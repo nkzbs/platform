@@ -1,0 +1,147 @@
+require('../../../shared/require-strong-secrets').requireStrongSecrets([
+  { name: 'JWT_SECRET', value: process.env.JWT_SECRET, badDefault: 'changeme' },
+  { name: 'INTERNAL_API_SECRET', value: process.env.INTERNAL_API_SECRET, badDefault: 'changeme_internal' },
+]);
+
+const express = require('express');
+const cors = require('cors');
+const db = require('./db');
+
+const authRoutes = require('./routes/auth');
+const usersRoutes = require('./routes/users');
+const modulesRoutes = require('./routes/modules');
+const recordsRoutes = require('./routes/records');
+const builderRoutes = require('./routes/builder');
+const uploadsRoutes = require('./routes/uploads');
+const connectionsRoutes = require('./routes/connections');
+const automationsRoutes = require('./routes/automations');
+const dashboardRoutes = require('./routes/dashboard');
+const auditRoutes = require('./routes/audit');
+const rolesRoutes = require('./routes/roles');
+const { startScheduler } = require('./scheduler');
+const { startGmailPoller } = require('./gmail-poller');
+const { startAuditRetentionScheduler } = require('./audit-retention-scheduler');
+const m2mRoutes = require('./routes/m2m');
+const notificationsRoutes = require('./routes/notifications');
+const searchRoutes = require('./routes/search');
+const backupRoutes = require('./routes/backup');
+const settingsRoutes = require('./routes/settings');
+const googleOAuthRoutes = require('./routes/google-oauth');
+const reportisticaRoutes = require('./routes/reportistica');
+const { siteAdminRouter, sitePublicRouter, rootPublicRouter } = require('./routes/site');
+const { logError } = require('./error-log');
+const { rateLimit } = require('./rate-limit');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors(require('../../../shared/cors-origin').buildCorsOptions(process.env.CLOUDFLARE_ZONE_NAME)));
+app.use(require('../../../shared/security-headers').applySecurityHeaders);
+// limit:'5mb' (2026-09-06) — il default di express.json (100kb) faceva
+// fallire con 500 il salvataggio di una pagina Sito Web appena una foto
+// veniva incollata come data:URI base64 (bug reale, trovato salvando la
+// foto vera dell'hero di Nico Caffè: ~68KB di file, ~92KB di base64, oltre
+// il limite). 5mb basta per qualche foto per pagina senza aprire la porta
+// a upload multi-MB arbitrari.
+app.use(express.json({ limit: '5mb' }));
+
+// Limite generico su tutta l'API — non pensato per interferire con l'uso
+// normale (poll notifiche ogni 30s, log attività ogni 10s, refresh dashboard),
+// solo per contenere uno script impazzito o un abuso grossolano. Il login ha
+// il proprio limite più stretto a parte (vedi routes/auth.js) — questo qui
+// serve solo da rete di sicurezza generale, non da prima linea per il brute-force.
+const apiGlobalLimiter = rateLimit({ windowMs: 60 * 1000, max: 600, message: 'Troppe richieste da questo indirizzo, rallenta', name: 'api-global' });
+
+const routeMounts = [
+  ['/auth', authRoutes],
+  ['/users', usersRoutes],
+  ['/modules', modulesRoutes],
+  ['/records', recordsRoutes],
+  ['/builder', builderRoutes],
+  ['/uploads', uploadsRoutes],
+  ['/connections', connectionsRoutes],
+  ['/automations', automationsRoutes],
+  ['/dashboard', dashboardRoutes],
+  ['/audit-log', auditRoutes],
+  ['/roles', rolesRoutes],
+  ['/m2m', m2mRoutes],
+  ['/notifications', notificationsRoutes],
+  ['/search', searchRoutes],
+  ['/backup', backupRoutes],
+  ['/settings', settingsRoutes],
+  ['/integrazioni/google', googleOAuthRoutes],
+  ['/reportistica', reportisticaRoutes],
+  ['/site-pages', siteAdminRouter],
+];
+app.use('/api', apiGlobalLimiter);
+for (const [path, routerModule] of routeMounts) {
+  app.use('/api' + path, routerModule);
+}
+
+// Sito Web pubblico (2026-09-04) — deliberatamente FUORI dal prefisso /api: un
+// visitatore/crawler non deve mai vedere /api nell'URL di una pagina pensata per
+// essere condivisa/indicizzata. nginx.conf ha un location dedicato che instrada
+// /negozio qui esattamente come fa già per /api (stesso pattern, prefisso diverso).
+app.use('/negozio', sitePublicRouter);
+// Path interno, mai chiamato direttamente da un browser (vedi commento su
+// rootPublicRouter in routes/site.js) — solo nginx.conf ci fa da proxy sulla
+// root esatta del dominio, con fallback all'app SPA se risponde 404.
+app.use('/__root_public', rootPublicRouter);
+
+app.get('/health', (req, res) => res.json({
+  status: 'ok',
+  version: '0.1.0',
+  tenant: process.env.TENANT_SLUG || 'unknown',
+  name: process.env.TENANT_NAME || 'Platform Core'
+}));
+
+// Nome del tenant per il branding in sidebar/login ("Platform <Nome>") — pubblico,
+// non richiede autenticazione: serve anche prima del login (schermata di accesso),
+// e non è un dato sensibile. A differenza di /health, questo passa dal proxy interno
+// del container (solo /api è instradato al backend, vedi core/nginx.conf) quindi è
+// l'unico dei due raggiungibile davvero dal frontend.
+// logo_url/accent_color (white-label minimo, 2026-08-14): stessa riga di
+// tenant_settings già usata per i documenti stampabili (routes/settings.js),
+// letta qui SENZA autenticazione perché deve comparire già sulla schermata di
+// login, prima che esista un token — né l'uno né l'altro sono dati sensibili
+// (sono già visibili a chiunque apra l'app).
+app.get('/api/tenant-info', (req, res) => {
+  let branding = { logo_url: null, accent_color: null, hide_platform_name: 0, login_headline: null, login_subheadline: null, login_body: null, login_hero_image_url: null };
+  try {
+    const row = db.prepare('SELECT logo_url, accent_color, hide_platform_name, login_headline, login_subheadline, login_body, login_hero_image_url FROM tenant_settings WHERE id = 1').get();
+    if (row) branding = row;
+  } catch (e) { /* tabella non ancora pronta: fallback ai default, mai bloccare il login */ }
+  res.json({
+    name: process.env.TENANT_NAME || null,
+    logo_url: branding.logo_url,
+    accent_color: branding.accent_color,
+    hide_platform_name: !!branding.hide_platform_name,
+    login_headline: branding.login_headline,
+    login_subheadline: branding.login_subheadline,
+    login_body: branding.login_body,
+    login_hero_image_url: branding.login_hero_image_url,
+  });
+});
+
+// Rete di sicurezza per eccezioni non gestite in una route — non sostituisce i try/catch
+// già presenti ovunque nel codice (quelli rispondono già un errore chiaro e specifico),
+// cattura solo ciò che altrimenti sfuggirebbe del tutto (finiva solo nei log Docker,
+// invisibile finché qualcuno non li guardava apposta). DEVE stare per ultimo, dopo
+// tutte le route — è così che Express riconosce un error handler (4 argomenti).
+// Nota: cattura i throw sincroni e i next(err) espliciti, non ogni possibile rejection
+// asincrona non gestita — un backstop a livello processo (unhandledRejection) cambierebbe
+// il comportamento di crash/recovery dei container reali, fuori scope per un logging
+// leggero.
+app.use((err, req, res, next) => {
+  logError(req.originalUrl, req.method, err);
+  console.error('Errore non gestito:', err.message);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: 'Errore interno' });
+});
+
+app.listen(PORT, () => {
+  console.log('Platform Core [' + (process.env.TENANT_SLUG || 'default') + '] running on port ' + PORT);
+  startScheduler();
+  startGmailPoller();
+  startAuditRetentionScheduler();
+});

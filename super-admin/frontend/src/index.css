@@ -1,0 +1,150 @@
+/* PLATFORM-UI-RESKIN-PLAN.md, Fase 1 (2026-08-23) — valori del tema scuro
+   sostituiti con i token esatti di CLAUDE_CODE_UI_BRIEF.md (colori reali del
+   mockup di riferimento, non stimati). Il tema chiaro sotto resta INVARIATO
+   per scelta (Fase 0): il mockup è solo scuro, non ha senso forzare quei
+   token anche lì. Mappatura ai nomi variabile già esistenti in questo file
+   (surface-page ← cp-page, ecc.) — dove il brief non ha un token dedicato
+   (--surface-footer, e gli 8 gradini di --gray-*), scelta una via di mezzo
+   ragionevole tra i token adiacenti del brief, verificata poi dal vivo, non
+   assunta esatta a tavolino.
+   Formato "canali RGB separati da spazi", non esadecimale — necessario perché
+   Tailwind possa comporre rgb(var(--x) / <alpha>) nei modificatori di opacità
+   (vedi tailwind.config.js), altrimenti le classi con /NN non generano CSS. */
+:root {
+  --surface-page: 3 19 33;      /* --cp-page #031321 */
+  --surface-card: 6 25 39;      /* --cp-surface #061927 */
+  --surface-input: 4 24 39;     /* --cp-input #041827 */
+  --surface-hover: 9 34 56;     /* --cp-surface-hover #092238 */
+  --surface-footer: 4 23 36;    /* --cp-sidebar #041724 */
+  --ink: 229 239 255;           /* --cp-text #e5efff */
+  --gray-200: 187 205 227;      /* via tra cp-text e cp-text-muted */
+  --gray-300: 145 167 187;      /* --cp-text-muted #91a7bb */
+  --gray-400: 124 148 169;      /* via tra cp-text-muted e cp-text-faint */
+  --gray-500: 102 129 151;      /* --cp-text-faint #668197 */
+  --gray-600: 69 100 122;       /* via tra cp-text-faint e cp-border-strong */
+  --gray-700: 36 70 92;         /* --cp-border-strong #24465c */
+  --gray-800: 26 52 71;         /* --cp-border #1a3447 */
+  --gray-900: 9 34 56;          /* --cp-surface-hover #092238, stesso di surface-hover */
+
+  /* Nuovi, non nella scala gray/surface originale — usati da Fase 2/3 in
+     avanti per badge di stato/CTA, non retrofittati sui punti d'uso esistenti
+     ora (fuori scope per le fondamenta). */
+  --cp-primary: 8 123 255;
+  --cp-primary-hover: 23 107 213;
+  --cp-success: 82 216 144;
+  --cp-success-bg: 8 55 41;
+  --cp-warning: 240 182 75;
+  --cp-warning-bg: 56 40 13;
+  --cp-danger: 238 83 100;
+  --cp-danger-bg: 69 23 34;
+  --cp-purple: 134 87 236;
+  --cp-nav-active: 6 75 145;    /* voce Sidebar attiva #064b91, Fase 2 */
+}
+
+:root[data-theme="light"] {
+  --surface-page: 245 245 244;   /* stone-100 */
+  --surface-card: 255 255 255;
+  --surface-input: 250 250 249;  /* stone-50 */
+  --surface-hover: 245 245 244;  /* stone-100 */
+  --surface-footer: 245 245 244; /* stone-100 */
+  --ink: 28 25 23;                /* stone-900 */
+  --gray-200: 41 37 36;           /* stone-800 */
+  --gray-300: 68 64 60;           /* stone-700 */
+  --gray-400: 87 83 78;           /* stone-600 */
+  --gray-500: 120 113 108;        /* stone-500 */
+  --gray-600: 168 162 158;        /* stone-400 */
+  --gray-700: 214 211 209;        /* stone-300 */
+  --gray-800: 231 229 228;        /* stone-200 */
+  --gray-900: 245 245 244;        /* stone-100 */
+
+  /* Bug reale segnalato dall'utente (2026-08-28): i token di stato sotto non
+     avevano MAI avuto un override chiaro (mancavano da questo blocco fin
+     dall'inizio, non solo dimenticati oggi) — su una card bianca, il verde/
+     ambra/rosso tarati per lo sfondo quasi nero del tema scuro perdono
+     contrasto (badge "aggiornato" illeggibile in PartnerUpdatesPage.jsx).
+     Coppie standard sfondo-chiaro/testo-scuro (equivalenti Tailwind
+     green-100/green-700, amber-100/amber-700, red-100/red-700), stesso
+     principio già in uso per gli altri token qui sopra. */
+  --cp-success: 21 128 61;
+  --cp-success-bg: 220 252 231;
+  --cp-warning: 180 83 9;
+  --cp-warning-bg: 254 243 199;
+  --cp-danger: 185 28 28;
+  --cp-danger-bg: 254 226 226;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fix contrasto badge tema chiaro — sweep completo (2026-08-29). Il pattern
+   bg-{colore}-900/NN + text-{colore}-400 (badge/alert scritti dark-mode-
+   first, ~200 occorrenze in ~35 file di entrambi i frontend) legge bene
+   sullo sfondo quasi nero del tema scuro ma diventa illeggibile su una card
+   bianca in tema chiaro — trovato la prima volta su un badge isolato
+   (2026-08-28, vedi i token --cp-success/warning/danger sopra), poi
+   ripresentato su altre schermate (Store moduli, Super Builder...) perché
+   il pattern è sistemico, non un caso isolato. Un selettore per classe
+   invece di toccare ~35 file uno per uno: dopo @tailwind utilities, stessa
+   specificità della classe originale ma dichiarato più tardi nel foglio di
+   stile → vince per ordine di sorgente, senza !important. NON tocca le
+   varianti quasi opache (/90+, banner/toast interi in App.jsx con testo
+   chiaro pensato per quello sfondo — un override qui li romperebbe: sfondo
+   chiaro + testo chiaro). */
+:root[data-theme="light"] .bg-amber-900\/10 { background-color: rgb(254 243 199); }
+:root[data-theme="light"] .bg-amber-900\/20 { background-color: rgb(254 243 199); }
+:root[data-theme="light"] .bg-amber-900\/30 { background-color: rgb(254 243 199); }
+:root[data-theme="light"] .bg-amber-900\/40 { background-color: rgb(254 243 199); }
+:root[data-theme="light"] .bg-amber-900\/50 { background-color: rgb(254 243 199); }
+:root[data-theme="light"] .bg-emerald-900\/20 { background-color: rgb(220 252 231); }
+:root[data-theme="light"] .bg-emerald-900\/30 { background-color: rgb(220 252 231); }
+:root[data-theme="light"] .bg-emerald-900\/50 { background-color: rgb(220 252 231); }
+:root[data-theme="light"] .bg-green-900\/20 { background-color: rgb(220 252 231); }
+:root[data-theme="light"] .bg-green-900\/30 { background-color: rgb(220 252 231); }
+:root[data-theme="light"] .bg-green-900\/50 { background-color: rgb(220 252 231); }
+:root[data-theme="light"] .bg-red-900\/20 { background-color: rgb(254 226 226); }
+:root[data-theme="light"] .bg-red-900\/30 { background-color: rgb(254 226 226); }
+:root[data-theme="light"] .bg-red-900\/40 { background-color: rgb(254 226 226); }
+:root[data-theme="light"] .bg-red-900\/50 { background-color: rgb(254 226 226); }
+:root[data-theme="light"] .bg-red-900\/60 { background-color: rgb(254 226 226); }
+:root[data-theme="light"] .bg-yellow-900\/20 { background-color: rgb(254 243 199); }
+:root[data-theme="light"] .bg-yellow-900\/30 { background-color: rgb(254 243 199); }
+:root[data-theme="light"] .bg-yellow-900\/50 { background-color: rgb(254 243 199); }
+/* Redesign 2026-08-30, Fase 3 (stesso giro di grep fatto su core/frontend)
+   — 3 badge (RegistroPage "Core Certified"/promozione, TenantsPage
+   partner/verticale) restavano scuri in light mode. */
+:root[data-theme="light"] .bg-teal-900\/30 { background-color: rgb(204 251 241); }
+:root[data-theme="light"] .bg-teal-900\/50 { background-color: rgb(204 251 241); }
+:root[data-theme="light"] .bg-violet-900\/30 { background-color: rgb(237 233 254); }
+:root[data-theme="light"] .bg-indigo-900\/30 { background-color: rgb(224 231 255); }
+
+:root[data-theme="light"] .text-red-400 { color: rgb(185 28 28); }
+:root[data-theme="light"] .text-green-400 { color: rgb(21 128 61); }
+:root[data-theme="light"] .text-emerald-400 { color: rgb(21 128 61); }
+:root[data-theme="light"] .text-amber-400 { color: rgb(180 83 9); }
+:root[data-theme="light"] .text-yellow-400 { color: rgb(180 83 9); }
+:root[data-theme="light"] .text-teal-400 { color: rgb(15 118 110); }
+:root[data-theme="light"] .text-violet-400 { color: rgb(109 40 217); }
+:root[data-theme="light"] .text-indigo-400 { color: rgb(67 56 202); }
+
+:root[data-theme="light"] .border-amber-900\/40 { border-color: rgb(252 211 77); }
+:root[data-theme="light"] .border-green-900\/40 { border-color: rgb(134 239 172); }
+:root[data-theme="light"] .border-green-900\/50 { border-color: rgb(134 239 172); }
+:root[data-theme="light"] .border-red-900\/30 { border-color: rgb(252 165 165); }
+:root[data-theme="light"] .border-red-900\/40 { border-color: rgb(252 165 165); }
+:root[data-theme="light"] .border-red-900\/50 { border-color: rgb(252 165 165); }
+:root[data-theme="light"] .border-yellow-900\/40 { border-color: rgb(252 211 77); }
+
+/* PLATFORM-UI-RESKIN-PLAN.md, Fase 1 (2026-08-23) — Inter ovunque, come da
+   CLAUDE_CODE_UI_BRIEF.md (era IBM Plex Sans/Space Grotesk/IBM Plex Mono).
+   Un solo font per tutto (corpo e titoli) per la densità tecnica voluta dal
+   brief — nessuna distinzione titoli/corpo come nel tema precedente. */
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', ui-sans-serif, sans-serif;
+}
+h1, h2, h3, .font-display {
+  font-family: 'Inter', -apple-system, ui-sans-serif, sans-serif;
+}
+.font-mono, code, pre {
+  font-family: ui-monospace, 'SFMono-Regular', monospace;
+}

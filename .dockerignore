@@ -1,0 +1,18 @@
+# Nessun Dockerfile del repo copia queste directory dal contesto — ogni
+# immagine fa COPY dei soli sorgenti app + shared/ e gira npm install/build
+# dentro il container. Senza questo file, `docker buildx build` dalla radice
+# (necessario per raggiungere shared/, vedi i Dockerfile) trascinava ~400MB
+# di node_modules/.git di TUTTE le app nel contesto di build ad ogni singola
+# build — anche per un'immagine che tocca una sola app — rendendo il
+# trasferimento del contesto il vero collo di bottiglia (minuti), non la
+# build in sé. Trovato il 2026-08-29 mentre una build frontend ferma sul
+# trasferimento contesto veniva scambiata per lentezza dell'emulazione amd64.
+node_modules
+**/node_modules
+.git
+**/dist
+**/build
+.DS_Store
+**/*.log
+.claude
+.offsite-backups-dev

@@ -1,0 +1,82 @@
+# Stack locale di Platform: Super Admin (backend + frontend), provisioner, Redis e nginx.
+# I tenant NON sono qui: li crea Super Admin, come container separati, tramite il provisioner.
+#
+#   cp .env.example .env     # poi compila i segreti
+#   docker compose up --build
+#   Super Admin:  http://localhost:4000  (Host: localhost)
+#
+# Nomi dei volumi: con questo file il progetto si chiama "platform", quindi i volumi e la rete
+# diventano platform_platform-data / platform_platform. DATA_VOLUME e TENANT_NETWORK devono
+# coincidere con quei nomi (è il valore che il provisioner usa per i tenant che crea).
+# Sul NAS di produzione i nomi sono diversi (vedi docs/OPERAZIONI.md): lì non si usa compose.
+
+services:
+  super-admin-backend:
+    build: { context: ., dockerfile: super-admin/backend/Dockerfile }
+    volumes:
+      - platform-data:/data
+      - ./infra/nginx:/etc/nginx-shared
+    environment:
+      - PORT=3000
+      - DB_PATH=/data/super-admin.db
+      - JWT_SECRET=${JWT_SECRET:?imposta JWT_SECRET nel file .env}
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:?imposta INTERNAL_API_SECRET nel file .env}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:?imposta ENCRYPTION_KEY nel file .env}
+      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD:-}
+      - DATA_VOLUME=platform_platform-data
+      - PROVISIONER_URL=http://docker-provisioner:4000
+      - REDIS_URL=redis://redis:6379
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:-}
+      - CLOUDFLARE_ZONE_ID=${CLOUDFLARE_ZONE_ID:-}
+      - CLOUDFLARE_ZONE_NAME=${CLOUDFLARE_ZONE_NAME:-}
+      - CLOUDFLARE_ORIGIN_IP=${CLOUDFLARE_ORIGIN_IP:-}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-25}
+      - SMTP_SECURE=${SMTP_SECURE:-false}
+      - SMTP_FROM=${SMTP_FROM:-}
+      - NOTIFY_EMAIL_TO=${NOTIFY_EMAIL_TO:-}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
+    networks: [platform]
+    depends_on: [redis, docker-provisioner]
+
+  docker-provisioner:
+    build: { context: ., dockerfile: super-admin/docker-provisioner/Dockerfile }
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - PORT=4000
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:?imposta INTERNAL_API_SECRET nel file .env}
+      - DATA_VOLUME=platform_platform-data
+      - TENANT_NETWORK=platform_platform
+    networks: [platform]
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+    networks: [platform]
+
+  super-admin-frontend:
+    build: { context: ., dockerfile: super-admin/frontend/Dockerfile }
+    depends_on: [super-admin-backend]
+    networks: [platform]
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "4000:80"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/nginx/tenants-map.conf:/etc/nginx/tenants-map.conf:ro
+    depends_on: [super-admin-backend, super-admin-frontend]
+    networks: [platform]
+
+# I tenant usano l'immagine "platform-core:latest": costruiscila con
+#   docker build -f core/Dockerfile -t platform-core:latest .
+volumes:
+  platform-data:
+  redis-data:
+
+networks:
+  platform:
+    driver: bridge

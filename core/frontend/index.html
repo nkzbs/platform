@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Platform</title>
+    <!-- Favicon: SVG per i browser moderni (tab, preferiti); PNG raster per Safari/iOS
+         (non legge un'icona SVG per preferiti/"Aggiungi a Home") — stesso marchio
+         (gradiente blu→viola storico) renderizzato a 32/180px. -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%232563EB'/%3E%3Cstop offset='100%25' stop-color='%237C3AED'/%3E%3C/linearGradient%3E%3Crect width='40' height='40' rx='10' fill='url(%23g)'/%3E%3Crect x='7' y='7' width='15' height='15' rx='3' fill='%23f5f5f4'/%3E%3Crect x='22' y='22' width='11' height='11' rx='2.5' fill='%23f5f5f4'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABm0lEQVR4nL2XvU7DQAzH7RMD3dO3CK8AOx8KlVBhAvEASIw8BLxABwZGhhYJho5IfZx0J9shp7nokrtrz050Hlor8uVn/e2zFYSAnTyUGjWA0gAIzX/PV9A8s3wT3z+7Xk7JdQz7D3ICe14wBG6f/fnqJqJSwskvilJ7E8gTwHfxCLOrre4kkCeEG//mcpeEMo2QEm7ia/a+bv9dTCDWZvd/LHibOI4AJ1t9TPhwDaBC0kmMC6/jQ3WTGBuujQIe6UQKMOFtD/i6XaQAE+6UwL5qMgWYcG2VoH/PZQkIZgQGhozEJANKhSacWAHWdISmCT3SiRRgwp0S2C/g2uO8ku2U09vuLrB9Gq8c+PvncTDm6bry9hqezUs9dKsdght7LirnrBoDHlsy31k1Bjz21rDWsWIulmgFYtcxMhdLlAKcdayYsz1KAc46RuZi4ZagZa2XUxwKJ5/u+T57uaics2+bDI9gBLiJ993zQ6op+qHPpaHw0E4JnX3dZHUOaMtEXywp4a0CxlbfGaaEOwrYdne+bXfEGHBqOB/oH1/4Eudpt1o8AAAAAElFTkSuQmCC">
+    <link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,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">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      // Applica il tema salvato PRIMA che React monti — altrimenti si vedrebbe un
+      // lampo del tema scuro di default a ogni refresh per chi ha scelto il chiaro.
+      (function () {
+        try {
+          var t = localStorage.getItem('platform_theme');
+          if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

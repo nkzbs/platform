@@ -1,0 +1,50 @@
+/* Stili dedicati alla homepage pubblica (brochure + accesso Super Admin).
+   Isolati qui, non nel resto dell'app: questa pagina prende in prestito il
+   linguaggio visivo di platform-core-brochure.html, il resto del Super Admin
+   resta con lo stile Tailwind puro già in uso ovunque. Font caricati da
+   index.html (non qui, per evitare una doppia richiesta agli stessi font). */
+
+.home-page {
+  font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+}
+.home-page .font-display {
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: -0.02em;
+}
+.home-page .font-mono-ui {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-page * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.home-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity .7s ease, transform .7s ease;
+}
+.home-reveal.in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.home-chain-block {
+  opacity: 0;
+  transform: translateX(-12px) scale(0.92);
+  transition: opacity .5s ease, transform .5s ease;
+}
+.home-chain-block.in {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+.home-chain-arrow {
+  opacity: 0;
+  transition: opacity .4s ease;
+}
+.home-chain-arrow.in {
+  opacity: 1;
+}

@@ -1,0 +1,8 @@
+.env
+.env.local
+*.db
+*.DS_Store
+data/
+dist/
+node_modules/
+.offsite-backups-dev/

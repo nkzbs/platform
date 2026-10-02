@@ -1,0 +1,139 @@
+/* Tema scuro (default, invariato) — stessi valori hardcoded di sempre, solo spostati
+   in variabili CSS così il tema chiaro può sovrascriverli senza toccare i componenti. */
+/* Valori come triplette RGB separate da spazi (non esadecimale) — richiesto da
+   Tailwind per poter comporre `rgb(var(--x) / <alpha>)` nei modificatori di
+   opacità (es. border-gray-800/50). Con un valore esadecimale semplice Tailwind
+   non genera affatto la regola per le varianti /NN: la classe risultava presente
+   nel markup ma senza alcun CSS associato, quindi il bordo cadeva su
+   `currentColor` (il colore del testo) invece del grigio tenue voluto — da qui
+   le righe divisorie troppo marcate (bianche in dark, nere in light) segnalate
+   dall'utente. Stessi colori di sempre, solo riformattati. */
+/* PLATFORM-UI-RESKIN-PLAN.md, 2026-08-23 — stessi token esatti già applicati a
+   Super Admin (CLAUDE_CODE_UI_BRIEF.md), per coerenza visiva tra tutta la
+   piattaforma invece di due palette scure diverse. Tema chiaro sotto lasciato
+   invariato, stessa scelta già fatta per Super Admin. */
+:root {
+  --surface-page: 3 19 33;      /* #031321 */
+  --surface-card: 6 25 39;      /* #061927 */
+  --surface-input: 4 24 39;     /* #041827 */
+  --surface-hover: 9 34 56;     /* #092238 */
+  --surface-footer: 4 23 36;    /* #041724 */
+  --ink: 229 239 255;           /* #e5efff */
+  --gray-200: 187 205 227;
+  --gray-300: 145 167 187;      /* #91a7bb */
+  --gray-400: 124 148 169;
+  --gray-500: 102 129 151;      /* #668197 */
+  --gray-600: 69 100 122;
+  --gray-700: 36 70 92;         /* #24465c */
+  --gray-800: 26 52 71;         /* #1a3447 */
+  --gray-900: 9 34 56;
+  --cp-success: 82 216 144;
+  --cp-success-bg: 8 55 41;
+  --cp-warning: 240 182 75;
+  --cp-warning-bg: 56 40 13;
+  --cp-danger: 238 83 100;
+  --cp-danger-bg: 69 23 34;
+  --cp-purple: 134 87 236;
+  /* White-label minimo (2026-08-14): default ora allineato al blu primario
+     esatto del reskin (#087bff, era il blue-600 generico di Tailwind) —
+     sovrascritta a runtime via App.jsx solo per un tenant che ha impostato
+     un proprio colore, comportamento invariato. */
+  --accent: 8 123 255;
+}
+
+/* Tema chiaro "stone" (nico caffè) — palette Tailwind stone reale (le stesse tonalità
+   usate nell'originale), non una stima. Mappatura simmetrica della scala gray
+   (200<->800, 300<->700, 400<->600, 500 invariato) per preservare gli stessi rapporti
+   di contrasto relativo tra testo primario/secondario/bordi che esistono nel tema scuro. */
+:root[data-theme="light"] {
+  --surface-page: 245 245 244;   /* stone-100 */
+  --surface-card: 255 255 255;
+  --surface-input: 250 250 249;  /* stone-50 */
+  --surface-hover: 245 245 244;  /* stone-100 */
+  --surface-footer: 245 245 244; /* stone-100 */
+  --ink: 28 25 23;                /* stone-900 */
+  --gray-200: 41 37 36;           /* stone-800 */
+  --gray-300: 68 64 60;           /* stone-700 */
+  --gray-400: 87 83 78;           /* stone-600 */
+  --gray-500: 120 113 108;        /* stone-500 */
+  --gray-600: 168 162 158;        /* stone-400 */
+  --gray-700: 214 211 209;        /* stone-300 */
+  --gray-800: 231 229 228;        /* stone-200 */
+  --gray-900: 245 245 244;        /* stone-100 */
+
+  /* Stesso bug reale di super-admin/frontend (2026-08-28) — questi token non
+     avevano mai avuto un override chiaro: su una card bianca, verde/ambra/
+     rosso tarati per lo sfondo quasi nero del tema scuro perdono contrasto.
+     Coppie standard sfondo-chiaro/testo-scuro (equivalenti Tailwind
+     green-100/700, amber-100/700, red-100/700). */
+  --cp-success: 21 128 61;
+  --cp-success-bg: 220 252 231;
+  --cp-warning: 180 83 9;
+  --cp-warning-bg: 254 243 199;
+  --cp-danger: 185 28 28;
+  --cp-danger-bg: 254 226 226;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fix contrasto badge tema chiaro — sweep completo (2026-08-29), stesso
+   identico blocco di super-admin/frontend/src/index.css (vedi lì il
+   commento esteso sul perché). Il pattern bg-{colore}-900/NN + text-
+   {colore}-400 legge bene sullo sfondo quasi nero del tema scuro ma
+   diventa illeggibile su una card bianca in tema chiaro. Dopo @tailwind
+   utilities → vince per ordine di sorgente a parità di specificità, senza
+   !important. NON tocca le varianti quasi opache (/90+, banner/toast interi
+   con testo chiaro pensato per quello sfondo). */
+:root[data-theme="light"] .bg-amber-900\/10 { background-color: rgb(254 243 199); }
+:root[data-theme="light"] .bg-amber-900\/20 { background-color: rgb(254 243 199); }
+:root[data-theme="light"] .bg-amber-900\/30 { background-color: rgb(254 243 199); }
+:root[data-theme="light"] .bg-amber-900\/40 { background-color: rgb(254 243 199); }
+:root[data-theme="light"] .bg-amber-900\/50 { background-color: rgb(254 243 199); }
+:root[data-theme="light"] .bg-emerald-900\/20 { background-color: rgb(220 252 231); }
+:root[data-theme="light"] .bg-emerald-900\/30 { background-color: rgb(220 252 231); }
+:root[data-theme="light"] .bg-emerald-900\/50 { background-color: rgb(220 252 231); }
+:root[data-theme="light"] .bg-green-900\/20 { background-color: rgb(220 252 231); }
+:root[data-theme="light"] .bg-green-900\/30 { background-color: rgb(220 252 231); }
+:root[data-theme="light"] .bg-green-900\/50 { background-color: rgb(220 252 231); }
+:root[data-theme="light"] .bg-red-900\/20 { background-color: rgb(254 226 226); }
+:root[data-theme="light"] .bg-red-900\/30 { background-color: rgb(254 226 226); }
+:root[data-theme="light"] .bg-red-900\/40 { background-color: rgb(254 226 226); }
+:root[data-theme="light"] .bg-red-900\/50 { background-color: rgb(254 226 226); }
+:root[data-theme="light"] .bg-red-900\/60 { background-color: rgb(254 226 226); }
+:root[data-theme="light"] .bg-yellow-900\/20 { background-color: rgb(254 243 199); }
+:root[data-theme="light"] .bg-yellow-900\/30 { background-color: rgb(254 243 199); }
+:root[data-theme="light"] .bg-yellow-900\/50 { background-color: rgb(254 243 199); }
+/* Redesign 2026-08-30, Fase 3 (polish Tenant) — trovati con un grep di ogni
+   classe colore usata contro l'allowlist qui sotto: due badge (AuditPage
+   "parziale", StorePage "Partner Certified") restavano scuri in light mode. */
+:root[data-theme="light"] .bg-orange-900\/30 { background-color: rgb(255 237 213); }
+:root[data-theme="light"] .bg-teal-900\/30 { background-color: rgb(204 251 241); }
+
+:root[data-theme="light"] .text-red-400 { color: rgb(185 28 28); }
+:root[data-theme="light"] .text-green-400 { color: rgb(21 128 61); }
+:root[data-theme="light"] .text-emerald-400 { color: rgb(21 128 61); }
+:root[data-theme="light"] .text-amber-400 { color: rgb(180 83 9); }
+:root[data-theme="light"] .text-yellow-400 { color: rgb(180 83 9); }
+:root[data-theme="light"] .text-orange-400 { color: rgb(194 65 12); }
+:root[data-theme="light"] .text-teal-400 { color: rgb(15 118 110); }
+
+:root[data-theme="light"] .border-amber-900\/40 { border-color: rgb(252 211 77); }
+:root[data-theme="light"] .border-green-900\/40 { border-color: rgb(134 239 172); }
+:root[data-theme="light"] .border-green-900\/50 { border-color: rgb(134 239 172); }
+:root[data-theme="light"] .border-red-900\/30 { border-color: rgb(252 165 165); }
+:root[data-theme="light"] .border-red-900\/40 { border-color: rgb(252 165 165); }
+:root[data-theme="light"] .border-red-900\/50 { border-color: rgb(252 165 165); }
+:root[data-theme="light"] .border-yellow-900\/40 { border-color: rgb(252 211 77); }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', ui-sans-serif, sans-serif;
+  /* Prima trasparente: il colore vero veniva solo da un div wrapper interno,
+     non da <body> stesso. Cambio tema corretto nella variabile CSS/wrapper (
+     verificato dal vivo), ma un body trasparente può lasciar intravedere il
+     bianco del browser sotto in casi limite (contenuto più corto della
+     viewport, transizione) — sfondo esplicito qui, stesso principio già
+     richiesto per le pagine Artifact. */
+  background-color: rgb(var(--surface-page));
+}
