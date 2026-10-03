@@ -24,7 +24,8 @@ RUN npm install
 
 # Stage 3: immagine finale
 FROM node:22-alpine
-RUN apk add --no-cache nginx supervisor
+# poppler-utils: pdftotext, per leggere gli estratti conto in PDF (movimenti bancari)
+RUN apk add --no-cache nginx supervisor poppler-utils
 
 # NODE_ENV=production fissato QUI, nell'immagine (2026-09-04) — bug reale
 # trovato durante una verifica dal vivo sulla NAS di produzione: era stato

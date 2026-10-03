@@ -574,6 +574,36 @@ db.exec(`
   );
 `);
 
+// Movimenti bancari letti dagli estratti conto (PDF): servono a vedere cosa succede davvero sul conto e a
+// completare Finance. Il PDF non si conserva: si legge e si scarta (vedi bank-import.js).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS bank_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    iban_last4 TEXT NOT NULL UNIQUE,
+    holder TEXT,
+    nome TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS bank_movements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES bank_accounts(id),
+    date TEXT NOT NULL,
+    booked TEXT NOT NULL,
+    amount REAL NOT NULL,
+    description TEXT NOT NULL,
+    merchant TEXT,
+    kind TEXT NOT NULL,
+    category_hint TEXT,
+    match_module TEXT,
+    match_id INTEGER,
+    ignored INTEGER NOT NULL DEFAULT 0,
+    dedupe_key TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_bank_movements_date ON bank_movements(date);
+  CREATE INDEX IF NOT EXISTS idx_bank_movements_key ON bank_movements(account_id, dedupe_key);
+`);
+
 // Analisi "Come sta andando": impostazioni (JSON, una riga) e spiegazione scritta dall'assistente per
 // mese, conservata per non richiamare l'AI a ogni apertura (vedi insights.js).
 db.exec(`

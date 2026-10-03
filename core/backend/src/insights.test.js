@@ -149,6 +149,23 @@ async function main() {
     const s = insights.buildSnapshot('2026-07', NOW);
     assertEq(s.accantonato_stimato, false); assertEq(s.accantonato, 120);
   });
+  console.log('\n--- riepilogo dalla banca ---');
+
+  await test('senza movimenti bancari il blocco "banca" è vuoto; con i movimenti mostra uscite reali e quelle non registrate', () => {
+    assertEq(snap().banca, null);
+    db.prepare("INSERT INTO bank_accounts (iban_last4, holder, nome) VALUES ('9999', 'X', 'Conto …9999')").run();
+    const acc = db.prepare("SELECT id FROM bank_accounts WHERE iban_last4 = '9999'").get().id;
+    const ins = db.prepare('INSERT INTO bank_movements (account_id, date, booked, amount, description, kind, dedupe_key, match_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+    ins.run(acc, '2026-09-12', '2026-09-12', -40, 'Pagamento POS', 'carta', 'k1', null);
+    ins.run(acc, '2026-09-13', '2026-09-13', -60, 'Pagamento POS', 'carta', 'k2', 1);
+    ins.run(acc, '2026-09-14', '2026-09-14', -300, 'Bonifico Conto Casa', 'giro_interno', 'k3', null);
+    ins.run(acc, '2026-09-25', '2026-09-25', 1799.58, 'EMOLUMENTI', 'stipendio', 'k4', 1);
+    const b = snap().banca;
+    assertEq(b.entrate_reali, 1799.58); assertEq(b.uscite_reali, 100, 'i giri interni non sono spese');
+    assertEq(b.giri_interni, 300); assertEq(b.non_registrate, 40); assertEq(b.non_registrate_n, 1);
+    assertEq(insights.buildSnapshot('2026-08', NOW).banca, null, 'mese senza movimenti');
+  });
+
   console.log('\n--- limiti dichiarati ---');
 
   await test('il mese in corso è segnalato come parziale; il mese senza entrate lo dice', () => {

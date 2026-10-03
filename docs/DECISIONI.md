@@ -204,11 +204,41 @@ indicazioni di Nima del 2026-10-03):
 con la variazione e le anomalie. "Spiega con l'assistente" racconta i numeri; il testo si salva per mese e si riusa finché i
 numeri non cambiano (nessun costo a ogni apertura).
 
+## 2026-10-03 — Movimenti bancari (fase 1: conto personale)
+
+**Cosa.** In Finance c'è la pagina **Movimenti** (solo admin): carichi l'estratto conto in PDF e il programma ne legge i movimenti,
+li classifica, li abbina alle spese e alle entrate già registrate e ti mostra quelle che mancano. Il PDF **non si conserva**: si legge
+e si scarta, restano i movimenti (tabelle `bank_accounts` e `bank_movements`), con gli IBAN mascherati. Il server usa `pdftotext`
+(poppler-utils, aggiunto al `core/Dockerfile`).
+
+**Come funziona** (`core/backend/src/bank-import.js`, `routes/bank.js`, `pages/MovimentiPage.jsx`):
+- **Lettura** (`parseStatement`): formato "Estratto Conto Italia", un movimento per riga di importo; si ripuliscono intestazioni e piè di
+  pagina (le righe ripetute su ogni pagina) e si assegna a ogni importo il testo giusto anche quando è "centrato" tra due movimenti.
+  Provata su un anno vero (429 movimenti su 429 righe di importo). La data di un movimento è la **valuta** (per le carte è il giorno
+  dell'acquisto), la data contabile si conserva a parte.
+- **Classificazione**: stipendio, commissioni, carta (con esercente), utenza, prelievo, bonifico, **giro tra tuoi conti** (bonifico verso
+  l'intestatario, cointestato o "Conto Casa"; **ricarica della prepagata**). I giri non sono spese né entrate. Un bonifico a una persona
+  con lo stesso cognome ma nome diverso non è un giro.
+- **Doppioni**: caricare di nuovo lo stesso estratto, o uno che si sovrappone, non duplica niente; due movimenti identici nello stesso
+  giorno (due caffè uguali) restano due.
+- **Abbinamento**: un'uscita si abbina a una spesa di Finance con lo **stesso importo** e una data entro 75 giorni (stipendi alle entrate,
+  versamenti alla casa ai *Contributo Casa*); una riga di Finance si abbina a un solo movimento.
+- **"Da registrare"**: uscite (carta, utenze, bonifici, altro) senza spesa corrispondente. **Registra** crea una spesa personale già
+  pagata con la categoria suggerita da parole chiave (si può cambiare); **Ignora** la toglie dall'elenco.
+- La scheda "Come sta andando" mostra, per il mese, entrate e uscite reali in banca e quanto non è registrato in Finance.
+
+**Cosa si è visto sui dati veri.** Nel 2025 sul conto personale sono passati circa 14.600 € di **ricariche della prepagata**: la spesa
+vera di quel denaro si vedrà solo con l'estratto della prepagata. Fino a quel momento le uscite del conto personale sono sottostimate
+rispetto alle spese reali.
+
+**Non ancora fatto** (nell'ordine): estratti della **Prepagata** e del **Conto Casa** come conti a sé; categorie proposte da Mistral per
+i pagamenti con carta (oggi parole chiave); un elenco modificabile dei giri verso conti propri (es. Buddy Bank: da confermare se è un
+conto di risparmio).
+
 ### Da fare (nell'ordine deciso)
 
-1. **Movimenti bancari**, partendo dal solo conto personale (poi Conto Casa e gli altri, uno alla volta): lettura degli estratti PDF
-   (formato regolare, già verificato su 2.800 movimenti), esclusione dei giri tra i propri conti, collegamento alle spese di
-   Finance, categorie proposte da Mistral per i pagamenti con carta (accetti o ignori), IBAN e nomi tolti prima dell'invio.
+1. **Movimenti bancari**, passi successivi (la lettura del conto personale c'è, vedi sopra): Prepagata e Conto Casa come conti a sé,
+   categorie proposte da Mistral per i pagamenti con carta (accetti o ignori; IBAN e nomi tolti prima dell'invio).
 2. **Previsione di cassa** (30/60/90 giorni) e **debiti e rate**: richiedono saldi dei conti aggiornati (oggi tutti a 0).
 3. **Pulizia delle categorie** (doppioni come *Benzina* e *Auto & Benzina*) e **budget** per categoria.
 4. **Domande libere** ("quanto ho speso di luce nel 2025?") tradotte in un filtro strutturato, mai SQL libero; poi gli allegati PDF.

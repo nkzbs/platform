@@ -8,7 +8,7 @@ const monthLabel = (ym) => { const [y, m] = ym.split('-').map(Number); return ne
 const shift = (ym, d) => { const [y, m] = ym.split('-').map(Number); const t = y * 12 + (m - 1) + d; return Math.floor(t / 12) + '-' + String((t % 12) + 1).padStart(2, '0') }
 
 // "Come sta andando": i numeri del mese li calcola il programma; l'assistente, se lo chiedi, li racconta.
-export default function InsightsCard({ token }) {
+export default function InsightsCard({ token, onNavigate }) {
   const api = useApi(token)
   const [month, setMonth] = useState(null) // null = ultimo mese concluso (lo decide il server)
   const [data, setData] = useState(null)
@@ -82,6 +82,17 @@ export default function InsightsCard({ token }) {
             ))}
           </div>
           <div className="text-[11px] text-gray-600 mt-1.5">Il confronto è con la media dei mesi precedenti.</div>
+        </div>
+      )}
+
+      {data.banca && (
+        <div className="mt-5 rounded-lg bg-surface-page border border-gray-800 p-3 text-xs text-gray-300">
+          <span className="text-gray-500">In banca (conto personale): </span>
+          entrate {eur(data.banca.entrate_reali)}, uscite reali {eur(data.banca.uscite_reali)}
+          {data.banca.non_registrate_n > 0
+            ? <span className="text-amber-400">, di cui {eur(data.banca.non_registrate)} non registrati in Finance ({data.banca.non_registrate_n} movimenti)</span>
+            : <span className="text-green-400">, tutte registrate in Finance</span>}
+          {onNavigate && <button type="button" onClick={() => onNavigate('movimenti')} className="ml-2 text-accent hover:underline">Vedi i movimenti →</button>}
         </div>
       )}
 

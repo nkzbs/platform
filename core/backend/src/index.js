@@ -23,6 +23,7 @@ const { startGmailPoller } = require('./gmail-poller');
 const aiRoutes = require('./routes/ai');
 const notificationSettingsRoutes = require('./routes/notification-settings');
 const insightsRoutes = require('./routes/insights');
+const bankRoutes = require('./routes/bank');
 const digestRoutes = require('./routes/digest');
 const { startDailyDigest } = require('./daily-digest');
 const { startAuditRetentionScheduler } = require('./audit-retention-scheduler');
@@ -76,6 +77,7 @@ const routeMounts = [
   ['/integrazioni/google', googleOAuthRoutes],
   ['/ai', aiRoutes],
   ['/insights', insightsRoutes],
+  ['/bank', bankRoutes],
   ['/', notificationSettingsRoutes],
   ['/digest', digestRoutes],
   ['/site-pages', siteAdminRouter],

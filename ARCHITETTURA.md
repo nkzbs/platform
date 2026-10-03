@@ -196,6 +196,14 @@ anomalie, leggendo i record dei moduli indicati in `insights_config` (default: v
 il testo a Mistral e lo restituisce solo se ogni numero esiste nei dati. La spiegazione si salva per mese
 (`insight_explanations`, con l'impronta dei numeri) e si rigenera solo se i numeri cambiano o la si chiede di nuovo.
 
+## Movimenti bancari
+
+`core/backend/src/bank-import.js`: si carica un estratto conto in PDF (`POST /api/bank/import`, solo admin), `pdftotext -layout` ne estrae il
+testo (il PDF non si salva), `parseStatement` lo legge in movimenti, `classify` li classifica e `rematch` li abbina alle righe di Finance
+(spese personali e di casa, entrate, *Contributo Casa*) con lo stesso importo e una data vicina. Tabelle `bank_accounts` e
+`bank_movements` (un movimento ha `kind`, `merchant`, `category_hint`, l'eventuale abbinamento e `ignored`). La pagina
+`MovimentiPage.jsx` mostra riepilogo del mese e movimenti da registrare; `insights.js` ne legge il riepilogo per la scheda "Come sta andando".
+
 ## Sicurezza, in sintesi
 
 - Nessuna password fissa nel codice: la password admin iniziale è casuale o arriva da variabile d'ambiente.

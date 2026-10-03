@@ -162,9 +162,12 @@ function buildSnapshot(month, now = new Date()) {
   if (month >= cur) limiti.unshift('Mese in corso: i dati sono parziali.');
   if (!en) limiti.unshift('Nessuna entrata registrata in questo mese: il saldo e il risparmio non sono significativi.');
 
+  // Se ci sono movimenti bancari per questo mese, il riepilogo di ciò che è successo davvero sul conto.
+  let banca = null;
+  try { banca = require('./bank-import').monthSummary(month); } catch (e) { /* senza movimenti bancari */ }
   const st = spStato[month] || { pagate: 0, da_pagare: 0 }, fx = spFix[month] || { fisse: 0, variabili: 0 };
   return {
-    available: true, month, in_corso: month >= cur,
+    available: true, month, in_corso: month >= cur, banca,
     entrate: round2(en), spese: round2(sp), saldo: round2(en - sp),
     risparmio_pct: en > 0 ? Math.round(((en - sp) / en) * 1000) / 10 : null,
     accantonato: acc.valore, accantonato_stimato: acc.stimato,

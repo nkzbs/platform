@@ -6,6 +6,7 @@ import Sidebar from './components/Sidebar'
 import Icon from './components/Icon'
 import DashboardPage from './pages/DashboardPage'
 import LibreriaPage from './pages/LibreriaPage'
+import MovimentiPage from './pages/MovimentiPage'
 import BuilderPage from './pages/BuilderPage'
 import GuidaPage from './pages/GuidaPage'
 import AuditPage from './pages/AuditPage'
@@ -251,6 +252,7 @@ export default function App() {
         <div className="p-4 md:p-8">
         {currentPage === 'dashboard' && <DashboardPage user={user} modules={installedModules} token={token} onNavigate={setCurrentPage} />}
         {currentPage === 'report' && <DashboardPage user={user} modules={installedModules} token={token} page="report" />}
+        {currentPage === 'movimenti' && user && user.role === 'admin' && <MovimentiPage token={token} />}
         {currentPage === 'libreria' && user && user.role === 'admin' && <LibreriaPage token={token} onRefresh={loadModules} onOpenInBuilder={openInBuilder} onCreateNewModule={openBuilderNewModule} />}
         {currentPage === 'builder' && user && user.role === 'admin' && <BuilderPage token={token} allModules={allModulesForBuilder} onModulesChanged={loadModules} preselectSlug={builderPreselect} onPreselectHandled={() => setBuilderPreselect(null)} openNewModule={builderOpenNew} onNewModuleHandled={() => setBuilderOpenNew(false)} />}
         {currentPage === 'guida' && <GuidaPage modules={installedModules} token={token} />}

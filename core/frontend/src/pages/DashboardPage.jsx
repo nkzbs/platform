@@ -341,7 +341,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate })
         )}
       </div>
 
-      {page === 'dashboard' && <InsightsCard token={token} />}
+      {page === 'dashboard' && <InsightsCard token={token} onNavigate={onNavigate} />}
 
       {widgets.length === 0 && (
         <div className="bg-surface-card rounded-md p-12 text-center border border-gray-800 border-dashed">
