@@ -116,9 +116,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
   // `modules` come qualunque altra, installabile/disinstallabile dallo Store
   // (registro Super Admin, slug 'report') e già dentro l'array `modules` sopra:
   // compare tra i moduli normali, con la sua `sort_order` e il suo `group_name`.
-  if (user && user.role !== 'agente') {
-    systemItems.push({ slug: 'export_dati', name: 'Export dati', icon: 'download' })
-  }
+  // Export dati non è più una voce di menu: vive in Impostazioni → Export dati (stesso accesso di prima: tutti tranne l'agente).
   // Store/Builder/Connessioni/Utenti/Backup/Log/Impostazioni: già protetti lato backend
   // (requireAdmin sulle rotte che contano — schema-cache, registry, credenziali...), ma
   // fino ad ora comparivano comunque nel menu di QUALUNQUE utente autenticato, non solo

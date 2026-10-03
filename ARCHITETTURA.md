@@ -204,26 +204,29 @@ testo (il PDF non si salva), `parseStatement` lo legge in movimenti, `classify` 
 `bank_movements` (un movimento ha `kind`, `merchant`, `category_hint`, l'eventuale abbinamento e `ignored`). La pagina
 `MovimentiPage.jsx` mostra riepilogo del mese e movimenti da registrare; `insights.js` ne legge il riepilogo per la scheda "Come sta andando".
 
-## Funzioni facoltative per tenant
+## Capacità: il progetto si costruisce da zero
 
-Il nucleo è un motore generico. Le parti che conoscono la finanza personale sono **funzioni facoltative**, attivabili per tenant
-(`core/backend/src/features.js`, tabella `tenant_features`, Impostazioni → Funzioni):
+Tre strati. **Il motore** (utenti, moduli, record, Builder, Libreria, backup, Export dati) c'è sempre. Le **capacità** sono funzioni in più che un
+progetto può avere e si **installano dalla Libreria**, con lo stesso gesto dei moduli (`core/backend/src/features.js`, tabella `tenant_features`,
+sezione "Capacità" della Libreria). I **moduli** sono quelli di business che costruisci tu.
 
-| Funzione | Cosa abilita |
+| Capacità | Cosa porta |
 |---|---|
+| `whatsapp` | Destinatari WhatsApp (Impostazioni → Notifiche), rotte `/api/whatsapp-recipients` |
+| `gmail` | Regole Gmail (Impostazioni → Connessioni), rotte `/api/gmail-rules`, controllo periodico delle mail |
+| `sito_web` | Scheda Sito Web e il suo editor (`/api/site-pages`); il sito pubblico resta spento finché non lo attivi |
 | `movimenti` | Pagina Movimenti, rotte `/api/bank/*`, lettura degli estratti PDF |
-| `analisi` | Scheda "Come sta andando", rotte `/api/insights/*` |
+| `analisi` | Scheda "Come sta andando" in dashboard, rotte `/api/insights/*` |
 | `bollette_ai` | Smistamento bollette con l'assistente (riquadro in dashboard, rotte `/api/ai/suggest*`, aggancio al poller Gmail) |
 | `riepilogo_mattino` | Riepilogo WhatsApp del mattino (controllo, rotte `/api/digest/*`) |
 
-Un tenant **nuovo le ha tutte spente**: non compaiono nel menu e le rotte rispondono 403 `feature_off`. Alla prima inizializzazione un
-tenant che ha già moduli di spese o entrate installati le trova accese (Finance non cambia). Restano disponibili a tutti i tenant le
-parti generiche: AI (chiave Mistral, spiegazione dei report), destinatari WhatsApp, regole Gmail, moduli, Builder, Libreria.
-`GET /api/tenant-info` (pubblico) dice quali funzioni sono accese, così menu e dashboard si adattano.
+Un progetto **nuovo non ne ha nessuna**: non compaiono nel menu, in dashboard né nelle Impostazioni (le schede si adattano), e le loro rotte rispondono 403
+`feature_off`. Un progetto che già le usa le trova installate al primo avvio (valore di partenza dai dati: moduli di spese, destinatari, regole, sito attivo).
+Rimuovere una capacità non cancella i dati: la si reinstalla quando serve. `GET /api/tenant-info` (pubblico) dice quali sono installate, così menu e
+dashboard si adattano. Restano sempre disponibili il motore e l'AI generica (chiave Mistral, spiegazione dei report). **Export dati** sta in Impostazioni.
 
-**Onestà sul confine.** Le funzioni spente sono invisibili ma il loro codice sta ancora nel nucleo, con i nomi dei moduli di Finance
-(`spese_casa`, `entrate`...) scritti dentro. È il primo passo, non il disegno finale: il passo successivo è far dichiarare ai moduli
-stessi cosa sanno fare con l'AI (vedi `docs/DECISIONI.md`, "AI nei moduli").
+**Onestà sul confine.** Le capacità non installate sono invisibili, ma il loro codice sta ancora nel nucleo, e quelle di finanza hanno scritti dentro i nomi
+dei moduli di Finance (`spese_casa`, `entrate`...). Il passo successivo è far dichiarare ai moduli stessi cosa sanno fare con l'AI (vedi `docs/DECISIONI.md`).
 
 ## Sicurezza, in sintesi
 

@@ -44,6 +44,7 @@ async function main() {
   require('./index.js');
   await waitForServer(10000);
   const db = require('./db');
+  require('./features').set('sito_web', true); // capacità facoltativa: qui serve accesa
 
   const loginRes = await fetch(BASE + '/api/auth/login', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },

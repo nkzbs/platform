@@ -255,13 +255,12 @@ export default function App() {
         {currentPage === 'dashboard' && <DashboardPage user={user} modules={installedModules} token={token} features={features} onNavigate={setCurrentPage} />}
         {currentPage === 'report' && <DashboardPage user={user} modules={installedModules} token={token} page="report" />}
         {currentPage === 'movimenti' && user && user.role === 'admin' && features.movimenti && <MovimentiPage token={token} />}
-        {currentPage === 'libreria' && user && user.role === 'admin' && <LibreriaPage token={token} onRefresh={loadModules} onOpenInBuilder={openInBuilder} onCreateNewModule={openBuilderNewModule} />}
+        {currentPage === 'libreria' && user && user.role === 'admin' && <LibreriaPage token={token} onFeaturesChanged={loadTenantName} onRefresh={loadModules} onOpenInBuilder={openInBuilder} onCreateNewModule={openBuilderNewModule} />}
         {currentPage === 'builder' && user && user.role === 'admin' && <BuilderPage token={token} allModules={allModulesForBuilder} onModulesChanged={loadModules} preselectSlug={builderPreselect} onPreselectHandled={() => setBuilderPreselect(null)} openNewModule={builderOpenNew} onNewModuleHandled={() => setBuilderOpenNew(false)} />}
         {currentPage === 'guida' && <GuidaPage modules={installedModules} token={token} />}
         {/* Export e Backup uniti (2026-08-29): un solo tab-set dentro ExportDatiPage,
             Backup resta un tab admin-only al suo interno — stesso gate di prima, solo
             spostato dentro il componente invece che qui. */}
-        {currentPage === 'export_dati' && <ExportDatiPage token={token} modules={installedModules} user={user} />}
         {currentPage === 'audit' && <AuditPage token={token} />}
         {/* Impostazioni e "Il mio account" uniti (2026-08-29): stessa
             pagina, non più admin-gated qui — un non-admin ci arriva comunque
@@ -274,8 +273,8 @@ export default function App() {
             nuovo esplicitamente dall'utente, stavolta come scelta definitiva.
             'sito_web' qui sotto instrada sullo stesso meccanismo di 'account'
             sopra, solo con un tab diverso. */}
-        {(currentPage === 'impostazioni' || currentPage === 'account' || currentPage === 'sito_web') && user &&
-          <ImpostazioniPage token={token} user={user} features={features} onFeaturesChanged={loadTenantName} initialTab={currentPage === 'impostazioni' ? undefined : currentPage} />}
+        {(currentPage === 'impostazioni' || currentPage === 'account' || currentPage === 'sito_web' || currentPage === 'export_dati') && user &&
+          <ImpostazioniPage token={token} user={user} features={features} modules={installedModules} onFeaturesChanged={loadTenantName} initialTab={currentPage === 'impostazioni' ? undefined : currentPage} />}
         {currentModule && !['dashboard', 'utenti', 'report'].includes(currentPage) && <ModulePage module={currentModule} token={token} user={user} onNavigate={setCurrentPage} />}
         </div>
       </main>

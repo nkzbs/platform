@@ -296,6 +296,10 @@ accese al primo avvio: Finance non cambia. Si gestiscono da Impostazioni → Fun
 
 **Cosa NON risolve.** Il codice resta nel nucleo e conosce i nomi dei moduli di Finance. È il primo tempo; il secondo è l'**AI nei moduli**:
 
+**Aggiornamento (stesso giorno).** Le funzioni sono diventate **capacità installabili dalla Libreria** (non un interruttore nelle Impostazioni: «installare» è il gesto
+del progetto che si costruisce da zero) e sono sette: a quelle di finanza si sono aggiunte WhatsApp, mail Gmail e Sito Web, che prima erano sempre presenti. Un progetto nuovo
+non ne ha nessuna. **Export dati** è tornato in Impostazioni, non più una voce di menu. Le schede delle Impostazioni mostrano solo ciò che è installato.
+
 ### AI nei moduli (progettazione, non ancora costruito)
 
 L'idea (di Nima): abilitare l'AI su un tenant lo fa "evolvere" offrendo versioni potenziate dei moduli; la chiave si inserisce nel tenant

@@ -4,7 +4,11 @@ const { requireAuth, requireAdmin } = require('./auth');
 const ns = require('../notification-settings');
 const { logAudit } = require('../audit-log');
 
+const { requireFeature } = require('../features');
+
 const router = express.Router();
+router.use('/whatsapp-recipients', requireAuth, requireFeature('whatsapp'));
+router.use('/gmail-rules', requireAuth, requireFeature('gmail'));
 const guard = [requireAuth, requireAdmin];
 const respond = (res, out, key) => {
   if (out.notFound) return res.status(404).json({ error: 'Non trovato' });

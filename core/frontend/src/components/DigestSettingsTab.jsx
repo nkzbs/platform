@@ -105,7 +105,7 @@ export default function DigestSettingsTab({ token, features = {} }) {
       </>
       )}
 
-      <WhatsAppRecipientsPanel token={token} />
+      {features.whatsapp && <WhatsAppRecipientsPanel token={token} />}
     </div>
   )
 }

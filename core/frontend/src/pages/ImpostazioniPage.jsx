@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import GmailRulesPanel from '../components/GmailRulesPanel'
-import FeaturesTab from '../components/FeaturesTab'
+import ExportDatiPage from './ExportDatiPage'
 import AiSettingsTab from '../components/AiSettingsTab'
 import DigestSettingsTab from '../components/DigestSettingsTab'
 import { API } from '../lib/api'
@@ -25,7 +25,7 @@ import SitoWebPage from './SitoWebPage'
 // drive_scope_ok), spostata qui dove è sempre visibile — nessuna riscrittura
 // concettuale, solo un posto più naturale da controllare, anche quando non
 // stai guardando un modulo specifico in quel momento.
-function ConnessioniTab({ token }) {
+function ConnessioniTab({ token, features = {} }) {
   const api = useApi(token)
   const [connections, setConnections] = useState([])
   const [googleStatus, setGoogleStatus] = useState(null)
@@ -170,7 +170,7 @@ function ConnessioniTab({ token }) {
           </div>
         ))}
       </div>
-      <GmailRulesPanel token={token} />
+      {features.gmail && <GmailRulesPanel token={token} />}
     </div>
   )
 }
@@ -295,11 +295,11 @@ const SETTINGS_TABS = [
   { key: 'connessioni', icon: 'link', label: 'Connessioni' },
   { key: 'notifiche', icon: 'bell', label: 'Notifiche' },
   { key: 'assistente', icon: 'wand', label: 'Assistente AI' },
-  { key: 'funzioni', icon: 'box', label: 'Funzioni' },
+  { key: 'export_dati', icon: 'download', label: 'Export dati' },
   { key: 'account', icon: 'user', label: 'Il mio account' },
 ]
 
-function ImpostazioniPage({ token, user, initialTab, features = {}, onFeaturesChanged }) {
+function ImpostazioniPage({ token, user, initialTab, features = {}, modules = [], onFeaturesChanged }) {
   const isAdmin = user && user.role === 'admin'
   const [tab, setTab] = useState(initialTab || (isAdmin ? 'utenti' : 'account'))
   // Navigazione ripetuta verso il tab "Il mio account" (click sul proprio nome in
@@ -307,16 +307,23 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, onFeaturesCh
   // sull'ultimo tab aperto invece di saltare di nuovo su Account.
   useEffect(() => { if (initialTab) setTab(initialTab) }, [initialTab])
 
+  // Le schede si adattano al progetto: una capacità spenta (Sito Web, WhatsApp...) non ha la sua scheda; chi non è admin vede il proprio account
+  // e, se non è un agente, l'export dei dati.
+  const canExport = user && user.role !== 'agente'
+  const visibleTabs = isAdmin
+    ? SETTINGS_TABS.filter((t) => (t.key === 'sito_web' ? features.sito_web : t.key === 'notifiche' ? (features.whatsapp || features.riepilogo_mattino) : true))
+    : SETTINGS_TABS.filter((t) => t.key === 'account' || (t.key === 'export_dati' && canExport))
+
   return (
     <div>
       {/* Un non-admin ha un solo tab possibile (Il mio account) — niente titolo/tab-bar
          "Impostazioni" ridondante sopra, va dritto al contenuto (che ha già il suo h1). */}
-      {isAdmin && (
+      {(isAdmin || visibleTabs.length > 1) && (
         <>
           <div className="mb-4">
             <h1 className="text-lg font-bold text-ink tracking-[-0.35px]">Impostazioni</h1>
           </div>
-          <TabBar items={SETTINGS_TABS} active={tab} onChange={setTab} />
+          <TabBar items={visibleTabs} active={tab} onChange={setTab} />
         </>
       )}
 
@@ -327,13 +334,14 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, onFeaturesCh
 
       {tab === 'sito_web' && <SitoWebPage token={token} />}
 
-      {tab === 'connessioni' && <ConnessioniTab token={token} />}
+      {tab === 'connessioni' && <ConnessioniTab token={token} features={features} />}
 
       {tab === 'notifiche' && <DigestSettingsTab token={token} features={features} />}
 
       {tab === 'assistente' && <AiSettingsTab token={token} features={features} />}
 
-      {tab === 'funzioni' && <FeaturesTab token={token} onChanged={onFeaturesChanged} />}
+
+      {tab === 'export_dati' && canExport && <ExportDatiPage token={token} modules={modules} user={user} />}
     </div>
   )
 }

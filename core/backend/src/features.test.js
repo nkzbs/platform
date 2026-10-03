@@ -54,10 +54,15 @@ async function main() {
       assertEq((await r.json()).code, 'feature_off', p);
     }
   });
-  await test('le funzioni generiche non sono toccate: AI (chiave, spiegazione report), destinatari WhatsApp e regole Gmail restano', async () => {
-    assertEq((await call('GET', '/whatsapp-recipients')).status, 200);
-    assertEq((await call('GET', '/gmail-rules')).status, 200);
+  await test('anche WhatsApp, Gmail e Sito Web sono capacità da accendere: spenti, le loro rotte rispondono 403', async () => {
+    for (const p of ['/whatsapp-recipients', '/gmail-rules', '/site-pages/settings']) {
+      assertEq((await call('GET', p)).status, 403, p);
+    }
+    assertEq(require('./gmail-poller').pollGmail.constructor.name, 'AsyncFunction');
+  });
+  await test('restano per tutti solo le parti del motore e dell\'AI generica (chiave Mistral, spiegazione dei report)', async () => {
     assertTrue((await call('GET', '/ai/settings')).status !== 403, 'impostazioni AI sempre disponibili');
+    assertEq((await call('GET', '/modules')).status, 200);
   });
   await test('lo smistamento delle bollette non parte se la funzione è spenta, nemmeno forzato', async () => {
     const out = await require('./ai-suggestions').suggestForRecord({ moduleSlug: 'spese_casa', recordId: 1, force: true });
@@ -74,6 +79,14 @@ async function main() {
     assertEq(list.length, features.KEYS.length);
     assertTrue(list.every((f) => f.label && f.description && f.enabled === false));
     assertEq((await call('GET', '/features', null, {})).status, 401);
+  });
+  await test('accendere WhatsApp, Gmail e Sito Web apre le loro rotte, una alla volta', async () => {
+    for (const [k, p] of [['whatsapp', '/whatsapp-recipients'], ['gmail', '/gmail-rules'], ['sito_web', '/site-pages/settings']]) {
+      assertEq((await call('GET', p)).status, 403, p + ' spenta');
+      await call('PUT', '/features/' + k, { enabled: true });
+      assertEq((await call('GET', p)).status, 200, p + ' accesa');
+      await call('PUT', '/features/' + k, { enabled: false });
+    }
   });
   await test('si accende una funzione: la sua rotta risponde, le altre restano spente; si spegne di nuovo', async () => {
     assertEq((await (await call('PUT', '/features/movimenti', { enabled: true })).json()).enabled, true);
@@ -92,11 +105,33 @@ async function main() {
     db.prepare('DELETE FROM modules WHERE slug = ?').run('spese_personali');
     db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('Spese personali', 'spese_personali', 'box', '#000', 1, 1, 50, '{}')").run();
     assertEq(features.seedIfEmpty(), true);
-    for (const k of features.KEYS) assertEq(features.isEnabled(k), true, k);
+    for (const k of ['movimenti', 'analisi', 'bollette_ai', 'riepilogo_mattino']) assertEq(features.isEnabled(k), true, k);
+  });
+  await test('WhatsApp, Gmail e Sito Web partono accesi solo se il progetto li usa già (destinatari, regole, sito attivo)', () => {
+    db.exec('DELETE FROM tenant_features; DELETE FROM whatsapp_recipients; DELETE FROM gmail_rules;');
+    db.prepare("DELETE FROM modules WHERE slug = 'spese_personali'").run();
+    features.seedIfEmpty();
+    for (const k of ['whatsapp', 'gmail', 'sito_web']) assertEq(features.isEnabled(k), false, k + ' senza dati');
+    db.exec('DELETE FROM tenant_features');
+    db.prepare("INSERT INTO whatsapp_recipients (nome, numero, triggers, attivo) VALUES ('A', '+39 333 000 0000', '[]', 1)").run();
+    db.prepare("INSERT INTO gmail_rules (mittente, gruppo) VALUES ('a@b.it', 'Casa')").run();
+    db.prepare('UPDATE tenant_settings SET site_enabled = 1 WHERE id = 1').run();
+    features.seedIfEmpty();
+    for (const k of ['whatsapp', 'gmail', 'sito_web']) assertEq(features.isEnabled(k), true, k + ' con dati');
+    assertEq(features.isEnabled('movimenti'), false, 'la finanza resta spenta senza moduli di spese');
+    db.prepare('UPDATE tenant_settings SET site_enabled = 0 WHERE id = 1').run();
+  });
+  await test('una funzione NUOVA aggiunta dopo (chiave mancante) riceve il suo valore di partenza senza toccare le scelte già fatte', () => {
+    features.set('analisi', true);
+    db.prepare("DELETE FROM tenant_features WHERE key = 'gmail'").run();
+    features.seedIfEmpty();
+    assertEq(features.isEnabled('analisi'), true, 'la scelta fatta resta');
+    assertEq(db.prepare("SELECT COUNT(*) c FROM tenant_features WHERE key = 'gmail'").get().c, 1, 'la chiave mancante è stata creata');
+    features.set('analisi', false);
   });
   await test('rilanciare l\'inizializzazione non cambia le scelte già fatte', () => {
     features.set('analisi', false);
-    assertEq(features.seedIfEmpty(), false);
+    features.seedIfEmpty();
     assertEq(features.isEnabled('analisi'), false);
   });
 

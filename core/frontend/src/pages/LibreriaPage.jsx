@@ -3,6 +3,7 @@ import { API } from '../lib/api'
 import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
 import RichText from '../components/RichText'
+import CapabilitiesSection from '../components/CapabilitiesSection'
 import { parseSchemaFrontend, getAutomationSteps, getRequiredConnectors } from '../lib/schema-v3-frontend'
 
 // La Libreria del tenant: i moduli che ho già (installati) e quelli salvati nella Libreria di
@@ -13,7 +14,7 @@ import { parseSchemaFrontend, getAutomationSteps, getRequiredConnectors } from '
 // I collegamenti (Google, WhatsApp...) di un modulo si deducono da cosa fa davvero
 // (getRequiredConnectors) e si configurano dentro il suo dettaglio. La credenziale è condivisa
 // per tenant: un secondo modulo che usa lo stesso collegamento lo trova già connesso.
-function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule }) {
+function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, onFeaturesChanged }) {
   const api = useApi(token)
   const [modules, setModules] = useState([])
   const [registry, setRegistry] = useState([])
@@ -353,6 +354,9 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule }) 
         </div>
       )}
 
+      <CapabilitiesSection token={token} onChanged={onFeaturesChanged} />
+
+      <h2 className="text-sm font-semibold text-ink mb-3">Moduli</h2>
       <div className="relative mb-6 max-w-md">
         <Icon name="search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cerca moduli..."

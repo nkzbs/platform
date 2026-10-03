@@ -33,6 +33,7 @@ async function main() {
   for (let i = 0; i < 100; i++) { try { if ((await fetch(BASE + '/health')).ok) break; } catch (e) { await new Promise((r) => setTimeout(r, 100)); } }
   const db = require('./db');
   const ns = require('./notification-settings');
+  for (const k of require('./features').KEYS) require('./features').set(k, true); // capacità facoltative: qui servono accese
   const login = await (await fetch(BASE + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: process.env.INITIAL_ADMIN_PASSWORD }) })).json();
   const H = { Authorization: 'Bearer ' + login.token, 'Content-Type': 'application/json' };
   const call = (m, p, body, h = H) => fetch(BASE + '/api' + p, { method: m, headers: h, body: body ? JSON.stringify(body) : undefined });

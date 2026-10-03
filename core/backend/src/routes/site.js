@@ -11,6 +11,8 @@ const { renderPageHtml, renderSitemapXml, renderRobotsTxt } = require('../site-r
 const { rateLimit } = require('../rate-limit');
 
 const siteAdminRouter = express.Router();
+// Capacità facoltativa: l'editor del Sito Web (lato admin) risponde solo se è accesa. Le pagine pubbliche non dipendono da questo.
+siteAdminRouter.use(requireAuth, require('../features').requireFeature('sito_web'));
 const sitePublicRouter = express.Router();
 
 // Sito Web è funzionalità CORE (2026-09-05) — nessun gate "modulo installato":

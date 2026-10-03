@@ -271,6 +271,7 @@ async function processaMessaggio(accessToken, msgId, rule) {
 }
 
 async function pollGmail() {
+  if (!require('./features').isEnabled('gmail')) return; // capacità facoltativa: spenta, il controllo non fa niente
   const rules = getActiveRules();
   if (rules.length === 0) return;
 

@@ -7,6 +7,9 @@
 const db = require('./db');
 
 const FEATURES = {
+  whatsapp: { label: 'Notifiche WhatsApp', description: 'Destinatari e messaggi WhatsApp: avvisi e riepiloghi inviati a chi scegli. Serve il collegamento WhatsApp in Connessioni.' },
+  gmail: { label: 'Mail che diventano righe', description: 'Regole su Gmail: le mail di certi mittenti diventano righe da smistare. Serve Google collegato in Connessioni.' },
+  sito_web: { label: 'Sito Web', description: 'Pagine pubbliche del progetto, con il loro editor. Resta spento al pubblico finché non lo attivi dalla scheda Sito Web.' },
   movimenti: { label: 'Movimenti bancari', description: 'Carica gli estratti conto in PDF, vedi i movimenti reali e completa le spese che mancano.' },
   analisi: { label: 'Come sta andando', description: 'Scheda in dashboard con entrate, spese, risparmio, confronti e anomalie, spiegata dall\'assistente.' },
   bollette_ai: { label: 'Smistamento bollette con l\'assistente', description: 'Propone categoria, importo e scadenza per le bollette in arrivo da Gmail.' },
@@ -16,13 +19,24 @@ const KEYS = Object.keys(FEATURES);
 
 db.exec('CREATE TABLE IF NOT EXISTS tenant_features (key TEXT PRIMARY KEY, enabled INTEGER NOT NULL DEFAULT 0)');
 
-// Prima inizializzazione: tabella vuota -> accese per chi ha già moduli di finanza installati, spente per gli altri.
+// Valore di partenza per una funzione senza scelta salvata: accesa solo se il progetto già la usa, altrimenti spenta. Così un progetto nuovo
+// parte da zero e uno che funziona già non perde niente.
+function defaultFor(key) {
+  const has = (sql) => { try { return !!db.prepare(sql).get(); } catch (e) { return false; } };
+  if (['movimenti', 'analisi', 'bollette_ai', 'riepilogo_mattino'].includes(key)) return has("SELECT 1 FROM modules WHERE installed = 1 AND slug IN ('spese_personali', 'spese_casa', 'entrate')");
+  if (key === 'whatsapp') return has('SELECT 1 FROM whatsapp_recipients LIMIT 1') || has("SELECT 1 FROM connections WHERE integration_id = 'whatsapp_callmebot' AND connected = 1");
+  if (key === 'gmail') return has('SELECT 1 FROM gmail_rules LIMIT 1');
+  if (key === 'sito_web') return has('SELECT 1 FROM tenant_settings WHERE site_enabled = 1') || has('SELECT 1 FROM site_pages LIMIT 1');
+  return false;
+}
+
+// All'avvio: ogni funzione senza scelta salvata riceve il suo valore di partenza (le scelte già fatte non si toccano). Ritorna le chiavi accese.
 function seedIfEmpty() {
-  if (db.prepare('SELECT COUNT(*) c FROM tenant_features').get().c > 0) return false;
-  const usesFinance = !!db.prepare("SELECT 1 FROM modules WHERE installed = 1 AND slug IN ('spese_personali', 'spese_casa', 'entrate')").get();
+  const have = new Set(db.prepare('SELECT key FROM tenant_features').all().map((r) => r.key));
   const ins = db.prepare('INSERT INTO tenant_features (key, enabled) VALUES (?, ?)');
-  db.transaction(() => { for (const k of KEYS) ins.run(k, usesFinance ? 1 : 0); })();
-  return usesFinance;
+  const turnedOn = [];
+  db.transaction(() => { for (const k of KEYS) if (!have.has(k)) { const on = defaultFor(k); ins.run(k, on ? 1 : 0); if (on) turnedOn.push(k); } })();
+  return turnedOn.length > 0;
 }
 
 function isEnabled(key) {
