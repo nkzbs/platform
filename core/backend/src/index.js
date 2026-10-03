@@ -24,6 +24,8 @@ const aiRoutes = require('./routes/ai');
 const notificationSettingsRoutes = require('./routes/notification-settings');
 const insightsRoutes = require('./routes/insights');
 const bankRoutes = require('./routes/bank');
+const featuresRoutes = require('./routes/features');
+const features = require('./features');
 const digestRoutes = require('./routes/digest');
 const { startDailyDigest } = require('./daily-digest');
 const { startAuditRetentionScheduler } = require('./audit-retention-scheduler');
@@ -78,6 +80,7 @@ const routeMounts = [
   ['/ai', aiRoutes],
   ['/insights', insightsRoutes],
   ['/bank', bankRoutes],
+  ['/features', featuresRoutes],
   ['/', notificationSettingsRoutes],
   ['/digest', digestRoutes],
   ['/site-pages', siteAdminRouter],
@@ -120,7 +123,10 @@ app.get('/api/tenant-info', (req, res) => {
     const row = db.prepare('SELECT logo_url, accent_color, hide_platform_name, login_headline, login_subheadline, login_body, login_hero_image_url FROM tenant_settings WHERE id = 1').get();
     if (row) branding = row;
   } catch (e) { /* tabella non ancora pronta: fallback ai default, mai bloccare il login */ }
+  let enabledFeatures = {};
+  try { enabledFeatures = features.all(); } catch (e) { /* tabella non pronta */ }
   res.json({
+    features: enabledFeatures,
     name: process.env.TENANT_NAME || null,
     logo_url: branding.logo_url,
     accent_color: branding.accent_color,
@@ -151,11 +157,12 @@ app.use((err, req, res, next) => {
 // Destinatari WhatsApp e regole Gmail non sono più moduli: porta nelle tabelle nuove le righe rimaste.
 require('./notification-settings').migrateLegacy();
 require('./legacy-cleanup').removeStubModules();
+if (features.seedIfEmpty()) console.log('Funzioni: tenant con moduli di finanza, funzioni accese; le altre restano spente');
 
 app.listen(PORT, () => {
   console.log('Platform Core [' + (process.env.TENANT_SLUG || 'default') + '] running on port ' + PORT);
   startScheduler();
-  startDailyDigest();
+  startDailyDigest(); // il controllo ogni minuto parte sempre; se la funzione è spenta non fa niente
   startGmailPoller();
   startAuditRetentionScheduler();
 });

@@ -118,6 +118,7 @@ let running = false;
 // Il giorno è segnato PRIMA dell'invio: un errore non deve trasformarsi in un messaggio ogni minuto.
 async function tick(now = new Date()) {
   if (running) return { skipped: 'in corso' };
+  if (!require('./features').isEnabled('riepilogo_mattino')) return { skipped: 'funzione non attiva' };
   const s = settings();
   if (!s.enabled) return { skipped: 'spento' };
   const { date, hour } = romeParts(now);

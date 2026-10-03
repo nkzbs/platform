@@ -3,7 +3,7 @@ import Icon from './Icon'
 import PlatformLogo from './PlatformLogo'
 import { API, notifyUnauthorized } from '../lib/api'
 
-function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName, logoUrl, hidePlatformName, token, mobileOpen, onMobileClose, collapsed }) {
+function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName, logoUrl, hidePlatformName, features = {}, token, mobileOpen, onMobileClose, collapsed }) {
   // Sotto md: la sidebar è un drawer off-canvas (nascosta di default, aperta
   // dall'hamburger in App.jsx) — sopra md: resta sempre visibile come oggi.
   // Navigare chiude il drawer su mobile, altrimenti coprirebbe il contenuto
@@ -126,7 +126,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
   // falliscono silenziosamente sulle chiamate API (403) — nessuna fuga di dati, ma un
   // menu che promette funzioni a cui l'utente non ha davvero accesso.
   if (user && user.role === 'admin') {
-    systemItems.push({ slug: 'movimenti', name: 'Movimenti', icon: 'credit-card' })
+    if (features.movimenti) systemItems.push({ slug: 'movimenti', name: 'Movimenti', icon: 'credit-card' })
     systemItems.push({ slug: 'libreria', name: 'Libreria', icon: 'store' })
     systemItems.push({ slug: 'builder', name: 'Builder', icon: 'tool' })
     // Sito Web nestato dentro Impostazioni (2026-10-01, richiesto

@@ -3,7 +3,7 @@ import useApi from '../lib/useApi'
 import Icon from './Icon'
 
 // Interruttore dell'assistente AI e consumo del mese. Spento finché non lo si accende.
-export default function AiSettingsTab({ token }) {
+export default function AiSettingsTab({ token, features = {} }) {
   const api = useApi(token)
   const [state, setState] = useState(null) // { bollette_enabled, budget }
   const [busy, setBusy] = useState(false)
@@ -76,6 +76,7 @@ export default function AiSettingsTab({ token }) {
         </div>
       </section>
 
+      {features.bollette_ai && (
       <section className="bg-surface-card border border-gray-800 rounded-xl p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
@@ -92,6 +93,7 @@ export default function AiSettingsTab({ token }) {
           <div>All'AI arrivano solo mittente, oggetto e le prime righe del testo, <span className="text-gray-300">senza IBAN, telefoni, email e codici fiscali</span>.</div>
         </div>
       </section>
+      )}
 
       <section className="bg-surface-card border border-gray-800 rounded-xl p-5">
         <div className="flex items-start justify-between gap-4">

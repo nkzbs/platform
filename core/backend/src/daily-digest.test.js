@@ -34,6 +34,7 @@ global.fetch = async (url) => {
 
 (async () => {
   const db = require('./db');
+  for (const k of require('./features').KEYS) require('./features').set(k, true); // funzione facoltativa: qui serve accesa
   const digest = require('./daily-digest');
   const { runAzioni } = require('./automation-engine');
 

@@ -47,6 +47,7 @@ async function main() {
   require('./index.js');
   for (let i = 0; i < 100; i++) { try { if ((await fetch(BASE + '/health')).ok) break; } catch (e) { await new Promise((r) => setTimeout(r, 100)); } }
   const db = require('./db');
+  for (const k of require('./features').KEYS) require('./features').set(k, true); // le funzioni facoltative sono spente di default: qui servono
   const insights = require('./insights');
   for (const slug of ['entrate', 'spese_casa', 'spese_personali']) {
     db.prepare('DELETE FROM modules WHERE slug = ?').run(slug);

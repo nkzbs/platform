@@ -204,6 +204,27 @@ testo (il PDF non si salva), `parseStatement` lo legge in movimenti, `classify` 
 `bank_movements` (un movimento ha `kind`, `merchant`, `category_hint`, l'eventuale abbinamento e `ignored`). La pagina
 `MovimentiPage.jsx` mostra riepilogo del mese e movimenti da registrare; `insights.js` ne legge il riepilogo per la scheda "Come sta andando".
 
+## Funzioni facoltative per tenant
+
+Il nucleo è un motore generico. Le parti che conoscono la finanza personale sono **funzioni facoltative**, attivabili per tenant
+(`core/backend/src/features.js`, tabella `tenant_features`, Impostazioni → Funzioni):
+
+| Funzione | Cosa abilita |
+|---|---|
+| `movimenti` | Pagina Movimenti, rotte `/api/bank/*`, lettura degli estratti PDF |
+| `analisi` | Scheda "Come sta andando", rotte `/api/insights/*` |
+| `bollette_ai` | Smistamento bollette con l'assistente (riquadro in dashboard, rotte `/api/ai/suggest*`, aggancio al poller Gmail) |
+| `riepilogo_mattino` | Riepilogo WhatsApp del mattino (controllo, rotte `/api/digest/*`) |
+
+Un tenant **nuovo le ha tutte spente**: non compaiono nel menu e le rotte rispondono 403 `feature_off`. Alla prima inizializzazione un
+tenant che ha già moduli di spese o entrate installati le trova accese (Finance non cambia). Restano disponibili a tutti i tenant le
+parti generiche: AI (chiave Mistral, spiegazione dei report), destinatari WhatsApp, regole Gmail, moduli, Builder, Libreria.
+`GET /api/tenant-info` (pubblico) dice quali funzioni sono accese, così menu e dashboard si adattano.
+
+**Onestà sul confine.** Le funzioni spente sono invisibili ma il loro codice sta ancora nel nucleo, con i nomi dei moduli di Finance
+(`spese_casa`, `entrate`...) scritti dentro. È il primo passo, non il disegno finale: il passo successivo è far dichiarare ai moduli
+stessi cosa sanno fare con l'AI (vedi `docs/DECISIONI.md`, "AI nei moduli").
+
 ## Sicurezza, in sintesi
 
 - Nessuna password fissa nel codice: la password admin iniziale è casuale o arriva da variabile d'ambiente.

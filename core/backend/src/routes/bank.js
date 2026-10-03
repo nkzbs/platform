@@ -5,7 +5,10 @@ const { requireAuth, requireAdmin } = require('./auth');
 const bank = require('../bank-import');
 const { logAudit } = require('../audit-log');
 
+const { requireFeature } = require('../features');
+
 const router = express.Router();
+router.use(requireAuth, requireFeature('movimenti')); // prima l'accesso (401), poi la funzione (403)
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024, files: 24 } });
 const validMonth = (m) => m === undefined || /^\d{4}-\d{2}$/.test(String(m));
 const idOf = (req) => parseInt(req.params.id, 10);

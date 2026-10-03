@@ -4,7 +4,10 @@ const { requireAuth, requireAdmin } = require('./auth');
 const digest = require('../daily-digest');
 const { logAudit } = require('../audit-log');
 
+const { requireFeature } = require('../features');
+
 const router = express.Router();
+router.use(requireAuth, requireFeature('riepilogo_mattino')); // prima l'accesso (401), poi la funzione (403)
 
 router.get('/settings', requireAuth, requireAdmin, (req, res) => {
   const s = digest.settings();

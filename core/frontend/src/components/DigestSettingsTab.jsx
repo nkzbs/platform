@@ -12,7 +12,7 @@ function renderWa(text) {
   return text.split(/(\*[^*\n]+\*)/g).map((part, i) => (/^\*[^*\n]+\*$/.test(part) ? <strong key={i} className="text-ink">{part.slice(1, -1)}</strong> : part))
 }
 
-export default function DigestSettingsTab({ token }) {
+export default function DigestSettingsTab({ token, features = {} }) {
   const api = useApi(token)
   const [s, setS] = useState(null) // { enabled, hour, last_sent }
   const [busy, setBusy] = useState(false)
@@ -50,6 +50,8 @@ export default function DigestSettingsTab({ token }) {
 
   return (
     <div className="max-w-2xl space-y-4">
+      {features.riepilogo_mattino && (
+      <>
       <section className="bg-surface-card border border-gray-800 rounded-xl p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
@@ -100,6 +102,8 @@ export default function DigestSettingsTab({ token }) {
           <div className={'mt-3 text-xs p-3 rounded-lg border ' + (m.ok ? 'bg-green-900/20 text-green-400 border-green-900/40' : 'bg-amber-900/20 text-amber-400 border-amber-900/40')}>{m.text}</div>
         ) })()}
       </section>
+      </>
+      )}
 
       <WhatsAppRecipientsPanel token={token} />
     </div>

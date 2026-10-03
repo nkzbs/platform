@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import GmailRulesPanel from '../components/GmailRulesPanel'
+import FeaturesTab from '../components/FeaturesTab'
 import AiSettingsTab from '../components/AiSettingsTab'
 import DigestSettingsTab from '../components/DigestSettingsTab'
 import { API } from '../lib/api'
@@ -294,10 +295,11 @@ const SETTINGS_TABS = [
   { key: 'connessioni', icon: 'link', label: 'Connessioni' },
   { key: 'notifiche', icon: 'bell', label: 'Notifiche' },
   { key: 'assistente', icon: 'wand', label: 'Assistente AI' },
+  { key: 'funzioni', icon: 'box', label: 'Funzioni' },
   { key: 'account', icon: 'user', label: 'Il mio account' },
 ]
 
-function ImpostazioniPage({ token, user, initialTab }) {
+function ImpostazioniPage({ token, user, initialTab, features = {}, onFeaturesChanged }) {
   const isAdmin = user && user.role === 'admin'
   const [tab, setTab] = useState(initialTab || (isAdmin ? 'utenti' : 'account'))
   // Navigazione ripetuta verso il tab "Il mio account" (click sul proprio nome in
@@ -327,9 +329,11 @@ function ImpostazioniPage({ token, user, initialTab }) {
 
       {tab === 'connessioni' && <ConnessioniTab token={token} />}
 
-      {tab === 'notifiche' && <DigestSettingsTab token={token} />}
+      {tab === 'notifiche' && <DigestSettingsTab token={token} features={features} />}
 
-      {tab === 'assistente' && <AiSettingsTab token={token} />}
+      {tab === 'assistente' && <AiSettingsTab token={token} features={features} />}
+
+      {tab === 'funzioni' && <FeaturesTab token={token} onChanged={onFeaturesChanged} />}
     </div>
   )
 }

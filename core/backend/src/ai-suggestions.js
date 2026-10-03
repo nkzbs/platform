@@ -67,6 +67,7 @@ function hasPending(moduleSlug, recordId) {
 // Crea il suggerimento per un record, se serve. Mai un errore verso il chiamante: il record
 // resta com'è e l'assistente al massimo non propone nulla.
 async function suggestForRecord({ moduleSlug, recordId, mittente, subject, text, attachments, force = false }) {
+  if (!require('./features').isEnabled('bollette_ai')) return { skipped: 'funzione non attiva' };
   if (!force && !isEnabled()) return { skipped: 'disattivato' };
   if (!BILL_MODULES.includes(moduleSlug)) return { skipped: 'modulo non supportato' };
   if (hasPending(moduleSlug, recordId)) return { skipped: 'già presente' };

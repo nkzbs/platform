@@ -4,7 +4,10 @@ const { requireAuth, requireAdmin } = require('./auth');
 const insights = require('../insights');
 const { logAudit } = require('../audit-log');
 
+const { requireFeature } = require('../features');
+
 const router = express.Router();
+router.use(requireAuth, requireFeature('analisi')); // prima l'accesso (401), poi la funzione (403)
 const validMonth = (m) => m === undefined || /^\d{4}-\d{2}$/.test(String(m));
 
 // I numeri del mese (nessuna AI): sempre disponibili, e con l'eventuale spiegazione già salvata.

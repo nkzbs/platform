@@ -16,7 +16,7 @@ import WeeklyBreakdownView from './ModulePage/WeeklyBreakdownView'
 // altrove (riepilogo mensile, pivot categoria, andamento settimanale, aggregato
 // singolo) — qui si sceglie liberamente quali vedere insieme, invece di doverli
 // trovare sparsi sulla pagina di ogni singolo modulo.
-function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate }) {
+function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, features = {} }) {
   const api = useApi(token)
   const [editMode, setEditMode] = useState(false)
   // Prima i widget vivevano in localStorage (per browser, non per tenant — due persone
@@ -342,8 +342,8 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate })
         )}
       </div>
 
-      {page === 'dashboard' && <AiSuggestionsPanel token={token} isAdmin={!!(user && user.role === 'admin')} />}
-      {page === 'dashboard' && <InsightsCard token={token} onNavigate={onNavigate} />}
+      {page === 'dashboard' && features.bollette_ai && <AiSuggestionsPanel token={token} isAdmin={!!(user && user.role === 'admin')} />}
+      {page === 'dashboard' && features.analisi && <InsightsCard token={token} onNavigate={features.movimenti ? onNavigate : undefined} />}
 
       {widgets.length === 0 && (
         <div className="bg-surface-card rounded-md p-12 text-center border border-gray-800 border-dashed">

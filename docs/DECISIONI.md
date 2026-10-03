@@ -284,6 +284,32 @@ rispetto alle spese reali.
 i pagamenti con carta (oggi parole chiave); un elenco modificabile dei giri verso conti propri (es. Buddy Bank: da confermare se è un
 conto di risparmio).
 
+## 2026-10-03 — Funzioni facoltative per tenant (la modularità torna)
+
+**Problema.** Nel corso del lavoro sull'AI avevo messo nel nucleo circa 1.700 righe che conoscono Finance (movimenti bancari, analisi,
+smistamento bollette, riepilogo del mattino), presenti in **ogni** tenant: Timbrature vedeva "Movimenti" e il riquadro delle bollette.
+L'affermazione di `ARCHITETTURA.md` "non c'è codice specifico per un tenant" non era più vera.
+
+**Scelta.** Quattro **funzioni facoltative** attivabili per tenant (`movimenti`, `analisi`, `bollette_ai`, `riepilogo_mattino`), spente di default.
+Spente: niente voce di menu, niente riquadro, rotte 403, lo smistamento e il riepilogo non partono. Un tenant che usa già la finanza le trova
+accese al primo avvio: Finance non cambia. Si gestiscono da Impostazioni → Funzioni. Provato con un tenant senza moduli di finanza.
+
+**Cosa NON risolve.** Il codice resta nel nucleo e conosce i nomi dei moduli di Finance. È il primo tempo; il secondo è l'**AI nei moduli**:
+
+### AI nei moduli (progettazione, non ancora costruito)
+
+L'idea (di Nima): abilitare l'AI su un tenant lo fa "evolvere" offrendo versioni potenziate dei moduli; la chiave si inserisce nel tenant
+(già così: cifrata in Super Admin, tetto per tenant). Un modulo **dichiara** nel suo schema cosa sa fare con l'AI, con blocchi nuovi come
+quelli esistenti per campi, workflow e automazioni:
+- `ai_triage`: "quando una riga arriva da smistare, proponi categoria, importo, scadenza"; dichiara il campo categoria e dove prende il testo
+  (email, allegati). Oggi è `ai-suggestions.js` con `spese_casa` e `spese_personali` scritti dentro.
+- `ai_explain`: "racconta questi totali"; oggi il commento ai report (già generico) e "Come sta andando".
+- `ai_import`: "leggi un estratto o un documento e proponi righe"; oggi `bank-import.js`.
+Nel nucleo restano pochi motori generici (smistare, spiegare, importare) e la parte di sicurezza (pulizia dei dati personali, tetto di spesa,
+controllo dei numeri), che sta già in Super Admin. Le versioni potenziate si pubblicano in Libreria come versione 2 del modulo; il tenant
+vede "disponibile v2 con AI" e aggiorna quando vuole (l'aggiornamento è già esplicito). Il Builder all'inizio mostra i blocchi in sola lettura.
+**Ordine:** `ai_triage` per primo (la prova più piccola), poi `ai_explain`, infine `ai_import`. Si parte quando nasce un secondo progetto che usa l'AI.
+
 ### Da fare (nell'ordine deciso)
 
 1. **Movimenti bancari**, passi successivi (la lettura del conto personale c'è, vedi sopra): Prepagata e Conto Casa come conti a sé,

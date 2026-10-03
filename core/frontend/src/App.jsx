@@ -123,6 +123,7 @@ export default function App() {
   const [builderOpenNew, setBuilderOpenNew] = useState(false)
   const openBuilderNewModule = () => { setBuilderOpenNew(true); setCurrentPage('builder') }
   const [tenantName, setTenantName] = useState('')
+  const [features, setFeatures] = useState({}) // funzioni facoltative accese su questo progetto (da /api/tenant-info)
   const [tenantLogoUrl, setTenantLogoUrl] = useState('')
   const [hidePlatformName, setHidePlatformName] = useState(false)
   const [loginCms, setLoginCms] = useState(null)
@@ -164,6 +165,7 @@ export default function App() {
     if (!res.ok) return
     const data = await res.json()
     setTenantName(data.name || '')
+    setFeatures(data.features || {})
     setTenantLogoUrl((data.logo_url || ''))
     setHidePlatformName(!!data.hide_platform_name)
     setLoginCms(data.login_headline ? {
@@ -240,7 +242,7 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen bg-surface-page">
-      <Sidebar modules={installedModules} currentPage={currentPage} onNavigate={setCurrentPage} user={user} onLogout={logout} tenantName={tenantName} logoUrl={tenantLogoUrl} hidePlatformName={hidePlatformName} token={token}
+      <Sidebar modules={installedModules} currentPage={currentPage} onNavigate={setCurrentPage} user={user} onLogout={logout} tenantName={tenantName} logoUrl={tenantLogoUrl} hidePlatformName={hidePlatformName} features={features} token={token}
         mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)} collapsed />
       <main className="md:ml-14 flex-1 min-w-0">
         <div className="sticky top-0 z-20 bg-surface-page/90 backdrop-blur-sm border-b border-gray-800/50 px-4 md:px-8 py-3 flex items-center justify-between md:justify-end gap-3" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
@@ -250,9 +252,9 @@ export default function App() {
           <GlobalSearch token={token} modules={installedModules} onNavigate={setCurrentPage} />
         </div>
         <div className="p-4 md:p-8">
-        {currentPage === 'dashboard' && <DashboardPage user={user} modules={installedModules} token={token} onNavigate={setCurrentPage} />}
+        {currentPage === 'dashboard' && <DashboardPage user={user} modules={installedModules} token={token} features={features} onNavigate={setCurrentPage} />}
         {currentPage === 'report' && <DashboardPage user={user} modules={installedModules} token={token} page="report" />}
-        {currentPage === 'movimenti' && user && user.role === 'admin' && <MovimentiPage token={token} />}
+        {currentPage === 'movimenti' && user && user.role === 'admin' && features.movimenti && <MovimentiPage token={token} />}
         {currentPage === 'libreria' && user && user.role === 'admin' && <LibreriaPage token={token} onRefresh={loadModules} onOpenInBuilder={openInBuilder} onCreateNewModule={openBuilderNewModule} />}
         {currentPage === 'builder' && user && user.role === 'admin' && <BuilderPage token={token} allModules={allModulesForBuilder} onModulesChanged={loadModules} preselectSlug={builderPreselect} onPreselectHandled={() => setBuilderPreselect(null)} openNewModule={builderOpenNew} onNewModuleHandled={() => setBuilderOpenNew(false)} />}
         {currentPage === 'guida' && <GuidaPage modules={installedModules} token={token} />}
@@ -273,7 +275,7 @@ export default function App() {
             'sito_web' qui sotto instrada sullo stesso meccanismo di 'account'
             sopra, solo con un tab diverso. */}
         {(currentPage === 'impostazioni' || currentPage === 'account' || currentPage === 'sito_web') && user &&
-          <ImpostazioniPage token={token} user={user} initialTab={currentPage === 'impostazioni' ? undefined : currentPage} />}
+          <ImpostazioniPage token={token} user={user} features={features} onFeaturesChanged={loadTenantName} initialTab={currentPage === 'impostazioni' ? undefined : currentPage} />}
         {currentModule && !['dashboard', 'utenti', 'report'].includes(currentPage) && <ModulePage module={currentModule} token={token} user={user} onNavigate={setCurrentPage} />}
         </div>
       </main>
