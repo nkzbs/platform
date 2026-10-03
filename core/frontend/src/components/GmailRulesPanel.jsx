@@ -6,7 +6,7 @@ const EMPTY = { mittente: '', descrizione: '', gruppo: 'Casa', categoria: '', at
 const inputCls = 'w-full bg-surface-page text-ink px-3 py-2 rounded-lg outline-none border border-gray-800 focus:border-accent text-sm placeholder-gray-600'
 
 // Quali mail diventano spese: per ogni mittente, il gruppo (Casa o Personale) e la categoria.
-// I dati stanno come prima (record 'gmail_regole'), ma si gestiscono da qui.
+// Tabella gmail_rules, rotte /api/gmail-rules.
 export default function GmailRulesPanel({ token }) {
   const api = useApi(token)
   const [rows, setRows] = useState(null)
@@ -14,7 +14,7 @@ export default function GmailRulesPanel({ token }) {
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const load = async () => { const d = await api.get('/records/gmail_regole'); setRows(Array.isArray(d) ? d : []) }
+  const load = async () => { const d = await api.get('/gmail-rules'); setRows(Array.isArray(d) ? d.map((x) => ({ id: x.id, data: x })) : []) }
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async () => {
@@ -23,15 +23,15 @@ export default function GmailRulesPanel({ token }) {
     if (!/^\S+@\S+\.\S+$/.test(d.mittente.trim())) { setErr('Il mittente deve essere un indirizzo email (es. bollette@a2a.it).'); return }
     setBusy(true)
     const body = { ...d, mittente: d.mittente.trim() }
-    const res = edit.id ? await api.put('/records/gmail_regole/' + edit.id, body) : await api.post('/records/gmail_regole', body)
+    const res = edit.id ? await api.put('/gmail-rules/' + edit.id, body) : await api.post('/gmail-rules', body)
     setBusy(false)
     if (res.ok) { setEdit(null); load() } else setErr((res.data && res.data.error) || 'Non sono riuscito a salvare.')
   }
   const remove = async (r) => {
     if (!window.confirm('Togliere la regola per ' + r.data.mittente + '?')) return
-    await api.del('/records/gmail_regole/' + r.id); load()
+    await api.del('/gmail-rules/' + r.id); load()
   }
-  const toggleActive = async (r) => { await api.put('/records/gmail_regole/' + r.id, { ...r.data, attiva: r.data.attiva === false }); load() }
+  const toggleActive = async (r) => { await api.put('/gmail-rules/' + r.id, { ...r.data, attiva: r.data.attiva === false }); load() }
 
   return (
     <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mt-4">

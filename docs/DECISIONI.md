@@ -137,20 +137,26 @@ verso Mistral: pulizia dei dati personali, controllo dei numeri e tetto restano 
 - `MISTRAL_API_KEY` dell'ambiente resta come **ripiego**: un tenant senza chiave sua la usa (e la spesa conta comunque
   nel suo tetto). Senza né l'una né l'altra, l'assistente risponde "nessuna chiave" e non chiama nessuno.
 
-## 2026-10-03 — Regole Gmail e Destinatari WhatsApp escono dal menu
+## 2026-10-03 — Regole Gmail e Destinatari WhatsApp: impostazioni del sistema, non moduli
 
-**Perché.** Non sono spese o entrate da consultare ma impostazioni del sistema: chi riceve quali messaggi, e quali mail
-diventano spese. Averli nel menu come moduli era un residuo di come erano nati.
+**Perché.** Non sono spese o entrate da consultare ma impostazioni: chi riceve quali messaggi, e quali mail diventano
+spese. Averli come moduli era un residuo di come erano nati.
 
-**Ora.** Si gestiscono da Impostazioni: i destinatari in **Notifiche**, le regole Gmail in **Connessioni** (sotto Google).
-Non compaiono più nel menu, nell'elenco moduli, nella Libreria né nel Builder (`core/backend/src/system-modules.js`).
+**Ora.** Hanno tabelle proprie (`whatsapp_recipients`, `gmail_rules`) e si gestiscono da Impostazioni: i destinatari in
+**Notifiche**, le regole Gmail in **Connessioni** (sotto Google). I moduli `whatsapp_destinatari` e `gmail_regole` non esistono
+più: né nel menu, né nella Libreria, né nel Builder. Il codice è in `core/backend/src/notification-settings.js`.
 
-**Cosa NON cambia.** I dati restano nella stessa tabella `records` con gli stessi slug (`whatsapp_destinatari`,
-`gmail_regole`): backup, export e motore (notifiche, riepilogo, poller Gmail) li leggono come prima, e nessun dato
-è stato spostato o toccato in produzione. Non sono "core" nel senso di tabelle dedicate: se un giorno servirà,
-si può farlo con una migrazione, ma oggi non porterebbe nulla.
+**Migrazione** (`migrateLegacy()`, all'avvio e dopo ogni import di un backup): copia le righe rimaste in `records` nelle
+tabelle nuove e, nella stessa transazione, toglie righe, moduli e permessi vecchi. È idempotente. Una riga incompleta
+non viene persa: resta dov'è e il modulo non viene tolto finché c'è qualcosa da salvare. Provata su una copia dei dati
+reali di Finance (6 righe → 1 destinatario e 5 regole). I backup JSON includono le due tabelle; un backup vecchio
+(con i due moduli come righe) si importa lo stesso.
 
 ### Corretto durante il lavoro
+
+- Il riepilogo del mattino **non è mai partito in produzione**: `startDailyDigest()` chiamava `.catch()` sul risultato di
+  `withLock()`, che è una funzione e non una promessa, e ogni minuto finiva in un `TypeError` nel registro. I test passavano perché
+  chiamavano `tick()` direttamente. Corretto, con un test che avvia il controllo come fa il server.
 
 - Il commit "Assistente AI, WhatsApp…" nel repository nuovo conteneva solo la parte `core/`: mancavano i file di Super Admin
   (`lib/ai-budget.js`, `lib/ai-redact.js`, `routes/tenant-ai.js` con lo smistamento bollette, ecc.). Il NAS era a posto,

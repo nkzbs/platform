@@ -89,9 +89,7 @@ function buildDigest(now = new Date()) {
 }
 
 function destinatari() {
-  return db.prepare("SELECT data FROM records WHERE module_slug = 'whatsapp_destinatari'").all()
-    .map((r) => { try { return JSON.parse(r.data || '{}'); } catch (e) { return null; } })
-    .filter((d) => d && d.attivo !== false && d.numero && Array.isArray(d.triggers) && d.triggers.includes(TAG));
+  return require('./notification-settings').recipientsForTag(TAG);
 }
 
 function writeLog(esito, descrizione) {
@@ -134,7 +132,10 @@ async function tick(now = new Date()) {
 
 function startDailyDigest() {
   const { withLock } = require('./scheduler-lock');
-  setInterval(() => { withLock('daily-digest', 55000, () => tick()).catch((e) => console.error('[digest]', e.message)); }, 60 * 1000);
+  // withLock restituisce la funzione già protetta dal lock (con Redis) o la funzione stessa
+  // (senza): va richiamata, e il risultato può non essere una promessa.
+  const guarded = withLock('daily-digest', 55000, tick);
+  setInterval(() => { Promise.resolve().then(() => guarded()).catch((e) => console.error('[digest]', e.message)); }, 60 * 1000);
   console.log('Riepilogo del mattino: controllo ogni minuto (spento finché non lo accendi dalle impostazioni)');
 }
 

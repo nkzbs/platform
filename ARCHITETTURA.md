@@ -125,8 +125,9 @@ Dal tenant, la voce **Export dati** scarica il database o un export JSON complet
 
 ## Collegamenti esterni
 
-Google (Gmail in lettura, Calendar, Drive) e WhatsApp (CallMeBot) si configurano per tenant dal dettaglio
-di un modulo. L'elenco mostra solo i collegamenti attivi o richiesti dai moduli installati. Le credenziali
+Google (Gmail in lettura, Calendar, Drive) e WhatsApp (CallMeBot) si configurano per tenant da Impostazioni → Connessioni.
+I destinatari WhatsApp (tabella `whatsapp_recipients`, Impostazioni → Notifiche) e le regole Gmail (tabella `gmail_rules`,
+Impostazioni → Connessioni) sono impostazioni del sistema, non moduli. L'elenco mostra solo i collegamenti attivi o richiesti dai moduli installati. Le credenziali
 Google (Client ID e Secret, token) stanno nella tabella `connections` del tenant.
 
 ## Notifiche WhatsApp

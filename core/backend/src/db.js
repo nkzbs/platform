@@ -552,6 +552,28 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_ai_suggestions_record ON ai_suggestions(module_slug, record_id, status);
 `);
 
+// Destinatari WhatsApp e regole Gmail: impostazioni del sistema (prima erano due moduli nascosti,
+// con le righe nella tabella `records`; vedi notification-settings.js e docs/DECISIONI.md).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS whatsapp_recipients (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT NOT NULL,
+    numero TEXT NOT NULL,
+    triggers TEXT NOT NULL DEFAULT '[]',
+    attivo INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS gmail_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mittente TEXT NOT NULL,
+    descrizione TEXT,
+    gruppo TEXT NOT NULL DEFAULT 'Casa',
+    categoria TEXT,
+    attiva INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
 // Tema per pagina (2026-09-04, richiesto dall'utente dopo aver mostrato un mockup
 // reale — brand scuro/oro con font serif) — a livello di PAGINA, non di tenant: un
 // sito può avere sezioni scure alternate a chiare (ogni blocco ha il proprio flag

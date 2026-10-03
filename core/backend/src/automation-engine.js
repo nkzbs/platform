@@ -125,18 +125,10 @@ function httpPost(urlStr, body, headers) {
   });
 }
 
-// Legge i destinatari WhatsApp (modulo Builder 'whatsapp_destinatari', campi nome/
-// numero/triggers/attivo — 'triggers' è un campo multiselect, quindi già un array
-// nel JSON del record, non una stringa da fare JSON.parse una seconda volta)
-// sottoscritti a un dato tag.
+// Destinatari WhatsApp attivi iscritti a un dato tag (tabella whatsapp_recipients,
+// notification-settings.js). Mai un errore verso il chiamante: nel dubbio, nessun destinatario.
 function getDestinatariPerTag(tag) {
-  try {
-    const righe = db.prepare("SELECT data FROM records WHERE module_slug = 'whatsapp_destinatari'").all();
-    return righe
-      .map((r) => { try { return JSON.parse(r.data || '{}'); } catch { return null; } })
-      .filter((d) => d && d.attivo !== false && d.numero)
-      .filter((d) => Array.isArray(d.triggers) && d.triggers.includes(tag));
-  } catch (e) { return []; }
+  try { return require('./notification-settings').recipientsForTag(tag); } catch (e) { return []; }
 }
 
 function getCredentials(integrationId) {

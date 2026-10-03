@@ -131,7 +131,7 @@ global.fetch = async (url) => {
     assertEq(sent.length, 0);
   });
 
-  db.prepare("INSERT INTO records (module_slug, user_id, data) VALUES ('whatsapp_destinatari', NULL, ?)").run(JSON.stringify({ nome: 'Nima', numero: '+39 333 111 1111', triggers: ['scadenza'], attivo: true }));
+  db.prepare("INSERT INTO whatsapp_recipients (nome, numero, triggers, attivo) VALUES ('Nima', '+39 333 111 1111', ?, 1)").run(JSON.stringify(['scadenza']));
 
   await test('con un destinatario parte UN solo messaggio con tutto dentro, e il registro lo dice', async () => {
     fixture();
@@ -208,10 +208,30 @@ global.fetch = async (url) => {
   await test('gli avvisi con un altro tag (bolletta, rata) non vengono toccati dal riepilogo', async () => {
     reset();
     digest.saveSettings({ enabled: true });
-    db.prepare("UPDATE records SET data = ? WHERE module_slug = 'whatsapp_destinatari'").run(JSON.stringify({ nome: 'Nima', numero: '+39 333 111 1111', triggers: ['scadenza', 'bolletta'], attivo: true }));
+    db.prepare("UPDATE whatsapp_recipients SET triggers = ?").run(JSON.stringify(['scadenza', 'bolletta']));
     runAzioni([{ target: '__interno__', azione: 'invia_notifica', config: { trigger_tag: 'bolletta', messaggio: 'Nuova bolletta' } }], {}, 'spese_casa', 'Notifica bolletta', 2, { triggerDesc: 't' }, {});
     for (let i = 0; i < 50 && sent.length === 0; i++) await new Promise((r) => setTimeout(r, 20));
     assertEq(sent.length, 1);
+  });
+
+  console.log('\n--- avvio nel server ---');
+
+  await test('startDailyDigest: il controllo ogni minuto gira senza errori (con e senza Redis)', async () => {
+    // Bug trovato in produzione: withLock() restituisce una funzione, non una promessa, e il
+    // codice chiamava .catch() su di essa: ogni minuto un TypeError e il riepilogo non partiva mai.
+    const realSetInterval = global.setInterval;
+    let cb = null;
+    global.setInterval = (fn) => { cb = fn; return 0; };
+    const errors = [];
+    const realErr = console.error;
+    console.error = (...a) => errors.push(a.join(' '));
+    try {
+      digest.startDailyDigest();
+      assertTrue(typeof cb === 'function', 'deve programmare il controllo');
+      cb();
+      await new Promise((r) => setTimeout(r, 50));
+    } finally { global.setInterval = realSetInterval; console.error = realErr; }
+    assertEq(errors.length, 0, 'errori: ' + errors.join(' | '));
   });
 
   console.log(`\n${'='.repeat(60)}`);

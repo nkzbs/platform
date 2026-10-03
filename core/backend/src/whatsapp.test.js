@@ -159,7 +159,7 @@ const BAD_KEY = { status: 200, body: 'ERROR: APIKey is invalid or phone number i
 
   const { runAzioni } = require('./automation-engine');
   db.prepare("INSERT OR REPLACE INTO connections (integration_id, connected, credentials) VALUES ('whatsapp_callmebot', 1, ?)").run(JSON.stringify({ api_key: 'chiave-finta' }));
-  db.prepare("INSERT INTO records (module_slug, user_id, data) VALUES ('whatsapp_destinatari', NULL, ?)").run(JSON.stringify({ nome: 'Nima', numero: '+39 333 111 1111', triggers: ['scadenza'], attivo: true }));
+  db.prepare("INSERT INTO whatsapp_recipients (nome, numero, triggers, attivo) VALUES ('Nima', '+39 333 111 1111', ?, 1)").run(JSON.stringify(['scadenza']));
   const AZIONE = [{ target: '__interno__', azione: 'invia_notifica', config: { trigger_tag: 'scadenza', messaggio: 'Scade oggi: {{descrizione}}' } }];
   const lastLog = () => db.prepare("SELECT esito, action_desc FROM automation_logs WHERE automation_label = 'Notifica scadenza' ORDER BY id DESC").get();
   const waitDone = async () => { for (let i = 0; i < 100; i++) { const l = lastLog(); if (l && l.esito !== 'in invio') return l; await new Promise((r) => setTimeout(r, 20)); } return lastLog(); };

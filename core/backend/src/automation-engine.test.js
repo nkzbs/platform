@@ -55,8 +55,10 @@ const mockDb = {
     if (sql === 'SELECT credentials FROM connections WHERE integration_id = ?') {
       return { get: (integrationId) => (MOCK_CREDENTIALS[integrationId] ? { credentials: JSON.stringify(MOCK_CREDENTIALS[integrationId]) } : undefined) };
     }
-    if (sql === "SELECT data FROM records WHERE module_slug = 'whatsapp_destinatari'") {
-      return { all: () => RECORDS.filter((r) => r.module_slug === 'whatsapp_destinatari') };
+    if (sql === 'SELECT * FROM whatsapp_recipients ORDER BY id') {
+      // I destinatari WhatsApp hanno una tabella propria (notification-settings.js); il test li
+      // semina come prima con seedRecord e qui li restituisce nella forma della tabella.
+      return { all: () => RECORDS.filter((r) => r.module_slug === 'whatsapp_destinatari').map((r) => { const d = JSON.parse(r.data); return { id: r.id, nome: d.nome, numero: d.numero, triggers: JSON.stringify(d.triggers || []), attivo: d.attivo === false ? 0 : 1 }; }) };
     }
     if (sql === 'INSERT INTO automation_deltas (module_slug, record_id, campo, delta, source_module, source_record_id) VALUES (?, ?, ?, ?, ?, ?)') {
       return {

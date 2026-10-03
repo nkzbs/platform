@@ -299,7 +299,7 @@ function InviaNotificaConfig({ config, onChange }) {
         <textarea className="w-full bg-surface-page text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-700 resize-none"
           rows={2} value={cfg.messaggio || ''} onChange={(e) => onChange({ ...cfg, messaggio: e.target.value })} />
       </div>
-      <div className="text-[10px] text-gray-600">Invia via CallMeBot (connessione "WhatsApp (CallMeBot)") a tutti i destinatari del modulo "whatsapp_destinatari" iscritti a questo tag.</div>
+      <div className="text-[10px] text-gray-600">Invia via CallMeBot (connessione "WhatsApp (CallMeBot)") a tutti i destinatari WhatsApp (Impostazioni → Notifiche) iscritti a questo tag.</div>
     </div>
   )
 }

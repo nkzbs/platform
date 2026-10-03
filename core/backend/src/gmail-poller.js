@@ -40,9 +40,7 @@ async function gmailGet(accessToken, urlPath) {
 }
 
 function getActiveRules() {
-  return db.prepare("SELECT id, data FROM records WHERE module_slug = 'gmail_regole'").all()
-    .map((r) => ({ id: r.id, ...JSON.parse(r.data) }))
-    .filter((r) => r.attiva && r.mittente);
+  return require('./notification-settings').activeRules();
 }
 
 // Cammina l'albero 'parts' del messaggio Gmail (può essere annidato) raccogliendo

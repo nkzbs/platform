@@ -197,7 +197,7 @@ async function main() {
   const ins = (data, importo, cat) => db.prepare("INSERT INTO records (module_slug, user_id, data) VALUES ('spese_casa', NULL, ?)").run(JSON.stringify({ descrizione: 'riga segreta ' + cat, data, importo, categoria: cat, _stato: 'pagato' }));
   ins(mesePrec, 200, 'Elettricità'); ins(mesePrec, 100, 'Gas'); ins(mesePrecPrec, 150, 'Elettricità');
   db.prepare("INSERT OR REPLACE INTO connections (integration_id, connected, credentials) VALUES ('whatsapp_callmebot', 1, ?)").run(JSON.stringify({ api_key: 'chiave-finta' }));
-  db.prepare("INSERT INTO records (module_slug, user_id, data) VALUES ('whatsapp_destinatari', NULL, ?)").run(JSON.stringify({ nome: 'Nima', numero: '+39 333 111 1111', triggers: ['report'], attivo: true }));
+  db.prepare("INSERT INTO whatsapp_recipients (nome, numero, triggers, attivo) VALUES ('Nima', '+39 333 111 1111', ?, 1)").run(JSON.stringify(['report']));
   const AZ = [{ target: '__interno__', azione: 'invia_report_periodico', config: { periodo: 'mese', raggruppa_per: 'categoria', trigger_tag: 'report', titolo: 'Report mensile' } }];
   const run = async () => { wa = []; sa.calls = []; runAzioni(AZ, {}, 'spese_casa', 'Report mensile', null, { triggerDesc: 'il 1° del mese' }, {}); for (let i = 0; i < 100 && !wa.length; i++) await new Promise((r) => setTimeout(r, 30)); await new Promise((r) => setTimeout(r, 50)); };
 

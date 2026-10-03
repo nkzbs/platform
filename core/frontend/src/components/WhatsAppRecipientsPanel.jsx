@@ -13,8 +13,7 @@ const TAGS = [
 const EMPTY = { nome: '', numero: '', triggers: ['scadenza'], attivo: true }
 const inputCls = 'w-full bg-surface-page text-ink px-3 py-2 rounded-lg outline-none border border-gray-800 focus:border-accent text-sm placeholder-gray-600'
 
-// Chi riceve quali messaggi WhatsApp. I dati stanno come prima (record 'whatsapp_destinatari'),
-// ma si gestiscono da qui, non da una voce di menu.
+// Chi riceve quali messaggi WhatsApp (tabella whatsapp_recipients, rotte /api/whatsapp-recipients).
 export default function WhatsAppRecipientsPanel({ token }) {
   const api = useApi(token)
   const [rows, setRows] = useState(null)
@@ -22,7 +21,7 @@ export default function WhatsAppRecipientsPanel({ token }) {
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const load = async () => { const d = await api.get('/records/whatsapp_destinatari'); setRows(Array.isArray(d) ? d : []) }
+  const load = async () => { const d = await api.get('/whatsapp-recipients'); setRows(Array.isArray(d) ? d.map((x) => ({ id: x.id, data: x })) : []) }
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async () => {
@@ -30,15 +29,15 @@ export default function WhatsAppRecipientsPanel({ token }) {
     const d = edit.data
     if (!d.nome.trim() || !d.numero.trim()) { setErr('Servono nome e numero.'); return }
     setBusy(true)
-    const res = edit.id ? await api.put('/records/whatsapp_destinatari/' + edit.id, d) : await api.post('/records/whatsapp_destinatari', d)
+    const res = edit.id ? await api.put('/whatsapp-recipients/' + edit.id, d) : await api.post('/whatsapp-recipients', d)
     setBusy(false)
     if (res.ok) { setEdit(null); load() } else setErr((res.data && res.data.error) || 'Non sono riuscito a salvare.')
   }
   const remove = async (r) => {
     if (!window.confirm('Togliere ' + r.data.nome + ' dai destinatari?')) return
-    await api.del('/records/whatsapp_destinatari/' + r.id); load()
+    await api.del('/whatsapp-recipients/' + r.id); load()
   }
-  const toggleActive = async (r) => { await api.put('/records/whatsapp_destinatari/' + r.id, { ...r.data, attivo: r.data.attivo === false }); load() }
+  const toggleActive = async (r) => { await api.put('/whatsapp-recipients/' + r.id, { ...r.data, attivo: r.data.attivo === false }); load() }
   const setTag = (id) => setEdit((e) => { const t = e.data.triggers || []; return { ...e, data: { ...e.data, triggers: t.includes(id) ? t.filter((x) => x !== id) : [...t, id] } } })
 
   return (

@@ -21,6 +21,7 @@ const rolesRoutes = require('./routes/roles');
 const { startScheduler } = require('./scheduler');
 const { startGmailPoller } = require('./gmail-poller');
 const aiRoutes = require('./routes/ai');
+const notificationSettingsRoutes = require('./routes/notification-settings');
 const digestRoutes = require('./routes/digest');
 const { startDailyDigest } = require('./daily-digest');
 const { startAuditRetentionScheduler } = require('./audit-retention-scheduler');
@@ -73,6 +74,7 @@ const routeMounts = [
   ['/settings', settingsRoutes],
   ['/integrazioni/google', googleOAuthRoutes],
   ['/ai', aiRoutes],
+  ['/', notificationSettingsRoutes],
   ['/digest', digestRoutes],
   ['/site-pages', siteAdminRouter],
 ];
@@ -141,6 +143,9 @@ app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);
   res.status(500).json({ error: 'Errore interno' });
 });
+
+// Destinatari WhatsApp e regole Gmail non sono più moduli: porta nelle tabelle nuove le righe rimaste.
+require('./notification-settings').migrateLegacy();
 
 app.listen(PORT, () => {
   console.log('Platform Core [' + (process.env.TENANT_SLUG || 'default') + '] running on port ' + PORT);

@@ -55,7 +55,9 @@ router.get('/export-json', requireAuth, requireAdmin, async (req, res) => {
       return { ...u, data_base64: null, error: e.message };
     }
   }));
-  const dump = { tenant, exported_at: new Date().toISOString(), modules, records, uploads, record_attachments: recordAttachments };
+  const whatsappRecipients = db.prepare('SELECT nome, numero, triggers, attivo FROM whatsapp_recipients ORDER BY id').all();
+  const gmailRules = db.prepare('SELECT mittente, descrizione, gruppo, categoria, attiva FROM gmail_rules ORDER BY id').all();
+  const dump = { tenant, exported_at: new Date().toISOString(), modules, records, uploads, record_attachments: recordAttachments, whatsapp_recipients: whatsappRecipients, gmail_rules: gmailRules };
   const uploadsFalliti = uploads.filter((u) => !u.data_base64).length;
   logAudit(req.user.username, 'backup.export_json', tenant, { modules: modules.length, records: records.length, uploads: uploads.length, uploadsFalliti });
   res.setHeader('Content-Disposition', `attachment; filename="backup-${tenant}-${new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-')}.json"`);
@@ -63,7 +65,7 @@ router.get('/export-json', requireAuth, requireAdmin, async (req, res) => {
 });
 
 router.post('/import-json', requireAuth, requireAdmin, async (req, res) => {
-  const { modules, records, uploads, record_attachments: recordAttachments } = req.body || {};
+  const { modules, records, uploads, record_attachments: recordAttachments, whatsapp_recipients: whatsappIn, gmail_rules: gmailIn } = req.body || {};
   if (!Array.isArray(modules) || !Array.isArray(records)) {
     return res.status(400).json({ error: 'Formato non valido: attesi { modules: [], records: [] }' });
   }
@@ -139,10 +141,24 @@ router.post('/import-json', requireAuth, requireAdmin, async (req, res) => {
       });
     }
 
+    // Destinatari WhatsApp e regole Gmail (assenti nei backup precedenti al 3/10/2026: lì stavano
+    // come righe di due moduli, che migrateLegacy() porta qui subito dopo).
+    if (Array.isArray(whatsappIn)) {
+      db.exec('DELETE FROM whatsapp_recipients');
+      const ins = db.prepare('INSERT INTO whatsapp_recipients (nome, numero, triggers, attivo) VALUES (?, ?, ?, ?)');
+      whatsappIn.forEach((w) => ins.run(w.nome, w.numero, typeof w.triggers === 'string' ? w.triggers : JSON.stringify(w.triggers || []), w.attivo ? 1 : 0));
+    }
+    if (Array.isArray(gmailIn)) {
+      db.exec('DELETE FROM gmail_rules');
+      const ins = db.prepare('INSERT INTO gmail_rules (mittente, descrizione, gruppo, categoria, attiva) VALUES (?, ?, ?, ?, ?)');
+      gmailIn.forEach((g) => ins.run(g.mittente, g.descrizione || '', g.gruppo || 'Casa', g.categoria || '', g.attiva ? 1 : 0));
+    }
+
     return { moduliCreati, recordRipristinati: records.length, moduliInteressati: slugsPresenti.length, uploadsRipristinati, uploadsFalliti };
   });
   try {
     const result = importTx();
+    require('../notification-settings').migrateLegacy();
     logAudit(req.user.username, 'backup.import_json', process.env.TENANT_SLUG || 'tenant', result);
     res.json({ ok: true, ...result });
   } catch (e) {
