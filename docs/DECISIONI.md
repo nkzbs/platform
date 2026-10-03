@@ -154,6 +154,9 @@ reali di Finance (6 righe → 1 destinatario e 5 regole). I backup JSON includon
 
 ### Corretto durante il lavoro
 
+- La **Checklist** in dashboard (periodo "questo mese") non permetteva di cambiare mese: ora ha le frecce avanti e indietro, il nome del
+  mese e "Torna a oggi" (`ChecklistWidget.jsx`).
+
 - **"Chiedi per le righe da smistare (N)" risaliva dopo ogni "Accetta".** Accettare applicava i campi ma lasciava la riga in "da smistare", che tornava tra
   quelle da chiedere. Ora Accetta esegue anche la transizione già prevista dal flusso delle spese, "Conferma categorizzazione"
   (da smistare → da pagare). Una riga già "da pagare" o "pagato" non cambia stato.

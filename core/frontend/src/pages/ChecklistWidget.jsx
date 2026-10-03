@@ -26,7 +26,7 @@ function isoLocal(d) {
 // del successivo" (prima versione, sbagliata: tagliava fuori proprio le spese di
 // fine mese che il cutoff avrebbe dovuto anticipare) — è sempre un mese di
 // calendario intero, solo scelto in anticipo.
-function currentMonthRange(cutoffDay) {
+function currentMonthRange(cutoffDay, offset = 0) {
   const cutoff = cutoffDay >= 2 && cutoffDay <= 28 ? cutoffDay : null
   const now = new Date()
   let year = now.getFullYear()
@@ -35,9 +35,10 @@ function currentMonthRange(cutoffDay) {
     month += 1
     if (month > 11) { month = 0; year += 1 }
   }
-  const from = new Date(year, month, 1)
-  const to = new Date(year, month + 1, 0)
-  return { from: isoLocal(from), to: isoLocal(to) }
+  // `offset` = mesi avanti (+) o indietro (-) rispetto al mese di partenza: serve alle frecce del widget.
+  const from = new Date(year, month + offset, 1)
+  const to = new Date(year, month + offset + 1, 0)
+  return { from: isoLocal(from), to: isoLocal(to), label: from.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' }) }
 }
 
 // Widget "Checklist multi-modulo": combina i record di più moduli sorgente (ognuno
@@ -80,6 +81,7 @@ function ChecklistWidget({ config, token, label, color, modules, user }) {
   const [loading, setLoading] = useState(true)
   const [savingId, setSavingId] = useState(null)
   const [detail, setDetail] = useState(null) // { module_slug, recordId } — riga aperta nel modal
+  const [monthOffset, setMonthOffset] = useState(0) // frecce del mese: 0 = quello di partenza, -1 = il precedente...
 
   const sources = config?.sources || []
   const period = config?.period || 'tutti'
@@ -107,7 +109,7 @@ function ChecklistWidget({ config, token, label, color, modules, user }) {
     setLoading(true)
     let effectiveFrom = null, effectiveTo = null
     if (period === 'questo_mese') {
-      const r = currentMonthRange(config?.giorno_cutoff)
+      const r = currentMonthRange(config?.giorno_cutoff, monthOffset)
       effectiveFrom = r.from; effectiveTo = r.to
     } else if (period === 'personalizzato') {
       effectiveFrom = config?.from || null
@@ -143,7 +145,7 @@ function ChecklistWidget({ config, token, label, color, modules, user }) {
 
     setRows(all)
     setLoading(false)
-  }, [JSON.stringify(sources), period, config?.giorno_cutoff, config?.from, config?.to])
+  }, [JSON.stringify(sources), period, config?.giorno_cutoff, config?.from, config?.to, monthOffset])
 
   useEffect(() => { load() }, [load])
 
@@ -177,6 +179,7 @@ function ChecklistWidget({ config, token, label, color, modules, user }) {
     setSavingId(null)
   }
 
+  const monthNav = period === 'questo_mese' ? currentMonthRange(config?.giorno_cutoff, monthOffset) : null
   const moduleLabel = (slug) => (modules.find((m) => m.slug === slug) || {}).name || slug
 
   const totale = rows.reduce((s, r) => s + (parseFloat(r.data[r._source.amount_field]) || 0), 0)
@@ -187,7 +190,17 @@ function ChecklistWidget({ config, token, label, color, modules, user }) {
   return (
     <div>
       <div className="px-5 pt-4 pb-3 border-b border-gray-800 flex items-center justify-between flex-wrap gap-2">
-        <div className="text-sm font-medium text-ink">{label}</div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="text-sm font-medium text-ink">{label}</div>
+          {monthNav && (
+            <div className="flex items-center gap-1 text-xs text-gray-400">
+              <button type="button" onClick={() => setMonthOffset((o) => o - 1)} className="px-1.5 py-1 rounded hover:bg-gray-800" aria-label="Mese precedente"><Icon name="chevron-left" size={13} /></button>
+              <span className="min-w-[110px] text-center capitalize text-gray-300">{monthNav.label}</span>
+              <button type="button" onClick={() => setMonthOffset((o) => o + 1)} className="px-1.5 py-1 rounded hover:bg-gray-800" aria-label="Mese successivo"><Icon name="chevron-right" size={13} /></button>
+              {monthOffset !== 0 && <button type="button" onClick={() => setMonthOffset(0)} className="ml-1 text-accent hover:underline">Torna a oggi</button>}
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-4 text-xs">
           <div className="text-gray-500">Totale <span className="text-ink font-semibold">{formatAmount(totale)}</span></div>
           <div className="text-gray-500">Da pagare <span className="font-semibold" style={{ color }}>{formatAmount(daPagare)}</span></div>
