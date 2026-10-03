@@ -47,7 +47,7 @@ async function main() {
     assertEq(info.features.movimenti, false);
   });
   await test('con la funzione spenta le rotte rispondono 403 "feature_off"; senza login restano 401', async () => {
-    for (const p of ['/bank/summary', '/insights', '/ai/overview', '/digest/settings']) {
+    for (const p of ['/bank/summary', '/insights', '/digest/settings']) {
       assertEq((await call('GET', p, null, {})).status, 401, p + ' senza login');
       const r = await call('GET', p);
       assertEq(r.status, 403, p);
@@ -64,9 +64,9 @@ async function main() {
     assertTrue((await call('GET', '/ai/settings')).status !== 403, 'impostazioni AI sempre disponibili');
     assertEq((await call('GET', '/modules')).status, 200);
   });
-  await test('lo smistamento delle bollette non parte se la funzione è spenta, nemmeno forzato', async () => {
+  await test('lo smistamento con l\'AI non parte se il modulo non lo ha acceso, nemmeno forzato', async () => {
     const out = await require('./ai-suggestions').suggestForRecord({ moduleSlug: 'spese_casa', recordId: 1, force: true });
-    assertEq(out.skipped, 'funzione non attiva');
+    assertEq(out.skipped, 'non attivo su questo modulo');
   });
   await test('il riepilogo del mattino non parte se la funzione è spenta', async () => {
     assertEq((await require('./daily-digest').tick()).skipped, 'funzione non attiva');
@@ -105,7 +105,7 @@ async function main() {
     db.prepare('DELETE FROM modules WHERE slug = ?').run('spese_personali');
     db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('Spese personali', 'spese_personali', 'box', '#000', 1, 1, 50, '{}')").run();
     assertEq(features.seedIfEmpty(), true);
-    for (const k of ['movimenti', 'analisi', 'bollette_ai', 'riepilogo_mattino']) assertEq(features.isEnabled(k), true, k);
+    for (const k of ['movimenti', 'analisi', 'riepilogo_mattino']) assertEq(features.isEnabled(k), true, k);
   });
   await test('WhatsApp, Gmail e Sito Web partono accesi solo se il progetto li usa già (destinatari, regole, sito attivo)', () => {
     db.exec('DELETE FROM tenant_features; DELETE FROM whatsapp_recipients; DELETE FROM gmail_rules;');

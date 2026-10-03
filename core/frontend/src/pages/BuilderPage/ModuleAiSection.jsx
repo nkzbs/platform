@@ -2,12 +2,24 @@ import React, { useState, useEffect } from 'react'
 import useApi from '../../lib/useApi'
 
 // Potenziamenti AI del modulo (Builder): ogni modulo accende da solo quelli che vuole. Senza i ruoli che servono (Ruoli del modulo)
-// il potenziamento resta fermo e qui si legge cosa manca. Gli interruttori si salvano; i potenziamenti si collegano uno alla volta.
+// il potenziamento resta fermo e qui si legge cosa manca. Collegato: "Smistare". Gli altri si collegano uno alla volta.
 export default function ModuleAiSection({ token, baseUrl, slug }) {
   const api = useApi(token, baseUrl)
   const [list, setList] = useState(null)
   const load = () => api.get('/module-ai/' + slug).then((d) => setList(Array.isArray(d) ? d : []))
   useEffect(() => { setList(null); load() }, [slug]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [key, setKey] = useState(null) // stato della chiave Mistral di questo progetto
+  const [keyInput, setKeyInput] = useState('')
+  const [keyMsg, setKeyMsg] = useState(null)
+  const loadKey = () => api.get('/ai/settings').then((d) => setKey(d && d.key ? d.key : null))
+  useEffect(() => { loadKey() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const saveKey = async () => {
+    setKeyMsg(null)
+    const res = await api.put('/ai/key', { key: keyInput })
+    if (res.ok) { setKeyInput(''); setKeyMsg({ ok: true, text: 'Chiave salvata.' }); loadKey() }
+    else setKeyMsg({ ok: false, text: (res.data && res.data.error) || 'Non sono riuscito a salvare la chiave.' })
+  }
 
   const toggle = async (key) => {
     const on = list.filter((f) => f.enabled).map((f) => f.key)
@@ -30,7 +42,20 @@ export default function ModuleAiSection({ token, baseUrl, slug }) {
           )}
         </div>
       ))}
-      <div className="text-[10.5px] text-gray-600 mt-1.5">In arrivo: gli interruttori si salvano, ma i potenziamenti non sono ancora collegati.</div>
+      {list.some((f) => f.enabled) && (
+        <div className="mt-2 text-[10.5px]">
+          {key && key.configured
+            ? <div className="text-gray-500">Chiave Mistral {key.source === 'tenant' ? 'di questo progetto' : 'generale'}{key.hint ? ' (' + key.hint + ')' : ''}.</div>
+            : <div className="text-amber-500">Manca la chiave Mistral: senza, l'AI non funziona.</div>}
+          <div className="flex gap-1.5 mt-1.5">
+            <input type="password" autoComplete="off" spellCheck="false" value={keyInput} onChange={(e) => setKeyInput(e.target.value)} placeholder="Incolla la chiave"
+              className="flex-1 min-w-0 bg-surface-page text-ink px-2 py-1 rounded-lg outline-none border border-gray-800 focus:border-accent text-xs" />
+            <button type="button" onClick={saveKey} disabled={!keyInput.trim()} className="bg-accent hover:opacity-90 disabled:opacity-50 text-white px-2.5 py-1 rounded-lg text-xs">Salva</button>
+          </div>
+          {keyMsg && <div className={'mt-1 ' + (keyMsg.ok ? 'text-green-500' : 'text-amber-500')}>{keyMsg.text}</div>}
+        </div>
+      )}
+      <div className="text-[10.5px] text-gray-600 mt-1.5">Lo "Smistare" propone nell'elenco del modulo; "Spiegare" e "Importare" arrivano a breve.</div>
     </div>
   )
 }

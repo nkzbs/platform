@@ -10,6 +10,7 @@ import Select from '../../components/Select'
 import FieldEditorInput from './FieldEditorInput'
 import RecordDetailModal from './RecordDetailModal'
 import ReportPanel from './ReportPanel'
+import AiSuggestionsPanel from '../../components/AiSuggestionsPanel'
 import SchemaReports from './SchemaReports'
 import BranchCreateModal from './BranchCreateModal'
 import ReconciliationView from './ReconciliationView'
@@ -715,6 +716,8 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
           )}
         </div>
       )}
+
+      <AiSuggestionsPanel token={token} isAdmin={!!(user && user.role === 'admin')} moduleSlug={mod.slug} onChanged={loadRecords} />
 
       {showReport && (
         <div className="mb-6">

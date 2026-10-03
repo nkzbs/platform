@@ -12,7 +12,6 @@ const FEATURES = {
   sito_web: { label: 'Sito Web', description: 'Pagine pubbliche del progetto, con il loro editor. Resta spento al pubblico finché non lo attivi dalla scheda Sito Web.' },
   movimenti: { label: 'Movimenti bancari', description: 'Carica gli estratti conto in PDF, vedi i movimenti reali e completa le spese che mancano.' },
   analisi: { label: 'Come sta andando', description: 'Scheda in dashboard con entrate, spese, risparmio, confronti e anomalie, spiegata dall\'assistente.' },
-  bollette_ai: { label: 'Smistamento bollette con l\'assistente', description: 'Propone categoria, importo e scadenza per le bollette in arrivo da Gmail.' },
   riepilogo_mattino: { label: 'Riepilogo del mattino', description: 'Un messaggio WhatsApp al giorno con le spese di oggi, domani e in ritardo.' },
 };
 const KEYS = Object.keys(FEATURES);
@@ -23,7 +22,7 @@ db.exec('CREATE TABLE IF NOT EXISTS tenant_features (key TEXT PRIMARY KEY, enabl
 // parte da zero e uno che funziona già non perde niente.
 function defaultFor(key) {
   const has = (sql) => { try { return !!db.prepare(sql).get(); } catch (e) { return false; } };
-  if (['movimenti', 'analisi', 'bollette_ai', 'riepilogo_mattino'].includes(key)) return has("SELECT 1 FROM modules WHERE installed = 1 AND slug IN ('spese_personali', 'spese_casa', 'entrate')");
+  if (['movimenti', 'analisi', 'riepilogo_mattino'].includes(key)) return has("SELECT 1 FROM modules WHERE installed = 1 AND slug IN ('spese_personali', 'spese_casa', 'entrate')");
   if (key === 'whatsapp') return has('SELECT 1 FROM whatsapp_recipients LIMIT 1') || has("SELECT 1 FROM connections WHERE integration_id = 'whatsapp_callmebot' AND connected = 1");
   if (key === 'gmail') return has('SELECT 1 FROM gmail_rules LIMIT 1');
   if (key === 'sito_web') return has('SELECT 1 FROM tenant_settings WHERE site_enabled = 1') || has('SELECT 1 FROM site_pages LIMIT 1');

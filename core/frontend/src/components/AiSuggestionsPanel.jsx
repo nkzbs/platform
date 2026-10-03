@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from './Icon'
 
-// Proposte dell'assistente AI, in dashboard: bollette di casa e personali in un solo elenco. L'AI PROPONE e non scrive:
-// ogni proposta si accetta (applica i campi al record) o si ignora. Compare solo se c'è qualcosa da vedere o da chiedere.
-const MODULO_LABEL = { spese_casa: 'Spese casa', spese_personali: 'Spese personali' }
+// Proposte dell'assistente AI per UN modulo (quello con "Smistare" acceso nel Builder), sopra l'elenco. L'AI PROPONE e non scrive:
+// ogni proposta si accetta (applica i campi al record, senza cambiarne lo stato) o si ignora. Compare solo se c'è qualcosa da vedere o da chiedere.
 const fmtEur = (n) => (n == null ? '—' : Number(n).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' }))
 
 // Un campo che l'assistente conferma senza cambiarlo: lo si mostra comunque, così si vede cosa ha capito (es. "Categoria: Elettricità").
@@ -29,7 +28,7 @@ function Change({ label, from, to }) {
   )
 }
 
-export default function AiSuggestionsPanel({ token, isAdmin }) {
+export default function AiSuggestionsPanel({ token, isAdmin, moduleSlug, onChanged }) {
   const api = useApi(token)
   const [items, setItems] = useState([])
   const [toAsk, setToAsk] = useState([]) // righe "da smistare" per cui non è ancora stata chiesta una proposta
@@ -41,9 +40,12 @@ export default function AiSuggestionsPanel({ token, isAdmin }) {
   const load = async () => {
     if (!isAdmin) return
     const data = await api.get('/ai/overview')
-    if (data) { setItems(data.items || []); setToAsk(data.to_ask || []); setToAskTotal(data.to_ask_total || 0) }
+    if (data) {
+      const mine = (x) => x.module_slug === moduleSlug
+      setItems((data.items || []).filter(mine)); const ask = (data.to_ask || []).filter(mine); setToAsk(ask); setToAskTotal(ask.length)
+    }
   }
-  useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, [moduleSlug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!isAdmin) return null
 
@@ -54,6 +56,7 @@ export default function AiSuggestionsPanel({ token, isAdmin }) {
     if (!res.ok) { setMsg({ ok: false, text: (res.data && res.data.error) || 'Operazione non riuscita' }); return }
     setMsg(null)
     await load()
+    if (action === 'accept' && onChanged) onChanged()
   }
 
   const askAll = async () => {
@@ -98,14 +101,14 @@ export default function AiSuggestionsPanel({ token, isAdmin }) {
           return (
             <div key={s.id} className="bg-surface-card border border-gray-800 rounded-lg p-3 flex items-start justify-between gap-3 flex-wrap">
               <div className="min-w-0 flex-1">
-                <div className="text-sm text-ink font-medium truncate">{s.record.descrizione} <span className="text-gray-500 font-normal">· {fmtEur(s.record.importo)} · {s.record.data} · {MODULO_LABEL[s.module_slug] || s.module_slug}</span></div>
+                <div className="text-sm text-ink font-medium truncate">{s.record.descrizione} <span className="text-gray-500 font-normal">· {fmtEur(s.record.importo)} · {s.record.data}</span></div>
                 <div className="mt-1.5 space-y-0.5">
                   {p.categoria && (p.categoria !== s.corrente.categoria ? <Change label="Categoria" from={s.corrente.categoria} to={p.categoria} /> : <Same label="Categoria" value={p.categoria} />)}
                   {!p.categoria && <div className="text-xs text-gray-500">Categoria: non si capisce dal documento, scegli tu.</div>}
                   {p.importo != null && (p.importo !== Number(s.corrente.importo || 0) ? <Change label="Importo" from={s.corrente.importo ? fmtEur(s.corrente.importo) : null} to={fmtEur(p.importo)} /> : <Same label="Importo" value={fmtEur(p.importo)} />)}
                   {p.scadenza && (p.scadenza !== s.corrente.scadenza ? <Change label="Scadenza" from={s.corrente.scadenza} to={p.scadenza} /> : <Same label="Scadenza" value={p.scadenza} />)}
                   {p.fornitore && <Change label="Fornitore" from={null} to={p.fornitore} />}
-                  {p.modulo && p.modulo !== s.module_slug && <div className="text-xs text-amber-400">Sembra una voce di «{MODULO_LABEL[p.modulo] || p.modulo}»: lo sposto a mano se è così.</div>}
+                  {p.modulo && p.modulo !== s.module_slug && <div className="text-xs text-amber-400">Sembra una voce di «{p.modulo}»: lo sposto a mano se è così.</div>}
                 </div>
                 <div className="text-[11px] text-gray-600 mt-1.5">Sicurezza della proposta: {p.confidenza}</div>
               </div>

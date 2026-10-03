@@ -73,6 +73,8 @@ async function main() {
     db.prepare('DELETE FROM modules WHERE slug = ?').run(slug);
     db.prepare("INSERT INTO modules (name, slug, icon, color, installed, sort_order, schema_json) VALUES (?, ?, 'box', '#2563EB', 1, 50, ?)").run(slug, slug, schema);
   }
+  const moduleAi = require('./module-ai'), moduleRoles = require('./module-roles');
+  for (const slug of ['spese_casa', 'spese_personali']) moduleRoles.set(slug, { kind: 'spesa', uses: ['avvisi', 'mail'], roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato' } });
   const newBill = (extra = {}) => db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run('spese_casa', null,
     JSON.stringify({ descrizione: 'A2A Energia', importo: 0, data: '2026-09-07', categoria: 'Altro', note: 'Importato da Gmail', _stato: 'da_smistare', ...extra })).lastInsertRowid;
   const getData = (id) => JSON.parse(db.prepare('SELECT data FROM records WHERE id = ?').get(id).data);
@@ -85,23 +87,26 @@ async function main() {
 
   console.log('\n--- interruttore ---');
 
-  await test('spento di default: il poller non chiama nessuno', async () => {
+  await test('senza "Smistare" acceso sul modulo l\'AI non lavora e non chiama nessuno', async () => {
     sa.calls = [];
     const id = newBill();
     const out = await ai.suggestForRecord({ moduleSlug: 'spese_casa', recordId: id, mittente: 'A2A', subject: 'Bolletta', text: 'testo' });
-    assertEq(out.skipped, 'disattivato');
+    assertEq(out.skipped, 'non attivo su questo modulo');
+    assertEq((await ai.suggestForRecord({ moduleSlug: 'spese_casa', recordId: id, force: true })).skipped, 'non attivo su questo modulo', 'nemmeno su richiesta esplicita');
     assertEq(sa.calls.length, 0, 'chiamate a Super Admin');
   });
 
-  await test('impostazioni: spento, e il consumo del mese arriva da Super Admin', async () => {
+  await test('impostazioni: il consumo del mese arriva da Super Admin', async () => {
     const s = await (await api('GET', '/settings')).json();
-    assertEq(s.bollette_enabled, false);
     assertEq(s.budget.spent_eur, 0.42);
   });
 
-  await test('si accende e si spegne dalle impostazioni', async () => {
-    assertEq((await (await api('PUT', '/settings', { bollette_enabled: true })).json()).bollette_enabled, true);
-    assertEq(ai.isEnabled(), true);
+  await test('si accende modulo per modulo, e un modulo senza i ruoli richiesti non lavora', async () => {
+    moduleAi.set('spese_casa', ['triage']); moduleAi.set('spese_personali', ['triage']);
+    assertEq(ai.triageModules().sort().join(), 'spese_casa,spese_personali');
+    moduleRoles.set('spese_personali', { kind: 'spesa', uses: [], roles: { importo: 'importo' } });
+    assertEq(ai.triageModules().join(), 'spese_casa', 'a spese_personali mancano categoria e stato');
+    moduleRoles.set('spese_personali', { kind: 'spesa', uses: ['avvisi', 'mail'], roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato' } });
   });
 
   await test('senza login nessuna rotta risponde', async () => {
@@ -210,7 +215,7 @@ async function main() {
 
   await test('un modulo che non è di spese non viene proposto', async () => {
     const out = await ai.suggestForRecord({ moduleSlug: 'entrate', recordId: 1, force: true });
-    assertEq(out.skipped, 'modulo non supportato');
+    assertEq(out.skipped, 'non attivo su questo modulo');
   });
 
   await test('se la proposta non cambia nulla non viene salvata', async () => {

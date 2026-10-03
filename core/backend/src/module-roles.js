@@ -33,7 +33,7 @@ function clean(input) {
   const kind = KINDS.includes(input && input.kind) ? input.kind : null;
   const uses = Array.isArray(input && input.uses) ? [...new Set(input.uses.filter((u) => USES.includes(u)))] : [];
   const roles = {};
-  for (const k of ROLE_KEYS) { const v = input && input.roles && input.roles[k]; if (typeof v === 'string' && v.trim()) roles[k] = v.trim(); }
+  for (const k of ROLE_KEYS) { const v = input && input.roles && input.roles[k]; if (typeof v === 'string' && /^[A-Za-z0-9_]{1,60}$/.test(v.trim())) roles[k] = v.trim(); }
   return { kind, uses, roles };
 }
 
