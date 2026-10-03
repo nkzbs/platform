@@ -150,6 +150,7 @@ app.use((err, req, res, next) => {
 
 // Destinatari WhatsApp e regole Gmail non sono più moduli: porta nelle tabelle nuove le righe rimaste.
 require('./notification-settings').migrateLegacy();
+require('./legacy-cleanup').removeStubModules();
 
 app.listen(PORT, () => {
   console.log('Platform Core [' + (process.env.TENANT_SLUG || 'default') + '] running on port ' + PORT);

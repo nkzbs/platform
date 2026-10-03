@@ -154,6 +154,10 @@ reali di Finance (6 righe → 1 destinatario e 5 regole). I backup JSON includon
 
 ### Corretto durante il lavoro
 
+- In Libreria compariva un modulo **"Sito Web" da installare**, mentre il Sito Web vero è una funzione delle Impostazioni (scheda Sito Web).
+  Erano due moduli segnaposto vuoti (`sito_web`, `sito_avanzato`: nessun campo, non installati) rimasti da una versione vecchia.
+  All'avvio `core/backend/src/legacy-cleanup.js` li toglie, ma solo se sono davvero vuoti (non installati, schema senza blocchi, nessun record).
+
 - **Luce o gas?** Una bolletta "A2A Energia Gas/Luce" arrivava all'assistente senza categoria: il titolo non basta, il tipo sta nel PDF
   allegato. Ora il PDF si legge in locale (`core/backend/src/attachment-text.js`, `pdftotext`) e un programma calcola un **indizio**
   (kWh, POD, "energia elettrica" = luce; Smc, PDR, "gas naturale" = gas; entrambi se ci sono segni di tutti e due). A Super Admin
