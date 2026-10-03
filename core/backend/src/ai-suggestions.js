@@ -132,9 +132,6 @@ function accept(id, actor) {
     after.note = (before.note ? before.note + '\n' : '') + 'Fornitore: ' + p.fornitore;
     applied.push('fornitore');
   }
-  // Accettare è confermare la categorizzazione: la riga esce da "da smistare" (è la transizione "Conferma categorizzazione" del flusso
-  // delle spese). Senza questo restava da smistare e tornava a contare tra le righe da chiedere all'assistente.
-  if (before._stato === 'da_smistare') { after._stato = 'da_pagare'; applied.push('stato'); }
   if (applied.length) {
     db.prepare('UPDATE records SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify(after), sug.record_id);
     logHistory(sug.module_slug, sug.record_id, actor, before, after);

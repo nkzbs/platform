@@ -4,7 +4,6 @@ import Icon from '../components/Icon'
 import { parseSchemaFrontend } from '../lib/schema-v3-frontend'
 import ChecklistWidget from './ChecklistWidget'
 import InsightsCard from '../components/InsightsCard'
-import AiSuggestionsPanel from '../components/AiSuggestionsPanel'
 import YearlyBreakdownView from './ModulePage/YearlyBreakdownView'
 import CategoryPivotView from './ModulePage/CategoryPivotView'
 import WeeklyBreakdownView from './ModulePage/WeeklyBreakdownView'
@@ -238,7 +237,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
   }
   const saveWidget = async () => {
     const w = { ...newWidget, page }
-    if (!w.label) w.label = w.module_slug || (w.type === 'checklist' ? 'Checklist' : 'Widget')
+    if (!w.label) w.label = w.module_slug || (w.type === 'checklist' ? 'Checklist' : w.type === 'come_sta_andando' ? 'Come sta andando' : 'Widget')
     if (w.type === 'checklist') w.config = checklistConfig
     if (w.type === 'periodo') w.config = periodoConfig
     if (w.type === 'riepilogo_mensile') w.config = riepilogoConfig
@@ -342,8 +341,6 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
         )}
       </div>
 
-      {page === 'dashboard' && features.bollette_ai && <AiSuggestionsPanel token={token} isAdmin={!!(user && user.role === 'admin')} />}
-      {page === 'dashboard' && features.analisi && <InsightsCard token={token} onNavigate={features.movimenti ? onNavigate : undefined} />}
 
       {widgets.length === 0 && (
         <div className="bg-surface-card rounded-md p-12 text-center border border-gray-800 border-dashed">
@@ -368,7 +365,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
           // rounded-xl border p-5), niente doppia cornice qui, solo 'relative' per
           // ancorare i controlli di editMode.
           return (
-            <div key={w.id} className={(['yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? 'relative' : 'bg-surface-card rounded-md border border-gray-800 overflow-hidden relative') + (['checklist', 'riepilogo_mensile', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? ' col-span-full' : '')}>
+            <div key={w.id} className={(['yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'come_sta_andando'].includes(w.type) ? 'relative' : 'bg-surface-card rounded-md border border-gray-800 overflow-hidden relative') + (['checklist', 'riepilogo_mensile', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'come_sta_andando'].includes(w.type) ? ' col-span-full' : '')}>
               {editMode && (
                 <div className="absolute top-2 right-2 flex gap-1 z-10">
                   <button onClick={() => startEditWidget(w)} className="w-6 h-6 flex items-center justify-center bg-gray-800 hover:bg-gray-700 text-gray-400 rounded text-xs" title="Modifica widget"><Icon name="edit" size={11} /></button>
@@ -425,6 +422,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                   </div>
                 )
               })()}
+              {w.type === 'come_sta_andando' && <InsightsCard token={token} onNavigate={features.movimenti ? onNavigate : undefined} />}
               {w.type === 'checklist' && (
                 <ChecklistWidget config={w.config} token={token} label={w.label} color={w.color} modules={modules} user={user} />
               )}
@@ -483,6 +481,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                   <option value="kpi">KPI — Numero aggregato</option>
                   <option value="periodo">KPI per periodo — con soglia di allerta</option>
                   <option value="table">Tabella — Ultimi record</option>
+                  {features.analisi && <option value="come_sta_andando">Come sta andando — mese e da inizio anno</option>}
                   <option value="checklist">Checklist — Elenco spuntabile multi-modulo</option>
                   <option value="riepilogo_mensile">Riepilogo mensile — Entrate/Uscite/Fisso-Variabile/Spendibile</option>
                   <option value="yearly_breakdown">Riepilogo mensile per anno — 12 mesi, confronto anno prec.</option>
@@ -491,7 +490,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                   <option value="aggregate_value">Aggregato singolo — un numero (Formula/Aggregato del Builder)</option>
                 </select>
               </div>
-              {!['checklist', 'riepilogo_mensile', ...REPORT_WIDGET_TYPES].includes(newWidget.type) && (
+              {!['checklist', 'riepilogo_mensile', 'come_sta_andando', ...REPORT_WIDGET_TYPES].includes(newWidget.type) && (
                 <div>
                   <label className="text-xs text-gray-400 block mb-1">Modulo</label>
                   <select className="w-full bg-surface-page text-ink px-4 py-3 rounded-lg outline-none border border-gray-800 focus:border-accent transition" value={newWidget.module_slug} onChange={(e) => setNewWidget({ ...newWidget, module_slug: e.target.value, field: '' })}>
@@ -825,6 +824,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                 newWidget.type === 'checklist' ? checklistConfig.sources.filter((s) => s.module_slug && s.amount_field && s.status_field).length === 0
                 : newWidget.type === 'riepilogo_mensile' ? !(riepilogoConfig.entrate.modulo && riepilogoConfig.gruppi.some((g) => g.modulo && g.campo_importo))
                 : REPORT_WIDGET_TYPES.includes(newWidget.type) ? !(reportBlockConfig.source_module && reportBlockConfig.block_key)
+                : newWidget.type === 'come_sta_andando' ? false
                 : !newWidget.module_slug
               } className="flex-1 bg-accent hover:opacity-90 disabled:opacity-50 text-white py-3 rounded-lg transition font-medium">{editingWidgetId ? 'Salva modifiche' : 'Aggiungi'}</button>
             </div>

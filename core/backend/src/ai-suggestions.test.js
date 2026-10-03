@@ -223,15 +223,15 @@ async function main() {
 
   console.log('\n--- accettare e ignorare ---');
 
-  await test('accettare applica categoria, importo, scadenza e fornitore, e conferma la categorizzazione (da smistare -> da pagare)', async () => {
+  await test('accettare applica categoria, importo, scadenza e fornitore, e lascia la riga in "da smistare"', async () => {
     const out = await (await api('POST', '/suggestions/' + sugId + '/accept')).json();
-    assertEq(out.applied.join(','), 'categoria,importo,scadenza,fornitore,stato');
+    assertEq(out.applied.join(','), 'categoria,importo,scadenza,fornitore');
     const d = getData(recId);
     assertEq(d.categoria, 'Elettricità');
     assertEq(d.importo, 64);
     assertEq(d.scadenza, '2026-09-07');
     assertTrue(d.note.includes('Fornitore: A2A Energia'));
-    assertEq(d._stato, 'da_pagare', 'la riga esce da "da smistare"');
+    assertEq(d._stato, 'da_smistare', 'lo smistamento resta una scelta tua');
   });
 
   await test('l\'accettazione lascia traccia nella cronologia del record', () => {
@@ -249,24 +249,10 @@ async function main() {
     db.prepare('INSERT INTO ai_suggestions (module_slug, record_id, payload) VALUES (?, ?, ?)').run('spese_casa', id, JSON.stringify({ proposta: { categoria: 'Viaggi di lusso', importo: 10 }, corrente: {} }));
     const sid = db.prepare('SELECT MAX(id) m FROM ai_suggestions').get().m;
     const out = await (await api('POST', '/suggestions/' + sid + '/accept')).json();
-    assertEq(out.applied.join(','), 'importo,stato');
+    assertEq(out.applied.join(','), 'importo');
     assertEq(getData(id).categoria, 'Altro');
   });
 
-  await test('dopo "Accetta" la riga NON torna tra quelle da chiedere (il contatore non risale)', async () => {
-    db.prepare("DELETE FROM ai_suggestions").run();
-    db.prepare("DELETE FROM records WHERE json_extract(data, '$._stato') = 'da_smistare'").run();
-    const a = newBill({ _stato: 'da_smistare' });
-    const b = newBill({ _stato: 'da_smistare' });
-    assertEq((await (await api('GET', '/overview')).json()).to_ask_total, 2);
-    sa.reply = { suggestion: PROPOSTA };
-    const o = await ai.suggestForRecord({ moduleSlug: 'spese_casa', recordId: a, force: true });
-    assertEq((await (await api('GET', '/overview')).json()).to_ask_total, 1, 'una ha la proposta, resta da chiedere solo l\'altra');
-    await api('POST', '/suggestions/' + o.id + '/accept');
-    assertEq((await (await api('GET', '/overview')).json()).to_ask_total, 1, 'dopo Accetta il numero non sale');
-    assertEq(getData(a)._stato, 'da_pagare');
-    assertEq(getData(b)._stato, 'da_smistare');
-  });
   await test('una riga già "da pagare" o "pagato" non cambia stato accettando', async () => {
     const id = newBill({ _stato: 'pagato' });
     const o = await ai.suggestForRecord({ moduleSlug: 'spese_casa', recordId: id, force: true });
