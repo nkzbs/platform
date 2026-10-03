@@ -22,6 +22,7 @@ const { startScheduler } = require('./scheduler');
 const { startGmailPoller } = require('./gmail-poller');
 const aiRoutes = require('./routes/ai');
 const notificationSettingsRoutes = require('./routes/notification-settings');
+const insightsRoutes = require('./routes/insights');
 const digestRoutes = require('./routes/digest');
 const { startDailyDigest } = require('./daily-digest');
 const { startAuditRetentionScheduler } = require('./audit-retention-scheduler');
@@ -74,6 +75,7 @@ const routeMounts = [
   ['/settings', settingsRoutes],
   ['/integrazioni/google', googleOAuthRoutes],
   ['/ai', aiRoutes],
+  ['/insights', insightsRoutes],
   ['/', notificationSettingsRoutes],
   ['/digest', digestRoutes],
   ['/site-pages', siteAdminRouter],

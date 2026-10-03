@@ -74,10 +74,40 @@ function verifyNumbers(text, numeri) {
   return { ok: true };
 }
 
+// ─── "Come sta andando": riepilogo di un mese già calcolato dal tenant ─────────
+// Passano solo i campi previsti (numeri e nomi di categoria), ripuliti; tutti i numeri finiti
+// nel payload sono quelli che il modello può citare.
+const NUM_KEYS = ['entrate', 'spese', 'saldo', 'risparmio_pct', 'spese_pagate', 'spese_da_pagare', 'spese_fisse', 'spese_variabili'];
+function sanitizeInsights(data) {
+  if (!data || typeof data !== 'object') return { error: 'data obbligatorio' };
+  if (!/^\d{4}-\d{2}$/.test(String(data.month || ''))) return { error: 'month non valido' };
+  const clean = (v, n) => redact(String(v == null ? '' : v)).replace(/[\r\n]+/g, ' ').trim().slice(0, n);
+  const numeri = [];
+  const n = (v) => { const x = numOrNull(v); if (x == null) return null; numeri.push(x, Math.abs(x)); return round2(x); };
+  const out = { mese: data.month, mese_in_corso: !!data.in_corso };
+  for (const k of NUM_KEYS) { const v = data[k] == null ? null : n(data[k]); if (v != null) out[k] = v; }
+  if (out.entrate == null || out.spese == null) return { error: 'entrate e spese obbligatorie' };
+  const c = data.confronti || {};
+  out.confronti = {};
+  for (const [k, row] of Object.entries({ mese_precedente: c.mese_precedente, anno_precedente: c.anno_precedente, media_12_mesi: c.media_12_mesi })) {
+    if (!row || typeof row !== 'object') continue;
+    const r = {};
+    for (const f of ['entrate', 'spese', 'spese_variazione_pct']) { const v = row[f] == null ? null : n(row[f]); if (v != null) r[f] = v; }
+    if (row.mese) r.mese = clean(row.mese, 7);
+    out.confronti[k] = r;
+  }
+  const cat = (x) => { const r = { nome: clean(x.nome, 40) || 'Altro' }; for (const f of ['valore', 'media_6m', 'variazione_pct']) { const v = x[f] == null ? null : n(x[f]); if (v != null) r[f] = v; } return r; };
+  out.categorie = (Array.isArray(data.categorie) ? data.categorie : []).slice(0, 8).map(cat);
+  out.anomalie = (Array.isArray(data.anomalie) ? data.anomalie : []).slice(0, 6).map((x) => ({ tipo: ['sopra_la_media', 'categoria_nuova'].includes(x.tipo) ? x.tipo : 'sopra_la_media', ...cat(x) }));
+  numeri.push(out.categorie.length, out.anomalie.length);
+  return { payload: out, numeri };
+}
+
 const PROMPTS = {
+  stato: `Sei un assistente che dice a una persona come stanno andando le sue finanze personali in un mese. Ricevi un JSON già calcolato: entrate, spese, saldo, risparmio_pct, confronti (mese precedente, anno precedente, media degli ultimi 12 mesi), categorie con valore, media_6m e variazione_pct, anomalie. Scrivi in italiano, massimo 110 parole, in questo ordine: 1) un giudizio chiaro in una frase (mese in positivo o in negativo e di quanto); 2) cosa lo spiega: le voci o le variazioni che pesano di più; 3) al massimo due cose che meritano attenzione, prendendole solo da "anomalie" e dai confronti. Se mese_in_corso è true, dillo: i dati sono parziali. USA SOLO numeri e nomi presenti nel JSON: non fare calcoli, non inventare, non dare consigli di investimento o fiscali, non fare supposizioni su cosa manca. Testo semplice: niente markdown, niente elenchi puntati, niente emoji.`,
   commento: `Sei un assistente che commenta un report di spese personali o familiari. Ricevi un JSON con i totali per categoria (valore, confronto col periodo precedente e variazione_pct già calcolata). Scrivi UN commento di una o due frasi, massimo 220 caratteri, in italiano, che dica cosa emerge di più importante (la voce più grande o la variazione più netta). USA SOLO numeri e nomi presenti nel JSON: non fare calcoli, non inventare, non dare consigli finanziari. Testo semplice: niente markdown, niente elenchi, niente emoji.`,
   spiegazione: `Sei un assistente che spiega un report di spese personali o familiari a chi lo sta guardando. Ricevi un JSON con i totali per categoria (valore, confronto col periodo precedente e variazione_pct già calcolata). Scrivi in italiano una spiegazione chiara di massimo 120 parole: le voci principali, cosa è cambiato rispetto al periodo precedente se c'è il confronto, cosa merita attenzione. USA SOLO numeri e nomi presenti nel JSON: non fare calcoli, non inventare, non dare consigli di investimento. Se i dati sono troppo pochi, dillo. Testo semplice: niente markdown, niente elenchi puntati.`,
 };
-const LIMITS = { commento: { chars: 260, tokens: 160 }, spiegazione: { chars: 1100, tokens: 450 } };
+const LIMITS = { stato: { chars: 1000, tokens: 420 }, commento: { chars: 260, tokens: 160 }, spiegazione: { chars: 1100, tokens: 450 } };
 
-module.exports = { sanitizeReport, verifyNumbers, parseNum, PROMPTS, LIMITS };
+module.exports = { sanitizeInsights, sanitizeReport, verifyNumbers, parseNum, PROMPTS, LIMITS };

@@ -136,6 +136,46 @@ async function main() {
     assertTrue(!JSON.stringify(mistralCalls[0].messages).includes('francese'));
   });
 
+  console.log('\n--- "Come sta andando" ---');
+
+  const INS = { month: '2026-09', in_corso: false, entrate: 1799.58, spese: 1500, saldo: 299.58, risparmio_pct: 16.6, spese_pagate: 1400, spese_da_pagare: 100, spese_fisse: 900, spese_variabili: 600,
+    confronti: { mese_precedente: { mese: '2026-08', entrate: 1669.66, spese: 1200, spese_variazione_pct: 25 }, anno_precedente: { mese: '2025-09', entrate: 1805.43, spese: 1100, spese_variazione_pct: 36.4 }, media_12_mesi: { entrate: 2100, spese: 1300, spese_variazione_pct: 15.4 } },
+    categorie: [{ nome: 'Elettricità', valore: 300, media_6m: 200, variazione_pct: 50 }, { nome: 'Alimentari', valore: 250, media_6m: 240, variazione_pct: 4.2 }],
+    anomalie: [{ tipo: 'sopra_la_media', nome: 'Elettricità', valore: 300, media_6m: 200, variazione_pct: 50 }] };
+  const callIns = (data) => realFetch(BASE + '/api/tenant-ai/explain-insights', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': SECRET }, body: JSON.stringify({ tenant_slug: 'finance', data }) });
+
+  await test('sanitizeInsights: tiene solo i campi previsti e ripulisce i nomi', () => {
+    const { payload } = rep.sanitizeInsights({ ...INS, descrizioni: ['segreto'], categorie: [{ nome: 'mario.rossi@gmail.com', valore: 5, righe: ['x'] }] });
+    assertEq(payload.mese, '2026-09');
+    assertTrue(!JSON.stringify(payload).includes('segreto') && !JSON.stringify(payload).includes('mario.rossi') && !JSON.stringify(payload).includes('righe'), JSON.stringify(payload));
+  });
+
+  await test('mese non valido o entrate/spese mancanti -> errore', () => {
+    assertTrue(rep.sanitizeInsights({ ...INS, month: 'boh' }).error);
+    assertTrue(rep.sanitizeInsights({ month: '2026-09', in_corso: false }).error);
+  });
+
+  await test('percorso felice: testo restituito; a Mistral arrivano solo totali', async () => {
+    mistralText = 'Settembre chiude in positivo di 299,58 euro: il risparmio è del 16,6%. L\'elettricità pesa 300 euro, il 50% sopra la media.';
+    mistralCalls = [];
+    const res = await callIns({ ...INS, descrizioni: ['segreto privato'] });
+    assertEq(res.status, 200);
+    assertEq((await res.json()).text, mistralText);
+    assertTrue(!JSON.stringify(mistralCalls[0].messages).includes('segreto privato'));
+  });
+
+  await test('un numero che non c\'è nei dati (o una percentuale sbagliata) -> 502 ai_unverified, nessun testo', async () => {
+    mistralText = 'Settembre chiude a 450 euro di saldo.';
+    let res = await callIns(INS); let b = await res.json();
+    assertEq(res.status, 502); assertEq(b.code, 'ai_unverified'); assertEq(b.text, undefined);
+    mistralText = 'Le spese crescono del 31% sul mese scorso.';
+    assertEq((await callIns(INS)).status, 502);
+  });
+
+  await test('senza secret interno -> 401 (anche per explain-insights)', async () => {
+    assertEq((await realFetch(BASE + '/api/tenant-ai/explain-insights', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': 'no' }, body: '{}' })).status, 401);
+  });
+
   console.log(`\n${passed} passati, ${failed} falliti`);
   process.exit(failed ? 1 : 0);
 }

@@ -3,14 +3,10 @@ import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
 import { parseSchemaFrontend } from '../lib/schema-v3-frontend'
 import ChecklistWidget from './ChecklistWidget'
+import InsightsCard from '../components/InsightsCard'
 import YearlyBreakdownView from './ModulePage/YearlyBreakdownView'
 import CategoryPivotView from './ModulePage/CategoryPivotView'
 import WeeklyBreakdownView from './ModulePage/WeeklyBreakdownView'
-
-function formatAnalysisDate(iso) {
-  if (!iso) return ''
-  return new Date(iso.replace(' ', 'T') + 'Z').toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-}
 
 // ─── DASHBOARD / REPORT ─────────────────────────────────────────────────────────
 // Stesso motore widget per due pagine — page='dashboard' (default, invariato) o
@@ -79,19 +75,6 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate })
   }
   useEffect(() => { loadWidgets() }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Riquadro fisso con l'ultima analisi AI di Reportistica (2026-09-28, richiesto
-  // dall'utente: "qualcosa nella dashboard home page" oltre a Reportistica stessa,
-  // "non voglio troppe chiamate") — SOLA LETTURA, nessun bottone di generazione
-  // qui: un solo punto da cui parte una chiamata Mistral (il bottone in
-  // ReportisticaPage.jsx), questa card legge la stessa cache (GET, zero costo AI).
-  // Solo sulla vera Dashboard ('dashboard'), non sul Report a pannelli-widget
-  // ('report') — pagine diverse nonostante condividano questo componente.
-  const [reportisticaAnalysis, setReportisticaAnalysis] = useState(null)
-  useEffect(() => {
-    if (page !== 'dashboard') return
-    api.get('/reportistica/analysis').then((data) => { if (data) setReportisticaAnalysis(data) })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page])
 
   // Blocchi già dichiarati su un modulo per uno dei 4 tipi "pannello aggregato" — stesso
   // bisogno di fieldsOf() più sotto, per un array diverso dello schema normalizzato.
@@ -358,16 +341,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate })
         )}
       </div>
 
-      {page === 'dashboard' && reportisticaAnalysis && (
-        <div className="bg-surface-card rounded-md border border-gray-800 p-5 mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-sm font-medium text-ink flex items-center gap-1.5"><Icon name="sparkles" size={14} />Commento AI — Reportistica</div>
-            <div className="text-xs text-gray-500">generato il {formatAnalysisDate(reportisticaAnalysis.created_at)}</div>
-          </div>
-          <div className="text-sm text-gray-300 whitespace-pre-wrap mb-2">{reportisticaAnalysis.result_text}</div>
-          {onNavigate && <button onClick={() => onNavigate('reportistica')} className="text-xs text-accent hover:underline">Vai a Reportistica per una nuova analisi →</button>}
-        </div>
-      )}
+      {page === 'dashboard' && <InsightsCard token={token} />}
 
       {widgets.length === 0 && (
         <div className="bg-surface-card rounded-md p-12 text-center border border-gray-800 border-dashed">

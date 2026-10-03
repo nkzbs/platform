@@ -187,6 +187,15 @@ esista nei dati**, altrimenti risponde errore e il tenant non mostra nulla.
   «Commento al report mensile» è acceso. Il report parte comunque se il commento non arriva.
 - **Spiega questo report**: pulsante nel pannello Report (`ReportPanel.jsx`), rotta `POST /api/ai/explain-report`.
 
+### "Come sta andando"
+
+`core/backend/src/insights.js` calcola per un mese entrate, spese, saldo, risparmio, confronti (mese prima, stesso mese
+dell'anno prima, media di 12 mesi), categorie con variazione e anomalie, leggendo i record dei moduli indicati in
+`insights_config` (default: entrate, spese casa e personali). `GET /api/insights` restituisce i numeri senza AI;
+`POST /api/insights/explain` manda a Super Admin (`/api/tenant-ai/explain-insights`) solo i totali, che li ripulisce, fa scrivere
+il testo a Mistral e lo restituisce solo se ogni numero esiste nei dati. La spiegazione si salva per mese
+(`insight_explanations`, con l'impronta dei numeri) e si rigenera solo se i numeri cambiano o la si chiede di nuovo.
+
 ## Sicurezza, in sintesi
 
 - Nessuna password fissa nel codice: la password admin iniziale è casuale o arriva da variabile d'ambiente.

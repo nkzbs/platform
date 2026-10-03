@@ -162,6 +162,39 @@ reali di Finance (6 righe → 1 destinatario e 5 regole). I backup JSON includon
   (`lib/ai-budget.js`, `lib/ai-redact.js`, `routes/tenant-ai.js` con lo smistamento bollette, ecc.). Il NAS era a posto,
   il repository no. Recuperati dalla cartella vecchia e committati.
 
-### Da fare
+## 2026-10-03 — Piano AI per Finance: "Come sta andando" (fase 1)
 
-- Backup su un dispositivo diverso dal NAS.
+**Principio.** Il programma fa i conti, Mistral li racconta. All'AI arrivano solo totali già calcolati, mai righe né
+descrizioni; ogni numero del testo è controllato da Super Admin (cfr. "Commento ai report").
+
+**Scelte fatte** (dopo aver confrontato Finance con gli estratti conto del conto personale e del Conto Casa, 2020-2026):
+- **Spese** = Spese Casa + Spese Personali; **entrate** = il modulo Entrate **senza** le categorie *Risparmi* e *Fondo*
+  (accantonamenti, non soldi guadagnati). Sono un'impostazione (`insights_config`), non codice fisso: vale anche per altri tenant.
+- **Pagamenti** e **Debiti** non contano come spese: le rate sono già dentro Spese Personali.
+- Le righe "da smistare" non sono spese finché non si smistano.
+- **Il mese di una spesa è il campo `data`** di Finance. Il confronto con le banche ha mostrato che le date delle spese NON sono
+  sfasate in modo fisso (Finance segna la scadenza, la banca il pagamento: scarto da -2 a 0 mesi), quindi nessuna correzione.
+- **Anomalia** = categoria con almeno +25% e +20 € rispetto alla media dei mesi precedenti (finestra di 6; la media conta solo
+  i mesi con spese registrate), oppure una categoria nuova da almeno 50 €. Soglia minima di saldo 300 € (per la futura previsione di cassa).
+- **Gli stipendi** erano sfasati di un mese (-1 da maggio 2021 a dicembre 2025, +1 nel 2026), con importi arrotondati e 12 mancanti:
+  allineati agli estratti conto (75 righe, data e importo al centesimo). La vecchia app ha date giuste ma importi arrotondati
+  all'euro e in qualche mese diversi (es. 2025-09: 1860 contro 1.805,43 in banca).
+
+**Limite dichiarato.** Finance non vede tutto: solo il 22-42% delle spese registrate compare sul conto personale e circa
+21.000 € l'anno di uscite (pagamenti con carta, prelievi, giri tra conti) non hanno una spesa corrispondente. La scheda lo dice
+("Cosa conta in questi numeri") e non pretende di essere il flusso di cassa completo.
+
+**Cosa c'è** (`core/backend/src/insights.js`, `routes/insights.js`, `components/InsightsCard.jsx`): in dashboard la scheda
+"Come sta andando" mostra entrate, spese, saldo, risparmio, confronto con il mese prima e con la media di 12 mesi, le categorie
+con la variazione e le anomalie. "Spiega con l'assistente" racconta i numeri; il testo si salva per mese e si riusa finché i
+numeri non cambiano (nessun costo a ogni apertura).
+
+### Da fare (nell'ordine deciso)
+
+1. **Movimenti bancari**, partendo dal solo conto personale (poi Conto Casa e gli altri, uno alla volta): lettura degli estratti PDF
+   (formato regolare, già verificato su 2.800 movimenti), esclusione dei giri tra i propri conti, collegamento alle spese di
+   Finance, categorie proposte da Mistral per i pagamenti con carta (accetti o ignori), IBAN e nomi tolti prima dell'invio.
+2. **Previsione di cassa** (30/60/90 giorni) e **debiti e rate**: richiedono saldi dei conti aggiornati (oggi tutti a 0).
+3. **Pulizia delle categorie** (doppioni come *Benzina* e *Auto & Benzina*) e **budget** per categoria.
+4. **Domande libere** ("quanto ho speso di luce nel 2025?") tradotte in un filtro strutturato, mai SQL libero; poi gli allegati PDF.
+5. Backup su un dispositivo diverso dal NAS.

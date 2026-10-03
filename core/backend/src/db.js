@@ -574,6 +574,18 @@ db.exec(`
   );
 `);
 
+// Analisi "Come sta andando": impostazioni (JSON, una riga) e spiegazione scritta dall'assistente per
+// mese, conservata per non richiamare l'AI a ogni apertura (vedi insights.js).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS insights_config (id INTEGER PRIMARY KEY CHECK (id = 1), config TEXT NOT NULL DEFAULT '{}');
+  CREATE TABLE IF NOT EXISTS insight_explanations (
+    month TEXT PRIMARY KEY,
+    snapshot_hash TEXT NOT NULL,
+    text TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
 // Tema per pagina (2026-09-04, richiesto dall'utente dopo aver mostrato un mockup
 // reale — brand scuro/oro con font serif) — a livello di PAGINA, non di tenant: un
 // sito può avere sezioni scure alternate a chiare (ogni blocco ha il proprio flag

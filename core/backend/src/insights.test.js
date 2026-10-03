@@ -1,0 +1,194 @@
+'use strict';
+// "Come sta andando" (insights.js, routes/insights.js): numeri di un mese calcolati dal programma
+// su entrate e spese, confronti, anomalie, limiti dichiarati, spiegazione dell'assistente (Super Admin
+// simulato) salvata e riusata finché i numeri non cambiano.
+// Eseguire con: node src/insights.test.js (porte 34800 e 34801 libere).
+
+const path = require('path');
+const os = require('os');
+const fs = require('fs');
+const http = require('http');
+const crypto = require('crypto');
+
+const TEST_PORT = 34800, FAKE_PORT = 34801;
+const BASE = 'http://localhost:' + TEST_PORT;
+const SECRET = 'insights_internal_' + crypto.randomBytes(8).toString('hex');
+const dbPath = path.join(os.tmpdir(), 'insights-test-' + crypto.randomBytes(6).toString('hex') + '.db');
+process.env.DB_PATH = dbPath;
+process.env.PORT = String(TEST_PORT);
+process.env.JWT_SECRET = 'insights_secret_' + crypto.randomBytes(8).toString('hex');
+process.env.INTERNAL_API_SECRET = SECRET;
+process.env.INITIAL_ADMIN_PASSWORD = 'insights_admin_pw';
+process.env.UPLOAD_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'insights-uploads-'));
+process.env.SUPER_ADMIN_URL = 'http://localhost:' + FAKE_PORT;
+process.env.TENANT_SLUG = 'finance';
+
+let passed = 0, failed = 0;
+async function test(name, fn) {
+  try { await fn(); console.log('  ✓ ' + name); passed++; }
+  catch (e) { console.error('  ✗ ' + name + '\n    ' + e.message); failed++; }
+}
+function assertEq(a, e, msg) { if (a !== e) throw new Error(`${msg || ''}: atteso ${JSON.stringify(e)}, ottenuto ${JSON.stringify(a)}`); }
+function assertTrue(c, msg) { if (!c) throw new Error(msg || 'atteso true'); }
+
+let sa = { calls: [], status: 200, reply: { text: 'Settembre chiude in positivo.' } };
+const fakeSA = http.createServer((req, res) => {
+  let body = '';
+  req.on('data', (d) => (body += d));
+  req.on('end', () => {
+    if (req.headers['x-internal-secret'] !== SECRET) { res.writeHead(401); return res.end('{}'); }
+    if (req.url === '/api/tenant-ai/explain-insights') { sa.calls.push(JSON.parse(body)); res.writeHead(sa.status, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify(sa.reply)); }
+    res.writeHead(404); res.end('{}');
+  });
+});
+
+async function main() {
+  await new Promise((r) => fakeSA.listen(FAKE_PORT, r));
+  require('./index.js');
+  for (let i = 0; i < 100; i++) { try { if ((await fetch(BASE + '/health')).ok) break; } catch (e) { await new Promise((r) => setTimeout(r, 100)); } }
+  const db = require('./db');
+  const insights = require('./insights');
+  for (const slug of ['entrate', 'spese_casa', 'spese_personali']) {
+    db.prepare('DELETE FROM modules WHERE slug = ?').run(slug);
+    db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES (?, ?, 'box', '#000', 1, 1, 50, '{}')").run(slug, slug);
+  }
+  const rec = (slug, d) => db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, NULL, ?)').run(slug, JSON.stringify(d)).lastInsertRowid;
+  const ent = (data, importo, categoria = 'Stipendio') => rec('entrate', { descrizione: 'riga segreta ' + categoria, data, importo, categoria });
+  const sp = (slug, data, importo, categoria, extra = {}) => rec(slug, { descrizione: 'descrizione privata', data, importo, categoria, _stato: 'pagato', ...extra });
+
+  // 2026-04..2026-08: ogni mese 1000 di stipendio, Elettricità 100, Alimentari 200; 2026-09 (mese in esame): stipendio 1800, Elettricità 300 (+200%), Alimentari 210, Benzina 80 (nuova)
+  for (const m of ['2026-04', '2026-05', '2026-06', '2026-07', '2026-08']) { ent(m + '-27', 1000); sp('spese_casa', m + '-10', 100, 'Elettricità', { fisso: true }); sp('spese_personali', m + '-15', 200, 'Alimentari'); }
+  ent('2026-09-25', 1799.58); ent('2026-09-10', 500, 'Risparmi'); ent('2026-09-11', 99, 'Fondo');
+  sp('spese_casa', '2026-09-10', 300, 'Elettricità', { fisso: true }); sp('spese_personali', '2026-09-15', 210, 'Alimentari'); sp('spese_personali', '2026-09-20', 80, 'Benzina', { _stato: 'da_pagare' });
+  sp('spese_casa', '2026-09-12', 0, 'Gas', { _stato: 'da_smistare' });
+
+  const NOW = new Date('2026-10-03T10:00:00Z');
+  const snap = () => insights.buildSnapshot('2026-09', NOW);
+
+  console.log('\n--- numeri del mese ---');
+
+  await test('entrate: gli stipendi sì, Risparmi e Fondo no (non sono soldi guadagnati)', () => { assertEq(snap().entrate, 1799.58); });
+  await test('spese del mese = casa + personali, senza le righe "da smistare"', () => { assertEq(snap().spese, 590); });
+  await test('saldo, risparmio %, pagate / da pagare, fisse / variabili', () => {
+    const s = snap();
+    assertEq(s.saldo, 1209.58); assertEq(s.risparmio_pct, 67.2);
+    assertEq(s.spese_pagate, 510); assertEq(s.spese_da_pagare, 80);
+    assertEq(s.spese_fisse, 300); assertEq(s.spese_variabili, 290);
+  });
+  await test('confronto con il mese prima e con la media dei 12 mesi (solo mesi con dati)', () => {
+    const c = snap().confronti;
+    assertEq(c.mese_precedente.spese, 300); assertEq(c.mese_precedente.spese_variazione_pct, 96.7);
+    assertEq(c.media_12_mesi.spese, 300); assertEq(c.media_12_mesi.entrate, 1000);
+    assertEq(c.anno_precedente.spese, 0); assertEq(c.anno_precedente.spese_variazione_pct, null, 'niente divisione per zero');
+  });
+  await test('categorie con media degli ultimi 6 mesi e variazione', () => {
+    const el = snap().categorie.find((c) => c.nome === 'Elettricità');
+    assertEq(el.valore, 300); assertEq(el.media_6m, 100, 'media sui 5 mesi con dati, non sui 6'); assertEq(el.variazione_pct, 200);
+  });
+
+  console.log('\n--- anomalie ---');
+
+  await test('Elettricità (+260% sulla media) è un\'anomalia; Alimentari (+5%) no; Benzina è una categoria nuova (80 €)', () => {
+    const a = snap().anomalie;
+    assertTrue(a.some((x) => x.nome === 'Elettricità' && x.tipo === 'sopra_la_media'), JSON.stringify(a));
+    assertTrue(!a.some((x) => x.nome === 'Alimentari'));
+    assertTrue(a.some((x) => x.nome === 'Benzina' && x.tipo === 'categoria_nuova'));
+  });
+  await test('la soglia è un\'impostazione: con +300% Elettricità non è più un\'anomalia', () => {
+    insights.saveConfig({ anomaly: { pct: 300 } });
+    assertTrue(!snap().anomalie.some((x) => x.nome === 'Elettricità'));
+    insights.saveConfig({ anomaly: { pct: 25 } });
+  });
+
+  console.log('\n--- limiti dichiarati ---');
+
+  await test('il mese in corso è segnalato come parziale; il mese senza entrate lo dice', () => {
+    const cur = insights.buildSnapshot('2026-10', NOW);
+    assertEq(cur.in_corso, true);
+    assertTrue(cur.limiti.some((l) => /parziali/.test(l)));
+    assertTrue(cur.limiti.some((l) => /Nessuna entrata/.test(l)));
+    assertEq(snap().in_corso, false);
+  });
+  await test('i limiti dicono sempre cosa non è conteggiato', () => {
+    assertTrue(snap().limiti.some((l) => /Risparmi, Fondo/.test(l)));
+    assertTrue(snap().limiti.some((l) => /altri conti/.test(l)));
+  });
+  await test('senza moduli di entrate o di spese -> "non disponibile", mai un errore', () => {
+    db.prepare("UPDATE modules SET installed = 0 WHERE slug = 'entrate'").run();
+    assertEq(insights.buildSnapshot('2026-09', NOW).available, false);
+    db.prepare("UPDATE modules SET installed = 1 WHERE slug = 'entrate'").run();
+  });
+  await test('il mese di default è l\'ultimo concluso', () => { assertEq(insights.lastClosedMonth(NOW), '2026-09'); assertEq(insights.lastClosedMonth(new Date('2026-01-05T00:00:00Z')), '2025-12'); });
+
+  console.log('\n--- spiegazione dell\'assistente ---');
+
+  const login = await (await fetch(BASE + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: process.env.INITIAL_ADMIN_PASSWORD }) })).json();
+  const H = { Authorization: 'Bearer ' + login.token, 'Content-Type': 'application/json' };
+  const call = (m, p, body, h = H) => fetch(BASE + '/api/insights' + p, { method: m, headers: h, body: body ? JSON.stringify(body) : undefined });
+
+  await test('senza login -> 401; mese non valido -> 400', async () => {
+    assertEq((await call('GET', '', null, {})).status, 401);
+    assertEq((await call('GET', '?month=boh')).status, 400);
+    assertEq((await call('POST', '/explain', { month: 'boh' })).status, 400);
+  });
+  await test('GET restituisce i numeri senza chiamare l\'AI', async () => {
+    sa.calls = [];
+    const b = await (await call('GET', '?month=2026-09')).json();
+    assertEq(b.entrate, 1799.58); assertEq(b.explanation, null);
+    assertEq(sa.calls.length, 0);
+  });
+  await test('POST /explain: a Super Admin vanno solo totali (mai descrizioni), il testo si salva', async () => {
+    sa.calls = []; sa.status = 200; sa.reply = { text: 'Settembre chiude in positivo di 1209,58 euro.' };
+    const res = await call('POST', '/explain', { month: '2026-09' });
+    assertEq(res.status, 200);
+    assertEq((await res.json()).text, sa.reply.text);
+    const sent = JSON.stringify(sa.calls[0]);
+    assertTrue(!sent.includes('privata') && !sent.includes('segreta'), 'descrizioni uscite: ' + sent.slice(0, 200));
+    assertTrue(sa.calls[0].data.categorie.length > 0 && sa.calls[0].data.limiti === undefined);
+    assertEq((await (await call('GET', '?month=2026-09')).json()).explanation.text, sa.reply.text);
+  });
+  await test('seconda richiesta con gli stessi numeri: usa il testo salvato, nessuna nuova chiamata (nessun costo)', async () => {
+    sa.calls = [];
+    const b = await (await call('POST', '/explain', { month: '2026-09' })).json();
+    assertEq(b.cached, true); assertEq(sa.calls.length, 0);
+  });
+  await test('"Riscrivi" forza una nuova chiamata', async () => {
+    sa.calls = [];
+    await call('POST', '/explain', { month: '2026-09', refresh: true });
+    assertEq(sa.calls.length, 1);
+  });
+  await test('se i numeri cambiano (nuova spesa) il testo salvato risulta "vecchio" e si rigenera', async () => {
+    sp('spese_personali', '2026-09-22', 40, 'Alimentari');
+    const b = await (await call('GET', '?month=2026-09')).json();
+    assertEq(b.explanation.stale, true);
+    sa.calls = [];
+    await call('POST', '/explain', { month: '2026-09' });
+    assertEq(sa.calls.length, 1);
+  });
+  await test('errori di Super Admin: tetto (429), numero inventato (502), nessuna chiave (503); il testo vecchio resta', async () => {
+    sa.status = 429; sa.reply = { error: 'Tetto', code: 'ai_budget_exceeded' };
+    let r = await call('POST', '/explain', { month: '2026-09', refresh: true }); assertEq(r.status, 429); assertEq((await r.json()).code, 'ai_budget_exceeded');
+    sa.status = 502; sa.reply = { error: 'scartato', code: 'ai_unverified' };
+    r = await call('POST', '/explain', { month: '2026-09', refresh: true }); assertEq(r.status, 502);
+    sa.status = 503; sa.reply = { error: 'Nessuna chiave', code: 'ai_not_configured' };
+    r = await call('POST', '/explain', { month: '2026-09', refresh: true }); assertEq(r.status, 503);
+    assertTrue(!!(await (await call('GET', '?month=2026-09')).json()).explanation, 'il testo precedente non va perso');
+  });
+
+  console.log('\n--- impostazioni ---');
+
+  await test('la configurazione si legge e si cambia (solo admin); un valore strano non rompe i calcoli', async () => {
+    const cfg = await (await call('GET', '/config')).json();
+    assertEq(cfg.entrate.exclude_categories.join(), 'Risparmi,Fondo');
+    const up = await (await call('PUT', '/config', { entrate: { exclude_categories: ['Risparmi'] }, balance_floor_eur: 500 })).json();
+    assertEq(up.balance_floor_eur, 500);
+    assertEq(insights.buildSnapshot('2026-09', NOW).entrate, 1898.58, 'ora il Fondo conta come entrata');
+    await call('PUT', '/config', { entrate: { exclude_categories: ['Risparmi', 'Fondo'] }, balance_floor_eur: 300 });
+  });
+
+  console.log(`\n${'='.repeat(60)}`);
+  console.log(passed + ' passati, ' + failed + ' falliti su ' + (passed + failed) + ' test.');
+  try { fs.unlinkSync(dbPath); } catch (e) {}
+  process.exit(failed > 0 ? 1 : 0);
+}
+main().catch((e) => { console.error('Suite insights fallita ad avviarsi:', e); process.exit(1); });
