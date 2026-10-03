@@ -27,6 +27,7 @@ const bankRoutes = require('./routes/bank');
 const featuresRoutes = require('./routes/features');
 const features = require('./features');
 const moduleRolesRoutes = require('./routes/module-roles');
+const moduleAiRoutes = require('./routes/module-ai');
 const moduleRoles = require('./module-roles');
 const digestRoutes = require('./routes/digest');
 const { startDailyDigest } = require('./daily-digest');
@@ -84,6 +85,7 @@ const routeMounts = [
   ['/bank', bankRoutes],
   ['/features', featuresRoutes],
   ['/module-roles', moduleRolesRoutes],
+  ['/module-ai', moduleAiRoutes],
   ['/', notificationSettingsRoutes],
   ['/digest', digestRoutes],
   ['/site-pages', siteAdminRouter],

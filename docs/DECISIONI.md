@@ -332,3 +332,12 @@ di salute"), che restano nello schema ma contano diversamente (non includono l'a
 3. **Pulizia delle categorie** (doppioni come *Benzina* e *Auto & Benzina*) e **budget** per categoria.
 4. **Domande libere** ("quanto ho speso di luce nel 2025?") tradotte in un filtro strutturato, mai SQL libero; poi gli allegati PDF.
 5. Backup su un dispositivo diverso dal NAS.
+
+## 2026-10-03 — Ruoli dei moduli e base per l'AI
+
+- **Nessuna funzione conosce nomi di moduli o di campi.** Ogni modulo dichiara nel Builder (Proprietà → "Ruoli del modulo") se è una spesa o un'entrata, a cosa serve (riepiloghi, avvisi, mail) e quali suoi campi sono importo, data, scadenza, categoria, descrizione, stato, gruppo, fisso. Tabella `module_roles`, rotte `/api/module-roles`, codice `module-roles.js`. Per Finance i valori di partenza sono i nomi di prima (nessun cambiamento visibile).
+- **Chi legge i ruoli:** "Come sta andando" (moduli e campi di entrate/spese), riepilogo del mattino (moduli "avvisi"), regole Gmail (modulo di destinazione scelto sulla regola, colonna `gmail_rules.modulo`; le regole vecchie sono agganciate al modulo che usavano).
+- **Impostazioni salvate a mano non congelano i ruoli:** `insights_config` salva solo ciò che è stato cambiato, il resto segue i ruoli.
+- **AI per modulo, non globale.** Ogni modulo accende da solo i potenziamenti (smistare, spiegare, importare) dal Builder (Proprietà → "Potenziamenti AI"). Tabella `module_ai`, rotte `/api/module-ai`, codice `module-ai.js`, unico punto che dice se un potenziamento è attivo (`can(slug, key)`: acceso + ruoli richiesti dichiarati). Un widget è "spiegabile" solo se lo dice la sua configurazione (`config.explainable`). Per ora si salvano solo gli interruttori: nessun potenziamento è ancora collegato.
+- **Finance senza AI** (decisione dello stesso giorno): via la sezione Capacità dalla Libreria, via la scheda "Assistente AI", via i pulsanti "spiega"; la capacità `bollette_ai` è spenta su Finance. Le bollette restano in "da smistare" con avviso WhatsApp (`smistare-notify.js`).
+- **Da fare:** configurare "Come sta andando" dal widget (scelta dei moduli), poi collegare i potenziamenti AI uno alla volta (prima `triage` su Spese casa).

@@ -2,6 +2,7 @@ import React from 'react'
 import Icon from '../../components/Icon'
 import { MODULE_ICON_CHOICES, MODULE_COLOR_CHOICES } from './constants'
 import ModuleRolesSection from './ModuleRolesSection'
+import ModuleAiSection from './ModuleAiSection'
 
 // Builder 2.0 — pannello destro "Proprietà"/"Cronologia" (dal mockup mostrato
 // dall'utente). Prima questi stessi controlli erano tutti ammassati in una
@@ -112,6 +113,7 @@ function PropertiesPanel({ token, baseUrl, mod, schema, fieldCache, allModules, 
             )}
 
             <ModuleRolesSection token={token} baseUrl={baseUrl} slug={mod.slug} fields={(schema?.steps || []).filter((s) => s.block_type === 'field')} />
+            <ModuleAiSection token={token} baseUrl={baseUrl} slug={mod.slug} />
 
             <div className="border-t border-gray-800 pt-3">
               <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Moduli correlati ({relatedUnique.length})</div>
