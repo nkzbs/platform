@@ -39,6 +39,7 @@ function fromRoles() {
     if (r.data) cfg.date = r.data;
     if (r.categoria) cfg.category = r.categoria;
     if (key === 'entrate' && r.gruppo) cfg.group = r.gruppo;
+    if (key === 'entrate') Object.assign(cfg, mods[0].riepiloghi); // criteri dichiarati dal modulo (anche vuoti: nessuna esclusione)
     if (key === 'spese') { if (r.stato) cfg.status = r.stato; if (r.fisso) cfg.fixed = r.fisso; }
     out[key] = cfg;
   }

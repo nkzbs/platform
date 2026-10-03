@@ -74,6 +74,26 @@ test('salvare un\'impostazione non congela i ruoli: se cambiano, la funzione li 
   assertEq(insights.getConfig().anomaly.pct, 40);
 });
 
+console.log('\n--- criteri dei riepiloghi dichiarati dal modulo ---');
+test('Finance parte con i criteri di prima (categorie escluse, stipendio, risparmio, gruppo escluso)', () => {
+  roles.set('entrate', { kind: 'entrata', uses: ['riepiloghi'], roles: { importo: 'importo', data: 'data', categoria: 'categoria', gruppo: 'gruppo' }, riepiloghi: { exclude_categories: 'Risparmi, Fondo', exclude_groups: ['Casa'], salary_categories: ['Stipendio'], savings_field: 'accantonamento_suggerito' } });
+  const cfg = insights.getConfig().entrate;
+  assertEq(cfg.exclude_categories, ['Risparmi', 'Fondo']); assertEq(cfg.exclude_groups, ['Casa']); assertEq(cfg.salary_categories, ['Stipendio']); assertEq(cfg.savings_field, 'accantonamento_suggerito');
+});
+test('un modulo di entrate qualunque, senza criteri: nessuna esclusione (non eredita quelle di Finance)', () => {
+  roles.set('entrate', { kind: 'entrata', uses: ['riepiloghi'], roles: { importo: 'importo', data: 'data' } });
+  const cfg = insights.getConfig().entrate;
+  assertEq(cfg.exclude_categories, []); assertEq(cfg.exclude_groups, []); assertEq(cfg.savings_field, '');
+});
+test('un modulo dichiarato con la forma vecchia (solo avvisi) prende i criteri di Finance una volta sola', () => {
+  db.prepare("UPDATE module_roles SET extra = ? WHERE module_slug = 'entrate'").run(JSON.stringify({ states: { nuovo: '', da_fare: '' }, nuovo: false, scadenze: false, tag: 'scadenza', label: '', noun_s: 'riga', noun_p: 'righe' }));
+  roles.seedIfEmpty();
+  assertEq(roles.get('entrate').riepiloghi.exclude_categories, ['Risparmi', 'Fondo']);
+  roles.set('entrate', { kind: 'entrata', uses: ['riepiloghi'], roles: { importo: 'importo' }, riepiloghi: {} });
+  roles.seedIfEmpty();
+  assertEq(roles.get('entrate').riepiloghi.exclude_categories, [], 'una scelta fatta (anche vuota) non si ripristina');
+});
+
 console.log(`\n${'='.repeat(60)}`);
 console.log(passed + ' passati, ' + failed + ' falliti su ' + (passed + failed) + ' test.');
 try { fs.unlinkSync(dbPath); } catch (e) {}
