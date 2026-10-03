@@ -12,8 +12,6 @@
 // qui non esistono. Ogni esecuzione viene comunque loggata in automation_logs con
 // esito 'simulato', mai spacciata per una chiamata reale riuscita.
 
-const https = require('https');
-const http = require('http');
 const db = require('./db');
 const { getAutomationSteps, parseSchemaNormalized } = require('./schema-v3');
 const { attachComputedFields } = require('./computed-fields');
@@ -123,19 +121,6 @@ function httpPost(urlStr, body, headers) {
     req.setTimeout(8000, () => { req.destroy(new Error('timeout')); });
     req.write(payload);
     req.end();
-  });
-}
-
-function httpGet(urlStr) {
-  return new Promise((resolve, reject) => {
-    const url = new URL(urlStr);
-    const req = (url.protocol === 'https:' ? https : http).get(url, (res) => {
-      let data = '';
-      res.on('data', (c) => { data += c; });
-      res.on('end', () => resolve({ status: res.statusCode, body: data }));
-    });
-    req.on('error', reject);
-    req.setTimeout(8000, () => { req.destroy(new Error('timeout')); });
   });
 }
 
@@ -442,6 +427,25 @@ function resolveDati(datiConfig, recordData, indice, opts) {
   return dati;
 }
 
+// Invio WhatsApp con esito vero: scrive subito una riga di registro "in invio", poi, a invio
+// finito, la aggiorna con l'esito per destinatario (inviato / parziale / FALLITO + motivo).
+// Non blocca l'automazione: l'invio gira in coda (vedi whatsapp.js).
+function inviaWhatsAppConEsito({ moduleSlug, automationLabel, triggerDesc, recordId, destinatari, testo, apiKey, descBase }) {
+  const wa = require('./whatsapp');
+  let logId = null;
+  try {
+    logId = db.prepare('INSERT INTO automation_logs (module_slug, automation_label, trigger_desc, action_desc, esito, record_id) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(moduleSlug, automationLabel, triggerDesc, descBase, 'in invio', recordId || null).lastInsertRowid;
+  } catch (e) { /* il registro non deve fermare l'invio */ }
+  wa.sendAll({ destinatari, testo, apiKey }).then((out) => {
+    if (logId == null) return;
+    db.prepare('UPDATE automation_logs SET esito = ?, action_desc = ? WHERE id = ?').run(out.esito, (descBase + ' — ' + out.dettaglio).slice(0, 400), logId);
+  }).catch((e) => {
+    console.error('automation-engine: invio WhatsApp fallito:', e.message);
+    if (logId != null) db.prepare('UPDATE automation_logs SET esito = ? WHERE id = ?').run('FALLITO', logId);
+  });
+}
+
 // Esegue (in modo simulato) l'elenco di azioni di un'automazione, seguendo i rami
 // Se/Altrimenti quando presenti — annidamento illimitato, questa funzione si richiama
 // da sola su ogni ramo then/otherwise. Il limite a un livello che esisteva prima era
@@ -505,6 +509,13 @@ function runAzioni(azioni, recordData, moduleSlug, automationLabel, recordId, lo
         return tmpl.replace(/\{\{(\w+)\}\}/g, (_, k) => recordData && recordData[k] !== undefined ? String(recordData[k]) : '');
       };
       const testo = interpolate(cfg.messaggio) || automationLabel;
+      // Con il riepilogo del mattino acceso, gli avvisi "scadenza" per singola riga non partono più:
+      // arrivano tutti insieme nel riepilogo (un messaggio al giorno invece di uno per riga).
+      if (cfg.trigger_tag === require('./daily-digest').TAG && require('./daily-digest').isEnabled()) {
+        if (dryRun) { dryLog.push({ desc: 'invia_notifica [' + cfg.trigger_tag + ']: sostituita dal riepilogo del mattino' }); return; }
+        db.prepare('INSERT INTO automation_logs (module_slug, automation_label, trigger_desc, action_desc, esito, record_id) VALUES (?, ?, ?, ?, ?, ?)').run(moduleSlug, automationLabel, logged.triggerDesc, 'invia_notifica [' + cfg.trigger_tag + ']: ' + testo.slice(0, 60), 'sostituita dal riepilogo', recordId || null);
+        return;
+      }
       const creds = getCredentials('whatsapp_callmebot');
       if (!creds || !creds.api_key) {
         if (dryRun) { dryLog.push({ desc: 'invia_notifica [' + (cfg.trigger_tag || '') + ']: ' + testo.slice(0, 60) + ' (nessuna credenziale WhatsApp collegata, sarebbe simulato anche in esecuzione reale)' }); return; }
@@ -513,12 +524,7 @@ function runAzioni(azioni, recordData, moduleSlug, automationLabel, recordId, lo
       }
       const destinatari = getDestinatariPerTag(cfg.trigger_tag);
       if (dryRun) { dryLog.push({ desc: 'invia_notifica [' + (cfg.trigger_tag || '') + '] → ' + destinatari.length + ' destinatari (WhatsApp reale NON inviato in anteprima): ' + testo.slice(0, 60) }); return; }
-      db.prepare('INSERT INTO automation_logs (module_slug, automation_label, trigger_desc, action_desc, esito, record_id) VALUES (?, ?, ?, ?, ?, ?)').run(moduleSlug, automationLabel, logged.triggerDesc, 'invia_notifica [' + (cfg.trigger_tag || '') + '] → ' + destinatari.length + ' destinatari: ' + testo.slice(0, 60), 'chiamata_reale', recordId || null);
-      destinatari.forEach((dest) => {
-        const numero = String(dest.numero).replace(/\s+/g, '').replace(/^\+/, '');
-        const url = 'https://api.callmebot.com/whatsapp.php?phone=' + encodeURIComponent(numero) + '&text=' + encodeURIComponent(testo) + '&apikey=' + encodeURIComponent(creds.api_key);
-        httpGet(url).catch((e) => console.error('automation-engine: invia_notifica (CallMeBot) fallita per', numero, ':', e.message));
-      });
+      inviaWhatsAppConEsito({ moduleSlug, automationLabel, triggerDesc: logged.triggerDesc, recordId, destinatari, testo, apiKey: creds.api_key, descBase: 'invia_notifica [' + (cfg.trigger_tag || '') + '] → ' + destinatari.length + ' destinatari: ' + testo.slice(0, 60) });
       return;
     }
 
@@ -600,12 +606,7 @@ function runAzioni(azioni, recordData, moduleSlug, automationLabel, recordId, lo
       }
       const destinatari = getDestinatariPerTag(cfg.trigger_tag);
       if (dryRun) { dryLog.push({ desc: 'invia_report_periodico [' + (cfg.trigger_tag || '') + '] → ' + destinatari.length + ' destinatari (WhatsApp reale NON inviato in anteprima): ' + testo.replace(/\n/g, ' | ').slice(0, 100) }); return; }
-      db.prepare('INSERT INTO automation_logs (module_slug, automation_label, trigger_desc, action_desc, esito, record_id) VALUES (?, ?, ?, ?, ?, ?)').run(moduleSlug, automationLabel, logged.triggerDesc, 'invia_report_periodico [' + (cfg.trigger_tag || '') + '] → ' + destinatari.length + ' destinatari: ' + testo.replace(/\n/g, ' | ').slice(0, 100), 'chiamata_reale', recordId || null);
-      destinatari.forEach((dest) => {
-        const numero = String(dest.numero).replace(/\s+/g, '').replace(/^\+/, '');
-        const url = 'https://api.callmebot.com/whatsapp.php?phone=' + encodeURIComponent(numero) + '&text=' + encodeURIComponent(testo) + '&apikey=' + encodeURIComponent(creds.api_key);
-        httpGet(url).catch((e) => console.error('automation-engine: invia_report_periodico (CallMeBot) fallita per', numero, ':', e.message));
-      });
+      inviaWhatsAppConEsito({ moduleSlug, automationLabel, triggerDesc: logged.triggerDesc, recordId, destinatari, testo, apiKey: creds.api_key, descBase: 'invia_report_periodico [' + (cfg.trigger_tag || '') + '] → ' + destinatari.length + ' destinatari: ' + testo.replace(/\n/g, ' | ').slice(0, 100) });
       return;
     }
 

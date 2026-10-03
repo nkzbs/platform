@@ -52,8 +52,8 @@ imposti, altrimenti ne genera una casuale e la stampa **una volta sola** nel log
 Ogni backend ha la sua suite, nessuna dipendenza esterna (i servizi esterni sono simulati):
 
 ```bash
-cd core/backend && npm test            # 23 suite
-cd super-admin/backend && npm test     # 13 suite
+cd core/backend && npm test            # 26 suite
+cd super-admin/backend && npm test     # 14 suite
 ```
 
 I frontend si verificano compilando: `cd core/frontend && npx vite build` (idem `super-admin/frontend`).

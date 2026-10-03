@@ -3,6 +3,7 @@ const db = require('../db');
 const { requireAuth, requireAdmin } = require('./auth');
 const { logAudit } = require('../audit-log');
 const { getRequiredConnectors } = require('../schema-v3');
+const whatsapp = require('../whatsapp');
 
 const router = express.Router();
 
@@ -106,6 +107,22 @@ router.put('/:id/credentials', requireAuth, requireAdmin, (req, res) => {
 // credenziali app reali di ogni servizio, che questo prototipo non ha). Onesto e
 // dichiarato: quello che cambia davvero è solo la persistenza dello stato, prima
 // perso ad ogni reload perché era React state locale.
+// Messaggio di prova WhatsApp: manda un testo ai destinatari attivi e dice, per ciascuno, se è
+// partito davvero (CallMeBot risponde 200 anche quando rifiuta, vedi whatsapp.js).
+router.post('/whatsapp_callmebot/test', requireAuth, requireAdmin, async (req, res) => {
+  const row = db.prepare("SELECT credentials FROM connections WHERE integration_id = 'whatsapp_callmebot'").get();
+  let creds = null;
+  try { creds = row && row.credentials ? JSON.parse(row.credentials) : null; } catch (e) { /* credenziali illeggibili */ }
+  if (!creds || !creds.api_key) return res.status(400).json({ error: 'Collega prima WhatsApp (CallMeBot) con la sua chiave' });
+  const destinatari = db.prepare("SELECT data FROM records WHERE module_slug = 'whatsapp_destinatari'").all()
+    .map((r) => { try { return JSON.parse(r.data || '{}'); } catch (e) { return null; } })
+    .filter((d) => d && d.attivo !== false && d.numero);
+  if (!destinatari.length) return res.status(400).json({ error: 'Nessun destinatario attivo: aggiungine uno in "Destinatari WhatsApp"' });
+  const out = await whatsapp.sendAll({ destinatari, testo: 'Prova di Platform: se leggi questo messaggio, le notifiche WhatsApp funzionano.', apiKey: creds.api_key });
+  logAudit(req.user.username, 'connection.whatsapp_test', 'whatsapp_callmebot', { esito: out.esito });
+  res.json(out);
+});
+
 router.post('/:id/toggle', requireAuth, requireAdmin, (req, res) => {
   if (!CATALOG.some((c) => c.id === req.params.id)) return res.status(404).json({ error: 'Connessione non trovata' });
   const existing = db.prepare('SELECT connected FROM connections WHERE integration_id = ?').get(req.params.id);

@@ -222,21 +222,6 @@ db.exec(`
     UNIQUE(rule_id, scope)
   );
 
-  -- Cache append-only per i commenti AI su dati aggregati (2026-09-28, Finance:
-  -- "vorrei che mistral mi analizzasse i dati" su Reportistica, "non voglio
-  -- troppe chiamate"). Un solo 'kind' oggi ('reportistica'). Nessuna riga viene
-  -- mai aggiornata: ogni analisi è una riga nuova, la più recente per kind è
-  -- "quella attuale" — stessa forma append-only già in uso per ai_recommendations
-  -- in Super Admin. Zero costo AI per leggerla: GET /reportistica/analysis legge
-  -- solo l'ultima riga, la chiamata Mistral parte SOLO da POST /analyze
-  -- (bottone manuale in Reportistica, mai un trigger automatico).
-  CREATE TABLE IF NOT EXISTS ai_analysis_cache (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    kind TEXT NOT NULL,
-    result_text TEXT NOT NULL,
-    generated_by TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
 
   -- Tracciamento ultima esecuzione per le automazioni schedulate (trigger temporale).
   -- La chiave è module_slug + automation_id: ogni coppia ha il proprio timestamp.
@@ -540,6 +525,31 @@ ensureColumn('site_leads', 'email_status', 'TEXT DEFAULT NULL');
 // sarebbe fuorviante per chi lo attiva dal pannello).
 ensureColumn('tenant_settings', 'hover_effects', 'INTEGER DEFAULT 0');
 ensureColumn('tenant_settings', 'eyebrow_swoosh', 'INTEGER DEFAULT 0');
+
+// Assistente AI (smistamento bollette): spento finché non lo si attiva dalle impostazioni.
+ensureColumn('tenant_settings', 'ai_bollette_enabled', 'INTEGER DEFAULT 0');
+
+// Riepilogo del mattino su WhatsApp (un solo messaggio al giorno con scadenze di oggi, di domani e in ritardo).
+// Spento finché non lo si accende; l'ora è quella italiana.
+ensureColumn('tenant_settings', 'digest_enabled', 'INTEGER DEFAULT 0');
+ensureColumn('tenant_settings', 'digest_hour', 'INTEGER DEFAULT 8');
+ensureColumn('tenant_settings', 'digest_last_sent', 'TEXT DEFAULT NULL');
+
+// Suggerimenti dell'AI su un record. L'AI PROPONE, mai scrive: un suggerimento resta
+// 'pending' finché non lo si accetta (applica i campi al record) o lo si ignora.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS ai_suggestions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    module_slug TEXT NOT NULL,
+    record_id INTEGER NOT NULL,
+    kind TEXT NOT NULL DEFAULT 'bolletta',
+    payload TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    decided_at DATETIME
+  );
+  CREATE INDEX IF NOT EXISTS idx_ai_suggestions_record ON ai_suggestions(module_slug, record_id, status);
+`);
 
 // Tema per pagina (2026-09-04, richiesto dall'utente dopo aver mostrato un mockup
 // reale — brand scuro/oro con font serif) — a livello di PAGINA, non di tenant: un

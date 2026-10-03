@@ -20,6 +20,9 @@ const auditRoutes = require('./routes/audit');
 const rolesRoutes = require('./routes/roles');
 const { startScheduler } = require('./scheduler');
 const { startGmailPoller } = require('./gmail-poller');
+const aiRoutes = require('./routes/ai');
+const digestRoutes = require('./routes/digest');
+const { startDailyDigest } = require('./daily-digest');
 const { startAuditRetentionScheduler } = require('./audit-retention-scheduler');
 const m2mRoutes = require('./routes/m2m');
 const notificationsRoutes = require('./routes/notifications');
@@ -27,7 +30,6 @@ const searchRoutes = require('./routes/search');
 const backupRoutes = require('./routes/backup');
 const settingsRoutes = require('./routes/settings');
 const googleOAuthRoutes = require('./routes/google-oauth');
-const reportisticaRoutes = require('./routes/reportistica');
 const { siteAdminRouter, sitePublicRouter, rootPublicRouter } = require('./routes/site');
 const { logError } = require('./error-log');
 const { rateLimit } = require('./rate-limit');
@@ -70,7 +72,8 @@ const routeMounts = [
   ['/backup', backupRoutes],
   ['/settings', settingsRoutes],
   ['/integrazioni/google', googleOAuthRoutes],
-  ['/reportistica', reportisticaRoutes],
+  ['/ai', aiRoutes],
+  ['/digest', digestRoutes],
   ['/site-pages', siteAdminRouter],
 ];
 app.use('/api', apiGlobalLimiter);
@@ -142,6 +145,7 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log('Platform Core [' + (process.env.TENANT_SLUG || 'default') + '] running on port ' + PORT);
   startScheduler();
+  startDailyDigest();
   startGmailPoller();
   startAuditRetentionScheduler();
 });

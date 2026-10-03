@@ -152,23 +152,6 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
     systemItems.push({ slug: 'guida', name: 'Guida', icon: 'info' })
   }
 
-  // Centri di Costo & EBITDA / Reportistica / Scadenzario / Provvigioni: pagine di
-  // sola lettura (più un'azione) sui dati contabili/commerciali — non moduli CRUD
-  // veri (niente riga in `modules`, quindi niente permissions.rules a governarle),
-  // ma vanno mostrate DENTRO le stesse intestazioni di gruppo di nico (Generale,
-  // Amministrazione) e non in un blocco a parte — altrimenti il menu è funzionalmente
-  // completo ma visivamente non è 1:1. Visibili solo se il tenant ha davvero i moduli
-  // sorgente installati e mai per il ruolo Agente (sono dentro AdminApp in nico).
-  const moduleSlugs = modules.map((m) => m.slug)
-  const virtualGenerale = []
-  const virtualAmministrazione = []
-  const virtualUngrouped = []
-  if (user && user.role !== 'agente') {
-    if (moduleSlugs.includes('agenti') && moduleSlugs.includes('fatture') && moduleSlugs.includes('prodotti')) {
-      virtualGenerale.push({ slug: 'reportistica', name: 'Reportistica', icon: 'bar-chart', color: '#8B5CF6', group_name: 'Generale' })
-    }
-  }
-
   return (
     <>
       {mobileOpen && (
@@ -210,7 +193,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
           // di "Amministrazione" vanno DOPO (si accodano alla sezione Amministrazione
           // già esistente dai moduli reali, stesso group_name = stessa intestazione,
           // nessun secondo blocco duplicato).
-          const visible = [...virtualGenerale, ...modules.filter((m) => !m.support_module), ...virtualAmministrazione, ...virtualUngrouped]
+          const visible = modules.filter((m) => !m.support_module)
           // Ordine delle sezioni = ordine di primo incontro scorrendo i moduli (già
           // ordinati per sort_order dal backend) — niente da configurare a parte, la
           // sezione appare dove appare per primo il modulo con priorità più alta.

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react'
+import AiSettingsTab from '../components/AiSettingsTab'
+import DigestSettingsTab from '../components/DigestSettingsTab'
 import { API } from '../lib/api'
 import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
@@ -28,6 +30,7 @@ function ConnessioniTab({ token }) {
   const [openFor, setOpenFor] = useState(null)
   const [credForm, setCredForm] = useState({})
   const [saving, setSaving] = useState(false)
+  const [waTest, setWaTest] = useState(null) // { busy } oppure { esito, dettaglio, error }
 
   const loadConnections = async () => { const data = await api.get('/connections'); if (data) setConnections(data) }
   const loadGoogleStatus = async () => { const data = await api.get('/integrazioni/google/status'); if (data) setGoogleStatus(data) }
@@ -35,6 +38,13 @@ function ConnessioniTab({ token }) {
 
   const credFieldsFor = (id) => { const intg = connections.find((c) => c.id === id); return (intg && intg.cred_fields) || [] }
   const initialCredForm = (id) => { const f = {}; credFieldsFor(id).forEach((x) => { f[x.key] = '' }); return f }
+  // Messaggio di prova WhatsApp: dice, per ogni destinatario, se è davvero partito.
+  const testWhatsApp = async () => {
+    setWaTest({ busy: true })
+    const res = await api.post('/connections/whatsapp_callmebot/test', {})
+    if (!res.ok) { setWaTest({ error: (res.data && res.data.error) || 'Prova non riuscita' }); return }
+    setWaTest({ esito: res.data.esito, risultati: res.data.risultati })
+  }
   const toggle = (id) => { const next = openFor === id ? null : id; setOpenFor(next); if (next) setCredForm(initialCredForm(next)) }
 
   const connectGoogle = () => { window.location.href = API + '/integrazioni/google/oauth/start' }
@@ -128,6 +138,12 @@ function ConnessioniTab({ token }) {
                         className="text-xs bg-accent hover:opacity-90 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg transition font-medium">
                         {saving ? 'Salvataggio...' : 'Salva e connetti'}
                       </button>
+                      {row.id === 'whatsapp_callmebot' && row.connected && (
+                        <button onClick={testWhatsApp} disabled={waTest && waTest.busy}
+                          className="text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-3 py-1.5 rounded-lg transition">
+                          {waTest && waTest.busy ? 'Invio...' : 'Invia messaggio di prova'}
+                        </button>
+                      )}
                       {row.connected && (
                         <button onClick={() => toggleConnGeneric(row.id)} className="text-xs text-gray-500 hover:text-red-400 transition px-2 py-1.5">Disconnetti</button>
                       )}
@@ -135,6 +151,16 @@ function ConnessioniTab({ token }) {
                         <span className="text-[10px] text-gray-600 ml-auto">attuali: {Object.keys(row.intg.credentials_masked).join(', ')}</span>
                       )}
                     </div>
+                    {row.id === 'whatsapp_callmebot' && waTest && !waTest.busy && (
+                      <div className={'text-xs mt-3 p-3 rounded-lg border ' + (waTest.error || waTest.esito !== 'inviato' ? 'bg-amber-900/20 text-amber-400 border-amber-900/40' : 'bg-green-900/20 text-green-400 border-green-900/40')}>
+                        {waTest.error ? waTest.error : (
+                          <>
+                            <div className="font-medium mb-1">{waTest.esito === 'inviato' ? 'Messaggio inviato: controlla il telefono.' : waTest.esito === 'parziale' ? 'Inviato solo ad alcuni destinatari.' : 'Messaggio NON inviato.'}</div>
+                            {waTest.risultati.map((r) => <div key={r.nome}>{r.ok ? '✓' : '✗'} {r.nome}{r.ok ? '' : ': ' + r.reason}</div>)}
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -264,6 +290,8 @@ const SETTINGS_TABS = [
   { key: 'moduli', icon: 'box', label: 'Moduli' },
   { key: 'sito_web', icon: 'globe', label: 'Sito Web' },
   { key: 'connessioni', icon: 'link', label: 'Connessioni' },
+  { key: 'notifiche', icon: 'bell', label: 'Notifiche' },
+  { key: 'assistente', icon: 'wand', label: 'Assistente AI' },
   { key: 'account', icon: 'user', label: 'Il mio account' },
 ]
 
@@ -296,6 +324,10 @@ function ImpostazioniPage({ token, user, initialTab }) {
       {tab === 'sito_web' && <SitoWebPage token={token} />}
 
       {tab === 'connessioni' && <ConnessioniTab token={token} />}
+
+      {tab === 'notifiche' && <DigestSettingsTab token={token} />}
+
+      {tab === 'assistente' && <AiSettingsTab token={token} />}
     </div>
   )
 }

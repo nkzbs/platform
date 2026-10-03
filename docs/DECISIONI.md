@@ -27,6 +27,7 @@ servire a un tenant futuro" non è un motivo.
 | Federazione tra istanze (pairing, tenant esterni, migrazione verso altri server, import/export delle immagini) | Pensata per più "core" che si agganciano; non esiste più quella visione |
 | App mobile (SwiftUI e Capacitor iOS/Android), modalità offline e sincronizzazione, stampa Bluetooth | Nessun uso; avevano reso `api.js` e `useApi.js` più complicati |
 | Raccomandazioni e misurazioni da "analisi clienti" | Nate dal CRM dei clienti |
+| Pagina **Reportistica** (provvigioni degli agenti e margini sui prodotti, nata con Coffee) e la sua rotta AI | Compariva solo nei tenant con agenti, fatture e prodotti: Finance non l'ha mai vista. I riepiloghi veri stanno nei moduli di spesa e nella dashboard |
 | Tour guidato al primo accesso | Non serve a chi ha costruito il sistema |
 | Invito di un "cliente" via email e creazione utente dal link | Un solo operatore: gli utenti si creano a mano |
 | Integrazioni non usate (Fatture in Cloud, WhatsApp Business, Slack, Stripe, Mailchimp, Resend) dall'elenco | Restano visibili solo Google e WhatsApp (CallMeBot), le uniche usate. Ricompare un'integrazione se un modulo installato la richiede |
@@ -61,8 +62,50 @@ servire a un tenant futuro" non è un motivo.
 - **Segreti nelle API**: l'elenco dei tenant restituiva `encryption_key`, `jwt_secret` e le credenziali offsite
   del backup. Ora vengono tolti, con un test.
 
+## 2026-10-02 — Assistente AI per Finance (fase 1)
+
+**Cosa.** Smistamento delle bollette in arrivo da Gmail: l'AI (Mistral, mistral-small) propone categoria, importo,
+scadenza e fornitore; l'utente accetta o ignora.
+
+**Scelte.**
+- L'AI **propone, non scrive**: nessuna modifica ai dati senza un'accettazione esplicita.
+- Il tenant non ha la chiave né parla con Mistral: tutto passa da Super Admin, dove stanno la pulizia dei dati
+  personali, il tetto di spesa e il controllo dell'output.
+- Il tetto è **in euro al mese** (10 € di default) e a tetto raggiunto le chiamate si fermano da sole.
+- **Spento di default.**
+- Ai modelli arrivano mittente, oggetto e le prime righe del testo, **senza** IBAN, telefoni, email, codici fiscali
+  e numeri lunghi.
+
+## 2026-10-02 — Notifiche WhatsApp con esito vero
+
+**Problema.** CallMeBot risponde HTTP 200 anche quando rifiuta un messaggio (chiave sbagliata, numero non
+attivato). L'invio partiva senza attendere la risposta e il registro scriveva "chiamata_reale" prima ancora di
+inviare: un messaggio mai arrivato non lasciava nessuna traccia.
+
+**Ora** (`core/backend/src/whatsapp.js`): si legge la risposta, si riprova per i problemi temporanei (rete, servizio
+occupato) ma non per quelli certi (chiave non valida), il registro riporta l'esito per destinatario
+(inviato / parziale / FALLITO + motivo), un messaggio non consegnato genera un avviso nell'app (uno all'ora per
+motivo) e gli invii escono uno alla volta con qualche secondo di distanza. In Impostazioni → Connessioni c'è
+"Invia messaggio di prova".
+
+## 2026-10-03 — Riepilogo del mattino
+
+**Problema.** Un messaggio WhatsApp per ogni riga in scadenza è rumoroso (CallMeBot limita anche la frequenza) e
+l'avviso "scadenza oggi" guardava solo il campo `scadenza`, che le righe di Finance usano poco: la data di
+scadenza sta di solito in `data`. Inoltre i lavori pianificati contano le ore in **UTC**: "ora: 8" significa le
+10 in estate e le 9 in inverno in Italia.
+
+**Ora** (`core/backend/src/daily-digest.js`): un solo messaggio al giorno, all'ora italiana scelta (default 08:00),
+con le spese da pagare *oggi*, *domani* e *in ritardo* (entro 45 giorni, per non trascinare residui vecchi),
+più il numero di bollette da smistare. La scadenza è `scadenza` se c'è, altrimenti `data`. Non manda nulla se
+non c'è niente da segnalare, e al massimo una volta al giorno.
+
+**Spento di default.** Quando è acceso, gli avvisi "scadenza oggi" per singola riga non partono più (verrebbero
+doppi); gli altri tag (bolletta, rata, report) non cambiano. Si accende da Impostazioni → Notifiche, dove ci sono
+anche l'anteprima e "Invia ora".
+
 ### Da fare
 
-- Piano AI con Mistral per Finance: smistamento delle bollette, lettura dei PDF, commento ai report e alla
-  reportistica, con tetto di spesa mensile. Predisposto, da costruire.
+- Fase 2: commento al report mensile (solo totali per categoria, mai le descrizioni).
+- Fase 3: "Spiega questo report" nella pagina Reportistica.
 - Backup su un dispositivo diverso dal NAS.

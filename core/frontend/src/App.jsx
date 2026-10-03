@@ -11,7 +11,6 @@ import GuidaPage from './pages/GuidaPage'
 import AuditPage from './pages/AuditPage'
 import ImpostazioniPage from './pages/ImpostazioniPage'
 import ModulePage from './pages/ModulePage'
-import ReportisticaPage from './pages/ReportisticaPage'
 import ExportDatiPage from './pages/ExportDatiPage'
 
 // Toast globale: qualunque componente fa:
@@ -255,7 +254,6 @@ export default function App() {
         {currentPage === 'libreria' && user && user.role === 'admin' && <LibreriaPage token={token} onRefresh={loadModules} onOpenInBuilder={openInBuilder} onCreateNewModule={openBuilderNewModule} />}
         {currentPage === 'builder' && user && user.role === 'admin' && <BuilderPage token={token} allModules={allModulesForBuilder} onModulesChanged={loadModules} preselectSlug={builderPreselect} onPreselectHandled={() => setBuilderPreselect(null)} openNewModule={builderOpenNew} onNewModuleHandled={() => setBuilderOpenNew(false)} />}
         {currentPage === 'guida' && <GuidaPage modules={installedModules} token={token} />}
-        {currentPage === 'reportistica' && <ReportisticaPage token={token} />}
         {/* Export e Backup uniti (2026-08-29): un solo tab-set dentro ExportDatiPage,
             Backup resta un tab admin-only al suo interno — stesso gate di prima, solo
             spostato dentro il componente invece che qui. */}

@@ -129,8 +129,50 @@ Google (Gmail in lettura, Calendar, Drive) e WhatsApp (CallMeBot) si configurano
 di un modulo. L'elenco mostra solo i collegamenti attivi o richiesti dai moduli installati. Le credenziali
 Google (Client ID e Secret, token) stanno nella tabella `connections` del tenant.
 
-L'AI (Mistral) è predisposta in Super Admin (`lib/ai-providers.js`, con registro dei token usati): il
-tenant manda solo i dati, il testo delle istruzioni resta lato server.
+## Notifiche WhatsApp
+
+L'invio passa da `core/backend/src/whatsapp.js`: legge la risposta di CallMeBot (che risponde 200 anche quando
+rifiuta), riprova solo i problemi temporanei, manda i messaggi uno alla volta e registra l'esito vero per
+destinatario; un messaggio non consegnato genera un avviso nell'app. Le automazioni dei moduli (`invia_notifica`,
+`invia_report_periodico`) usano lo stesso invio.
+
+Il **riepilogo del mattino** (`daily-digest.js`) è un lavoro a parte che gira ogni minuto e, all'ora italiana scelta,
+manda un solo messaggio con le scadenze di oggi, domani e in ritardo. È spento di default.
+
+## Assistente AI (Mistral)
+
+Oggi c'è una funzione: lo **smistamento delle bollette** di Finance. L'AI **propone** (categoria, importo,
+scadenza, fornitore) e tu accetti o ignori; non scrive mai da sola nei dati.
+
+```mermaid
+sequenceDiagram
+  participant G as Poller Gmail (tenant)
+  participant T as Tenant
+  participant SA as Super Admin
+  participant M as Mistral
+  G->>T: nuova bolletta in stato "Da smistare"
+  T->>SA: mittente, oggetto, testo breve + categorie ammesse
+  SA->>SA: toglie IBAN/telefoni/email/CF, controlla il tetto di spesa
+  SA->>M: richiesta (istruzioni fisse sul server)
+  M-->>SA: JSON con la proposta
+  SA->>SA: valida l'output (categoria tra quelle ammesse, importo e data validi)
+  SA-->>T: proposta controllata
+  T->>T: salva il suggerimento (stato "in attesa")
+  Note over T: l'utente lo vede sopra l'elenco: Accetta applica i campi, Ignora lo chiude
+```
+
+- Il **tenant non parla mai con Mistral** e non ha la chiave: chiede a Super Admin (`/api/tenant-ai/classify-bill`).
+- I **dati personali** vengono tolti in un solo punto, in Super Admin (`lib/ai-redact.js`), prima di ogni invio.
+- Le **istruzioni al modello** stanno sul server; il tenant manda solo dati.
+- L'**output è controllato**: una categoria che non è tra le opzioni del modulo viene scartata, importi e date
+  non validi diventano vuoti, una risposta che non è JSON viene rifiutata. All'accettazione la categoria è
+  ricontrollata sul modulo.
+- **Tetto di spesa mensile** (`lib/ai-budget.js`): si sommano i token del mese dal registro, convertiti in euro
+  (di default mistral-small: 0,13 € in ingresso e 0,51 € in uscita per milione di token), e a tetto raggiunto
+  nessuna chiamata parte. Avviso per email all'80% e al 100%. Tetto di default 10 €, regolabile con
+  `AI_MONTHLY_BUDGET_EUR`.
+- **Spento di default**: si accende da Impostazioni → Assistente AI. Le righe già presenti si possono
+  sottoporre all'assistente anche con l'interruttore spento, dal riquadro in cima alla pagina Spese.
 
 ## Sicurezza, in sintesi
 

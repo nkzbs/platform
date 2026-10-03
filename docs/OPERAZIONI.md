@@ -115,6 +115,10 @@ Elenco in [`.env.example`](../.env.example). Le obbligatorie sono `JWT_SECRET`, 
 `ENCRYPTION_KEY`. In produzione stanno in `deploy-secrets/super-admin-backend.env`; lo script di messa online
 imposta in più solo `DB_PATH=/data/super-admin-01.db`.
 
+Per l'assistente AI: `MISTRAL_API_KEY` (obbligatoria per usarlo), `AI_MONTHLY_BUDGET_EUR` (tetto mensile, di
+default 10) e, se cambiano i prezzi, `AI_COST_PER_MTOK_INPUT_MISTRAL` / `AI_COST_PER_MTOK_OUTPUT_MISTRAL`
+(di default 0,13 e 0,51 euro per milione di token). La spesa del mese si vede in Impostazioni → Assistente AI.
+
 La password dell'utente `admin` di Super Admin, se manca `INITIAL_ADMIN_PASSWORD`, viene generata al primo
 avvio su database vuoto e stampata **una sola volta** nel log (`docker logs super-admin-backend`). Se la perdi,
 l'unico modo è reimpostarla direttamente nel database.
