@@ -107,6 +107,22 @@ async function main() {
     assertEq((await fetch(BASE + '/api/ai/settings')).status, 401);
   });
 
+  console.log('\n--- dashboard ---');
+
+  await test('overview: proposte di entrambi i moduli e righe "da smistare" ancora da chiedere (solo admin)', async () => {
+    db.prepare("DELETE FROM ai_suggestions").run();
+    db.prepare("DELETE FROM records WHERE json_extract(data, '$._stato') = 'da_smistare'").run(); // parte pulita, senza righe lasciate dai test sopra
+    const a = newBill({ _stato: 'da_smistare' });
+    const b = newBill({ _stato: 'da_smistare' });
+    const c = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run('spese_personali', null, JSON.stringify({ descrizione: 'Rata', importo: 10, data: '2026-09-10', categoria: 'Altro', _stato: 'da_smistare' })).lastInsertRowid;
+    db.prepare("INSERT INTO ai_suggestions (module_slug, record_id, kind, payload, status) VALUES ('spese_casa', ?, 'bolletta', ?, 'pending')").run(a, JSON.stringify({ proposta: { categoria: 'Gas', importo: 10, scadenza: null, fornitore: 'X', confidenza: 'alta' }, corrente: {} }));
+    const o = await (await api('GET', '/overview')).json();
+    assertEq(o.items.length, 1); assertEq(o.items[0].record_id, a);
+    const asked = o.to_ask.map((x) => x.module_slug + ':' + x.record_id).sort().join();
+    assertEq(asked, ['spese_casa:' + b, 'spese_personali:' + c].sort().join(), 'la riga con proposta non va richiesta di nuovo');
+    assertEq((await fetch(BASE + '/api/ai/overview')).status, 401);
+  });
+
   console.log('\n--- proposta ---');
   sa.reply = { suggestion: PROPOSTA };
 

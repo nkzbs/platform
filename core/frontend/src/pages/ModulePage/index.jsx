@@ -12,7 +12,6 @@ import RecordDetailModal from './RecordDetailModal'
 import ReportPanel from './ReportPanel'
 import SchemaReports from './SchemaReports'
 import BranchCreateModal from './BranchCreateModal'
-import AiSuggestionsPanel from '../../components/AiSuggestionsPanel'
 import ReconciliationView from './ReconciliationView'
 import FinancialStatementView from './FinancialStatementView'
 import DistanceBucketsView from './DistanceBucketsView'
@@ -664,7 +663,6 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
         )}
       </div>
 
-      <AiSuggestionsPanel token={token} moduleSlug={mod.slug} records={records} isAdmin={!!(user && user.role === 'admin')} onApplied={loadRecords} />
 
       {requiredConnectors.includes('google') && (
         <div className={'mb-6 border rounded-lg px-4 py-3 ' + (connectorStatus.google ? 'bg-surface-card border-gray-800' : 'bg-amber-900/20 border-amber-900/40')}>

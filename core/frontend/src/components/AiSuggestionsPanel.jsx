@@ -2,10 +2,8 @@ import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from './Icon'
 
-// Proposte dell'assistente AI sopra l'elenco delle spese. L'AI PROPONE e non scrive: ogni
-// proposta si accetta (applica i campi al record) o si ignora. Compare solo per i moduli di
-// spese e solo se c'è qualcosa da vedere o da chiedere.
-const MODULI_SPESE = ['spese_casa', 'spese_personali']
+// Proposte dell'assistente AI, in dashboard: bollette di casa e personali in un solo elenco. L'AI PROPONE e non scrive:
+// ogni proposta si accetta (applica i campi al record) o si ignora. Compare solo se c'è qualcosa da vedere o da chiedere.
 const MODULO_LABEL = { spese_casa: 'Spese casa', spese_personali: 'Spese personali' }
 const fmtEur = (n) => (n == null ? '—' : Number(n).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' }))
 
@@ -20,26 +18,23 @@ function Change({ label, from, to }) {
   )
 }
 
-export default function AiSuggestionsPanel({ token, moduleSlug, records, isAdmin, onApplied }) {
+export default function AiSuggestionsPanel({ token, isAdmin }) {
   const api = useApi(token)
   const [items, setItems] = useState([])
+  const [toAsk, setToAsk] = useState([]) // righe "da smistare" per cui non è ancora stata chiesta una proposta
+  const [toAskTotal, setToAskTotal] = useState(0)
   const [busyId, setBusyId] = useState(null)
   const [asking, setAsking] = useState(false)
   const [msg, setMsg] = useState(null) // { ok, text }
 
-  const supported = MODULI_SPESE.includes(moduleSlug) && isAdmin
   const load = async () => {
-    if (!supported) return
-    const data = await api.get('/ai/suggestions?module=' + moduleSlug)
-    setItems(Array.isArray(data) ? data : [])
+    if (!isAdmin) return
+    const data = await api.get('/ai/overview')
+    if (data) { setItems(data.items || []); setToAsk(data.to_ask || []); setToAskTotal(data.to_ask_total || 0) }
   }
-  useEffect(() => { load() }, [moduleSlug, records && records.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!supported) return null
-
-  const daSmistare = (records || []).filter((r) => r.data && r.data._stato === 'da_smistare')
-  const withSuggestion = new Set(items.map((i) => i.record_id))
-  const toAsk = daSmistare.filter((r) => !withSuggestion.has(r.id)).slice(0, 10)
+  if (!isAdmin) return null
 
   const decide = async (id, action) => {
     setBusyId(id)
@@ -48,7 +43,6 @@ export default function AiSuggestionsPanel({ token, moduleSlug, records, isAdmin
     if (!res.ok) { setMsg({ ok: false, text: (res.data && res.data.error) || 'Operazione non riuscita' }); return }
     setMsg(null)
     await load()
-    if (action === 'accept' && onApplied) onApplied()
   }
 
   const askAll = async () => {
@@ -56,7 +50,7 @@ export default function AiSuggestionsPanel({ token, moduleSlug, records, isAdmin
     setMsg(null)
     let created = 0, last = null
     for (const r of toAsk) {
-      const res = await api.post('/ai/suggest/' + moduleSlug + '/' + r.id, {})
+      const res = await api.post('/ai/suggest/' + r.module_slug + '/' + r.record_id, {})
       if (!res.ok) { last = res.data; if (res.data && res.data.code === 'ai_budget_exceeded') break; continue }
       if (res.data && res.data.id) created++
     }
@@ -80,7 +74,7 @@ export default function AiSuggestionsPanel({ token, moduleSlug, records, isAdmin
         </div>
         {toAsk.length > 0 && (
           <button onClick={askAll} disabled={asking} className="text-xs bg-accent hover:opacity-90 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg transition font-medium">
-            {asking ? 'Chiedo...' : 'Chiedi per le righe da smistare (' + toAsk.length + ')'}
+            {asking ? 'Chiedo...' : 'Chiedi per le righe da smistare (' + toAskTotal + ')'}
           </button>
         )}
       </div>
@@ -93,7 +87,7 @@ export default function AiSuggestionsPanel({ token, moduleSlug, records, isAdmin
           return (
             <div key={s.id} className="bg-surface-card border border-gray-800 rounded-lg p-3 flex items-start justify-between gap-3 flex-wrap">
               <div className="min-w-0 flex-1">
-                <div className="text-sm text-ink font-medium truncate">{s.record.descrizione} <span className="text-gray-500 font-normal">· {fmtEur(s.record.importo)} · {s.record.data}</span></div>
+                <div className="text-sm text-ink font-medium truncate">{s.record.descrizione} <span className="text-gray-500 font-normal">· {fmtEur(s.record.importo)} · {s.record.data} · {MODULO_LABEL[s.module_slug] || s.module_slug}</span></div>
                 <div className="mt-1.5 space-y-0.5">
                   {p.categoria && p.categoria !== s.corrente.categoria && <Change label="Categoria" from={s.corrente.categoria} to={p.categoria} />}
                   {p.importo != null && p.importo !== Number(s.corrente.importo || 0) && <Change label="Importo" from={s.corrente.importo ? fmtEur(s.corrente.importo) : null} to={fmtEur(p.importo)} />}

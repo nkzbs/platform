@@ -159,7 +159,7 @@ sequenceDiagram
   SA->>SA: valida l'output (categoria tra quelle ammesse, importo e data validi)
   SA-->>T: proposta controllata
   T->>T: salva il suggerimento (stato "in attesa")
-  Note over T: l'utente lo vede sopra l'elenco: Accetta applica i campi, Ignora lo chiude
+  Note over T: l'utente lo vede in dashboard: Accetta applica i campi, Ignora lo chiude
 ```
 
 - Il **tenant non parla mai con Mistral** e non ha la chiave: chiede a Super Admin (`/api/tenant-ai/classify-bill`).

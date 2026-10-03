@@ -65,6 +65,9 @@ router.delete('/key', requireAuth, requireAdmin, async (req, res) => {
   res.json(r.data);
 });
 
+// Tutte le proposte in attesa (casa e personali) e le righe ancora da chiedere: per la dashboard.
+router.get('/overview', requireAuth, requireAdmin, (req, res) => res.json(ai.overview()));
+
 // Suggerimenti in attesa per un modulo (per il pannello sopra l'elenco).
 router.get('/suggestions', requireAuth, (req, res) => {
   const slug = String(req.query.module || '');

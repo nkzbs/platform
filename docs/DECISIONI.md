@@ -154,6 +154,10 @@ reali di Finance (6 righe → 1 destinatario e 5 regole). I backup JSON includon
 
 ### Corretto durante il lavoro
 
+- Il riquadro delle **proposte dell'assistente** (bollette da smistare) stava sopra l'elenco di Spese Casa, e un riquadro uguale
+  sopra Spese Personali. Spostato in **dashboard**, in un elenco solo (`GET /api/ai/overview`): riguarda entrambi i moduli ed è
+  la prima cosa che si apre.
+
 - La scheda **Debiti** dentro Spese (e Spese Casa) mostrava solo "#3966" invece del nome del debito: quando una scheda legge un
   altro modulo, la pagina non ha le righe di quel modulo e il titolo ripiegava sull'id. Ora `ParentChildrenView` carica le righe del
   modulo dei debiti, usa il campo *nome* come titolo e aggiunge il creditore.

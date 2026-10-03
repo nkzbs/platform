@@ -4,6 +4,7 @@ import Icon from '../components/Icon'
 import { parseSchemaFrontend } from '../lib/schema-v3-frontend'
 import ChecklistWidget from './ChecklistWidget'
 import InsightsCard from '../components/InsightsCard'
+import AiSuggestionsPanel from '../components/AiSuggestionsPanel'
 import YearlyBreakdownView from './ModulePage/YearlyBreakdownView'
 import CategoryPivotView from './ModulePage/CategoryPivotView'
 import WeeklyBreakdownView from './ModulePage/WeeklyBreakdownView'
@@ -341,6 +342,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate })
         )}
       </div>
 
+      {page === 'dashboard' && <AiSuggestionsPanel token={token} isAdmin={!!(user && user.role === 'admin')} />}
       {page === 'dashboard' && <InsightsCard token={token} onNavigate={onNavigate} />}
 
       {widgets.length === 0 && (

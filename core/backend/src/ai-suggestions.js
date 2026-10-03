@@ -151,6 +151,21 @@ function listPending(moduleSlug) {
 }
 
 // Fetch dello stato del tetto da Super Admin (solo per mostrarlo nelle impostazioni).
+// Quadro per la dashboard: tutte le proposte in attesa (casa e personali) e le righe "da smistare" per cui
+// non è ancora stata chiesta una proposta (al massimo 10, per non spendere troppo in un colpo solo).
+function overview() {
+  const items = BILL_MODULES.flatMap((slug) => listPending(slug));
+  const have = new Set(items.map((i) => i.module_slug + ':' + i.record_id));
+  const toAsk = [];
+  for (const slug of BILL_MODULES) {
+    if (!db.prepare('SELECT 1 FROM modules WHERE slug = ? AND installed = 1').get(slug)) continue;
+    for (const r of db.prepare("SELECT id FROM records WHERE module_slug = ? AND json_extract(data, '$._stato') = 'da_smistare' ORDER BY id DESC").all(slug)) {
+      if (!have.has(slug + ':' + r.id) && !hasPending(slug, r.id)) toAsk.push({ module_slug: slug, record_id: r.id });
+    }
+  }
+  return { items, to_ask: toAsk.slice(0, 10), to_ask_total: toAsk.length };
+}
+
 async function budget() {
   try {
     const res = await fetch(SUPER_ADMIN_URL + '/api/tenant-ai/budget?tenant_slug=' + encodeURIComponent(process.env.TENANT_SLUG || ''), { headers: { 'x-internal-secret': INTERNAL_SECRET }, signal: AbortSignal.timeout(4000) });
@@ -158,4 +173,4 @@ async function budget() {
   } catch (e) { return null; }
 }
 
-module.exports = { isEnabled, setEnabled, suggestForRecord, accept, dismiss, listPending, budget, allowedCategories, BILL_MODULES };
+module.exports = { isEnabled, setEnabled, suggestForRecord, accept, dismiss, listPending, overview, budget, allowedCategories, BILL_MODULES };
