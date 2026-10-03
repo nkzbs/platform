@@ -81,6 +81,15 @@ async function main() {
     assertEq(ns.activeRules().length, 1);
   });
 
+  await test('il tipo di regola: "bolletta" di default, "semplice" se scelto, un valore strano torna "bolletta"', async () => {
+    assertEq(ns.listRules()[0].tipo, 'bolletta');
+    const a = await (await call('POST', '/gmail-rules', { mittente: 'ordini@x.it', tipo: 'semplice', modulo: 'ordini' })).json();
+    assertEq(a.tipo, 'semplice'); assertEq(a.modulo, 'ordini');
+    const b = await (await call('POST', '/gmail-rules', { mittente: 'altro@x.it', tipo: 'boh' })).json();
+    assertEq(b.tipo, 'bolletta');
+    await call('DELETE', '/gmail-rules/' + a.id); await call('DELETE', '/gmail-rules/' + b.id);
+  });
+
   await test('mittente che non è una email -> 400; regola disattivata non è attiva', async () => {
     assertEq((await call('POST', '/gmail-rules', { mittente: 'a2a' })).status, 400);
     const r = ns.listRules()[0];

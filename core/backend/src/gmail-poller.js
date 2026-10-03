@@ -175,6 +175,27 @@ function raffinaCategoria(subject, categoriaRegola) {
   return categoriaRegola;
 }
 
+// La riga da creare per una mail. Funzione pura: i campi da scrivere sono quelli che il modulo ha dichiarato (module-roles.js), e un
+// campo senza ruolo non si scrive. Un modulo non dichiarato usa i nomi più comuni. Lo stato "nuovo" è quello dichiarato dal modulo.
+// Ritorna { data: i dati della riga, campi: la mappa ruolo → campo }.
+function costruisciRiga({ rule, declared, subject, importo, scadenza, dataSpesa }) {
+  const semplice = rule.tipo === 'semplice';
+  const F = declared
+    ? { stato: '_stato', ...declared.roles }
+    : { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', fisso: 'fisso' };
+  const nuovo = (declared && declared.avvisi && declared.avvisi.states.nuovo) || 'da_smistare';
+  const d = {};
+  if (F.descrizione) d[F.descrizione] = rule.descrizione || subject;
+  if (F.importo && !semplice) d[F.importo] = importo || 0;
+  if (F.data) d[F.data] = dataSpesa;
+  if (F.categoria) d[F.categoria] = raffinaCategoria(subject, rule.categoria || 'Altro');
+  d.note = 'Importato da Gmail (' + rule.mittente + '): ' + subject + (semplice || importo ? '' : ' — importo non rilevato automaticamente, verificare');
+  d[F.stato] = nuovo;
+  if (F.fisso) d[F.fisso] = false;
+  if (F.scadenza && scadenza && !semplice) d[F.scadenza] = scadenza;
+  return { data: d, campi: F };
+}
+
 async function processaMessaggio(accessToken, msgId, rule) {
   const already = db.prepare('SELECT id FROM gmail_processed_messages WHERE message_id = ?').get(msgId);
   if (already) return;
@@ -211,10 +232,13 @@ async function processaMessaggio(accessToken, msgId, rule) {
     }
   }
 
+  // Cosa leggere dalla mail lo sceglie la regola: "bolletta" cerca importo e scadenza nel testo e nei PDF; "semplice" prende solo oggetto,
+  // data e allegati e lascia importo e scadenza vuoti (ordini, contratti, documenti: tutto ciò che non è una bolletta).
+  const semplice = rule.tipo === 'semplice';
   const testoCompleto = subject + '\n' + acc.text;
-  const importo = estraiImporto(testoCompleto);
-  const dateEtichettate = estraiDateEtichettate(testoCompleto);
-  const scadenza = dateEtichettate.dataScadenza || estraiScadenzaGenerica(testoCompleto, emailDate);
+  const importo = semplice ? null : estraiImporto(testoCompleto);
+  const dateEtichettate = semplice ? {} : estraiDateEtichettate(testoCompleto);
+  const scadenza = semplice ? null : (dateEtichettate.dataScadenza || estraiScadenzaGenerica(testoCompleto, emailDate));
   const dataSpesa = dateEtichettate.dataVersamento || emailDate.toISOString().slice(0, 10);
 
   // Il modulo dove scrivere lo sceglie la regola; i nomi dei campi li dichiara il modulo (module-roles.js). Una regola senza modulo
@@ -223,18 +247,7 @@ async function processaMessaggio(accessToken, msgId, rule) {
   let moduleSlug = rule.modulo && db.prepare('SELECT 1 FROM modules WHERE slug = ? AND installed = 1').get(rule.modulo) ? rule.modulo : null;
   if (!moduleSlug) { const first = mr.list({ use: 'mail' })[0]; moduleSlug = first ? first.module_slug : null; }
   if (!moduleSlug) { console.error('[gmail-poller] regola', rule.mittente, ': nessun modulo può ricevere righe dalle mail (Builder → Ruoli del modulo)'); return; }
-  const declared = mr.get(moduleSlug);
-  const F = { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', fisso: 'fisso', ...((declared && declared.roles) || {}) };
-  const dataRecord = {
-    [F.descrizione]: rule.descrizione || subject,
-    [F.importo]: importo || 0,
-    [F.data]: dataSpesa,
-    [F.categoria]: raffinaCategoria(subject, rule.categoria || 'Altro'),
-    note: 'Importato da Gmail (' + rule.mittente + '): ' + subject + (importo ? '' : ' — importo non rilevato automaticamente, verificare'),
-    [F.stato]: 'da_smistare',
-    [F.fisso]: false,
-  };
-  if (scadenza) dataRecord[F.scadenza] = scadenza;
+  const { data: dataRecord, campi: F } = costruisciRiga({ rule, declared: mr.get(moduleSlug), subject, importo, scadenza, dataSpesa });
 
   const result = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(moduleSlug, null, JSON.stringify(dataRecord));
   const recordId = result.lastInsertRowid;
@@ -266,7 +279,7 @@ async function processaMessaggio(accessToken, msgId, rule) {
   if (scadenza) {
     try {
       await createCalendarEvent({
-        summary: dataRecord[F.descrizione] + (importo ? ' — €' + importo.toFixed(2) : ''),
+        summary: (dataRecord[F.descrizione] || subject) + (importo ? ' — €' + importo.toFixed(2) : ''),
         description: 'Scadenza rilevata automaticamente da un\'email di ' + rule.mittente + '.\n' + subject,
         date: scadenza,
       });
@@ -314,4 +327,4 @@ function startGmailPoller() {
   setInterval(pollGmail, 15 * 60 * 1000);
 }
 
-module.exports = { startGmailPoller, pollGmail, estraiImporto, estraiScadenzaGenerica };
+module.exports = { startGmailPoller, pollGmail, estraiImporto, estraiScadenzaGenerica, costruisciRiga };

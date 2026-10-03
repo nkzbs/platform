@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from './Icon'
 
-const EMPTY = { mittente: '', descrizione: '', gruppo: 'Casa', modulo: '', categoria: '', attiva: true }
+const EMPTY = { mittente: '', descrizione: '', gruppo: 'Casa', modulo: '', tipo: 'bolletta', categoria: '', attiva: true }
 const inputCls = 'w-full bg-surface-page text-ink px-3 py-2 rounded-lg outline-none border border-gray-800 focus:border-accent text-sm placeholder-gray-600'
 
 // Quali mail diventano spese: per ogni mittente, il gruppo (Casa o Personale) e la categoria.
@@ -58,7 +58,12 @@ export default function GmailRulesPanel({ token, nested = false }) {
                 {dest.length > 0 && !edit.data.modulo && <option value="">Scegli il modulo…</option>}
                 {dest.map((m) => <option key={m.module_slug} value={m.module_slug}>{m.name}</option>)}
               </select></div>
-            <div><label className="block text-xs text-gray-500 mb-1">Categoria della spesa</label><input className={inputCls} placeholder="Elettricità" value={edit.data.categoria || ''} onChange={(e) => setEdit({ ...edit, data: { ...edit.data, categoria: e.target.value } })} /></div>
+            <div><label className="block text-xs text-gray-500 mb-1">Cosa legge dalla mail</label>
+              <select className={inputCls} value={edit.data.tipo || 'bolletta'} onChange={(e) => setEdit({ ...edit, data: { ...edit.data, tipo: e.target.value } })}>
+                <option value="bolletta">Bolletta: importo e scadenza (da testo e PDF)</option>
+                <option value="semplice">Semplice: solo oggetto, data e allegati</option>
+              </select></div>
+            <div><label className="block text-xs text-gray-500 mb-1">Categoria della riga</label><input className={inputCls} placeholder="Elettricità" value={edit.data.categoria || ''} onChange={(e) => setEdit({ ...edit, data: { ...edit.data, categoria: e.target.value } })} /></div>
           </div>
           {err && <div className="text-xs text-amber-400">{err}</div>}
           <div className="flex gap-2">
@@ -75,7 +80,7 @@ export default function GmailRulesPanel({ token, nested = false }) {
           <div key={r.id} className="py-2.5 flex items-center gap-3 flex-wrap">
             <div className="min-w-0 flex-1">
               <div className={'text-sm ' + (r.data.attiva === false ? 'text-gray-500' : 'text-ink')}>{r.data.descrizione || r.data.mittente}</div>
-              <div className="text-xs text-gray-500 mt-0.5"><span className="font-mono">{r.data.mittente}</span> → {(dest.find((m) => m.module_slug === r.data.modulo) || {}).name || r.data.gruppo || 'Casa'}{r.data.categoria ? ' · ' + r.data.categoria : ''}</div>
+              <div className="text-xs text-gray-500 mt-0.5"><span className="font-mono">{r.data.mittente}</span> → {(dest.find((m) => m.module_slug === r.data.modulo) || {}).name || r.data.gruppo || 'Casa'}{r.data.tipo === 'semplice' ? ' · semplice' : ''}{r.data.categoria ? ' · ' + r.data.categoria : ''}</div>
             </div>
             <button type="button" role="switch" aria-checked={r.data.attiva !== false} onClick={() => toggleActive(r)} title={r.data.attiva === false ? 'Disattivata' : 'Attiva'}
               className={'w-8 h-[18px] rounded-full transition-colors relative flex-shrink-0 ' + (r.data.attiva !== false ? 'bg-accent' : 'bg-gray-700')}>

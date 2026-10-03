@@ -47,7 +47,7 @@ function updateRecipient(id, body) {
 const deleteRecipient = (id) => db.prepare('DELETE FROM whatsapp_recipients WHERE id = ?').run(id).changes > 0;
 
 // ─── Regole Gmail ────────────────────────────────────────────────────────────
-const toRule = (r) => ({ id: r.id, mittente: r.mittente, descrizione: r.descrizione || '', gruppo: r.gruppo, modulo: r.modulo || '', categoria: r.categoria || '', attiva: !!r.attiva });
+const toRule = (r) => ({ id: r.id, mittente: r.mittente, descrizione: r.descrizione || '', gruppo: r.gruppo, modulo: r.modulo || '', tipo: r.tipo === 'semplice' ? 'semplice' : 'bolletta', categoria: r.categoria || '', attiva: !!r.attiva });
 const listRules = () => db.prepare('SELECT * FROM gmail_rules ORDER BY id').all().map(toRule);
 const activeRules = () => listRules().filter((r) => r.attiva && r.mittente);
 
@@ -56,13 +56,13 @@ function cleanRule(body) {
   if (!/^\S+@\S+\.\S+$/.test(mittente)) return { error: 'Il mittente deve essere un indirizzo email (es. bollette@a2a.it).' };
   const gruppo = body.gruppo === 'Personale' ? 'Personale' : 'Casa';
   const modulo = /^[a-z0-9_]{1,60}$/.test(String(body.modulo || '')) ? String(body.modulo) : '';
-  return { value: { mittente, descrizione: String(body.descrizione || '').trim().slice(0, 80), gruppo, modulo, categoria: String(body.categoria || '').trim().slice(0, 60), attiva: body.attiva === false || body.attiva === 0 ? 0 : 1 } };
+  return { value: { mittente, descrizione: String(body.descrizione || '').trim().slice(0, 80), gruppo, modulo, tipo: body.tipo === 'semplice' ? 'semplice' : 'bolletta', categoria: String(body.categoria || '').trim().slice(0, 60), attiva: body.attiva === false || body.attiva === 0 ? 0 : 1 } };
 }
 
 function createRule(body) {
   const c = cleanRule(body); if (c.error) return c;
   const v = c.value;
-  const id = db.prepare('INSERT INTO gmail_rules (mittente, descrizione, gruppo, modulo, categoria, attiva) VALUES (?, ?, ?, ?, ?, ?)').run(v.mittente, v.descrizione, v.gruppo, v.modulo, v.categoria, v.attiva).lastInsertRowid;
+  const id = db.prepare('INSERT INTO gmail_rules (mittente, descrizione, gruppo, modulo, tipo, categoria, attiva) VALUES (?, ?, ?, ?, ?, ?, ?)').run(v.mittente, v.descrizione, v.gruppo, v.modulo, v.tipo, v.categoria, v.attiva).lastInsertRowid;
   return { rule: toRule(db.prepare('SELECT * FROM gmail_rules WHERE id = ?').get(id)) };
 }
 
@@ -70,7 +70,7 @@ function updateRule(id, body) {
   if (!db.prepare('SELECT 1 FROM gmail_rules WHERE id = ?').get(id)) return { notFound: true };
   const c = cleanRule(body); if (c.error) return c;
   const v = c.value;
-  db.prepare('UPDATE gmail_rules SET mittente = ?, descrizione = ?, gruppo = ?, modulo = ?, categoria = ?, attiva = ? WHERE id = ?').run(v.mittente, v.descrizione, v.gruppo, v.modulo, v.categoria, v.attiva, id);
+  db.prepare('UPDATE gmail_rules SET mittente = ?, descrizione = ?, gruppo = ?, modulo = ?, tipo = ?, categoria = ?, attiva = ? WHERE id = ?').run(v.mittente, v.descrizione, v.gruppo, v.modulo, v.tipo, v.categoria, v.attiva, id);
   return { rule: toRule(db.prepare('SELECT * FROM gmail_rules WHERE id = ?').get(id)) };
 }
 

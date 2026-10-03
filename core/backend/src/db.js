@@ -573,6 +573,7 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 `);
+ensureColumn('gmail_rules', 'tipo', "TEXT DEFAULT 'bolletta'"); // cosa leggere dalla mail: bolletta (importo e scadenza) o semplice (solo oggetto e allegati)
 ensureColumn('gmail_rules', 'modulo', 'TEXT'); // modulo di destinazione scelto sulla regola (vuoto = come prima, dal gruppo)
 
 // Movimenti bancari letti dagli estratti conto (PDF): servono a vedere cosa succede davvero sul conto e a
