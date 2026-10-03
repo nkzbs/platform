@@ -35,8 +35,6 @@ function ExportDatiPage({ token, modules, user }) {
   const api = useApi(token)
   const [slug, setSlug] = useState('')
   const [exporting, setExporting] = useState(false)
-  const isAdmin = user && user.role === 'admin'
-  const [tab, setTab] = useState('export')
 
   const exportable = modules.filter((m) => m.slug !== 'dashboard').sort((a, b) => a.name.localeCompare(b.name))
 
@@ -82,24 +80,22 @@ function ExportDatiPage({ token, modules, user }) {
   }
 
   return (
-    <div>
-      {tab === 'export' && (
-        <div>
-          <p className="text-gray-500 text-sm mb-4 max-w-md">Esporta tutti i record di un modulo in CSV (relazioni risolte al valore leggibile).</p>
-          <div className="bg-surface-card rounded-md border border-gray-800 p-5 max-w-md">
-            <label className="text-xs text-gray-400 block mb-1.5">Modulo</label>
-            <div className="mb-4">
-              <Select value={slug} onChange={setSlug} placeholder="Seleziona modulo..."
-                options={exportable.map((m) => ({ value: m.slug, label: m.name }))} />
+    <div className="bg-surface-card rounded-md p-5 border border-gray-800 flex flex-col">
+      <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-accent/15 flex items-center justify-center flex-shrink-0"><Icon name="download" size={18} className="text-accent" /></div>
+            <div>
+              <div className="text-ink font-medium mb-0.5">Esporta in CSV</div>
+              <div className="text-sm text-gray-500">Tutti i record di un modulo, con le relazioni risolte al valore leggibile.</div>
             </div>
-            <button onClick={doExport} disabled={!slug || exporting}
-              className="w-full bg-accent hover:opacity-90 disabled:opacity-50 text-white py-3 rounded-lg transition font-medium flex items-center justify-center gap-2">
-              <Icon name="download" size={14} />{exporting ? 'Esportazione...' : 'Esporta CSV'}
-            </button>
           </div>
-        </div>
-      )}
-
+      <div className="mt-auto pt-5 space-y-2">
+        <Select value={slug} onChange={setSlug} placeholder="Seleziona modulo..."
+          options={exportable.map((m) => ({ value: m.slug, label: m.name }))} />
+        <button onClick={doExport} disabled={!slug || exporting}
+          className="w-full bg-accent hover:opacity-90 disabled:opacity-50 text-white py-2.5 rounded-lg transition font-medium flex items-center justify-center gap-2 text-sm">
+          <Icon name="download" size={14} />{exporting ? 'Esportazione...' : 'Esporta CSV'}
+        </button>
+      </div>
     </div>
   )
 }

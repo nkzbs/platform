@@ -77,44 +77,40 @@ function BackupPage({ token }) {
     }
   }
 
+  const btnPrimary = 'w-full bg-accent hover:opacity-90 disabled:opacity-50 text-white py-2.5 rounded-lg transition font-medium flex items-center justify-center gap-2 text-sm'
+  const btnSecondary = 'w-full bg-gray-800 hover:bg-gray-700 text-ink py-2.5 rounded-lg transition font-medium flex items-center justify-center gap-2 text-sm cursor-pointer'
   return (
-    <div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
-        <div className="bg-surface-card rounded-md p-6 border border-gray-800">
-          <div className="flex items-start gap-4 mb-5">
-            <div className="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center flex-shrink-0">
-              <Icon name="file" size={20} className="text-accent" />
-            </div>
+    <>
+      <div className="bg-surface-card rounded-md p-5 border border-gray-800 flex flex-col">
+        <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-accent/15 flex items-center justify-center flex-shrink-0"><Icon name="file" size={18} className="text-accent" /></div>
             <div>
-              <div className="text-ink font-medium mb-1">Database SQLite completo</div>
-              <div className="text-sm text-gray-500">File binario grezzo — tutti i record, moduli, utenti e configurazioni.</div>
+              <div className="text-ink font-medium mb-0.5">Backup completo (.db)</div>
+              <div className="text-sm text-gray-500">Il database intero: record, moduli, utenti e configurazioni.</div>
             </div>
           </div>
-          <button onClick={download} disabled={downloading}
-            className="w-full bg-accent hover:opacity-90 disabled:opacity-50 text-white py-3 rounded-lg transition font-medium flex items-center justify-center gap-2">
-            <Icon name="file" size={14} />
-            {downloading ? 'Download in corso...' : 'Scarica backup (.db)'}
+        <div className="mt-auto pt-5 space-y-2">
+          <button onClick={download} disabled={downloading} className={btnPrimary}>
+            <Icon name="file" size={14} />{downloading ? 'Download in corso...' : 'Scarica backup'}
           </button>
         </div>
+      </div>
 
-        <div className="bg-surface-card rounded-md p-6 border border-gray-800">
-          <div className="flex items-start gap-4 mb-5">
-            <div className="w-10 h-10 rounded-lg bg-green-600/20 flex items-center justify-center flex-shrink-0">
-              <Icon name="download" size={20} className="text-green-400" />
-            </div>
+      <div className="bg-surface-card rounded-md p-5 border border-gray-800 flex flex-col">
+        <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-accent/15 flex items-center justify-center flex-shrink-0"><Icon name="upload" size={18} className="text-accent" /></div>
             <div>
-              <div className="text-ink font-medium mb-1">Export/Restore JSON</div>
-              <div className="text-sm text-gray-500">Moduli (schema incluso), record e allegati (byte inclusi) — ripristinabile su un tenant nuovo. Non include utenti/password.</div>
+              <div className="text-ink font-medium mb-0.5">Esporta e ripristina (JSON)</div>
+              <div className="text-sm text-gray-500">Moduli con schema, record e allegati; ripristinabile su un tenant nuovo. Esclude utenti e password.</div>
             </div>
           </div>
-          <button onClick={downloadJson} disabled={exportingJson}
-            className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white py-3 rounded-lg transition font-medium flex items-center justify-center gap-2 mb-3">
-            <Icon name="download" size={14} />
-            {exportingJson ? 'Export in corso...' : 'Esporta JSON'}
+        <div className="mt-auto pt-5 space-y-2">
+          <button onClick={downloadJson} disabled={exportingJson} className={btnPrimary}>
+            <Icon name="download" size={14} />{exportingJson ? 'Export in corso...' : 'Esporta JSON'}
           </button>
           <input ref={fileRef} type="file" accept="application/json" onChange={onPickFile} className="hidden" id="restore-file-input" />
-          <label htmlFor="restore-file-input" className="w-full bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg transition font-medium flex items-center justify-center gap-2 cursor-pointer">
-            <Icon name="file" size={14} />Seleziona file di ripristino...
+          <label htmlFor="restore-file-input" className={btnSecondary}>
+            <Icon name="file" size={14} />Ripristina da file...
           </label>
         </div>
       </div>
@@ -135,7 +131,7 @@ function BackupPage({ token }) {
       )}
 
       {restoreResult && (
-        <div className={'mt-4 max-w-3xl rounded-xl border p-4 text-sm ' + (restoreResult.success ? 'bg-green-900/20 border-green-800 text-green-400' : 'bg-red-900/20 border-red-800 text-red-400')}>
+        <div className={'col-span-full rounded-xl border p-4 text-sm ' + (restoreResult.success ? 'bg-green-900/20 border-green-800 text-green-400' : 'bg-red-900/20 border-red-800 text-red-400')}>
           {restoreResult.success
             ? `Ripristinati ${restoreResult.recordRipristinati} record su ${restoreResult.moduliInteressati} moduli (${restoreResult.moduliCreati} moduli nuovi creati)`
               + (restoreResult.uploadsRipristinati || restoreResult.uploadsFalliti
@@ -144,7 +140,7 @@ function BackupPage({ token }) {
             : `Errore: ${restoreResult.error}`}
         </div>
       )}
-    </div>
+    </>
   )
 }
 

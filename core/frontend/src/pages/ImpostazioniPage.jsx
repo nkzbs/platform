@@ -345,17 +345,9 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
 
 
       {tab === 'export_dati' && canExport && (
-        <div className="space-y-8">
-          <section>
-            <h2 className="text-sm font-semibold text-ink mb-1">Export</h2>
-            <ExportDatiPage token={token} modules={modules} user={user} />
-          </section>
-          {isAdmin && (
-            <section>
-              <h2 className="text-sm font-semibold text-ink mb-3">Backup</h2>
-              <BackupPage token={token} />
-            </section>
-          )}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-w-5xl">
+          <ExportDatiPage token={token} modules={modules} user={user} />
+          {isAdmin && <BackupPage token={token} />}
         </div>
       )}
     </div>
