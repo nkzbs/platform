@@ -1,5 +1,8 @@
 const express = require('express');
 const { callAI, isProviderConfigured } = require('../lib/ai-providers');
+const { status: budgetStatus } = require('../lib/ai-budget');
+const { redact } = require('../lib/ai-redact');
+const reportAi = require('../lib/ai-report');
 
 const router = express.Router();
 
@@ -14,32 +17,91 @@ function requireInternalSecret(req, res, next) {
   next();
 }
 
-// Un solo "kind" oggi: 'reportistica' (Finance — performance agenti a scaglioni
-// di provvigione, marginalità prodotto). Il prompt di sistema resta di proprietà
-// di QUESTO lato (stesso principio già in uso in ai-enabler.js per il "secondo
-// revisore GDPR" — il chiamante manda solo i dati, mai il testo del prompt): un
-// futuro kind si aggiunge qui, mai lasciando al tenant la scelta del prompt.
-const SYSTEM_PROMPTS = {
-  reportistica: `Sei un analista che commenta i dati di reportistica di un'azienda (performance commerciale degli agenti con le loro provvigioni, marginalità dei prodotti venduti). Ricevi due tabelle già calcolate nel messaggio (JSON). Scrivi un commento breve (massimo 200 parole), in italiano, concreto e utile a chi gestisce l'azienda: cosa emerge, cosa merita attenzione. USA SOLO i numeri e i nomi presenti nei dati ricevuti — non inventare MAI un valore, una percentuale o un nome non presente nel messaggio. Se i dati sono troppo pochi per un commento utile, dillo esplicitamente invece di forzare un'osservazione. Rispondi con testo semplice, nessun markdown, nessun JSON.`,
-};
+// Stato del tetto di spesa del mese (lo mostra la pagina delle impostazioni del tenant).
+router.get('/budget', requireInternalSecret, (req, res) => {
+  res.json(budgetStatus());
+});
 
-router.post('/analyze', requireInternalSecret, async (req, res) => {
-  const { tenant_slug, kind, data } = req.body || {};
-  if (!tenant_slug || !kind || !data) {
-    return res.status(400).json({ error: 'tenant_slug, kind e data sono obbligatori' });
+// ─── Smistamento bollette ─────────────────────────────────────────────────────
+// Il tenant manda mittente, oggetto, un estratto del testo e le categorie ammesse; l'AI
+// PROPONE categoria, fornitore, importo e scadenza. Il risultato è controllato qui: una
+// categoria che non è tra quelle ammesse viene scartata, un importo o una data non validi
+// diventano "null". Il tenant non riceve mai testo libero dal modello, solo questi campi.
+const BILL_SYSTEM_PROMPT = `Sei un assistente che smista le bollette e le fatture ricevute per email, per la gestione delle spese di famiglia. Ricevi un JSON con: mittente, oggetto, testo (estratto della mail, con i dati personali già tolti), rilevato (importo e scadenza trovati da un programma, possono mancare o essere sbagliati), modulo_attuale e moduli (per ogni modulo le categorie ammesse). Rispondi SOLO con un oggetto JSON, senza altro testo, con questi campi: "modulo" (una delle chiavi di "moduli"), "categoria" (UNA delle categorie ammesse di quel modulo, oppure null se nessuna è adatta), "fornitore" (nome breve dell'azienda che emette il documento, oppure null), "importo" (numero con il punto decimale, l'importo totale da pagare, oppure null se non lo trovi con certezza), "scadenza" (data di scadenza del pagamento nel formato AAAA-MM-GG, oppure null), "confidenza" ("alta", "media" o "bassa"). Non inventare: se un dato non c'è scrivi null.`;
+
+function parseJsonObject(text) {
+  const m = String(text || '').match(/\{[\s\S]*\}/);
+  if (!m) return null;
+  try { return JSON.parse(m[0]); } catch (e) { return null; }
+}
+
+function validDate(v) {
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  const d = new Date(v + 'T00:00:00Z');
+  return !isNaN(d) && d.toISOString().slice(0, 10) === v ? v : null;
+}
+
+function sanitizeBillSuggestion(raw, moduli, moduloAttuale) {
+  const keys = Object.keys(moduli || {});
+  const modulo = keys.includes(raw.modulo) ? raw.modulo : (keys.includes(moduloAttuale) ? moduloAttuale : null);
+  const categorie = modulo && Array.isArray(moduli[modulo] && moduli[modulo].categorie) ? moduli[modulo].categorie : [];
+  const categoria = categorie.includes(raw.categoria) ? raw.categoria : null;
+  const fornitore = typeof raw.fornitore === 'string' && raw.fornitore.trim() ? raw.fornitore.replace(/[\r\n]+/g, ' ').trim().slice(0, 60) : null;
+  const imp = typeof raw.importo === 'number' ? raw.importo : parseFloat(String(raw.importo).replace(',', '.'));
+  const importo = Number.isFinite(imp) && imp > 0 && imp < 100000 ? Math.round(imp * 100) / 100 : null;
+  const confidenza = ['alta', 'media', 'bassa'].includes(raw.confidenza) ? raw.confidenza : 'bassa';
+  return { modulo, categoria, fornitore, importo, scadenza: validDate(raw.scadenza), confidenza };
+}
+
+router.post('/classify-bill', requireInternalSecret, async (req, res) => {
+  const { tenant_slug, data } = req.body || {};
+  if (!tenant_slug || !data || typeof data !== 'object') {
+    return res.status(400).json({ error: 'tenant_slug e data sono obbligatori' });
   }
-  const systemPrompt = SYSTEM_PROMPTS[kind];
-  if (!systemPrompt) {
-    return res.status(400).json({ error: 'kind "' + kind + '" non supportato' });
+  if (!data.moduli || typeof data.moduli !== 'object' || Object.keys(data.moduli).length === 0) {
+    return res.status(400).json({ error: 'data.moduli (con le categorie ammesse) è obbligatorio' });
   }
   if (!isProviderConfigured('mistral')) {
     return res.status(503).json({ error: 'Mistral non configurato su Super Admin' });
   }
+  // Solo ciò che serve, ripulito dai dati personali e accorciato.
+  const payload = {
+    mittente: redact(String(data.mittente || '')).slice(0, 120),
+    oggetto: redact(String(data.oggetto || '')).slice(0, 200),
+    testo: redact(String(data.testo || '')).slice(0, 1500),
+    rilevato: { importo: data.rilevato && data.rilevato.importo != null ? data.rilevato.importo : null, scadenza: data.rilevato && data.rilevato.scadenza || null },
+    modulo_attuale: data.modulo_attuale || null,
+    moduli: data.moduli,
+  };
   try {
-    const text = await callAI('mistral', { system: systemPrompt, user: JSON.stringify(data), maxTokens: 500 });
-    res.json({ result_text: text });
+    const text = await callAI('mistral', { system: BILL_SYSTEM_PROMPT, user: JSON.stringify(payload), maxTokens: 250 });
+    const raw = parseJsonObject(text);
+    if (!raw) return res.status(502).json({ error: 'Risposta dell\'AI non valida' });
+    res.json({ suggestion: sanitizeBillSuggestion(raw, data.moduli, data.modulo_attuale) });
   } catch (e) {
-    res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita' });
+    res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
+  }
+});
+
+// ─── Commento / spiegazione dei report ────────────────────────────────────────
+// Il tenant manda solo totali per gruppo. 'commento' = una frase breve per il messaggio
+// WhatsApp mensile; 'spiegazione' = qualche riga per chi guarda il report. Il testo torna al
+// tenant solo se ogni numero scritto dal modello esiste nei dati forniti.
+router.post('/explain-report', requireInternalSecret, async (req, res) => {
+  const { tenant_slug, modo, data } = req.body || {};
+  if (!tenant_slug || !reportAi.PROMPTS[modo]) return res.status(400).json({ error: 'tenant_slug e modo (commento | spiegazione) sono obbligatori' });
+  const s = reportAi.sanitizeReport(data);
+  if (s.error) return res.status(400).json({ error: s.error });
+  if (!isProviderConfigured('mistral')) return res.status(503).json({ error: 'Mistral non configurato su Super Admin' });
+  try {
+    const raw = await callAI('mistral', { system: reportAi.PROMPTS[modo], user: JSON.stringify(s.payload), maxTokens: reportAi.LIMITS[modo].tokens });
+    const text = String(raw || '').replace(/\*\*|__|^#+\s*/gm, '').trim();
+    if (!text || text.length > reportAi.LIMITS[modo].chars) return res.status(502).json({ error: 'Risposta dell\'AI non utilizzabile' });
+    const check = reportAi.verifyNumbers(text, s.numeri);
+    if (!check.ok) return res.status(502).json({ error: 'Il commento conteneva un numero non presente nei dati (' + check.numero + '): scartato', code: 'ai_unverified' });
+    res.json({ text });
+  } catch (e) {
+    res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
   }
 });
 

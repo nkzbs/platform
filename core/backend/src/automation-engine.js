@@ -15,6 +15,7 @@
 const db = require('./db');
 const { getAutomationSteps, parseSchemaNormalized } = require('./schema-v3');
 const { attachComputedFields } = require('./computed-fields');
+const reportAi = require('./report-ai');
 
 function getModuleSchema(slug) {
   const mod = db.prepare('SELECT schema_json FROM modules WHERE slug = ?').get(slug);
@@ -606,7 +607,18 @@ function runAzioni(azioni, recordData, moduleSlug, automationLabel, recordId, lo
       }
       const destinatari = getDestinatariPerTag(cfg.trigger_tag);
       if (dryRun) { dryLog.push({ desc: 'invia_report_periodico [' + (cfg.trigger_tag || '') + '] → ' + destinatari.length + ' destinatari (WhatsApp reale NON inviato in anteprima): ' + testo.replace(/\n/g, ' | ').slice(0, 100) }); return; }
-      inviaWhatsAppConEsito({ moduleSlug, automationLabel, triggerDesc: logged.triggerDesc, recordId, destinatari, testo, apiKey: creds.api_key, descBase: 'invia_report_periodico [' + (cfg.trigger_tag || '') + '] → ' + destinatari.length + ' destinatari: ' + testo.replace(/\n/g, ' | ').slice(0, 100) });
+      const invia = (testoFinale) => inviaWhatsAppConEsito({ moduleSlug, automationLabel, triggerDesc: logged.triggerDesc, recordId, destinatari, testo: testoFinale, apiKey: creds.api_key, descBase: 'invia_report_periodico [' + (cfg.trigger_tag || '') + '] → ' + destinatari.length + ' destinatari: ' + testoFinale.replace(/\n/g, ' | ').slice(0, 100) });
+      // Report mensile per categoria: con l'assistente acceso si aggiunge una frase di commento.
+      // Se l'AI non risponde o sbaglia un numero, il report parte comunque, senza commento.
+      if (cfg.periodo === 'mese' && cfg.raggruppa_per && reportAi.isEnabled() && destinatari.length) {
+        const nomeMese = new Date(daStr + 'T00:00:00Z').toLocaleDateString('it-IT', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+        reportAi.explain('commento', {
+          titolo: cfg.titolo || automationLabel, periodo: nomeMese, metrica: campoImporto, funzione: 'sum', totale, totale_confronto: totalePrec > 0 ? totalePrec : undefined,
+          gruppi: reportAi.gruppiDaRighe(inRange, inRangePrec, cfg.raggruppa_per, campoImporto),
+        }).then((c) => invia(c.text ? testo + '\n\n💬 ' + c.text : testo)).catch(() => invia(testo));
+      } else {
+        invia(testo);
+      }
       return;
     }
 

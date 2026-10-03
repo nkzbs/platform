@@ -2,20 +2,47 @@
 const express = require('express');
 const { requireAuth, requireAdmin } = require('./auth');
 const ai = require('../ai-suggestions');
+const reportAi = require('../report-ai');
 const { logAudit } = require('../audit-log');
 
 const router = express.Router();
 
 // Stato e interruttore dell'assistente + quanto si è speso nel mese (letto da Super Admin).
 router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
-  res.json({ bollette_enabled: ai.isEnabled(), budget: await ai.budget() });
+  res.json({ bollette_enabled: ai.isEnabled(), report_enabled: reportAi.isEnabled(), budget: await ai.budget() });
 });
 
+// Cambia solo gli interruttori presenti nella richiesta.
 router.put('/settings', requireAuth, requireAdmin, (req, res) => {
-  const on = !!(req.body && req.body.bollette_enabled);
-  ai.setEnabled(on);
-  logAudit(req.user.username, on ? 'ai.bollette.on' : 'ai.bollette.off', null, null);
-  res.json({ bollette_enabled: on });
+  const body = req.body || {};
+  if ('bollette_enabled' in body) {
+    ai.setEnabled(!!body.bollette_enabled);
+    logAudit(req.user.username, body.bollette_enabled ? 'ai.bollette.on' : 'ai.bollette.off', null, null);
+  }
+  if ('report_enabled' in body) {
+    reportAi.setEnabled(!!body.report_enabled);
+    logAudit(req.user.username, body.report_enabled ? 'ai.report.on' : 'ai.report.off', null, null);
+  }
+  res.json({ bollette_enabled: ai.isEnabled(), report_enabled: reportAi.isEnabled() });
+});
+
+// "Spiega questo report": riceve i totali già calcolati e mostrati nella pagina (mai righe).
+// Funziona anche con l'interruttore spento: è una richiesta esplicita di chi guarda il report.
+router.post('/explain-report', requireAuth, async (req, res) => {
+  const b = req.body || {};
+  const gruppi = Array.isArray(b.gruppi) ? b.gruppi.slice(0, 12).map((g) => ({
+    nome: String((g && g.label) != null ? g.label : (g && g.nome) || '').slice(0, 40),
+    valore: g && g.value != null ? g.value : g && g.valore,
+    confronto: g && g.confronto != null ? g.confronto : undefined,
+  })) : [];
+  if (!gruppi.length) return res.status(400).json({ error: 'Nessun dato da spiegare' });
+  const out = await reportAi.explain('spiegazione', {
+    titolo: String(b.titolo || '').slice(0, 80), periodo: String(b.periodo || '').slice(0, 60),
+    metrica: String(b.metrica || '').slice(0, 40), funzione: String(b.funzione || '').slice(0, 20),
+    totale: b.totale, totale_confronto: b.totale_confronto, gruppi,
+  });
+  if (out.error) return res.status(out.status === 429 ? 429 : 502).json({ error: out.error, code: out.code });
+  res.json({ text: out.text });
 });
 
 // Suggerimenti in attesa per un modulo (per il pannello sopra l'elenco).

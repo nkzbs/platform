@@ -104,8 +104,30 @@ non c'è niente da segnalare, e al massimo una volta al giorno.
 doppi); gli altri tag (bolletta, rata, report) non cambiano. Si accende da Impostazioni → Notifiche, dove ci sono
 anche l'anteprima e "Invia ora".
 
+## 2026-10-03 — Commento ai report e "Spiega questo report" (fasi 2 e 3)
+
+**Cosa.** Due usi dello stesso meccanismo: (2) il report mensile su WhatsApp si chiude con una frase di commento;
+(3) in ogni pagina Report, il pulsante «Spiega questo report» scrive qualche riga sui totali che stai guardando.
+Era previsto "Reportistica" come pagina, ma quella pagina non esiste più (vedi sopra): il pulsante sta nel
+pannello Report che ogni modulo con un campo numerico e uno a selezione già ha.
+
+**Scelte.**
+- All'AI vanno **solo i totali per gruppo** (le categorie, con il confronto col periodo prima), mai le righe né le descrizioni.
+- Le **variazioni percentuali le calcola il programma**: il modello non fa conti.
+- **Ogni numero** scritto dal modello deve esistere nei dati forniti (anche arrotondato o scritto all'italiana; le
+  percentuali devono essere una delle variazioni date). Altrimenti il testo è scartato e non arriva a nessuno.
+- Il commento WhatsApp è **spento di default** e **non blocca mai il report**: se l'AI non risponde, ha raggiunto il
+  tetto o sbaglia un numero, il report parte com'era. Non parte nulla all'anteprima delle automazioni.
+- «Spiega questo report» funziona anche con l'interruttore spento (è una richiesta esplicita) e rispetta lo stesso
+  tetto di spesa mensile.
+- Le istruzioni al modello stanno su Super Admin (`lib/ai-report.js`), insieme alla verifica dei numeri.
+
+### Corretto durante il lavoro
+
+- Il commit "Assistente AI, WhatsApp…" nel repository nuovo conteneva solo la parte `core/`: mancavano i file di Super Admin
+  (`lib/ai-budget.js`, `lib/ai-redact.js`, `routes/tenant-ai.js` con lo smistamento bollette, ecc.). Il NAS era a posto,
+  il repository no. Recuperati dalla cartella vecchia e committati.
+
 ### Da fare
 
-- Fase 2: commento al report mensile (solo totali per categoria, mai le descrizioni).
-- Fase 3: "Spiega questo report" nella pagina Reportistica.
 - Backup su un dispositivo diverso dal NAS.

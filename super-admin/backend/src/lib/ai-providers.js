@@ -11,6 +11,7 @@
 // non devono restare appesi all'infinito se il provider non risponde.
 const { callClaude } = require('./ai');
 const db = require('../db');
+const { assertWithinBudget, maybeAlert } = require('./ai-budget');
 
 function isProviderConfigured(providerName) {
   if (providerName === 'mistral') return !!process.env.MISTRAL_API_KEY;
@@ -100,6 +101,7 @@ function logAIUsage(providerName, usage) {
 // effetto collaterale trasparente, nessuno dei chiamanti esistenti
 // (super-builder.js, client-analyses.js, ai-enabler.js) deve cambiare.
 async function callAI(providerName, { system, user, maxTokens = 2048, timeoutMs = 20000 } = {}) {
+  assertWithinBudget(); // a tetto mensile raggiunto non parte nessuna chiamata
   if (!isProviderConfigured(providerName)) {
     const err = new Error('Provider AI "' + providerName + '" non configurato');
     err.status = 503;
@@ -108,6 +110,7 @@ async function callAI(providerName, { system, user, maxTokens = 2048, timeoutMs 
   if (providerName === 'mistral') {
     const { text, usage } = await callMistral({ system, user, maxTokens, timeoutMs });
     logAIUsage(providerName, usage);
+    maybeAlert();
     return text;
   }
   if (providerName === 'anthropic') {
@@ -118,6 +121,7 @@ async function callAI(providerName, { system, user, maxTokens = 2048, timeoutMs 
     try {
       const { text, usage } = await Promise.race([callClaude({ system, user, maxTokens }), timeout]);
       logAIUsage(providerName, usage);
+      maybeAlert();
       return text;
     } finally {
       clearTimeout(timer);

@@ -134,4 +134,33 @@ async function notifyBackupVerifyFailure({ tenantName, tenantSlug, error }) {
   }
 }
 
-module.exports = { notifyBackupResult, notifyBackupVerifyFailure };
+// Avviso sul tetto di spesa AI (80% e 100%), una volta per mese e livello.
+async function notifyAIBudget({ level, spentEur, budgetEur }) {
+  const to = process.env.NOTIFY_EMAIL_TO;
+  const t = getTransporter();
+  if (!t || !to) {
+    console.log('[notifier] email non inviata (SMTP non configurato) — tetto AI al ' + level + '%');
+    return { sent: false, reason: 'smtp_not_configured' };
+  }
+  const reached = level >= 100;
+  const subject = reached ? 'Tetto mensile AI raggiunto: chiamate sospese' : 'Spesa AI all\'' + level + '% del tetto mensile';
+  const text = `Spesa AI del mese: ${spentEur.toFixed(2)} € su ${budgetEur.toFixed(2)} € (${level}%).` + (reached ? '\nLe nuove chiamate sono sospese fino al mese prossimo.' : '');
+  const html = wrapMailHtml({
+    accentColor: reached ? '#dc2626' : '#d97706',
+    title: reached ? 'Tetto mensile AI raggiunto' : 'Spesa AI all\'' + level + '% del tetto',
+    lines: [
+      `Spesa AI del mese: <b>${spentEur.toFixed(2)} €</b> su ${budgetEur.toFixed(2)} € (${level}%).`,
+      reached ? 'Le nuove chiamate sono <b>sospese</b> fino al mese prossimo.' : 'Raggiunto il tetto, le chiamate si fermano da sole.',
+    ],
+    footer: 'Platform Super Admin — notifica automatica',
+  });
+  try {
+    await t.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to, subject, text, html });
+    return { sent: true };
+  } catch (e) {
+    console.error('[notifier] invio email fallito:', e.message);
+    return { sent: false, reason: e.message };
+  }
+}
+
+module.exports = { notifyBackupResult, notifyBackupVerifyFailure, notifyAIBudget };

@@ -174,6 +174,17 @@ sequenceDiagram
 - **Spento di default**: si accende da Impostazioni → Assistente AI. Le righe già presenti si possono
   sottoporre all'assistente anche con l'interruttore spento, dal riquadro in cima alla pagina Spese.
 
+### Commento e spiegazione dei report
+
+Stesso schema dello smistamento bollette, con una verifica in più. Il tenant (`core/backend/src/report-ai.js`) manda a
+Super Admin (`/api/tenant-ai/explain-report`) i soli totali per gruppo; Super Admin (`lib/ai-report.js`) ripulisce i nomi,
+calcola le variazioni percentuali, chiede il testo a Mistral con istruzioni sue e **controlla che ogni numero scritto
+esista nei dati**, altrimenti risponde errore e il tenant non mostra nulla.
+
+- **Commento mensile**: `invia_report_periodico` con `periodo: 'mese'` e `raggruppa_per`, se Impostazioni → Assistente AI →
+  «Commento al report mensile» è acceso. Il report parte comunque se il commento non arriva.
+- **Spiega questo report**: pulsante nel pannello Report (`ReportPanel.jsx`), rotta `POST /api/ai/explain-report`.
+
 ## Sicurezza, in sintesi
 
 - Nessuna password fissa nel codice: la password admin iniziale è casuale o arriva da variabile d'ambiente.

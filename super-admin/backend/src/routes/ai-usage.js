@@ -13,6 +13,7 @@
 const express = require('express');
 const db = require('../db');
 const { requireAuth } = require('./auth');
+const { status: budgetStatus } = require('../lib/ai-budget');
 
 const router = express.Router();
 
@@ -62,6 +63,7 @@ router.get('/', requireAuth, (req, res) => {
   `).all();
 
   res.json({
+    month: budgetStatus(),
     all_time: withCost(allTime),
     last_30_days: withCost(last30Days),
     rates_configured: {
