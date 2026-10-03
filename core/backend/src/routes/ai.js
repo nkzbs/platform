@@ -3,13 +3,15 @@ const express = require('express');
 const { requireAuth, requireAdmin } = require('./auth');
 const ai = require('../ai-suggestions');
 const reportAi = require('../report-ai');
+const aiKey = require('../ai-key');
 const { logAudit } = require('../audit-log');
 
 const router = express.Router();
 
 // Stato e interruttore dell'assistente + quanto si è speso nel mese (letto da Super Admin).
 router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
-  res.json({ bollette_enabled: ai.isEnabled(), report_enabled: reportAi.isEnabled(), budget: await ai.budget() });
+  const [budget, key] = await Promise.all([ai.budget(), aiKey.status()]);
+  res.json({ bollette_enabled: ai.isEnabled(), report_enabled: reportAi.isEnabled(), budget, key });
 });
 
 // Cambia solo gli interruttori presenti nella richiesta.
@@ -43,6 +45,24 @@ router.post('/explain-report', requireAuth, async (req, res) => {
   });
   if (out.error) return res.status(out.status === 429 ? 429 : 502).json({ error: out.error, code: out.code });
   res.json({ text: out.text });
+});
+
+// Chiave Mistral di questo tenant. Va a Super Admin, che la controlla con Mistral e la conserva
+// cifrata; qui non resta nulla e non viene mai restituita.
+router.put('/key', requireAuth, requireAdmin, async (req, res) => {
+  const key = String((req.body && req.body.key) || '').trim();
+  if (!key) return res.status(400).json({ error: 'Incolla la chiave.' });
+  const r = await aiKey.setKey(key);
+  if (!r.ok) return res.status(r.status === 400 ? 400 : 502).json({ error: r.data.error || 'Non sono riuscito a salvare la chiave.' });
+  logAudit(req.user.username, 'ai.key.set', null, null);
+  res.json(r.data);
+});
+
+router.delete('/key', requireAuth, requireAdmin, async (req, res) => {
+  const r = await aiKey.clearKey();
+  if (!r.ok) return res.status(502).json({ error: r.data.error || 'Non sono riuscito a togliere la chiave.' });
+  logAudit(req.user.username, 'ai.key.clear', null, null);
+  res.json(r.data);
 });
 
 // Suggerimenti in attesa per un modulo (per il pannello sopra l'elenco).

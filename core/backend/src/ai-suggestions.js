@@ -153,7 +153,7 @@ function listPending(moduleSlug) {
 // Fetch dello stato del tetto da Super Admin (solo per mostrarlo nelle impostazioni).
 async function budget() {
   try {
-    const res = await fetch(SUPER_ADMIN_URL + '/api/tenant-ai/budget', { headers: { 'x-internal-secret': INTERNAL_SECRET }, signal: AbortSignal.timeout(4000) });
+    const res = await fetch(SUPER_ADMIN_URL + '/api/tenant-ai/budget?tenant_slug=' + encodeURIComponent(process.env.TENANT_SLUG || ''), { headers: { 'x-internal-secret': INTERNAL_SECRET }, signal: AbortSignal.timeout(4000) });
     return res.ok ? await res.json() : null;
   } catch (e) { return null; }
 }

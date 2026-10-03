@@ -135,7 +135,8 @@ async function notifyBackupVerifyFailure({ tenantName, tenantSlug, error }) {
 }
 
 // Avviso sul tetto di spesa AI (80% e 100%), una volta per mese e livello.
-async function notifyAIBudget({ level, spentEur, budgetEur }) {
+async function notifyAIBudget({ level, spentEur, budgetEur, tenantSlug }) {
+  const di = tenantSlug ? ' (' + tenantSlug + ')' : '';
   const to = process.env.NOTIFY_EMAIL_TO;
   const t = getTransporter();
   if (!t || !to) {
@@ -143,8 +144,8 @@ async function notifyAIBudget({ level, spentEur, budgetEur }) {
     return { sent: false, reason: 'smtp_not_configured' };
   }
   const reached = level >= 100;
-  const subject = reached ? 'Tetto mensile AI raggiunto: chiamate sospese' : 'Spesa AI all\'' + level + '% del tetto mensile';
-  const text = `Spesa AI del mese: ${spentEur.toFixed(2)} € su ${budgetEur.toFixed(2)} € (${level}%).` + (reached ? '\nLe nuove chiamate sono sospese fino al mese prossimo.' : '');
+  const subject = reached ? 'Tetto mensile AI raggiunto' + di + ': chiamate sospese' : 'Spesa AI' + di + ' all\'' + level + '% del tetto mensile';
+  const text = `Spesa AI${di} del mese: ${spentEur.toFixed(2)} € su ${budgetEur.toFixed(2)} € (${level}%).` + (reached ? '\nLe nuove chiamate sono sospese fino al mese prossimo.' : '');
   const html = wrapMailHtml({
     accentColor: reached ? '#dc2626' : '#d97706',
     title: reached ? 'Tetto mensile AI raggiunto' : 'Spesa AI all\'' + level + '% del tetto',

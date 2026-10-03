@@ -147,6 +147,13 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_ai_usage_log_created_at ON ai_usage_log(created_at);
 
+  -- Chiave Mistral di un tenant (cifrata). Un tenant senza riga usa la chiave generale di Super Admin.
+  CREATE TABLE IF NOT EXISTS tenant_ai_keys (
+    tenant_slug TEXT PRIMARY KEY,
+    mistral_key TEXT NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
   CREATE TABLE IF NOT EXISTS guide_feedback (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     topic_key TEXT NOT NULL,
@@ -154,6 +161,10 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 `);
+// A chi appartiene ogni chiamata AI (NULL = Super Admin stesso, es. il Super Builder): serve al tetto per tenant.
+if (!db.prepare("SELECT 1 FROM pragma_table_info('ai_usage_log') WHERE name = 'tenant_slug'").get()) {
+  db.exec('ALTER TABLE ai_usage_log ADD COLUMN tenant_slug TEXT');
+}
 db.prepare('INSERT OR IGNORE INTO update_manager (id) VALUES (1)').run();
 
 // Seed del registro moduli — solo se completamente vuoto (prima installazione).

@@ -34,13 +34,21 @@ async function test(name, fn) {
 function assertEq(a, e, msg) { if (a !== e) throw new Error(`${msg || ''}: atteso ${JSON.stringify(e)}, ottenuto ${JSON.stringify(a)}`); }
 function assertTrue(c, msg) { if (!c) throw new Error(msg || 'atteso true'); }
 
-let sa = { calls: [], status: 200, reply: { text: 'Commento di prova.' } };
+let sa = { calls: [], status: 200, reply: { text: 'Commento di prova.' }, key: { configured: false, source: null, hint: null }, keyCalls: [], keyReply: null };
 const fakeSA = http.createServer((req, res) => {
   let body = '';
   req.on('data', (d) => (body += d));
   req.on('end', () => {
     if (req.headers['x-internal-secret'] !== SECRET) { res.writeHead(401); return res.end('{}'); }
-    if (req.url === '/api/tenant-ai/budget') { res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({ spent_eur: 0, budget_eur: 10, percent: 0 })); }
+    if (req.url.startsWith('/api/tenant-ai/budget')) { res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({ spent_eur: 0, budget_eur: 10, percent: 0 })); }
+    if (req.url.startsWith('/api/tenant-ai/key')) {
+      sa.keyCalls.push({ method: req.method, url: req.url, body: body ? JSON.parse(body) : null });
+      if (sa.keyReply) { res.writeHead(sa.keyReply.status, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify(sa.keyReply.body)); }
+      if (req.method === 'PUT') sa.key = { configured: true, source: 'tenant', hint: '…' + JSON.parse(body).key.slice(-4) };
+      if (req.method === 'DELETE') sa.key = { configured: false, source: null, hint: null };
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify(sa.key));
+    }
     if (req.url === '/api/tenant-ai/explain-report') {
       sa.calls.push(JSON.parse(body));
       res.writeHead(sa.status, { 'Content-Type': 'application/json' });
@@ -89,6 +97,47 @@ async function main() {
     assertEq(s.report_enabled, true, 'il report non deve cambiare');
     await api('PUT', '/settings', { bollette_enabled: false, report_enabled: false });
     assertEq(reportAi.isEnabled(), false);
+  });
+
+  console.log('\n--- chiave Mistral del tenant ---');
+
+  await test('le impostazioni mostrano lo stato della chiave, mai la chiave', async () => {
+    const s = await (await api('GET', '/settings')).json();
+    assertEq(s.key.configured, false);
+  });
+
+  await test('senza login -> 401', async () => {
+    assertEq((await realFetch(BASE + '/api/ai/key', { method: 'PUT', body: '{}' })).status, 401);
+  });
+
+  await test('si inserisce: va a Super Admin con il nome del tenant; indietro tornano solo le ultime 4 cifre', async () => {
+    sa.keyCalls = [];
+    const res = await api('PUT', '/key', { key: '  chiave-segreta-9876  ' });
+    const body = await res.json();
+    assertEq(res.status, 200);
+    assertEq(sa.keyCalls[0].body.tenant_slug, 'finance');
+    assertEq(sa.keyCalls[0].body.key, 'chiave-segreta-9876', 'senza spazi');
+    assertEq(body.hint, '…9876');
+    assertTrue(!JSON.stringify(body).includes('chiave-segreta'), 'la chiave non torna indietro');
+    assertTrue(!JSON.stringify(db.prepare('SELECT * FROM tenant_settings').all()).includes('chiave-segreta'), 'il tenant non la conserva');
+    assertEq((await (await api('GET', '/settings')).json()).key.configured, true);
+  });
+
+  await test('chiave vuota -> 400, nessuna chiamata; chiave rifiutata da Mistral -> errore leggibile', async () => {
+    sa.keyCalls = [];
+    assertEq((await api('PUT', '/key', { key: '   ' })).status, 400);
+    assertEq(sa.keyCalls.length, 0);
+    sa.keyReply = { status: 400, body: { error: 'Mistral non riconosce questa chiave.' } };
+    const res = await api('PUT', '/key', { key: 'chiave-sbagliata-0000' });
+    assertEq(res.status, 400);
+    assertEq((await res.json()).error, 'Mistral non riconosce questa chiave.');
+    sa.keyReply = null;
+  });
+
+  await test('si toglie', async () => {
+    const res = await api('DELETE', '/key');
+    assertEq(res.status, 200);
+    assertEq((await res.json()).configured, false);
   });
 
   console.log('\n--- "Spiega questo report" ---');

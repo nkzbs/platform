@@ -167,7 +167,8 @@ sequenceDiagram
 - L'**output è controllato**: una categoria che non è tra le opzioni del modulo viene scartata, importi e date
   non validi diventano vuoti, una risposta che non è JSON viene rifiutata. All'accettazione la categoria è
   ricontrollata sul modulo.
-- **Tetto di spesa mensile** (`lib/ai-budget.js`): si sommano i token del mese dal registro, convertiti in euro
+- **Chiave per tenant** (`lib/ai-key.js`, tabella `tenant_ai_keys`): inserita dalle impostazioni del tenant, cifrata in Super Admin, mai restituita; `MISTRAL_API_KEY` è il ripiego.
+- **Tetto di spesa mensile per tenant** (`lib/ai-budget.js`): si sommano i token del mese dal registro, convertiti in euro
   (di default mistral-small: 0,13 € in ingresso e 0,51 € in uscita per milione di token), e a tetto raggiunto
   nessuna chiamata parte. Avviso per email all'80% e al 100%. Tetto di default 10 €, regolabile con
   `AI_MONTHLY_BUDGET_EUR`.

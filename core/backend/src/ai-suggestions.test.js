@@ -42,7 +42,7 @@ const fakeSA = http.createServer((req, res) => {
   req.on('data', (d) => (body += d));
   req.on('end', () => {
     if (req.headers['x-internal-secret'] !== SECRET) { res.writeHead(401); return res.end('{}'); }
-    if (req.url === '/api/tenant-ai/budget') { res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({ spent_eur: 0.42, budget_eur: 10, percent: 4.2 })); }
+    if (req.url.startsWith('/api/tenant-ai/budget')) { res.setHeader('Content-Type', 'application/json'); return res.end(JSON.stringify({ spent_eur: 0.42, budget_eur: 10, percent: 4.2 })); }
     if (req.url === '/api/tenant-ai/classify-bill') {
       sa.calls.push(JSON.parse(body));
       res.writeHead(sa.status, { 'Content-Type': 'application/json' });

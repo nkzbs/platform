@@ -7,8 +7,9 @@ import { NAV_ITEMS, MENU_HIDDEN } from '../lib/nav-items'
 // uso personale, un solo pannello, un solo utente — vedi nav-items.js).
 function Sidebar({ page, onNavigate, onLogout, mobileOpen, onMobileClose, payload, token }) {
   const items = NAV_ITEMS.filter((i) => !MENU_HIDDEN.has(i.id))
-  const brandLabel = 'Core'
-  const brandSub = 'super admin'
+  const brandLabel = 'Admin'
+  // Numero di versione annotato a mano a ogni chiusura di fase, non il version del package.json.
+  const brandSub = 'versione 0.1.0'
   // Chiude subito l'espansione al click (2026-08-29, bug reale trovato dal
   // vivo): senza, il cursore resta fermo sopra la voce appena cliccata e la
   // sidebar resta espansa SOPRA il contenuto appena caricato (nessun reflow,
@@ -114,10 +115,6 @@ function Sidebar({ page, onNavigate, onLogout, mobileOpen, onMobileClose, payloa
               </button>
             </div>
           </div>
-          {/* Numero di versione annotato a mano a ogni chiusura di fase (0.1.1, 0.1.2, 0.1.3...)
-              — nessuna fonte automatica da cui dedurlo, non è il version del package.json
-              (quello è per app/build, non per la piattaforma nel suo insieme). */}
-          {expanded && <div className="pt-2 text-[10px] text-gray-700">Platform 0.1.0</div>}
         </div>
       </div>
     </>

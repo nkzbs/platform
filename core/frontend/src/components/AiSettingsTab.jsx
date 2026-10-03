@@ -7,6 +7,8 @@ export default function AiSettingsTab({ token }) {
   const api = useApi(token)
   const [state, setState] = useState(null) // { bollette_enabled, budget }
   const [busy, setBusy] = useState(false)
+  const [keyInput, setKeyInput] = useState('')
+  const [keyMsg, setKeyMsg] = useState(null) // { ok, text }
 
   const load = async () => { const d = await api.get('/ai/settings'); if (d) setState(d) }
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -16,6 +18,23 @@ export default function AiSettingsTab({ token }) {
     const res = await api.put('/ai/settings', { [key]: !state[key] })
     setBusy(false)
     if (res.ok) setState({ ...state, bollette_enabled: res.data.bollette_enabled, report_enabled: res.data.report_enabled })
+  }
+
+  const saveKey = async () => {
+    setBusy(true); setKeyMsg(null)
+    const res = await api.put('/ai/key', { key: keyInput })
+    setBusy(false)
+    if (res.ok) { setKeyInput(''); setState({ ...state, key: res.data }); setKeyMsg({ ok: true, text: 'Chiave salvata.' }) }
+    else setKeyMsg({ ok: false, text: (res.data && res.data.error) || 'Non sono riuscito a salvare la chiave.' })
+  }
+
+  const removeKey = async () => {
+    if (!window.confirm('Togliere la chiave? L\'assistente smette di funzionare finché non ne inserisci un\'altra.')) return
+    setBusy(true); setKeyMsg(null)
+    const res = await api.del('/ai/key')
+    setBusy(false)
+    if (res.ok) { const d = await api.get('/ai/settings'); if (d) setState(d); setKeyMsg({ ok: true, text: 'Chiave tolta.' }) }
+    else setKeyMsg({ ok: false, text: 'Non sono riuscito a togliere la chiave.' })
   }
 
   const Switch = ({ k }) => state && (
@@ -30,6 +49,33 @@ export default function AiSettingsTab({ token }) {
 
   return (
     <div className="max-w-2xl space-y-4">
+      <section className="bg-surface-card border border-gray-800 rounded-xl p-5">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-lg bg-surface-page border border-gray-800 flex items-center justify-center text-accent flex-shrink-0"><Icon name="key" size={16} /></div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-sm font-semibold text-ink">Chiave Mistral</h2>
+            <p className="text-xs text-gray-500 mt-0.5 max-w-md">Ogni progetto ha la sua chiave e il suo tetto di spesa. La trovi nel tuo account Mistral, in «API keys».</p>
+            {state && (
+              <div className="mt-3 text-xs">
+                {state.key && state.key.source === 'tenant' && <div className="text-green-400">Chiave di questo progetto salvata ({state.key.hint})</div>}
+                {state.key && state.key.source === 'generale' && <div className="text-gray-400">Usa la chiave generale di Super Admin. Inserisci qui la tua per separare la spesa di questo progetto.</div>}
+                {(!state.key || !state.key.configured) && <div className="text-amber-400">Nessuna chiave: l'assistente non funziona finché non ne inserisci una.</div>}
+              </div>
+            )}
+            <div className="flex gap-2 mt-3 flex-wrap">
+              <input type="password" autoComplete="off" spellCheck="false" value={keyInput} onChange={(e) => setKeyInput(e.target.value)} placeholder="Incolla la chiave Mistral"
+                className="flex-1 min-w-[220px] bg-surface-page text-ink px-3 py-2 rounded-lg outline-none border border-gray-800 focus:border-accent text-sm placeholder-gray-600" />
+              <button type="button" onClick={saveKey} disabled={busy || !keyInput.trim()} className="bg-accent hover:opacity-90 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Salva</button>
+              {state && state.key && state.key.source === 'tenant' && (
+                <button type="button" onClick={removeKey} disabled={busy} className="px-4 py-2 rounded-lg text-sm bg-surface-page hover:bg-gray-800 text-gray-300 transition border border-gray-800 disabled:opacity-50">Togli</button>
+              )}
+            </div>
+            {keyMsg && <div className={'mt-2 text-xs ' + (keyMsg.ok ? 'text-green-400' : 'text-amber-400')}>{keyMsg.text}</div>}
+            <div className="text-xs text-gray-600 mt-3">La chiave viene controllata con Mistral e conservata cifrata da Super Admin. Non viene mostrata di nuovo: se la perdi, ne inserisci un'altra.</div>
+          </div>
+        </div>
+      </section>
+
       <section className="bg-surface-card border border-gray-800 rounded-xl p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">

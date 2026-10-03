@@ -52,19 +52,20 @@ async function main() {
   const db = require('./db');
   const budget = require('./lib/ai-budget');
   const { redact } = require('./lib/ai-redact');
-  const call = (p, body, secret = SECRET) => realFetch(BASE + '/api/tenant-ai' + p, { method: p === '/budget' ? 'GET' : 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': secret }, body: p === '/budget' ? undefined : JSON.stringify(body) });
-  const setUsage = (inTok, outTok) => { db.prepare('DELETE FROM ai_usage_log').run(); db.prepare("INSERT INTO ai_usage_log (provider, model, input_tokens, output_tokens) VALUES ('mistral', 'mistral-small-latest', ?, ?)").run(inTok, outTok); };
+  const call = (p, body, secret = SECRET) => realFetch(BASE + '/api/tenant-ai' + p, { method: p.startsWith('/budget') ? 'GET' : 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': secret }, body: p.startsWith('/budget') ? undefined : JSON.stringify(body) });
+  const setUsage = (inTok, outTok) => { db.prepare('DELETE FROM ai_usage_log').run(); db.prepare("INSERT INTO ai_usage_log (provider, model, input_tokens, output_tokens, tenant_slug) VALUES ('mistral', 'mistral-small-latest', ?, ?, 'finance')").run(inTok, outTok); };
 
   console.log('\n--- costo e tetto ---');
 
   await test('il costo del mese usa i prezzi di mistral-small (0,13 € in ingresso, 0,51 € in uscita per milione)', () => {
     setUsage(1000000, 1000000);
-    assertEq(budget.monthlySpendEur(), 0.64);
+    assertEq(budget.monthlySpendEur(new Date(), 'finance'), 0.64);
+    assertEq(budget.monthlySpendEur(new Date(), 'altro'), 0, 'ogni tenant ha il suo conto');
   });
 
   await test('/budget riporta spesa, tetto e percentuale', async () => {
     setUsage(2000000, 0); // 0,26 € su 1 €
-    const s = await (await call('/budget')).json();
+    const s = await (await call('/budget?tenant_slug=finance')).json();
     assertEq(s.budget_eur, 1);
     assertEq(s.spent_eur, 0.26);
     assertEq(s.percent, 26);
@@ -72,7 +73,7 @@ async function main() {
   });
 
   await test('senza secret interno -> 401', async () => {
-    assertEq((await call('/budget', null, 'sbagliato')).status, 401);
+    assertEq((await call('/budget?tenant_slug=finance', null, 'sbagliato')).status, 401);
   });
 
   await test('a tetto raggiunto la chiamata è rifiutata (429) e Mistral NON viene contattato', async () => {
@@ -88,8 +89,8 @@ async function main() {
   await test('l\'avviso al 80% e al 100% parte una volta sola per mese', async () => {
     db.prepare('DELETE FROM ai_budget_alerts').run();
     setUsage(8000000, 0); // 1,04 € su 1 € -> sopra 80% e 100%
-    await budget.maybeAlert();
-    await budget.maybeAlert();
+    await budget.maybeAlert('finance');
+    await budget.maybeAlert('finance');
     assertEq(db.prepare('SELECT COUNT(*) c FROM ai_budget_alerts').get().c, 2, 'una riga per livello, mai doppie');
   });
 

@@ -1,5 +1,8 @@
 const express = require('express');
 const { callAI, isProviderConfigured } = require('../lib/ai-providers');
+const aiKey = require('../lib/ai-key');
+const db = require('../db');
+const { logAudit } = require('../audit-log');
 const { status: budgetStatus } = require('../lib/ai-budget');
 const { redact } = require('../lib/ai-redact');
 const reportAi = require('../lib/ai-report');
@@ -19,7 +22,35 @@ function requireInternalSecret(req, res, next) {
 
 // Stato del tetto di spesa del mese (lo mostra la pagina delle impostazioni del tenant).
 router.get('/budget', requireInternalSecret, (req, res) => {
-  res.json(budgetStatus());
+  res.json(budgetStatus(new Date(), req.query.tenant_slug || null));
+});
+
+// ─── Chiave Mistral del tenant ────────────────────────────────────────────────
+// Il tenant la inserisce dalle sue impostazioni; qui resta cifrata e non viene mai restituita.
+const tenantExists = (slug) => !!slug && !!db.prepare('SELECT 1 FROM tenants WHERE slug = ?').get(slug);
+
+router.get('/key', requireInternalSecret, (req, res) => {
+  res.json(aiKey.keyStatus(req.query.tenant_slug || null));
+});
+
+router.put('/key', requireInternalSecret, async (req, res) => {
+  const { tenant_slug, key } = req.body || {};
+  if (!tenantExists(tenant_slug)) return res.status(404).json({ error: 'Tenant sconosciuto' });
+  const k = String(key || '').trim();
+  if (k.length < 16 || /\s/.test(k)) return res.status(400).json({ error: 'La chiave non sembra valida (troppo corta o con spazi).' });
+  const v = await aiKey.validateMistralKey(k);
+  if (!v.ok) return res.status(400).json({ error: v.reason });
+  aiKey.setTenantKey(tenant_slug, k);
+  logAudit('tenant:' + tenant_slug, 'ai.key.set', tenant_slug, null);
+  res.json(aiKey.keyStatus(tenant_slug));
+});
+
+router.delete('/key', requireInternalSecret, (req, res) => {
+  const slug = (req.body && req.body.tenant_slug) || req.query.tenant_slug;
+  if (!tenantExists(slug)) return res.status(404).json({ error: 'Tenant sconosciuto' });
+  aiKey.clearTenantKey(slug);
+  logAudit('tenant:' + slug, 'ai.key.clear', slug, null);
+  res.json(aiKey.keyStatus(slug));
 });
 
 // ─── Smistamento bollette ─────────────────────────────────────────────────────
@@ -61,8 +92,8 @@ router.post('/classify-bill', requireInternalSecret, async (req, res) => {
   if (!data.moduli || typeof data.moduli !== 'object' || Object.keys(data.moduli).length === 0) {
     return res.status(400).json({ error: 'data.moduli (con le categorie ammesse) è obbligatorio' });
   }
-  if (!isProviderConfigured('mistral')) {
-    return res.status(503).json({ error: 'Mistral non configurato su Super Admin' });
+  if (!isProviderConfigured('mistral', tenant_slug)) {
+    return res.status(503).json({ error: 'Nessuna chiave Mistral: inseriscila in Impostazioni → Assistente AI.', code: 'ai_not_configured' });
   }
   // Solo ciò che serve, ripulito dai dati personali e accorciato.
   const payload = {
@@ -74,7 +105,7 @@ router.post('/classify-bill', requireInternalSecret, async (req, res) => {
     moduli: data.moduli,
   };
   try {
-    const text = await callAI('mistral', { system: BILL_SYSTEM_PROMPT, user: JSON.stringify(payload), maxTokens: 250 });
+    const text = await callAI('mistral', { system: BILL_SYSTEM_PROMPT, user: JSON.stringify(payload), maxTokens: 250, tenantSlug: tenant_slug });
     const raw = parseJsonObject(text);
     if (!raw) return res.status(502).json({ error: 'Risposta dell\'AI non valida' });
     res.json({ suggestion: sanitizeBillSuggestion(raw, data.moduli, data.modulo_attuale) });
@@ -92,9 +123,9 @@ router.post('/explain-report', requireInternalSecret, async (req, res) => {
   if (!tenant_slug || !reportAi.PROMPTS[modo]) return res.status(400).json({ error: 'tenant_slug e modo (commento | spiegazione) sono obbligatori' });
   const s = reportAi.sanitizeReport(data);
   if (s.error) return res.status(400).json({ error: s.error });
-  if (!isProviderConfigured('mistral')) return res.status(503).json({ error: 'Mistral non configurato su Super Admin' });
+  if (!isProviderConfigured('mistral', tenant_slug)) return res.status(503).json({ error: 'Nessuna chiave Mistral: inseriscila in Impostazioni → Assistente AI.', code: 'ai_not_configured' });
   try {
-    const raw = await callAI('mistral', { system: reportAi.PROMPTS[modo], user: JSON.stringify(s.payload), maxTokens: reportAi.LIMITS[modo].tokens });
+    const raw = await callAI('mistral', { system: reportAi.PROMPTS[modo], user: JSON.stringify(s.payload), maxTokens: reportAi.LIMITS[modo].tokens, tenantSlug: tenant_slug });
     const text = String(raw || '').replace(/\*\*|__|^#+\s*/gm, '').trim();
     if (!text || text.length > reportAi.LIMITS[modo].chars) return res.status(502).json({ error: 'Risposta dell\'AI non utilizzabile' });
     const check = reportAi.verifyNumbers(text, s.numeri);

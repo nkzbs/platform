@@ -115,7 +115,8 @@ Elenco in [`.env.example`](../.env.example). Le obbligatorie sono `JWT_SECRET`, 
 `ENCRYPTION_KEY`. In produzione stanno in `deploy-secrets/super-admin-backend.env`; lo script di messa online
 imposta in più solo `DB_PATH=/data/super-admin-01.db`.
 
-Per l'assistente AI: `MISTRAL_API_KEY` (obbligatoria per usarlo), `AI_MONTHLY_BUDGET_EUR` (tetto mensile, di
+Per l'assistente AI: la chiave Mistral si inserisce **per tenant** da Impostazioni → Assistente AI (`MISTRAL_API_KEY` è solo il
+ripiego per i tenant che non ne hanno una), `AI_MONTHLY_BUDGET_EUR` (tetto mensile **per tenant**, di
 default 10) e, se cambiano i prezzi, `AI_COST_PER_MTOK_INPUT_MISTRAL` / `AI_COST_PER_MTOK_OUTPUT_MISTRAL`
 (di default 0,13 e 0,51 euro per milione di token). La spesa del mese si vede in Impostazioni → Assistente AI.
 

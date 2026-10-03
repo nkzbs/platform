@@ -79,7 +79,7 @@ export default function App() {
     if (page !== 'super-builder' && builderPrefill) setBuilderPrefill(null)
   }, [page]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    document.title = 'Platform Core'
+    document.title = 'Platform Admin'
   }, [])
 
   const logout = () => {

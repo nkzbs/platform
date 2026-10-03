@@ -45,12 +45,13 @@ function monthKey(date = new Date()) {
 }
 
 // Spesa del mese in corso, in euro.
-function monthlySpendEur(date = new Date()) {
+// Con tenantSlug conta solo le chiamate di quel tenant; senza, quelle di Super Admin stesso.
+function monthlySpendEur(date = new Date(), tenantSlug = null) {
   const from = monthKey(date) + '-01 00:00:00';
   const rows = db.prepare(`
     SELECT provider, SUM(COALESCE(input_tokens, 0)) AS i, SUM(COALESCE(output_tokens, 0)) AS o
-    FROM ai_usage_log WHERE created_at >= ? GROUP BY provider
-  `).all(from);
+    FROM ai_usage_log WHERE created_at >= ? AND tenant_slug IS ? GROUP BY provider
+  `).all(from, tenantSlug || null);
   let total = 0;
   for (const r of rows) {
     const rate = ratesFor(r.provider);
@@ -60,15 +61,15 @@ function monthlySpendEur(date = new Date()) {
   return Math.round(total * 10000) / 10000;
 }
 
-function status(date = new Date()) {
-  const spent = monthlySpendEur(date);
+function status(date = new Date(), tenantSlug = null) {
+  const spent = monthlySpendEur(date, tenantSlug);
   const budget = budgetEur();
   return { month: monthKey(date), spent_eur: spent, budget_eur: budget, percent: Math.min(999, Math.round((spent / budget) * 1000) / 10), blocked: spent >= budget };
 }
 
 // Da chiamare PRIMA di ogni chiamata AI: a tetto raggiunto non parte nulla.
-function assertWithinBudget() {
-  const s = status();
+function assertWithinBudget(tenantSlug = null) {
+  const s = status(new Date(), tenantSlug);
   if (s.blocked) {
     const err = new Error('Tetto mensile AI raggiunto (' + s.spent_eur.toFixed(2) + ' € su ' + s.budget_eur.toFixed(2) + ' €): le chiamate riprendono il mese prossimo, o alza AI_MONTHLY_BUDGET_EUR.');
     err.status = 429;
@@ -79,16 +80,18 @@ function assertWithinBudget() {
 
 // Da chiamare DOPO una chiamata riuscita: manda un'email una sola volta per mese e livello
 // (80% e 100%). Mai bloccante: un avviso perso non deve far fallire la risposta.
-async function maybeAlert() {
+async function maybeAlert(tenantSlug = null) {
   try {
-    const s = status();
+    const s = status(new Date(), tenantSlug);
+    // La colonna "month" tiene anche il tenant ("2026-10|finance"), così ogni tenant ha i suoi avvisi.
+    const key = tenantSlug ? s.month + '|' + tenantSlug : s.month;
     for (const level of ALERT_LEVELS) {
       if (s.percent < level) continue;
-      const done = db.prepare('SELECT 1 FROM ai_budget_alerts WHERE month = ? AND level = ?').get(s.month, level);
+      const done = db.prepare('SELECT 1 FROM ai_budget_alerts WHERE month = ? AND level = ?').get(key, level);
       if (done) continue;
-      db.prepare('INSERT INTO ai_budget_alerts (month, level) VALUES (?, ?)').run(s.month, level);
+      db.prepare('INSERT INTO ai_budget_alerts (month, level) VALUES (?, ?)').run(key, level);
       const { notifyAIBudget } = require('../notifier');
-      await notifyAIBudget({ level, spentEur: s.spent_eur, budgetEur: s.budget_eur });
+      await notifyAIBudget({ level, spentEur: s.spent_eur, budgetEur: s.budget_eur, tenantSlug });
     }
   } catch (e) { /* mai bloccare */ }
 }

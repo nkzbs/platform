@@ -122,6 +122,21 @@ pannello Report che ogni modulo con un campo numerico e uno a selezione già ha.
   tetto di spesa mensile.
 - Le istruzioni al modello stanno su Super Admin (`lib/ai-report.js`), insieme alla verifica dei numeri.
 
+## 2026-10-03 — Una chiave Mistral per ogni tenant
+
+**Scelta.** Ogni progetto (Finance, ...) ha la sua chiave Mistral e il suo tetto di spesa. Si inserisce da
+Impostazioni → Assistente AI del tenant. Il tenant la manda a Super Admin, che la controlla con Mistral (elenco
+modelli, nessun costo), la conserva **cifrata** nel registro e non la restituisce mai (le API mostrano solo
+"configurata" e le ultime 4 cifre). Il tenant non la tiene.
+
+**Perché a Super Admin e non nel tenant.** Le chiamate continuano a passare da Super Admin, che resta l'unico punto
+verso Mistral: pulizia dei dati personali, controllo dei numeri e tetto restano in un posto solo.
+
+- Il **tetto** (default 10 € al mese, `AI_MONTHLY_BUDGET_EUR`) vale **per tenant**: i consumi sono registrati con il tenant
+  che li ha fatti (`ai_usage_log.tenant_slug`) e gli avvisi dell'80% e del 100% sono separati per tenant.
+- `MISTRAL_API_KEY` dell'ambiente resta come **ripiego**: un tenant senza chiave sua la usa (e la spesa conta comunque
+  nel suo tetto). Senza né l'una né l'altra, l'assistente risponde "nessuna chiave" e non chiama nessuno.
+
 ### Corretto durante il lavoro
 
 - Il commit "Assistente AI, WhatsApp…" nel repository nuovo conteneva solo la parte `core/`: mancavano i file di Super Admin

@@ -12,14 +12,15 @@
 const { callClaude } = require('./ai');
 const db = require('../db');
 const { assertWithinBudget, maybeAlert } = require('./ai-budget');
+const { keyFor } = require('./ai-key');
 
-function isProviderConfigured(providerName) {
-  if (providerName === 'mistral') return !!process.env.MISTRAL_API_KEY;
+function isProviderConfigured(providerName, tenantSlug = null) {
+  if (providerName === 'mistral') return !!keyFor(tenantSlug);
   if (providerName === 'anthropic') return !!process.env.ANTHROPIC_API_KEY;
   return false;
 }
 
-async function callMistral({ system, user, maxTokens = 2048, timeoutMs = 20000 }) {
+async function callMistral({ system, user, maxTokens = 2048, timeoutMs = 20000, apiKey }) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -27,7 +28,7 @@ async function callMistral({ system, user, maxTokens = 2048, timeoutMs = 20000 }
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + process.env.MISTRAL_API_KEY,
+        Authorization: 'Bearer ' + apiKey,
       },
       body: JSON.stringify({
         // mistral-small-latest, non -large (2026-09-06, verificato dal vivo
@@ -81,11 +82,11 @@ function modelFor(providerName) {
 // direttamente, tutti passano da qui). Non deve MAI far fallire la chiamata
 // AI vera: un log perso è accettabile, un suggerimento perso per un errore
 // di logging no.
-function logAIUsage(providerName, usage) {
+function logAIUsage(providerName, usage, tenantSlug = null) {
   if (!usage) return;
   try {
-    db.prepare('INSERT INTO ai_usage_log (provider, model, input_tokens, output_tokens) VALUES (?, ?, ?, ?)')
-      .run(providerName, modelFor(providerName), usage.input_tokens ?? null, usage.output_tokens ?? null);
+    db.prepare('INSERT INTO ai_usage_log (provider, model, input_tokens, output_tokens, tenant_slug) VALUES (?, ?, ?, ?, ?)')
+      .run(providerName, modelFor(providerName), usage.input_tokens ?? null, usage.output_tokens ?? null, tenantSlug || null);
   } catch (e) { /* mai bloccare la risposta AI per un log fallito */ }
 }
 
@@ -100,17 +101,18 @@ function logAIUsage(providerName, usage) {
 // continua a ritornare solo `text` come sempre — logAIUsage qui sotto è un
 // effetto collaterale trasparente, nessuno dei chiamanti esistenti
 // (super-builder.js, client-analyses.js, ai-enabler.js) deve cambiare.
-async function callAI(providerName, { system, user, maxTokens = 2048, timeoutMs = 20000 } = {}) {
-  assertWithinBudget(); // a tetto mensile raggiunto non parte nessuna chiamata
-  if (!isProviderConfigured(providerName)) {
+// tenantSlug: di chi è la chiamata (usa la chiave di quel tenant, se ce l'ha, e conta nel suo tetto).
+async function callAI(providerName, { system, user, maxTokens = 2048, timeoutMs = 20000, tenantSlug = null } = {}) {
+  assertWithinBudget(tenantSlug); // a tetto mensile raggiunto non parte nessuna chiamata
+  if (!isProviderConfigured(providerName, tenantSlug)) {
     const err = new Error('Provider AI "' + providerName + '" non configurato');
     err.status = 503;
     throw err;
   }
   if (providerName === 'mistral') {
-    const { text, usage } = await callMistral({ system, user, maxTokens, timeoutMs });
-    logAIUsage(providerName, usage);
-    maybeAlert();
+    const { text, usage } = await callMistral({ system, user, maxTokens, timeoutMs, apiKey: keyFor(tenantSlug) });
+    logAIUsage(providerName, usage, tenantSlug);
+    maybeAlert(tenantSlug);
     return text;
   }
   if (providerName === 'anthropic') {
@@ -120,8 +122,8 @@ async function callAI(providerName, { system, user, maxTokens = 2048, timeoutMs 
     });
     try {
       const { text, usage } = await Promise.race([callClaude({ system, user, maxTokens }), timeout]);
-      logAIUsage(providerName, usage);
-      maybeAlert();
+      logAIUsage(providerName, usage, tenantSlug);
+      maybeAlert(tenantSlug);
       return text;
     } finally {
       clearTimeout(timer);
