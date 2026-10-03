@@ -178,6 +178,12 @@ indicazioni di Nima del 2026-10-03):
   gennaio-settembre). Le righe *Fondo* non sono entrate sul conto, ma sono **risparmio vero**: la scheda mostra "Entrate sul conto",
   "accantonati" e il risparmio contando anche l'accantonato. Dove manca la riga con l'importo vero, si **stima** con il rapporto
   mediano accantonato/netto degli altri mesi, e la scheda lo dichiara ("stima"). Gli estratti conto non contengono il lordo.
+- **Accordo sulla casa.** Di norma Nima versa **500 €/mese** al Conto Casa (causali "Budget mese X") e Federica 400 €. Se in un mese
+  Nima non versa (non ha budget), l'affitto da 550 € lo paga Federica, direttamente o dal Conto Casa. I versamenti di Nima sono in
+  Spese Personali con categoria *Contributo Casa*, con data e importo della banca (22 righe, 9.725 €, gennaio 2025-settembre 2026,
+  importate dagli estratti conto). La parte versata **in meno** dei 500 € è un debito verso Federica: da gennaio 2025 a ottobre
+  2026 sono 2.130 € nei mesi in meno e 1.355 € nei mesi in più, **775 € netti**; registrato in Debiti Personali (senza piano
+  rateale: la creazione del debito genera di norma le rate, qui tolte). Non è una spesa finché non lo restituisce.
 - **Pagamenti** e **Debiti** non contano come spese: le rate sono già dentro Spese Personali.
 - Le righe "da smistare" non sono spese finché non si smistano.
 - **Il mese di una spesa è il campo `data`** di Finance. Il confronto con le banche ha mostrato che le date delle spese NON sono
