@@ -166,6 +166,18 @@ async function main() {
     assertEq(insights.buildSnapshot('2026-08', NOW).banca, null, 'mese senza movimenti');
   });
 
+  console.log('\n--- righe senza data certa ---');
+
+  await test('una spesa con data_incerta non entra in nessun mese, e la scheda dice quante e quanto', () => {
+    const before = snap().spese;
+    const id = sp('spese_personali', '2026-09-18', 400, 'Alimentari', { data_incerta: true });
+    const s = snap();
+    assertEq(s.spese, before, 'la riga senza data certa non cambia il mese');
+    assertTrue(s.limiti.some((l) => /andata persa/.test(l) && /400/.test(l)), JSON.stringify(s.limiti));
+    db.prepare('DELETE FROM records WHERE id = ?').run(id);
+    assertTrue(!snap().limiti.some((l) => /andata persa/.test(l)), 'senza righe incerte nessun avviso');
+  });
+
   console.log('\n--- limiti dichiarati ---');
 
   await test('il mese in corso è segnalato come parziale; il mese senza entrate lo dice', () => {

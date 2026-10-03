@@ -65,6 +65,7 @@ function installedModules(slugs) {
 // Legge i record una volta sola e li raggruppa per mese.
 function collect(cfg) {
   const entrate = {}, spese = {}, stipendi = {}, accantonato = {};
+  const senzaData = { n: 0, totale: 0 }; // righe la cui data vera è andata persa (campo data_incerta): fuori dai conti mensili
   const spCat = {}; // mese -> categoria -> totale
   const spFix = {}; // mese -> { fisse, variabili }
   const spStato = {}; // mese -> { pagate, da_pagare }
@@ -92,6 +93,7 @@ function collect(cfg) {
       let d; try { d = JSON.parse(r.data); } catch (e) { continue; }
       const m = monthOf(d[cfg.spese.date]); const a = num(d[cfg.spese.amount]);
       if (!m || a == null) continue;
+      if (d.data_incerta) { senzaData.n++; senzaData.totale += a; continue; }
       // le righe "da smistare" (bollette appena arrivate da Gmail, importo spesso 0) non sono ancora spese vere
       if (d[cfg.spese.status] === 'da_smistare') continue;
       spese[m] = (spese[m] || 0) + a;
@@ -103,7 +105,7 @@ function collect(cfg) {
       if (d[cfg.spese.status] === 'pagato') st.pagate += a; else st.da_pagare += a;
     }
   }
-  return { entrate, spese, spCat, spFix, spStato, stipendi, accantonato };
+  return { entrate, spese, spCat, spFix, spStato, stipendi, accantonato, senzaData };
 }
 
 // Accantonamento per mese: quello registrato; dove manca (da quando è cominciato) si stima con il rapporto
@@ -158,6 +160,7 @@ function buildSnapshot(month, now = new Date()) {
   const limiti = ['Vista personale: conta ciò che è registrato in Finance (' + [...installedModules(cfg.spese.modules)].join(', ') + ' per le spese). Le spese di casa (affitto, bollette) non sono incluse: contano solo le quote che versi tu alla casa, se registrate come "Contributo Casa". I pagamenti con carta o da altri conti non registrati non compaiono.',
     'Non sono conteggiati come entrate: ' + ((cfg.entrate.exclude_categories || []).join(', ') || 'nessuna categoria esclusa') + ', i contributi alla casa e i riporti di saldo.',
     'Le righe "da smistare" non contano come spese finché non le smisti.'];
+  if (col.senzaData.n) limiti.push('Non contate in nessun mese: ' + col.senzaData.n + ' spese (circa ' + Math.round(col.senzaData.totale) + ' €) la cui data vera è andata persa nell\'importazione.');
   if (acc.valore) limiti.push('L\'accantonamento (fondo o azioni, trattenuto in busta paga) non arriva sul conto: è contato come risparmio.' + (acc.stimato ? ' Per questo mese è una stima (circa ' + Math.round((acc.valore / (col.stipendi[month] || 1)) * 100) + '% del netto, come negli altri mesi): manca la riga con l\'importo vero.' : ''));
   if (month >= cur) limiti.unshift('Mese in corso: i dati sono parziali.');
   if (!en) limiti.unshift('Nessuna entrata registrata in questo mese: il saldo e il risparmio non sono significativi.');

@@ -163,7 +163,7 @@ reali di Finance (6 righe → 1 destinatario e 5 regole). I backup JSON includon
   - 37 righe ricategorizzate (Benzina → Auto & Benzina, Assicurazione Auto → Assicurazioni).
   Le righe "da pagare" scadute da oltre 30 giorni sono passate da 32 a 4.
   **Restano 35 righe impilate sul 18/04/2025** (circa 7.500 €: Iper Tosano ×17, Spese mese ×9, Cristian Bai, Michele Clerici, R.A.M. caldaia): non esistono nella vecchia app né
-  tra i movimenti del conto personale (probabilmente pagate dalla Prepagata), quindi la data vera non è recuperabile. Aprile 2025 resta gonfiato finché non si sceglie come datarle.
+  tra i movimenti del conto personale (probabilmente pagate dalla Prepagata), quindi la data vera non è recuperabile. Invece di inventare date, quelle 35 righe (7.509 €) sono marcate `data_incerta` con una nota e **escluse dai conti mensili**; la scheda "Come sta andando" lo dichiara ("Non contate in nessun mese: N spese…").
   Lezione per gli script di scrittura: una riga si riscrive sempre partendo dalla copia più recente, mai da una letta all'inizio.
 
 - La **Checklist** in dashboard (periodo "questo mese") non permetteva di cambiare mese: ora ha le frecce avanti e indietro, il nome del
