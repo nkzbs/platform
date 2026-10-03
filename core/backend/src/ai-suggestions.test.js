@@ -107,6 +107,52 @@ async function main() {
     assertEq((await fetch(BASE + '/api/ai/settings')).status, 401);
   });
 
+  console.log('\n--- luce o gas dal PDF allegato ---');
+
+  const att = require('./attachment-text');
+  const PDF_LUCE = 'Bolletta energia elettrica\nPOD IT001E12345678901234\nConsumo fatturato 180 kWh fascia F1\nTotale da pagare 44,00 euro\nScadenza 01/10/2026\nPotenza impegnata 3 kW\nIBAN IT60X0542811101000000123456';
+  const PDF_GAS = 'Bolletta gas naturale\nPDR 12345678901234\nConsumo 52 Smc\nCoefficiente C 1,02\nTotale da pagare 61,00 euro';
+
+  await test('energyHint: kWh/POD -> luce; Smc/PDR -> gas; entrambi; troppo poco -> nessun indizio', () => {
+    assertEq(att.energyHint(PDF_LUCE), 'luce'); assertEq(att.energyHint(PDF_GAS), 'gas');
+    assertEq(att.energyHint(PDF_LUCE + '\n' + PDF_GAS), 'entrambi');
+    assertEq(att.energyHint('La tua bolletta Gas/Luce è pronta'), null, 'il solo titolo non basta');
+  });
+  await test('relevantExtract tiene le righe utili, toglie i codici lunghi e l\'IBAN, e non supera 1500 caratteri', () => {
+    const e = att.relevantExtract(PDF_LUCE + '\n' + 'Totale da pagare altro '.repeat(300));
+    assertTrue(/180 kWh/.test(e) && /Totale da pagare 44,00/.test(e));
+    assertTrue(!/IT001E12345678901234/.test(e) && !/IT60X0542811101000000123456/.test(e), e.slice(0, 200));
+    assertTrue(e.length <= 1500);
+  });
+  await test('con un PDF allegato (appena scaricato) a Super Admin arrivano l\'indizio e l\'estratto, non l\'intero PDF', async () => {
+    require('./bank-import').extractText = async () => PDF_LUCE; // pdftotext simulato
+    const id = newBill({ descrizione: 'A2A Energia Gas/Luce', categoria: 'Altro', _stato: 'da_smistare' });
+    sa.calls = []; sa.status = 200; sa.reply = { suggestion: { modulo: 'spese_casa', categoria: 'Elettricità', fornitore: 'A2A', importo: 44, scadenza: '2026-10-01', confidenza: 'alta' } };
+    const out = await ai.suggestForRecord({ moduleSlug: 'spese_casa', recordId: id, mittente: 'a2a', subject: 'Bolletta Gas/Luce', text: 'La tua bolletta', attachments: [{ bytes: Buffer.from('%PDF'), filename: 'bolletta.pdf', mimeType: 'application/pdf' }], force: true });
+    assertTrue(!!out.id, JSON.stringify(out));
+    const d = sa.calls[0].data;
+    assertEq(d.indizio_energia, 'luce');
+    assertTrue(/180 kWh/.test(d.allegati) && !/IT60X05428/.test(d.allegati) && !/POD IT001E/.test(d.allegati));
+  });
+  await test('senza allegati appena scaricati si leggono quelli già salvati per il record (file locale)', async () => {
+    const id = newBill({ descrizione: 'A2A Energia Gas/Luce', categoria: 'Altro', _stato: 'da_smistare' });
+    const stored = 'test-' + crypto.randomBytes(4).toString('hex') + '.pdf';
+    fs.writeFileSync(path.join(process.env.UPLOAD_DIR, stored), Buffer.from('%PDF finto'));
+    const up = db.prepare("INSERT INTO uploads (original_name, stored_name, mime_type, size) VALUES ('b.pdf', ?, 'application/pdf', 10)").run(stored).lastInsertRowid;
+    db.prepare("INSERT INTO record_attachments (module_slug, record_id, upload_id, tipo) VALUES ('spese_casa', ?, ?, 'gmail')").run(id, up);
+    require('./bank-import').extractText = async () => PDF_GAS;
+    sa.calls = [];
+    await ai.suggestForRecord({ moduleSlug: 'spese_casa', recordId: id, force: true });
+    assertEq(sa.calls[0].data.indizio_energia, 'gas');
+  });
+  await test('se il PDF non si legge, la proposta parte lo stesso, senza indizio', async () => {
+    require('./bank-import').extractText = async () => { throw new Error('manca pdftotext'); };
+    const id = newBill({ descrizione: 'Bolletta', categoria: 'Altro', _stato: 'da_smistare' });
+    sa.calls = [];
+    await ai.suggestForRecord({ moduleSlug: 'spese_casa', recordId: id, text: 'testo', attachments: [{ bytes: Buffer.from('x'), filename: 'a.pdf', mimeType: 'application/pdf' }], force: true });
+    assertEq(sa.calls.length, 1); assertEq(sa.calls[0].data.indizio_energia, undefined);
+  });
+
   console.log('\n--- dashboard ---');
 
   await test('overview: proposte di entrambi i moduli e righe "da smistare" ancora da chiedere (solo admin)', async () => {

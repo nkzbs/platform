@@ -42,14 +42,14 @@ function moduliAmmessi() {
 }
 
 // Chiede a Super Admin la proposta. Ritorna { suggestion } oppure { error, status, code }.
-async function classify({ mittente, oggetto, testo, rilevato, moduloAttuale }) {
+async function classify({ mittente, oggetto, testo, rilevato, moduloAttuale, allegati, indizioEnergia }) {
   const moduli = moduliAmmessi();
   if (!Object.keys(moduli).length) return { error: 'Nessun modulo di spese con categorie installato', status: 400 };
   try {
     const res = await fetch(SUPER_ADMIN_URL + '/api/tenant-ai/classify-bill', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET },
-      body: JSON.stringify({ tenant_slug: process.env.TENANT_SLUG, data: { mittente, oggetto, testo, rilevato, modulo_attuale: moduloAttuale, moduli } }),
+      body: JSON.stringify({ tenant_slug: process.env.TENANT_SLUG, data: { mittente, oggetto, testo, rilevato, modulo_attuale: moduloAttuale, moduli, allegati: allegati || undefined, indizio_energia: indizioEnergia || undefined } }),
       signal: AbortSignal.timeout(30000),
     });
     const body = await res.json().catch(() => ({}));
@@ -66,14 +66,20 @@ function hasPending(moduleSlug, recordId) {
 
 // Crea il suggerimento per un record, se serve. Mai un errore verso il chiamante: il record
 // resta com'è e l'assistente al massimo non propone nulla.
-async function suggestForRecord({ moduleSlug, recordId, mittente, subject, text, force = false }) {
+async function suggestForRecord({ moduleSlug, recordId, mittente, subject, text, attachments, force = false }) {
   if (!force && !isEnabled()) return { skipped: 'disattivato' };
   if (!BILL_MODULES.includes(moduleSlug)) return { skipped: 'modulo non supportato' };
   if (hasPending(moduleSlug, recordId)) return { skipped: 'già presente' };
   const rec = db.prepare('SELECT data FROM records WHERE id = ? AND module_slug = ?').get(recordId, moduleSlug);
   if (!rec) return { skipped: 'record inesistente' };
   const cur = JSON.parse(rec.data);
+  // Il tipo di bolletta (luce o gas) sta di solito nel PDF allegato: se ci sono allegati appena scaricati si usano quelli,
+  // altrimenti quelli già salvati per il record. Verso l'assistente esce solo un estratto e l'indizio calcolato qui.
+  const att = require('./attachment-text');
+  const pdf = attachments && attachments.length ? await att.textFromBuffers(attachments) : await att.textForRecord(moduleSlug, recordId);
+  const indizio = att.energyHint((text || cur.note || '') + '\n' + pdf);
   const out = await classify({
+    allegati: att.relevantExtract(pdf) || undefined, indizioEnergia: indizio,
     mittente: mittente || cur.descrizione || '',
     oggetto: subject || cur.descrizione || '',
     testo: text || cur.note || '',

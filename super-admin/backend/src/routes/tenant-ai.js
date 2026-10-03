@@ -58,7 +58,7 @@ router.delete('/key', requireInternalSecret, (req, res) => {
 // PROPONE categoria, fornitore, importo e scadenza. Il risultato è controllato qui: una
 // categoria che non è tra quelle ammesse viene scartata, un importo o una data non validi
 // diventano "null". Il tenant non riceve mai testo libero dal modello, solo questi campi.
-const BILL_SYSTEM_PROMPT = `Sei un assistente che smista le bollette e le fatture ricevute per email, per la gestione delle spese di famiglia. Ricevi un JSON con: mittente, oggetto, testo (estratto della mail, con i dati personali già tolti), rilevato (importo e scadenza trovati da un programma, possono mancare o essere sbagliati), modulo_attuale e moduli (per ogni modulo le categorie ammesse). Rispondi SOLO con un oggetto JSON, senza altro testo, con questi campi: "modulo" (una delle chiavi di "moduli"), "categoria" (UNA delle categorie ammesse di quel modulo, oppure null se nessuna è adatta), "fornitore" (nome breve dell'azienda che emette il documento, oppure null), "importo" (numero con il punto decimale, l'importo totale da pagare, oppure null se non lo trovi con certezza), "scadenza" (data di scadenza del pagamento nel formato AAAA-MM-GG, oppure null), "confidenza" ("alta", "media" o "bassa"). Non inventare: se un dato non c'è scrivi null.`;
+const BILL_SYSTEM_PROMPT = `Sei un assistente che smista le bollette e le fatture ricevute per email, per la gestione delle spese di famiglia. Ricevi un JSON con: mittente, oggetto, testo (estratto della mail, con i dati personali già tolti), rilevato (importo e scadenza trovati da un programma, possono mancare o essere sbagliati), modulo_attuale e moduli (per ogni modulo le categorie ammesse). Rispondi SOLO con un oggetto JSON, senza altro testo, con questi campi: "modulo" (una delle chiavi di "moduli"), "categoria" (UNA delle categorie ammesse di quel modulo, oppure null se nessuna è adatta), "fornitore" (nome breve dell'azienda che emette il documento, oppure null), "importo" (numero con il punto decimale, l'importo totale da pagare, oppure null se non lo trovi con certezza), "scadenza" (data di scadenza del pagamento nel formato AAAA-MM-GG, oppure null), "confidenza" ("alta", "media" o "bassa"). Non inventare: se un dato non c'è scrivi null. Per le bollette di energia il tipo conta: nel JSON può esserci "indizio_energia" ("luce", "gas" o "entrambi", calcolato da un programma leggendo il PDF della bolletta) e "allegati" (estratto delle righe utili del PDF). Se indizio_energia è "luce", o il testo parla di kWh, POD o energia elettrica, scegli la categoria dell'elettricità; se è "gas", o il testo parla di Smc, PDR o gas naturale, quella del gas. Un titolo come "Gas/Luce" non basta a decidere: guarda il contenuto. Se resta davvero ambiguo, categoria null.`;
 
 function parseJsonObject(text) {
   const m = String(text || '').match(/\{[\s\S]*\}/);
@@ -72,11 +72,15 @@ function validDate(v) {
   return !isNaN(d) && d.toISOString().slice(0, 10) === v ? v : null;
 }
 
-function sanitizeBillSuggestion(raw, moduli, moduloAttuale) {
+function sanitizeBillSuggestion(raw, moduli, moduloAttuale, indizio) {
   const keys = Object.keys(moduli || {});
   const modulo = keys.includes(raw.modulo) ? raw.modulo : (keys.includes(moduloAttuale) ? moduloAttuale : null);
   const categorie = modulo && Array.isArray(moduli[modulo] && moduli[modulo].categorie) ? moduli[modulo].categorie : [];
-  const categoria = categorie.includes(raw.categoria) ? raw.categoria : null;
+  let categoria = categorie.includes(raw.categoria) ? raw.categoria : null;
+  // L'indizio calcolato dal programma (kWh, POD / Smc, PDR nel PDF) vale più di un'incertezza del modello:
+  // se dice chiaramente luce o gas, la categoria è quella, qualunque cosa abbia risposto.
+  const energy = { luce: /elettric|luce/i, gas: /\bgas\b/i }[indizio];
+  if (energy) { const match = categorie.find((c) => energy.test(c)); if (match) categoria = match; }
   const fornitore = typeof raw.fornitore === 'string' && raw.fornitore.trim() ? raw.fornitore.replace(/[\r\n]+/g, ' ').trim().slice(0, 60) : null;
   const imp = typeof raw.importo === 'number' ? raw.importo : parseFloat(String(raw.importo).replace(',', '.'));
   const importo = Number.isFinite(imp) && imp > 0 && imp < 100000 ? Math.round(imp * 100) / 100 : null;
@@ -104,11 +108,14 @@ router.post('/classify-bill', requireInternalSecret, async (req, res) => {
     modulo_attuale: data.modulo_attuale || null,
     moduli: data.moduli,
   };
+  const indizio = ['luce', 'gas', 'entrambi'].includes(data.indizio_energia) ? data.indizio_energia : null;
+  if (indizio) payload.indizio_energia = indizio;
+  if (data.allegati) payload.allegati = redact(String(data.allegati)).slice(0, 1500);
   try {
     const text = await callAI('mistral', { system: BILL_SYSTEM_PROMPT, user: JSON.stringify(payload), maxTokens: 250, tenantSlug: tenant_slug });
     const raw = parseJsonObject(text);
     if (!raw) return res.status(502).json({ error: 'Risposta dell\'AI non valida' });
-    res.json({ suggestion: sanitizeBillSuggestion(raw, data.moduli, data.modulo_attuale) });
+    res.json({ suggestion: sanitizeBillSuggestion(raw, data.moduli, data.modulo_attuale, indizio) });
   } catch (e) {
     res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
   }

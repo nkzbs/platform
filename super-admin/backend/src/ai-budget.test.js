@@ -113,6 +113,30 @@ async function main() {
     assertEq(s.confidenza, 'alta');
   });
 
+  await test('luce o gas: l\'indizio calcolato dal tenant (kWh/POD, Smc/PDR) vale più di un\'incertezza o di un errore del modello', async () => {
+    mistralReply = { content: '{"modulo":"spese_casa","categoria":"Gas","fornitore":"A2A","importo":44,"scadenza":null,"confidenza":"media"}' };
+    let s = (await (await call('/classify-bill', bill({ indizio_energia: 'luce' }))).json()).suggestion;
+    assertEq(s.categoria, 'Elettricità', 'il modello ha detto Gas ma il PDF parla di kWh e POD');
+    mistralReply = { content: '{"modulo":"spese_casa","categoria":null,"fornitore":"A2A","importo":44,"scadenza":null,"confidenza":"bassa"}' };
+    s = (await (await call('/classify-bill', bill({ indizio_energia: 'gas' }))).json()).suggestion;
+    assertEq(s.categoria, 'Gas', 'il modello non sapeva: decide l\'indizio');
+    s = (await (await call('/classify-bill', bill({ indizio_energia: 'entrambi' }))).json()).suggestion;
+    assertEq(s.categoria, null, 'se sono entrambi o è ambiguo non si forza niente');
+  });
+
+  await test('indizio e estratto del PDF arrivano al modello (estratto ripulito e accorciato); un indizio sconosciuto si ignora', async () => {
+    mistralReply = { content: '{"modulo":"spese_casa"}' };
+    mistralCalls = [];
+    await call('/classify-bill', bill({ indizio_energia: 'luce', allegati: 'Consumo 120 kWh | mail mario.rossi@gmail.com | ' + 'x'.repeat(3000) }));
+    const user = JSON.parse(mistralCalls[0].messages[1].content);
+    assertEq(user.indizio_energia, 'luce');
+    assertTrue(user.allegati.includes('120 kWh') && !user.allegati.includes('mario.rossi@gmail.com'), user.allegati.slice(0, 80));
+    assertTrue(user.allegati.length <= 1500, 'lunghezza ' + user.allegati.length);
+    mistralCalls = [];
+    await call('/classify-bill', bill({ indizio_energia: 'boh' }));
+    assertEq(JSON.parse(mistralCalls[0].messages[1].content).indizio_energia, undefined);
+  });
+
   await test('una categoria inventata viene scartata (null), non passata al tenant', async () => {
     mistralReply = { content: '{"modulo":"spese_casa","categoria":"Viaggi di lusso","fornitore":"A2A","importo":64,"scadenza":"2026-09-07","confidenza":"alta"}' };
     const s = (await (await call('/classify-bill', bill())).json()).suggestion;

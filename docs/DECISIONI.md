@@ -154,6 +154,13 @@ reali di Finance (6 righe → 1 destinatario e 5 regole). I backup JSON includon
 
 ### Corretto durante il lavoro
 
+- **Luce o gas?** Una bolletta "A2A Energia Gas/Luce" arrivava all'assistente senza categoria: il titolo non basta, il tipo sta nel PDF
+  allegato. Ora il PDF si legge in locale (`core/backend/src/attachment-text.js`, `pdftotext`) e un programma calcola un **indizio**
+  (kWh, POD, "energia elettrica" = luce; Smc, PDR, "gas naturale" = gas; entrambi se ci sono segni di tutti e due). A Super Admin
+  escono solo l'indizio e un estratto delle righe utili (importi, scadenze, consumi, tipo di fornitura), **senza codici lunghi, IBAN né
+  l'intero PDF**. Se l'indizio dice chiaramente luce o gas, la categoria è quella, anche se il modello rispondeva altro o non sapeva;
+  se è ambiguo o il PDF non si legge, la proposta parte lo stesso, senza forzare niente.
+
 - Il riquadro delle **proposte dell'assistente** (bollette da smistare) stava sopra l'elenco di Spese Casa, e un riquadro uguale
   sopra Spese Personali. Spostato in **dashboard**, in un elenco solo (`GET /api/ai/overview`): riguarda entrambi i moduli ed è
   la prima cosa che si apre.

@@ -229,7 +229,7 @@ async function processaMessaggio(accessToken, msgId, rule) {
   const recordId = result.lastInsertRowid;
   // Assistente AI (se attivo): propone categoria, importo e scadenza per la bolletta appena arrivata.
   // Non blocca e non scrive nulla da solo; un errore qui non deve mai fermare l'importazione.
-  require('./ai-suggestions').suggestForRecord({ moduleSlug, recordId, mittente: rule.mittente, subject, text: acc.text })
+  require('./ai-suggestions').suggestForRecord({ moduleSlug, recordId, mittente: rule.mittente, subject, text: acc.text, attachments: allegatiScaricati })
     .catch((e) => console.error('[gmail-poller] suggerimento AI fallito:', e.message));
   // Stesso fireTrigger('nuovo_record', ...) che routes/records.js chiama per un
   // record creato dall'utente — senza questo, un'automazione con trigger "Nuovo
