@@ -133,7 +133,9 @@ l'unico modo è reimpostarla direttamente nel database.
 | Un tenant mostra un errore dopo l'aggiornamento | Ricarica forzata (Cmd+Shift+R); poi `docker logs platform-<slug>` |
 | `502` aprendo un allegato | Google non risponde o il token è scaduto: ricollega Google (vedi sopra) |
 | Super Admin non risponde | `docker ps` per i 6 container; `docker logs super-admin-backend` |
-| Il redeploy dice "Sessione attiva rilevata" | Qualcuno è collegato: aspetta 3 minuti e rilancia (mai forzare mentre si usa) |
+| Il redeploy dice "Sessione attiva rilevata" (`finance -> saltato: active_session`) | Il tenant ha avuto un'azione negli ultimi 3 minuti (conta `last_active_at`, non il polling passivo). Chiudi le schede di Finance, anche sul telefono, aspetta 3 minuti e rilancia. Anche le chiamate API fatte a mano contano come attività. Per forzare: `POST /api/tenants/finance/redeploy {"force":true}` su Super Admin (la pagina aperta chiede di nuovo l'accesso) |
+| Dopo il redeploy il tenant risponde `502` per qualche secondo | Normale: il container sta partendo. Aspetta la risposta 200 di `/api/tenant-info` prima di verificare |
+| `redeploy-nas.sh` stampa `aggiornato` ma la vecchia versione è ancora lì | Controlla la riga del tenant: se è `saltato`, il codice nuovo è sul NAS ma il container non è stato ricreato |
 
 Comandi utili (sul NAS: `/usr/local/bin/docker`):
 
@@ -146,6 +148,9 @@ docker logs --tail 50 super-admin-backend
 ## Cose da sapere
 
 - Mai committare `.env`, `*.db`, né il contenuto di `deploy-secrets/`.
+- Prima di importare o correggere dati in un tenant, salva una copia dei record interessati (per Finance: `~/Desktop/platform-backup-nas/finance-prima-<cosa>-<data>.json`) e fai sempre una prova senza scrivere.
+- Dopo ogni deploy di Finance verifica i numeri che contano (per esempio `/api/insights`) confrontandoli con quelli di prima: se il deploy è stato saltato il confronto non prova niente.
+- Lo script `redeploy-nas.sh` si lancia solo con i test verdi (`cd core/backend && npm test`). Non concatenare i comandi con `;`: usa `&&`.
 - Il Mac non è affidabile per costruire le immagini (Docker Desktop può bloccarsi scaricando le immagini base
   e produce arm64): si costruisce sul NAS, come fa `redeploy-nas.sh`.
 - Un tenant si può tenere sul solo volume dati anche con il container fermo: i dati non dipendono dal container.

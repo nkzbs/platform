@@ -340,4 +340,38 @@ di salute"), che restano nello schema ma contano diversamente (non includono l'a
 - **Impostazioni salvate a mano non congelano i ruoli:** `insights_config` salva solo ciò che è stato cambiato, il resto segue i ruoli.
 - **AI per modulo, non globale.** Ogni modulo accende da solo i potenziamenti (smistare, spiegare, importare) dal Builder (Proprietà → "Potenziamenti AI"). Tabella `module_ai`, rotte `/api/module-ai`, codice `module-ai.js`, unico punto che dice se un potenziamento è attivo (`can(slug, key)`: acceso + ruoli richiesti dichiarati). Un widget è "spiegabile" solo se lo dice la sua configurazione (`config.explainable`). Per ora si salvano solo gli interruttori: nessun potenziamento è ancora collegato.
 - **Finance senza AI** (decisione dello stesso giorno): via la sezione Capacità dalla Libreria, via la scheda "Assistente AI", via i pulsanti "spiega"; la capacità `bollette_ai` è spenta su Finance. Le bollette restano in "da smistare" con avviso WhatsApp (`smistare-notify.js`).
-- **Da fare:** configurare "Come sta andando" dal widget (scelta dei moduli), poi collegare i potenziamenti AI uno alla volta (prima `triage` su Spese casa).
+
+## 2026-10-03 — Dal modulo all'avviso, al widget: la modularità completata
+
+Seguito del registro precedente, nell'ordine in cui è stato fatto. Tutto è online su Finance.
+
+- **Avvisi per modulo.** Il modulo dichiara quale valore dello stato è "nuovo" (da smistare) e quale "da fare" (da pagare), se avvisare per le righe nuove e se
+  mettere le scadenze nel riepilogo del mattino, come chiama le sue righe ("bolletta/bollette") e il tag dei destinatari. Il riepilogo e l'avviso (`avvisi.js`) non
+  hanno più parole o stati scritti nel codice. Il testo è neutro rispetto al genere ("Bolletta da smistare", "Ordine nuovo").
+- **Criteri dei riepiloghi nel modulo di entrate** (categorie escluse, gruppi esclusi, stipendio, risparmio, campo accantonamento): non più dentro `insights.js`.
+  Un modulo di entrate nuovo non eredita niente di Finance.
+- **Via i nomi di Finance dai valori di riserva** (riepilogo, insights, Gmail, capacità, frontend). Restano solo la migrazione `FINANCE` in `module-roles.js` e i
+  Movimenti bancari, che **non si rendono modulari perché non servono** (spenti su Finance). La migrazione scrive i valori una volta sola: chi ha spento tutto apposta non li ritrova.
+- **Regola Gmail con tipo** (*bolletta* o *semplice*) e modulo di destinazione; la riga usa campi e stato dichiarati dal modulo.
+- **Coda "Da smistare" in dashboard** con pulsante **Smista** (transizione normale del modulo). **L'AI non c'entra**: non legge e non smista. Se un modulo ha "Smistare"
+  acceso, l'AI propone solo nell'elenco del modulo, e "Accetta" non cambia lo stato.
+- **"Come sta andando" per vista**: un widget per Personale e uno per Casa. La vista (moduli, gruppi, accantonamento, **solo spese**) è nella configurazione del widget e la legge
+  il server. Casa è di sole spese: i contributi alla casa non servono come entrate, "in Spese casa io vedo le cose".
+- **AI per modulo e per widget**: "Smistare" e "Spiegare" collegati; "Importare" no. "Spiegare" sui widget si accende dal widget (`explainable`), sui report dal modulo.
+  Su Finance: "Smistare" spento, "Spiegare" acceso sui due "Come sta andando". Stile dei commenti riscritto (dai del tu, frasi brevi, niente giudizio bene/male per le sole spese).
+- **Registro degli invii WhatsApp** (`whatsapp_log`): ogni messaggio con l'esito vero per destinatario. Messaggio di prova: inviato.
+- **Impostazioni riordinate**: regole Gmail dentro Google, destinatari e invii dentro WhatsApp, **Dati** (Export CSV, backup `.db`, export/ripristino JSON) come unica voce con tre schede uniformi,
+  "Il mio account" con profilo, password e 2FA. Tolta la scheda Assistente AI e la sezione Capacità dalla Libreria.
+- **Timbrature**: il modulo `timbrature` è dentro Finance (non un progetto a parte, quello eliminato non esiste più). Aggiornato da uno zip Firestore (1.161 righe, 111 nuove, chiave data+entrata+uscita, date corrette di +2 ore).
+  Resta una riga a cavallo della mezzanotte (09/06/2023, 07:00–00:00) con durata calcolata negativa: la formula fa uscita meno entrata. Nel modulo c'è una bozza più vecchia della versione pubblicata: non va pubblicata.
+- **Accesso di Federica**: scelta moduli per utente (Utenti & Ruoli → "Moduli accessibili": Timbrature e Spese casa). Nasconde dal menu ma non blocca l'API; se non si spunta nulla l'utente vede tutto.
+  I widget della dashboard sono tutti solo admin.
+
+### Ancora aperto (non bloccante)
+
+- **Monitoraggio su WhatsApp**: messaggio periodico con "come sta andando" e commento dell'AI; non costruito.
+- **AI "Importare"** e "Spiegare" su altri widget (Riepilogo mensile, Checklist): non collegati.
+- **Dati di Finance**: righe "da smistare" vecchie o a 0 €, scadenza A2A 30/04/2028, settembre con 1.100 € ancora "da pagare" (affitto, Spese Casa, rata PayPal), affitto registrato in un solo mese su sei
+  (il confronto lo segnala come anomalia), 4 righe scadute, marzo–maggio della Quarta Cartella "da verificare". Il primo riepilogo delle 8:00 sarà rumoroso finché non si puliscono.
+- **Sicurezza, a carico di Nima**: app Google in produzione (altrimenti il collegamento può scadere dopo circa 7 giorni e Gmail si ferma), password del NAS, 2FA del Super Admin.
+- Un timeout verso Redis è comparso una volta all'avvio di un container e non si è ripresentato (rete e Redis a posto): non c'è niente da cambiare, ma va ricordato se torna.

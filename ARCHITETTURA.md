@@ -125,25 +125,75 @@ Dal tenant, la voce **Export dati** scarica il database o un export JSON complet
 
 ## Collegamenti esterni
 
-Google (Gmail in lettura, Calendar, Drive) e WhatsApp (CallMeBot) si configurano per tenant da Impostazioni → Connessioni.
-I destinatari WhatsApp (tabella `whatsapp_recipients`, Impostazioni → Notifiche) e le regole Gmail (tabella `gmail_rules`,
-Impostazioni → Connessioni) sono impostazioni del sistema, non moduli. L'elenco mostra solo i collegamenti attivi o richiesti dai moduli installati. Le credenziali
+Google (Gmail in lettura, Calendar, Drive) e WhatsApp (CallMeBot) si configurano per tenant da Impostazioni → Connessioni. Le **regole Gmail** stanno dentro
+la riga Google (si vedono con Google collegato) e i **destinatari WhatsApp** e gli **ultimi invii** dentro la riga WhatsApp: sono impostazioni del sistema
+(tabelle `gmail_rules`, `whatsapp_recipients`), non moduli. L'elenco mostra solo i collegamenti attivi o richiesti dai moduli installati. Le credenziali
 Google (Client ID e Secret, token) stanno nella tabella `connections` del tenant.
+
+**Regole Gmail** (`gmail-poller.js`, ogni 15 minuti): ogni regola ha mittente, **modulo di destinazione**, categoria e **tipo**. *Bolletta* cerca importo e
+scadenza nel testo e nei PDF; *semplice* prende solo oggetto, data e allegati (ordini, contratti, documenti). La riga creata scrive solo i campi che il
+modulo ha dichiarato (`costruisciRiga`, funzione pura e testata) e usa lo stato "nuovo" dichiarato dal modulo. Una regola senza modulo usa il primo che ha
+dichiarato di poter ricevere righe dalle mail.
 
 ## Notifiche WhatsApp
 
 L'invio passa da `core/backend/src/whatsapp.js`: legge la risposta di CallMeBot (che risponde 200 anche quando
 rifiuta), riprova solo i problemi temporanei, manda i messaggi uno alla volta e registra l'esito vero per
-destinatario; un messaggio non consegnato genera un avviso nell'app. Le automazioni dei moduli (`invia_notifica`,
-`invia_report_periodico`) usano lo stesso invio.
+destinatario; un messaggio non consegnato genera un avviso nell'app. Ogni invio finisce nel **registro** (`whatsapp_log`,
+ultimi 200, rotta `GET /api/connections/whatsapp_callmebot/log`), visibile in Impostazioni → Connessioni → WhatsApp → "Ultimi invii".
+Le automazioni dei moduli (`invia_notifica`, `invia_report_periodico`) usano lo stesso invio.
 
-Il **riepilogo del mattino** (`daily-digest.js`) è un lavoro a parte che gira ogni minuto e, all'ora italiana scelta,
-manda un solo messaggio con le scadenze di oggi, domani e in ritardo. È spento di default.
+Cosa avvisare e con quali parole lo **dichiara il modulo** (Builder → Ruoli del modulo → "Avvisi", vedi sotto), non il codice:
+
+- **Avviso su riga nuova** (`avvisi.js`): quando una riga arriva nello stato "nuovo" del modulo (da Gmail, `gmail-poller.js`, o creata a mano,
+  `routes/records.js`) parte un messaggio ("Bolletta da smistare: A2A · 44,00 € · scade 01/10/2026") ai destinatari del tag scelto dal modulo.
+- **Riepilogo del mattino** (`daily-digest.js`): lavoro a parte che gira ogni minuto e, all'ora italiana scelta, manda un solo messaggio con le
+  scadenze di oggi, domani e in ritardo dei moduli che hanno acceso "scadenze nel riepilogo" e il numero di righe nello stato "nuovo". Spento di default.
+  Senza moduli dichiarati non porta nessuna riga.
+
+## Ruoli dei moduli: le funzioni non conoscono i nomi
+
+Ogni modulo dichiara nel Builder (Proprietà → "Ruoli del modulo") a cosa serve; le funzioni leggono la dichiarazione invece di avere nomi di moduli e di
+campi scritti nel codice (`module-roles.js`, tabella `module_roles`, rotte `/api/module-roles`; la dichiarazione sta fuori dallo schema per non toccarne la conversione v2/v3).
+
+| Cosa si dichiara | A cosa serve |
+|---|---|
+| **Tipo** (spesa, entrata) e **usi** (riepiloghi, avvisi, mail) | Quali moduli entrano in "Come sta andando", nel riepilogo del mattino, tra le destinazioni delle regole Gmail |
+| **Ruoli dei campi** (importo, data, scadenza, categoria, descrizione, stato, gruppo, fisso) | Quale campo del modulo è l'importo, la data... Un campo senza ruolo non viene letto né scritto |
+| **Avvisi**: stato "nuovo" e "da fare", avviso su riga nuova, scadenze nel riepilogo, come si chiamano le righe ("bolletta/bollette"), etichetta breve, tag destinatari | Parole e stati dei messaggi WhatsApp e della coda "Da smistare" |
+| **Criteri dei riepiloghi** (entrate): categorie, gruppi e descrizioni escluse, categorie stipendio e risparmio, campo accantonamento | Cosa non conta come entrata, cosa è stipendio, cosa è risparmio |
+
+I valori di Finance (`spese_personali`, `spese_casa`, `entrate`) sono dichiarati da una **migrazione** all'avvio (`seedIfEmpty`, una volta sola per modulo:
+una scelta fatta dal Builder, anche "tutto spento", non si ripristina). Un modulo senza dichiarazione non entra in nessuna funzione. `GET /api/module-roles/queues`
+(per qualunque utente collegato) elenca i moduli con uno stato "nuovo": serve alla coda in dashboard.
+
+## Dashboard: widget
+
+I widget sono dati (`dashboard_widgets`: tipo, configurazione, ruoli e utenti che li vedono). Oltre a KPI, tabelle, checklist e riepiloghi:
+
+- **Coda da smistare** (`coda`, `QueueWidget.jsx`): le righe nello stato "nuovo" di tutti i moduli che lo hanno dichiarato. Il pulsante **Smista** cambia lo stato
+  da "nuovo" a "da fare" con la transizione normale del modulo (`POST /api/records/:slug/:id/transition`: permessi, controlli, storico e automazioni come sempre).
+  L'AI non c'entra: è un click.
+- **Come sta andando** (`come_sta_andando`): uno o più widget, ciascuno con la sua **vista** nella configurazione: moduli di spese, gruppi di entrate inclusi,
+  se conta l'accantonamento, **solo spese** (per la casa: spese pagate e da pagare, fisse e variabili, categorie e confronti, senza entrate, saldo e risparmio).
+  La vista la legge il server dal widget salvato (`GET /api/insights?widget=ID`), mai dal browser; la spiegazione salvata ha chiave per widget (`2026-09@w14`).
+- Ogni widget può essere nascosto a un ruolo: su Finance sono tutti solo admin. La scelta moduli per utente (Utenti & Ruoli) nasconde i moduli dal menu ma non
+  blocca l'API; per un blocco vero ci sono i permessi per ruolo nei moduli.
 
 ## Assistente AI (Mistral)
 
-Oggi c'è una funzione: lo **smistamento delle bollette** di Finance. L'AI **propone** (categoria, importo,
-scadenza, fornitore) e tu accetti o ignori; non scrive mai da sola nei dati.
+L'AI **non è una funzione globale**: ogni modulo accende da solo i potenziamenti che vuole (Builder → Proprietà → "Potenziamenti AI", `module-ai.js`, tabella
+`module_ai`, rotte `/api/module-ai`). `can(modulo, potenziamento)` è l'unico punto che dice se è attivo: acceso **e** con i ruoli richiesti dichiarati
+(smistare: importo, categoria, stato; spiegare e importare: importo, data). Senza interruttore un modulo non ha AI. L'AI **propone o racconta**,
+non scrive mai da sola nei dati.
+
+| Potenziamento | Stato | Cosa fa |
+|---|---|---|
+| **Smistare** (`triage`) | collegato | Per le bollette in arrivo da Gmail propone categoria, importo, scadenza e fornitore. La proposta compare sopra l'elenco del modulo; "Accetta" applica i campi **senza cambiare lo stato** (lo smisti tu), "Ignora" la chiude |
+| **Spiegare** (`explain`) | collegato | Pulsante «Spiega con l'AI» nei report del modulo (`ReportPanel.jsx`, `POST /api/ai/explain-report`, serve il modulo con "Spiegare" acceso). Per i widget "Come sta andando" si accende dal widget (casella "Spiegabile", `config.explainable`) |
+| **Importare** (`import`) | non collegato | Progettato: leggere allegati e PDF e proporre le righe |
+
+Il flusso dello smistamento:
 
 ```mermaid
 sequenceDiagram
@@ -159,7 +209,7 @@ sequenceDiagram
   SA->>SA: valida l'output (categoria tra quelle ammesse, importo e data validi)
   SA-->>T: proposta controllata
   T->>T: salva il suggerimento (stato "in attesa")
-  Note over T: l'utente lo vede in dashboard: Accetta applica i campi, Ignora lo chiude
+  Note over T: la proposta sta sopra l'elenco del modulo: Accetta applica i campi (senza cambiare lo stato), Ignora la chiude
 ```
 
 - Il **tenant non parla mai con Mistral** e non ha la chiave: chiede a Super Admin (`/api/tenant-ai/classify-bill`).
@@ -168,13 +218,12 @@ sequenceDiagram
 - L'**output è controllato**: una categoria che non è tra le opzioni del modulo viene scartata, importi e date
   non validi diventano vuoti, una risposta che non è JSON viene rifiutata. All'accettazione la categoria è
   ricontrollata sul modulo.
-- **Chiave per tenant** (`lib/ai-key.js`, tabella `tenant_ai_keys`): inserita dalle impostazioni del tenant, cifrata in Super Admin, mai restituita; `MISTRAL_API_KEY` è il ripiego.
+- **Chiave per tenant** (`lib/ai-key.js`, tabella `tenant_ai_keys`): inserita dal Builder, nella sezione "Potenziamenti AI" quando se ne accende uno; cifrata in Super Admin, mai restituita; `MISTRAL_API_KEY` è il ripiego.
 - **Tetto di spesa mensile per tenant** (`lib/ai-budget.js`): si sommano i token del mese dal registro, convertiti in euro
   (di default mistral-small: 0,13 € in ingresso e 0,51 € in uscita per milione di token), e a tetto raggiunto
   nessuna chiamata parte. Avviso per email all'80% e al 100%. Tetto di default 10 €, regolabile con
   `AI_MONTHLY_BUDGET_EUR`.
-- **Spento di default**: si accende da Impostazioni → Assistente AI. Le righe già presenti si possono
-  sottoporre all'assistente anche con l'interruttore spento, dal riquadro in cima alla pagina Spese.
+- **Spento di default**: un modulo senza interruttore acceso non ha AI. Su Finance "Smistare" è spento (il parser Gmail con le regole basta); "Spiegare" è acceso sui widget "Come sta andando".
 
 ### Commento e spiegazione dei report
 
@@ -183,18 +232,24 @@ Super Admin (`/api/tenant-ai/explain-report`) i soli totali per gruppo; Super Ad
 calcola le variazioni percentuali, chiede il testo a Mistral con istruzioni sue e **controlla che ogni numero scritto
 esista nei dati**, altrimenti risponde errore e il tenant non mostra nulla.
 
-- **Commento mensile**: `invia_report_periodico` con `periodo: 'mese'` e `raggruppa_per`, se Impostazioni → Assistente AI →
-  «Commento al report mensile» è acceso. Il report parte comunque se il commento non arriva.
-- **Spiega questo report**: pulsante nel pannello Report (`ReportPanel.jsx`), rotta `POST /api/ai/explain-report`.
+- **Commento mensile**: `invia_report_periodico` con `periodo: 'mese'` e `raggruppa_per`, se il commento è acceso (`PUT /api/ai/settings {report_enabled}`; oggi senza schermata: la scheda Assistente AI è stata tolta). Il report parte comunque se il commento non arriva.
+- **Spiega questo report**: pulsante nel pannello Report (`ReportPanel.jsx`), rotta `POST /api/ai/explain-report`, solo sui moduli con "Spiegare" acceso (403 `ai_off` altrimenti).
 
 ### "Come sta andando"
 
 `core/backend/src/insights.js` calcola per un mese entrate (sul conto), spese, saldo, accantonato (trattenuto in busta, con stima dove
 manca la riga), risparmio vero, confronti (mese prima, stesso mese dell'anno prima, media di 12 mesi), categorie con variazione e
-anomalie, leggendo i record dei moduli indicati in `insights_config` (default: vista personale, cioè entrate e spese personali). `GET /api/insights` restituisce i numeri senza AI (`?period=anno&year=AAAA` per la vista da inizio anno);
-`POST /api/insights/explain` manda a Super Admin (`/api/tenant-ai/explain-insights`) solo i totali, che li ripulisce, fa scrivere
-il testo a Mistral e lo restituisce solo se ogni numero esiste nei dati. La spiegazione si salva per mese
-(`insight_explanations`, con l'impronta dei numeri) e si rigenera solo se i numeri cambiano o la si chiede di nuovo.
+anomalie (+25% e almeno 20 € sulla media dei 6 mesi), leggendo i record dei moduli dichiarati per i riepiloghi (vedi "Ruoli dei moduli"). `GET /api/insights` restituisce i numeri
+senza AI (`?period=anno&year=AAAA` per da inizio anno; `?widget=ID` per la vista di un widget). Il default è neutro (nessun modulo, nessun criterio);
+`insights_config` salva solo ciò che si cambia a mano. Con `view.solo_spese` il calcolo salta entrate, saldo e risparmio.
+
+`POST /api/insights/explain` risponde solo se il widget ha la casella "Spiegabile": manda a Super Admin (`/api/tenant-ai/explain-insights`) solo i totali,
+che li ripulisce, fa scrivere il testo a Mistral e lo restituisce solo se ogni numero esiste nei dati. La spiegazione si salva per mese e widget
+(`insight_explanations`, con l'impronta dei numeri) e si rigenera solo se i numeri cambiano o la si chiede di nuovo. Le istruzioni al modello (tono: dai del tu,
+frasi brevi, nessun giudizio bene/male per le viste di sole spese) stanno in `super-admin/backend/src/lib/ai-report.js`.
+
+La vista **Da inizio anno** (`buildYearSnapshot`) va da gennaio all'ultimo mese concluso, con le stesse regole: mostra come si dividono le spese
+(rate = righe collegate a un debito o categoria Rata; fisse; variabili) e il confronto con lo stesso periodo dell'anno prima.
 
 ## Movimenti bancari
 
@@ -202,31 +257,32 @@ il testo a Mistral e lo restituisce solo se ogni numero esiste nei dati. La spie
 testo (il PDF non si salva), `parseStatement` lo legge in movimenti, `classify` li classifica e `rematch` li abbina alle righe di Finance
 (spese personali e di casa, entrate, *Contributo Casa*) con lo stesso importo e una data vicina. Tabelle `bank_accounts` e
 `bank_movements` (un movimento ha `kind`, `merchant`, `category_hint`, l'eventuale abbinamento e `ignored`). La pagina
-`MovimentiPage.jsx` mostra riepilogo del mese e movimenti da registrare; `insights.js` ne legge il riepilogo per la scheda "Come sta andando".
+`MovimentiPage.jsx` mostra riepilogo del mese e movimenti da registrare; `insights.js` ne legge il riepilogo per la vista generale di "Come sta andando".
+**Non è modulare**: usa i nomi dei moduli di Finance e le loro colonne. Su Finance è spento (`movimenti` non installato) e non serve.
 
 ## Capacità: il progetto si costruisce da zero
 
 Tre strati. **Il motore** (utenti, moduli, record, Builder, Libreria, backup, Export dati) c'è sempre. Le **capacità** sono funzioni in più che un
-progetto può avere e si **installano dalla Libreria**, con lo stesso gesto dei moduli (`core/backend/src/features.js`, tabella `tenant_features`,
-sezione "Capacità" della Libreria). I **moduli** sono quelli di business che costruisci tu.
+progetto può avere (`core/backend/src/features.js`, tabella `tenant_features`, rotte `/api/features`, solo admin); i **moduli** sono quelli di business che costruisci tu.
+Oggi **non c'è una schermata** per accenderle (la sezione "Capacità" della Libreria è stata tolta): si accendono con `PUT /api/features/<chiave>`.
 
 | Capacità | Cosa porta |
 |---|---|
-| `whatsapp` | Destinatari WhatsApp (Impostazioni → Notifiche), rotte `/api/whatsapp-recipients` |
-| `gmail` | Regole Gmail (Impostazioni → Connessioni), rotte `/api/gmail-rules`, controllo periodico delle mail |
+| `whatsapp` | Destinatari WhatsApp (dentro Connessioni → WhatsApp), rotte `/api/whatsapp-recipients`, registro degli invii |
+| `gmail` | Regole Gmail (dentro Connessioni → Google), rotte `/api/gmail-rules`, controllo periodico delle mail |
 | `sito_web` | Scheda Sito Web e il suo editor (`/api/site-pages`); il sito pubblico resta spento finché non lo attivi |
-| `movimenti` | Pagina Movimenti, rotte `/api/bank/*`, lettura degli estratti PDF |
-| `analisi` | Scheda "Come sta andando" in dashboard, rotte `/api/insights/*` |
-| `bollette_ai` | Smistamento bollette con l'assistente (riquadro in dashboard, rotte `/api/ai/suggest*`, aggancio al poller Gmail) |
-| `riepilogo_mattino` | Riepilogo WhatsApp del mattino (controllo, rotte `/api/digest/*`) |
+| `movimenti` | Pagina Movimenti, rotte `/api/bank/*`, lettura degli estratti PDF (non modulare, spenta su Finance) |
+| `analisi` | Widget "Come sta andando" disponibile in "Aggiungi widget", rotte `/api/insights/*` |
+| `riepilogo_mattino` | Riepilogo WhatsApp del mattino (scheda Notifiche, rotte `/api/digest/*`) |
 
-Un progetto **nuovo non ne ha nessuna**: non compaiono nel menu, in dashboard né nelle Impostazioni (le schede si adattano), e le loro rotte rispondono 403
-`feature_off`. Un progetto che già le usa le trova installate al primo avvio (valore di partenza dai dati: moduli di spese, destinatari, regole, sito attivo).
-Rimuovere una capacità non cancella i dati: la si reinstalla quando serve. `GET /api/tenant-info` (pubblico) dice quali sono installate, così menu e
-dashboard si adattano. Restano sempre disponibili il motore e l'AI generica (chiave Mistral, spiegazione dei report). **Export dati** sta in Impostazioni.
+Un progetto **nuovo non ne ha nessuna**: le loro rotte rispondono 403 `feature_off` e le schede si adattano. Il valore di partenza di un progetto che già le usa
+viene dai dati: `movimenti`, `analisi` e `riepilogo_mattino` partono accese se almeno un modulo ha dichiarato di essere una spesa o un'entrata; `whatsapp`,
+`gmail`, `sito_web` se ci sono destinatari, regole o un sito attivo. `GET /api/tenant-info` (pubblico) dice quali sono accese. L'AI non è una capacità: la
+decide ogni modulo (vedi sopra). **Export e Backup** stanno in Impostazioni → Dati.
 
-**Onestà sul confine.** Le capacità non installate sono invisibili, ma il loro codice sta ancora nel nucleo, e quelle di finanza hanno scritti dentro i nomi
-dei moduli di Finance (`spese_casa`, `entrate`...). Il passo successivo è far dichiarare ai moduli stessi cosa sanno fare con l'AI (vedi `docs/DECISIONI.md`).
+**Onestà sul confine.** Il codice delle capacità sta ancora nel nucleo. I nomi dei moduli di Finance restano solo nella migrazione che dichiara i loro ruoli
+(`module-roles.js`, `FINANCE`) e nei Movimenti bancari. Il parser Gmail estrae importo e scadenza con regole pensate per le bollette italiane; la regola può scegliere
+il tipo "semplice" (solo oggetto, data e allegati) per mail che non sono bollette.
 
 ## Sicurezza, in sintesi
 

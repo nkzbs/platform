@@ -52,7 +52,7 @@ imposti, altrimenti ne genera una casuale e la stampa **una volta sola** nel log
 Ogni backend ha la sua suite, nessuna dipendenza esterna (i servizi esterni sono simulati):
 
 ```bash
-cd core/backend && npm test            # 33 suite
+cd core/backend && npm test            # 36 suite
 cd super-admin/backend && npm test     # 16 suite
 ```
 
