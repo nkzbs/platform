@@ -9,15 +9,17 @@ const db = require('./db');
 const whatsapp = require('./whatsapp');
 const { logAudit } = require('./audit-log');
 
-// Valori di partenza se nessun modulo ha dichiarato di lavorare negli avvisi (vedi module-roles.js).
-const FALLBACK_MODULES = [{ slug: 'spese_casa', label: 'casa', roles: {} }, { slug: 'spese_personali', label: 'pers.', roles: {} }];
-const SHORT = { spese_casa: 'casa', spese_personali: 'pers.' };
+// I moduli che entrano nel riepilogo li dichiara il modulo (Builder → Avvisi): quali valori del suo stato sono "da fare" e "nuovo",
+// come chiamare le sue righe. Valori di partenza se nessun modulo ha dichiarato niente (progetti senza ruoli): quelli di Finance.
+const LEGACY = { states: { nuovo: 'da_smistare', da_fare: 'da_pagare' }, noun_s: 'bolletta', noun_p: 'bollette' };
+const FALLBACK_MODULES = [{ slug: 'spese_casa', label: 'casa', roles: {}, ...LEGACY }, { slug: 'spese_personali', label: 'pers.', roles: {}, ...LEGACY }];
 function digestModules() {
   let declared = [];
-  try { declared = require('./module-roles').list({ kind: 'spesa', use: 'avvisi' }); } catch (e) { /* tabella non pronta */ }
+  try { declared = require('./module-roles').list({ use: 'avvisi' }).filter((m) => m.avvisi.scadenze); } catch (e) { /* tabella non pronta */ }
   if (!declared.length) return FALLBACK_MODULES;
-  return declared.map((m) => ({ slug: m.module_slug, label: SHORT[m.module_slug] || String(m.name || m.module_slug).toLowerCase(), roles: m.roles }));
+  return declared.map((m) => ({ slug: m.module_slug, label: m.avvisi.label || String(m.name || m.module_slug).toLowerCase(), roles: m.roles, states: m.avvisi.states, noun_s: m.avvisi.noun_s, noun_p: m.avvisi.noun_p }));
 }
+const humanize = (v) => { const t = String(v || '').replace(/_/g, ' ').trim(); return t.charAt(0).toUpperCase() + t.slice(1); };
 const TAG = 'scadenza'; // lo stesso tag degli avvisi per riga: chi li riceveva riceve il riepilogo
 const LATE_DAYS = 45; // oltre questa soglia una riga "da pagare" è un residuo vecchio, non un ritardo
 const MAX_LINES = 5;
@@ -62,13 +64,14 @@ function buildDigest(now = new Date()) {
   const tomorrow = addDays(today, 1);
   const lateFrom = addDays(today, -LATE_DAYS);
   const groups = { oggi: [], domani: [], ritardo: [] };
-  let daSmistare = 0;
-  for (const { slug, label, roles } of digestModules()) {
+  const nuovi = []; // righe nello stato "nuovo" (da smistare) per modulo
+  for (const { slug, label, roles, states, noun_s, noun_p } of digestModules()) {
+    let nNuovi = 0;
     const fStato = roles.stato || '_stato', fScad = roles.scadenza || 'scadenza', fData = roles.data || 'data', fDesc = roles.descrizione || 'descrizione', fImp = roles.importo || 'importo';
     for (const r of db.prepare('SELECT data FROM records WHERE module_slug = ?').all(slug)) {
       let d; try { d = JSON.parse(r.data); } catch (e) { continue; }
-      if (d[fStato] === 'da_smistare') { daSmistare++; continue; }
-      if (d[fStato] !== 'da_pagare') continue;
+      if (states.nuovo && d[fStato] === states.nuovo) { nNuovi++; continue; }
+      if (!states.da_fare || d[fStato] !== states.da_fare) continue;
       const due = d[fScad] || d[fData];
       if (!due) continue;
       const item = { descrizione: String(d[fDesc] || '(senza descrizione)').trim(), label, importo: Number(d[fImp]) || 0, due };
@@ -76,7 +79,12 @@ function buildDigest(now = new Date()) {
       else if (due === tomorrow) groups.domani.push(item);
       else if (due < today && due >= lateFrom) groups.ritardo.push(item);
     }
+    if (nNuovi) {
+      const same = nuovi.find((x) => x.stato === states.nuovo && x.noun_s === noun_s && x.noun_p === noun_p);
+      if (same) same.n += nNuovi; else nuovi.push({ n: nNuovi, stato: states.nuovo, noun_s, noun_p });
+    }
   }
+  const daSmistare = nuovi.reduce((t, x) => t + x.n, 0);
   if (!groups.oggi.length && !groups.domani.length && !groups.ritardo.length && !daSmistare) return null;
 
   const block = (title, items, showDate) => {
@@ -92,7 +100,7 @@ function buildDigest(now = new Date()) {
     block('Oggi', groups.oggi, false),
     block('Domani', groups.domani, false),
     block('In ritardo', groups.ritardo, true),
-    daSmistare ? '*Da smistare:* ' + daSmistare + (daSmistare === 1 ? ' bolletta' : ' bollette') : null,
+    ...nuovi.map((x) => '*' + humanize(x.stato) + ':* ' + x.n + ' ' + (x.n === 1 ? x.noun_s : x.noun_p)),
   ].filter(Boolean);
   return { text: parts.join('\n\n'), counts: { oggi: groups.oggi.length, domani: groups.domani.length, ritardo: groups.ritardo.length, daSmistare } };
 }

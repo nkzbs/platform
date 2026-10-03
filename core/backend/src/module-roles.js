@@ -9,13 +9,19 @@ const KINDS = ['spesa', 'entrata'];
 const USES = ['riepiloghi', 'avvisi', 'mail'];
 
 db.exec('CREATE TABLE IF NOT EXISTS module_roles (module_slug TEXT PRIMARY KEY, kind TEXT, uses TEXT NOT NULL DEFAULT \'[]\', roles TEXT NOT NULL DEFAULT \'{}\')');
+if (!db.prepare('PRAGMA table_info(module_roles)').all().some((c) => c.name === 'extra')) db.exec("ALTER TABLE module_roles ADD COLUMN extra TEXT NOT NULL DEFAULT '{}'");
+
+// Avvisi del modulo (WhatsApp): quali valori del suo stato contano ("nuovo" = da smistare, "da fare" = da pagare/da evadere...),
+// quando avvisare, e come chiamare le sue righe nei messaggi. Le funzioni non conoscono nomi di stati scritti nel codice.
+const DEFAULT_AVVISI = { states: { nuovo: '', da_fare: '' }, nuovo: false, scadenze: false, tag: 'scadenza', label: '', noun_s: 'riga', noun_p: 'righe' };
 
 function parse(row) {
   if (!row) return null;
-  let uses = [], roles = {};
+  let uses = [], roles = {}, extra = {};
   try { uses = JSON.parse(row.uses || '[]'); } catch (e) { /* vuoto */ }
   try { roles = JSON.parse(row.roles || '{}'); } catch (e) { /* vuoto */ }
-  return { module_slug: row.module_slug, kind: row.kind || null, uses, roles };
+  try { extra = JSON.parse(row.extra || '{}'); } catch (e) { /* vuoto */ }
+  return { module_slug: row.module_slug, kind: row.kind || null, uses, roles, avvisi: { ...DEFAULT_AVVISI, ...extra, states: { ...DEFAULT_AVVISI.states, ...(extra.states || {}) } } };
 }
 
 function get(slug) { return parse(db.prepare('SELECT * FROM module_roles WHERE module_slug = ?').get(slug)); }
@@ -34,21 +40,32 @@ function clean(input) {
   const uses = Array.isArray(input && input.uses) ? [...new Set(input.uses.filter((u) => USES.includes(u)))] : [];
   const roles = {};
   for (const k of ROLE_KEYS) { const v = input && input.roles && input.roles[k]; if (typeof v === 'string' && /^[A-Za-z0-9_]{1,60}$/.test(v.trim())) roles[k] = v.trim(); }
-  return { kind, uses, roles };
+  const a = (input && input.avvisi) || {};
+  const word = (v, d, n) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, n) : d);
+  const stateKey = (v) => (typeof v === 'string' && /^[A-Za-z0-9_]{1,60}$/.test(v.trim()) ? v.trim() : '');
+  const avvisi = {
+    states: { nuovo: stateKey(a.states && a.states.nuovo), da_fare: stateKey(a.states && a.states.da_fare) },
+    nuovo: !!a.nuovo, scadenze: !!a.scadenze,
+    tag: word(a.tag, 'scadenza', 40).replace(/[^A-Za-z0-9_\-]/g, '') || 'scadenza',
+    label: word(a.label, '', 20), noun_s: word(a.noun_s, 'riga', 30), noun_p: word(a.noun_p, 'righe', 30),
+  };
+  return { kind, uses, roles, avvisi };
 }
 
 function set(slug, input) {
   const c = clean(input);
-  db.prepare('INSERT INTO module_roles (module_slug, kind, uses, roles) VALUES (?, ?, ?, ?) ON CONFLICT(module_slug) DO UPDATE SET kind = excluded.kind, uses = excluded.uses, roles = excluded.roles')
-    .run(slug, c.kind, JSON.stringify(c.uses), JSON.stringify(c.roles));
+  db.prepare('INSERT INTO module_roles (module_slug, kind, uses, roles, extra) VALUES (?, ?, ?, ?, ?) ON CONFLICT(module_slug) DO UPDATE SET kind = excluded.kind, uses = excluded.uses, roles = excluded.roles, extra = excluded.extra')
+    .run(slug, c.kind, JSON.stringify(c.uses), JSON.stringify(c.roles), JSON.stringify(c.avvisi));
   return get(slug);
 }
 
 // Valori di partenza per i moduli di finanza che esistono già: gli stessi nomi che le funzioni usavano prima, così per chi li ha
 // già niente cambia. Si scrivono solo dove non c'è ancora una dichiarazione (una scelta fatta dal Builder non si tocca).
 const FINANCE = {
-  spese_personali: { kind: 'spesa', uses: ['riepiloghi', 'avvisi', 'mail'], roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', fisso: 'fisso' } },
-  spese_casa: { kind: 'spesa', uses: ['avvisi', 'mail'], roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', fisso: 'fisso' } },
+  spese_personali: { kind: 'spesa', uses: ['riepiloghi', 'avvisi', 'mail'], roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', fisso: 'fisso' },
+    avvisi: { states: { nuovo: 'da_smistare', da_fare: 'da_pagare' }, nuovo: true, scadenze: true, tag: 'scadenza', label: 'pers.', noun_s: 'bolletta', noun_p: 'bollette' } },
+  spese_casa: { kind: 'spesa', uses: ['avvisi', 'mail'], roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', fisso: 'fisso' },
+    avvisi: { states: { nuovo: 'da_smistare', da_fare: 'da_pagare' }, nuovo: true, scadenze: true, tag: 'scadenza', label: 'casa', noun_s: 'bolletta', noun_p: 'bollette' } },
   entrate: { kind: 'entrata', uses: ['riepiloghi'], roles: { importo: 'importo', data: 'data', categoria: 'categoria', descrizione: 'descrizione', gruppo: 'gruppo' } },
 };
 function seedIfEmpty() {
@@ -57,6 +74,15 @@ function seedIfEmpty() {
     if (!db.prepare('SELECT 1 FROM modules WHERE slug = ?').get(slug)) continue;
     if (get(slug)) continue;
     set(slug, cfg); n++;
+  }
+  // Moduli di finanza dichiarati prima degli "Avvisi": prendono i valori di prima (una scelta già fatta non si tocca).
+  for (const [slug, cfg] of Object.entries(FINANCE)) {
+    const cur = get(slug);
+    const raw = db.prepare('SELECT extra FROM module_roles WHERE module_slug = ?').get(slug);
+    // solo se gli avvisi non sono mai stati scritti (extra vuoto): chi li ha spenti apposta non li ritrova accesi al riavvio
+    if (cur && cfg.avvisi && raw && (raw.extra || '{}') === '{}') {
+      set(slug, { kind: cur.kind, uses: cur.uses, roles: cur.roles, avvisi: cfg.avvisi }); n++;
+    }
   }
   // Le regole Gmail fatte prima della scelta del modulo: si agganciano al modulo che usavano (Casa -> spese_casa, il resto -> spese_personali).
   try {

@@ -112,7 +112,7 @@ function PropertiesPanel({ token, baseUrl, mod, schema, fieldCache, allModules, 
               </div>
             )}
 
-            <ModuleRolesSection token={token} baseUrl={baseUrl} slug={mod.slug} fields={(schema?.steps || []).filter((s) => s.block_type === 'field')} />
+            <ModuleRolesSection token={token} baseUrl={baseUrl} slug={mod.slug} fields={(schema?.steps || []).filter((s) => s.block_type === 'field')} states={(schema?.steps || []).filter((s) => s.block_type === 'workflow_state')} />
             <ModuleAiSection token={token} baseUrl={baseUrl} slug={mod.slug} />
 
             <div className="border-t border-gray-800 pt-3">
