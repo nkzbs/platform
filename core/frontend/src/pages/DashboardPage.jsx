@@ -236,6 +236,9 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
     setRiepilogoConfig({ giorno_cutoff: 27, entrate: { modulo: '', campo_importo: '', campo_data: '' }, gruppi: [], conti: { modulo: '', campo_tipo: '', valore_carta: '', valore_conto: '' } })
     setReportBlockConfig({ source_module: '', block_key: '' })
   }
+  const [spesaModules, setSpesaModules] = useState([]) // moduli dichiarati come spese (Builder → Ruoli del modulo), per la vista di "Come sta andando"
+  useEffect(() => { if (showAdd && newWidget.type === 'come_sta_andando') api.get('/module-roles').then((d) => setSpesaModules(Array.isArray(d) ? d.filter((m) => m.kind === 'spesa') : [])) }, [showAdd, newWidget.type]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const saveWidget = async () => {
     const w = { ...newWidget, page }
     if (!w.label) w.label = w.module_slug || (w.type === 'checklist' ? 'Checklist' : w.type === 'come_sta_andando' ? 'Come sta andando' : w.type === 'coda' ? 'Da smistare' : 'Widget')
@@ -243,7 +246,10 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
     if (w.type === 'periodo') w.config = periodoConfig
     if (w.type === 'riepilogo_mensile') w.config = riepilogoConfig
     if (REPORT_WIDGET_TYPES.includes(w.type)) w.config = reportBlockConfig
-    if (w.type === 'come_sta_andando') w.config = { explainable: !!newWidget.explainable }
+    if (w.type === 'come_sta_andando') {
+      const grp = String(newWidget.entrate_include || '').split(',').map((x) => x.trim()).filter(Boolean)
+      w.config = { explainable: !!newWidget.explainable, spese_modules: newWidget.spese_modules || [], entrate_include_groups: grp, accantonamento: newWidget.accantonamento !== false }
+    }
     const saved = editingWidgetId ? await api.patch('/dashboard/widgets/' + editingWidgetId, w) : await api.post('/dashboard/widgets', w)
     if (saved && saved.ok !== false) {
       resetWidgetForm()
@@ -265,7 +271,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
       conti: cfg.conti || { modulo: '', campo_tipo: '', valore_carta: '', valore_conto: '' },
     })
     if (REPORT_WIDGET_TYPES.includes(w.type)) setReportBlockConfig({ source_module: cfg.source_module || '', block_key: cfg.block_key || '' })
-    if (w.type === 'come_sta_andando') setNewWidget((n) => ({ ...n, explainable: !!cfg.explainable }))
+    if (w.type === 'come_sta_andando') setNewWidget((n) => ({ ...n, explainable: !!cfg.explainable, spese_modules: cfg.spese_modules || [], entrate_include: (cfg.entrate_include_groups || []).join(', '), accantonamento: cfg.accantonamento !== false }))
     setEditingWidgetId(w.id)
     setShowAdd(true)
   }
@@ -426,7 +432,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                 )
               })()}
               {w.type === 'coda' && <QueueWidget token={token} onNavigate={onNavigate} />}
-              {w.type === 'come_sta_andando' && <InsightsCard token={token} onNavigate={features.movimenti ? onNavigate : undefined} />}
+              {w.type === 'come_sta_andando' && <InsightsCard token={token} widgetId={w.id} title={w.label} onNavigate={features.movimenti ? onNavigate : undefined} />}
               {w.type === 'checklist' && (
                 <ChecklistWidget config={w.config} token={token} label={w.label} color={w.color} modules={modules} user={user} />
               )}
@@ -509,6 +515,26 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                   <input type="checkbox" className="mt-1" checked={!!newWidget.explainable} onChange={(e) => setNewWidget({ ...newWidget, explainable: e.target.checked })} />
                   <span>Spiegabile con l'AI<span className="block text-xs text-gray-500">Compare «Spiega con l'AI» sul widget. L'AI legge solo i totali mostrati, mai le righe. Serve la chiave Mistral.</span></span>
                 </label>
+              )}
+              {newWidget.type === 'come_sta_andando' && (
+                <div className="space-y-3 rounded-lg border border-gray-800 p-3">
+                  <div className="text-xs text-gray-500">Cosa conta in questo widget. Lascia vuoto per la vista generale (i moduli dichiarati nei riepiloghi).</div>
+                  <div>
+                    <div className="text-xs text-gray-400 mb-1">Moduli di spese</div>
+                    {spesaModules.length === 0 && <div className="text-xs text-gray-600">Nessun modulo dichiarato come spesa (Builder → Ruoli del modulo).</div>}
+                    {spesaModules.map((m) => (
+                      <label key={m.module_slug} className="flex items-center gap-2 py-0.5 text-sm text-gray-300 cursor-pointer">
+                        <input type="checkbox" checked={(newWidget.spese_modules || []).includes(m.module_slug)}
+                          onChange={(e) => setNewWidget({ ...newWidget, spese_modules: e.target.checked ? [...(newWidget.spese_modules || []), m.module_slug] : (newWidget.spese_modules || []).filter((x) => x !== m.module_slug) })} />{m.name}
+                      </label>
+                    ))}
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-400 mb-1">Solo le entrate di questi gruppi (separati da virgola)</div>
+                    <input className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg outline-none border border-gray-800 focus:border-accent text-sm" placeholder="es. Casa" value={newWidget.entrate_include || ''} onChange={(e) => setNewWidget({ ...newWidget, entrate_include: e.target.value })} />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer"><input type="checkbox" checked={newWidget.accantonamento !== false} onChange={(e) => setNewWidget({ ...newWidget, accantonamento: e.target.checked })} />Conta l'accantonamento (stipendio trattenuto in busta)</label>
+                </div>
               )}
               {newWidget.type === 'checklist' && (
                 <div className="space-y-3">

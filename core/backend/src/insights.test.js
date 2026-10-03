@@ -347,6 +347,34 @@ async function main() {
     await call('PUT', '/config', { entrate: { exclude_categories: ['Risparmi', 'Fondo'] }, balance_floor_eur: 300 });
   });
 
+  console.log('\n--- un widget per vista: personale e casa ---');
+  const sumRows = (slug, pred) => db.prepare('SELECT data FROM records WHERE module_slug = ?').all(slug).map((r) => JSON.parse(r.data)).filter(pred).reduce((t, d) => t + Number(d.importo || 0), 0);
+  const inMonth = (d) => String(d.data).startsWith('2026-09');
+  let wCasa;
+  await test('un widget con altri moduli e gruppi dà il suo calcolo (spese di casa, contributi alla casa), non quello generale', async () => {
+    wCasa = db.prepare("INSERT INTO dashboard_widgets (type, label, config) VALUES ('come_sta_andando', 'Casa', ?)").run(JSON.stringify({ explainable: true, spese_modules: ['spese_casa'], entrate_include_groups: ['Casa'], entrate_exclude_groups: [], accantonamento: false })).lastInsertRowid;
+    const g = await (await call('GET', '?month=2026-09&widget=' + wCasa)).json();
+    assertEq(g.available, true);
+    assertEq(g.entrate, Math.round(sumRows('entrate', (d) => inMonth(d) && d.gruppo === 'Casa') * 100) / 100, 'solo i contributi alla casa');
+    assertEq(g.spese, Math.round(sumRows('spese_casa', (d) => inMonth(d) && d._stato !== 'da_smistare' && !d.data_incerta) * 100) / 100, 'solo le spese di casa');
+    assertEq(g.key, '2026-09@w' + wCasa, 'la spiegazione salvata è separata da quella generale');
+    assertEq(g.banca, null, 'i movimenti bancari sono solo della vista generale');
+  });
+  await test('la vista generale non cambia', async () => {
+    const g = await (await call('GET', '?month=2026-09')).json();
+    assertEq(g.key, '2026-09'); assertEq(g.entrate, 1799.58);
+  });
+  await test('"Spiega" è acceso per widget: un widget con la casella spenta riceve 403, quello acceso funziona', async () => {
+    const off = db.prepare("INSERT INTO dashboard_widgets (type, label, config) VALUES ('come_sta_andando', 'Spento', '{}')").run().lastInsertRowid;
+    assertEq((await (await call('GET', '?month=2026-09&widget=' + off)).json()).explainable, false);
+    assertEq((await call('POST', '/explain', { month: '2026-09', widget: off })).status, 403);
+    assertEq((await (await call('GET', '?month=2026-09&widget=' + wCasa)).json()).explainable, true);
+  });
+  await test('un widget che non esiste o non è di questo tipo: 404', async () => {
+    assertEq((await call('GET', '?widget=99999')).status, 404);
+    assertEq((await call('POST', '/explain', { month: '2026-09', widget: 99999 })).status, 404);
+  });
+
   console.log(`\n${'='.repeat(60)}`);
   console.log(passed + ' passati, ' + failed + ' falliti su ' + (passed + failed) + ' test.');
   try { fs.unlinkSync(dbPath); } catch (e) {}

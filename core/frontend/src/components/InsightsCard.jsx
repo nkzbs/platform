@@ -10,7 +10,7 @@ const monthLabel = (ym) => { const [y, m] = ym.split('-').map(Number); return ne
 const shift = (ym, d) => { const [y, m] = ym.split('-').map(Number); const t = y * 12 + (m - 1) + d; return Math.floor(t / 12) + '-' + String((t % 12) + 1).padStart(2, '0') }
 
 // "Come sta andando": i numeri del mese li calcola il programma.
-export default function InsightsCard({ token, onNavigate }) {
+export default function InsightsCard({ token, onNavigate, widgetId, title }) {
   const api = useApi(token)
   const [month, setMonth] = useState(null) // null = ultimo mese concluso (lo decide il server)
   const [data, setData] = useState(null)
@@ -18,7 +18,8 @@ export default function InsightsCard({ token, onNavigate }) {
   const [vista, setVista] = useState('mese') // 'mese' | 'anno'
 
   const load = async (m) => {
-    const d = await api.get('/insights' + (m ? '?month=' + m : ''))
+    const q = [m ? 'month=' + m : '', widgetId ? 'widget=' + widgetId : ''].filter(Boolean).join('&')
+    const d = await api.get('/insights' + (q ? '?' + q : ''))
     setData(d)
     if (d && d.month && !m) setMonth(d.month)
   }
@@ -36,10 +37,10 @@ export default function InsightsCard({ token, onNavigate }) {
     return (
       <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mb-6">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-          <div className="flex items-center gap-2"><Icon name="bar-chart" size={16} className="text-accent" /><h2 className="text-sm font-semibold text-ink">Come sta andando</h2></div>
+          <div className="flex items-center gap-2"><Icon name="bar-chart" size={16} className="text-accent" /><h2 className="text-sm font-semibold text-ink">{title || 'Come sta andando'}</h2></div>
           {vistaToggle}
         </div>
-        <InsightsYear token={token} />
+        <InsightsYear token={token} widgetId={widgetId} />
       </section>
     )
   }
@@ -63,7 +64,7 @@ export default function InsightsCard({ token, onNavigate }) {
       <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
         <div className="flex items-center gap-2">
           <Icon name="bar-chart" size={16} className="text-accent" />
-          <h2 className="text-sm font-semibold text-ink">Come sta andando</h2>
+          <h2 className="text-sm font-semibold text-ink">{title || 'Come sta andando'}</h2>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
         {vistaToggle}
@@ -125,7 +126,7 @@ export default function InsightsCard({ token, onNavigate }) {
 
       {data.explainable && (
         <ExplainBox what="i numeri" resetKey={data.month} initial={data.explanation && !data.explanation.stale ? data.explanation.text : null} stale={!!(data.explanation && data.explanation.stale)}
-          ask={(refresh) => api.post('/insights/explain', { month: data.month, refresh: !!refresh })} />
+          ask={(refresh) => api.post('/insights/explain', { month: data.month, widget: widgetId, refresh: !!refresh })} />
       )}
 
       <button type="button" onClick={() => setShowLimits(!showLimits)} className="mt-4 text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1">

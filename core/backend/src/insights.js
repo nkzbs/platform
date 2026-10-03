@@ -47,13 +47,31 @@ function fromRoles() {
   return out;
 }
 
-function getConfig() {
+function getConfig(view) {
   let saved = {};
   try { const row = db.prepare('SELECT config FROM insights_config WHERE id = 1').get(); if (row) saved = JSON.parse(row.config || '{}'); } catch (e) { /* default */ }
   const derived = fromRoles();
-  const m = (k) => ({ ...DEFAULT_CONFIG[k], ...(derived[k] || {}), ...(saved[k] || {}) });
+  // `view`: la vista di un widget (viene da viewFromWidget): quali moduli di spese, quali gruppi di entrate, se conta l'accantonamento
+  const m = (k) => ({ ...DEFAULT_CONFIG[k], ...(derived[k] || {}), ...(saved[k] || {}), ...((view && view[k]) || {}) });
   return { entrate: m('entrate'), spese: m('spese'), anomaly: m('anomaly'), balance_floor_eur: saved.balance_floor_eur != null ? saved.balance_floor_eur : DEFAULT_CONFIG.balance_floor_eur };
 }
+
+// La vista di un widget "Come sta andando": lo stesso calcolo, ma su altri moduli o altri gruppi (es. spese di casa e contributi alla casa
+// al posto delle spese personali). Configurazione del widget, mai fidarsi di cosa arriva dal browser: si legge dal widget salvato.
+function viewFromWidget(widget) {
+  let cfg = widget && widget.config; if (typeof cfg === 'string') { try { cfg = JSON.parse(cfg); } catch (e) { cfg = {}; } }
+  cfg = cfg || {};
+  const list = (v) => (Array.isArray(v) ? v : []).map((x) => String(x).trim()).filter(Boolean).slice(0, 30);
+  const view = { id: widget && widget.id };
+  const sp = list(cfg.spese_modules); if (sp.length) view.spese = { modules: sp };
+  const en = {};
+  const inc = list(cfg.entrate_include_groups); if (inc.length) en.include_groups = inc;
+  if (Array.isArray(cfg.entrate_exclude_groups)) en.exclude_groups = list(cfg.entrate_exclude_groups);
+  if (cfg.accantonamento === false) { en.savings_categories = []; en.salary_categories = []; en.savings_field = ''; }
+  if (Object.keys(en).length) view.entrate = en;
+  return view;
+}
+const viewKey = (view) => (view && view.id ? '@w' + view.id : '');
 
 function saveConfig(patch) {
   // Si salva solo ciò che è stato cambiato a mano: il resto continua a seguire i ruoli dei moduli.
@@ -95,7 +113,8 @@ function collect(cfg) {
   const spKind = {}; // mese -> { rate, fisse, variabili } (rata = collegata a un debito o categoria Rata; poi fisse; il resto variabili)
   const spStato = {}; // mese -> { pagate, da_pagare }
   const E = cfg.entrate;
-  const exCat = new Set(E.exclude_categories || []), exGrp = new Set(E.exclude_groups || []);
+  const incGrp = new Set(E.include_groups || []);
+  const exCat = new Set(E.exclude_categories || []), exGrp = new Set((E.exclude_groups || []).filter((g) => !incGrp.has(g))); // un gruppo scelto per questa vista non può essere anche escluso
   const exDesc = (E.exclude_descriptions || []).map((x) => String(x).trim().toLowerCase());
   const sav = new Set(E.savings_categories || []), sal = new Set(E.salary_categories || []);
   for (const slug of installedModules(E.modules)) {
@@ -104,6 +123,7 @@ function collect(cfg) {
       const m = monthOf(d[E.date]); const a = num(d[E.amount]);
       if (!m || a == null) continue;
       if (exGrp.has(d[E.group])) continue; // registro della casa, non entrate personali
+      if (incGrp.size && !incGrp.has(d[E.group])) continue; // vista di un widget: solo questi gruppi
       if (exDesc.includes(String(d.descrizione || '').trim().toLowerCase())) continue; // es. riporto di saldo
       // l'accantonamento trattenuto in busta: righe di categoria "fondo" oppure il campo sulla riga dello stipendio
       if (sav.has(d[E.category])) accantonato[m] = (accantonato[m] || 0) + a;
@@ -154,8 +174,8 @@ const sumRange = (obj, from, to) => { let t = 0; for (let m = from; m <= to; m =
 const monthsWithData = (obj, from, to) => { let n = 0; for (let m = from; m <= to; m = addMonths(m, 1)) if (obj[m]) n++; return n; };
 const pct = (cur, ref) => (ref ? Math.round(((cur - ref) / Math.abs(ref)) * 1000) / 10 : null);
 
-function buildSnapshot(month, now = new Date()) {
-  const cfg = getConfig();
+function buildSnapshot(month, now = new Date(), view = null) {
+  const cfg = getConfig(view);
   const mods = [...installedModules(cfg.entrate.modules), ...installedModules(cfg.spese.modules)];
   if (!installedModules(cfg.entrate.modules).length || !installedModules(cfg.spese.modules).length) return { available: false, reason: 'Servono almeno un modulo di entrate e uno di spese installati.' };
   month = month && /^\d{4}-\d{2}$/.test(month) ? month : lastClosedMonth(now);
@@ -194,10 +214,10 @@ function buildSnapshot(month, now = new Date()) {
 
   // Se ci sono movimenti bancari per questo mese, il riepilogo di ciò che è successo davvero sul conto.
   let banca = null;
-  try { banca = require('./bank-import').monthSummary(month); } catch (e) { /* senza movimenti bancari */ }
+  if (!view) { try { banca = require('./bank-import').monthSummary(month); } catch (e) { /* senza movimenti bancari */ } } // il conto è uno solo: solo nella vista generale
   const st = spStato[month] || { pagate: 0, da_pagare: 0 }, fx = spFix[month] || { fisse: 0, variabili: 0 };
   return {
-    available: true, key: month, month, in_corso: month >= cur, banca,
+    available: true, key: month + viewKey(view), month, in_corso: month >= cur, banca,
     entrate: round2(en), spese: round2(sp), saldo: round2(en - sp),
     risparmio_pct: en > 0 ? Math.round(((en - sp) / en) * 1000) / 10 : null,
     accantonato: acc.valore, accantonato_stimato: acc.stimato,
@@ -219,8 +239,8 @@ function buildSnapshot(month, now = new Date()) {
 function monthsBetween(from, to) { const out = []; for (let m = from; m <= to; m = addMonths(m, 1)) out.push(m); return out; }
 
 // Da inizio anno (fino all'ultimo mese concluso; un anno passato fino a dicembre), con il confronto con lo stesso periodo dell'anno prima.
-function buildYearSnapshot(year, now = new Date()) {
-  const cfg = getConfig();
+function buildYearSnapshot(year, now = new Date(), view = null) {
+  const cfg = getConfig(view);
   if (!installedModules(cfg.entrate.modules).length || !installedModules(cfg.spese.modules).length) return { available: false, reason: 'Servono almeno un modulo di entrate e uno di spese installati.' };
   const cur = now.toISOString().slice(0, 7);
   const y = /^\d{4}$/.test(String(year || '')) ? String(year) : cur.slice(0, 4);
@@ -247,7 +267,7 @@ function buildYearSnapshot(year, now = new Date()) {
   const mesiConEntrate = months.filter((m) => col.entrate[m]).length;
   if (mesiConEntrate < months.length) limiti.unshift('In ' + (months.length - mesiConEntrate) + ' mesi non risulta nessuna entrata registrata.');
   return {
-    available: true, key: 'anno-' + y, period: 'anno', year: y, fino_a: to, mesi: months.length,
+    available: true, key: 'anno-' + y + viewKey(view), period: 'anno', year: y, fino_a: to, mesi: months.length,
     entrate: round2(en), spese: round2(sp), saldo: round2(en - sp),
     risparmio_pct: en > 0 ? Math.round(((en - sp) / en) * 1000) / 10 : null,
     accantonato: ac.valore, accantonato_stimato: ac.stimato,
@@ -286,4 +306,4 @@ async function explain(snap, { refresh = false } = {}) {
   }
 }
 
-module.exports = { getConfig, saveConfig, buildSnapshot, buildYearSnapshot, cachedExplanation, explain, lastClosedMonth, addMonths, DEFAULT_CONFIG };
+module.exports = { viewFromWidget, getConfig, saveConfig, buildSnapshot, buildYearSnapshot, cachedExplanation, explain, lastClosedMonth, addMonths, DEFAULT_CONFIG };

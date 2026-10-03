@@ -11,7 +11,7 @@ const router = express.Router();
 // le righe le legge il widget dall'elenco normale del modulo, che già rispetta i permessi di chi guarda.
 router.get('/queues', requireAuth, (req, res) => {
   res.json(roles.list({ use: 'avvisi' }).filter((m) => m.avvisi.states.nuovo).map((m) => ({
-    module_slug: m.module_slug, name: m.name, stato: m.roles.stato || '_stato', nuovo: m.avvisi.states.nuovo,
+    module_slug: m.module_slug, name: m.name, stato: m.roles.stato || '_stato', nuovo: m.avvisi.states.nuovo, da_fare: m.avvisi.states.da_fare || '',
     descrizione: m.roles.descrizione || 'descrizione', importo: m.roles.importo || 'importo', scadenza: m.roles.scadenza || 'scadenza', data: m.roles.data || 'data',
     noun_s: m.avvisi.noun_s, noun_p: m.avvisi.noun_p,
   })));

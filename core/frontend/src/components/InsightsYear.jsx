@@ -9,14 +9,14 @@ const monthName = (ym) => new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)
 
 // "Da inizio anno": stessi conti del mese (stipendi, accantonato, quota alla casa), sommati fino all'ultimo mese concluso e confrontati
 // con lo stesso periodo dell'anno prima. I numeri li calcola il programma.
-export default function InsightsYear({ token }) {
+export default function InsightsYear({ token, widgetId }) {
   const api = useApi(token)
   const [year, setYear] = useState(null)
   const [data, setData] = useState(null)
   const [showLimits, setShowLimits] = useState(false)
 
   const load = async (y) => {
-    const d = await api.get('/insights?period=anno' + (y ? '&year=' + y : ''))
+    const d = await api.get('/insights?period=anno' + (y ? '&year=' + y : '') + (widgetId ? '&widget=' + widgetId : ''))
     setData(d)
     if (d && d.year && !y) setYear(d.year)
   }
@@ -88,7 +88,7 @@ export default function InsightsYear({ token }) {
 
       {data.explainable && (
         <ExplainBox what="i numeri dell'anno" resetKey={String(data.year)} initial={data.explanation && !data.explanation.stale ? data.explanation.text : null} stale={!!(data.explanation && data.explanation.stale)}
-          ask={(refresh) => api.post('/insights/explain', { period: 'anno', year: data.year, refresh: !!refresh })} />
+          ask={(refresh) => api.post('/insights/explain', { period: 'anno', year: data.year, widget: widgetId, refresh: !!refresh })} />
       )}
 
       <button type="button" onClick={() => setShowLimits(!showLimits)} className="mt-4 text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1">
