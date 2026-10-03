@@ -18,6 +18,10 @@ function ParentChildrenView({ config, mod, schema, token, tableColumns, records 
   const [childDetailId, setChildDetailId] = useState(null)
   const [childMod, setChildMod] = useState(null)
   const [childSchema, setChildSchema] = useState(null)
+  // Righe del modulo "genitore" per il titolo. Quando la vista è una scheda di un ALTRO modulo (es. la scheda Debiti dentro
+  // Spese Personali) la pagina non ha le righe dei debiti: le carico qui, altrimenti il titolo sarebbe solo "#id".
+  const [ownRecords, setOwnRecords] = useState(null)
+  const needsOwn = !records || !records.length || !tableColumns || !tableColumns.length
 
   const openChild = async (id) => {
     if (!childMod) {
@@ -34,13 +38,20 @@ function ParentChildrenView({ config, mod, schema, token, tableColumns, records 
     })
   }
   useEffect(() => { load() }, [mod.slug, config.key]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!needsOwn) return
+    api.get('/records/' + mod.slug).then((r) => setOwnRecords(Array.isArray(r) ? r : []))
+  }, [mod.slug, needsOwn]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <div className="text-gray-500 text-sm">Caricamento...</div>
   if (!data) return <div className="text-sm text-red-400">Impossibile calcolare questa vista.</div>
 
   const recordById = {}
-  ;(records || []).forEach((r) => { recordById[r.id] = r })
-  const titleField = tableColumns[0]
+  ;(needsOwn ? ownRecords || [] : records).forEach((r) => { recordById[r.id] = r })
+  // Campo del titolo: la prima colonna della tabella; per un altro modulo, un campo "nome" se c'è, altrimenti il primo campo.
+  const fields = (schema && schema.fields) || []
+  const titleKey = (tableColumns && tableColumns[0] && tableColumns[0].key)
+    || (fields.find((f) => ['nome', 'name', 'titolo', 'descrizione'].includes(f.key)) || fields[0] || {}).key
 
   return (
     <div>
@@ -51,8 +62,8 @@ function ParentChildrenView({ config, mod, schema, token, tableColumns, records 
             <div key={p.__id} className="bg-surface-card rounded-md border border-gray-800 p-5">
               <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                 <div className="min-w-0 cursor-pointer" onClick={() => setDetailId(p.__id)}>
-                  <div className="text-ink font-medium hover:text-accent transition">{rec && titleField ? String(rec.data[titleField.key] ?? '—') : '#' + p.__id}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">{eur(p.totale)} totale · {p.n_done}/{p.n_children} completati</div>
+                  <div className="text-ink font-medium hover:text-accent transition">{rec && titleKey ? String(rec.data[titleKey] ?? '—') : '#' + p.__id}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">{rec && rec.data.creditore && rec.data.creditore !== rec.data[titleKey] ? rec.data.creditore + ' · ' : ''}{eur(p.totale)} totale · {p.n_done}/{p.n_children} completati</div>
                 </div>
                 {p.residuo <= 0 && p.n_children > 0 && <span className="text-xs text-green-400 flex-shrink-0">Saldato</span>}
               </div>

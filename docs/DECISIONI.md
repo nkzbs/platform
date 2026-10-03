@@ -154,6 +154,10 @@ reali di Finance (6 righe → 1 destinatario e 5 regole). I backup JSON includon
 
 ### Corretto durante il lavoro
 
+- La scheda **Debiti** dentro Spese (e Spese Casa) mostrava solo "#3966" invece del nome del debito: quando una scheda legge un
+  altro modulo, la pagina non ha le righe di quel modulo e il titolo ripiegava sull'id. Ora `ParentChildrenView` carica le righe del
+  modulo dei debiti, usa il campo *nome* come titolo e aggiunge il creditore.
+
 - Il riepilogo del mattino **non è mai partito in produzione**: `startDailyDigest()` chiamava `.catch()` sul risultato di
   `withLock()`, che è una funzione e non una promessa, e ogni minuto finiva in un `TypeError` nel registro. I test passavano perché
   chiamavano `tick()` direttamente. Corretto, con un test che avvia il controllo come fa il server.
