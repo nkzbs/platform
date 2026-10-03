@@ -234,11 +234,6 @@ export default function App() {
 
   const currentModule = installedModules.find((m) => m.slug === currentPage)
   const allModulesForBuilder = installedModules
-  // Dashboard hearth-style al posto di quella generica a widget solo se il tenant
-  // ha davvero la forma di un'app di finanza personale (Casa/Personale + entrate) —
-  // gate su moduli installati, non su tenant slug, cosi' resta un cambio generico.
-  const financeSlugs = ['spese_casa', 'spese_personali', 'entrate']
-  const hasFinanceModules = financeSlugs.every((s) => installedModules.some((m) => m.slug === s))
 
   return (
     <div className="flex min-h-screen bg-surface-page">

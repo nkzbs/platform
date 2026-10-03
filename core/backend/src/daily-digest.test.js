@@ -34,6 +34,8 @@ global.fetch = async (url) => {
 
 (async () => {
   const db = require('./db');
+  for (const [slug, n] of [['spese_casa', 'Spese casa'], ['spese_personali', 'Spese personali']]) db.prepare("INSERT OR IGNORE INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES (?, ?, 'box', '#000', 1, 1, 50, '{}')").run(n, slug);
+  require('./module-roles').seedIfEmpty(); // i moduli dichiarano a cosa servono (come fa Finance con la sua migrazione)
   for (const k of require('./features').KEYS) require('./features').set(k, true); // funzione facoltativa: qui serve accesa
   const digest = require('./daily-digest');
   const { runAzioni } = require('./automation-engine');

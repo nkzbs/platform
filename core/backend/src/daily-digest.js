@@ -10,13 +10,10 @@ const whatsapp = require('./whatsapp');
 const { logAudit } = require('./audit-log');
 
 // I moduli che entrano nel riepilogo li dichiara il modulo (Builder → Avvisi): quali valori del suo stato sono "da fare" e "nuovo",
-// come chiamare le sue righe. Valori di partenza se nessun modulo ha dichiarato niente (progetti senza ruoli): quelli di Finance.
-const LEGACY = { states: { nuovo: 'da_smistare', da_fare: 'da_pagare' }, noun_s: 'bolletta', noun_p: 'bollette' };
-const FALLBACK_MODULES = [{ slug: 'spese_casa', label: 'casa', roles: {}, ...LEGACY }, { slug: 'spese_personali', label: 'pers.', roles: {}, ...LEGACY }];
+// come chiamare le sue righe. Nessun modulo dichiarato = nessuna riga nel riepilogo.
 function digestModules() {
   let declared = [];
   try { declared = require('./module-roles').list({ use: 'avvisi' }).filter((m) => m.avvisi.scadenze); } catch (e) { /* tabella non pronta */ }
-  if (!declared.length) return FALLBACK_MODULES;
   return declared.map((m) => ({ slug: m.module_slug, label: m.avvisi.label || String(m.name || m.module_slug).toLowerCase(), roles: m.roles, states: m.avvisi.states, noun_s: m.avvisi.noun_s, noun_p: m.avvisi.noun_p }));
 }
 const humanize = (v) => { const t = String(v || '').replace(/_/g, ' ').trim(); return t.charAt(0).toUpperCase() + t.slice(1); };

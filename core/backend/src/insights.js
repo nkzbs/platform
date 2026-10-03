@@ -13,11 +13,12 @@ const db = require('./db');
 // Accantonamento (es. il 10% del lordo trattenuto in busta e versato in un fondo): non arriva sul conto, ma è
 // risparmio vero. Si legge dalle righe delle categorie `savings_categories` e dal campo `savings_field` delle
 // righe di stipendio; dove manca si stima dal rapporto con il netto degli altri mesi (e lo si dice).
+// Valori di partenza neutri: nessun modulo e nessun criterio. Moduli, campi e criteri li dichiara ogni modulo (Builder → Ruoli del modulo
+// e Criteri dei riepiloghi, vedi module-roles.js); qui restano solo i nomi di campo più comuni, usati se il modulo non ne indica altri.
 const DEFAULT_CONFIG = {
-  entrate: { modules: ['entrate'], amount: 'importo', date: 'data', category: 'categoria', group: 'gruppo',
-    exclude_categories: ['Risparmi', 'Fondo'], exclude_groups: ['Casa'], exclude_descriptions: ['Saldo conto'],
-    salary_categories: ['Stipendio'], savings_categories: ['Fondo'], savings_field: 'accantonamento_suggerito' },
-  spese: { modules: ['spese_personali'], amount: 'importo', date: 'data', category: 'categoria', status: '_stato', fixed: 'fisso' },
+  entrate: { modules: [], amount: 'importo', date: 'data', category: 'categoria', group: 'gruppo',
+    exclude_categories: [], exclude_groups: [], exclude_descriptions: [], salary_categories: [], savings_categories: [], savings_field: '' },
+  spese: { modules: [], amount: 'importo', date: 'data', category: 'categoria', status: '_stato', fixed: 'fisso' },
   anomaly: { pct: 25, min_delta_eur: 20, window_months: 6 },
   balance_floor_eur: 300,
 };

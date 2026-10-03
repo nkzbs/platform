@@ -53,6 +53,7 @@ async function main() {
     db.prepare('DELETE FROM modules WHERE slug = ?').run(slug);
     db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES (?, ?, 'box', '#000', 1, 1, 50, '{}')").run(slug, slug);
   }
+  require('./module-roles').seedIfEmpty(); // i moduli dichiarano a cosa servono (come fa Finance con la sua migrazione)
   const rec = (slug, d) => db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, NULL, ?)').run(slug, JSON.stringify(d)).lastInsertRowid;
   const ent = (data, importo, categoria = 'Stipendio') => rec('entrate', { descrizione: 'riga segreta ' + categoria, data, importo, categoria });
   const sp = (slug, data, importo, categoria, extra = {}) => rec(slug, { descrizione: 'descrizione privata', data, importo, categoria, _stato: 'pagato', ...extra });
@@ -111,7 +112,8 @@ async function main() {
     assertEq(snap().entrate, 1799.58, 'restano solo gli stipendi');
   });
   await test('il default è la sola vista personale: le spese di casa (affitto, bollette, pagate anche da altri) non contano', () => {
-    assertEq(JSON.stringify(insights.DEFAULT_CONFIG.spese.modules), JSON.stringify(['spese_personali']));
+    assertEq(JSON.stringify(require('./module-roles').list({ kind: 'spesa', use: 'riepiloghi' }).map((m) => m.module_slug)), JSON.stringify(['spese_personali']), 'solo il modulo personale dichiara di entrare nei riepiloghi');
+    assertEq(JSON.stringify(insights.DEFAULT_CONFIG.spese.modules), JSON.stringify([]), 'nessun nome di modulo scritto nel codice');
     insights.saveConfig({ spese: { modules: ['spese_personali'] } });
     assertEq(snap().spese, 290, 'solo Alimentari 210 + Benzina 80');
     insights.saveConfig({ spese: { modules: ['spese_casa', 'spese_personali'] } });

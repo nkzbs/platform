@@ -104,6 +104,7 @@ async function main() {
     db.exec('DELETE FROM tenant_features');
     db.prepare('DELETE FROM modules WHERE slug = ?').run('spese_personali');
     db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('Spese personali', 'spese_personali', 'box', '#000', 1, 1, 50, '{}')").run();
+    require('./module-roles').seedIfEmpty(); // il modulo di spese dichiara cos'è
     assertEq(features.seedIfEmpty(), true);
     for (const k of ['movimenti', 'analisi', 'riepilogo_mattino']) assertEq(features.isEnabled(k), true, k);
   });

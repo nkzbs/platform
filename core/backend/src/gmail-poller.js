@@ -217,10 +217,12 @@ async function processaMessaggio(accessToken, msgId, rule) {
   const scadenza = dateEtichettate.dataScadenza || estraiScadenzaGenerica(testoCompleto, emailDate);
   const dataSpesa = dateEtichettate.dataVersamento || emailDate.toISOString().slice(0, 10);
 
-  // Il modulo dove scrivere lo sceglie la regola; i nomi dei campi li dichiara il modulo (module-roles.js). Senza scelta resta il
-  // comportamento di prima: gruppo Casa -> spese_casa, altrimenti spese_personali.
+  // Il modulo dove scrivere lo sceglie la regola; i nomi dei campi li dichiara il modulo (module-roles.js). Una regola senza modulo
+  // (o con un modulo non più installato) usa il primo modulo che ha dichiarato di poter ricevere righe dalle mail.
   const mr = require('./module-roles');
-  let moduleSlug = rule.modulo && db.prepare('SELECT 1 FROM modules WHERE slug = ? AND installed = 1').get(rule.modulo) ? rule.modulo : (rule.gruppo === 'Casa' ? 'spese_casa' : 'spese_personali');
+  let moduleSlug = rule.modulo && db.prepare('SELECT 1 FROM modules WHERE slug = ? AND installed = 1').get(rule.modulo) ? rule.modulo : null;
+  if (!moduleSlug) { const first = mr.list({ use: 'mail' })[0]; moduleSlug = first ? first.module_slug : null; }
+  if (!moduleSlug) { console.error('[gmail-poller] regola', rule.mittente, ': nessun modulo può ricevere righe dalle mail (Builder → Ruoli del modulo)'); return; }
   const declared = mr.get(moduleSlug);
   const F = { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', fisso: 'fisso', ...((declared && declared.roles) || {}) };
   const dataRecord = {

@@ -22,7 +22,7 @@ db.exec('CREATE TABLE IF NOT EXISTS tenant_features (key TEXT PRIMARY KEY, enabl
 // parte da zero e uno che funziona già non perde niente.
 function defaultFor(key) {
   const has = (sql) => { try { return !!db.prepare(sql).get(); } catch (e) { return false; } };
-  if (['movimenti', 'analisi', 'riepilogo_mattino'].includes(key)) return has("SELECT 1 FROM modules WHERE installed = 1 AND slug IN ('spese_personali', 'spese_casa', 'entrate')");
+  if (['movimenti', 'analisi', 'riepilogo_mattino'].includes(key)) return has('SELECT 1 FROM module_roles r JOIN modules m ON m.slug = r.module_slug WHERE m.installed = 1 AND r.kind IS NOT NULL'); // almeno un modulo ha dichiarato di essere una spesa o un'entrata
   if (key === 'whatsapp') return has('SELECT 1 FROM whatsapp_recipients LIMIT 1') || has("SELECT 1 FROM connections WHERE integration_id = 'whatsapp_callmebot' AND connected = 1");
   if (key === 'gmail') return has('SELECT 1 FROM gmail_rules LIMIT 1');
   if (key === 'sito_web') return has('SELECT 1 FROM tenant_settings WHERE site_enabled = 1') || has('SELECT 1 FROM site_pages LIMIT 1');
