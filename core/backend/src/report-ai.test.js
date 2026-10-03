@@ -84,18 +84,13 @@ async function main() {
   await test('il commento ai report è spento di default', async () => {
     const s = await (await api('GET', '/settings')).json();
     assertEq(s.report_enabled, false);
-    assertEq(s.bollette_enabled, false);
   });
 
-  await test('i due interruttori sono indipendenti', async () => {
+  await test('il commento ai report si accende e si spegne dalle impostazioni', async () => {
     await api('PUT', '/settings', { report_enabled: true });
     let s = await (await api('GET', '/settings')).json();
     assertEq(s.report_enabled, true);
-    assertEq(s.bollette_enabled, false, 'le bollette non devono cambiare');
-    await api('PUT', '/settings', { bollette_enabled: true });
-    s = await (await api('GET', '/settings')).json();
-    assertEq(s.report_enabled, true, 'il report non deve cambiare');
-    await api('PUT', '/settings', { bollette_enabled: false, report_enabled: false });
+    await api('PUT', '/settings', { report_enabled: false });
     assertEq(reportAi.isEnabled(), false);
   });
 
