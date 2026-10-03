@@ -3,7 +3,6 @@ import GmailRulesPanel from '../components/GmailRulesPanel'
 import WhatsAppRecipientsPanel from '../components/WhatsAppRecipientsPanel'
 import ExportDatiPage from './ExportDatiPage'
 import BackupPage from './BackupPage'
-import AiSettingsTab from '../components/AiSettingsTab'
 import DigestSettingsTab from '../components/DigestSettingsTab'
 import { API } from '../lib/api'
 import useApi from '../lib/useApi'
@@ -297,7 +296,6 @@ const SETTINGS_TABS = [
   { key: 'sito_web', icon: 'globe', label: 'Sito Web' },
   { key: 'connessioni', icon: 'link', label: 'Connessioni' },
   { key: 'notifiche', icon: 'bell', label: 'Notifiche' },
-  { key: 'assistente', icon: 'wand', label: 'Assistente AI' },
   { key: 'export_dati', icon: 'download', label: 'Dati' },
   { key: 'account', icon: 'user', label: 'Il mio account' },
 ]
@@ -340,8 +338,6 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
       {tab === 'connessioni' && <ConnessioniTab token={token} features={features} />}
 
       {tab === 'notifiche' && <DigestSettingsTab token={token} features={features} />}
-
-      {tab === 'assistente' && <AiSettingsTab token={token} features={features} />}
 
 
       {tab === 'export_dati' && canExport && (

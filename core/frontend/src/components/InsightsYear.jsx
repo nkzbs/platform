@@ -7,18 +7,16 @@ const pctTxt = (n) => (n == null ? null : (n > 0 ? '+' : '') + n.toLocaleString(
 const monthName = (ym) => new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)) - 1, 1).toLocaleDateString('it-IT', { month: 'long' })
 
 // "Da inizio anno": stessi conti del mese (stipendi, accantonato, quota alla casa), sommati fino all'ultimo mese concluso e confrontati
-// con lo stesso periodo dell'anno prima. I numeri li calcola il programma; l'assistente, se lo chiedi, li racconta.
+// con lo stesso periodo dell'anno prima. I numeri li calcola il programma.
 export default function InsightsYear({ token }) {
   const api = useApi(token)
   const [year, setYear] = useState(null)
   const [data, setData] = useState(null)
-  const [explain, setExplain] = useState(null)
   const [showLimits, setShowLimits] = useState(false)
 
   const load = async (y) => {
     const d = await api.get('/insights?period=anno' + (y ? '&year=' + y : ''))
     setData(d)
-    setExplain(d && d.explanation && !d.explanation.stale ? { text: d.explanation.text } : null)
     if (d && d.year && !y) setYear(d.year)
   }
   useEffect(() => { load(year) }, [year]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -26,15 +24,6 @@ export default function InsightsYear({ token }) {
   if (!data) return <div className="text-sm text-gray-600 py-6 text-center">Caricamento…</div>
   if (data.available === false) return null
 
-  const ask = async (refresh) => {
-    setExplain({ busy: true })
-    const res = await api.post('/insights/explain', { period: 'anno', year: data.year, refresh: !!refresh })
-    if (res.ok && res.data.text) setExplain({ text: res.data.text })
-    else if (res.data && res.data.code === 'ai_budget_exceeded') setExplain({ error: 'Il tetto di spesa mensile dell\'assistente è raggiunto: riprende il mese prossimo.' })
-    else if (res.data && res.data.code === 'ai_unverified') setExplain({ error: 'Non sono riuscito a scrivere una spiegazione affidabile. Riprova.' })
-    else if (res.data && res.data.code === 'ai_not_configured') setExplain({ error: 'Manca la chiave Mistral: inseriscila in Impostazioni → Assistente AI.' })
-    else setExplain({ error: 'L\'assistente non è disponibile in questo momento.' })
-  }
 
   const thisYear = String(new Date().getFullYear())
   const header = (
@@ -96,21 +85,6 @@ export default function InsightsYear({ token }) {
         </div>
       )}
 
-      <div className="mt-5 pt-4 border-t border-gray-800">
-        <div className="flex items-center gap-3 flex-wrap">
-          <button type="button" onClick={() => ask(false)} disabled={!!(explain && explain.busy)} className="flex items-center gap-2 text-sm text-accent hover:underline disabled:opacity-60 disabled:no-underline">
-            <Icon name="wand" size={14} />{explain && explain.busy ? 'Sto leggendo i numeri…' : explain && explain.text ? 'Aggiorna la spiegazione' : 'Spiega con l\'assistente'}
-          </button>
-          {explain && explain.text && !explain.busy && <button type="button" onClick={() => ask(true)} className="text-xs text-gray-500 hover:text-gray-300">Riscrivi</button>}
-        </div>
-        {explain && explain.text && (
-          <div className="mt-3 rounded-lg bg-surface-page border border-gray-800 p-4 text-sm text-gray-300 leading-relaxed whitespace-pre-line">
-            {explain.text}
-            <div className="text-xs text-gray-600 mt-3">Scritto dall'assistente a partire dai numeri qui sopra; ogni cifra citata è controllata, ma verifica sempre sulle spese.</div>
-          </div>
-        )}
-        {explain && explain.error && <div className="mt-3 text-sm text-amber-400">{explain.error}</div>}
-      </div>
 
       <button type="button" onClick={() => setShowLimits(!showLimits)} className="mt-4 text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1">
         <Icon name={showLimits ? 'chevron-down' : 'chevron-right'} size={12} />Cosa conta in questi numeri

@@ -8,19 +8,17 @@ const pctTxt = (n) => (n == null ? null : (n > 0 ? '+' : '') + n.toLocaleString(
 const monthLabel = (ym) => { const [y, m] = ym.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' }) }
 const shift = (ym, d) => { const [y, m] = ym.split('-').map(Number); const t = y * 12 + (m - 1) + d; return Math.floor(t / 12) + '-' + String((t % 12) + 1).padStart(2, '0') }
 
-// "Come sta andando": i numeri del mese li calcola il programma; l'assistente, se lo chiedi, li racconta.
+// "Come sta andando": i numeri del mese li calcola il programma.
 export default function InsightsCard({ token, onNavigate }) {
   const api = useApi(token)
   const [month, setMonth] = useState(null) // null = ultimo mese concluso (lo decide il server)
   const [data, setData] = useState(null)
-  const [explain, setExplain] = useState(null) // { busy } | { text, cached } | { error }
   const [showLimits, setShowLimits] = useState(false)
   const [vista, setVista] = useState('mese') // 'mese' | 'anno'
 
   const load = async (m) => {
     const d = await api.get('/insights' + (m ? '?month=' + m : ''))
     setData(d)
-    setExplain(d && d.explanation && !d.explanation.stale ? { text: d.explanation.text, cached: true } : null)
     if (d && d.month && !m) setMonth(d.month)
   }
   useEffect(() => { load(month) }, [month]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -46,15 +44,6 @@ export default function InsightsCard({ token, onNavigate }) {
   }
   if (!data || data.available === false) return null
 
-  const ask = async (refresh) => {
-    setExplain({ busy: true })
-    const res = await api.post('/insights/explain', { month: data.month, refresh: !!refresh })
-    if (res.ok && res.data.text) setExplain({ text: res.data.text, cached: res.data.cached })
-    else if (res.data && res.data.code === 'ai_budget_exceeded') setExplain({ error: 'Il tetto di spesa mensile dell\'assistente è raggiunto: riprende il mese prossimo.' })
-    else if (res.data && res.data.code === 'ai_unverified') setExplain({ error: 'Non sono riuscito a scrivere una spiegazione affidabile. Riprova.' })
-    else if (res.data && res.data.code === 'ai_not_configured') setExplain({ error: 'Manca la chiave Mistral: inseriscila in Impostazioni → Assistente AI.' })
-    else setExplain({ error: 'L\'assistente non è disponibile in questo momento.' })
-  }
 
   const c = data.confronti || {}
   const positivo = data.saldo >= 0
@@ -133,22 +122,6 @@ export default function InsightsCard({ token, onNavigate }) {
         </div>
       )}
 
-      <div className="mt-5 pt-4 border-t border-gray-800">
-        <div className="flex items-center gap-3 flex-wrap">
-          <button type="button" onClick={() => ask(false)} disabled={!!(explain && explain.busy)} className="flex items-center gap-2 text-sm text-accent hover:underline disabled:opacity-60 disabled:no-underline">
-            <Icon name="wand" size={14} />{explain && explain.busy ? 'Sto leggendo i numeri…' : explain && explain.text ? 'Aggiorna la spiegazione' : 'Spiega con l\'assistente'}
-          </button>
-          {explain && explain.text && !explain.busy && <button type="button" onClick={() => ask(true)} className="text-xs text-gray-500 hover:text-gray-300">Riscrivi</button>}
-        </div>
-        {data.explanation && data.explanation.stale && !(explain && explain.text) && <div className="mt-2 text-xs text-gray-500">I numeri sono cambiati dall'ultima spiegazione.</div>}
-        {explain && explain.text && (
-          <div className="mt-3 rounded-lg bg-surface-page border border-gray-800 p-4 text-sm text-gray-300 leading-relaxed whitespace-pre-line">
-            {explain.text}
-            <div className="text-xs text-gray-600 mt-3">Scritto dall'assistente a partire dai numeri qui sopra; ogni cifra citata è controllata, ma verifica sempre sulle spese.</div>
-          </div>
-        )}
-        {explain && explain.error && <div className="mt-3 text-sm text-amber-400">{explain.error}</div>}
-      </div>
 
       <button type="button" onClick={() => setShowLimits(!showLimits)} className="mt-4 text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1">
         <Icon name={showLimits ? 'chevron-down' : 'chevron-right'} size={12} />Cosa conta in questi numeri

@@ -3,7 +3,6 @@ import { API } from '../lib/api'
 import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
 import RichText from '../components/RichText'
-import CapabilitiesSection from '../components/CapabilitiesSection'
 import { parseSchemaFrontend, getAutomationSteps, getRequiredConnectors } from '../lib/schema-v3-frontend'
 
 // La Libreria del tenant: i moduli che ho già (installati) e quelli salvati nella Libreria di
@@ -354,7 +353,6 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
         </div>
       )}
 
-      <CapabilitiesSection token={token} onChanged={onFeaturesChanged} />
 
       <h2 className="text-sm font-semibold text-ink mb-3">Moduli</h2>
       <div className="relative mb-6 max-w-md">

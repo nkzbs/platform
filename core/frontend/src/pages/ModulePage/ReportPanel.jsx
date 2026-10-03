@@ -46,28 +46,6 @@ function ReportPanel({ moduleSlug, fields, token }) {
   const [dateField, setDateField] = useState(dateFields[0]?.key || '')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [explain, setExplain] = useState(null) // { busy } | { text } | { error }
-
-  useEffect(() => { setExplain(null) }, [groupBy, metric, func, period, dateField, moduleSlug])
-
-  // Manda all'assistente solo i totali già mostrati qui sotto, mai le singole righe.
-  const askExplain = async () => {
-    setExplain({ busy: true })
-    const withCompare = !!(data && data.compare_groups)
-    const res = await api.post('/ai/explain-report', {
-      titolo: moduleSlug.replace(/_/g, ' '),
-      periodo: PERIOD_LABELS[period] || '',
-      metrica: (metricFields.find((f) => f.key === metric) || {}).label || metric,
-      funzione: func,
-      totale: data.total,
-      totale_confronto: withCompare ? data.compare_total : undefined,
-      gruppi: data.groups.map((g) => ({ label: g.label, value: g.value, confronto: withCompare ? ((data.compare_groups.find((c) => c.label === g.label) || {}).value || 0) : undefined })),
-    })
-    if (res.ok && res.data.text) setExplain({ text: res.data.text })
-    else if (res.data && res.data.code === 'ai_budget_exceeded') setExplain({ error: 'Il tetto di spesa mensile dell\'assistente è raggiunto: riprende il mese prossimo.' })
-    else if (res.data && res.data.code === 'ai_unverified') setExplain({ error: 'Non sono riuscito a scrivere una spiegazione affidabile. Riprova.' })
-    else setExplain({ error: 'L\'assistente non è disponibile in questo momento.' })
-  }
 
   useEffect(() => {
     if (!groupBy || !metric) { setData(null); return }
@@ -170,20 +148,6 @@ function ReportPanel({ moduleSlug, fields, token }) {
                 )
               })}
             </div>
-          </div>
-          <div className="w-full mt-1">
-            <button type="button" onClick={askExplain} disabled={!!(explain && explain.busy)}
-              className="flex items-center gap-2 text-sm text-accent hover:underline disabled:opacity-60 disabled:no-underline">
-              <Icon name="wand" size={14} />
-              {explain && explain.busy ? 'Sto leggendo il report…' : 'Spiega questo report'}
-            </button>
-            {explain && explain.text && (
-              <div className="mt-3 rounded-lg bg-surface-page border border-gray-800 p-4 text-sm text-gray-300 leading-relaxed whitespace-pre-line">
-                {explain.text}
-                <div className="text-xs text-gray-600 mt-3">Scritto dall'assistente a partire dai totali qui sopra; i numeri sono controllati, ma verifica sempre sul report.</div>
-              </div>
-            )}
-            {explain && explain.error && <div className="mt-3 text-sm text-amber-400">{explain.error}</div>}
           </div>
         </div>
       )}
