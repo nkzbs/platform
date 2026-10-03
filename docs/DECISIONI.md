@@ -310,6 +310,16 @@ controllo dei numeri), che sta già in Super Admin. Le versioni potenziate si pu
 vede "disponibile v2 con AI" e aggiorna quando vuole (l'aggiornamento è già esplicito). Il Builder all'inizio mostra i blocchi in sola lettura.
 **Ordine:** `ai_triage` per primo (la prova più piccola), poi `ai_explain`, infine `ai_import`. Si parte quando nasce un secondo progetto che usa l'AI.
 
+## 2026-10-03 — Vista "Da inizio anno"
+
+La scheda "Come sta andando" ha ora due viste: **Mese** e **Da inizio anno** (`insights.js` → `buildYearSnapshot`, `components/InsightsYear.jsx`).
+Da gennaio all'ultimo mese concluso (un anno passato fino a dicembre), con le stesse regole del mese: stipendi, accantonato (registrato o stimato,
+dichiarato), quota alla casa, righe "da smistare" e senza data certa fuori. Mostra entrate, spese, saldo, risparmio vero, **come si dividono le spese**
+(rate = righe collegate a un debito o categoria Rata; fisse; variabili) con la quota già "impegnata", il confronto con **lo stesso periodo dell'anno
+prima** e le categorie con la variazione. "Spiega con l'assistente" racconta l'anno (istruzioni sue in Super Admin, cifre controllate; il testo si salva
+per anno, chiave `anno-AAAA`). Sostituisce nell'uso i riquadri sparsi del modulo Spese Personali ("Risparmio anno corrente", "Fondo cumulativo", "Indice
+di salute"), che restano nello schema ma contano diversamente (non includono l'accantonato in busta).
+
 ### Da fare (nell'ordine deciso)
 
 1. **Movimenti bancari**, passi successivi (la lettura del conto personale c'è, vedi sopra): Prepagata e Conto Casa come conti a sé,

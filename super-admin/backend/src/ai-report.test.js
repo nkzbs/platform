@@ -183,6 +183,32 @@ async function main() {
     assertEq((await realFetch(BASE + '/api/tenant-ai/explain-insights', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': 'no' }, body: '{}' })).status, 401);
   });
 
+  console.log('\n--- da inizio anno ---');
+
+  const YR = { period: 'anno', year: '2026', fino_a: '2026-09', accantonato_stimato: true, entrate: 17043.54, spese: 14000, saldo: 3043.54, risparmio_pct: 17.9, accantonato: 2550, risparmio_vero_pct: 28.6,
+    spese_rate: 4417.68, spese_fisse: 3964.5, spese_variabili: 5617.82,
+    confronti: { anno_precedente: { anno: '2025', entrate: 19656, spese: 12000, saldo: 7656, entrate_variazione_pct: -13.3, spese_variazione_pct: 16.7 } },
+    categorie: [{ nome: 'Rata', valore: 4417.68, anno_prec: 600, variazione_pct: 636.3 }, { nome: 'Alimentari', valore: 1200, anno_prec: 1100, variazione_pct: 9.1 }] };
+  const callYr = (data) => realFetch(BASE + '/api/tenant-ai/explain-insights', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': SECRET }, body: JSON.stringify({ tenant_slug: 'finance', data }) });
+
+  await test('sanitizeInsightsYear: solo i campi previsti; anno e mese di arrivo obbligatori', () => {
+    const { payload } = rep.sanitizeInsightsYear({ ...YR, descrizioni: ['segreto'] });
+    assertEq(payload.anno, '2026'); assertEq(payload.spese_rate, 4417.68);
+    assertTrue(!JSON.stringify(payload).includes('segreto'));
+    assertTrue(rep.sanitizeInsightsYear({ ...YR, year: 'boh' }).error);
+    assertTrue(rep.sanitizeInsightsYear({ period: 'anno', year: '2026', fino_a: '2026-09' }).error, 'servono entrate e spese');
+  });
+  await test('percorso felice: il testo torna; usa le istruzioni dell\'anno e le cifre vengono controllate', async () => {
+    mistralText = 'Da inizio anno sei in positivo di 3.043,54 euro, e il risparmio vero è del 28,6%. Le rate pesano 4.417,68 euro.';
+    mistralCalls = [];
+    const res = await callYr(YR);
+    assertEq(res.status, 200); assertEq((await res.json()).text, mistralText);
+    assertTrue(/da inizio anno/i.test(mistralCalls[0].messages[0].content), 'prompt dell\'anno');
+    mistralText = 'Il risparmio vero è del 35%.';
+    const bad = await callYr(YR);
+    assertEq(bad.status, 502); assertEq((await bad.json()).code, 'ai_unverified');
+  });
+
   console.log(`\n${passed} passati, ${failed} falliti`);
   process.exit(failed ? 1 : 0);
 }

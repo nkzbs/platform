@@ -68,6 +68,7 @@ function collect(cfg) {
   const senzaData = { n: 0, totale: 0 }; // righe la cui data vera è andata persa (campo data_incerta): fuori dai conti mensili
   const spCat = {}; // mese -> categoria -> totale
   const spFix = {}; // mese -> { fisse, variabili }
+  const spKind = {}; // mese -> { rate, fisse, variabili } (rata = collegata a un debito o categoria Rata; poi fisse; il resto variabili)
   const spStato = {}; // mese -> { pagate, da_pagare }
   const E = cfg.entrate;
   const exCat = new Set(E.exclude_categories || []), exGrp = new Set(E.exclude_groups || []);
@@ -99,13 +100,15 @@ function collect(cfg) {
       spese[m] = (spese[m] || 0) + a;
       const cat = d[cfg.spese.category] || 'Altro';
       (spCat[m] = spCat[m] || {})[cat] = ((spCat[m] || {})[cat] || 0) + a;
+      const kd = (spKind[m] = spKind[m] || { rate: 0, fisse: 0, variabili: 0 });
+      if (d.debito || cat === 'Rata') kd.rate += a; else if (d[cfg.spese.fixed]) kd.fisse += a; else kd.variabili += a;
       const f = (spFix[m] = spFix[m] || { fisse: 0, variabili: 0 });
       if (d[cfg.spese.fixed]) f.fisse += a; else f.variabili += a;
       const st = (spStato[m] = spStato[m] || { pagate: 0, da_pagare: 0 });
       if (d[cfg.spese.status] === 'pagato') st.pagate += a; else st.da_pagare += a;
     }
   }
-  return { entrate, spese, spCat, spFix, spStato, stipendi, accantonato, senzaData };
+  return { entrate, spese, spCat, spFix, spStato, spKind, stipendi, accantonato, senzaData };
 }
 
 // Accantonamento per mese: quello registrato; dove manca (da quando è cominciato) si stima con il rapporto
@@ -170,7 +173,7 @@ function buildSnapshot(month, now = new Date()) {
   try { banca = require('./bank-import').monthSummary(month); } catch (e) { /* senza movimenti bancari */ }
   const st = spStato[month] || { pagate: 0, da_pagare: 0 }, fx = spFix[month] || { fisse: 0, variabili: 0 };
   return {
-    available: true, month, in_corso: month >= cur, banca,
+    available: true, key: month, month, in_corso: month >= cur, banca,
     entrate: round2(en), spese: round2(sp), saldo: round2(en - sp),
     risparmio_pct: en > 0 ? Math.round(((en - sp) / en) * 1000) / 10 : null,
     accantonato: acc.valore, accantonato_stimato: acc.stimato,
@@ -189,18 +192,61 @@ function buildSnapshot(month, now = new Date()) {
   };
 }
 
+function monthsBetween(from, to) { const out = []; for (let m = from; m <= to; m = addMonths(m, 1)) out.push(m); return out; }
+
+// Da inizio anno (fino all'ultimo mese concluso; un anno passato fino a dicembre), con il confronto con lo stesso periodo dell'anno prima.
+function buildYearSnapshot(year, now = new Date()) {
+  const cfg = getConfig();
+  if (!installedModules(cfg.entrate.modules).length || !installedModules(cfg.spese.modules).length) return { available: false, reason: 'Servono almeno un modulo di entrate e uno di spese installati.' };
+  const cur = now.toISOString().slice(0, 7);
+  const y = /^\d{4}$/.test(String(year || '')) ? String(year) : cur.slice(0, 4);
+  let to = y + '-12';
+  if (y === cur.slice(0, 4)) { const lc = lastClosedMonth(now); to = lc.startsWith(y) ? lc : null; }
+  if (y > cur.slice(0, 4)) to = null;
+  if (!to) return { available: true, key: 'anno-' + y, period: 'anno', year: y, vuoto: true, limiti: ['Nessun mese concluso in questo anno.'] };
+  const months = monthsBetween(y + '-01', to);
+  const prevYear = String(Number(y) - 1), prevMonths = months.map((m) => prevYear + m.slice(4));
+  const col = collect(cfg);
+  const sum = (obj, ms) => ms.reduce((t, m) => t + (obj[m] || 0), 0);
+  const acc = (ms) => { let v = 0, st = false; for (const m of ms) { const a = accantonamentoMese(m, col); v += a.valore; if (a.stimato) st = true; } return { valore: round2(v), stimato: st }; };
+  const en = sum(col.entrate, months), sp = sum(col.spese, months), enP = sum(col.entrate, prevMonths), spP = sum(col.spese, prevMonths);
+  const ac = acc(months), acP = acc(prevMonths);
+  const kind = (k) => round2(months.reduce((t, m) => t + ((col.spKind[m] || {})[k] || 0), 0));
+  const catTot = (ms) => { const o = {}; for (const m of ms) for (const [c, v] of Object.entries(col.spCat[m] || {})) o[c] = (o[c] || 0) + v; return o; };
+  const cn = catTot(months), cp = catTot(prevMonths);
+  const categorie = Object.entries(cn).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([nome, valore]) => ({ nome, valore: round2(valore), anno_prec: round2(cp[nome] || 0), variazione_pct: cp[nome] > 0 ? pct(valore, cp[nome]) : null }));
+  const limiti = ['Vista personale: conta ciò che è registrato in Finance (' + [...installedModules(cfg.spese.modules)].join(', ') + ' per le spese). Le spese di casa non sono incluse: contano solo le quote che versi tu alla casa, se registrate come "Contributo Casa".',
+    'Non sono conteggiati come entrate: ' + ((cfg.entrate.exclude_categories || []).join(', ') || 'nessuna categoria esclusa') + ', i contributi alla casa e i riporti di saldo.'];
+  if (col.senzaData.n) limiti.push('Non contate in nessun mese: ' + col.senzaData.n + ' spese (circa ' + Math.round(col.senzaData.totale) + ' €) la cui data vera è andata persa nell\'importazione.');
+  if (ac.valore) limiti.push('L\'accantonamento (fondo o azioni, trattenuto in busta paga) non arriva sul conto: è contato come risparmio.' + (ac.stimato ? ' Per alcuni mesi è una stima: manca la riga con l\'importo vero.' : ''));
+  if (acP.valore === 0 && ac.valore > 0) limiti.push('L\'anno scorso non c\'era ancora l\'accantonamento: il confronto del risparmio non è alla pari.');
+  const mesiConEntrate = months.filter((m) => col.entrate[m]).length;
+  if (mesiConEntrate < months.length) limiti.unshift('In ' + (months.length - mesiConEntrate) + ' mesi non risulta nessuna entrata registrata.');
+  return {
+    available: true, key: 'anno-' + y, period: 'anno', year: y, fino_a: to, mesi: months.length,
+    entrate: round2(en), spese: round2(sp), saldo: round2(en - sp),
+    risparmio_pct: en > 0 ? Math.round(((en - sp) / en) * 1000) / 10 : null,
+    accantonato: ac.valore, accantonato_stimato: ac.stimato,
+    risparmio_vero_pct: en + ac.valore > 0 ? Math.round(((en - sp + ac.valore) / (en + ac.valore)) * 1000) / 10 : null,
+    spese_rate: kind('rate'), spese_fisse: kind('fisse'), spese_variabili: kind('variabili'),
+    confronti: { anno_precedente: { anno: prevYear, entrate: round2(enP), spese: round2(spP), saldo: round2(enP - spP), entrate_variazione_pct: pct(en, enP), spese_variazione_pct: pct(sp, spP) } },
+    categorie, limiti,
+  };
+}
+
 // L'impronta dei numeri: se cambia (registri una spesa, correggi un importo) la spiegazione salvata è "vecchia".
 const snapshotHash = (snap) => crypto.createHash('sha1').update(JSON.stringify({ ...snap, limiti: undefined })).digest('hex');
 
-function cachedExplanation(month, snap) {
-  const row = db.prepare('SELECT snapshot_hash, text, created_at FROM insight_explanations WHERE month = ?').get(month);
+function cachedExplanation(key, snap) {
+  const row = db.prepare('SELECT snapshot_hash, text, created_at FROM insight_explanations WHERE month = ?').get(key);
   if (!row) return null;
   return { text: row.text, created_at: row.created_at, stale: row.snapshot_hash !== snapshotHash(snap) };
 }
 
 // Chiede la spiegazione a Super Admin (che controlla i numeri) e la salva. Ritorna { text } o { error, status, code }.
 async function explain(snap, { refresh = false } = {}) {
-  if (!refresh) { const c = cachedExplanation(snap.month, snap); if (c && !c.stale) return { text: c.text, cached: true }; }
+  const key = snap.key || snap.month;
+  if (!refresh) { const c = cachedExplanation(key, snap); if (c && !c.stale) return { text: c.text, cached: true }; }
   try {
     const res = await fetch(SUPER_ADMIN_URL + '/api/tenant-ai/explain-insights', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET },
@@ -209,11 +255,11 @@ async function explain(snap, { refresh = false } = {}) {
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok || !body.text) return { error: body.error || 'Assistente non disponibile', status: res.status || 502, code: body.code };
-    db.prepare('INSERT INTO insight_explanations (month, snapshot_hash, text) VALUES (?, ?, ?) ON CONFLICT(month) DO UPDATE SET snapshot_hash = excluded.snapshot_hash, text = excluded.text, created_at = CURRENT_TIMESTAMP').run(snap.month, snapshotHash(snap), body.text);
+    db.prepare('INSERT INTO insight_explanations (month, snapshot_hash, text) VALUES (?, ?, ?) ON CONFLICT(month) DO UPDATE SET snapshot_hash = excluded.snapshot_hash, text = excluded.text, created_at = CURRENT_TIMESTAMP').run(key, snapshotHash(snap), body.text);
     return { text: body.text, cached: false };
   } catch (e) {
     return { error: 'Assistente non raggiungibile', status: 502 };
   }
 }
 
-module.exports = { getConfig, saveConfig, buildSnapshot, cachedExplanation, explain, lastClosedMonth, addMonths, DEFAULT_CONFIG };
+module.exports = { getConfig, saveConfig, buildSnapshot, buildYearSnapshot, cachedExplanation, explain, lastClosedMonth, addMonths, DEFAULT_CONFIG };

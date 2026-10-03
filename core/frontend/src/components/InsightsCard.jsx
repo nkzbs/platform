@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from './Icon'
+import InsightsYear from './InsightsYear'
 
 const eur = (n) => (n == null ? '—' : n.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' €')
 const pctTxt = (n) => (n == null ? null : (n > 0 ? '+' : '') + n.toLocaleString('it-IT', { maximumFractionDigits: 1 }) + '%')
@@ -14,6 +15,7 @@ export default function InsightsCard({ token, onNavigate }) {
   const [data, setData] = useState(null)
   const [explain, setExplain] = useState(null) // { busy } | { text, cached } | { error }
   const [showLimits, setShowLimits] = useState(false)
+  const [vista, setVista] = useState('mese') // 'mese' | 'anno'
 
   const load = async (m) => {
     const d = await api.get('/insights' + (m ? '?month=' + m : ''))
@@ -23,6 +25,25 @@ export default function InsightsCard({ token, onNavigate }) {
   }
   useEffect(() => { load(month) }, [month]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const vistaToggle = (
+    <div className="flex rounded-lg border border-gray-800 overflow-hidden text-xs">
+      {[['mese', 'Mese'], ['anno', 'Da inizio anno']].map(([k, l]) => (
+        <button key={k} type="button" onClick={() => setVista(k)} className={'px-3 py-1.5 transition ' + (vista === k ? 'bg-accent/15 text-accent' : 'text-gray-400 hover:text-gray-200')}>{l}</button>
+      ))}
+    </div>
+  )
+
+  if (vista === 'anno') {
+    return (
+      <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mb-6">
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+          <div className="flex items-center gap-2"><Icon name="bar-chart" size={16} className="text-accent" /><h2 className="text-sm font-semibold text-ink">Come sta andando</h2></div>
+          {vistaToggle}
+        </div>
+        <InsightsYear token={token} />
+      </section>
+    )
+  }
   if (!data || data.available === false) return null
 
   const ask = async (refresh) => {
@@ -54,10 +75,13 @@ export default function InsightsCard({ token, onNavigate }) {
           <Icon name="bar-chart" size={16} className="text-accent" />
           <h2 className="text-sm font-semibold text-ink">Come sta andando</h2>
         </div>
+        <div className="flex items-center gap-3 flex-wrap">
+        {vistaToggle}
         <div className="flex items-center gap-1 text-sm text-gray-400">
           <button type="button" onClick={() => setMonth(shift(data.month, -1))} className="px-2 py-1 rounded hover:bg-gray-800" aria-label="Mese precedente"><Icon name="chevron-left" size={14} /></button>
           <span className="min-w-[120px] text-center capitalize text-ink">{monthLabel(data.month)}{data.in_corso ? ' (in corso)' : ''}</span>
           <button type="button" onClick={() => setMonth(shift(data.month, 1))} disabled={data.month >= cur} className="px-2 py-1 rounded hover:bg-gray-800 disabled:opacity-30" aria-label="Mese successivo"><Icon name="chevron-right" size={14} /></button>
+        </div>
         </div>
       </div>
 

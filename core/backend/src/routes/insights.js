@@ -11,7 +11,15 @@ router.use(requireAuth, requireFeature('analisi')); // prima l'accesso (401), po
 const validMonth = (m) => m === undefined || /^\d{4}-\d{2}$/.test(String(m));
 
 // I numeri del mese (nessuna AI): sempre disponibili, e con l'eventuale spiegazione già salvata.
+const validYear = (y) => y === undefined || /^\d{4}$/.test(String(y));
+
 router.get('/', requireAuth, (req, res) => {
+  if (req.query.period === 'anno') {
+    if (!validYear(req.query.year)) return res.status(400).json({ error: 'Anno non valido (atteso AAAA)' });
+    const snap = insights.buildYearSnapshot(req.query.year);
+    if (!snap.available || snap.vuoto) return res.json(snap);
+    return res.json({ ...snap, explanation: insights.cachedExplanation(snap.key, snap) });
+  }
   if (!validMonth(req.query.month)) return res.status(400).json({ error: 'Mese non valido (atteso AAAA-MM)' });
   const snap = insights.buildSnapshot(req.query.month);
   if (!snap.available) return res.json(snap);
@@ -21,6 +29,14 @@ router.get('/', requireAuth, (req, res) => {
 // "Spiega con l'assistente": usa la spiegazione salvata se i numeri non sono cambiati.
 router.post('/explain', requireAuth, async (req, res) => {
   const b = req.body || {};
+  if (b.period === 'anno') {
+    if (!validYear(b.year)) return res.status(400).json({ error: 'Anno non valido (atteso AAAA)' });
+    const ysnap = insights.buildYearSnapshot(b.year);
+    if (!ysnap.available || ysnap.vuoto) return res.status(400).json({ error: ysnap.reason || 'Nessun mese concluso in questo anno.' });
+    const yout = await insights.explain(ysnap, { refresh: !!b.refresh });
+    if (yout.error) return res.status(yout.status === 429 ? 429 : yout.status === 503 ? 503 : 502).json({ error: yout.error, code: yout.code });
+    return res.json({ text: yout.text, cached: yout.cached });
+  }
   if (!validMonth(b.month)) return res.status(400).json({ error: 'Mese non valido (atteso AAAA-MM)' });
   const snap = insights.buildSnapshot(b.month);
   if (!snap.available) return res.status(400).json({ error: snap.reason });

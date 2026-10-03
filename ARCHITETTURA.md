@@ -191,7 +191,7 @@ esista nei dati**, altrimenti risponde errore e il tenant non mostra nulla.
 
 `core/backend/src/insights.js` calcola per un mese entrate (sul conto), spese, saldo, accantonato (trattenuto in busta, con stima dove
 manca la riga), risparmio vero, confronti (mese prima, stesso mese dell'anno prima, media di 12 mesi), categorie con variazione e
-anomalie, leggendo i record dei moduli indicati in `insights_config` (default: vista personale, cioè entrate e spese personali). `GET /api/insights` restituisce i numeri senza AI;
+anomalie, leggendo i record dei moduli indicati in `insights_config` (default: vista personale, cioè entrate e spese personali). `GET /api/insights` restituisce i numeri senza AI (`?period=anno&year=AAAA` per la vista da inizio anno);
 `POST /api/insights/explain` manda a Super Admin (`/api/tenant-ai/explain-insights`) solo i totali, che li ripulisce, fa scrivere
 il testo a Mistral e lo restituisce solo se ogni numero esiste nei dati. La spiegazione si salva per mese
 (`insight_explanations`, con l'impronta dei numeri) e si rigenera solo se i numeri cambiano o la si chiede di nuovo.

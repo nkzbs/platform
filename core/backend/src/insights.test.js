@@ -179,6 +179,69 @@ async function main() {
     assertTrue(!snap().limiti.some((l) => /andata persa/.test(l)), 'senza righe incerte nessun avviso');
   });
 
+  console.log('\n--- da inizio anno ---');
+
+  // 2025 (anno scorso): stipendio 1000 e spese personali 100 al mese, tutti i mesi. 2026 fino a settembre: i dati seminati sopra
+  // (aprile-agosto: stipendio 1000, casa 100 + personali 200; settembre: 1799,58 / 300 + 210 + 80) + gennaio-marzo di prova.
+  for (let m = 1; m <= 12; m++) { const mm = String(m).padStart(2, '0'); ent('2025-' + mm + '-27', 1000); sp('spese_personali', '2025-' + mm + '-15', 100, 'Alimentari'); }
+  for (const m of ['2026-01', '2026-02', '2026-03']) { ent(m + '-27', 1000); sp('spese_personali', m + '-15', 100, 'Alimentari'); }
+  sp('spese_personali', '2026-02-20', 300, 'Rata', { debito: 9999 });
+  const Y = () => insights.buildYearSnapshot('2026', NOW);
+
+  await test('anno corrente: da gennaio all\'ultimo mese concluso (settembre), non il mese in corso', () => {
+    const y = Y();
+    assertEq(y.fino_a, '2026-09'); assertEq(y.mesi, 9);
+    assertEq(y.period, 'anno');
+  });
+  await test('entrate e spese dell\'anno sono la somma dei mesi, con le stesse regole del mese (casa+personali di prova, "da smistare" fuori)', () => {
+    const y = Y();
+    // entrate: 3 x 1000 (gen-mar) + 5 x 1000 (apr-ago) + 1799,58 (set) ; Risparmi/Fondo/Casa/Saldo conto esclusi
+    assertEq(y.entrate, 9799.58);
+    // spese: gen-mar 3 x 100 + rata 300 ; apr-ago 5 x 300 ; set 590
+    assertEq(y.spese, 300 + 300 + 1500 + 590);
+    assertEq(y.saldo, y.entrate - y.spese === y.saldo ? y.saldo : -1);
+  });
+  await test('come si dividono le spese: rate (collegate a un debito o categoria Rata), fisse, variabili: la somma torna', () => {
+    const y = Y();
+    assertEq(y.spese_rate, 300);
+    assertEq(Math.round((y.spese_rate + y.spese_fisse + y.spese_variabili) * 100) / 100, y.spese);
+  });
+  await test('confronto con lo stesso periodo dell\'anno prima (gen-set 2025) e variazione percentuale', () => {
+    const c = Y().confronti.anno_precedente;
+    assertEq(c.anno, '2025'); assertEq(c.entrate, 9000); assertEq(c.spese, 900);
+    assertEq(c.spese_variazione_pct, Math.round(((Y().spese - 900) / 900) * 1000) / 10);
+  });
+  await test('categorie dell\'anno con il valore dell\'anno prima e la variazione', () => {
+    const al = Y().categorie.find((k) => k.nome === 'Alimentari');
+    assertEq(al.anno_prec, 900);
+    assertTrue(al.variazione_pct != null);
+  });
+  await test('un anno passato va fino a dicembre; l\'anno prossimo (o senza mesi conclusi) è vuoto, senza errori', () => {
+    assertEq(insights.buildYearSnapshot('2025', NOW).fino_a, '2025-12');
+    assertEq(insights.buildYearSnapshot('2027', NOW).vuoto, true);
+    assertEq(insights.buildYearSnapshot('2026', new Date('2026-01-10T00:00:00Z')).vuoto, true, 'a gennaio nessun mese concluso');
+  });
+  await test('l\'accantonamento dell\'anno somma i mesi (registrato + stimato) e dice se è in parte una stima', () => {
+    const y = Y();
+    assertTrue(y.accantonato > 0 && y.accantonato_stimato === true, JSON.stringify([y.accantonato, y.accantonato_stimato]));
+    assertEq(y.risparmio_vero_pct, Math.round(((y.entrate - y.spese + y.accantonato) / (y.entrate + y.accantonato)) * 1000) / 10);
+  });
+  await test('rotta: GET ?period=anno restituisce l\'anno; spiegazione dell\'anno salvata e riusata; anno non valido -> 400', async () => {
+    const log = await (await fetch(BASE + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: process.env.INITIAL_ADMIN_PASSWORD }) })).json();
+    const HH = { Authorization: 'Bearer ' + log.token, 'Content-Type': 'application/json' };
+    const yr = new Date().getUTCFullYear();
+    assertEq((await fetch(BASE + '/api/insights?period=anno&year=boh', { headers: HH })).status, 400);
+    const g = await (await fetch(BASE + '/api/insights?period=anno&year=2025', { headers: HH })).json();
+    assertEq(g.period, 'anno'); assertEq(g.explanation, null);
+    sa.calls = []; sa.status = 200; sa.reply = { text: 'Nel 2025 sei in positivo.' };
+    const e1 = await (await fetch(BASE + '/api/insights/explain', { method: 'POST', headers: HH, body: JSON.stringify({ period: 'anno', year: '2025' }) })).json();
+    assertEq(e1.text, 'Nel 2025 sei in positivo.');
+    assertEq(sa.calls[0].data.period, 'anno'); assertEq(sa.calls[0].data.year, '2025');
+    const e2 = await (await fetch(BASE + '/api/insights/explain', { method: 'POST', headers: HH, body: JSON.stringify({ period: 'anno', year: '2025' }) })).json();
+    assertEq(e2.cached, true); assertEq(sa.calls.length, 1, 'nessuna nuova chiamata');
+    assertEq((await (await fetch(BASE + '/api/insights?period=anno&year=2025', { headers: HH })).json()).explanation.text, 'Nel 2025 sei in positivo.');
+  });
+
   console.log('\n--- limiti dichiarati ---');
 
   await test('il mese in corso è segnalato come parziale; il mese senza entrate lo dice', () => {

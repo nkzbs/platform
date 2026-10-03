@@ -160,13 +160,14 @@ router.post('/explain-report', requireInternalSecret, async (req, res) => {
 router.post('/explain-insights', requireInternalSecret, async (req, res) => {
   const { tenant_slug, data } = req.body || {};
   if (!tenant_slug) return res.status(400).json({ error: 'tenant_slug obbligatorio' });
-  const s = reportAi.sanitizeInsights(data);
+  const isYear = data && data.period === 'anno';
+  const s = isYear ? reportAi.sanitizeInsightsYear(data) : reportAi.sanitizeInsights(data);
   if (s.error) return res.status(400).json({ error: s.error });
   if (!isProviderConfigured('mistral', tenant_slug)) return res.status(503).json({ error: 'Nessuna chiave Mistral: inseriscila in Impostazioni → Assistente AI.', code: 'ai_not_configured' });
   try {
-    const raw = await callAI('mistral', { system: reportAi.PROMPTS.stato, user: JSON.stringify(s.payload), maxTokens: reportAi.LIMITS.stato.tokens, tenantSlug: tenant_slug });
+    const raw = await callAI('mistral', { system: reportAi.PROMPTS[isYear ? 'anno' : 'stato'], user: JSON.stringify(s.payload), maxTokens: reportAi.LIMITS[isYear ? 'anno' : 'stato'].tokens, tenantSlug: tenant_slug });
     const text = String(raw || '').replace(/\*\*|__|^#+\s*|^[-•]\s+/gm, '').trim();
-    if (!text || text.length > reportAi.LIMITS.stato.chars) return res.status(502).json({ error: 'Risposta dell\'AI non utilizzabile' });
+    if (!text || text.length > reportAi.LIMITS[isYear ? 'anno' : 'stato'].chars) return res.status(502).json({ error: 'Risposta dell\'AI non utilizzabile' });
     const check = reportAi.verifyNumbers(text, s.numeri);
     if (!check.ok) return res.status(502).json({ error: 'Il testo conteneva un numero non presente nei dati (' + check.numero + '): scartato', code: 'ai_unverified' });
     res.json({ text });
