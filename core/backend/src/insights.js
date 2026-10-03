@@ -63,6 +63,7 @@ function viewFromWidget(widget) {
   cfg = cfg || {};
   const list = (v) => (Array.isArray(v) ? v : []).map((x) => String(x).trim()).filter(Boolean).slice(0, 30);
   const view = { id: widget && widget.id };
+  if (cfg.solo_spese) view.solo_spese = true; // vista di sole spese (es. la casa): niente entrate, saldo, risparmio
   const sp = list(cfg.spese_modules); if (sp.length) view.spese = { modules: sp };
   const en = {};
   const inc = list(cfg.entrate_include_groups); if (inc.length) en.include_groups = inc;
@@ -177,7 +178,8 @@ const pct = (cur, ref) => (ref ? Math.round(((cur - ref) / Math.abs(ref)) * 1000
 function buildSnapshot(month, now = new Date(), view = null) {
   const cfg = getConfig(view);
   const mods = [...installedModules(cfg.entrate.modules), ...installedModules(cfg.spese.modules)];
-  if (!installedModules(cfg.entrate.modules).length || !installedModules(cfg.spese.modules).length) return { available: false, reason: 'Servono almeno un modulo di entrate e uno di spese installati.' };
+  const soloSpese = !!(view && view.solo_spese);
+  if ((!soloSpese && !installedModules(cfg.entrate.modules).length) || !installedModules(cfg.spese.modules).length) return { available: false, reason: soloSpese ? 'Serve almeno un modulo di spese installato.' : 'Servono almeno un modulo di entrate e uno di spese installati.' };
   month = month && /^\d{4}-\d{2}$/.test(month) ? month : lastClosedMonth(now);
   const col = collect(cfg);
   const { entrate, spese, spCat, spFix, spStato } = col;
@@ -212,6 +214,23 @@ function buildSnapshot(month, now = new Date(), view = null) {
   if (month >= cur) limiti.unshift('Mese in corso: i dati sono parziali.');
   if (!en) limiti.unshift('Nessuna entrata registrata in questo mese: il saldo e il risparmio non sono significativi.');
 
+  // Vista di sole spese (es. la casa): niente entrate, saldo e risparmio; contano le spese registrate nei moduli scelti.
+  if (soloSpese) {
+    const stS = spStato[month] || { pagate: 0, da_pagare: 0 }, fxS = spFix[month] || { fisse: 0, variabili: 0 };
+    const limitiS = ['Conta le spese registrate in: ' + [...installedModules(cfg.spese.modules)].join(', ') + '.', 'Le righe "da smistare" non contano come spese finché non le smisti.'];
+    if (month >= cur) limitiS.unshift('Mese in corso: i dati sono parziali.');
+    return {
+      available: true, key: month + viewKey(view), month, in_corso: month >= cur, solo_spese: true,
+      spese: round2(sp), spese_pagate: round2(stS.pagate), spese_da_pagare: round2(stS.da_pagare), spese_fisse: round2(fxS.fisse), spese_variabili: round2(fxS.variabili),
+      confronti: {
+        mese_precedente: { mese: prev, spese: round2(spese[prev] || 0), spese_variazione_pct: pct(sp, spese[prev] || 0) },
+        anno_precedente: { mese: yearAgo, spese: round2(spese[yearAgo] || 0), spese_variazione_pct: pct(sp, spese[yearAgo] || 0) },
+        media_12_mesi: { spese: s12 == null ? null : round2(s12), spese_variazione_pct: s12 ? pct(sp, s12) : null },
+      },
+      categorie: cats.slice(0, 8), anomalie, limiti: limitiS,
+    };
+  }
+
   // Se ci sono movimenti bancari per questo mese, il riepilogo di ciò che è successo davvero sul conto.
   let banca = null;
   if (!view) { try { banca = require('./bank-import').monthSummary(month); } catch (e) { /* senza movimenti bancari */ } } // il conto è uno solo: solo nella vista generale
@@ -241,7 +260,8 @@ function monthsBetween(from, to) { const out = []; for (let m = from; m <= to; m
 // Da inizio anno (fino all'ultimo mese concluso; un anno passato fino a dicembre), con il confronto con lo stesso periodo dell'anno prima.
 function buildYearSnapshot(year, now = new Date(), view = null) {
   const cfg = getConfig(view);
-  if (!installedModules(cfg.entrate.modules).length || !installedModules(cfg.spese.modules).length) return { available: false, reason: 'Servono almeno un modulo di entrate e uno di spese installati.' };
+  const soloSpese = !!(view && view.solo_spese);
+  if ((!soloSpese && !installedModules(cfg.entrate.modules).length) || !installedModules(cfg.spese.modules).length) return { available: false, reason: soloSpese ? 'Serve almeno un modulo di spese installato.' : 'Servono almeno un modulo di entrate e uno di spese installati.' };
   const cur = now.toISOString().slice(0, 7);
   const y = /^\d{4}$/.test(String(year || '')) ? String(year) : cur.slice(0, 4);
   let to = y + '-12';
@@ -259,6 +279,14 @@ function buildYearSnapshot(year, now = new Date(), view = null) {
   const catTot = (ms) => { const o = {}; for (const m of ms) for (const [c, v] of Object.entries(col.spCat[m] || {})) o[c] = (o[c] || 0) + v; return o; };
   const cn = catTot(months), cp = catTot(prevMonths);
   const categorie = Object.entries(cn).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([nome, valore]) => ({ nome, valore: round2(valore), anno_prec: round2(cp[nome] || 0), variazione_pct: cp[nome] > 0 ? pct(valore, cp[nome]) : null }));
+  if (soloSpese) {
+    return {
+      available: true, key: 'anno-' + y + viewKey(view), period: 'anno', year: y, fino_a: to, mesi: months.length, solo_spese: true,
+      spese: round2(sp), spese_rate: kind('rate'), spese_fisse: kind('fisse'), spese_variabili: kind('variabili'),
+      confronti: { anno_precedente: { anno: prevYear, spese: round2(spP), spese_variazione_pct: pct(sp, spP) } },
+      categorie, limiti: ['Conta le spese registrate in: ' + [...installedModules(cfg.spese.modules)].join(', ') + '.', 'Le righe "da smistare" non contano come spese finché non le smisti.'],
+    };
+  }
   const limiti = ['Vista personale: conta ciò che è registrato in Finance (' + [...installedModules(cfg.spese.modules)].join(', ') + ' per le spese). Le spese di casa non sono incluse: contano solo le quote che versi tu alla casa, se registrate come "Contributo Casa".',
     'Non sono conteggiati come entrate: ' + ((cfg.entrate.exclude_categories || []).join(', ') || 'nessuna categoria esclusa') + ', i contributi alla casa e i riporti di saldo.'];
   if (col.senzaData.n) limiti.push('Non contate in nessun mese: ' + col.senzaData.n + ' spese (circa ' + Math.round(col.senzaData.totale) + ' €) la cui data vera è andata persa nell\'importazione.');

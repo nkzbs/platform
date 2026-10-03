@@ -76,12 +76,21 @@ export default function InsightsCard({ token, onNavigate, widgetId, title }) {
         </div>
       </div>
 
+      {data.solo_spese ? (
+        <div className="flex gap-3 flex-wrap">
+          {tile('Spese del mese', eur(data.spese), c.mese_precedente && c.mese_precedente.spese_variazione_pct != null ? pctTxt(c.mese_precedente.spese_variazione_pct) + ' sul mese prima' : null)}
+          {tile('Già pagate', eur(data.spese_pagate), null)}
+          {tile('Ancora da pagare', eur(data.spese_da_pagare), null, data.spese_da_pagare > 0 ? 'text-amber-400' : undefined)}
+          {tile('Fisse / variabili', eur(data.spese_fisse) + ' / ' + eur(data.spese_variabili), null)}
+        </div>
+      ) : (
       <div className="flex gap-3 flex-wrap">
         {tile('Entrate sul conto', eur(data.entrate), data.accantonato > 0 ? '+ ' + eur(data.accantonato) + ' accantonati' + (data.accantonato_stimato ? ' (stima)' : '') : null)}
         {tile('Spese', eur(data.spese), c.mese_precedente && c.mese_precedente.spese_variazione_pct != null ? pctTxt(c.mese_precedente.spese_variazione_pct) + ' sul mese prima' : null)}
         {tile('Saldo', eur(data.saldo), null, data.entrate ? (positivo ? 'text-green-400' : 'text-red-400') : 'text-gray-500')}
         {tile('Risparmio', (data.risparmio_vero_pct == null ? '—' : data.risparmio_vero_pct.toLocaleString('it-IT', { maximumFractionDigits: 1 }) + '%'), data.accantonato > 0 ? 'contando l\'accantonato' + (data.accantonato_stimato ? ' (stimato)' : '') : (c.media_12_mesi && c.media_12_mesi.spese ? 'spese medie ' + eur(c.media_12_mesi.spese) : null))}
       </div>
+      )}
 
       {data.categorie && data.categorie.length > 0 && (
         <div className="mt-5">

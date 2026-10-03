@@ -370,6 +370,18 @@ async function main() {
     assertEq((await call('POST', '/explain', { month: '2026-09', widget: off })).status, 403);
     assertEq((await (await call('GET', '?month=2026-09&widget=' + wCasa)).json()).explainable, true);
   });
+  await test('vista di sole spese (casa): niente entrate, saldo, risparmio; solo spese, pagate/da pagare, categorie e confronti', async () => {
+    const w = db.prepare("INSERT INTO dashboard_widgets (type, label, config) VALUES ('come_sta_andando', 'Casa spese', ?)").run(JSON.stringify({ explainable: true, spese_modules: ['spese_casa'], solo_spese: true })).lastInsertRowid;
+    const g = await (await call('GET', '?month=2026-09&widget=' + w)).json();
+    assertEq(g.available, true); assertEq(g.solo_spese, true);
+    assertEq(g.spese, Math.round(sumRows('spese_casa', (d) => inMonth(d) && d._stato !== 'da_smistare' && !d.data_incerta) * 100) / 100);
+    for (const k of ['entrate', 'saldo', 'risparmio_pct', 'risparmio_vero_pct', 'accantonato']) assertEq(k in g, false, k + ' non c\'è');
+    assertEq('entrate' in g.confronti.mese_precedente, false);
+    assertTrue(g.limiti.join(' ').includes('spese_casa') && !g.limiti.join(' ').includes('entrata'), g.limiti.join(' | '));
+    const y = await (await call('GET', '?period=anno&year=2026&widget=' + w)).json();
+    assertEq(y.solo_spese, true); assertEq('entrate' in y, false); assertTrue(y.spese > 0, 'spese dell\'anno');
+  });
+
   await test('un widget che non esiste o non è di questo tipo: 404', async () => {
     assertEq((await call('GET', '?widget=99999')).status, 404);
     assertEq((await call('POST', '/explain', { month: '2026-09', widget: 99999 })).status, 404);

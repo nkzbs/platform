@@ -53,10 +53,20 @@ export default function InsightsYear({ token, widgetId }) {
     <div>
       {header}
       <div className="flex gap-3 flex-wrap">
+        {data.solo_spese ? (
+          <>
+            {tile('Spese da inizio anno', eur(data.spese), c && c.spese_variazione_pct != null ? pctTxt(c.spese_variazione_pct) + ' sul ' + c.anno : null)}
+            {tile('Fisse', eur(data.spese_fisse), null)}
+            {tile('Variabili', eur(data.spese_variabili), null)}
+          </>
+        ) : (
+          <>
         {tile('Entrate sul conto', eur(data.entrate), data.accantonato > 0 ? '+ ' + eur(data.accantonato) + ' accantonati' + (data.accantonato_stimato ? ' (in parte stima)' : '') : null)}
         {tile('Spese', eur(data.spese), c && c.spese_variazione_pct != null ? pctTxt(c.spese_variazione_pct) + ' sul ' + c.anno : null)}
         {tile('Saldo', eur(data.saldo), c ? 'nel ' + c.anno + ': ' + eur(c.saldo) : null, data.saldo >= 0 ? 'text-green-400' : 'text-red-400')}
         {tile('Risparmio', data.risparmio_vero_pct == null ? '—' : data.risparmio_vero_pct.toLocaleString('it-IT', { maximumFractionDigits: 1 }) + '%', data.accantonato > 0 ? 'contando l\'accantonato' : null)}
+          </>
+        )}
       </div>
 
       <div className="mt-5">
