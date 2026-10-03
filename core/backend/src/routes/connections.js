@@ -116,9 +116,14 @@ router.post('/whatsapp_callmebot/test', requireAuth, requireAdmin, async (req, r
   if (!creds || !creds.api_key) return res.status(400).json({ error: 'Collega prima WhatsApp (CallMeBot) con la sua chiave' });
   const destinatari = require('../notification-settings').recipientsForTag(null);
   if (!destinatari.length) return res.status(400).json({ error: 'Nessun destinatario attivo: aggiungine uno in "Destinatari WhatsApp"' });
-  const out = await whatsapp.sendAll({ destinatari, testo: 'Prova di Platform: se leggi questo messaggio, le notifiche WhatsApp funzionano.', apiKey: creds.api_key });
+  const out = await whatsapp.sendAll({ destinatari, testo: 'Prova di Platform: se leggi questo messaggio, le notifiche WhatsApp funzionano.', apiKey: creds.api_key, kind: 'prova' });
   logAudit(req.user.username, 'connection.whatsapp_test', 'whatsapp_callmebot', { esito: out.esito });
   res.json(out);
+});
+
+// Ultimi invii WhatsApp, con l'esito vero per destinatario (per capire se un messaggio è davvero partito).
+router.get('/whatsapp_callmebot/log', requireAuth, requireAdmin, (req, res) => {
+  res.json(whatsapp.recentLog(req.query.limit));
 });
 
 router.post('/:id/toggle', requireAuth, requireAdmin, (req, res) => {

@@ -430,7 +430,7 @@ function inviaWhatsAppConEsito({ moduleSlug, automationLabel, triggerDesc, recor
     logId = db.prepare('INSERT INTO automation_logs (module_slug, automation_label, trigger_desc, action_desc, esito, record_id) VALUES (?, ?, ?, ?, ?, ?)')
       .run(moduleSlug, automationLabel, triggerDesc, descBase, 'in invio', recordId || null).lastInsertRowid;
   } catch (e) { /* il registro non deve fermare l'invio */ }
-  wa.sendAll({ destinatari, testo, apiKey }).then((out) => {
+  wa.sendAll({ destinatari, testo, apiKey, kind: 'automazione' }).then((out) => {
     if (logId == null) return;
     db.prepare('UPDATE automation_logs SET esito = ?, action_desc = ? WHERE id = ?').run(out.esito, (descBase + ' — ' + out.dettaglio).slice(0, 400), logId);
   }).catch((e) => {

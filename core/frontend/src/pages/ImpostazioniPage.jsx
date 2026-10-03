@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import GmailRulesPanel from '../components/GmailRulesPanel'
 import WhatsAppRecipientsPanel from '../components/WhatsAppRecipientsPanel'
+import WhatsAppLogPanel from '../components/WhatsAppLogPanel'
 import ExportDatiPage from './ExportDatiPage'
 import BackupPage from './BackupPage'
 import DigestSettingsTab from '../components/DigestSettingsTab'
@@ -166,6 +167,7 @@ function ConnessioniTab({ token, features = {} }) {
                       </div>
                     )}
                     {row.id === 'whatsapp_callmebot' && features.whatsapp && <WhatsAppRecipientsPanel token={token} nested />}
+                    {row.id === 'whatsapp_callmebot' && features.whatsapp && <WhatsAppLogPanel token={token} refreshKey={waTest ? JSON.stringify(waTest.esito || waTest.busy || '') : ''} />}
                   </div>
                 )}
               </div>

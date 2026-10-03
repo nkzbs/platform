@@ -124,7 +124,7 @@ async function sendDigest({ now = new Date(), actor = 'sistema' } = {}) {
   if (!dest.length) return { esito: 'non configurato', motivo: 'Nessun destinatario attivo con il tag "' + TAG + '"' };
   const digest = buildDigest(now);
   if (!digest) { writeLog('nulla da segnalare', 'Nessuna scadenza oggi, domani o in ritardo'); return { esito: 'nulla da segnalare' }; }
-  const out = await whatsapp.sendAll({ destinatari: dest, testo: digest.text, apiKey: creds.api_key });
+  const out = await whatsapp.sendAll({ destinatari: dest, testo: digest.text, apiKey: creds.api_key, kind: 'riepilogo' });
   writeLog(out.esito, 'oggi ' + digest.counts.oggi + ', domani ' + digest.counts.domani + ', in ritardo ' + digest.counts.ritardo + ' — ' + out.dettaglio);
   logAudit(actor, 'digest.send', null, { esito: out.esito });
   return { esito: out.esito, dettaglio: out.dettaglio, counts: digest.counts };

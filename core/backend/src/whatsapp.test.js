@@ -119,6 +119,12 @@ const BAD_KEY = { status: 200, body: 'ERROR: APIKey is invalid or phone number i
     assertTrue(out.dettaglio.includes('Fede ✗'), out.dettaglio);
   });
 
+  await test('ogni invio finisce nel registro, con il tipo e l\'esito vero per destinatario', () => {
+    const l = wa.recentLog(5)[0];
+    assertEq(l.esito, 'parziale'); assertEq(l.kind, 'altro'); assertEq(l.testo, 'ciao');
+    assertTrue(l.dettaglio.includes('Nima ✓') && l.dettaglio.includes('Fede ✗'), l.dettaglio);
+  });
+
   await test('chi non riceve il messaggio ha un avviso nell\'app, riservato all\'admin', () => {
     const n = db.prepare("SELECT message, roles, category FROM notifications").all();
     assertEq(n.length, 1);

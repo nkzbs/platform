@@ -68,7 +68,27 @@ function notifyFailure(nome, reason) {
 
 // Manda lo stesso testo a più destinatari. Ritorna { esito, dettaglio, risultati } dove esito è
 // 'inviato' (tutti), 'parziale' (alcuni) o 'FALLITO' (nessuno).
-async function sendAll({ destinatari, testo, apiKey }) {
+// Registro degli invii (visibile in Impostazioni → Connessioni → WhatsApp): una riga per messaggio, con l'esito vero per destinatario.
+// Si tengono gli ultimi 200.
+let logReady = false;
+function ensureLog() {
+  if (logReady) return;
+  db.exec('CREATE TABLE IF NOT EXISTS whatsapp_log (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT, testo TEXT, esito TEXT, dettaglio TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)');
+  logReady = true;
+}
+function logSend(kind, testo, esito, dettaglio) {
+  try {
+    ensureLog();
+    db.prepare('INSERT INTO whatsapp_log (kind, testo, esito, dettaglio) VALUES (?, ?, ?, ?)').run(kind || 'altro', String(testo || '').slice(0, 600), esito, String(dettaglio || '').slice(0, 400));
+    db.prepare('DELETE FROM whatsapp_log WHERE id <= (SELECT MAX(id) FROM whatsapp_log) - 200').run();
+  } catch (e) { /* mai bloccare un invio per il registro */ }
+}
+function recentLog(limit = 30) {
+  ensureLog();
+  return db.prepare('SELECT id, kind, testo, esito, dettaglio, created_at FROM whatsapp_log ORDER BY id DESC LIMIT ?').all(Math.min(Math.max(parseInt(limit, 10) || 30, 1), 100));
+}
+
+async function sendAll({ destinatari, testo, apiKey, kind }) {
   const risultati = [];
   for (const dest of destinatari) {
     const r = await send({ numero: dest.numero, testo, apiKey });
@@ -78,7 +98,8 @@ async function sendAll({ destinatari, testo, apiKey }) {
   const ok = risultati.filter((r) => r.ok).length;
   const esito = !risultati.length ? 'nessun destinatario' : ok === risultati.length ? 'inviato' : ok === 0 ? 'FALLITO' : 'parziale';
   const dettaglio = risultati.map((r) => r.nome + (r.ok ? ' ✓' : ' ✗ ' + r.reason)).join('; ');
+  logSend(kind, testo, esito, dettaglio);
   return { esito, dettaglio, risultati };
 }
 
-module.exports = { sendAll, sendOne, judge, notifyFailure };
+module.exports = { sendAll, recentLog, sendOne, judge, notifyFailure };

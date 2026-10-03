@@ -33,7 +33,7 @@ async function notifyNuovaRiga(slug, data) {
     if (!creds || !creds.api_key) return { skipped: 'whatsapp non collegato' };
     const dest = require('./notification-settings').recipientsForTag(msg.tag);
     if (!dest.length) return { skipped: 'nessun destinatario' };
-    const out = await whatsapp.sendAll({ destinatari: dest, testo: msg.text, apiKey: creds.api_key });
+    const out = await whatsapp.sendAll({ destinatari: dest, testo: msg.text, apiKey: creds.api_key, kind: 'avviso' });
     try { db.prepare("INSERT INTO automation_logs (module_slug, automation_label, trigger_desc, action_desc, esito) VALUES (?, 'Avviso nuova riga', 'nuova riga', ?, ?)").run(slug, String(out.dettaglio || '').slice(0, 400), out.esito); } catch (e) { /* mai bloccare */ }
     return out;
   } catch (e) {
