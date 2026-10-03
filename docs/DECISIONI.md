@@ -154,6 +154,10 @@ reali di Finance (6 righe → 1 destinatario e 5 regole). I backup JSON includon
 
 ### Corretto durante il lavoro
 
+- **"Chiedi per le righe da smistare (N)" risaliva dopo ogni "Accetta".** Accettare applicava i campi ma lasciava la riga in "da smistare", che tornava tra
+  quelle da chiedere. Ora Accetta esegue anche la transizione già prevista dal flusso delle spese, "Conferma categorizzazione"
+  (da smistare → da pagare). Una riga già "da pagare" o "pagato" non cambia stato.
+
 - **Scadenza sbagliata (2028) sulle bollette.** `estraiScadenzaGenerica` sceglieva la data futura **più lontana** del testo, che in una
   bolletta è la fine del contratto ("Data di scadenza del contratto: 30.04.2028"), non la scadenza del pagamento ("Rata unica entro il
   08.09.2026", caso reale A2A). Ora: prima una data introdotta da "entro il / scadenza / rata unica", mai una data del contratto, di
