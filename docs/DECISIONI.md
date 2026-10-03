@@ -154,6 +154,18 @@ reali di Finance (6 righe → 1 destinatario e 5 regole). I backup JSON includon
 
 ### Corretto durante il lavoro
 
+- **Pile di righe sulla stessa data (importazione del 4/8/2026).** Serie mensili intere erano accatastate su una data sola (13/12/2025 o 18/04/2025):
+  gonfiavano singoli mesi (dicembre 2025 sembrava avere 8.263 € di spese, aprile 2025 ne aveva 16.414 €), riempivano di falsi "da pagare" e falsavano i confronti.
+  Riallineamento del 3/10/2026 (backup `finance-prima-riallineo-2026-10-03.json`):
+  - 46 copie tolte (le pile del 13/12/2025 erano doppioni di serie già presenti con le date giuste: Benzina + treno, Dazn Netflix Prime, iCloud + AC, Spese mese);
+  - 63 date ripristinate dalla vecchia app per le pile del 18/04/2025 (anche 22 che un mio errore dello script aveva annullato, poi rifatte);
+  - 34 righe "AE 4 n/66" tolte perché doppie delle rate collegate alla Quarta Cartella (le rate 37-48 create il 3/10 duplicavano quella serie);
+  - 37 righe ricategorizzate (Benzina → Auto & Benzina, Assicurazione Auto → Assicurazioni).
+  Le righe "da pagare" scadute da oltre 30 giorni sono passate da 32 a 4.
+  **Restano 35 righe impilate sul 18/04/2025** (circa 7.500 €: Iper Tosano ×17, Spese mese ×9, Cristian Bai, Michele Clerici, R.A.M. caldaia): non esistono nella vecchia app né
+  tra i movimenti del conto personale (probabilmente pagate dalla Prepagata), quindi la data vera non è recuperabile. Aprile 2025 resta gonfiato finché non si sceglie come datarle.
+  Lezione per gli script di scrittura: una riga si riscrive sempre partendo dalla copia più recente, mai da una letta all'inizio.
+
 - La **Checklist** in dashboard (periodo "questo mese") non permetteva di cambiare mese: ora ha le frecce avanti e indietro, il nome del
   mese e "Torna a oggi" (`ChecklistWidget.jsx`).
 
