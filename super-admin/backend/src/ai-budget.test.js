@@ -124,6 +124,17 @@ async function main() {
     assertEq(s.categoria, null, 'se sono entrambi o è ambiguo non si forza niente');
   });
 
+  await test('una scadenza lontana più di ~13 mesi (fine contratto, es. 2028) non si propone; una vicina sì', async () => {
+    const y = new Date().getUTCFullYear();
+    mistralReply = { content: JSON.stringify({ modulo: 'spese_casa', categoria: 'Gas', fornitore: 'A2A', importo: 64, scadenza: (y + 2) + '-04-30', confidenza: 'alta' }) };
+    let s = (await (await call('/classify-bill', bill())).json()).suggestion;
+    assertEq(s.scadenza, null, 'data del contratto');
+    const near = new Date(Date.now() + 20 * 86400000).toISOString().slice(0, 10);
+    mistralReply = { content: JSON.stringify({ modulo: 'spese_casa', categoria: 'Gas', fornitore: 'A2A', importo: 64, scadenza: near, confidenza: 'alta' }) };
+    s = (await (await call('/classify-bill', bill())).json()).suggestion;
+    assertEq(s.scadenza, near);
+  });
+
   await test('titolo "Gas/Luce" senza nessuna prova: la categoria di energia resta vuota (niente indovinelli); con una prova nel testo si tiene', async () => {
     mistralReply = { content: '{"modulo":"spese_casa","categoria":"Gas","fornitore":"A2A","importo":null,"scadenza":null,"confidenza":"media"}' };
     let s = (await (await call('/classify-bill', bill({ oggetto: 'La tua bolletta Gas/Luce', testo: 'La tua bolletta è pronta' }))).json()).suggestion;

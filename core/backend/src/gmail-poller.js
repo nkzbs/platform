@@ -134,24 +134,25 @@ function estraiDateEtichettate(testo) {
 // sopra. Nessuna garanzia di trovarla: torna null se non c'è nulla di
 // plausibile, l'utente la aggiunge a mano in fase di revisione.
 function estraiScadenzaGenerica(testo, rifDate) {
-  const trovate = [];
+  const parse = (g, mese, anno) => { const d = new Date(Date.UTC(+anno, +mese - 1, +g)); return !isNaN(d) && d.getUTCMonth() === +mese - 1 ? d : null; };
   const reNumerica = /\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})\b/g;
-  let m;
-  while ((m = reNumerica.exec(testo))) {
-    const [, g, mese, anno] = m;
-    const d = new Date(Date.UTC(+anno, +mese - 1, +g));
-    if (!isNaN(d) && d.getUTCMonth() === +mese - 1) trovate.push(d);
-  }
   const reTestuale = new RegExp('\\b(\\d{1,2})\\s+(' + MESI.join('|') + ')\\s+(\\d{4})\\b', 'gi');
-  while ((m = reTestuale.exec(testo))) {
-    const [, g, meseNome, anno] = m;
-    const meseIdx = MESI.indexOf(meseNome.toLowerCase());
-    trovate.push(new Date(Date.UTC(+anno, meseIdx, +g)));
-  }
-  const future = trovate.filter((d) => d.getTime() > rifDate.getTime());
+  const trovate = []; // { d, ctx }
+  let m;
+  while ((m = reNumerica.exec(testo))) { const d = parse(m[1], m[2], m[3]); if (d) trovate.push({ d, ctx: testo.slice(Math.max(0, m.index - 45), m.index).toLowerCase() }); }
+  while ((m = reTestuale.exec(testo))) { const idx = MESI.indexOf(m[2].toLowerCase()); const d = parse(m[1], idx + 1, m[3]); if (d) trovate.push({ d, ctx: testo.slice(Math.max(0, m.index - 45), m.index).toLowerCase() }); }
+  // Una data è "del contratto" (durata, rinnovo, decorrenza): non è mai la scadenza del pagamento.
+  const delContratto = (t) => /contratt|decorrenz|rinnov|validit|offerta|periodo di/.test(t.ctx);
+  const future = trovate.filter((t) => t.d.getTime() > rifDate.getTime() && !delContratto(t));
   if (future.length === 0) return null;
-  future.sort((a, b) => b.getTime() - a.getTime());
-  return future[0].toISOString().slice(0, 10);
+  // 1) una data introdotta da "entro il", "scadenza", "da pagare entro"...: è la scadenza del pagamento
+  const conEtichetta = future.filter((t) => /(entro\s+il|scadenza|pagare\s+entro|pagamento\s+entro|rata\s+unica)[:\s]*$/.test(t.ctx));
+  if (conEtichetta.length) return conEtichetta.sort((a, b) => a.d - b.d)[0].d.toISOString().slice(0, 10);
+  // 2) altrimenti la più vicina nei prossimi 90 giorni. Prima si prendeva la PIÙ LONTANA, che per una bolletta è quasi sempre
+  //    la fine di un contratto o di un'offerta (es. 2028), non quando si paga.
+  const vicine = future.filter((t) => t.d.getTime() - rifDate.getTime() <= 90 * 86400000);
+  if (!vicine.length) return null;
+  return vicine.sort((a, b) => a.d - b.d)[0].d.toISOString().slice(0, 10);
 }
 
 // Un sollecito/reminder di una bolletta già registrata non deve creare una
@@ -304,4 +305,4 @@ function startGmailPoller() {
   setInterval(pollGmail, 15 * 60 * 1000);
 }
 
-module.exports = { startGmailPoller, pollGmail, estraiImporto };
+module.exports = { startGmailPoller, pollGmail, estraiImporto, estraiScadenzaGenerica };

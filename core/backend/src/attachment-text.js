@@ -49,7 +49,7 @@ function energyHint(text) {
 
 // Righe utili, senza codici lunghi (POD, PDR, numeri di cliente, IBAN...), al massimo ~1500 caratteri.
 function relevantExtract(text) {
-  const KEEP = /(totale|importo|scadenza|da pagare|kwh|smc|\bmc\b|fornitura|energia|gas|luce|consumo|periodo|bolletta)/i;
+  const KEEP = /(totale|importo|scadenza|da pagare|entro il|rata unica|kwh|smc|\bmc\b|fornitura|energia|gas|luce|consumo|periodo|bolletta)/i;
   const lines = String(text || '').split('\n').map((l) => l.replace(/\b[A-Z0-9]{12,}\b/g, ' ').replace(/\s+/g, ' ').trim()).filter((l) => l.length > 3 && KEEP.test(l));
   return [...new Set(lines)].join(' | ').slice(0, 1500);
 }

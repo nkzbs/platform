@@ -154,6 +154,12 @@ reali di Finance (6 righe → 1 destinatario e 5 regole). I backup JSON includon
 
 ### Corretto durante il lavoro
 
+- **Scadenza sbagliata (2028) sulle bollette.** `estraiScadenzaGenerica` sceglieva la data futura **più lontana** del testo, che in una
+  bolletta è la fine del contratto ("Data di scadenza del contratto: 30.04.2028"), non la scadenza del pagamento ("Rata unica entro il
+  08.09.2026", caso reale A2A). Ora: prima una data introdotta da "entro il / scadenza / rata unica", mai una data del contratto, di
+  rinnovo o di offerta; altrimenti la più **vicina** nei prossimi 90 giorni; altrimenti nessuna. Anche l'assistente scarta una scadenza
+  più lontana di ~13 mesi, e il pannello mostra sempre cosa ha capito (anche i campi già giusti, "già impostato").
+
 - **Luce o gas, controllato sui PDF veri.** La bolletta A2A da 201 € è luce (595 kWh); quella segnata "44 €" è **gas** e il 44 era il consumo
   (44 Smc), non l'importo: il lettore delle email prendeva i consumi per euro. Ora `estraiImporto` scarta le quantità (Smc, kWh, mc, kW).
   Inoltre, con un titolo "Gas/Luce" e **nessuna prova** (né PDF né kWh/Smc nel testo) il modello tirava a indovinare: ora la categoria di

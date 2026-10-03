@@ -7,6 +7,17 @@ import Icon from './Icon'
 const MODULO_LABEL = { spese_casa: 'Spese casa', spese_personali: 'Spese personali' }
 const fmtEur = (n) => (n == null ? '—' : Number(n).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' }))
 
+// Un campo che l'assistente conferma senza cambiarlo: lo si mostra comunque, così si vede cosa ha capito (es. "Categoria: Elettricità").
+function Same({ label, value }) {
+  return (
+    <div className="flex items-center gap-1.5 text-xs">
+      <span className="text-gray-500 w-20 flex-shrink-0">{label}</span>
+      <span className="text-ink font-medium">{value}</span>
+      <span className="text-gray-600">· già impostato</span>
+    </div>
+  )
+}
+
 function Change({ label, from, to }) {
   return (
     <div className="flex items-center gap-1.5 text-xs">
@@ -89,9 +100,10 @@ export default function AiSuggestionsPanel({ token, isAdmin }) {
               <div className="min-w-0 flex-1">
                 <div className="text-sm text-ink font-medium truncate">{s.record.descrizione} <span className="text-gray-500 font-normal">· {fmtEur(s.record.importo)} · {s.record.data} · {MODULO_LABEL[s.module_slug] || s.module_slug}</span></div>
                 <div className="mt-1.5 space-y-0.5">
-                  {p.categoria && p.categoria !== s.corrente.categoria && <Change label="Categoria" from={s.corrente.categoria} to={p.categoria} />}
-                  {p.importo != null && p.importo !== Number(s.corrente.importo || 0) && <Change label="Importo" from={s.corrente.importo ? fmtEur(s.corrente.importo) : null} to={fmtEur(p.importo)} />}
-                  {p.scadenza && p.scadenza !== s.corrente.scadenza && <Change label="Scadenza" from={s.corrente.scadenza} to={p.scadenza} />}
+                  {p.categoria && (p.categoria !== s.corrente.categoria ? <Change label="Categoria" from={s.corrente.categoria} to={p.categoria} /> : <Same label="Categoria" value={p.categoria} />)}
+                  {!p.categoria && <div className="text-xs text-gray-500">Categoria: non si capisce dal documento, scegli tu.</div>}
+                  {p.importo != null && (p.importo !== Number(s.corrente.importo || 0) ? <Change label="Importo" from={s.corrente.importo ? fmtEur(s.corrente.importo) : null} to={fmtEur(p.importo)} /> : <Same label="Importo" value={fmtEur(p.importo)} />)}
+                  {p.scadenza && (p.scadenza !== s.corrente.scadenza ? <Change label="Scadenza" from={s.corrente.scadenza} to={p.scadenza} /> : <Same label="Scadenza" value={p.scadenza} />)}
                   {p.fornitore && <Change label="Fornitore" from={null} to={p.fornitore} />}
                   {p.modulo && p.modulo !== s.module_slug && <div className="text-xs text-amber-400">Sembra una voce di «{MODULO_LABEL[p.modulo] || p.modulo}»: lo sposto a mano se è così.</div>}
                 </div>
