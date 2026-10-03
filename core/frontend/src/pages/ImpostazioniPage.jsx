@@ -298,8 +298,7 @@ const SETTINGS_TABS = [
   { key: 'connessioni', icon: 'link', label: 'Connessioni' },
   { key: 'notifiche', icon: 'bell', label: 'Notifiche' },
   { key: 'assistente', icon: 'wand', label: 'Assistente AI' },
-  { key: 'export_dati', icon: 'download', label: 'Export dati' },
-  { key: 'backup', icon: 'shield', label: 'Backup' },
+  { key: 'export_dati', icon: 'download', label: 'Dati' },
   { key: 'account', icon: 'user', label: 'Il mio account' },
 ]
 
@@ -345,8 +344,20 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
       {tab === 'assistente' && <AiSettingsTab token={token} features={features} />}
 
 
-      {tab === 'backup' && isAdmin && <BackupPage token={token} />}
-      {tab === 'export_dati' && canExport && <ExportDatiPage token={token} modules={modules} user={user} />}
+      {tab === 'export_dati' && canExport && (
+        <div className="space-y-8">
+          <section>
+            <h2 className="text-sm font-semibold text-ink mb-1">Export</h2>
+            <ExportDatiPage token={token} modules={modules} user={user} />
+          </section>
+          {isAdmin && (
+            <section>
+              <h2 className="text-sm font-semibold text-ink mb-3">Backup</h2>
+              <BackupPage token={token} />
+            </section>
+          )}
+        </div>
+      )}
     </div>
   )
 }
