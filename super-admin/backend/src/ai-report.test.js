@@ -138,7 +138,7 @@ async function main() {
 
   console.log('\n--- "Come sta andando" ---');
 
-  const INS = { month: '2026-09', in_corso: false, entrate: 1799.58, spese: 1500, saldo: 299.58, risparmio_pct: 16.6, spese_pagate: 1400, spese_da_pagare: 100, spese_fisse: 900, spese_variabili: 600,
+  const INS = { month: '2026-09', in_corso: false, entrate: 1799.58, spese: 1500, saldo: 299.58, risparmio_pct: 16.6, accantonato: 292.9, accantonato_stimato: true, risparmio_vero_pct: 28.2, spese_pagate: 1400, spese_da_pagare: 100, spese_fisse: 900, spese_variabili: 600,
     confronti: { mese_precedente: { mese: '2026-08', entrate: 1669.66, spese: 1200, spese_variazione_pct: 25 }, anno_precedente: { mese: '2025-09', entrate: 1805.43, spese: 1100, spese_variazione_pct: 36.4 }, media_12_mesi: { entrate: 2100, spese: 1300, spese_variazione_pct: 15.4 } },
     categorie: [{ nome: 'Elettricità', valore: 300, media_6m: 200, variazione_pct: 50 }, { nome: 'Alimentari', valore: 250, media_6m: 240, variazione_pct: 4.2 }],
     anomalie: [{ tipo: 'sopra_la_media', nome: 'Elettricità', valore: 300, media_6m: 200, variazione_pct: 50 }] };
@@ -148,6 +148,13 @@ async function main() {
     const { payload } = rep.sanitizeInsights({ ...INS, descrizioni: ['segreto'], categorie: [{ nome: 'mario.rossi@gmail.com', valore: 5, righe: ['x'] }] });
     assertEq(payload.mese, '2026-09');
     assertTrue(!JSON.stringify(payload).includes('segreto') && !JSON.stringify(payload).includes('mario.rossi') && !JSON.stringify(payload).includes('righe'), JSON.stringify(payload));
+  });
+
+  await test('accantonato, stima e risparmio vero passano all\'assistente e si possono citare', async () => {
+    const { payload, numeri } = rep.sanitizeInsights(INS);
+    assertEq(payload.accantonato, 292.9); assertEq(payload.accantonato_stimato, true); assertEq(payload.risparmio_vero_pct, 28.2);
+    assertTrue(rep.verifyNumbers('Con 292,90 euro accantonati il risparmio vero è del 28,2%.', numeri).ok);
+    assertEq(rep.verifyNumbers('Il risparmio vero è del 35%.', numeri).ok, false);
   });
 
   await test('mese non valido o entrate/spese mancanti -> errore', () => {

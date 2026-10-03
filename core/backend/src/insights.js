@@ -7,9 +7,17 @@
 const crypto = require('crypto');
 const db = require('./db');
 
+// La vista è quella PERSONALE ("io"): stipendi meno spese personali (comprese le quote versate alla casa,
+// categoria 'Contributo Casa'). Le spese di casa e i contributi alla casa registrati come entrate stanno nel
+// registro della casa, in parte pagate da altri (es. l'affitto): non sono una spesa personale.
+// Accantonamento (es. il 10% del lordo trattenuto in busta e versato in un fondo): non arriva sul conto, ma è
+// risparmio vero. Si legge dalle righe delle categorie `savings_categories` e dal campo `savings_field` delle
+// righe di stipendio; dove manca si stima dal rapporto con il netto degli altri mesi (e lo si dice).
 const DEFAULT_CONFIG = {
-  entrate: { modules: ['entrate'], amount: 'importo', date: 'data', category: 'categoria', exclude_categories: ['Risparmi', 'Fondo'] },
-  spese: { modules: ['spese_casa', 'spese_personali'], amount: 'importo', date: 'data', category: 'categoria', status: '_stato', fixed: 'fisso' },
+  entrate: { modules: ['entrate'], amount: 'importo', date: 'data', category: 'categoria', group: 'gruppo',
+    exclude_categories: ['Risparmi', 'Fondo'], exclude_groups: ['Casa'], exclude_descriptions: ['Saldo conto'],
+    salary_categories: ['Stipendio'], savings_categories: ['Fondo'], savings_field: 'accantonamento_suggerito' },
+  spese: { modules: ['spese_personali'], amount: 'importo', date: 'data', category: 'categoria', status: '_stato', fixed: 'fisso' },
   anomaly: { pct: 25, min_delta_eur: 20, window_months: 6 },
   balance_floor_eur: 300,
 };
@@ -56,17 +64,27 @@ function installedModules(slugs) {
 
 // Legge i record una volta sola e li raggruppa per mese.
 function collect(cfg) {
-  const entrate = {}, spese = {};
+  const entrate = {}, spese = {}, stipendi = {}, accantonato = {};
   const spCat = {}; // mese -> categoria -> totale
   const spFix = {}; // mese -> { fisse, variabili }
   const spStato = {}; // mese -> { pagate, da_pagare }
-  const ex = new Set(cfg.entrate.exclude_categories || []);
-  for (const slug of installedModules(cfg.entrate.modules)) {
+  const E = cfg.entrate;
+  const exCat = new Set(E.exclude_categories || []), exGrp = new Set(E.exclude_groups || []);
+  const exDesc = (E.exclude_descriptions || []).map((x) => String(x).trim().toLowerCase());
+  const sav = new Set(E.savings_categories || []), sal = new Set(E.salary_categories || []);
+  for (const slug of installedModules(E.modules)) {
     for (const r of db.prepare('SELECT data FROM records WHERE module_slug = ?').all(slug)) {
       let d; try { d = JSON.parse(r.data); } catch (e) { continue; }
-      const m = monthOf(d[cfg.entrate.date]); const a = num(d[cfg.entrate.amount]);
-      if (!m || a == null || ex.has(d[cfg.entrate.category])) continue;
+      const m = monthOf(d[E.date]); const a = num(d[E.amount]);
+      if (!m || a == null) continue;
+      if (exGrp.has(d[E.group])) continue; // registro della casa, non entrate personali
+      if (exDesc.includes(String(d.descrizione || '').trim().toLowerCase())) continue; // es. riporto di saldo
+      // l'accantonamento trattenuto in busta: righe di categoria "fondo" oppure il campo sulla riga dello stipendio
+      if (sav.has(d[E.category])) accantonato[m] = (accantonato[m] || 0) + a;
+      else if (sal.has(d[E.category]) && (num(d[E.savings_field]) || 0) > 0) accantonato[m] = (accantonato[m] || 0) + num(d[E.savings_field]);
+      if (exCat.has(d[E.category])) continue;
       entrate[m] = (entrate[m] || 0) + a;
+      if (sal.has(d[E.category])) stipendi[m] = (stipendi[m] || 0) + a;
     }
   }
   for (const slug of installedModules(cfg.spese.modules)) {
@@ -85,7 +103,22 @@ function collect(cfg) {
       if (d[cfg.spese.status] === 'pagato') st.pagate += a; else st.da_pagare += a;
     }
   }
-  return { entrate, spese, spCat, spFix, spStato };
+  return { entrate, spese, spCat, spFix, spStato, stipendi, accantonato };
+}
+
+// Accantonamento per mese: quello registrato; dove manca (da quando è cominciato) si stima con il rapporto
+// mediano tra accantonato e stipendio netto dei mesi che hanno entrambi. Ritorna { valore, stimato }.
+function accantonamentoMese(month, { stipendi, accantonato }) {
+  const first = Object.keys(accantonato).sort()[0];
+  if (!first || month < first) return { valore: 0, stimato: false };
+  if (accantonato[month]) return { valore: round2(accantonato[month]), stimato: false };
+  const net = stipendi[month];
+  if (!net) return { valore: 0, stimato: false };
+  const ratios = Object.keys(accantonato).filter((m) => stipendi[m] > 0).map((m) => accantonato[m] / stipendi[m]).sort((a, b) => a - b);
+  if (!ratios.length) return { valore: 0, stimato: false };
+  const mid = Math.floor(ratios.length / 2);
+  const median = ratios.length % 2 ? ratios[mid] : (ratios[mid - 1] + ratios[mid]) / 2;
+  return { valore: round2(net * median), stimato: true };
 }
 
 const sumRange = (obj, from, to) => { let t = 0; for (let m = from; m <= to; m = addMonths(m, 1)) t += obj[m] || 0; return t; };
@@ -97,7 +130,8 @@ function buildSnapshot(month, now = new Date()) {
   const mods = [...installedModules(cfg.entrate.modules), ...installedModules(cfg.spese.modules)];
   if (!installedModules(cfg.entrate.modules).length || !installedModules(cfg.spese.modules).length) return { available: false, reason: 'Servono almeno un modulo di entrate e uno di spese installati.' };
   month = month && /^\d{4}-\d{2}$/.test(month) ? month : lastClosedMonth(now);
-  const { entrate, spese, spCat, spFix, spStato } = collect(cfg);
+  const col = collect(cfg);
+  const { entrate, spese, spCat, spFix, spStato } = col;
   const en = entrate[month] || 0, sp = spese[month] || 0;
   const prev = addMonths(month, -1), yearAgo = addMonths(month, -12);
   const w = cfg.anomaly.window_months;
@@ -105,6 +139,7 @@ function buildSnapshot(month, now = new Date()) {
   const avg12 = (obj) => { const from = addMonths(month, -12), to = addMonths(month, -1); const n = monthsWithData(obj, from, to); return n ? sumRange(obj, from, to) / n : null; };
   const e12 = avg12(entrate), s12 = avg12(spese);
   const cur = now.toISOString().slice(0, 7);
+  const acc = accantonamentoMese(month, col);
 
   // La media si fa solo sui mesi della finestra in cui ci sono spese: un mese senza dati (storico
   // che non è ancora cominciato) non vale zero, altrimenti ogni variazione risulterebbe gonfiata.
@@ -120,9 +155,10 @@ function buildSnapshot(month, now = new Date()) {
     if (c.media_6m >= cfg.anomaly.min_delta_eur && c.variazione_pct != null && c.variazione_pct >= cfg.anomaly.pct && delta >= cfg.anomaly.min_delta_eur) anomalie.push({ tipo: 'sopra_la_media', ...c });
     else if (c.media_6m === 0 && c.valore >= 50) anomalie.push({ tipo: 'categoria_nuova', ...c });
   }
-  const limiti = ['Conta solo ciò che è registrato in Finance (' + [...installedModules(cfg.spese.modules)].join(', ') + ' per le spese): i pagamenti con carta o da altri conti non registrati non compaiono.',
-    'Non sono conteggiati come entrate: ' + ((cfg.entrate.exclude_categories || []).join(', ') || 'nessuna categoria esclusa') + '.',
+  const limiti = ['Vista personale: conta ciò che è registrato in Finance (' + [...installedModules(cfg.spese.modules)].join(', ') + ' per le spese). Le spese di casa (affitto, bollette) non sono incluse: contano solo le quote che versi tu alla casa, se registrate come "Contributo Casa". I pagamenti con carta o da altri conti non registrati non compaiono.',
+    'Non sono conteggiati come entrate: ' + ((cfg.entrate.exclude_categories || []).join(', ') || 'nessuna categoria esclusa') + ', i contributi alla casa e i riporti di saldo.',
     'Le righe "da smistare" non contano come spese finché non le smisti.'];
+  if (acc.valore) limiti.push('L\'accantonamento (fondo o azioni, trattenuto in busta paga) non arriva sul conto: è contato come risparmio.' + (acc.stimato ? ' Per questo mese è una stima (circa ' + Math.round((acc.valore / (col.stipendi[month] || 1)) * 100) + '% del netto, come negli altri mesi): manca la riga con l\'importo vero.' : ''));
   if (month >= cur) limiti.unshift('Mese in corso: i dati sono parziali.');
   if (!en) limiti.unshift('Nessuna entrata registrata in questo mese: il saldo e il risparmio non sono significativi.');
 
@@ -131,6 +167,9 @@ function buildSnapshot(month, now = new Date()) {
     available: true, month, in_corso: month >= cur,
     entrate: round2(en), spese: round2(sp), saldo: round2(en - sp),
     risparmio_pct: en > 0 ? Math.round(((en - sp) / en) * 1000) / 10 : null,
+    accantonato: acc.valore, accantonato_stimato: acc.stimato,
+    // risparmio vero: quello che resta sul conto più quello trattenuto in busta, sul totale guadagnato
+    risparmio_vero_pct: en + acc.valore > 0 ? Math.round(((en - sp + acc.valore) / (en + acc.valore)) * 1000) / 10 : null,
     spese_pagate: round2(st.pagate), spese_da_pagare: round2(st.da_pagare),
     spese_fisse: round2(fx.fisse), spese_variabili: round2(fx.variabili),
     confronti: {

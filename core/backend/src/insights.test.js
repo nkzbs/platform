@@ -62,6 +62,8 @@ async function main() {
   sp('spese_casa', '2026-09-10', 300, 'Elettricità', { fisso: true }); sp('spese_personali', '2026-09-15', 210, 'Alimentari'); sp('spese_personali', '2026-09-20', 80, 'Benzina', { _stato: 'da_pagare' });
   sp('spese_casa', '2026-09-12', 0, 'Gas', { _stato: 'da_smistare' });
 
+  // Questi test usano casa + personali insieme, come all'inizio (il default ora è la sola vista personale, provato più sotto).
+  insights.saveConfig({ spese: { modules: ['spese_casa', 'spese_personali'] } });
   const NOW = new Date('2026-10-03T10:00:00Z');
   const snap = () => insights.buildSnapshot('2026-09', NOW);
 
@@ -100,6 +102,53 @@ async function main() {
     insights.saveConfig({ anomaly: { pct: 25 } });
   });
 
+  console.log('\n--- vista personale: cosa non è entrata e cosa non è spesa mia ---');
+
+  await test('i contributi alla casa (gruppo Casa) e i riporti di saldo non sono entrate personali', () => {
+    rec('entrate', { descrizione: 'Contributo Casa', data: '2026-09-27', importo: 500, categoria: 'Contributo Casa', gruppo: 'Casa' });
+    rec('entrate', { descrizione: 'Saldo conto', data: '2026-09-26', importo: 1202, categoria: 'Altro', gruppo: 'Personale' });
+    assertEq(snap().entrate, 1799.58, 'restano solo gli stipendi');
+  });
+  await test('il default è la sola vista personale: le spese di casa (affitto, bollette, pagate anche da altri) non contano', () => {
+    assertEq(JSON.stringify(insights.DEFAULT_CONFIG.spese.modules), JSON.stringify(['spese_personali']));
+    insights.saveConfig({ spese: { modules: ['spese_personali'] } });
+    assertEq(snap().spese, 290, 'solo Alimentari 210 + Benzina 80');
+    insights.saveConfig({ spese: { modules: ['spese_casa', 'spese_personali'] } });
+  });
+  await test('una quota versata alla casa, registrata tra le spese personali ("Contributo Casa"), conta come spesa mia', () => {
+    insights.saveConfig({ spese: { modules: ['spese_personali'] } });
+    const id = sp('spese_personali', '2026-09-05', 500, 'Contributo Casa');
+    assertEq(snap().spese, 790);
+    db.prepare('DELETE FROM records WHERE id = ?').run(id);
+    insights.saveConfig({ spese: { modules: ['spese_casa', 'spese_personali'] } });
+  });
+
+  console.log('\n--- accantonamento trattenuto in busta ---');
+
+  // maggio: accantonamento registrato (riga Fondo, 150 su 1000 di netto); giugno, luglio, agosto: nessuna riga -> stima; settembre: 99 registrato
+  ent('2026-05-27', 150, 'Fondo');
+  await test('l\'accantonamento registrato (categoria Fondo) non è un\'entrata sul conto ma conta come risparmio', () => {
+    const s = insights.buildSnapshot('2026-05', NOW);
+    assertEq(s.entrate, 1000, 'il Fondo non è accreditato');
+    assertEq(s.accantonato, 150); assertEq(s.accantonato_stimato, false);
+    assertEq(s.risparmio_vero_pct, Math.round(((1000 - 300 + 150) / (1000 + 150)) * 1000) / 10);
+  });
+  await test('dove manca, si stima dal rapporto mediano accantonato/netto degli altri mesi, e lo dice', () => {
+    const s = insights.buildSnapshot('2026-06', NOW);
+    // rapporti: maggio 150/1000 = 0,15 ; settembre 99/1799,58 = 0,0550 -> mediana 0,1025
+    assertEq(s.accantonato, 102.51); assertEq(s.accantonato_stimato, true);
+    assertTrue(s.limiti.some((l) => /stima/.test(l)), 'il limite deve parlare di stima');
+  });
+  await test('prima che l\'accantonamento cominciasse (nessuna riga prima di maggio) non si stima niente', () => {
+    const s = insights.buildSnapshot('2026-04', NOW);
+    assertEq(s.accantonato, 0); assertEq(s.accantonato_stimato, false);
+    assertEq(s.risparmio_vero_pct, s.risparmio_pct);
+  });
+  await test('anche il campo accantonamento_suggerito sulla riga dello stipendio conta, senza stima', () => {
+    db.prepare("UPDATE records SET data = json_set(data, '$.accantonamento_suggerito', 120) WHERE module_slug = 'entrate' AND json_extract(data, '$.data') = '2026-07-27'").run();
+    const s = insights.buildSnapshot('2026-07', NOW);
+    assertEq(s.accantonato_stimato, false); assertEq(s.accantonato, 120);
+  });
   console.log('\n--- limiti dichiarati ---');
 
   await test('il mese in corso è segnalato come parziale; il mese senza entrate lo dice', () => {
@@ -173,6 +222,12 @@ async function main() {
     sa.status = 503; sa.reply = { error: 'Nessuna chiave', code: 'ai_not_configured' };
     r = await call('POST', '/explain', { month: '2026-09', refresh: true }); assertEq(r.status, 503);
     assertTrue(!!(await (await call('GET', '?month=2026-09')).json()).explanation, 'il testo precedente non va perso');
+  });
+
+  await test('l\'accantonamento arriva all\'assistente (numeri e flag di stima), così può citarlo', async () => {
+    sa.calls = [];
+    await call('POST', '/explain', { month: '2026-06', refresh: true });
+    assertEq(sa.calls[0].data.accantonato, insights.buildSnapshot('2026-06', NOW).accantonato); assertTrue(sa.calls[0].data.accantonato > 0); assertEq(sa.calls[0].data.accantonato_stimato, true);
   });
 
   console.log('\n--- impostazioni ---');

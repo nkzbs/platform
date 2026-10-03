@@ -77,14 +77,14 @@ function verifyNumbers(text, numeri) {
 // ─── "Come sta andando": riepilogo di un mese già calcolato dal tenant ─────────
 // Passano solo i campi previsti (numeri e nomi di categoria), ripuliti; tutti i numeri finiti
 // nel payload sono quelli che il modello può citare.
-const NUM_KEYS = ['entrate', 'spese', 'saldo', 'risparmio_pct', 'spese_pagate', 'spese_da_pagare', 'spese_fisse', 'spese_variabili'];
+const NUM_KEYS = ['entrate', 'spese', 'saldo', 'risparmio_pct', 'accantonato', 'risparmio_vero_pct', 'spese_pagate', 'spese_da_pagare', 'spese_fisse', 'spese_variabili'];
 function sanitizeInsights(data) {
   if (!data || typeof data !== 'object') return { error: 'data obbligatorio' };
   if (!/^\d{4}-\d{2}$/.test(String(data.month || ''))) return { error: 'month non valido' };
   const clean = (v, n) => redact(String(v == null ? '' : v)).replace(/[\r\n]+/g, ' ').trim().slice(0, n);
   const numeri = [];
   const n = (v) => { const x = numOrNull(v); if (x == null) return null; numeri.push(x, Math.abs(x)); return round2(x); };
-  const out = { mese: data.month, mese_in_corso: !!data.in_corso };
+  const out = { mese: data.month, mese_in_corso: !!data.in_corso, accantonato_stimato: !!data.accantonato_stimato };
   for (const k of NUM_KEYS) { const v = data[k] == null ? null : n(data[k]); if (v != null) out[k] = v; }
   if (out.entrate == null || out.spese == null) return { error: 'entrate e spese obbligatorie' };
   const c = data.confronti || {};
@@ -104,7 +104,7 @@ function sanitizeInsights(data) {
 }
 
 const PROMPTS = {
-  stato: `Sei un assistente che dice a una persona come stanno andando le sue finanze personali in un mese. Ricevi un JSON già calcolato: entrate, spese, saldo, risparmio_pct, confronti (mese precedente, anno precedente, media degli ultimi 12 mesi), categorie con valore, media_6m e variazione_pct, anomalie. Scrivi in italiano, massimo 110 parole, in questo ordine: 1) un giudizio chiaro in una frase (mese in positivo o in negativo e di quanto); 2) cosa lo spiega: le voci o le variazioni che pesano di più; 3) al massimo due cose che meritano attenzione, prendendole solo da "anomalie" e dai confronti. Se mese_in_corso è true, dillo: i dati sono parziali. USA SOLO numeri e nomi presenti nel JSON: non fare calcoli, non inventare, non dare consigli di investimento o fiscali, non fare supposizioni su cosa manca. Testo semplice: niente markdown, niente elenchi puntati, niente emoji.`,
+  stato: `Sei un assistente che dice a una persona come stanno andando le sue finanze personali in un mese. Ricevi un JSON già calcolato: entrate (accreditate sul conto), spese, saldo, risparmio_pct, accantonato (la quota dello stipendio trattenuta in busta e messa in un fondo: non arriva sul conto ma è risparmio), risparmio_vero_pct (il risparmio contando anche l'accantonato), confronti (mese precedente, anno precedente, media degli ultimi 12 mesi), categorie con valore, media_6m e variazione_pct, anomalie. Scrivi in italiano, massimo 110 parole, in questo ordine: 1) un giudizio chiaro in una frase (mese in positivo o in negativo e di quanto); 2) cosa lo spiega: le voci o le variazioni che pesano di più; 3) al massimo due cose che meritano attenzione, prendendole solo da "anomalie" e dai confronti. Se mese_in_corso è true, dillo: i dati sono parziali. Se accantonato_stimato è true, di' che l'accantonato è una stima. Parla di risparmio usando risparmio_vero_pct quando accantonato è maggiore di zero. USA SOLO numeri e nomi presenti nel JSON: non fare calcoli, non inventare, non dare consigli di investimento o fiscali, non fare supposizioni su cosa manca. Testo semplice: niente markdown, niente elenchi puntati, niente emoji.`,
   commento: `Sei un assistente che commenta un report di spese personali o familiari. Ricevi un JSON con i totali per categoria (valore, confronto col periodo precedente e variazione_pct già calcolata). Scrivi UN commento di una o due frasi, massimo 220 caratteri, in italiano, che dica cosa emerge di più importante (la voce più grande o la variazione più netta). USA SOLO numeri e nomi presenti nel JSON: non fare calcoli, non inventare, non dare consigli finanziari. Testo semplice: niente markdown, niente elenchi, niente emoji.`,
   spiegazione: `Sei un assistente che spiega un report di spese personali o familiari a chi lo sta guardando. Ricevi un JSON con i totali per categoria (valore, confronto col periodo precedente e variazione_pct già calcolata). Scrivi in italiano una spiegazione chiara di massimo 120 parole: le voci principali, cosa è cambiato rispetto al periodo precedente se c'è il confronto, cosa merita attenzione. USA SOLO numeri e nomi presenti nel JSON: non fare calcoli, non inventare, non dare consigli di investimento. Se i dati sono troppo pochi, dillo. Testo semplice: niente markdown, niente elenchi puntati.`,
 };

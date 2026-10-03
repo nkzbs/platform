@@ -167,9 +167,17 @@ reali di Finance (6 righe → 1 destinatario e 5 regole). I backup JSON includon
 **Principio.** Il programma fa i conti, Mistral li racconta. All'AI arrivano solo totali già calcolati, mai righe né
 descrizioni; ogni numero del testo è controllato da Super Admin (cfr. "Commento ai report").
 
-**Scelte fatte** (dopo aver confrontato Finance con gli estratti conto del conto personale e del Conto Casa, 2020-2026):
-- **Spese** = Spese Casa + Spese Personali; **entrate** = il modulo Entrate **senza** le categorie *Risparmi* e *Fondo*
-  (accantonamenti, non soldi guadagnati). Sono un'impostazione (`insights_config`), non codice fisso: vale anche per altri tenant.
+**Scelte fatte** (dopo aver confrontato Finance con gli estratti conto del conto personale e del Conto Casa, 2020-2026, e con le
+indicazioni di Nima del 2026-10-03):
+- **Vista personale ("io").** Entrate = stipendi (il netto accreditato). Spese = **solo Spese Personali**, comprese le quote versate
+  alla casa (categoria *Contributo Casa*). Le **spese di casa non contano**: sono un registro condiviso, e in parte le paga
+  Federica (l'affitto, spesso direttamente al proprietario: dai movimenti, dal 2026 non passa più dal Conto Casa). Contarle tutte
+  gonfiava le spese personali. Fuori dalle entrate anche i contributi alla casa (gruppo *Casa*) e i riporti di saldo ("Saldo conto").
+- **Accantonamento.** Dal 2025-12 una parte dello stipendio (10% del lordo) è **trattenuta in busta** e va in un fondo/azioni: sul
+  conto arriva il netto, e il netto 2026 è circa 290 €/mese più basso (confermato dai dati: 2.184 € contro 1.894 € di media
+  gennaio-settembre). Le righe *Fondo* non sono entrate sul conto, ma sono **risparmio vero**: la scheda mostra "Entrate sul conto",
+  "accantonati" e il risparmio contando anche l'accantonato. Dove manca la riga con l'importo vero, si **stima** con il rapporto
+  mediano accantonato/netto degli altri mesi, e la scheda lo dichiara ("stima"). Gli estratti conto non contengono il lordo.
 - **Pagamenti** e **Debiti** non contano come spese: le rate sono già dentro Spese Personali.
 - Le righe "da smistare" non sono spese finché non si smistano.
 - **Il mese di una spesa è il campo `data`** di Finance. Il confronto con le banche ha mostrato che le date delle spese NON sono
@@ -177,8 +185,9 @@ descrizioni; ogni numero del testo è controllato da Super Admin (cfr. "Commento
 - **Anomalia** = categoria con almeno +25% e +20 € rispetto alla media dei mesi precedenti (finestra di 6; la media conta solo
   i mesi con spese registrate), oppure una categoria nuova da almeno 50 €. Soglia minima di saldo 300 € (per la futura previsione di cassa).
 - **Gli stipendi** erano sfasati di un mese (-1 da maggio 2021 a dicembre 2025, +1 nel 2026), con importi arrotondati e 12 mancanti:
-  allineati agli estratti conto (75 righe, data e importo al centesimo). La vecchia app ha date giuste ma importi arrotondati
-  all'euro e in qualche mese diversi (es. 2025-09: 1860 contro 1.805,43 in banca).
+  allineati agli estratti conto (75 righe, data e importo al centesimo; lo stipendio arriva il 27, in passato intorno al 10 del mese).
+  La vecchia app ha date giuste ma importi arrotondati all'euro e in qualche mese diversi (es. 2025-09: 1860 contro 1.805,43 in banca):
+  si tengono gli importi della banca.
 
 **Limite dichiarato.** Finance non vede tutto: solo il 22-42% delle spese registrate compare sul conto personale e circa
 21.000 € l'anno di uscite (pagamenti con carta, prelievi, giri tra conti) non hanno una spesa corrispondente. La scheda lo dice
