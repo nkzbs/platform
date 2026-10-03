@@ -9,7 +9,15 @@ const db = require('./db');
 const whatsapp = require('./whatsapp');
 const { logAudit } = require('./audit-log');
 
-const MODULES = [['spese_casa', 'casa'], ['spese_personali', 'pers.']];
+// Valori di partenza se nessun modulo ha dichiarato di lavorare negli avvisi (vedi module-roles.js).
+const FALLBACK_MODULES = [{ slug: 'spese_casa', label: 'casa', roles: {} }, { slug: 'spese_personali', label: 'pers.', roles: {} }];
+const SHORT = { spese_casa: 'casa', spese_personali: 'pers.' };
+function digestModules() {
+  let declared = [];
+  try { declared = require('./module-roles').list({ kind: 'spesa', use: 'avvisi' }); } catch (e) { /* tabella non pronta */ }
+  if (!declared.length) return FALLBACK_MODULES;
+  return declared.map((m) => ({ slug: m.module_slug, label: SHORT[m.module_slug] || String(m.name || m.module_slug).toLowerCase(), roles: m.roles }));
+}
 const TAG = 'scadenza'; // lo stesso tag degli avvisi per riga: chi li riceveva riceve il riepilogo
 const LATE_DAYS = 45; // oltre questa soglia una riga "da pagare" è un residuo vecchio, non un ritardo
 const MAX_LINES = 5;
@@ -55,14 +63,15 @@ function buildDigest(now = new Date()) {
   const lateFrom = addDays(today, -LATE_DAYS);
   const groups = { oggi: [], domani: [], ritardo: [] };
   let daSmistare = 0;
-  for (const [slug, label] of MODULES) {
+  for (const { slug, label, roles } of digestModules()) {
+    const fStato = roles.stato || '_stato', fScad = roles.scadenza || 'scadenza', fData = roles.data || 'data', fDesc = roles.descrizione || 'descrizione', fImp = roles.importo || 'importo';
     for (const r of db.prepare('SELECT data FROM records WHERE module_slug = ?').all(slug)) {
       let d; try { d = JSON.parse(r.data); } catch (e) { continue; }
-      if (d._stato === 'da_smistare') { daSmistare++; continue; }
-      if (d._stato !== 'da_pagare') continue;
-      const due = d.scadenza || d.data;
+      if (d[fStato] === 'da_smistare') { daSmistare++; continue; }
+      if (d[fStato] !== 'da_pagare') continue;
+      const due = d[fScad] || d[fData];
       if (!due) continue;
-      const item = { descrizione: String(d.descrizione || '(senza descrizione)').trim(), label, importo: Number(d.importo) || 0, due };
+      const item = { descrizione: String(d[fDesc] || '(senza descrizione)').trim(), label, importo: Number(d[fImp]) || 0, due };
       if (due === today) groups.oggi.push(item);
       else if (due === tomorrow) groups.domani.push(item);
       else if (due < today && due >= lateFrom) groups.ritardo.push(item);

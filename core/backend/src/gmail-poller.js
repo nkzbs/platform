@@ -217,22 +217,27 @@ async function processaMessaggio(accessToken, msgId, rule) {
   const scadenza = dateEtichettate.dataScadenza || estraiScadenzaGenerica(testoCompleto, emailDate);
   const dataSpesa = dateEtichettate.dataVersamento || emailDate.toISOString().slice(0, 10);
 
-  const moduleSlug = rule.gruppo === 'Casa' ? 'spese_casa' : 'spese_personali';
+  // Il modulo dove scrivere lo sceglie la regola; i nomi dei campi li dichiara il modulo (module-roles.js). Senza scelta resta il
+  // comportamento di prima: gruppo Casa -> spese_casa, altrimenti spese_personali.
+  const mr = require('./module-roles');
+  let moduleSlug = rule.modulo && db.prepare('SELECT 1 FROM modules WHERE slug = ? AND installed = 1').get(rule.modulo) ? rule.modulo : (rule.gruppo === 'Casa' ? 'spese_casa' : 'spese_personali');
+  const declared = mr.get(moduleSlug);
+  const F = { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', fisso: 'fisso', ...((declared && declared.roles) || {}) };
   const dataRecord = {
-    descrizione: rule.descrizione || subject,
-    importo: importo || 0,
-    data: dataSpesa,
-    categoria: raffinaCategoria(subject, rule.categoria || 'Altro'),
+    [F.descrizione]: rule.descrizione || subject,
+    [F.importo]: importo || 0,
+    [F.data]: dataSpesa,
+    [F.categoria]: raffinaCategoria(subject, rule.categoria || 'Altro'),
     note: 'Importato da Gmail (' + rule.mittente + '): ' + subject + (importo ? '' : ' — importo non rilevato automaticamente, verificare'),
-    _stato: 'da_smistare',
-    fisso: false,
+    [F.stato]: 'da_smistare',
+    [F.fisso]: false,
   };
-  if (scadenza) dataRecord.scadenza = scadenza;
+  if (scadenza) dataRecord[F.scadenza] = scadenza;
 
   const result = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(moduleSlug, null, JSON.stringify(dataRecord));
   const recordId = result.lastInsertRowid;
   // La riga resta in "da smistare" finché non la smisti tu; intanto parte l'avviso WhatsApp.
-  require('./smistare-notify').notifyDaSmistare({ descrizione: dataRecord.descrizione, importo, scadenza });
+  require('./smistare-notify').notifyDaSmistare({ descrizione: dataRecord[F.descrizione], importo, scadenza });
   // Stesso fireTrigger('nuovo_record', ...) che routes/records.js chiama per un
   // record creato dall'utente — senza questo, un'automazione con trigger "Nuovo
   // record" su spese_casa/spese_personali non scattava MAI per le spese importate
@@ -256,7 +261,7 @@ async function processaMessaggio(accessToken, msgId, rule) {
   if (scadenza) {
     try {
       await createCalendarEvent({
-        summary: dataRecord.descrizione + (importo ? ' — €' + importo.toFixed(2) : ''),
+        summary: dataRecord[F.descrizione] + (importo ? ' — €' + importo.toFixed(2) : ''),
         description: 'Scadenza rilevata automaticamente da un\'email di ' + rule.mittente + '.\n' + subject,
         date: scadenza,
       });

@@ -1,6 +1,7 @@
 import React from 'react'
 import Icon from '../../components/Icon'
 import { MODULE_ICON_CHOICES, MODULE_COLOR_CHOICES } from './constants'
+import ModuleRolesSection from './ModuleRolesSection'
 
 // Builder 2.0 — pannello destro "Proprietà"/"Cronologia" (dal mockup mostrato
 // dall'utente). Prima questi stessi controlli erano tutti ammassati in una
@@ -8,7 +9,7 @@ import { MODULE_ICON_CHOICES, MODULE_COLOR_CHOICES } from './constants'
 // fisso, nessun campo nuovo inventato: ogni toggle scrive una colonna reale
 // già esistente su modules (vedi PATCH /modules/:slug). "Moduli correlati" è
 // calcolato da fieldCache (stessa fonte di ModelCanvas), zero nuove chiamate.
-function PropertiesPanel({ mod, schema, fieldCache, allModules, onUpdate, onSelectModule, showIconPicker, setShowIconPicker, history, restoreVersion, tab, setTab }) {
+function PropertiesPanel({ token, baseUrl, mod, schema, fieldCache, allModules, onUpdate, onSelectModule, showIconPicker, setShowIconPicker, history, restoreVersion, tab, setTab }) {
   if (!mod) return null
 
   const related = []
@@ -109,6 +110,8 @@ function PropertiesPanel({ mod, schema, fieldCache, allModules, onUpdate, onSele
                 )}
               </div>
             )}
+
+            <ModuleRolesSection token={token} baseUrl={baseUrl} slug={mod.slug} fields={(schema?.steps || []).filter((s) => s.block_type === 'field')} />
 
             <div className="border-t border-gray-800 pt-3">
               <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Moduli correlati ({relatedUnique.length})</div>

@@ -26,6 +26,8 @@ const insightsRoutes = require('./routes/insights');
 const bankRoutes = require('./routes/bank');
 const featuresRoutes = require('./routes/features');
 const features = require('./features');
+const moduleRolesRoutes = require('./routes/module-roles');
+const moduleRoles = require('./module-roles');
 const digestRoutes = require('./routes/digest');
 const { startDailyDigest } = require('./daily-digest');
 const { startAuditRetentionScheduler } = require('./audit-retention-scheduler');
@@ -81,6 +83,7 @@ const routeMounts = [
   ['/insights', insightsRoutes],
   ['/bank', bankRoutes],
   ['/features', featuresRoutes],
+  ['/module-roles', moduleRolesRoutes],
   ['/', notificationSettingsRoutes],
   ['/digest', digestRoutes],
   ['/site-pages', siteAdminRouter],
@@ -157,6 +160,7 @@ app.use((err, req, res, next) => {
 // Destinatari WhatsApp e regole Gmail non sono più moduli: porta nelle tabelle nuove le righe rimaste.
 require('./notification-settings').migrateLegacy();
 require('./legacy-cleanup').removeStubModules();
+if (moduleRoles.seedIfEmpty()) console.log('Ruoli dei moduli: dichiarati per i moduli di finanza già presenti');
 if (features.seedIfEmpty()) console.log('Funzioni: tenant con moduli di finanza, funzioni accese; le altre restano spente');
 
 app.listen(PORT, () => {

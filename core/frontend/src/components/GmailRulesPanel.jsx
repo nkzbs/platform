@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from './Icon'
 
-const EMPTY = { mittente: '', descrizione: '', gruppo: 'Casa', categoria: '', attiva: true }
+const EMPTY = { mittente: '', descrizione: '', gruppo: 'Casa', modulo: '', categoria: '', attiva: true }
 const inputCls = 'w-full bg-surface-page text-ink px-3 py-2 rounded-lg outline-none border border-gray-800 focus:border-accent text-sm placeholder-gray-600'
 
 // Quali mail diventano spese: per ogni mittente, il gruppo (Casa o Personale) e la categoria.
@@ -13,9 +13,10 @@ export default function GmailRulesPanel({ token, nested = false }) {
   const [edit, setEdit] = useState(null)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const [dest, setDest] = useState([]) // moduli che possono ricevere righe dalle mail (dichiarati nel Builder)
 
   const load = async () => { const d = await api.get('/gmail-rules'); setRows(Array.isArray(d) ? d.map((x) => ({ id: x.id, data: x })) : []) }
-  useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); api.get('/module-roles').then((d) => setDest(Array.isArray(d) ? d.filter((m) => m.kind === 'spesa' && m.uses.includes('mail')) : [])) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async () => {
     setErr('')
@@ -40,7 +41,7 @@ export default function GmailRulesPanel({ token, nested = false }) {
           <div className="w-9 h-9 rounded-lg bg-surface-page border border-gray-800 flex items-center justify-center text-accent flex-shrink-0"><Icon name="mail" size={16} /></div>
           <div>
             <h2 className="text-sm font-semibold text-ink">Regole Gmail</h2>
-            <p className="text-xs text-gray-500 mt-0.5 max-w-md">Le mail ricevute da questi mittenti diventano una spesa da smistare, nel gruppo e nella categoria indicati. Serve Google collegato.</p>
+            <p className="text-xs text-gray-500 mt-0.5 max-w-md">Le mail ricevute da questi mittenti diventano una riga da smistare, nel modulo e nella categoria indicati. Serve Google collegato.</p>
           </div>
         </div>
         {!edit && <button type="button" onClick={() => { setErr(''); setEdit({ id: null, data: { ...EMPTY } }) }} className="text-xs bg-accent hover:opacity-90 text-white px-3 py-1.5 rounded-lg font-medium flex-shrink-0">Aggiungi</button>}
@@ -51,8 +52,12 @@ export default function GmailRulesPanel({ token, nested = false }) {
           <div className="grid sm:grid-cols-2 gap-3">
             <div><label className="block text-xs text-gray-500 mb-1">Mittente (email)</label><input className={inputCls} placeholder="bollette@a2a.it" value={edit.data.mittente} onChange={(e) => setEdit({ ...edit, data: { ...edit.data, mittente: e.target.value } })} /></div>
             <div><label className="block text-xs text-gray-500 mb-1">Descrizione</label><input className={inputCls} placeholder="A2A Energia" value={edit.data.descrizione || ''} onChange={(e) => setEdit({ ...edit, data: { ...edit.data, descrizione: e.target.value } })} /></div>
-            <div><label className="block text-xs text-gray-500 mb-1">Gruppo</label>
-              <select className={inputCls} value={edit.data.gruppo || 'Casa'} onChange={(e) => setEdit({ ...edit, data: { ...edit.data, gruppo: e.target.value } })}><option>Casa</option><option>Personale</option></select></div>
+            <div><label className="block text-xs text-gray-500 mb-1">Modulo di destinazione</label>
+              <select className={inputCls} value={edit.data.modulo || ''} onChange={(e) => setEdit({ ...edit, data: { ...edit.data, modulo: e.target.value } })}>
+                {dest.length === 0 && <option value="">Nessun modulo dichiarato (Builder → Ruoli del modulo)</option>}
+                {dest.length > 0 && !edit.data.modulo && <option value="">Scegli il modulo…</option>}
+                {dest.map((m) => <option key={m.module_slug} value={m.module_slug}>{m.name}</option>)}
+              </select></div>
             <div><label className="block text-xs text-gray-500 mb-1">Categoria della spesa</label><input className={inputCls} placeholder="Elettricità" value={edit.data.categoria || ''} onChange={(e) => setEdit({ ...edit, data: { ...edit.data, categoria: e.target.value } })} /></div>
           </div>
           {err && <div className="text-xs text-amber-400">{err}</div>}
@@ -70,7 +75,7 @@ export default function GmailRulesPanel({ token, nested = false }) {
           <div key={r.id} className="py-2.5 flex items-center gap-3 flex-wrap">
             <div className="min-w-0 flex-1">
               <div className={'text-sm ' + (r.data.attiva === false ? 'text-gray-500' : 'text-ink')}>{r.data.descrizione || r.data.mittente}</div>
-              <div className="text-xs text-gray-500 mt-0.5"><span className="font-mono">{r.data.mittente}</span> → {r.data.gruppo || 'Casa'}{r.data.categoria ? ' · ' + r.data.categoria : ''}</div>
+              <div className="text-xs text-gray-500 mt-0.5"><span className="font-mono">{r.data.mittente}</span> → {(dest.find((m) => m.module_slug === r.data.modulo) || {}).name || r.data.gruppo || 'Casa'}{r.data.categoria ? ' · ' + r.data.categoria : ''}</div>
             </div>
             <button type="button" role="switch" aria-checked={r.data.attiva !== false} onClick={() => toggleActive(r)} title={r.data.attiva === false ? 'Disattivata' : 'Attiva'}
               className={'w-8 h-[18px] rounded-full transition-colors relative flex-shrink-0 ' + (r.data.attiva !== false ? 'bg-accent' : 'bg-gray-700')}>

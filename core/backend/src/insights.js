@@ -25,20 +25,42 @@ const DEFAULT_CONFIG = {
 const SUPER_ADMIN_URL = process.env.SUPER_ADMIN_URL || 'http://super-admin-backend:3000';
 const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'changeme_internal';
 
+// Valori di partenza dai ruoli dichiarati nel Builder (module-roles.js): i moduli di entrate e di spese che entrano nei riepiloghi
+// e quali loro campi sono importo, data, categoria... Dove non c'è nessuna dichiarazione restano i valori scritti sopra.
+function fromRoles() {
+  let roles; try { roles = require('./module-roles'); } catch (e) { return {}; }
+  const out = {};
+  for (const [key, kind] of [['entrate', 'entrata'], ['spese', 'spesa']]) {
+    let mods = []; try { mods = roles.list({ kind, use: 'riepiloghi' }); } catch (e) { /* tabella non pronta */ }
+    if (!mods.length) continue;
+    const r = mods[0].roles;
+    const cfg = { modules: mods.map((x) => x.module_slug) };
+    if (r.importo) cfg.amount = r.importo;
+    if (r.data) cfg.date = r.data;
+    if (r.categoria) cfg.category = r.categoria;
+    if (key === 'entrate' && r.gruppo) cfg.group = r.gruppo;
+    if (key === 'spese') { if (r.stato) cfg.status = r.stato; if (r.fisso) cfg.fixed = r.fisso; }
+    out[key] = cfg;
+  }
+  return out;
+}
+
 function getConfig() {
   let saved = {};
   try { const row = db.prepare('SELECT config FROM insights_config WHERE id = 1').get(); if (row) saved = JSON.parse(row.config || '{}'); } catch (e) { /* default */ }
-  const m = (k) => ({ ...DEFAULT_CONFIG[k], ...(saved[k] || {}) });
+  const derived = fromRoles();
+  const m = (k) => ({ ...DEFAULT_CONFIG[k], ...(derived[k] || {}), ...(saved[k] || {}) });
   return { entrate: m('entrate'), spese: m('spese'), anomaly: m('anomaly'), balance_floor_eur: saved.balance_floor_eur != null ? saved.balance_floor_eur : DEFAULT_CONFIG.balance_floor_eur };
 }
 
 function saveConfig(patch) {
-  const cur = getConfig();
-  const next = { ...cur };
-  for (const k of ['entrate', 'spese', 'anomaly']) if (patch && patch[k] && typeof patch[k] === 'object') next[k] = { ...cur[k], ...patch[k] };
-  if (patch && Number.isFinite(patch.balance_floor_eur)) next.balance_floor_eur = patch.balance_floor_eur;
-  db.prepare('INSERT INTO insights_config (id, config) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET config = excluded.config').run(JSON.stringify(next));
-  return next;
+  // Si salva solo ciò che è stato cambiato a mano: il resto continua a seguire i ruoli dei moduli.
+  let saved = {};
+  try { const row = db.prepare('SELECT config FROM insights_config WHERE id = 1').get(); if (row) saved = JSON.parse(row.config || '{}'); } catch (e) { /* vuoto */ }
+  for (const k of ['entrate', 'spese', 'anomaly']) if (patch && patch[k] && typeof patch[k] === 'object') saved[k] = { ...(saved[k] || {}), ...patch[k] };
+  if (patch && Number.isFinite(patch.balance_floor_eur)) saved.balance_floor_eur = patch.balance_floor_eur;
+  db.prepare('INSERT INTO insights_config (id, config) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET config = excluded.config').run(JSON.stringify(saved));
+  return getConfig();
 }
 
 const round2 = (n) => Math.round(n * 100) / 100;

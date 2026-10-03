@@ -2860,7 +2860,7 @@ function BuilderPage({ token, baseUrl, allModules, onModulesChanged, preselectSl
       </div>
 
       {selected && schema && !showCanvas && (
-        <PropertiesPanel mod={modules.find((m) => m.slug === selected)} schema={schema} fieldCache={fieldCache} allModules={modules}
+        <PropertiesPanel token={token} baseUrl={baseUrl} mod={modules.find((m) => m.slug === selected)} schema={schema} fieldCache={fieldCache} allModules={modules}
           onUpdate={(patch) => updateModuleIconColor(selected, patch)}
           onSelectModule={(slug) => { setShowCanvas(false); selectModule(slug) }}
           showIconPicker={showIconPicker} setShowIconPicker={setShowIconPicker}
