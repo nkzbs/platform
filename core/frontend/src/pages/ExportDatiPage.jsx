@@ -2,9 +2,7 @@ import React, { useState } from 'react'
 import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
 import Select from '../components/Select'
-import Tile from '../components/Tile'
 import { parseSchemaFrontend } from '../lib/schema-v3-frontend'
-import BackupPage from './BackupPage'
 
 // Stesso formato CSV di nico (Blob con BOM, ';' come separatore, campi tra virgolette
 // con "" per l'escape) — ma generico su qualunque modulo del tenant invece di 5
@@ -85,22 +83,9 @@ function ExportDatiPage({ token, modules, user }) {
 
   return (
     <div>
-      {isAdmin && (
-        <div className="grid grid-cols-2 gap-2 mb-6 max-w-md">
-          <Tile icon="download" label="Export dati" active={tab === 'export'} onClick={() => setTab('export')}
-            value="CSV per modulo" sub="Relazioni risolte" />
-          <Tile icon="shield" label="Backup" active={tab === 'backup'} onClick={() => setTab('backup')}
-            value="Copie di sicurezza" sub="Ripristino incluso" />
-        </div>
-      )}
-
       {tab === 'export' && (
         <div>
-          <div className="mb-6">
-            <h1 className="text-lg font-bold text-ink tracking-[-0.35px]">Export dati</h1>
-            <p className="text-gray-500 text-sm mt-0.5">Esporta tutti i record di un modulo in CSV (relazioni risolte al valore leggibile).</p>
-          </div>
-
+          <p className="text-gray-500 text-sm mb-4 max-w-md">Esporta tutti i record di un modulo in CSV (relazioni risolte al valore leggibile).</p>
           <div className="bg-surface-card rounded-md border border-gray-800 p-5 max-w-md">
             <label className="text-xs text-gray-400 block mb-1.5">Modulo</label>
             <div className="mb-4">
@@ -115,7 +100,6 @@ function ExportDatiPage({ token, modules, user }) {
         </div>
       )}
 
-      {tab === 'backup' && isAdmin && <BackupPage token={token} />}
     </div>
   )
 }

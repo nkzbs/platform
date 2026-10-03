@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from './Icon'
-import WhatsAppRecipientsPanel from './WhatsAppRecipientsPanel'
 
 // Riepilogo del mattino su WhatsApp: un solo messaggio al giorno con le spese da pagare oggi, domani
 // e in ritardo, al posto di un messaggio per ogni riga. Spento finché non lo si accende.
@@ -105,7 +104,6 @@ export default function DigestSettingsTab({ token, features = {} }) {
       </>
       )}
 
-      {features.whatsapp && <WhatsAppRecipientsPanel token={token} />}
     </div>
   )
 }

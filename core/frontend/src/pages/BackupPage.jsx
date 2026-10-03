@@ -79,10 +79,6 @@ function BackupPage({ token }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-lg font-bold text-ink tracking-[-0.35px]">Backup</h1>
-      </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
         <div className="bg-surface-card rounded-md p-6 border border-gray-800">
           <div className="flex items-start gap-4 mb-5">

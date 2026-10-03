@@ -14,7 +14,7 @@ const EMPTY = { nome: '', numero: '', triggers: ['scadenza'], attivo: true }
 const inputCls = 'w-full bg-surface-page text-ink px-3 py-2 rounded-lg outline-none border border-gray-800 focus:border-accent text-sm placeholder-gray-600'
 
 // Chi riceve quali messaggi WhatsApp (tabella whatsapp_recipients, rotte /api/whatsapp-recipients).
-export default function WhatsAppRecipientsPanel({ token }) {
+export default function WhatsAppRecipientsPanel({ token, nested = false }) {
   const api = useApi(token)
   const [rows, setRows] = useState(null)
   const [edit, setEdit] = useState(null) // { id|null, data }
@@ -41,7 +41,7 @@ export default function WhatsAppRecipientsPanel({ token }) {
   const setTag = (id) => setEdit((e) => { const t = e.data.triggers || []; return { ...e, data: { ...e.data, triggers: t.includes(id) ? t.filter((x) => x !== id) : [...t, id] } } })
 
   return (
-    <section className="bg-surface-card border border-gray-800 rounded-xl p-5">
+    <section className={nested ? 'mt-4 pt-4 border-t border-gray-800' : 'bg-surface-card border border-gray-800 rounded-xl p-5'}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <div className="w-9 h-9 rounded-lg bg-surface-page border border-gray-800 flex items-center justify-center text-accent flex-shrink-0"><Icon name="message-circle" size={16} /></div>

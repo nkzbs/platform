@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import GmailRulesPanel from '../components/GmailRulesPanel'
+import WhatsAppRecipientsPanel from '../components/WhatsAppRecipientsPanel'
 import ExportDatiPage from './ExportDatiPage'
+import BackupPage from './BackupPage'
 import AiSettingsTab from '../components/AiSettingsTab'
 import DigestSettingsTab from '../components/DigestSettingsTab'
 import { API } from '../lib/api'
@@ -121,6 +123,7 @@ function ConnessioniTab({ token, features = {} }) {
                         )}
                       </>
                     )}
+                    {googleConnected && features.gmail && <GmailRulesPanel token={token} nested />}
                   </div>
                 ) : (
                   <div>
@@ -163,6 +166,7 @@ function ConnessioniTab({ token, features = {} }) {
                         )}
                       </div>
                     )}
+                    {row.id === 'whatsapp_callmebot' && features.whatsapp && <WhatsAppRecipientsPanel token={token} nested />}
                   </div>
                 )}
               </div>
@@ -170,7 +174,6 @@ function ConnessioniTab({ token, features = {} }) {
           </div>
         ))}
       </div>
-      {features.gmail && <GmailRulesPanel token={token} />}
     </div>
   )
 }
@@ -270,7 +273,7 @@ function ModuliTab({ token }) {
 // da imparare.
 function TabBar({ items, active, onChange }) {
   return (
-    <div className="flex items-center gap-0.5 border-b border-gray-800 mb-6 overflow-x-auto">
+    <div className="flex items-center gap-0.5 border-b border-gray-800 mb-6 flex-wrap">
       {items.map((it) => (
         <button key={it.key} onClick={() => onChange(it.key)}
           className={'flex items-center gap-1.5 px-3 py-2.5 text-sm whitespace-nowrap border-b-2 transition flex-shrink-0 -mb-px ' +
@@ -296,6 +299,7 @@ const SETTINGS_TABS = [
   { key: 'notifiche', icon: 'bell', label: 'Notifiche' },
   { key: 'assistente', icon: 'wand', label: 'Assistente AI' },
   { key: 'export_dati', icon: 'download', label: 'Export dati' },
+  { key: 'backup', icon: 'shield', label: 'Backup' },
   { key: 'account', icon: 'user', label: 'Il mio account' },
 ]
 
@@ -311,7 +315,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
   // e, se non è un agente, l'export dei dati.
   const canExport = user && user.role !== 'agente'
   const visibleTabs = isAdmin
-    ? SETTINGS_TABS.filter((t) => (t.key === 'sito_web' ? features.sito_web : t.key === 'notifiche' ? (features.whatsapp || features.riepilogo_mattino) : true))
+    ? SETTINGS_TABS.filter((t) => (t.key === 'sito_web' ? features.sito_web : t.key === 'notifiche' ? features.riepilogo_mattino : true))
     : SETTINGS_TABS.filter((t) => t.key === 'account' || (t.key === 'export_dati' && canExport))
 
   return (
@@ -341,6 +345,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
       {tab === 'assistente' && <AiSettingsTab token={token} features={features} />}
 
 
+      {tab === 'backup' && isAdmin && <BackupPage token={token} />}
       {tab === 'export_dati' && canExport && <ExportDatiPage token={token} modules={modules} user={user} />}
     </div>
   )

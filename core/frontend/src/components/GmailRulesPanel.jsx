@@ -7,7 +7,7 @@ const inputCls = 'w-full bg-surface-page text-ink px-3 py-2 rounded-lg outline-n
 
 // Quali mail diventano spese: per ogni mittente, il gruppo (Casa o Personale) e la categoria.
 // Tabella gmail_rules, rotte /api/gmail-rules.
-export default function GmailRulesPanel({ token }) {
+export default function GmailRulesPanel({ token, nested = false }) {
   const api = useApi(token)
   const [rows, setRows] = useState(null)
   const [edit, setEdit] = useState(null)
@@ -34,7 +34,7 @@ export default function GmailRulesPanel({ token }) {
   const toggleActive = async (r) => { await api.put('/gmail-rules/' + r.id, { ...r.data, attiva: r.data.attiva === false }); load() }
 
   return (
-    <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mt-4">
+    <section className={nested ? 'mt-4 pt-4 border-t border-gray-800' : 'bg-surface-card border border-gray-800 rounded-xl p-5 mt-4'}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <div className="w-9 h-9 rounded-lg bg-surface-page border border-gray-800 flex items-center justify-center text-accent flex-shrink-0"><Icon name="mail" size={16} /></div>

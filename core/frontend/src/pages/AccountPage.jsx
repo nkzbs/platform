@@ -12,8 +12,23 @@ import Icon from '../components/Icon'
 // "una cosa sono le impostazioni sistema, un conto quelle dell'utente") NON
 // sono più qui — riguardano il tenant, non l'utente loggato, spostati nella
 // scheda di sistema "Istanza" in ImpostazioniPage.jsx (IstanzaTab).
-function AccountPage({ token }) {
+import { API } from '../lib/api'
+const ROLE_LABEL = { admin: 'Amministratore', user: 'Utente', agent: 'Agente' }
+
+function AccountPage({ token, user }) {
   const api = useApi(token)
+  const [pw, setPw] = useState({ current_password: '', new_password: '' })
+  const [pwBusy, setPwBusy] = useState(false)
+  const [pwMsg, setPwMsg] = useState(null) // { ok, text }
+  const changePassword = async () => {
+    if (!pw.current_password || !pw.new_password) { setPwMsg({ ok: false, text: 'Compila tutti i campi' }); return }
+    setPwBusy(true); setPwMsg(null)
+    const res = await fetch(API + '/users/me/change-password', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(pw) })
+    const data = await res.json().catch(() => ({}))
+    setPwBusy(false)
+    if (!res.ok) { setPwMsg({ ok: false, text: data.error || 'Errore' }); return }
+    setPw({ current_password: '', new_password: '' }); setPwMsg({ ok: true, text: 'Password aggiornata' })
+  }
   const [enabled, setEnabled] = useState(null)
   const [setup, setSetup] = useState(null) // { secret, qr_data_uri } — mentre si configura
   const [code, setCode] = useState('')
@@ -57,9 +72,35 @@ function AccountPage({ token }) {
     loadStatus()
   }
 
+  const inputCls = 'w-full bg-surface-page text-ink px-4 py-3 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition'
   return (
-    <div>
-      <div className="bg-surface-card rounded-md p-6 border border-gray-800 max-w-lg">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-4xl items-start">
+      <div className="bg-surface-card rounded-md p-6 border border-gray-800">
+        <div className="flex items-center gap-4 mb-5">
+          <div className="w-12 h-12 rounded-full bg-accent/15 text-accent flex items-center justify-center text-lg font-semibold flex-shrink-0">
+            {((user && (user.display_name || user.username)) || '?').trim().charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <div className="text-ink font-medium">{(user && user.display_name) || 'Utente'}</div>
+            <div className="text-xs text-gray-500">{ROLE_LABEL[user && user.role] || (user && user.role) || ''}</div>
+          </div>
+        </div>
+        <div className="text-xs text-gray-500 mb-1">Nome utente</div>
+        <div className="text-sm text-ink font-mono">{(user && user.username) || '—'}</div>
+      </div>
+
+      <div className="bg-surface-card rounded-md p-6 border border-gray-800">
+        <div className="text-ink font-medium mb-1">Password</div>
+        <div className="text-sm text-gray-500 mb-4">Minimo 8 caratteri.</div>
+        {pwMsg && <div className={'text-sm p-3 rounded-lg mb-3 border ' + (pwMsg.ok ? 'bg-green-900/20 text-green-400 border-green-900/40' : 'bg-red-900/30 text-red-400 border-red-900/50')}>{pwMsg.text}</div>}
+        <div className="space-y-2.5">
+          <input type="password" autoComplete="current-password" placeholder="Password attuale" className={inputCls} value={pw.current_password} onChange={(e) => setPw({ ...pw, current_password: e.target.value })} />
+          <input type="password" autoComplete="new-password" placeholder="Nuova password" className={inputCls} value={pw.new_password} onChange={(e) => setPw({ ...pw, new_password: e.target.value })} />
+        </div>
+        <button onClick={changePassword} disabled={pwBusy} className="mt-3 bg-accent hover:opacity-90 disabled:opacity-50 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition">{pwBusy ? 'Salvataggio...' : 'Cambia password'}</button>
+      </div>
+
+      <div className="bg-surface-card rounded-md p-6 border border-gray-800 lg:col-span-2">
         <div className="flex items-start gap-4 mb-5">
           <div className="w-10 h-10 rounded-lg bg-cp-purple/20 flex items-center justify-center flex-shrink-0">
             <Icon name="shield" size={20} className="text-cp-purple" />
