@@ -124,6 +124,18 @@ async function main() {
     assertEq(s.categoria, null, 'se sono entrambi o è ambiguo non si forza niente');
   });
 
+  await test('titolo "Gas/Luce" senza nessuna prova: la categoria di energia resta vuota (niente indovinelli); con una prova nel testo si tiene', async () => {
+    mistralReply = { content: '{"modulo":"spese_casa","categoria":"Gas","fornitore":"A2A","importo":null,"scadenza":null,"confidenza":"media"}' };
+    let s = (await (await call('/classify-bill', bill({ oggetto: 'La tua bolletta Gas/Luce', testo: 'La tua bolletta è pronta' }))).json()).suggestion;
+    assertEq(s.categoria, null); assertEq(s.confidenza, 'bassa');
+    s = (await (await call('/classify-bill', bill({ oggetto: 'La tua bolletta Gas/Luce', testo: 'Consumo fatturato 52 Smc' }))).json()).suggestion;
+    assertEq(s.categoria, 'Gas', 'con un segno nel testo si fida del modello');
+    s = (await (await call('/classify-bill', bill({ oggetto: 'La tua bolletta Gas/Luce', testo: 'pronta', allegati: 'Totale da pagare 44 euro' }))).json()).suggestion;
+    assertEq(s.categoria, 'Gas', 'con un estratto di PDF si fida del modello');
+    s = (await (await call('/classify-bill', bill({ oggetto: 'Bolletta Internet Intred', testo: 'pronta' }))).json()).suggestion;
+    assertEq(s.categoria, 'Gas', 'un titolo non ambiguo non cambia (qui il modello risponde Gas e va bene)');
+  });
+
   await test('indizio e estratto del PDF arrivano al modello (estratto ripulito e accorciato); un indizio sconosciuto si ignora', async () => {
     mistralReply = { content: '{"modulo":"spese_casa"}' };
     mistralCalls = [];

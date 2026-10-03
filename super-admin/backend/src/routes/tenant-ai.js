@@ -72,7 +72,7 @@ function validDate(v) {
   return !isNaN(d) && d.toISOString().slice(0, 10) === v ? v : null;
 }
 
-function sanitizeBillSuggestion(raw, moduli, moduloAttuale, indizio) {
+function sanitizeBillSuggestion(raw, moduli, moduloAttuale, indizio, senzaProve) {
   const keys = Object.keys(moduli || {});
   const modulo = keys.includes(raw.modulo) ? raw.modulo : (keys.includes(moduloAttuale) ? moduloAttuale : null);
   const categorie = modulo && Array.isArray(moduli[modulo] && moduli[modulo].categorie) ? moduli[modulo].categorie : [];
@@ -81,10 +81,14 @@ function sanitizeBillSuggestion(raw, moduli, moduloAttuale, indizio) {
   // se dice chiaramente luce o gas, la categoria è quella, qualunque cosa abbia risposto.
   const energy = { luce: /elettric|luce/i, gas: /\bgas\b/i }[indizio];
   if (energy) { const match = categorie.find((c) => energy.test(c)); if (match) categoria = match; }
+  // Un titolo che dice solo "Gas/Luce", senza nessuna prova (né PDF né kWh/Smc nel testo), non basta: il modello tirerebbe a indovinare.
+  // In quel caso la categoria di energia resta vuota, e la proposta lo dice con una confidenza bassa.
+  let forzaBassa = false;
+  if (senzaProve && categoria && /elettric|luce|\bgas\b/i.test(categoria)) { categoria = null; forzaBassa = true; }
   const fornitore = typeof raw.fornitore === 'string' && raw.fornitore.trim() ? raw.fornitore.replace(/[\r\n]+/g, ' ').trim().slice(0, 60) : null;
   const imp = typeof raw.importo === 'number' ? raw.importo : parseFloat(String(raw.importo).replace(',', '.'));
   const importo = Number.isFinite(imp) && imp > 0 && imp < 100000 ? Math.round(imp * 100) / 100 : null;
-  const confidenza = ['alta', 'media', 'bassa'].includes(raw.confidenza) ? raw.confidenza : 'bassa';
+  const confidenza = forzaBassa ? 'bassa' : (['alta', 'media', 'bassa'].includes(raw.confidenza) ? raw.confidenza : 'bassa');
   return { modulo, categoria, fornitore, importo, scadenza: validDate(raw.scadenza), confidenza };
 }
 
@@ -110,12 +114,16 @@ router.post('/classify-bill', requireInternalSecret, async (req, res) => {
   };
   const indizio = ['luce', 'gas', 'entrambi'].includes(data.indizio_energia) ? data.indizio_energia : null;
   if (indizio) payload.indizio_energia = indizio;
+  // titolo ambiguo (gas e luce insieme) e nessuna prova: vedi sanitizeBillSuggestion
+  const titolo = (payload.oggetto || '') + ' ' + (payload.mittente || '');
+  const prove = indizio || data.allegati || /\bkWh\b|\bSmc\b|\bPOD\b|\bPDR\b|energia elettrica|gas naturale/i.test(payload.testo || '');
+  const senzaProve = /\bgas\b/i.test(titolo) && /\bluce\b|elettric/i.test(titolo) && !prove;
   if (data.allegati) payload.allegati = redact(String(data.allegati)).slice(0, 1500);
   try {
     const text = await callAI('mistral', { system: BILL_SYSTEM_PROMPT, user: JSON.stringify(payload), maxTokens: 250, tenantSlug: tenant_slug });
     const raw = parseJsonObject(text);
     if (!raw) return res.status(502).json({ error: 'Risposta dell\'AI non valida' });
-    res.json({ suggestion: sanitizeBillSuggestion(raw, data.moduli, data.modulo_attuale, indizio) });
+    res.json({ suggestion: sanitizeBillSuggestion(raw, data.moduli, data.modulo_attuale, indizio, senzaProve) });
   } catch (e) {
     res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
   }

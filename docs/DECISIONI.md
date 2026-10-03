@@ -154,6 +154,11 @@ reali di Finance (6 righe → 1 destinatario e 5 regole). I backup JSON includon
 
 ### Corretto durante il lavoro
 
+- **Luce o gas, controllato sui PDF veri.** La bolletta A2A da 201 € è luce (595 kWh); quella segnata "44 €" è **gas** e il 44 era il consumo
+  (44 Smc), non l'importo: il lettore delle email prendeva i consumi per euro. Ora `estraiImporto` scarta le quantità (Smc, kWh, mc, kW).
+  Inoltre, con un titolo "Gas/Luce" e **nessuna prova** (né PDF né kWh/Smc nel testo) il modello tirava a indovinare: ora la categoria di
+  energia resta vuota con confidenza bassa (la regola sta in Super Admin, `routes/tenant-ai.js`).
+
 - In Libreria compariva un modulo **"Sito Web" da installare**, mentre il Sito Web vero è una funzione delle Impostazioni (scheda Sito Web).
   Erano due moduli segnaposto vuoti (`sito_web`, `sito_avanzato`: nessun campo, non installati) rimasti da una versione vecchia.
   All'avvio `core/backend/src/legacy-cleanup.js` li toglie, ma solo se sono davvero vuoti (non installati, schema senza blocchi, nessun record).

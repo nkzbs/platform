@@ -81,6 +81,9 @@ async function estraiTestoDaPDF(buffer) {
 // trova vince. Range di sanità 0,50-50000€ per scartare falsi positivi tipo
 // codici fiscali o numeri di pratica che assomigliano a un importo.
 function estraiImporto(testo) {
+  // Quantità di consumo (44 Smc, 595 kWh...) non sono importi: si tolgono prima di cercare, altrimenti "Consumo totale ... 44 Smc"
+  // finiva letto come 44 euro.
+  testo = String(testo || '').replace(/[\d.,]+\s*(?:Smc|kWh|MWh|kW|mc|m3|m³|GJ)\b/gi, ' ');
   const patterns = [
     /(?:totale\s+fattura)[:\s]*(?:€\s*)?([\d.,]+)/i,
     /Totale\s+Fattura[^€\d]*([\d]+[.,][\d]{2})/i,
@@ -301,4 +304,4 @@ function startGmailPoller() {
   setInterval(pollGmail, 15 * 60 * 1000);
 }
 
-module.exports = { startGmailPoller, pollGmail };
+module.exports = { startGmailPoller, pollGmail, estraiImporto };
