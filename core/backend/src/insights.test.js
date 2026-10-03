@@ -54,6 +54,7 @@ async function main() {
     db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES (?, ?, 'box', '#000', 1, 1, 50, '{}')").run(slug, slug);
   }
   require('./module-roles').seedIfEmpty(); // i moduli dichiarano a cosa servono (come fa Finance con la sua migrazione)
+  db.prepare("INSERT INTO dashboard_widgets (type, label, config) VALUES ('come_sta_andando', 'Come sta andando', '{\"explainable\":true}')").run(); // il widget ha acceso "Spiega"
   const rec = (slug, d) => db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, NULL, ?)').run(slug, JSON.stringify(d)).lastInsertRowid;
   const ent = (data, importo, categoria = 'Stipendio') => rec('entrate', { descrizione: 'riga segreta ' + categoria, data, importo, categoria });
   const sp = (slug, data, importo, categoria, extra = {}) => rec(slug, { descrizione: 'descrizione privata', data, importo, categoria, _stato: 'pagato', ...extra });
@@ -274,6 +275,16 @@ async function main() {
     assertEq((await call('GET', '', null, {})).status, 401);
     assertEq((await call('GET', '?month=boh')).status, 400);
     assertEq((await call('POST', '/explain', { month: 'boh' })).status, 400);
+  });
+  await test('senza il widget spiegabile: niente pulsante e POST /explain risponde 403 (nessuna chiamata)', async () => {
+    db.prepare("UPDATE dashboard_widgets SET config = '{}' WHERE type = 'come_sta_andando'").run();
+    const g = await (await call('GET', '')).json();
+    assertEq(g.explainable, false);
+    const before = sa.calls.length;
+    const r = await call('POST', '/explain', { month: '2026-09' });
+    assertEq(r.status, 403); assertEq((await r.json()).code, 'ai_off'); assertEq(sa.calls.length, before, 'nessuna chiamata a Super Admin');
+    db.prepare("UPDATE dashboard_widgets SET config = '{\"explainable\":true}' WHERE type = 'come_sta_andando'").run();
+    assertEq((await (await call('GET', '')).json()).explainable, true);
   });
   await test('GET restituisce i numeri senza chiamare l\'AI', async () => {
     sa.calls = [];

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from './Icon'
+import ExplainBox from './ExplainBox'
 
 const eur = (n) => (n == null ? '—' : n.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' €')
 const pctTxt = (n) => (n == null ? null : (n > 0 ? '+' : '') + n.toLocaleString('it-IT', { maximumFractionDigits: 1 }) + '%')
@@ -85,6 +86,10 @@ export default function InsightsYear({ token }) {
         </div>
       )}
 
+      {data.explainable && (
+        <ExplainBox what="i numeri dell'anno" resetKey={String(data.year)} initial={data.explanation && !data.explanation.stale ? data.explanation.text : null} stale={!!(data.explanation && data.explanation.stale)}
+          ask={(refresh) => api.post('/insights/explain', { period: 'anno', year: data.year, refresh: !!refresh })} />
+      )}
 
       <button type="button" onClick={() => setShowLimits(!showLimits)} className="mt-4 text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1">
         <Icon name={showLimits ? 'chevron-down' : 'chevron-right'} size={12} />Cosa conta in questi numeri

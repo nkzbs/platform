@@ -243,6 +243,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
     if (w.type === 'periodo') w.config = periodoConfig
     if (w.type === 'riepilogo_mensile') w.config = riepilogoConfig
     if (REPORT_WIDGET_TYPES.includes(w.type)) w.config = reportBlockConfig
+    if (w.type === 'come_sta_andando') w.config = { explainable: !!newWidget.explainable }
     const saved = editingWidgetId ? await api.patch('/dashboard/widgets/' + editingWidgetId, w) : await api.post('/dashboard/widgets', w)
     if (saved && saved.ok !== false) {
       resetWidgetForm()
@@ -264,6 +265,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
       conti: cfg.conti || { modulo: '', campo_tipo: '', valore_carta: '', valore_conto: '' },
     })
     if (REPORT_WIDGET_TYPES.includes(w.type)) setReportBlockConfig({ source_module: cfg.source_module || '', block_key: cfg.block_key || '' })
+    if (w.type === 'come_sta_andando') setNewWidget((n) => ({ ...n, explainable: !!cfg.explainable }))
     setEditingWidgetId(w.id)
     setShowAdd(true)
   }
@@ -501,6 +503,12 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                     {modules.filter((m) => !['dashboard'].includes(m.slug)).map((m) => <option key={m.slug} value={m.slug}>{m.name}</option>)}
                   </select>
                 </div>
+              )}
+              {newWidget.type === 'come_sta_andando' && (
+                <label className="flex items-start gap-2.5 cursor-pointer text-sm text-gray-300">
+                  <input type="checkbox" className="mt-1" checked={!!newWidget.explainable} onChange={(e) => setNewWidget({ ...newWidget, explainable: e.target.checked })} />
+                  <span>Spiegabile con l'AI<span className="block text-xs text-gray-500">Compare «Spiega con l'AI» sul widget. L'AI legge solo i totali mostrati, mai le righe. Serve la chiave Mistral.</span></span>
+                </label>
               )}
               {newWidget.type === 'checklist' && (
                 <div className="space-y-3">

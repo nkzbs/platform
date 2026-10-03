@@ -2,6 +2,7 @@
 const express = require('express');
 const { requireAuth, requireAdmin } = require('./auth');
 const insights = require('../insights');
+const moduleAi = require('../module-ai');
 const { logAudit } = require('../audit-log');
 
 const { requireFeature } = require('../features');
@@ -14,20 +15,22 @@ const validMonth = (m) => m === undefined || /^\d{4}-\d{2}$/.test(String(m));
 const validYear = (y) => y === undefined || /^\d{4}$/.test(String(y));
 
 router.get('/', requireAuth, (req, res) => {
+  const explainable = moduleAi.anyExplainableWidget('come_sta_andando'); // il pulsante "Spiega" c'è solo se il widget lo ha acceso
   if (req.query.period === 'anno') {
     if (!validYear(req.query.year)) return res.status(400).json({ error: 'Anno non valido (atteso AAAA)' });
     const snap = insights.buildYearSnapshot(req.query.year);
     if (!snap.available || snap.vuoto) return res.json(snap);
-    return res.json({ ...snap, explanation: insights.cachedExplanation(snap.key, snap) });
+    return res.json({ ...snap, explainable, explanation: insights.cachedExplanation(snap.key, snap) });
   }
   if (!validMonth(req.query.month)) return res.status(400).json({ error: 'Mese non valido (atteso AAAA-MM)' });
   const snap = insights.buildSnapshot(req.query.month);
   if (!snap.available) return res.json(snap);
-  res.json({ ...snap, explanation: insights.cachedExplanation(snap.month, snap) });
+  res.json({ ...snap, explainable, explanation: insights.cachedExplanation(snap.month, snap) });
 });
 
 // "Spiega con l'assistente": usa la spiegazione salvata se i numeri non sono cambiati.
 router.post('/explain', requireAuth, async (req, res) => {
+  if (!moduleAi.anyExplainableWidget('come_sta_andando')) return res.status(403).json({ error: 'La spiegazione con l\'AI non è accesa su questo widget', code: 'ai_off' });
   const b = req.body || {};
   if (b.period === 'anno') {
     if (!validYear(b.year)) return res.status(400).json({ error: 'Anno non valido (atteso AAAA)' });

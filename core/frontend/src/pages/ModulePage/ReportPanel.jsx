@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import useApi from '../../lib/useApi'
 import Icon from '../../components/Icon'
 import { pieChartSvg } from '../../lib/chart-svg'
+import ExplainBox from '../../components/ExplainBox'
 
 const PERIOD_LABELS = { tutti: 'Tutti i periodi', questo_mese: 'Questo mese', mese_precedente: 'Mese precedente', quest_anno: 'Quest\'anno', anno_precedente: 'Anno precedente' }
 const AGG_LABELS = { sum: 'Somma', avg: 'Media', count: 'Conteggio', min: 'Minimo', max: 'Massimo' }
@@ -46,6 +47,8 @@ function ReportPanel({ moduleSlug, fields, token }) {
   const [dateField, setDateField] = useState(dateFields[0]?.key || '')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [canExplain, setCanExplain] = useState(false) // "Spiegare" acceso su questo modulo (Builder → Potenziamenti AI)
+  useEffect(() => { api.get('/module-ai/' + moduleSlug + '/enabled').then((d) => setCanExplain(!!(d && Array.isArray(d.features) && d.features.includes('explain')))) }, [moduleSlug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!groupBy || !metric) { setData(null); return }
@@ -149,6 +152,24 @@ function ReportPanel({ moduleSlug, fields, token }) {
               })}
             </div>
           </div>
+          {canExplain && data && data.groups && data.groups.length > 0 && (
+            <div className="w-full">
+              <ExplainBox what="il report" resetKey={[groupBy, metric, func, period, dateField, moduleSlug].join('|')} note="Scritto dall'AI a partire dai totali qui sopra; i numeri sono controllati."
+                ask={() => {
+                  const withCompare = !!data.compare_groups
+                  return api.post('/ai/explain-report', {
+                    modulo: moduleSlug,
+                    titolo: moduleSlug.replace(/_/g, ' '),
+                    periodo: PERIOD_LABELS[period] || '',
+                    metrica: (metricFields.find((f) => f.key === metric) || {}).label || metric,
+                    funzione: func,
+                    totale: data.total,
+                    totale_confronto: withCompare ? data.compare_total : undefined,
+                    gruppi: data.groups.map((g) => ({ label: g.label, value: g.value, confronto: withCompare ? ((data.compare_groups.find((c) => c.label === g.label) || {}).value) : undefined })),
+                  })
+                }} />
+            </div>
+          )}
         </div>
       )}
     </div>

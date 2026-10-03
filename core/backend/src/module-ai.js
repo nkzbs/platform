@@ -45,4 +45,11 @@ function widgetExplainable(widget) {
   return !!(cfg && cfg.explainable);
 }
 
-module.exports = { FEATURES, KEYS, get, set, missing, can, widgetExplainable };
+// Esiste un widget di quel tipo che ha acceso "spiegabile"? (per i widget che non sono di un solo modulo, come "Come sta andando")
+function anyExplainableWidget(type) {
+  try {
+    return db.prepare('SELECT config FROM dashboard_widgets WHERE type = ?').all(type).some((w) => widgetExplainable(w));
+  } catch (e) { return false; }
+}
+
+module.exports = { anyExplainableWidget, FEATURES, KEYS, get, set, missing, can, widgetExplainable };

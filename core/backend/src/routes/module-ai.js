@@ -7,6 +7,11 @@ const db = require('../db');
 
 const router = express.Router();
 
+// Quali potenziamenti sono accesi su un modulo, per chiunque sia collegato (serve alle pagine per mostrare i pulsanti giusti).
+router.get('/:slug/enabled', requireAuth, (req, res) => {
+  res.json({ features: moduleAi.KEYS.filter((k) => moduleAi.can(req.params.slug, k)) });
+});
+
 // Elenco dei potenziamenti, con quelli accesi sul modulo e i ruoli che mancano a ciascuno.
 router.get('/:slug', requireAuth, requireAdmin, (req, res) => {
   const on = moduleAi.get(req.params.slug);

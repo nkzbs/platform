@@ -55,7 +55,7 @@ export default function ModuleAiSection({ token, baseUrl, slug }) {
           {keyMsg && <div className={'mt-1 ' + (keyMsg.ok ? 'text-green-500' : 'text-amber-500')}>{keyMsg.text}</div>}
         </div>
       )}
-      <div className="text-[10.5px] text-gray-600 mt-1.5">Lo "Smistare" propone nell'elenco del modulo; "Spiegare" e "Importare" arrivano a breve.</div>
+      <div className="text-[10.5px] text-gray-600 mt-1.5">"Smistare" propone nell'elenco del modulo; "Spiegare" aggiunge il pulsante nei report del modulo. "Importare" arriva a breve.</div>
     </div>
   )
 }

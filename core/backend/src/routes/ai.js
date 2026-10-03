@@ -4,6 +4,7 @@ const { requireAuth, requireAdmin } = require('./auth');
 const ai = require('../ai-suggestions');
 const reportAi = require('../report-ai');
 const aiKey = require('../ai-key');
+const moduleAi = require('../module-ai');
 const { logAudit } = require('../audit-log');
 
 const router = express.Router();
@@ -25,9 +26,10 @@ router.put('/settings', requireAuth, requireAdmin, (req, res) => {
 });
 
 // "Spiega questo report": riceve i totali già calcolati e mostrati nella pagina (mai righe).
-// Funziona anche con l'interruttore spento: è una richiesta esplicita di chi guarda il report.
+// Funziona solo sui moduli che hanno acceso "Spiegare" (Builder → Potenziamenti AI) e hanno i ruoli richiesti.
 router.post('/explain-report', requireAuth, async (req, res) => {
   const b = req.body || {};
+  if (!moduleAi.can(String(b.modulo || ''), 'explain')) return res.status(403).json({ error: 'La spiegazione con l\'AI non è accesa su questo modulo', code: 'ai_off' });
   const gruppi = Array.isArray(b.gruppi) ? b.gruppi.slice(0, 12).map((g) => ({
     nome: String((g && g.label) != null ? g.label : (g && g.nome) || '').slice(0, 40),
     valore: g && g.value != null ? g.value : g && g.valore,
