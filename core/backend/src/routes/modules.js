@@ -23,7 +23,7 @@ router.get('/registry', requireAuth, requireAdmin, async (req, res) => {
     if (!r.ok) return res.status(502).json({ error: 'Registro non raggiungibile', unavailable: true });
     const modules = await r.json();
     checkForUpdates(modules);
-    res.json(modules);
+    res.json(modules.filter((m) => !isSystem(m.slug)));
   } catch (e) {
     res.status(502).json({ error: 'Registro non raggiungibile', unavailable: true });
   }
@@ -293,18 +293,20 @@ function filterByRolePermissions(modules, role) {
 // Moduli installati/attivi visibili a QUESTO utente — admin vede tutto, un ruolo
 // con user_modules configurato vede solo la propria lista (+ dashboard, sempre
 // inclusa).
+const { SQL_NOT_SYSTEM, isSystem } = require('../system-modules');
+
 function getVisibleInstalledModules(user) {
   if (user.role === 'admin') {
-    return db.prepare('SELECT * FROM modules WHERE installed = 1 AND active = 1 ORDER BY sort_order').all();
+    return db.prepare('SELECT * FROM modules WHERE installed = 1 AND active = 1 AND slug NOT IN (' + SQL_NOT_SYSTEM + ') ORDER BY sort_order').all();
   }
   const allowed = db.prepare('SELECT module_slug FROM user_modules WHERE user_id = ?').all(user.id);
   if (allowed.length === 0) {
-    return db.prepare('SELECT * FROM modules WHERE installed = 1 AND active = 1 ORDER BY sort_order').all();
+    return db.prepare('SELECT * FROM modules WHERE installed = 1 AND active = 1 AND slug NOT IN (' + SQL_NOT_SYSTEM + ') ORDER BY sort_order').all();
   }
   const slugSet = new Set(allowed.map((r) => r.module_slug));
   slugSet.add('dashboard');
   const placeholders = [...slugSet].map(() => '?').join(',');
-  return db.prepare(`SELECT * FROM modules WHERE installed = 1 AND active = 1 AND slug IN (${placeholders}) ORDER BY sort_order`).all([...slugSet]);
+  return db.prepare(`SELECT * FROM modules WHERE installed = 1 AND active = 1 AND slug IN (${placeholders}) AND slug NOT IN (${SQL_NOT_SYSTEM}) ORDER BY sort_order`).all([...slugSet]);
 }
 
 router.get('/installed', requireAuth, (req, res) => {
@@ -557,7 +559,7 @@ router.get('/internal/stats', (req, res) => {
 
 // Tutti i moduli (store)
 router.get('/', requireAuth, requireAdmin, (req, res) => {
-  const modules = db.prepare('SELECT * FROM modules ORDER BY sort_order').all();
+  const modules = db.prepare('SELECT * FROM modules WHERE slug NOT IN (' + SQL_NOT_SYSTEM + ') ORDER BY sort_order').all();
   res.json(modules);
 });
 

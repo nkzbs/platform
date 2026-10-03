@@ -137,6 +137,19 @@ verso Mistral: pulizia dei dati personali, controllo dei numeri e tetto restano 
 - `MISTRAL_API_KEY` dell'ambiente resta come **ripiego**: un tenant senza chiave sua la usa (e la spesa conta comunque
   nel suo tetto). Senza né l'una né l'altra, l'assistente risponde "nessuna chiave" e non chiama nessuno.
 
+## 2026-10-03 — Regole Gmail e Destinatari WhatsApp escono dal menu
+
+**Perché.** Non sono spese o entrate da consultare ma impostazioni del sistema: chi riceve quali messaggi, e quali mail
+diventano spese. Averli nel menu come moduli era un residuo di come erano nati.
+
+**Ora.** Si gestiscono da Impostazioni: i destinatari in **Notifiche**, le regole Gmail in **Connessioni** (sotto Google).
+Non compaiono più nel menu, nell'elenco moduli, nella Libreria né nel Builder (`core/backend/src/system-modules.js`).
+
+**Cosa NON cambia.** I dati restano nella stessa tabella `records` con gli stessi slug (`whatsapp_destinatari`,
+`gmail_regole`): backup, export e motore (notifiche, riepilogo, poller Gmail) li leggono come prima, e nessun dato
+è stato spostato o toccato in produzione. Non sono "core" nel senso di tabelle dedicate: se un giorno servirà,
+si può farlo con una migrazione, ma oggi non porterebbe nulla.
+
 ### Corretto durante il lavoro
 
 - Il commit "Assistente AI, WhatsApp…" nel repository nuovo conteneva solo la parte `core/`: mancavano i file di Super Admin

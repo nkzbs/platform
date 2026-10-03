@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import GmailRulesPanel from '../components/GmailRulesPanel'
 import AiSettingsTab from '../components/AiSettingsTab'
 import DigestSettingsTab from '../components/DigestSettingsTab'
 import { API } from '../lib/api'
@@ -77,7 +78,7 @@ function ConnessioniTab({ token }) {
 
   return (
     <div className="max-w-2xl">
-      <p className="text-sm text-gray-500 mb-4">Account e servizi esterni collegati a questa istanza — usati dai moduli che ne hanno bisogno (es. Regole Gmail).</p>
+      <p className="text-sm text-gray-500 mb-4">Account e servizi esterni collegati a questa istanza — usati dai moduli che ne hanno bisogno (es. Gmail).</p>
       <div className="space-y-2">
         {rows.map((row) => (
           <div key={row.id} className="bg-surface-card border border-gray-800 rounded-lg p-3">
@@ -168,6 +169,7 @@ function ConnessioniTab({ token }) {
           </div>
         ))}
       </div>
+      <GmailRulesPanel token={token} />
     </div>
   )
 }
