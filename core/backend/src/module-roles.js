@@ -103,7 +103,8 @@ function seedIfEmpty() {
     const needAvvisi = cfg.avvisi && !parsed.avvisi && !parsed.states;
     const needRiep = cfg.riepiloghi && !parsed.riepiloghi;
     // dichiarato prima del piano a rate: si aggiungono stato "fatto", piano e campo data di pagamento
-    const needPiano = cfg.avvisi && cfg.avvisi.piano && parsed.avvisi && !('piano' in parsed.avvisi);
+    const avOld = parsed.avvisi || (parsed.states ? parsed : null); // forma vecchia: extra era direttamente gli avvisi
+    const needPiano = cfg.avvisi && cfg.avvisi.piano && avOld && !('piano' in avOld);
     if (!(needAvvisi || needRiep || needPiano)) continue;
     let avvisi = needAvvisi ? cfg.avvisi : cur.avvisi, roles = cur.roles;
     if (needPiano) {

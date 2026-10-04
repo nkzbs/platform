@@ -94,6 +94,17 @@ test('un modulo dichiarato con la forma vecchia (solo avvisi) prende i criteri d
   assertEq(roles.get('entrate').riepiloghi.exclude_categories, [], 'una scelta fatta (anche vuota) non si ripristina');
 });
 
+test('Finance dichiarato nella forma vecchia (avvisi senza piano a rate): prende stato "fatto", piano e "pagata il" una volta sola', () => {
+  db.prepare("UPDATE module_roles SET extra = ?, roles = ? WHERE module_slug = 'spese_casa'").run(JSON.stringify({ states: { nuovo: 'da_smistare', da_fare: 'da_pagare' }, nuovo: true, scadenze: true, tag: 'scadenza', label: 'casa', noun_s: 'bolletta', noun_p: 'bollette' }), JSON.stringify({ importo: 'importo', data: 'data', stato: '_stato' }));
+  roles.seedIfEmpty();
+  const a = roles.get('spese_casa');
+  assertEq(a.avvisi.states.fatto, 'pagato'); assertEq(a.avvisi.piano.modulo, 'debiti_casa'); assertEq(a.avvisi.piano.campi.n_rate, 'n_rate'); assertEq(a.roles.data_pagamento, 'data_pagamento');
+  assertEq(a.avvisi.states.da_fare, 'da_pagare', 'il resto non cambia');
+  roles.set('spese_casa', { kind: 'spesa', uses: ['avvisi'], roles: a.roles, avvisi: { ...a.avvisi, piano: { modulo: '', campi: {} } } });
+  roles.seedIfEmpty();
+  assertEq(roles.get('spese_casa').avvisi.piano.modulo, '', 'chi ha tolto il piano non lo ritrova');
+});
+
 console.log(`\n${'='.repeat(60)}`);
 console.log(passed + ' passati, ' + failed + ' falliti su ' + (passed + failed) + ' test.');
 try { fs.unlinkSync(dbPath); } catch (e) {}
