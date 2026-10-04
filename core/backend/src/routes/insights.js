@@ -63,6 +63,15 @@ router.post('/explain', requireAuth, async (req, res) => {
   res.json({ text: out.text, cached: out.cached });
 });
 
+// Anteprima del messaggio mensile di un widget (solo numeri, senza commento dell'AI e senza inviare niente).
+router.get('/monitor-preview', requireAuth, requireAdmin, (req, res) => {
+  const w = db.prepare("SELECT id, label, config FROM dashboard_widgets WHERE id = ? AND type = 'come_sta_andando'").get(parseInt(req.query.widget, 10));
+  if (!w) return res.status(404).json({ error: 'Widget non trovato' });
+  const month = validMonth(req.query.month) && req.query.month ? req.query.month : insights.lastClosedMonth();
+  const built = require('../monitor').buildText(w, month);
+  res.json({ month, text: built ? built.text : null });
+});
+
 router.get('/config', requireAuth, requireAdmin, (req, res) => res.json(insights.getConfig()));
 router.put('/config', requireAuth, requireAdmin, (req, res) => {
   const cfg = insights.saveConfig(req.body || {});
