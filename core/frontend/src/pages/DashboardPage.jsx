@@ -50,7 +50,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
       api.get('/users').then((data) => { if (data) setAllUsers(data) })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [user && user.role])
   const [widgetData, setWidgetData] = useState({})
   // Configurazione del widget Checklist multi-modulo — separata da newWidget perché
   // ha una forma diversa (più moduli, non uno) e diventa la 'config' JSON del widget.
@@ -535,6 +535,44 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                 </select>
                 {TYPE_HELP[newWidget.type] && <div className="text-xs text-gray-500 mt-1.5">{TYPE_HELP[newWidget.type]}</div>}
               </div>
+              <div className="rounded-lg border border-gray-800 p-3">
+                <label className="text-xs text-gray-400 block mb-2">Chi lo vede</label>
+                {(() => {
+                  const r = newWidget.roles || [], ids = newWidget.user_ids || []
+                  const tutti = r.length === 0 && ids.length === 0
+                  const soloAdmin = !tutti && ids.length === 0 && r.every((x) => x === 'admin')
+                  const chip = (on) => 'px-3 py-1.5 rounded-lg text-xs border transition ' + (on ? 'bg-accent/20 border-accent/50 text-accent' : 'bg-gray-800/50 border-gray-700 text-gray-500 hover:text-gray-300')
+                  const others = allUsers.filter((u) => u.role !== 'admin')
+                  const nomi = others.filter((u) => ids.includes(u.id)).map((u) => u.display_name || u.username)
+                  return (
+                    <>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" className={chip(tutti)} onClick={() => setNewWidget({ ...newWidget, roles: [], user_ids: [] })}>Tutti</button>
+                        <button type="button" className={chip(soloAdmin)} onClick={() => setNewWidget({ ...newWidget, roles: ['admin'], user_ids: [] })}>Solo admin</button>
+                        {others.map((u) => {
+                          const on = ids.includes(u.id)
+                          return <button key={u.id} type="button" className={chip(on)} onClick={() => setNewWidget({ ...newWidget, roles: ['admin'], user_ids: on ? ids.filter((x) => x !== u.id) : [...ids, u.id] })}>{u.display_name || u.username}</button>
+                        })}
+                      </div>
+                      <div className="text-[11px] text-gray-500 mt-2">
+                        {tutti ? 'Lo vedono tutti.' : 'Lo vedono: tu (admin)' + (nomi.length ? ', ' + nomi.join(', ') : '') + (r.filter((x) => x !== 'admin').length ? ' e chi ha il ruolo ' + r.filter((x) => x !== 'admin').join(', ') : '') + '.'}
+                        {' '}Tu, admin, vedi sempre tutto.
+                      </div>
+                      {allRoles.filter((x) => x.name !== 'admin').length > 0 && (
+                        <details className="mt-2">
+                          <summary className="text-[11px] text-gray-600 cursor-pointer">Per ruolo (avanzato)</summary>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {allRoles.filter((x) => x.name !== 'admin').map((x) => {
+                              const on = r.includes(x.name)
+                              return <button key={x.name} type="button" className={chip(on)} onClick={() => setNewWidget({ ...newWidget, roles: on ? r.filter((y) => y !== x.name) : [...(r.length ? r : ['admin']), x.name] })}>{x.label}</button>
+                            })}
+                          </div>
+                        </details>
+                      )}
+                    </>
+                  )
+                })()}
+              </div>
               {!['checklist', 'riepilogo_mensile', 'come_sta_andando', 'coda', ...REPORT_WIDGET_TYPES].includes(newWidget.type) && (
                 <div>
                   <label className="text-xs text-gray-400 block mb-1">Modulo</label>
@@ -862,41 +900,6 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                 <label className="text-xs text-gray-400 block mb-1">Colore</label>
                 <input type="color" value={newWidget.color} onChange={(e) => setNewWidget({ ...newWidget, color: e.target.value })} className="h-10 w-full rounded-lg border border-gray-800 bg-surface-page cursor-pointer" />
               </div>
-              {allRoles.length > 0 && (
-                <div>
-                  <label className="text-xs text-gray-400 block mb-1">Chi lo vede — ruoli (se non scegli né ruoli né utenti, lo vedono tutti; tu, admin, vedi sempre tutto)</label>
-                  <div className="flex flex-wrap gap-2">
-                    {allRoles.map((r) => {
-                      const checked = (newWidget.roles || []).includes(r.name)
-                      return (
-                        <button key={r.name} type="button"
-                          onClick={() => setNewWidget({ ...newWidget, roles: checked ? newWidget.roles.filter((x) => x !== r.name) : [...(newWidget.roles || []), r.name] })}
-                          className={'px-2.5 py-1.5 rounded-lg text-xs border transition ' + (checked ? 'bg-accent/20 border-accent/50 text-accent' : 'bg-gray-800/50 border-gray-700 text-gray-500 hover:text-gray-300')}>
-                          {r.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-              {allUsers.length > 0 && (
-                <div>
-                  <label className="text-xs text-gray-400 block mb-1">Chi lo vede — utenti specifici (in aggiunta ai ruoli sopra)</label>
-                  <div className="flex flex-wrap gap-2">
-                    {allUsers.map((u) => {
-                      const checked = (newWidget.user_ids || []).includes(u.id)
-                      return (
-                        <button key={u.id} type="button"
-                          onClick={() => setNewWidget({ ...newWidget, user_ids: checked ? newWidget.user_ids.filter((x) => x !== u.id) : [...(newWidget.user_ids || []), u.id] })}
-                          className={'px-2.5 py-1.5 rounded-lg text-xs border transition ' + (checked ? 'bg-accent/20 border-accent/50 text-accent' : 'bg-gray-800/50 border-gray-700 text-gray-500 hover:text-gray-300')}>
-                          {u.display_name || u.username}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <p className="text-[11px] text-gray-600 mt-1">Utile quando più persone condividono lo stesso ruolo (es. tutti "Utente") ma il widget riguarda solo una di loro.</p>
-                </div>
-              )}
             </div>
             <div className="flex gap-3">
               <button onClick={resetWidgetForm} className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg transition">Annulla</button>
