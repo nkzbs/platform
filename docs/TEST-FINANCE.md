@@ -49,6 +49,8 @@ Spunta man mano; se qualcosa non torna, annota cosa hai visto (schermata e passo
 
 ## 6. Utenti e accessi (da fare, lo fa Nima)
 
+Sulla riga di ogni utente non admin c'è il pulsante **Moduli · vede tutto** (arancione finché non ha moduli assegnati): si apre, si spuntano i moduli, si salva. Dopo il salvataggio il pulsante mostra il numero di moduli.
+
 Vedi `docs/OPERAZIONI.md` → "Utenti, accessi e 2FA". Dopo averli creati, prova **accedendo come l'utente di Federica**:
 
 - [ ] Vede nel menu **solo** Timbrature e Spese casa (e la dashboard, vuota).

@@ -111,8 +111,7 @@ Connessioni → WhatsApp (CallMeBot), con la API key ottenuta scrivendo al bot d
 
 ## Utenti, accessi e 2FA
 
-**Creare un utente** (lo fa l'admin del tenant): Impostazioni → Utenti & Ruoli → nuovo utente, con nome, nome utente, password e ruolo (*Utente* o *Admin*). Subito dopo, nella scheda dell'utente,
-**"Moduli accessibili"**: spunta solo quelli che deve vedere (per Federica: Timbrature e Spese casa). **Se non si spunta nessun modulo l'utente vede tutto**, quindi la scelta va fatta subito.
+**Creare un utente** (lo fa l'admin del tenant): Impostazioni → Utenti & Ruoli → nuovo utente, con nome, nome utente, password e ruolo (*Utente* o *Admin*). Subito dopo, con il pulsante **"Moduli · vede tutto"** sulla riga dell'utente (si apre da solo appena crei un utente non admin), spunta solo i moduli che deve vedere (per Federica: Timbrature e Spese casa) e premi *Salva accesso moduli*. **Se non si spunta nessun modulo l'utente vede tutto**, quindi la scelta va fatta subito.
 Cosa vede un utente non admin:
 
 | Cosa | Regola |

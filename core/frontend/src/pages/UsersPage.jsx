@@ -23,7 +23,13 @@ function UsersPage({ token }) {
 
   const loadUsers = async () => {
     const data = await api.get('/users')
-    if (data) setUsers(data)
+    if (data) {
+      setUsers(data)
+      // quanti moduli ha assegnato ciascun utente non admin: serve al pulsante «Moduli»
+      for (const u of data.filter((x) => x.role !== 'admin')) {
+        api.get('/users/' + u.id + '/modules').then((m) => { if (Array.isArray(m)) setUserModules((p) => ({ ...p, [u.id]: m })) })
+      }
+    }
   }
   const loadRoles = async () => {
     const data = await api.get('/roles')
@@ -72,6 +78,8 @@ function UsersPage({ token }) {
     setError('')
     const { ok, data } = await api.post('/users', form)
     if (!ok) return setError(data.error)
+    // un utente non admin senza moduli assegnati vede tutto: si apre subito la scelta dei moduli
+    if (data && data.id && form.role !== 'admin') { setExpandedUser(data.id); setUserModules((p) => ({ ...p, [data.id]: [] })) }
     setShowNew(false)
     setForm({ username: '', password: '', display_name: '', role: 'user', linked_module_slug: '', linked_record_id: '' })
     setLinkRecords([])
@@ -140,17 +148,22 @@ function UsersPage({ token }) {
                 </span>
                 <button onClick={() => toggle(u)} className="text-sm text-gray-500 hover:text-ink transition">{u.active ? 'Disabilita' : 'Abilita'}</button>
                 <button onClick={() => { setResetUserId(u.id); setResetPassword('') }} className="text-sm text-gray-500 hover:text-ink transition">Reimposta password</button>
-                {u.role !== 'admin' && modules.length > 0 && (
-                  <button onClick={() => toggleExpand(u.id)} className="text-gray-600 hover:text-gray-300 transition" title="Accesso moduli">
-                    <Icon name={expandedUser === u.id ? 'chevron-up' : 'chevron-down'} size={14} />
-                  </button>
-                )}
+                {u.role !== 'admin' && modules.length > 0 && (() => {
+                  const n = (userModules[u.id] || []).length
+                  return (
+                    <button onClick={() => toggleExpand(u.id)} title="Scegli quali moduli vede questo utente"
+                      className={'text-sm px-3 py-1 rounded-lg border transition flex items-center gap-1.5 ' + (n === 0 ? 'border-amber-700/60 text-amber-400 hover:bg-amber-900/20' : 'border-gray-700 text-gray-300 hover:bg-gray-800')}>
+                      Moduli · {n === 0 ? 'vede tutto' : n}
+                      <Icon name={expandedUser === u.id ? 'chevron-up' : 'chevron-down'} size={13} />
+                    </button>
+                  )
+                })()}
               </div>
             </div>
             {expandedUser === u.id && u.role !== 'admin' && (
               <div className="border-t border-gray-800 px-5 py-4 bg-surface-page/40">
                 <div className="text-xs text-gray-500 mb-3">
-                  Moduli accessibili — se nessuno è selezionato, l'utente vede tutti i moduli installati.
+                  Spunta i moduli che questo utente può vedere. <span className="text-amber-400">Se non ne spunti nessuno, vede tutti i moduli installati.</span>
                 </div>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {modules.map((m) => {
