@@ -448,7 +448,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                   </div>
                 )
               })()}
-              {w.type === 'coda' && <QueueWidget token={token} onNavigate={onNavigate} />}
+              {w.type === 'coda' && <QueueWidget token={token} onNavigate={onNavigate} modules={modules} />}
               {w.type === 'come_sta_andando' && <InsightsCard token={token} widgetId={w.id} title={w.label} onNavigate={features.movimenti ? onNavigate : undefined} />}
               {w.type === 'checklist' && (
                 <ChecklistWidget config={w.config} token={token} label={w.label} color={w.color} modules={modules} user={user} />

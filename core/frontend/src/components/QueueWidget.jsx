@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from './Icon'
+import SmistaPanel from './SmistaPanel'
 
 // Coda "da smistare": le righe nello stato "nuovo" dei moduli che lo hanno dichiarato (Builder → Avvisi). Nessun nome di modulo scritto qui.
 const MAX = 8
 const fmtEur = (n) => (Number(n) > 0 ? Number(n).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' }) : '')
 const fmtDate = (iso) => (iso ? String(iso).split('-').reverse().join('/') : '')
 
-export default function QueueWidget({ token, onNavigate }) {
+export default function QueueWidget({ token, onNavigate, modules }) {
   const api = useApi(token)
   const [queues, setQueues] = useState(null) // [{ q, rows }]
-  const [busy, setBusy] = useState(null) // id della riga in corso
-  const [msg, setMsg] = useState(null)
 
   const load = () => {
     (async () => {
@@ -27,16 +26,8 @@ export default function QueueWidget({ token, onNavigate }) {
   }
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // "Smista" = confermare la riga: passa dallo stato "nuovo" a quello "da fare" con la transizione del modulo (permessi, controlli, storico e
-  // automazioni sono quelli normali). Nessuna AI: è un click tuo.
-  const smista = async (q, r) => {
-    if (!(Number(r.data[q.importo]) > 0) && !window.confirm('L\'importo è 0 o mancante. Smisti lo stesso?')) return
-    setBusy(r.id); setMsg(null)
-    const res = await api.post('/records/' + q.module_slug + '/' + r.id + '/transition', { to: q.da_fare })
-    setBusy(null)
-    if (!res.ok) { setMsg((res.data && res.data.error) || 'Non sono riuscito a smistare questa riga: aprila nel modulo.'); return }
-    load()
-  }
+  const [panel, setPanel] = useState(null) // { q, row }
+  const [done, setDone] = useState(null) // { text, module_slug } dopo uno smistamento
 
   if (queues === null) return <div className="p-5 text-sm text-gray-600">Caricamento…</div>
   const total = queues.reduce((t, x) => t + x.rows.length, 0)
@@ -47,7 +38,13 @@ export default function QueueWidget({ token, onNavigate }) {
         <Icon name="inbox" size={15} className={total ? 'text-amber-500' : 'text-gray-500'} />
         <h2 className="text-sm font-semibold text-ink">Da smistare{total ? ' · ' + total : ''}</h2>
       </div>
-      {msg && <div className="text-xs text-amber-400 mb-2">{msg}</div>}
+      {done && (
+        <div className="flex items-start gap-2 text-xs text-green-400 bg-green-900/20 border border-green-900/40 rounded-lg p-2.5 mb-3">
+          <span className="flex-1">{done.text}</span>
+          {onNavigate && <button type="button" onClick={() => onNavigate(done.module_slug)} className="underline flex-shrink-0">Apri {done.name}</button>}
+          <button type="button" onClick={() => setDone(null)} className="text-gray-500 flex-shrink-0" aria-label="Chiudi">×</button>
+        </div>
+      )}
       {total === 0 && <div className="text-xs text-gray-500">Niente da smistare.</div>}
       {queues.filter((x) => x.rows.length).map(({ q, rows }) => (
         <div key={q.module_slug} className="mb-3 last:mb-0">
@@ -60,13 +57,14 @@ export default function QueueWidget({ token, onNavigate }) {
                   <span className="text-xs text-gray-400 flex-shrink-0">{fmtEur(r.data[q.importo]) || 'importo da verificare'}</span>
                   <span className="text-xs text-gray-500 flex-shrink-0 w-20 text-right">{fmtDate(r.data[q.scadenza] || r.data[q.data])}</span>
                 </button>
-                {q.da_fare && <button type="button" onClick={() => smista(q, r)} disabled={busy === r.id} className="text-xs bg-accent hover:opacity-90 disabled:opacity-50 text-white px-2.5 py-1 rounded-lg flex-shrink-0">{busy === r.id ? '…' : 'Smista'}</button>}
+                {q.da_fare && <button type="button" onClick={() => setPanel({ q, row: r })} className="text-xs bg-accent hover:opacity-90 text-white px-2.5 py-1 rounded-lg flex-shrink-0">Smista</button>}
               </div>
             ))}
           </div>
           {rows.length > MAX && <div className="text-xs text-gray-500 mt-1">… e altre {rows.length - MAX}</div>}
         </div>
       ))}
+      {panel && <SmistaPanel token={token} q={panel.q} row={panel.row} modules={modules} onClose={() => setPanel(null)} onDone={(text) => { setDone({ text, module_slug: panel.q.module_slug, name: panel.q.name }); setPanel(null); load() }} />}
     </div>
   )
 }

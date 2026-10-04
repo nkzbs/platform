@@ -5,19 +5,21 @@ import useApi from '../../lib/useApi'
 // Le funzioni (Come sta andando, riepilogo del mattino, regole Gmail) leggono questa dichiarazione invece di nomi scritti nel codice.
 const KINDS = [['', 'Nessuno'], ['spesa', 'Spese'], ['entrata', 'Entrate']]
 const USES = [['riepiloghi', 'Entra nei riepiloghi ("Come sta andando")'], ['avvisi', 'Entra negli avvisi e nel riepilogo del mattino'], ['mail', 'Può ricevere righe dalle mail (Gmail)']]
-const ROLES = [['importo', 'Importo'], ['data', 'Data'], ['scadenza', 'Scadenza'], ['categoria', 'Categoria'], ['descrizione', 'Descrizione'], ['stato', 'Stato'], ['gruppo', 'Gruppo'], ['fisso', 'Spesa fissa']]
+const ROLES = [['importo', 'Importo'], ['data', 'Data'], ['scadenza', 'Scadenza'], ['categoria', 'Categoria'], ['descrizione', 'Descrizione'], ['stato', 'Stato'], ['gruppo', 'Gruppo'], ['fisso', 'Spesa fissa'], ['data_pagamento', 'Pagata il']]
 const sel = 'w-full bg-surface-page text-ink px-2.5 py-1.5 rounded-lg text-xs outline-none border border-gray-800 focus:border-accent'
 
 const RP0 = { exclude_categories: [], exclude_groups: [], exclude_descriptions: [], salary_categories: [], savings_categories: [], savings_field: '' }
-const AV0 = { states: { nuovo: '', da_fare: '' }, nuovo: false, scadenze: false, tag: 'scadenza', label: '', noun_s: 'riga', noun_p: 'righe' }
+const PIANO0 = { modulo: '', campi: { nome: '', importo_totale: '', n_rate: '', importo_rata: '', data_prima_rata: '' } }
+const PIANO_CAMPI = [['nome', 'Nome'], ['importo_totale', 'Importo totale'], ['n_rate', 'Numero di rate'], ['importo_rata', 'Importo di una rata'], ['data_prima_rata', 'Data della prima rata']]
+const AV0 = { states: { nuovo: '', da_fare: '', fatto: '' }, piano: PIANO0, nuovo: false, scadenze: false, tag: 'scadenza', label: '', noun_s: 'riga', noun_p: 'righe' }
 const txt = 'w-full bg-surface-page text-ink px-2.5 py-1.5 rounded-lg text-xs outline-none border border-gray-800 focus:border-accent placeholder-gray-600'
 
-export default function ModuleRolesSection({ token, baseUrl, slug, fields, states }) {
+export default function ModuleRolesSection({ token, baseUrl, slug, fields, states, allModules = [], fieldCache = [] }) {
   const api = useApi(token, baseUrl)
   const [cfg, setCfg] = useState(null)
   const [saved, setSaved] = useState(false)
 
-  useEffect(() => { setCfg(null); api.get('/module-roles/' + slug).then((d) => setCfg(d && d.module_slug ? { ...d, riepiloghi: { ...RP0, ...(d.riepiloghi || {}) }, avvisi: { ...AV0, ...(d.avvisi || {}), states: { ...AV0.states, ...((d.avvisi || {}).states || {}) } } } : { kind: null, uses: [], roles: {}, avvisi: AV0, riepiloghi: RP0 })) }, [slug]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setCfg(null); api.get('/module-roles/' + slug).then((d) => setCfg(d && d.module_slug ? { ...d, riepiloghi: { ...RP0, ...(d.riepiloghi || {}) }, avvisi: { ...AV0, ...(d.avvisi || {}), states: { ...AV0.states, ...((d.avvisi || {}).states || {}) }, piano: { ...PIANO0, ...((d.avvisi || {}).piano || {}), campi: { ...PIANO0.campi, ...(((d.avvisi || {}).piano || {}).campi || {}) } } } } : { kind: null, uses: [], roles: {}, avvisi: AV0, riepiloghi: RP0 })) }, [slug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async (next) => {
     setCfg(next); setSaved(false)
@@ -52,7 +54,7 @@ export default function ModuleRolesSection({ token, baseUrl, slug, fields, state
             ))}
           </div>
           <div className="mt-2 space-y-1.5">
-            {ROLES.filter(([k]) => cfg.kind === 'spesa' ? k !== 'gruppo' : k !== 'fisso').map(([k, l]) => (
+            {ROLES.filter(([k]) => cfg.kind === 'spesa' ? k !== 'gruppo' : !['fisso', 'data_pagamento'].includes(k)).map(([k, l]) => (
               <div key={k} className="flex items-center gap-2">
                 <span className="text-[11px] text-gray-500 w-16 flex-shrink-0">{l}</span>
                 <select className={sel} value={cfg.roles[k] || ''} onChange={(e) => setRole(k, e.target.value)}>
@@ -82,7 +84,7 @@ export default function ModuleRolesSection({ token, baseUrl, slug, fields, state
           {cfg.uses.includes('avvisi') && (
             <div className="mt-3 pt-2 border-t border-gray-800">
               <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Avvisi WhatsApp</div>
-              {[['nuovo', 'Stato "nuovo" (da smistare)'], ['da_fare', 'Stato "da fare" (da pagare)']].map(([k, l]) => (
+              {[['nuovo', 'Stato "nuovo" (da smistare)'], ['da_fare', 'Stato "da fare" (da pagare)'], ['fatto', 'Stato "fatto" (pagato), per «già pagata»']].map(([k, l]) => (
                 <div key={k} className="mb-1.5">
                   <div className="text-[11px] text-gray-500 mb-0.5">{l}</div>
                   {stateOpts.length > 0 ? (
@@ -95,6 +97,27 @@ export default function ModuleRolesSection({ token, baseUrl, slug, fields, state
                   )}
                 </div>
               ))}
+              <div className="mt-2 mb-1.5 pt-2 border-t border-gray-800">
+                <div className="text-[11px] text-gray-500 mb-0.5">Piano a rate (per «Dividi in rate»)</div>
+                <select className={sel} value={cfg.avvisi.piano.modulo || ''} onChange={(e) => setAv({ piano: { modulo: e.target.value, campi: { ...PIANO0.campi } } })}>
+                  <option value="">Nessuno: non si divide in rate</option>
+                  {allModules.filter((m) => m.slug !== slug && m.slug !== 'dashboard').map((m) => <option key={m.slug} value={m.slug}>{m.name}</option>)}
+                </select>
+                {cfg.avvisi.piano.modulo && (
+                  <div className="mt-1.5 space-y-1">
+                    <div className="text-[10.5px] text-gray-600">Quali campi di quel modulo sono: (le righe delle rate le genera la sua automazione)</div>
+                    {PIANO_CAMPI.map(([k, l]) => (
+                      <div key={k} className="flex items-center gap-2">
+                        <span className="text-[11px] text-gray-500 w-24 flex-shrink-0">{l}</span>
+                        <select className={sel} value={cfg.avvisi.piano.campi[k] || ''} onChange={(e) => setAv({ piano: { ...cfg.avvisi.piano, campi: { ...cfg.avvisi.piano.campi, [k]: e.target.value } } })}>
+                          <option value="">—</option>
+                          {((fieldCache.find((m) => m.slug === cfg.avvisi.piano.modulo) || {}).fields || []).map((f) => <option key={f.key} value={f.key}>{f.label || f.key}</option>)}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <label className="flex items-start gap-2 py-1 cursor-pointer text-[11px] text-gray-300 leading-tight"><input type="checkbox" className="mt-0.5" checked={cfg.avvisi.nuovo} onChange={() => setAv({ nuovo: !cfg.avvisi.nuovo })} />Avvisa quando arriva una riga nuova</label>
               <label className="flex items-start gap-2 py-1 cursor-pointer text-[11px] text-gray-300 leading-tight"><input type="checkbox" className="mt-0.5" checked={cfg.avvisi.scadenze} onChange={() => setAv({ scadenze: !cfg.avvisi.scadenze })} />Mette le scadenze nel riepilogo del mattino</label>
               <div className="grid grid-cols-2 gap-1.5 mt-1.5">

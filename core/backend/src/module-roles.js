@@ -4,7 +4,7 @@
 // dichiarazione invece di conoscere nomi di moduli e di campi scritti nel codice. Si modifica dal Builder.
 const db = require('./db');
 
-const ROLE_KEYS = ['importo', 'data', 'scadenza', 'categoria', 'descrizione', 'stato', 'gruppo', 'fisso'];
+const ROLE_KEYS = ['importo', 'data', 'scadenza', 'categoria', 'descrizione', 'stato', 'gruppo', 'fisso', 'data_pagamento'];
 const KINDS = ['spesa', 'entrata'];
 const USES = ['riepiloghi', 'avvisi', 'mail'];
 
@@ -15,7 +15,10 @@ if (!db.prepare('PRAGMA table_info(module_roles)').all().some((c) => c.name === 
 // quando avvisare, e come chiamare le sue righe nei messaggi. Le funzioni non conoscono nomi di stati scritti nel codice.
 // Criteri dei riepiloghi ("Come sta andando") per un modulo di entrate: cosa non conta come entrata, cosa è stipendio, cosa è risparmio.
 const DEFAULT_RIEPILOGHI = { exclude_categories: [], exclude_groups: [], exclude_descriptions: [], salary_categories: [], savings_categories: [], savings_field: '' };
-const DEFAULT_AVVISI = { states: { nuovo: '', da_fare: '' }, nuovo: false, scadenze: false, tag: 'scadenza', label: '', noun_s: 'riga', noun_p: 'righe' };
+// Piano a rate: dove si crea il piano quando una riga si divide in rate (un altro modulo, es. i debiti) e quali suoi campi sono nome, importo totale,
+// numero di rate, importo della rata e data della prima. Le righe delle rate le genera l'automazione di quel modulo, come per un piano creato a mano.
+const DEFAULT_PIANO = { modulo: '', campi: { nome: '', importo_totale: '', n_rate: '', importo_rata: '', data_prima_rata: '' } };
+const DEFAULT_AVVISI = { states: { nuovo: '', da_fare: '', fatto: '' }, piano: DEFAULT_PIANO, nuovo: false, scadenze: false, tag: 'scadenza', label: '', noun_s: 'riga', noun_p: 'righe' };
 
 function parse(row) {
   if (!row) return null;
@@ -25,7 +28,7 @@ function parse(row) {
   try { extra = JSON.parse(row.extra || '{}'); } catch (e) { /* vuoto */ }
   const av = extra.avvisi || (extra.states ? extra : {}); // forma vecchia: extra era direttamente gli avvisi
   return { module_slug: row.module_slug, kind: row.kind || null, uses, roles,
-    avvisi: { ...DEFAULT_AVVISI, ...av, states: { ...DEFAULT_AVVISI.states, ...(av.states || {}) } },
+    avvisi: { ...DEFAULT_AVVISI, ...av, states: { ...DEFAULT_AVVISI.states, ...(av.states || {}) }, piano: { ...DEFAULT_PIANO, ...(av.piano || {}), campi: { ...DEFAULT_PIANO.campi, ...((av.piano || {}).campi || {}) } } },
     riepiloghi: { ...DEFAULT_RIEPILOGHI, ...(extra.riepiloghi || {}) } };
 }
 
@@ -49,7 +52,8 @@ function clean(input) {
   const word = (v, d, n) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, n) : d);
   const stateKey = (v) => (typeof v === 'string' && /^[A-Za-z0-9_]{1,60}$/.test(v.trim()) ? v.trim() : '');
   const avvisi = {
-    states: { nuovo: stateKey(a.states && a.states.nuovo), da_fare: stateKey(a.states && a.states.da_fare) },
+    states: { nuovo: stateKey(a.states && a.states.nuovo), da_fare: stateKey(a.states && a.states.da_fare), fatto: stateKey(a.states && a.states.fatto) },
+    piano: { modulo: stateKey(a.piano && a.piano.modulo), campi: Object.fromEntries(Object.keys(DEFAULT_PIANO.campi).map((k) => [k, stateKey(a.piano && a.piano.campi && a.piano.campi[k])])) },
     nuovo: !!a.nuovo, scadenze: !!a.scadenze,
     tag: word(a.tag, 'scadenza', 40).replace(/[^A-Za-z0-9_\-]/g, '') || 'scadenza',
     label: word(a.label, '', 20), noun_s: word(a.noun_s, 'riga', 30), noun_p: word(a.noun_p, 'righe', 30),
@@ -73,11 +77,12 @@ function set(slug, input) {
 
 // Valori di partenza per i moduli di finanza che esistono già: gli stessi nomi che le funzioni usavano prima, così per chi li ha
 // già niente cambia. Si scrivono solo dove non c'è ancora una dichiarazione (una scelta fatta dal Builder non si tocca).
+const PIANO_FINANCE = { nome: 'nome', importo_totale: 'importo_totale', n_rate: 'n_rate', importo_rata: 'importo_rata', data_prima_rata: 'data_prima_rata' };
 const FINANCE = {
-  spese_personali: { kind: 'spesa', uses: ['riepiloghi', 'avvisi', 'mail'], roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', fisso: 'fisso' },
-    avvisi: { states: { nuovo: 'da_smistare', da_fare: 'da_pagare' }, nuovo: true, scadenze: true, tag: 'scadenza', label: 'pers.', noun_s: 'bolletta', noun_p: 'bollette' } },
-  spese_casa: { kind: 'spesa', uses: ['avvisi', 'mail'], roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', fisso: 'fisso' },
-    avvisi: { states: { nuovo: 'da_smistare', da_fare: 'da_pagare' }, nuovo: true, scadenze: true, tag: 'scadenza', label: 'casa', noun_s: 'bolletta', noun_p: 'bollette' } },
+  spese_personali: { kind: 'spesa', uses: ['riepiloghi', 'avvisi', 'mail'], roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', fisso: 'fisso', data_pagamento: 'data_pagamento' },
+    avvisi: { states: { nuovo: 'da_smistare', da_fare: 'da_pagare', fatto: 'pagato' }, piano: { modulo: 'debiti_personali', campi: PIANO_FINANCE }, nuovo: true, scadenze: true, tag: 'scadenza', label: 'pers.', noun_s: 'bolletta', noun_p: 'bollette' } },
+  spese_casa: { kind: 'spesa', uses: ['avvisi', 'mail'], roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', fisso: 'fisso', data_pagamento: 'data_pagamento' },
+    avvisi: { states: { nuovo: 'da_smistare', da_fare: 'da_pagare', fatto: 'pagato' }, piano: { modulo: 'debiti_casa', campi: PIANO_FINANCE }, nuovo: true, scadenze: true, tag: 'scadenza', label: 'casa', noun_s: 'bolletta', noun_p: 'bollette' } },
   entrate: { kind: 'entrata', uses: ['riepiloghi'], roles: { importo: 'importo', data: 'data', categoria: 'categoria', descrizione: 'descrizione', gruppo: 'gruppo' },
     riepiloghi: { exclude_categories: ['Risparmi', 'Fondo'], exclude_groups: ['Casa'], exclude_descriptions: ['Saldo conto'], salary_categories: ['Stipendio'], savings_categories: ['Fondo'], savings_field: 'accantonamento_suggerito' } },
 };
@@ -97,9 +102,15 @@ function seedIfEmpty() {
     let parsed = {}; try { parsed = JSON.parse(raw.extra || '{}'); } catch (e) { /* vuoto */ }
     const needAvvisi = cfg.avvisi && !parsed.avvisi && !parsed.states;
     const needRiep = cfg.riepiloghi && !parsed.riepiloghi;
-    if (needAvvisi || needRiep) {
-      set(slug, { kind: cur.kind, uses: cur.uses, roles: cur.roles, avvisi: needAvvisi ? cfg.avvisi : cur.avvisi, riepiloghi: needRiep ? cfg.riepiloghi : cur.riepiloghi }); n++;
+    // dichiarato prima del piano a rate: si aggiungono stato "fatto", piano e campo data di pagamento
+    const needPiano = cfg.avvisi && cfg.avvisi.piano && parsed.avvisi && !('piano' in parsed.avvisi);
+    if (!(needAvvisi || needRiep || needPiano)) continue;
+    let avvisi = needAvvisi ? cfg.avvisi : cur.avvisi, roles = cur.roles;
+    if (needPiano) {
+      avvisi = { ...avvisi, states: { ...avvisi.states, fatto: cfg.avvisi.states.fatto }, piano: cfg.avvisi.piano };
+      roles = { ...roles, data_pagamento: roles.data_pagamento || cfg.roles.data_pagamento };
     }
+    set(slug, { kind: cur.kind, uses: cur.uses, roles, avvisi, riepiloghi: needRiep ? cfg.riepiloghi : cur.riepiloghi }); n++;
   }
   // Le regole Gmail fatte prima della scelta del modulo: si agganciano al modulo che usavano (Casa -> spese_casa, il resto -> spese_personali).
   try {

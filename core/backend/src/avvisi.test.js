@@ -30,7 +30,7 @@ addModule('spese_casa', 'Spese casa');
 roles.seedIfEmpty();
 test('Spese casa avvisa per le righe da smistare, con il tag e i nomi di prima', () => {
   const a = roles.get('spese_casa').avvisi;
-  assertEq(a.states, { nuovo: 'da_smistare', da_fare: 'da_pagare' }); assertEq(a.nuovo, true); assertEq(a.scadenze, true); assertEq(a.tag, 'scadenza'); assertEq(a.noun_s, 'bolletta');
+  assertEq(a.states, { nuovo: 'da_smistare', da_fare: 'da_pagare', fatto: 'pagato' }); assertEq(a.piano.modulo, 'debiti_casa'); assertEq(a.piano.campi.n_rate, 'n_rate'); assertEq(a.nuovo, true); assertEq(a.scadenze, true); assertEq(a.tag, 'scadenza'); assertEq(a.noun_s, 'bolletta');
 });
 test('il messaggio per una nuova bolletta', () => {
   const m = avvisi.buildNuovaRiga('spese_casa', { descrizione: 'A2A Energia', importo: 44, scadenza: '2026-10-01', _stato: 'da_smistare' });
@@ -52,7 +52,7 @@ test('senza avviso acceso il modulo non avvisa', () => {
 });
 test('valori strani nelle dichiarazioni vengono ripuliti', () => {
   const a = roles.set('ordini', { kind: 'entrata', uses: [], roles: {}, avvisi: { states: { nuovo: "x'; DROP", da_fare: 'ok_1' }, tag: 'a b!c', noun_s: '  ', nuovo: 1 } }).avvisi;
-  assertEq(a.states, { nuovo: '', da_fare: 'ok_1' }); assertEq(a.tag, 'abc'); assertEq(a.noun_s, 'riga'); assertEq(a.nuovo, true);
+  assertEq(a.states, { nuovo: '', da_fare: 'ok_1', fatto: '' }); assertEq(a.tag, 'abc'); assertEq(a.noun_s, 'riga'); assertEq(a.nuovo, true);
 });
 
 console.log(`\n${'='.repeat(60)}`);
