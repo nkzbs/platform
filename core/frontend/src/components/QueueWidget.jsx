@@ -51,13 +51,15 @@ export default function QueueWidget({ token, onNavigate, modules }) {
           <button type="button" onClick={() => onNavigate && onNavigate(q.module_slug)} className="text-[11px] uppercase tracking-wide text-gray-500 hover:text-accent mb-1">{q.name} · {rows.length} {rows.length === 1 ? q.noun_s : q.noun_p}</button>
           <div className="divide-y divide-gray-800">
             {rows.slice(0, MAX).map((r) => (
-              <div key={r.id} className="flex items-center gap-3 py-1.5 hover:bg-white/[0.03] rounded">
-                <button type="button" onClick={() => onNavigate && onNavigate(q.module_slug)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                  <span className="text-sm text-ink truncate flex-1">{r.data[q.descrizione] || '(senza descrizione)'}</span>
-                  <span className="text-xs text-gray-400 flex-shrink-0">{fmtEur(r.data[q.importo]) || 'importo da verificare'}</span>
-                  <span className="text-xs text-gray-500 flex-shrink-0 w-20 text-right">{fmtDate(r.data[q.scadenza] || r.data[q.data])}</span>
+              <div key={r.id} className="flex items-center gap-3 py-2 hover:bg-white/[0.03] rounded">
+                <button type="button" onClick={() => onNavigate && onNavigate(q.module_slug)} className="flex-1 min-w-0 text-left">
+                  <div className="text-sm text-ink break-words">{r.data[q.descrizione] || '(senza descrizione)'}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    <span className={fmtEur(r.data[q.importo]) ? 'text-gray-300' : 'text-amber-500'}>{fmtEur(r.data[q.importo]) || 'importo da verificare'}</span>
+                    {fmtDate(r.data[q.scadenza] || r.data[q.data]) && <span> · {fmtDate(r.data[q.scadenza] || r.data[q.data])}</span>}
+                  </div>
                 </button>
-                {q.da_fare && <button type="button" onClick={() => setPanel({ q, row: r })} className="text-xs bg-accent hover:opacity-90 text-white px-2.5 py-1 rounded-lg flex-shrink-0">Smista</button>}
+                {q.da_fare && <button type="button" onClick={() => setPanel({ q, row: r })} className="text-sm bg-accent hover:opacity-90 text-white px-3 py-1.5 rounded-lg flex-shrink-0">Smista</button>}
               </div>
             ))}
           </div>

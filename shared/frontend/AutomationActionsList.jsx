@@ -103,7 +103,7 @@ function CreaRecordNVolteConfig({ config, onChange }) {
 }
 
 // Le 5 righe sotto sono un input di testo + una select operazione — stesso schema
-// ricorrente in aggiorna_record/aggiorna_figli/trova_o_crea_e_aggiorna, estratto per
+// ricorrente in aggiorna_record, estratto per
 // non ripetere il markup 3 volte.
 function Riga({ label, placeholder, value, onChange }) {
   return (
@@ -158,137 +158,6 @@ function AggiornaRecordConfig({ config, onChange }) {
   )
 }
 
-function ApplicaPrezzoListinoConfig({ config, onChange }) {
-  const cfg = config && typeof config === 'object' ? config : {}
-  return (
-    <div className="w-full mt-1 space-y-1.5 bg-surface-card rounded-md p-2 border border-gray-700">
-      <div className="text-[10px] text-gray-600 mb-1">Percorso: questo record → documento padre → cliente → listino → riga del listino per questo prodotto. Se non trova nulla, usa il prezzo base del prodotto.</div>
-      <Riga label="Modulo padre" placeholder="es. ordini" value={cfg.modulo_padre} onChange={(v) => onChange({ ...cfg, modulo_padre: v })} />
-      <Riga label="Campo verso il padre" placeholder="campo su questo record che punta al padre, es. 'ordine'" value={cfg.campo_padre} onChange={(v) => onChange({ ...cfg, campo_padre: v })} />
-      <Riga label="Campo cliente sul padre" placeholder="es. 'cliente'" value={cfg.campo_cliente} onChange={(v) => onChange({ ...cfg, campo_cliente: v })} />
-      <Riga label="Campo listino sul cliente" placeholder="es. 'listino'" value={cfg.campo_listino} onChange={(v) => onChange({ ...cfg, campo_listino: v })} />
-      <Riga label="Modulo righe listino" placeholder="es. listini_righe" value={cfg.modulo_listino_righe} onChange={(v) => onChange({ ...cfg, modulo_listino_righe: v })} />
-      <Riga label="Campo prodotto (questo record)" placeholder="es. 'prodotto'" value={cfg.campo_prodotto} onChange={(v) => onChange({ ...cfg, campo_prodotto: v })} />
-      <Riga label="Modulo prodotti (fallback)" placeholder="es. prodotti" value={cfg.modulo_prodotti} onChange={(v) => onChange({ ...cfg, modulo_prodotti: v })} />
-      <Riga label="Campo prezzo base prodotto" placeholder="es. 'prezzo_listino'" value={cfg.campo_prezzo_base} onChange={(v) => onChange({ ...cfg, campo_prezzo_base: v })} />
-      <Riga label="Campo prezzo da scrivere" placeholder="default 'prezzo_unitario'" value={cfg.campo_prezzo_target} onChange={(v) => onChange({ ...cfg, campo_prezzo_target: v })} />
-      <Riga label="Campo sconto da scrivere" placeholder="default 'sconto_percentuale'" value={cfg.campo_sconto_target} onChange={(v) => onChange({ ...cfg, campo_sconto_target: v })} />
-      <div className="text-[10px] text-gray-600">Non sovrascrive una riga già prezzata a mano — scrive solo se il campo prezzo è ancora vuoto.</div>
-    </div>
-  )
-}
-
-function AggiornaFigliConfig({ config, onChange }) {
-  const cfg = config && typeof config === 'object' ? config : {}
-  return (
-    <div className="w-full mt-1 space-y-1.5 bg-surface-card rounded-md p-2 border border-gray-700">
-      <Riga label="Modulo figlio" placeholder="es. ordini_righe" value={cfg.figlio_modulo} onChange={(v) => onChange({ ...cfg, figlio_modulo: v })} />
-      <Riga label="Via relazione" placeholder="campo nel figlio che punta al record corrente" value={cfg.via_relazione} onChange={(v) => onChange({ ...cfg, via_relazione: v })} />
-      <Riga label="Campo relazione" placeholder="campo nel figlio che punta al record da aggiornare" value={cfg.rel_campo} onChange={(v) => onChange({ ...cfg, rel_campo: v })} />
-      <Riga label="Modulo target" placeholder="es. prodotti" value={cfg.target_modulo} onChange={(v) => onChange({ ...cfg, target_modulo: v })} />
-      <Riga label="Campo target" placeholder="es. stock_attuale" value={cfg.target_campo} onChange={(v) => onChange({ ...cfg, target_campo: v })} />
-      <div className="flex items-center gap-2">
-        <span className="text-[10px] text-gray-500 w-24 flex-shrink-0">Operazione</span>
-        <OperazioneSelect value={cfg.operazione} onChange={(v) => onChange({ ...cfg, operazione: v })} />
-      </div>
-      <Riga label="Campo quantità" placeholder="campo nel figlio con la quantità (default 'quantita')" value={cfg.quantita_campo} onChange={(v) => onChange({ ...cfg, quantita_campo: v })} />
-    </div>
-  )
-}
-
-function AggiornaFigliViaRouterConfig({ config, onChange }) {
-  const cfg = config && typeof config === 'object' ? config : {}
-  return (
-    <div className="w-full mt-1 space-y-1.5 bg-surface-card rounded-md p-2 border border-gray-700">
-      <div className="text-[10px] text-amber-500/80 mb-1">Es. "scarica il furgone dell'agente se ne ha uno assegnato, altrimenti il magazzino centrale"</div>
-      <Riga label="Modulo figlio" placeholder="es. ordini_righe" value={cfg.figlio_modulo} onChange={(v) => onChange({ ...cfg, figlio_modulo: v })} />
-      <Riga label="Via relazione" placeholder="campo nel figlio che punta al record corrente" value={cfg.via_relazione} onChange={(v) => onChange({ ...cfg, via_relazione: v })} />
-      <Riga label="Campo relazione" placeholder="campo nel figlio che punta al prodotto/target" value={cfg.rel_campo} onChange={(v) => onChange({ ...cfg, rel_campo: v })} />
-      <Riga label="Campo quantità" placeholder="default 'quantita'" value={cfg.quantita_campo} onChange={(v) => onChange({ ...cfg, quantita_campo: v })} />
-      <div className="pt-1.5 mt-1 border-t border-gray-800 text-[10px] text-gray-500">Router — record collegato lateralmente (stesso valore in comune, non una relazione diretta):</div>
-      <Riga label="Campo router (qui)" placeholder="campo sul record corrente, es. agente" value={cfg.router_campo_corrente} onChange={(v) => onChange({ ...cfg, router_campo_corrente: v })} />
-      <Riga label="Modulo router" placeholder="es. furgoni" value={cfg.router_modulo} onChange={(v) => onChange({ ...cfg, router_modulo: v })} />
-      <Riga label="Campo router (là)" placeholder="campo nel modulo router da confrontare, es. agente" value={cfg.router_campo_match} onChange={(v) => onChange({ ...cfg, router_campo_match: v })} />
-      <div className="pt-1.5 mt-1 border-t border-gray-800 text-[10px] text-gray-500">Se il router esiste — trova o crea in un modulo alternativo:</div>
-      <Riga label="Modulo alternativo" placeholder="es. giacenza_furgone" value={cfg.modulo_alternativo} onChange={(v) => onChange({ ...cfg, modulo_alternativo: v })} />
-      <Riga label="Campo riferimento router" placeholder="campo nel modulo alternativo che punta al router, es. furgone" value={cfg.router_campo_riferimento} onChange={(v) => onChange({ ...cfg, router_campo_riferimento: v })} />
-      <Riga label="Campo corrisp. figlio" placeholder="campo nel modulo alternativo che corrisponde al 'Campo relazione', es. prodotto" value={cfg.campo_alternativo_match} onChange={(v) => onChange({ ...cfg, campo_alternativo_match: v })} />
-      <Riga label="Campo da aggiornare" placeholder="es. quantita" value={cfg.target_campo_alternativo} onChange={(v) => onChange({ ...cfg, target_campo_alternativo: v })} />
-      <div className="pt-1.5 mt-1 border-t border-gray-800 text-[10px] text-gray-500">Se il router NON esiste — fallback (stesso comportamento di "Aggiorna un record collegato per ogni figlio"):</div>
-      <Riga label="Modulo target" placeholder="es. prodotti" value={cfg.target_modulo} onChange={(v) => onChange({ ...cfg, target_modulo: v })} />
-      <Riga label="Campo target" placeholder="es. stock_attuale" value={cfg.target_campo} onChange={(v) => onChange({ ...cfg, target_campo: v })} />
-      <div className="flex items-center gap-2">
-        <span className="text-[10px] text-gray-500 w-28 flex-shrink-0">Operazione</span>
-        <OperazioneSelect value={cfg.operazione} onChange={(v) => onChange({ ...cfg, operazione: v })} />
-      </div>
-    </div>
-  )
-}
-
-function LiberaAltriConStessoValoreConfig({ config, onChange }) {
-  const cfg = config && typeof config === 'object' ? config : {}
-  return (
-    <div className="w-full mt-1 space-y-1.5 bg-surface-card rounded-md p-2 border border-gray-700">
-      <div className="text-[10px] text-amber-500/80 mb-1">Es. "assegnando un agente a questo furgone, libera qualunque altro furgone che l'agente aveva già"</div>
-      <Riga label="Modulo" placeholder="di solito questo stesso modulo" value={cfg.modulo} onChange={(v) => onChange({ ...cfg, modulo: v })} />
-      <Riga label="Campo di confronto" placeholder="campo su cui cercare altri record con lo stesso valore, es. agente" value={cfg.campo_confronto} onChange={(v) => onChange({ ...cfg, campo_confronto: v })} />
-      <Riga label="Campo da liberare" placeholder="campo da azzerare sugli altri record, di solito lo stesso" value={cfg.campo_da_liberare} onChange={(v) => onChange({ ...cfg, campo_da_liberare: v })} />
-    </div>
-  )
-}
-
-function TrovaOCreaEAggiornaConfig({ config, onChange }) {
-  const cfg = config && typeof config === 'object' ? config : {}
-  return (
-    <div className="w-full mt-1 space-y-1.5 bg-surface-card rounded-md p-2 border border-gray-700">
-      <Riga label="Modulo" placeholder="es. giacenza_furgone" value={cfg.modulo} onChange={(v) => onChange({ ...cfg, modulo: v })} />
-      <JsonField label='Corrispondenza (JSON) — { "campo_target": "campo_record_corrente", ... }' placeholder='{\n  "furgone": "furgone",\n  "prodotto": "prodotto"\n}' value={cfg.match} onChange={(v) => onChange({ ...cfg, match: v })} />
-      <Riga label="Campo da aggiornare" placeholder="es. quantita" value={cfg.campo} onChange={(v) => onChange({ ...cfg, campo: v })} />
-      <div className="flex items-center gap-2">
-        <span className="text-[10px] text-gray-500 w-24 flex-shrink-0">Operazione</span>
-        <OperazioneSelect value={cfg.operazione} onChange={(v) => onChange({ ...cfg, operazione: v })} />
-      </div>
-      <Riga label="Valore" placeholder="numero o nome campo del record corrente" value={cfg.valore} onChange={(v) => onChange({ ...cfg, valore: v })} />
-      <div className="text-[10px] text-gray-600">Se non esiste ancora un record che soddisfa la corrispondenza, viene creato al volo — utile per contatori per-combinazione (es. giacenza furgone×prodotto).</div>
-    </div>
-  )
-}
-
-function AggregaInRecordConfig({ config, onChange }) {
-  const cfg = config && typeof config === 'object' ? config : {}
-  return (
-    <div className="w-full mt-1 space-y-1.5 bg-surface-card rounded-md p-2 border border-gray-700">
-      <Riga label="Modulo sorgente" placeholder="es. ordini_pagamenti" value={cfg.modulo_sorgente} onChange={(v) => onChange({ ...cfg, modulo_sorgente: v })} />
-      <JsonField label='Filtro (JSON, array di {campo, op, valore} — tutte in AND)' placeholder='[\n  {"campo": "agente", "op": "==", "valore": "campo:agente"},\n  {"campo": "distinta_id", "op": "==", "valore": null}\n]' value={cfg.filtro} onChange={(v) => onChange({ ...cfg, filtro: v })} rows={4} />
-      <Riga label="Modulo destinazione" placeholder="es. distinte_versamento" value={cfg.modulo_destinazione} onChange={(v) => onChange({ ...cfg, modulo_destinazione: v })} />
-      <JsonField label='Mappatura (JSON) — valori: letterali, "campo:X", "_oggi_", "somma:campo", "conteggio", "numero_annuale"' placeholder='{\n  "importo_totale": "somma:importo",\n  "data": "_oggi_"\n}' value={cfg.mappatura} onChange={(v) => onChange({ ...cfg, mappatura: v })} rows={4} />
-      <Riga label="Campo marcatura" placeholder="opzionale — campo sui record sorgente per marcarli come processati" value={cfg.campo_marcatura} onChange={(v) => onChange({ ...cfg, campo_marcatura: v })} />
-      <div className="text-[10px] text-gray-600">Senza campo marcatura, i record sorgente restano riprocessabili al giro successivo (es. ammortamenti mensili che ricomprendono le stesse attrezzature ogni mese).</div>
-    </div>
-  )
-}
-
-function CreaRecordDaPadreConfig({ config, onChange }) {
-  const cfg = config && typeof config === 'object' ? config : {}
-  return (
-    <div className="w-full mt-1 space-y-1.5 bg-surface-card rounded-md p-2 border border-gray-700">
-      <Riga label="Modulo destinazione" placeholder="opzionale — assente se serve solo clonare righe, senza una nuova testata" value={cfg.modulo_destinazione} onChange={(v) => onChange({ ...cfg, modulo_destinazione: v })} />
-      <JsonField label='Mappatura campi padre (JSON)' placeholder='{\n  "numero": "numero_annuale",\n  "cliente": "campo:cliente",\n  "ordine": "__origine_id__"\n}' value={cfg.mappatura_campi} onChange={(v) => onChange({ ...cfg, mappatura_campi: v })} rows={4} />
-      <JsonField label='Figli clonati da un modulo sorgente (JSON, array)' placeholder='[{\n  "modulo_sorgente_figli": "ordini_righe",\n  "via_relazione": "ordine",\n  "modulo_destinazione_figli": "fatture_righe",\n  "relazione_nuovo_padre": "fattura",\n  "mappatura_campi_figli": {"prodotto": "campo:prodotto"}\n}]' value={cfg.figli} onChange={(v) => onChange({ ...cfg, figli: v })} rows={5} />
-      <JsonField label='Righe fisse, non clonate (JSON, array) — es. le 2-3 righe di un movimento contabile' placeholder='[{\n  "modulo_destinazione_figli": "movimenti_righe",\n  "relazione_nuovo_padre": "movimento",\n  "mappatura_campi_figli": {"conto": "conto:1100", "dare": "campo:totale", "avere": 0}\n}]' value={cfg.figli_fissi} onChange={(v) => onChange({ ...cfg, figli_fissi: v })} rows={5} />
-      <div className="text-[10px] text-gray-600">Token disponibili nelle mappature: "campo:X" (dal record corrente), "campo_padre:X" (dentro un figlio, legge dal padre), "__origine_id__", "_oggi_"/"_ora_", "numero_annuale", "conto:CODICE", "scadenza_pagamento:campo_relazione_cliente".</div>
-    </div>
-  )
-}
-
-function StornaRiferimentoConfig() {
-  return (
-    <div className="w-full mt-1 bg-surface-card rounded-md p-2 border border-gray-700 text-[10px] text-gray-500">
-      Nessuna configurazione necessaria — inverte tutti i delta numerici (incrementi/decrementi) generati in precedenza da automazioni scatenate da QUESTO record (es. un pagamento che viene stornato inverte l'incasso che aveva generato).
-    </div>
-  )
-}
-
 function InviaNotificaConfig({ config, onChange }) {
   const cfg = config && typeof config === 'object' ? config : {}
   return (
@@ -322,14 +191,6 @@ function InviaReportPeriodicoConfig({ config, onChange }) {
       <Riga label="Titolo messaggio" placeholder="es. 📊 Report settimanale Spese Casa" value={cfg.titolo} onChange={(v) => onChange({ ...cfg, titolo: v })} />
       <Riga label="Tag trigger" placeholder="es. report — libero, non una lista fissa" value={cfg.trigger_tag} onChange={(v) => onChange({ ...cfg, trigger_tag: v })} />
       <div className="text-[10px] text-gray-600">Somma il campo importo di tutti i record di QUESTO modulo nel periodo scelto (opzionale: spaccato per il campo scelto in "Raggruppa per", top 5). Pensata per un'automazione schedulata SENZA "esegui una volta per record" — gira una volta sola.</div>
-    </div>
-  )
-}
-
-function RegistraProvvigioneConfig() {
-  return (
-    <div className="w-full mt-1 bg-surface-card rounded-md p-2 border border-gray-700 text-[10px] text-gray-500">
-      Nessuna configurazione necessaria — legge il campo "agente" del record corrente, calcola lo scaglione dal fatturato lifetime (JSON in agenti.scaglioni_provvigione), applica la percentuale al batch di fatture non ancora processate, posta il movimento e marca le fatture. Pensata per un modulo "richiesta" con solo una relazione ad agenti.
     </div>
   )
 }
@@ -424,32 +285,9 @@ function AutomationActionRow({ action, onChange, onRemove, connections }) {
           {action.azione === 'invia_report_periodico' && (
             <InviaReportPeriodicoConfig config={action.config} onChange={(v) => onChange({ ...action, config: v })} />
           )}
-          {action.azione === 'applica_prezzo_listino' && (
-            <ApplicaPrezzoListinoConfig config={action.config} onChange={(v) => onChange({ ...action, config: v })} />
-          )}
           {action.azione === 'aggiorna_record' && (
             <AggiornaRecordConfig config={action.config} onChange={(v) => onChange({ ...action, config: v })} />
           )}
-          {action.azione === 'aggiorna_figli' && (
-            <AggiornaFigliConfig config={action.config} onChange={(v) => onChange({ ...action, config: v })} />
-          )}
-          {action.azione === 'aggiorna_figli_via_router' && (
-            <AggiornaFigliViaRouterConfig config={action.config} onChange={(v) => onChange({ ...action, config: v })} />
-          )}
-          {action.azione === 'libera_altri_con_stesso_valore' && (
-            <LiberaAltriConStessoValoreConfig config={action.config} onChange={(v) => onChange({ ...action, config: v })} />
-          )}
-          {action.azione === 'trova_o_crea_e_aggiorna' && (
-            <TrovaOCreaEAggiornaConfig config={action.config} onChange={(v) => onChange({ ...action, config: v })} />
-          )}
-          {action.azione === 'aggrega_in_record' && (
-            <AggregaInRecordConfig config={action.config} onChange={(v) => onChange({ ...action, config: v })} />
-          )}
-          {action.azione === 'crea_record_da_padre' && (
-            <CreaRecordDaPadreConfig config={action.config} onChange={(v) => onChange({ ...action, config: v })} />
-          )}
-          {action.azione === 'storna_riferimento' && <StornaRiferimentoConfig />}
-          {action.azione === 'registra_provvigione' && <RegistraProvvigioneConfig />}
         </>
       ) : (
         <>

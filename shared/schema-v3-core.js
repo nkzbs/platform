@@ -216,15 +216,6 @@ export const INTERNAL_ACTIONS = {
   invia_notifica: { label: 'Invia notifica (WhatsApp — CallMeBot)', connector_id: 'whatsapp_callmebot' },
   invia_report_periodico: { label: 'Invia report periodico (WhatsApp — CallMeBot)', connector_id: 'whatsapp_callmebot' },
   aggiorna_record: { label: 'Aggiorna un campo di un record' },
-  applica_prezzo_listino: { label: 'Applica prezzo/sconto dal listino del cliente' },
-  aggiorna_figli: { label: 'Aggiorna un record collegato per ogni figlio' },
-  aggiorna_figli_via_router: { label: 'Aggiorna un record collegato per ogni figlio, instradando su un record correlato se esiste' },
-  libera_altri_con_stesso_valore: { label: 'Libera altri record con lo stesso valore (assegnazione esclusiva)' },
-  trova_o_crea_e_aggiorna: { label: 'Trova (o crea) e aggiorna' },
-  aggrega_in_record: { label: 'Aggrega un batch in un nuovo record' },
-  crea_record_da_padre: { label: 'Clona record + righe in un altro modulo' },
-  storna_riferimento: { label: 'Storna (inverti i delta di questo record)' },
-  registra_provvigione: { label: 'Registra provvigione agente (scaglioni)' },
 }
 
 // Derivata da INTERNAL_ACTIONS — non più una lista scritta a mano a parte.

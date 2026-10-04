@@ -86,7 +86,7 @@ function sqliteDatetime(d) {
 }
 
 // Stesso trattamento speciale di null/undefined già usato in automation-engine.js per
-// aggrega_in_record: un valore null nel filtro significa "campo vuoto/non impostato",
+// filtri: un valore null nel filtro significa "campo vuoto/non impostato",
 // non un confronto letterale (che con compare() darebbe sempre false). '_ore_fa:N' è
 // un secondo token speciale (oltre a '_oggi_'): si risolve a "adesso meno N ore", nello
 // stesso formato di records.created_at — usato per filtri tipo "creato da più di 24 ore
@@ -124,7 +124,7 @@ function matchesFiltro(d, f) {
 }
 
 // Esegue le azioni di un'automazione schedulata riusando runAzioni di
-// automation-engine.js (condizioni, aggiorna_record, aggrega_in_record, crea_record,
+// automation-engine.js (condizioni, aggiorna_record, crea_record,
 // ecc. — tutto il ventaglio, non più una whitelist ridotta come prima) — invece di
 // duplicare la logica di esecuzione qui con un sottoinsieme limitato di azioni.
 //

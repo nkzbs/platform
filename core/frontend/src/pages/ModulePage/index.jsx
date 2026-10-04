@@ -928,7 +928,42 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
         </div>
       ) : (
         <div className="bg-surface-card rounded-md border border-gray-800 overflow-x-auto">
-          <table className="w-full min-w-[640px]">
+          {/* Mobile: una scheda per riga (la tabella larga costringeva a scorrere di lato e si vedeva solo la prima colonna). */}
+          <div className="md:hidden divide-y divide-gray-800/60">
+            {pagedRecords.map((r) => {
+              const stato = workflow && workflow.states.find((s) => s.key === r.data._stato)
+              const val = (c) => {
+                const v = r.data[c.key]
+                if (v === undefined || v === null || v === '') return null
+                if (relations.some((x) => x.key === c.key)) { const cache = relatedCache[c.key]; return (cache && cache.byId[v]) || '#' + v }
+                if (c.type === 'file') return v.name || null
+                return String(v)
+              }
+              const [first, ...rest] = tableColumns
+              const sub = rest.map(val).filter(Boolean)
+              return (
+                <div key={r.id} onClick={() => setDetailId(r.id)} className="flex items-start gap-3 px-4 py-3 active:bg-white/5 cursor-pointer">
+                  {togglePair && (
+                    <button onClick={(e) => { e.stopPropagation(); quickToggle(r) }} className="mt-0.5 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: r.data._stato === togglePair.on ? '#10B981' : 'transparent', border: '2px solid ' + (r.data._stato === togglePair.on ? '#10B981' : '#374151') }}>
+                      {r.data._stato === togglePair.on && <Icon name="check" size={12} className="text-white" />}
+                    </button>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-ink break-words">{(first && val(first)) || '—'}</div>
+                    {(sub.length > 0 || stato) && (
+                      <div className="text-xs text-gray-500 mt-0.5 break-words">
+                        {stato && <span className="mr-2"><span className="inline-block w-1.5 h-1.5 rounded-full mr-1" style={{ backgroundColor: stato.color }} />{stato.label}</span>}
+                        {sub.slice(0, 3).join(' · ')}
+                      </div>
+                    )}
+                  </div>
+                  {canDelete && <button onClick={(e) => { e.stopPropagation(); remove(r.id) }} className="text-red-400/50 p-1 flex-shrink-0" aria-label="Elimina"><Icon name="trash" size={15} /></button>}
+                </div>
+              )
+            })}
+          </div>
+          <table className="hidden md:table w-full min-w-[640px]">
             <thead>
               <tr className="border-b border-gray-800">
                 {togglePair && <th className="w-8 px-2 py-3"></th>}

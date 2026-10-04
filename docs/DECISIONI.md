@@ -397,3 +397,10 @@ Tutto è online su Finance e committato. **Finance ora va testato a mano** con `
 - **Sicurezza, a carico di Nima**: app Google in produzione (altrimenti il collegamento può scadere dopo circa 7 giorni e Gmail si ferma), password del NAS, 2FA del Super Admin e degli utenti.
 - **Movimenti bancari**: non modulari, spenti, non servono.
 - Un timeout verso Redis è comparso una volta all'avvio di un container e non si è ripresentato (rete e Redis a posto): niente da cambiare, ma va ricordato se torna.
+
+## 2026-10-04 — Primitive tolte perché non usate
+Il Builder resta completo (quello di Super Admin serve per gli altri tenant), ma si sono tolte le primitive che nessun modulo installato usava.
+- Blocchi: financial_statement, distance_buckets, reconciliation, document_template, form_step (e Wizard/PrintModal).
+- Azioni automazione: applica_prezzo_listino, aggiorna_figli, aggiorna_figli_via_router, libera_altri_con_stesso_valore, trova_o_crea_e_aggiorna, aggrega_in_record, crea_record_da_padre, storna_riferimento, registra_provvigione.
+- Restano: crea_record, crea_record_n_volte, notifica_interna, invia_notifica, invia_report_periodico, aggiorna_record.
+- Un blocco sconosciuto nei vecchi schemi viene ignorato (lenient), non rompe il modulo.

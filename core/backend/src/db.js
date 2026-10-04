@@ -235,7 +235,7 @@ db.exec(`
   );
 
   -- Registro strutturato dei delta numerici applicati da increment/decrement
-  -- (aggiorna_record, aggiorna_figli, trova_o_crea_e_aggiorna) — a differenza di
+  -- (aggiorna_record) — a differenza di
   -- automation_logs (testo libero per umani), questa tabella è machine-readable e
   -- permette a storna_riferimento di invertire esattamente ciò che un'automazione
   -- ha applicato in precedenza, senza dover ricalcolare o indovinare il delta.

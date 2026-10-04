@@ -157,7 +157,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
         <div className="fixed inset-0 bg-black/60 z-30 md:hidden" onClick={onMobileClose} />
       )}
       <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-        className={(expanded ? 'w-56' : 'w-14') + ' bg-surface-card border-r border-gray-800 flex flex-col h-screen h-[100dvh] fixed left-0 top-0 z-40 transition-[width,transform] duration-150 md:translate-x-0 ' + (expanded ? 'shadow-2xl' : '') + ' ' + (mobileOpen ? 'translate-x-0' : '-translate-x-full')}>
+        className={(expanded ? 'w-56' : 'w-14') + ' bg-surface-card border-r border-gray-800 flex flex-col fixed inset-y-0 left-0 z-40 transition-[width,transform] duration-150 md:translate-x-0 ' + (expanded ? 'shadow-2xl' : '') + ' ' + (mobileOpen ? 'translate-x-0' : '-translate-x-full')}>
       <div className={(expanded ? 'px-5' : 'px-3') + ' py-5 border-b border-gray-800'} style={{ paddingTop: 'max(1.25rem, env(safe-area-inset-top))' }}>
         <div className="flex items-center gap-2.5">
           {/* Stessa logica corretta di Login.jsx (2026-08-29): il badge a lettera
@@ -185,7 +185,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
           )}
         </div>
       </div>
-      <nav className="flex-1 overflow-y-auto py-3">
+      <nav className="flex-1 min-h-0 overflow-y-auto py-3">
         {(() => {
           // Le pagine virtuali di "Generale" vanno PRIMA dei moduli reali (così quel
           // gruppo è il primo incontrato, subito dopo Dashboard, come in nico); quelle
@@ -230,7 +230,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
           ))}
         </div>
       </nav>
-      <div className={(expanded ? 'px-4' : 'px-2') + ' py-4 border-t border-gray-800'} style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+      <div className={(expanded ? 'px-4' : 'px-2') + ' py-3 border-t border-gray-800 flex-shrink-0'} style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
         <div className={!expanded ? 'flex flex-col items-center gap-3' : 'flex items-center justify-between'}>
           {expanded && (
             <button onClick={() => handleNavigate('account')} className="text-left hover:opacity-80 transition" title="Il mio account">
