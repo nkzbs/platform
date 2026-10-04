@@ -7,6 +7,7 @@ function UsersPage({ token }) {
   const [users, setUsers] = useState([])
   const [roles, setRoles] = useState([])
   const [modules, setModules] = useState([])
+  const [supportModules, setSupportModules] = useState([]) // moduli di supporto: non compaiono nel menu di nessuno
   const [showNew, setShowNew] = useState(false)
   const [form, setForm] = useState({ username: '', password: '', display_name: '', role: 'user', linked_module_slug: '', linked_record_id: '' })
   const [error, setError] = useState('')
@@ -37,7 +38,12 @@ function UsersPage({ token }) {
   }
   const loadModules = async () => {
     const data = await api.get('/modules')
-    if (data) setModules(data.filter((m) => m.installed && m.slug !== 'dashboard'))
+    if (data) {
+      // Qui si scelgono solo i moduli che compaiono nel menu: i moduli di supporto (Debiti, Ricorrenti...) sono sempre nascosti e quelli non attivi non si vedono
+      const installed = data.filter((m) => m.installed && m.slug !== 'dashboard')
+      setModules(installed.filter((m) => !m.support_module && m.active !== 0))
+      setSupportModules(installed.filter((m) => m.support_module && m.active !== 0))
+    }
   }
 
   useEffect(() => { loadUsers(); loadRoles(); loadModules() }, [])
@@ -165,6 +171,7 @@ function UsersPage({ token }) {
                 <div className="text-xs text-gray-500 mb-3">
                   Spunta i moduli che questo utente può vedere. <span className="text-amber-400">Se non ne spunti nessuno, vede tutti i moduli installati.</span>
                 </div>
+                {supportModules.length > 0 && <div className="text-[11px] text-gray-600 mb-3">{supportModules.map((m) => m.name).join(', ')} sono moduli di supporto: non compaiono nel menu di nessuno e si usano dentro i moduli principali, quindi non serve spuntarli.</div>}
                 <div className="flex flex-wrap gap-2 mb-3">
                   {modules.map((m) => {
                     const checked = (userModules[u.id] || []).includes(m.slug)
