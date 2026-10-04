@@ -392,6 +392,12 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
           // ancorare i controlli di editMode.
           return (
             <div key={w.id} className={(['yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'come_sta_andando'].includes(w.type) ? 'relative' : 'bg-surface-card rounded-md border border-gray-800 overflow-hidden relative') + (['checklist', 'riepilogo_mensile', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'come_sta_andando', 'coda'].includes(w.type) ? ' col-span-full' : '')}>
+              {editMode && (() => {
+                const r = w.roles || [], ids = w.user_ids || []
+                const nomi = ids.map((id) => { const x = allUsers.find((u) => u.id === id); return x ? (x.display_name || x.username) : null }).filter(Boolean)
+                const chi = r.length === 0 && ids.length === 0 ? 'Visibile a tutti' : 'Admin' + (r.filter((x) => x !== 'admin').length ? ' + ruoli: ' + r.filter((x) => x !== 'admin').join(', ') : '') + (nomi.length ? ' + ' + nomi.join(', ') : ' (solo admin)')
+                return <div className="absolute top-2 left-2 z-10 text-[10px] bg-gray-800 text-gray-400 rounded px-1.5 py-0.5 max-w-[60%] truncate" title="Chi lo vede (si cambia dalla matita o dalla scheda dell'utente)">{chi}</div>
+              })()}
               {editMode && (
                 <div className="absolute top-2 right-2 flex gap-1 z-10">
                   <button onClick={() => startEditWidget(w)} className="w-6 h-6 flex items-center justify-center bg-gray-800 hover:bg-gray-700 text-gray-400 rounded text-xs" title="Modifica widget"><Icon name="edit" size={11} /></button>
@@ -858,7 +864,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
               </div>
               {allRoles.length > 0 && (
                 <div>
-                  <label className="text-xs text-gray-400 block mb-1">Visibile a — ruoli (vuoto = tutti)</label>
+                  <label className="text-xs text-gray-400 block mb-1">Chi lo vede — ruoli (se non scegli né ruoli né utenti, lo vedono tutti; tu, admin, vedi sempre tutto)</label>
                   <div className="flex flex-wrap gap-2">
                     {allRoles.map((r) => {
                       const checked = (newWidget.roles || []).includes(r.name)
@@ -875,7 +881,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
               )}
               {allUsers.length > 0 && (
                 <div>
-                  <label className="text-xs text-gray-400 block mb-1">Visibile a — utenti specifici (in aggiunta ai ruoli sopra)</label>
+                  <label className="text-xs text-gray-400 block mb-1">Chi lo vede — utenti specifici (in aggiunta ai ruoli sopra)</label>
                   <div className="flex flex-wrap gap-2">
                     {allUsers.map((u) => {
                       const checked = (newWidget.user_ids || []).includes(u.id)

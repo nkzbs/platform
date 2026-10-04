@@ -121,6 +121,9 @@ Cosa vede un utente non admin:
 | Impostazioni, Builder, Libreria | Non le vede |
 | Dati dei moduli | Secondo i permessi del modulo (blocco "Permessi" del Builder): Spese casa tutto, Spese personali solo le proprie righe |
 
+**Assegnare i widget della dashboard:** sulla riga dell'utente c'è anche il pulsante **"Widget · N"**: spunti quali widget vede (salvataggio immediato). Un widget senza ruoli né utenti lo vedono tutti; quando ne assegni
+uno a una persona diventa "solo admin più gli utenti scelti". Dalla dashboard, in "Modifica layout", ogni widget mostra a chi è visibile, e la matita permette di cambiarlo. Tu, admin, vedi sempre tutto.
+
 **Attenzione:** la scelta dei moduli per utente nasconde i moduli dal menu ma **non blocca l'API**. Per un blocco vero si usano i permessi per ruolo dentro il modulo (Builder → Permessi).
 
 **Attivare il 2FA** (ogni utente per sé, Impostazioni → Il mio account → Autenticazione a due fattori): *Attiva 2FA*, scansiona il QR con un'app authenticator (Google Authenticator, Authy…), inserisci il codice

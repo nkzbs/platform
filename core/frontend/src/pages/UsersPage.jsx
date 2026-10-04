@@ -15,6 +15,8 @@ function UsersPage({ token }) {
   const [roleForm, setRoleForm] = useState({ name: '', label: '', color: '#6B7280' })
   const [roleError, setRoleError] = useState('')
   const [expandedUser, setExpandedUser] = useState(null)
+  const [widgetUser, setWidgetUser] = useState(null) // utente di cui si stanno scegliendo i widget
+  const [widgets, setWidgets] = useState([]) // widget della dashboard (e dei report), per assegnarli agli utenti
   const [userModules, setUserModules] = useState({})
   const [savingModules, setSavingModules] = useState(null)
   const [resetUserId, setResetUserId] = useState(null)
@@ -40,7 +42,23 @@ function UsersPage({ token }) {
     if (data) setModules(data.filter((m) => m.installed && m.slug !== 'dashboard' && m.active !== 0))
   }
 
-  useEffect(() => { loadUsers(); loadRoles(); loadModules() }, [])
+  const loadWidgets = async () => {
+    const [d, r] = await Promise.all([api.get('/dashboard/widgets?page=dashboard'), api.get('/dashboard/widgets?page=report')])
+    setWidgets([...(Array.isArray(d) ? d : []), ...(Array.isArray(r) ? r : [])])
+  }
+  useEffect(() => { loadUsers(); loadRoles(); loadModules(); loadWidgets() }, [])
+
+  // Un widget senza ruoli né utenti lo vedono tutti; altrimenti chi ha il ruolo o è nell'elenco. L'admin vede sempre tutto.
+  const sees = (w, u) => ((w.roles || []).length === 0 && (w.user_ids || []).length === 0) || (w.roles || []).includes(u.role) || (w.user_ids || []).includes(u.id)
+  // Assegnare o togliere un widget a un utente rende l'elenco esplicito: solo admin più gli utenti scelti.
+  const toggleWidgetForUser = async (w, u) => {
+    const others = users.filter((x) => x.role !== 'admin')
+    const now = new Set(others.filter((x) => sees(w, x)).map((x) => x.id))
+    if (now.has(u.id)) now.delete(u.id); else now.add(u.id)
+    const body = { roles: ['admin'], user_ids: [...now] }
+    setWidgets((list) => list.map((x) => (x.id === w.id ? { ...x, ...body } : x))) // subito visibile
+    await api.patch('/dashboard/widgets/' + w.id, body)
+  }
 
   const loadUserModules = async (userId) => {
     const data = await api.get('/users/' + userId + '/modules')
@@ -148,6 +166,13 @@ function UsersPage({ token }) {
                 </span>
                 <button onClick={() => toggle(u)} className="text-sm text-gray-500 hover:text-ink transition">{u.active ? 'Disabilita' : 'Abilita'}</button>
                 <button onClick={() => { setResetUserId(u.id); setResetPassword('') }} className="text-sm text-gray-500 hover:text-ink transition">Reimposta password</button>
+                {u.role !== 'admin' && widgets.length > 0 && (
+                  <button onClick={() => setWidgetUser(widgetUser === u.id ? null : u.id)} title="Scegli quali widget della dashboard vede questo utente"
+                    className={'text-sm px-3 py-1 rounded-lg border transition flex items-center gap-1.5 ' + (widgets.filter((w) => sees(w, u)).length === 0 ? 'border-gray-700 text-gray-500 hover:bg-gray-800' : 'border-gray-700 text-gray-300 hover:bg-gray-800')}>
+                    Widget · {widgets.filter((w) => sees(w, u)).length}
+                    <Icon name={widgetUser === u.id ? 'chevron-up' : 'chevron-down'} size={13} />
+                  </button>
+                )}
                 {u.role !== 'admin' && modules.length > 0 && (() => {
                   const n = (userModules[u.id] || []).length
                   return (
@@ -160,6 +185,23 @@ function UsersPage({ token }) {
                 })()}
               </div>
             </div>
+            {widgetUser === u.id && u.role !== 'admin' && (
+              <div className="border-t border-gray-800 px-5 py-4 bg-surface-page/40">
+                <div className="text-xs text-gray-500 mb-3">Spunta i widget della dashboard che questo utente può vedere. Tu, admin, vedi sempre tutto. Il salvataggio è immediato.</div>
+                <div className="flex flex-wrap gap-2">
+                  {widgets.map((w) => {
+                    const on = sees(w, u)
+                    return (
+                      <button key={w.id} onClick={() => toggleWidgetForUser(w, u)}
+                        className={'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition border ' + (on ? 'bg-accent/20 border-accent/50 text-accent' : 'bg-gray-800/50 border-gray-700 text-gray-500 hover:text-gray-300')}>
+                        {w.label || w.type}
+                        {on && <Icon name="check" size={10} />}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
             {expandedUser === u.id && u.role !== 'admin' && (
               <div className="border-t border-gray-800 px-5 py-4 bg-surface-page/40">
                 <div className="text-xs text-gray-500 mb-3">

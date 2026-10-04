@@ -59,6 +59,8 @@ Vedi `docs/OPERAZIONI.md` → "Utenti, accessi e 2FA". Dopo averli creati, prova
 - [ ] In Spese casa può leggere e creare righe; i widget della dashboard (solo admin) non compaiono.
 - [ ] Riga di cautela: la scelta moduli per utente nasconde i moduli dal menu ma **non blocca l'API**.
 
+- [ ] **Widget per utente:** sulla riga dell'utente non admin, "Widget · N" mostra i widget della dashboard; spuntane uno (es. "Come sta andando — Casa" per Federica). Accedendo come lei, vede solo quello. In "Modifica layout" ogni widget indica a chi è visibile.
+
 ## 7. 2FA
 
 - [ ] Attiva il 2FA dal proprio account (Impostazioni → Il mio account): scansiona il QR con un'app authenticator e **salva i codici di recupero** (si vedono una volta sola).
