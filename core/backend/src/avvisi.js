@@ -80,7 +80,7 @@ async function scanNuove() {
 }
 
 // Invio di un testo ai destinatari di un tag (stesso canale, stesso registro). Mai un errore verso il chiamante.
-async function sendText(tag, testo) {
+async function sendText(tag, testo, kind = 'avviso') {
   try {
     if (!require('./features').isEnabled('whatsapp')) return { skipped: 'whatsapp non attivo' };
     const row = db.prepare("SELECT credentials FROM connections WHERE integration_id = 'whatsapp_callmebot'").get();
@@ -88,7 +88,7 @@ async function sendText(tag, testo) {
     if (!creds || !creds.api_key) return { skipped: 'whatsapp non collegato' };
     const dest = require('./notification-settings').recipientsForTag(tag);
     if (!dest.length) return { skipped: 'nessun destinatario' };
-    return await whatsapp.sendAll({ destinatari: dest, testo, apiKey: creds.api_key, kind: 'avviso' });
+    return await whatsapp.sendAll({ destinatari: dest, testo, apiKey: creds.api_key, kind });
   } catch (e) { console.error('[avvisi]', e.message); return { error: e.message }; }
 }
 

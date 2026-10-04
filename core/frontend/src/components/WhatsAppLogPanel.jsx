@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
 
 // Ultimi invii WhatsApp: quando, di che tipo, e se sono davvero partiti (esito vero per destinatario).
-const KIND = { riepilogo: 'Riepilogo del mattino', avviso: 'Riga nuova', prova: 'Prova', automazione: 'Automazione', altro: 'Altro' }
+const KIND = { riepilogo: 'Riepilogo del mattino', monitoraggio: 'Come sta andando', avviso: 'Riga nuova', prova: 'Prova', automazione: 'Automazione', altro: 'Altro' }
 const when = (iso) => new Date(String(iso).replace(' ', 'T') + 'Z').toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 
 export default function WhatsAppLogPanel({ token, refreshKey }) {

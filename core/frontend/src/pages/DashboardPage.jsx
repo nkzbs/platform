@@ -265,7 +265,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
     if (REPORT_WIDGET_TYPES.includes(w.type)) w.config = reportBlockConfig
     if (w.type === 'come_sta_andando') {
       const grp = String(newWidget.entrate_include || '').split(',').map((x) => x.trim()).filter(Boolean)
-      w.config = { explainable: newWidget.explainable !== false, spese_modules: newWidget.spese_modules || [], entrate_include_groups: grp, accantonamento: newWidget.accantonamento !== false, solo_spese: !!newWidget.solo_spese }
+      w.config = { explainable: newWidget.explainable !== false, spese_modules: newWidget.spese_modules || [], entrate_include_groups: grp, accantonamento: newWidget.accantonamento !== false, solo_spese: !!newWidget.solo_spese, monitor: !!newWidget.monitor }
     }
     const saved = editingWidgetId ? await api.patch('/dashboard/widgets/' + editingWidgetId, w) : await api.post('/dashboard/widgets', w)
     if (saved && saved.ok !== false) {
@@ -288,7 +288,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
       conti: cfg.conti || { modulo: '', campo_tipo: '', valore_carta: '', valore_conto: '' },
     })
     if (REPORT_WIDGET_TYPES.includes(w.type)) setReportBlockConfig({ source_module: cfg.source_module || '', block_key: cfg.block_key || '' })
-    if (w.type === 'come_sta_andando') setNewWidget((n) => ({ ...n, explainable: cfg.explainable !== false, spese_modules: cfg.spese_modules || [], entrate_include: (cfg.entrate_include_groups || []).join(', '), accantonamento: cfg.accantonamento !== false, solo_spese: !!cfg.solo_spese }))
+    if (w.type === 'come_sta_andando') setNewWidget((n) => ({ ...n, explainable: cfg.explainable !== false, spese_modules: cfg.spese_modules || [], entrate_include: (cfg.entrate_include_groups || []).join(', '), accantonamento: cfg.accantonamento !== false, solo_spese: !!cfg.solo_spese, monitor: !!cfg.monitor }))
     setEditingWidgetId(w.id)
     setShowAdd(true)
   }
@@ -542,6 +542,12 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                 <label className="flex items-start gap-2.5 cursor-pointer text-sm text-gray-300">
                   <input type="checkbox" className="mt-1" checked={newWidget.explainable !== false} onChange={(e) => setNewWidget({ ...newWidget, explainable: e.target.checked })} />
                   <span>Spiegabile con l'AI<span className="block text-xs text-gray-500">Con l'AI accesa (Impostazioni → AI) compare «Spiega con l'AI» sul widget. Legge solo i totali mostrati, mai le righe.</span></span>
+                </label>
+              )}
+              {newWidget.type === 'come_sta_andando' && (
+                <label className="flex items-start gap-2.5 cursor-pointer text-sm text-gray-300">
+                  <input type="checkbox" className="mt-1" checked={!!newWidget.monitor} onChange={(e) => setNewWidget({ ...newWidget, monitor: e.target.checked })} />
+                  <span>Invia ogni mese su WhatsApp<span className="block text-xs text-gray-500">Il giorno 2 alle 9 arriva «come sta andando» dell'ultimo mese: numeri, cose da guardare e, con l'AI accesa, il commento. Va ai destinatari con il tag «report».</span></span>
                 </label>
               )}
               {newWidget.type === 'come_sta_andando' && (
