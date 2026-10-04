@@ -375,10 +375,17 @@ Seguito del registro precedente, nell'ordine in cui è stato fatto. Tutto è onl
   e spesa del mese. Con l'AI accesa: **Smista già compilato** dalla bolletta, **Spiega** acceso di default sui widget, **Importa da PDF**, **Chiedi ai dati** (query strutturata validata due volte, mai SQL) e **monitoraggio**
   mensile su WhatsApp (acceso sui due widget di Finance: primo messaggio il 2 novembre alle 9). Ogni potenziamento usa i ruoli dichiarati dai moduli, senza nomi di Finance nel codice.
 
+### Stato alla fine della sessione (2026-10-04)
+
+Tutto è online su Finance e committato. **Finance ora va testato a mano** con `docs/TEST-FINANCE.md`. Nima crea gli utenti (Federica: Timbrature e Spese casa) e attiva il 2FA (vedi `docs/OPERAZIONI.md`).
+
 ### Ancora aperto (non bloccante)
 
+- **Da provare dal vivo** (coperti dai test con servizi simulati, mai visti con dati veri): avviso WhatsApp su una bolletta vera, "Smista" in rate, "Importa da PDF", "Chiedi ai dati", proposte dell'AI con la fonte, mail non riconosciute.
 - **"Spiegare"** sugli altri widget (Riepilogo mensile, Checklist): non collegato.
-- **Dati di Finance**: righe "da smistare" vecchie o a 0 €, scadenza A2A 30/04/2028, settembre con 1.100 € ancora "da pagare" (affitto, Spese Casa, rata PayPal), affitto registrato in un solo mese su sei
-  (il confronto lo segnala come anomalia), 4 righe scadute, marzo–maggio della Quarta Cartella "da verificare". Il primo riepilogo delle 8:00 sarà rumoroso finché non si puliscono.
-- **Sicurezza, a carico di Nima**: app Google in produzione (altrimenti il collegamento può scadere dopo circa 7 giorni e Gmail si ferma), password del NAS, 2FA del Super Admin.
-- Un timeout verso Redis è comparso una volta all'avvio di un container e non si è ripresentato (rete e Redis a posto): non c'è niente da cambiare, ma va ricordato se torna.
+- **Dati di Finance** da pulire (elenco in `docs/TEST-FINANCE.md`): righe "da smistare" vecchie o a 0 €, scadenza A2A 30/04/2028, settembre ancora "da pagare" (affitto, Spese Casa, rata PayPal), affitto registrato in un solo mese su sei,
+  righe scadute, Quarta Cartella marzo–maggio. Il riepilogo delle 8:00 e il messaggio mensile del 2 novembre sono rumorosi finché non si puliscono.
+- **Timbrature**: la formula della durata non gestisce i turni a cavallo della mezzanotte (esempio: 09/06/2023, 07:00–00:00).
+- **Sicurezza, a carico di Nima**: app Google in produzione (altrimenti il collegamento può scadere dopo circa 7 giorni e Gmail si ferma), password del NAS, 2FA del Super Admin e degli utenti.
+- **Movimenti bancari**: non modulari, spenti, non servono.
+- Un timeout verso Redis è comparso una volta all'avvio di un container e non si è ripresentato (rete e Redis a posto): niente da cambiare, ma va ricordato se torna.

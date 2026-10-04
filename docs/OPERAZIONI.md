@@ -109,6 +109,25 @@ Google Cloud → Google Auth Platform → Pubblico, passa l'app a **In produzion
 
 Connessioni → WhatsApp (CallMeBot), con la API key ottenuta scrivendo al bot dal telefono.
 
+## Utenti, accessi e 2FA
+
+**Creare un utente** (lo fa l'admin del tenant): Impostazioni → Utenti & Ruoli → nuovo utente, con nome, nome utente, password e ruolo (*Utente* o *Admin*). Subito dopo, nella scheda dell'utente,
+**"Moduli accessibili"**: spunta solo quelli che deve vedere (per Federica: Timbrature e Spese casa). **Se non si spunta nessun modulo l'utente vede tutto**, quindi la scelta va fatta subito.
+Cosa vede un utente non admin:
+
+| Cosa | Regola |
+|---|---|
+| Menu | Solo i moduli assegnati (più la dashboard) |
+| Dashboard | Solo i widget senza restrizione; su Finance sono tutti solo admin, quindi la dashboard è vuota |
+| Impostazioni, Builder, Libreria | Non le vede |
+| Dati dei moduli | Secondo i permessi del modulo (blocco "Permessi" del Builder): Spese casa tutto, Spese personali solo le proprie righe |
+
+**Attenzione:** la scelta dei moduli per utente nasconde i moduli dal menu ma **non blocca l'API**. Per un blocco vero si usano i permessi per ruolo dentro il modulo (Builder → Permessi).
+
+**Attivare il 2FA** (ogni utente per sé, Impostazioni → Il mio account → Autenticazione a due fattori): *Attiva 2FA*, scansiona il QR con un'app authenticator (Google Authenticator, Authy…), inserisci il codice
+a 6 cifre e **salva subito i codici di recupero**: si vedono una sola volta e ognuno vale una volta. Per disattivarlo serve la password. Se un utente perde l'authenticator e i codici, l'admin non può
+sbloccarlo dall'app: va ripristinato dal database del tenant. Il Super Admin (admin.platform-core.it) ha lo stesso 2FA sul proprio account.
+
 ## Variabili d'ambiente di Super Admin
 
 Elenco in [`.env.example`](../.env.example). Le obbligatorie sono `JWT_SECRET`, `INTERNAL_API_SECRET` e

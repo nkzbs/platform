@@ -21,6 +21,7 @@ Perché esiste, cosa non sarà mai e la regola che tiene fuori l'eccesso: [`PLAT
 | [`ARCHITETTURA.md`](ARCHITETTURA.md) | Come è fatto: parti, flussi, dati, sicurezza |
 | [`docs/OPERAZIONI.md`](docs/OPERAZIONI.md) | Mettere online, aggiornare, backup, ripristino, cosa fare se qualcosa non va |
 | [`docs/DECISIONI.md`](docs/DECISIONI.md) | Cosa è stato tolto e perché (registro delle decisioni) |
+| [`docs/TEST-FINANCE.md`](docs/TEST-FINANCE.md) | Lista di prove a mano per Finance: cosa fare e cosa deve succedere |
 
 ## Struttura
 
@@ -52,8 +53,8 @@ imposti, altrimenti ne genera una casuale e la stampa **una volta sola** nel log
 Ogni backend ha la sua suite, nessuna dipendenza esterna (i servizi esterni sono simulati):
 
 ```bash
-cd core/backend && npm test            # 36 suite
-cd super-admin/backend && npm test     # 16 suite
+cd core/backend && npm test            # 42 suite
+cd super-admin/backend && npm test     # 17 suite
 ```
 
 I frontend si verificano compilando: `cd core/frontend && npx vite build` (idem `super-admin/frontend`).
