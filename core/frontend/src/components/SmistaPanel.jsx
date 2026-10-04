@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import useApi from '../lib/useApi'
 import { parseSchemaFrontend } from '../lib/schema-v3-frontend'
+import AiSource from './AiSource'
 
 // Smistare una riga "nuova": un pagamento solo, in rate, o già pagata. Cosa fa ogni scelta lo dice il pannello prima di confermare.
 // Stati, campi e piano a rate li dichiara il modulo (Builder → Avvisi); il server fa il lavoro (POST /api/smista/:modulo/:id). Nessuna AI.
@@ -36,11 +37,11 @@ export default function SmistaPanel({ token, q, row, modules, onClose, onDone })
       if (!vivo) return
       if (!res.ok) { setAi({ errore: true }); return }
       const p = res.data && res.data.proposta
-      if (!p) { setAi({ vuota: true }); return }
+      if (!p) { setAi({ vuota: true, motivo: res.data && res.data.motivo }); return }
       if (p.importo != null && !touched.current.importo) setImporto(String(p.importo))
       if (p.scadenza && !touched.current.scadenza) { setScadenza(p.scadenza); setPrima((x) => (touched.current.prima ? x : p.scadenza)) }
       if (p.categoria && !touched.current.categoria && (catOptions.length === 0 || catOptions.includes(p.categoria))) setCategoria(p.categoria)
-      setAi({ proposta: p, suggestion_id: res.data.suggestion_id })
+      setAi({ proposta: p, suggestion_id: res.data.suggestion_id, fonte: res.data.fonte || null })
     })
     return () => { vivo = false }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -76,7 +77,7 @@ export default function SmistaPanel({ token, q, row, modules, onClose, onDone })
           <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 mb-4 text-xs">
             {ai.loading && <span className="text-gray-400">✨ L'AI sta leggendo la bolletta…</span>}
             {ai.errore && <span className="text-gray-500">L'AI non è disponibile in questo momento: compila a mano.</span>}
-            {ai.vuota && <span className="text-gray-500">L'AI non ha trovato niente di certo in questa riga: compila a mano.</span>}
+            {ai.vuota && <span className="text-gray-500">{/niente da leggere/.test(ai.motivo || '') ? 'Questa riga non ha un PDF né un testo da leggere: l\'AI non può proporre niente. Compila a mano (o allega il PDF alla riga).' : 'L\'AI non ha trovato niente di certo in questa riga: compila a mano.'}</span>}
             {ai.proposta && (
               <span className="text-gray-300">
                 <span className="text-accent font-medium">✨ L'AI ha letto la bolletta</span>
@@ -84,6 +85,7 @@ export default function SmistaPanel({ token, q, row, modules, onClose, onDone })
                 {ai.proposta.confidenza ? ' (sicurezza: ' + ai.proposta.confidenza + ')' : ''}. Ho compilato i campi: controlla e conferma.
               </span>
             )}
+            {ai.proposta && <AiSource fonte={ai.fonte} proposta={ai.proposta} token={token} />}
           </div>
         )}
         <div className="grid grid-cols-3 gap-3 mb-4">

@@ -37,9 +37,9 @@ router.post('/:slug/:id/proposta', requireAuth, async (req, res) => {
   const row = db.prepare('SELECT 1 FROM records WHERE id = ? AND module_slug = ?').get(id, slug);
   if (!row) return fail(res, 404, 'Riga non trovata');
   const esistente = aiSuggestions.listPending(slug).find((x) => x.record_id === id);
-  if (esistente) return res.json({ suggestion_id: esistente.id, proposta: esistente.proposta, corrente: esistente.corrente });
+  if (esistente) return res.json({ suggestion_id: esistente.id, proposta: esistente.proposta, corrente: esistente.corrente, fonte: esistente.fonte || null });
   const out = await aiSuggestions.suggestForRecord({ moduleSlug: slug, recordId: id, force: true });
-  if (out.id) return res.json({ suggestion_id: out.id, proposta: out.payload.proposta, corrente: out.payload.corrente });
+  if (out.id) return res.json({ suggestion_id: out.id, proposta: out.payload.proposta, corrente: out.payload.corrente, fonte: out.payload.fonte || null });
   if (out.error) return res.status(out.status === 429 ? 429 : 502).json({ error: out.error, code: out.code });
   res.json({ proposta: null, motivo: out.skipped || 'nessuna proposta utile' });
 });

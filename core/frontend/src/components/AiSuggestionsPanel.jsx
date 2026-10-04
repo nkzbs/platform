@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from './Icon'
+import AiSource from './AiSource'
 
 // Proposte dell'assistente AI per UN modulo (quello con "Smistare" acceso nel Builder), sopra l'elenco. L'AI PROPONE e non scrive:
 // ogni proposta si accetta (applica i campi al record, senza cambiarne lo stato) o si ignora. Compare solo se c'è qualcosa da vedere o da chiedere.
@@ -111,6 +112,7 @@ export default function AiSuggestionsPanel({ token, isAdmin, moduleSlug, onChang
                   {p.modulo && p.modulo !== s.module_slug && <div className="text-xs text-amber-400">Sembra una voce di «{p.modulo}»: lo sposto a mano se è così.</div>}
                 </div>
                 <div className="text-[11px] text-gray-600 mt-1.5">Sicurezza della proposta: {p.confidenza}</div>
+                <AiSource fonte={s.fonte} proposta={p} token={token} />
               </div>
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 <button onClick={() => decide(s.id, 'accept')} disabled={busyId === s.id} className="text-xs bg-accent hover:opacity-90 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg transition font-medium">Accetta</button>

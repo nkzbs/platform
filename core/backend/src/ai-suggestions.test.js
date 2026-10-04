@@ -36,6 +36,7 @@ function assertEq(a, e, msg) { if (a !== e) throw new Error(`${msg || ''}: attes
 function assertTrue(c, msg) { if (!c) throw new Error(msg || 'atteso true'); }
 
 // Super Admin finto: tiene le richieste ricevute e risponde come deciso dal test.
+const TESTO = 'Gentile cliente, la tua bolletta è disponibile. Totale da pagare 64,00 euro entro il 07/09/2026. Puoi pagare online o in banca.';
 let sa = { calls: [], reply: null, status: 200 };
 const fakeSA = http.createServer((req, res) => {
   let body = '';
@@ -77,7 +78,7 @@ async function main() {
   moduleAi.setMaster(true); // AI accesa: poi ogni modulo accende i suoi potenziamenti
   for (const slug of ['spese_casa', 'spese_personali']) moduleRoles.set(slug, { kind: 'spesa', uses: ['avvisi', 'mail'], roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato' } });
   const newBill = (extra = {}) => db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run('spese_casa', null,
-    JSON.stringify({ descrizione: 'A2A Energia', importo: 0, data: '2026-09-07', categoria: 'Altro', note: 'Importato da Gmail', _stato: 'da_smistare', ...extra })).lastInsertRowid;
+    JSON.stringify({ descrizione: 'A2A Energia', importo: 0, data: '2026-09-07', categoria: 'Altro', note: 'Importato da Gmail: ' + TESTO, _stato: 'da_smistare', ...extra })).lastInsertRowid;
   const getData = (id) => JSON.parse(db.prepare('SELECT data FROM records WHERE id = ?').get(id).data);
   const pendingCount = () => db.prepare("SELECT COUNT(*) c FROM ai_suggestions WHERE status = 'pending'").get().c;
 
@@ -91,7 +92,7 @@ async function main() {
   await test('senza "Smistare" acceso sul modulo l\'AI non lavora e non chiama nessuno', async () => {
     sa.calls = [];
     const id = newBill();
-    const out = await ai.suggestForRecord({ moduleSlug: 'spese_casa', recordId: id, mittente: 'A2A', subject: 'Bolletta', text: 'testo' });
+    const out = await ai.suggestForRecord({ moduleSlug: 'spese_casa', recordId: id, mittente: 'A2A', subject: 'Bolletta', text: TESTO });
     assertEq(out.skipped, 'non attivo su questo modulo');
     assertEq((await ai.suggestForRecord({ moduleSlug: 'spese_casa', recordId: id, force: true })).skipped, 'non attivo su questo modulo', 'nemmeno su richiesta esplicita');
     assertEq(sa.calls.length, 0, 'chiamate a Super Admin');
@@ -156,7 +157,7 @@ async function main() {
     require('./bank-import').extractText = async () => { throw new Error('manca pdftotext'); };
     const id = newBill({ descrizione: 'Bolletta', categoria: 'Altro', _stato: 'da_smistare' });
     sa.calls = [];
-    await ai.suggestForRecord({ moduleSlug: 'spese_casa', recordId: id, text: 'testo', attachments: [{ bytes: Buffer.from('x'), filename: 'a.pdf', mimeType: 'application/pdf' }], force: true });
+    await ai.suggestForRecord({ moduleSlug: 'spese_casa', recordId: id, text: TESTO, attachments: [{ bytes: Buffer.from('x'), filename: 'a.pdf', mimeType: 'application/pdf' }], force: true });
     assertEq(sa.calls.length, 1); assertEq(sa.calls[0].data.indizio_energia, undefined);
   });
 
@@ -183,11 +184,11 @@ async function main() {
   await test('con l\'assistente acceso il poller chiede la proposta, mandando il testo della mail e le categorie ammesse', async () => {
     sa.calls = [];
     recId = newBill();
-    const out = await ai.suggestForRecord({ moduleSlug: 'spese_casa', recordId: recId, mittente: 'A2A Energia', subject: 'La tua bolletta', text: 'Totale da pagare 64,00 euro' });
+    const out = await ai.suggestForRecord({ moduleSlug: 'spese_casa', recordId: recId, mittente: 'A2A Energia', subject: 'La tua bolletta', text: TESTO });
     assertTrue(out.id, 'suggerimento creato');
     sugId = out.id;
     const sent = sa.calls[0].data;
-    assertEq(sent.testo, 'Totale da pagare 64,00 euro');
+    assertEq(sent.testo, TESTO);
     assertEq(sent.mittente, 'A2A Energia');
     assertEq(sent.moduli.spese_casa.categorie.join(','), 'Elettricità,Gas,Acqua,Altro');
   });
@@ -225,6 +226,37 @@ async function main() {
     const out = await ai.suggestForRecord({ moduleSlug: 'spese_casa', recordId: id, force: true });
     assertEq(out.skipped, 'nessuna differenza');
     sa.reply = { suggestion: PROPOSTA };
+  });
+
+
+  console.log('\n--- verificabilità: dove l\'AI ha letto ---');
+  await test('senza PDF e senza testo di mail sostanzioso non si propone niente (e non si chiama nessuno): con il solo titolo si indovinerebbe', async () => {
+    sa.calls = []; const id = newBill({ descrizione: 'A2A Energia Gas/Luce', note: 'Importato da Gmail (a2a)' });
+    const out = await ai.suggestForRecord({ moduleSlug: 'spese_casa', recordId: id, mittente: 'a2a', subject: 'Bolletta', text: 'La tua bolletta' });
+    assertTrue(/niente da leggere/.test(out.skipped), JSON.stringify(out)); assertEq(sa.calls.length, 0, 'nessuna chiamata, nessun costo');
+  });
+  await test('il solo fornitore, senza documento, non basta a creare una proposta', async () => {
+    sa.status = 200; sa.reply = { suggestion: { modulo: 'spese_casa', categoria: null, fornitore: 'A2A', importo: null, scadenza: null, confidenza: 'bassa' } };
+    const id = newBill({ descrizione: 'A2A', categoria: 'Altro' });
+    const out = await ai.suggestForRecord({ moduleSlug: 'spese_casa', recordId: id, mittente: 'a2a', subject: 'Bolletta', text: TESTO });
+    assertEq(out.skipped, 'nessuna differenza');
+  });
+  await test('la proposta ricorda le righe del PDF da cui ha letto importo, scadenza e categoria, e gli allegati da aprire', async () => {
+    require('./bank-import').extractText = async () => 'Bolletta energia elettrica\nConsumo fatturato 180 kWh\nTotale da pagare 1.250,50 euro\nScadenza 31/10/2026';
+    sa.reply = { suggestion: { modulo: 'spese_casa', categoria: 'Elettricità', fornitore: 'A2A', importo: 1250.5, scadenza: '2026-10-31', confidenza: 'alta' } };
+    const id = newBill({ descrizione: 'A2A Energia Gas/Luce', categoria: 'Altro' });
+    const up = db.prepare("INSERT INTO uploads (original_name, stored_name, mime_type, size) VALUES ('bolletta.pdf', 'z.pdf', 'application/pdf', 10)").run().lastInsertRowid;
+    db.prepare("INSERT INTO record_attachments (module_slug, record_id, upload_id, tipo) VALUES ('spese_casa', ?, ?, 'gmail')").run(id, up);
+    fs.writeFileSync(path.join(process.env.UPLOAD_DIR, 'z.pdf'), Buffer.from('%PDF finto'));
+    const out = await ai.suggestForRecord({ moduleSlug: 'spese_casa', recordId: id, mittente: 'a2a', subject: 'Bolletta', text: TESTO });
+    assertTrue(!!out.id, JSON.stringify(out));
+    const f = out.payload.fonte;
+    assertEq(f.letto_pdf, true); assertEq(JSON.stringify(f.allegati), JSON.stringify([{ upload_id: up, name: 'bolletta.pdf' }]));
+    assertEq(f.righe.importo, 'Totale da pagare 1.250,50 euro'); assertEq(f.righe.scadenza, 'Scadenza 31/10/2026'); assertEq(f.righe.categoria, 'Consumo fatturato 180 kWh');
+  });
+  await test('un valore che nel PDF non si trova non ha una fonte (il pannello lo dirà)', () => {
+    const e = ai.evidenza('Totale da pagare 10,00 euro', { importo: 99, scadenza: '2027-01-01', categoria: 'Viaggi' });
+    assertEq(JSON.stringify(e), '{}');
   });
 
   console.log('\n--- accettare e ignorare ---');

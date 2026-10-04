@@ -78,6 +78,35 @@ function hasPending(moduleSlug, recordId) {
   return !!db.prepare("SELECT 1 FROM ai_suggestions WHERE module_slug = ? AND record_id = ? AND status = 'pending'").get(moduleSlug, recordId);
 }
 
+// Dove l'AI ha letto ogni valore: per importo, scadenza e categoria la riga del PDF in cui compare. Serve a chi non conosce i dati per controllarli
+// (la proposta non è un atto di fede). Calcolato qui, non dal modello: se la riga non si trova, il campo non ha una fonte e il pannello lo dice.
+const escRe = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+function lineWith(pdf, re) {
+  const l = String(pdf || '').split('\n').map((x) => x.replace(/\s+/g, ' ').trim()).find((x) => x.length > 3 && re.test(x));
+  return l ? l.slice(0, 140) : null;
+}
+function evidenza(pdf, p) {
+  const out = {};
+  if (p.importo != null) {
+    const [i, d] = Number(p.importo).toFixed(2).split('.');
+    const conPunto = i.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + d;
+    const l = lineWith(pdf, new RegExp('(^|[^\\d,.])' + escRe(conPunto) + '(?!\\d)')) || lineWith(pdf, new RegExp('(^|[^\\d,.])' + escRe(i + ',' + d) + '(?!\\d)'));
+    if (l) out.importo = l;
+  }
+  if (p.scadenza && /^\d{4}-\d{2}-\d{2}$/.test(p.scadenza)) {
+    const [y, m, g] = p.scadenza.split('-'); const gg = String(parseInt(g, 10));
+    const l = lineWith(pdf, new RegExp('\\b0?' + gg + '[/.\\- ]0?' + parseInt(m, 10) + '[/.\\- ]' + y + '\\b')) || lineWith(pdf, new RegExp('\\b0?' + gg + ' ' + MESI[parseInt(m, 10) - 1] + ' ' + y, 'i'));
+    if (l) out.scadenza = l;
+  }
+  if (p.categoria) {
+    const c = String(p.categoria).toLowerCase();
+    const l = (/elettric|luce/.test(c) && (lineWith(pdf, /kwh|\bpod\b/i) || lineWith(pdf, /energia elettrica/i))) || (/\bgas\b/.test(c) && (lineWith(pdf, /\bsmc\b|\bpdr\b/i) || lineWith(pdf, /gas naturale/i))) || lineWith(pdf, new RegExp(escRe(p.categoria), 'i'));
+    if (l) out.categoria = l;
+  }
+  return out;
+}
+
 // Crea il suggerimento per un record, se serve. Mai un errore verso il chiamante: il record
 // resta com'è e l'assistente al massimo non propone nulla.
 async function suggestForRecord({ moduleSlug, recordId, mittente, subject, text, attachments, force = false }) {
@@ -93,6 +122,9 @@ async function suggestForRecord({ moduleSlug, recordId, mittente, subject, text,
   const att = require('./attachment-text');
   const pdf = attachments && attachments.length ? await att.textFromBuffers(attachments) : await att.textForRecord(moduleSlug, recordId);
   const indizio = att.energyHint((text || cur.note || '') + '\n' + pdf);
+  // Niente da leggere (nessun PDF e nessun testo di mail sostanzioso) = niente da proporre: con il solo titolo l'AI indovinerebbe, e non si potrebbe verificare.
+  const haPdf = String(pdf || '').trim().length >= 20;
+  if (!haPdf && String(text || cur.note || '').trim().length < 80) return { skipped: 'niente da leggere: nessun PDF e nessun testo' };
   const out = await classify({
     allegati: att.relevantExtract(pdf) || undefined, indizioEnergia: indizio,
     mittente: mittente || cur[F.descrizione] || '',
@@ -109,10 +141,14 @@ async function suggestForRecord({ moduleSlug, recordId, mittente, subject, text,
     || (p.importo != null && Number(cur[F.importo] || 0) !== p.importo)
     || (p.scadenza && p.scadenza !== cur[F.scadenza])
     || (p.modulo && p.modulo !== moduleSlug)
-    || !!p.fornitore;
+    || (!!p.fornitore && haPdf); // il solo fornitore, senza un documento da cui leggerlo, non basta per proporre
   if (!cambia) return { skipped: 'nessuna differenza' };
 
-  const payload = { proposta: p, corrente: { categoria: cur[F.categoria] || null, importo: cur[F.importo] || null, scadenza: cur[F.scadenza] || null } };
+  const allegati = db.prepare('SELECT u.id AS upload_id, u.original_name AS name FROM record_attachments ra JOIN uploads u ON u.id = ra.upload_id WHERE ra.module_slug = ? AND ra.record_id = ?').all(moduleSlug, recordId);
+  const payload = {
+    proposta: p, corrente: { categoria: cur[F.categoria] || null, importo: cur[F.importo] || null, scadenza: cur[F.scadenza] || null },
+    fonte: { letto_pdf: haPdf, allegati: allegati.length ? allegati : (attachments || []).map((a) => ({ upload_id: null, name: a.filename })), righe: haPdf ? evidenza(pdf, p) : {} },
+  };
   const id = db.prepare('INSERT INTO ai_suggestions (module_slug, record_id, payload) VALUES (?, ?, ?)').run(moduleSlug, recordId, JSON.stringify(payload)).lastInsertRowid;
   return { id, payload };
 }
@@ -194,4 +230,4 @@ async function budget() {
   } catch (e) { return null; }
 }
 
-module.exports = { proposeFromDocument, suggestForRecord, accept, dismiss, listPending, overview, budget, allowedCategories, triageModules };
+module.exports = { evidenza, proposeFromDocument, suggestForRecord, accept, dismiss, listPending, overview, budget, allowedCategories, triageModules };
