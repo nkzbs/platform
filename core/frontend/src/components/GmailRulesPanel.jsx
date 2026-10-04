@@ -13,9 +13,13 @@ export default function GmailRulesPanel({ token, nested = false }) {
   const [edit, setEdit] = useState(null)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const [unknown, setUnknown] = useState([]) // mail che sembrano bollette da mittenti senza regola
   const [dest, setDest] = useState([]) // moduli che possono ricevere righe dalle mail (dichiarati nel Builder)
 
-  const load = async () => { const d = await api.get('/gmail-rules'); setRows(Array.isArray(d) ? d.map((x) => ({ id: x.id, data: x })) : []) }
+  const load = async () => {
+    const d = await api.get('/gmail-rules'); setRows(Array.isArray(d) ? d.map((x) => ({ id: x.id, data: x })) : [])
+    const u = await api.get('/gmail-unknown'); setUnknown(Array.isArray(u) ? u : [])
+  }
   useEffect(() => { load(); api.get('/module-roles').then((d) => setDest(Array.isArray(d) ? d.filter((m) => m.kind === 'spesa' && m.uses.includes('mail')) : [])) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async () => {
@@ -70,6 +74,26 @@ export default function GmailRulesPanel({ token, nested = false }) {
             <button type="button" onClick={save} disabled={busy} className="text-xs bg-accent hover:opacity-90 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg font-medium">{busy ? 'Salvo…' : 'Salva'}</button>
             <button type="button" onClick={() => setEdit(null)} className="text-xs text-gray-400 hover:text-gray-200 px-3 py-1.5">Annulla</button>
           </div>
+        </div>
+      )}
+
+      {unknown.length > 0 && !edit && (
+        <div className="mt-4 rounded-lg bg-amber-900/15 border border-amber-900/40 p-3">
+          <div className="text-xs font-medium text-amber-400 mb-1">Mail non riconosciute · {unknown.length}</div>
+          <div className="text-[11px] text-gray-500 mb-2">Sembrano bollette ma nessuna regola le riconosce, quindi non finiscono in «da smistare». Crea una regola o ignora il mittente.</div>
+          <div className="divide-y divide-gray-800">
+            {unknown.slice(0, 6).map((u) => (
+              <div key={u.id} className="py-1.5 flex items-center gap-3 flex-wrap">
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs text-ink truncate">{u.oggetto}</div>
+                  <div className="text-[11px] text-gray-500 font-mono truncate">{u.mittente}</div>
+                </div>
+                <button type="button" onClick={() => { setErr(''); setEdit({ id: null, data: { ...EMPTY, mittente: u.mittente, descrizione: u.oggetto.slice(0, 60), modulo: dest.length === 1 ? dest[0].module_slug : '' } }) }} className="text-xs text-accent hover:underline">Crea regola</button>
+                <button type="button" onClick={async () => { await api.post('/gmail-unknown/' + u.id + '/ignore', {}); load() }} className="text-xs text-gray-500 hover:text-gray-300">Ignora</button>
+              </div>
+            ))}
+          </div>
+          {unknown.length > 6 && <div className="text-[11px] text-gray-500 mt-1">… e altre {unknown.length - 6}</div>}
         </div>
       )}
 

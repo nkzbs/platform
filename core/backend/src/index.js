@@ -32,6 +32,7 @@ const smistaRoutes = require('./routes/smista');
 const moduleRoles = require('./module-roles');
 const digestRoutes = require('./routes/digest');
 const { startDailyDigest } = require('./daily-digest');
+const { startAvvisi } = require('./avvisi');
 const { startAuditRetentionScheduler } = require('./audit-retention-scheduler');
 const m2mRoutes = require('./routes/m2m');
 const notificationsRoutes = require('./routes/notifications');
@@ -171,6 +172,7 @@ app.listen(PORT, () => {
   console.log('Platform Core [' + (process.env.TENANT_SLUG || 'default') + '] running on port ' + PORT);
   startScheduler();
   startDailyDigest(); // il controllo ogni minuto parte sempre; se la funzione è spenta non fa niente
+  startAvvisi(); // ogni minuto: righe nuove in "da smistare" (da qualunque via) -> un messaggio WhatsApp
   startGmailPoller();
   startAuditRetentionScheduler();
 });

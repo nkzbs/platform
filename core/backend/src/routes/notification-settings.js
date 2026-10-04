@@ -39,7 +39,7 @@ router.delete('/whatsapp-recipients/:id', ...guard, (req, res) => {
 router.get('/gmail-rules', ...guard, (req, res) => res.json(ns.listRules()));
 router.post('/gmail-rules', ...guard, (req, res) => {
   const out = ns.createRule(req.body || {});
-  if (out.rule) logAudit(req.user.username, 'gmail.rule.create', String(out.rule.id), { mittente: out.rule.mittente });
+  if (out.rule) { logAudit(req.user.username, 'gmail.rule.create', String(out.rule.id), { mittente: out.rule.mittente }); require('../gmail-unknown').risolviMittente(out.rule.mittente); }
   respond(res, out, 'rule');
 });
 router.put('/gmail-rules/:id', ...guard, (req, res) => {
@@ -50,6 +50,15 @@ router.put('/gmail-rules/:id', ...guard, (req, res) => {
 router.delete('/gmail-rules/:id', ...guard, (req, res) => {
   const ok = ns.deleteRule(idOf(req));
   if (ok) logAudit(req.user.username, 'gmail.rule.delete', String(idOf(req)), null);
+  res.status(ok ? 200 : 404).json({ ok });
+});
+
+// Mail che sembrano bollette da mittenti senza regola
+const unknown = require('../gmail-unknown');
+router.use('/gmail-unknown', requireAuth, requireFeature('gmail'));
+router.get('/gmail-unknown', ...guard, (req, res) => res.json(unknown.listNuove()));
+router.post('/gmail-unknown/:id/ignore', ...guard, (req, res) => {
+  const ok = unknown.ignora(idOf(req));
   res.status(ok ? 200 : 404).json({ ok });
 });
 

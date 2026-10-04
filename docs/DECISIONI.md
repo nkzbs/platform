@@ -369,6 +369,8 @@ Seguito del registro precedente, nell'ordine in cui è stato fatto. Tutto è onl
 
 - **Widget generici e facili da usare**: l'elenco dei tipi è in gruppi con una riga di spiegazione, e i widget di finanza compaiono solo nei progetti che hanno spese o entrate ("deve essere generico e facile da usare"). Riepilogo mensile e Come sta andando restano widget di finanza, non resi configurabili fino a perdere il vocabolario.
 
+- **Due buchi degli avvisi chiusi**: (1) l'avviso sulle righe nuove non dipende più da come nascono ma da un controllo unico ogni minuto (`avvisi.js`), che copre anche automazioni e importazioni; (2) le mail che sembrano bollette ma da mittenti senza regola si mettono in lista e si segnalano con un messaggio (`gmail-unknown.js`), invece di perdersi in silenzio.
+
 ### Ancora aperto (non bloccante)
 
 - **Monitoraggio su WhatsApp**: messaggio periodico con "come sta andando" e commento dell'AI; non costruito.

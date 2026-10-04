@@ -936,7 +936,6 @@ router.post('/:slug', requireAuth, (req, res) => {
   const decrypted = decryptFields(JSON.parse(record.data), schema.fields);
   const attached = attachComputedFields({ ...record, data: decrypted }, schema, req.params.slug);
   fireTrigger(req.params.slug, 'nuovo_record', attached.data, attached.id, {});
-  require('../avvisi').notifyNuovaRiga(req.params.slug, attached.data); // solo se il modulo ha acceso l'avviso per le righe nuove
   logHistory(req.params.slug, attached.id, req.user.username, 'create', null, attached.data);
   res.json(attached);
 });

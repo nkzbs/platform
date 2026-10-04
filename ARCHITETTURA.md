@@ -145,8 +145,14 @@ Le automazioni dei moduli (`invia_notifica`, `invia_report_periodico`) usano lo 
 
 Cosa avvisare e con quali parole lo **dichiara il modulo** (Builder → Ruoli del modulo → "Avvisi", vedi sotto), non il codice:
 
-- **Avviso su riga nuova** (`avvisi.js`): quando una riga arriva nello stato "nuovo" del modulo (da Gmail, `gmail-poller.js`, o creata a mano,
-  `routes/records.js`) parte un messaggio ("Bolletta da smistare: A2A · 44,00 € · scade 01/10/2026") ai destinatari del tag scelto dal modulo.
+- **Avviso su riga nuova** (`avvisi.js`, `scanNuove`): ogni minuto cerca le righe nello stato "nuovo" dei moduli con l'avviso acceso che non sono ancora state
+  segnalate e le manda in un messaggio ("Bolletta da smistare: A2A · 44,00 € · scade 01/10/2026"; più righe dello stesso modulo = un solo messaggio con l'elenco,
+  le prime 4 e "… e altre N"). Il controllo vale per **qualunque via di creazione** (mail Gmail, riga a mano, automazione, importazione): niente aggancio sul singolo punto.
+  Tabella `avvisi_notificati`; alla prima volta le righe già presenti si segnano come viste senza avvisare. Le righe che nascono in un altro stato (le rate "da pagare") non avvisano.
+- **Mail non riconosciute** (`gmail-unknown.js`): a ogni ciclo di Gmail si cercano, negli ultimi 3 giorni (solo intestazioni: mittente, oggetto, data; mai il corpo), le mail con parole da
+  bolletta (bolletta, fattura, scadenza, "da pagare", "avviso di pagamento", "estratto conto"; senza promozioni) il cui mittente non ha una regola. Finiscono in una lista (Impostazioni →
+  Connessioni → Google → "Mail non riconosciute", con «Crea regola» e «Ignora», tabella `gmail_unknown`) e partono in **un solo messaggio WhatsApp**. Un mittente ignorato non torna a
+  segnalarsi; creando la regola le sue mail escono dalla lista.
 - **Riepilogo del mattino** (`daily-digest.js`): lavoro a parte che gira ogni minuto e, all'ora italiana scelta, manda un solo messaggio con le
   scadenze di oggi, domani e in ritardo dei moduli che hanno acceso "scadenze nel riepilogo" e il numero di righe nello stato "nuovo". Spento di default.
   Senza moduli dichiarati non porta nessuna riga.

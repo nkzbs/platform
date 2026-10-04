@@ -255,7 +255,6 @@ async function processaMessaggio(accessToken, msgId, rule) {
   // Se il modulo ha "Smistare" acceso (Builder → Potenziamenti AI), l'AI prepara una proposta: non scrive nulla da sola.
   require('./ai-suggestions').suggestForRecord({ moduleSlug, recordId, mittente: rule.mittente, subject, text: acc.text, attachments: allegatiScaricati })
     .catch((e) => console.error('[gmail-poller] suggerimento AI fallito:', e.message));
-  require('./avvisi').notifyNuovaRiga(moduleSlug, dataRecord);
   // Stesso fireTrigger('nuovo_record', ...) che routes/records.js chiama per un
   // record creato dall'utente — senza questo, un'automazione con trigger "Nuovo
   // record" su spese_casa/spese_personali non scattava MAI per le spese importate
@@ -294,7 +293,6 @@ async function processaMessaggio(accessToken, msgId, rule) {
 async function pollGmail() {
   if (!require('./features').isEnabled('gmail')) return; // capacità facoltativa: spenta, il controllo non fa niente
   const rules = getActiveRules();
-  if (rules.length === 0) return;
 
   let accessToken;
   try {
@@ -319,6 +317,15 @@ async function pollGmail() {
     } catch (e) {
       console.error('[gmail-poller] regola', rule.mittente, 'fallita:', e.message);
     }
+  }
+
+  // Mail che sembrano bollette ma da mittenti senza regola: messe in lista e segnalate con un solo messaggio (gmail-unknown.js)
+  try {
+    const un = require('./gmail-unknown');
+    const fresh = await un.scan(accessToken, gmailGet, rules);
+    if (fresh.length) require('./avvisi').sendText('scadenza', un.messaggio(fresh));
+  } catch (e) {
+    console.error('[gmail-poller] controllo mail non riconosciute fallito:', e.message);
   }
 }
 
