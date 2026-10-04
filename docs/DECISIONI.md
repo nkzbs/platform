@@ -390,7 +390,8 @@ Tutto è online su Finance e committato. **Finance ora va testato a mano** con `
 
 - **Da provare dal vivo** (coperti dai test con servizi simulati, mai visti con dati veri): avviso WhatsApp su una bolletta vera, "Smista" in rate, "Importa da PDF", "Chiedi ai dati", proposte dell'AI con la fonte, mail non riconosciute.
 - **"Spiegare"** sugli altri widget (Riepilogo mensile, Checklist): non collegato.
-- **Dati di Finance** da pulire (elenco in `docs/TEST-FINANCE.md`): righe "da smistare" vecchie o a 0 €, scadenza A2A 30/04/2028, settembre ancora "da pagare" (affitto, Spese Casa, rata PayPal), affitto registrato in un solo mese su sei,
+- **Pulizia del 04/10/2026**: corretta la scadenza A2A (30/04/2028 → 08/09/2026, dal PDF; copia del database prima). I presunti doppioni **non sono doppioni**: sono pagamenti con data incerta (import del 4/8), e restano.
+- **Dati di Finance** da pulire (elenco in `docs/TEST-FINANCE.md`): righe "da smistare" vecchie o a 0 €, settembre ancora "da pagare" (affitto, Spese Casa, rata PayPal), affitto registrato in un solo mese su sei,
   righe scadute, Quarta Cartella marzo–maggio. Il riepilogo delle 8:00 e il messaggio mensile del 2 novembre sono rumorosi finché non si puliscono.
 - **Timbrature**: la formula della durata non gestisce i turni a cavallo della mezzanotte (esempio: 09/06/2023, 07:00–00:00).
 - **Sicurezza, a carico di Nima**: app Google in produzione (altrimenti il collegamento può scadere dopo circa 7 giorni e Gmail si ferma), password del NAS, 2FA del Super Admin e degli utenti.

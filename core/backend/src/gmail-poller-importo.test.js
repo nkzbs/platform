@@ -39,6 +39,10 @@ test('senza etichette si prende la data più vicina nei prossimi 90 giorni, non 
   assertEq(ISO('Emessa il 19/08/2026. Pagamento 08/09/2026. Valida fino al 30/12/2026'), '2026-09-08');
   assertEq(ISO('solo una data lontana 30/04/2028'), null);
 });
+test('bolletta A2A reale: "201,00 Euro 08.09.2026" è la scadenza, il 30.04.2028 (contratto) no', () => {
+  const t = 'A2A Start Luce Totale da pagare Entro il 08 DATA SCADENZA 201,00 € Settembre CONDIZIONI ECONOMICHE 2026 30.04.2028 Importo entro il PAGA ONLINE 201,00 Euro 08.09.2026 Banking';
+  assertEq(estraiScadenzaGenerica(t, new Date('2026-08-20T00:00:00Z')), '2026-09-08');
+});
 test('date testuali ("entro il 8 settembre 2026") e date passate ignorate', () => {
   assertEq(ISO('da pagare entro il 8 settembre 2026'), '2026-09-08');
   assertEq(ISO('fattura del 01/07/2026'), null);

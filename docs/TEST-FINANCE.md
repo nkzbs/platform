@@ -72,6 +72,7 @@ Vedi `docs/OPERAZIONI.md` → "Utenti, accessi e 2FA". Dopo averli creati, prova
 Il primo riepilogo e il messaggio mensile del 2 novembre dipendono da questi:
 
 - [ ] Righe "da smistare" vecchie o a 0 € (smistale, correggile o eliminale).
-- [ ] La riga A2A da 201 € ha scadenza 30/04/2028 (è la data del contratto): correggila.
+- [x] La riga A2A da 201 € aveva scadenza 30/04/2028 (la data del contratto): corretta a 08/09/2026 il 04/10/2026 (dal PDF: «201,00 Euro 08.09.2026»).
+- [ ] **Non cancellare i "doppioni" 18/04/2025** (7 "Spese Mese" da 200 €, 2 "Caldaia R.A.M." da 95 €): sono pagamenti reali con la data persa nell'import ("data incerta"), già esclusi dai conteggi. Cancellarli toglierebbe spese vere.
 - [ ] Settembre: affitto 550 €, "Spese Casa" 500 € e rata PayPal 50,17 € risultano ancora "da pagare": segnali "pagato" se lo sono.
 - [ ] Le righe scadute da verificare (assicurazione auto, hotel Sardegna, A2A Acqua) e la Quarta Cartella marzo–maggio.
