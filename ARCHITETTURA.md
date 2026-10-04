@@ -101,6 +101,10 @@ Un **modulo** è uno schema JSON (formato v3: una lista di blocchi `field`, `rel
 `automation`, viste, permessi). Il motore (`core/backend/src/schema-v3.js`, condiviso con `shared/`) lo
 interpreta; non c'è codice specifico per un tenant.
 
+**Esistono solo moduli**, tutti uguali: visibili nel menu, nello Store e nel Builder, e che si parlano tra loro con le **relazioni** (un campo che punta a righe di un altro modulo) e con viste che
+mostrano le righe collegate (per esempio i piani a rate dentro Spese). Non c'è più il "modulo di supporto" nascosto: la colonna `modules.support_module` resta solo per i database esistenti, viene azzerata
+all'avvio e da un trigger a ogni scrittura (import, installazione, ripristino), e nessuna schermata la mostra.
+
 Il **Builder** modifica gli schemi. La **Libreria** (tabella `registry_modules` di Super Admin) conserva i
 moduli con una versione: salvare di nuovo lo stesso modulo crea la versione successiva. **Installare = copiare**:
 il tenant riceve una copia sua, ricorda da quale versione viene e mostra "Aggiorna" quando ne esiste una più

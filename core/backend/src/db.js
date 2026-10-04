@@ -367,6 +367,15 @@ function ensureColumn(table, column, definition) {
   }
 }
 ensureColumn('modules', 'support_module', 'INTEGER DEFAULT 0');
+// Non esistono "moduli di supporto": ogni modulo è un modulo vero, visibile nel menu, nello Store e nel Builder, e i moduli si parlano tra loro con le relazioni.
+// La colonna resta solo per non rompere i database esistenti: viene azzerata ora e a ogni scrittura (import, installazione, ripristino), da un trigger.
+db.exec(`
+  UPDATE modules SET support_module = 0 WHERE support_module IS NOT NULL AND support_module != 0;
+  CREATE TRIGGER IF NOT EXISTS modules_no_support_ins AFTER INSERT ON modules WHEN NEW.support_module IS NOT NULL AND NEW.support_module != 0
+    BEGIN UPDATE modules SET support_module = 0 WHERE id = NEW.id; END;
+  CREATE TRIGGER IF NOT EXISTS modules_no_support_upd AFTER UPDATE OF support_module ON modules WHEN NEW.support_module IS NOT NULL AND NEW.support_module != 0
+    BEGIN UPDATE modules SET support_module = 0 WHERE id = NEW.id; END;
+`);
 // Il cerchio "tap-to-pay" (ModulePage/ChecklistWidget) si attiva da solo su
 // qualunque workflow con una coppia di stati A<->B — euristica utile per
 // pagamenti/debiti ma fuorviante su moduli come Clienti dove una coppia

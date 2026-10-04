@@ -231,12 +231,10 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
     }
   }
 
-  const businessModules = modules.filter((m) => !m.support_module)
+  const businessModules = modules
   const alreadyInstalledSlugs = new Set(modules.map((m) => m.slug))
   const registryByKey = new Map(registry.map((r) => [r.slug + '@' + r.source_tenant_slug, r]))
-  // Un modulo di supporto (es. le righe di un ordine) non si sfoglia: si installa da solo come
-  // dipendenza del modulo principale.
-  const registryNotInstalled = registry.filter((m) => !alreadyInstalledSlugs.has(m.slug) && !m.support_module)
+  const registryNotInstalled = registry.filter((m) => !alreadyInstalledSlugs.has(m.slug))
 
   const updateFor = (m) => {
     if (!m.installed || !m.registry_slug || !m.registry_source_tenant_slug) return null

@@ -87,7 +87,6 @@ function PropertiesPanel({ mod, schema, fieldCache, allModules, onUpdate, onSele
 
             <div className="border-t border-gray-800 pt-3">
               <Toggle checked={mod.active !== 0} onChange={(v) => onUpdate({ active: v })} label="Visibile in sidebar" />
-              <Toggle checked={!mod.support_module} onChange={(v) => onUpdate({ support_module: !v })} label="Modulo primario" hint="Un modulo di supporto non compare nello Store né nel menu." />
               <Toggle checked={mod.quick_toggle !== 0} onChange={(v) => onUpdate({ quick_toggle: v })} label="Cerchio rapido in tabella" hint="Utile per pagamenti/scadenze, fuorviante su workflow generici." />
               <Toggle checked={mod.list_view === 'card_grid'} onChange={(v) => onUpdate({ list_view: v ? 'card_grid' : 'table' })} label="Vista a card" hint="Griglia di card colorate invece di una tabella." />
             </div>

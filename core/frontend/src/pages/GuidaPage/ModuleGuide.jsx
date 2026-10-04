@@ -18,7 +18,7 @@ const TYPE_LABEL = {
 }
 
 function ModuleGuide({ modules }) {
-  const real = (modules || []).filter((m) => !m.support_module && m.slug !== 'dashboard')
+  const real = (modules || []).filter((m) => m.slug !== 'dashboard')
   const [selectedSlug, setSelectedSlug] = useState(real[0] ? real[0].slug : null)
   const selected = real.find((m) => m.slug === selectedSlug)
   const parsed = selected ? parseSchemaFrontend(selected.schema_json) : null

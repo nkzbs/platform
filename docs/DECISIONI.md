@@ -375,6 +375,13 @@ Seguito del registro precedente, nell'ordine in cui è stato fatto. Tutto è onl
   e spesa del mese. Con l'AI accesa: **Smista già compilato** dalla bolletta, **Spiega** acceso di default sui widget, **Importa da PDF**, **Chiedi ai dati** (query strutturata validata due volte, mai SQL) e **monitoraggio**
   mensile su WhatsApp (acceso sui due widget di Finance: primo messaggio il 2 novembre alle 9). Ogni potenziamento usa i ruoli dichiarati dai moduli, senza nomi di Finance nel codice.
 
+- **Via i moduli di supporto** (richiesta di Nima: «non deve esistere modulo di supporto, ma solo moduli che tra di loro possono parlarsi»). Tolto il concetto da Builder (casella nel wizard e nelle proprietà, elenco "Supporto"),
+  menu, Store, Impostazioni, Guida e Utenti; la colonna è azzerata da un trigger. Su Finance, con copia dei dati prima (`finance-2026-10-04-prima-semplificazione-moduli.db` e `.json`, 2.076 righe): ritirati
+  **Pagamenti** (102 righe, calendari delle rate del vecchio sistema, in parte in contraddizione con le rate vere), **Ricorrenti casa** e **Ricorrenti personali** (0 righe) — disinstallati, le righe restano e si riattivano;
+  **Debiti casa e personali** e **Conti** (usato da 560 spese su 644 e dal Riepilogo mensile, era solo nascosto) sono ora moduli normali nel menu. Il menu di Finance ha 8 moduli più la dashboard.
+- **Idea per dopo**: un solo modulo "Spese" con un campo "Ambito" (Casa/Personale) al posto di due copie, e un solo "Debiti". Richiede prima nel Builder la **visibilità per valore di campo** nei permessi (un ruolo vede solo le righe
+  con Ambito = Casa, anche via API), che è anche ciò che serve per un'app più universale.
+
 ### Stato alla fine della sessione (2026-10-04)
 
 Tutto è online su Finance e committato. **Finance ora va testato a mano** con `docs/TEST-FINANCE.md`. Nima crea gli utenti (Federica: Timbrature e Spese casa) e attiva il 2FA (vedi `docs/OPERAZIONI.md`).

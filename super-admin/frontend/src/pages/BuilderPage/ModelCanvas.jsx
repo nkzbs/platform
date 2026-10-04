@@ -23,7 +23,7 @@ function ModelCanvas({ modules, fieldCache, onSelectModule }) {
   fieldCache.forEach((m) => { bySlug[m.slug] = m })
   // Solo moduli reali installati (niente moduli di supporto tipo ordini_righe —
   // sono dettaglio di un altro modulo, non un nodo a sé nella mappa d'insieme).
-  const nodes = modules.filter((m) => !m.support_module && bySlug[m.slug])
+  const nodes = modules.filter((m) => bySlug[m.slug])
 
   const recompute = useCallback(() => {
     const container = containerRef.current

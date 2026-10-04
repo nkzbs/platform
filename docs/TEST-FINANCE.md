@@ -8,6 +8,7 @@ Spunta man mano; se qualcosa non torna, annota cosa hai visto (schermata e passo
 
 ## 1. Accesso e dashboard
 
+- [ ] Il menu ha 8 moduli: Entrate, Spese personali, Spese casa, Documenti, Conti, Debiti casa, Debiti personali, Timbrature (nessun modulo nascosto: Pagamenti e Ricorrenti sono stati ritirati).
 - [ ] Accedi come admin. La dashboard ha, nell'ordine: **Da smistare**, **Come sta andando — Personale**, **Come sta andando — Casa**, Riepilogo mensile, Checklist.
 - [ ] **Personale** mostra per settembre entrate 1.799,58 € e spese 1.321,45 €. Il pulsante Mese / Da inizio anno cambia la vista.
 - [ ] **Casa** mostra solo spese (niente entrate, saldo, risparmio), con "già pagate" e "ancora da pagare".

@@ -196,15 +196,13 @@ function ModuliTab({ token }) {
 
   const load = async () => {
     const data = await api.get('/modules')
-    // Solo moduli DAVVERO installati e NON di supporto — un modulo mai installato,
-    // o un modulo di supporto (righe di un modulo padre: ordini_righe, fatture_righe...),
-    // non compare mai in sidebar (stesso filtro di Sidebar.jsx: !support_module), quindi
-    // non ha senso poterlo riordinare o nasconderlo da qui. 'dashboard' invece è incluso
+    // Solo moduli DAVVERO installati — un modulo mai installato non compare mai in sidebar,
+    // quindi non ha senso poterlo riordinare o nasconderlo da qui. 'dashboard' invece è incluso
     // di proposito: è un modulo reale come gli altri (is_system=1 lo protegge solo da
     // disinstallazione/eliminazione altrove), quindi può e deve essere riordinato come
     // qualunque voce — è il modo con cui un tenant sposta Dashboard sotto altre voci
     // che gli interessano di più in cima (es. Nico: Zone prima di Dashboard).
-    if (data) setModules(data.filter((m) => m.installed && !m.support_module).sort((a, b) => a.sort_order - b.sort_order))
+    if (data) setModules(data.filter((m) => m.installed).sort((a, b) => a.sort_order - b.sort_order))
     const overlayData = await api.get('/modules/overlay-status')
     if (overlayData) {
       const bySlug = {}

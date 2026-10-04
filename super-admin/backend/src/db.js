@@ -161,6 +161,15 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 `);
+
+// Non esistono "moduli di supporto" (vedi core/backend/src/db.js): la colonna resta solo per i database esistenti e viene sempre azzerata.
+db.exec(`
+  UPDATE registry_modules SET support_module = 0 WHERE support_module IS NOT NULL AND support_module != 0;
+  CREATE TRIGGER IF NOT EXISTS registry_no_support_ins AFTER INSERT ON registry_modules WHEN NEW.support_module IS NOT NULL AND NEW.support_module != 0
+    BEGIN UPDATE registry_modules SET support_module = 0 WHERE id = NEW.id; END;
+  CREATE TRIGGER IF NOT EXISTS registry_no_support_upd AFTER UPDATE OF support_module ON registry_modules WHEN NEW.support_module IS NOT NULL AND NEW.support_module != 0
+    BEGIN UPDATE registry_modules SET support_module = 0 WHERE id = NEW.id; END;
+`);
 // A chi appartiene ogni chiamata AI (NULL = Super Admin stesso, es. il Super Builder): serve al tetto per tenant.
 if (!db.prepare("SELECT 1 FROM pragma_table_info('ai_usage_log') WHERE name = 'tenant_slug'").get()) {
   db.exec('ALTER TABLE ai_usage_log ADD COLUMN tenant_slug TEXT');

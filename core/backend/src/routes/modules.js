@@ -619,12 +619,11 @@ router.get('/:slug/children-modules', requireAuth, (req, res) => {
 
 // Aggiorna icona/colore di un modulo esistente (scelti dal set predefinito nel Builder)
 router.patch('/:slug', requireAuth, requireAdmin, (req, res) => {
-  const { icon, color, support_module, quick_toggle, name, group_name, group_order, active, list_view, batch_upload_field, batch_upload_category_field } = req.body;
+  const { icon, color, quick_toggle, name, group_name, group_order, active, list_view, batch_upload_field, batch_upload_category_field } = req.body;
   const mod = db.prepare('SELECT id FROM modules WHERE slug = ?').get(req.params.slug);
   if (!mod) return res.status(404).json({ error: 'Modulo non trovato' });
   if (icon) db.prepare('UPDATE modules SET icon = ? WHERE slug = ?').run(icon, req.params.slug);
   if (color) db.prepare('UPDATE modules SET color = ? WHERE slug = ?').run(color, req.params.slug);
-  if (support_module !== undefined) db.prepare('UPDATE modules SET support_module = ? WHERE slug = ?').run(support_module ? 1 : 0, req.params.slug);
   // Visibilità in sidebar/navigazione — la colonna esisteva già ed era già rispettata
   // da GET /modules/installed (filtrato installed=1 AND active=1), mancava solo un
   // modo per scriverla. Non è un confine di sicurezza: solo convenienza di
@@ -648,12 +647,12 @@ router.patch('/:slug', requireAuth, requireAdmin, (req, res) => {
 
 // Crea nuovo modulo
 router.post('/create', requireAuth, requireAdmin, (req, res) => {
-  const { name, slug, icon, color, support_module } = req.body
+  const { name, slug, icon, color } = req.body
   if (!name || !slug) return res.status(400).json({ error: 'Nome e slug obbligatori' })
   try {
-    db.prepare('INSERT INTO modules (name, slug, icon, color, installed, sort_order, schema_json, support_module) VALUES (?, ?, ?, ?, 1, 99, ?, ?)').run(name, slug, icon || 'box', color || '#2563EB', '{}', support_module ? 1 : 0)
+    db.prepare('INSERT INTO modules (name, slug, icon, color, installed, sort_order, schema_json, support_module) VALUES (?, ?, ?, ?, 1, 99, ?, ?)').run(name, slug, icon || 'box', color || '#2563EB', '{}', 0)
     const module = db.prepare('SELECT * FROM modules WHERE slug = ?').get(slug)
-    logAudit(req.user.username, 'module.create', slug, { support_module: !!support_module })
+    logAudit(req.user.username, 'module.create', slug, null)
     res.json(module)
   } catch (e) {
     res.status(400).json({ error: 'Slug gia esistente' })

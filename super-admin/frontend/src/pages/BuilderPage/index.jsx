@@ -246,7 +246,6 @@ function BuilderPage({ token, baseUrl, allModules, onModulesChanged, preselectSl
   const [newModuleName, setNewModuleName] = useState('')
   const [newModuleIcon, setNewModuleIcon] = useState('box')
   const [newModuleColor, setNewModuleColor] = useState('#2563EB')
-  const [newModuleSupport, setNewModuleSupport] = useState(false)
   const [showNewModule, setShowNewModule] = useState(false)
   // Wizard: step 1 = dati base modulo (già esisteva), step 2 = aiuto per la prima
   // relazione, opzionale. Non un modale a sé — stesso showNewModule, solo più passi,
@@ -335,7 +334,7 @@ function BuilderPage({ token, baseUrl, allModules, onModulesChanged, preselectSl
   useEffect(() => {
     if (openNewModule) {
       setNewModuleName(''); setNewModuleIcon('box'); setNewModuleColor('#2563EB')
-      setNewModuleSupport(false); setWizardStep(1)
+      setWizardStep(1)
       setNewModuleRelation({ enabled: false, target_module: '', label: '', cardinality: 'many_to_one' })
       setCloneFromSlug('')
       setShowNewModule(true)
@@ -476,7 +475,7 @@ function BuilderPage({ token, baseUrl, allModules, onModulesChanged, preselectSl
   const createModule = async () => {
     if (!newModuleName.trim()) return
     const slug = newModuleName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-    await api.post('/modules/create', { name: newModuleName, slug, icon: newModuleIcon, color: newModuleColor, support_module: newModuleSupport })
+    await api.post('/modules/create', { name: newModuleName, slug, icon: newModuleIcon, color: newModuleColor })
 
     // Se al passo 2 del wizard è stata configurata una relazione, il nuovo modulo non
     // parte con schema vuoto — parte già con quel blocco pronto in bozza, da rivedere
@@ -512,7 +511,6 @@ function BuilderPage({ token, baseUrl, allModules, onModulesChanged, preselectSl
     setNewModuleName('')
     setNewModuleIcon('box')
     setNewModuleColor('#2563EB')
-    setNewModuleSupport(false)
     setNewModuleRelation({ enabled: false, target_module: '', label: '', cardinality: 'many_to_one' })
     setCloneFromSlug('')
     loadModules()
@@ -801,8 +799,7 @@ function BuilderPage({ token, baseUrl, allModules, onModulesChanged, preselectSl
   // non installato non deve essere modificabile qui, sarebbe editare qualcosa che
   // il tenant non vede/usa più.
   const builderModules = modules.filter((m) => !['dashboard'].includes(m.slug) && m.installed)
-  const primaryModules = builderModules.filter((m) => !m.support_module)
-  const supportModulesList = builderModules.filter((m) => m.support_module)
+  const primaryModules = builderModules
 
   return (
     <>
@@ -918,16 +915,6 @@ function BuilderPage({ token, baseUrl, allModules, onModulesChanged, preselectSl
             )
           })()}
         </div>
-        {supportModulesList.filter((m) => m.name.toLowerCase().includes(moduleSearch.trim().toLowerCase())).length > 0 && (
-          <>
-            <div className="text-[10px] text-gray-600 uppercase tracking-wider font-semibold mt-3 mb-1.5 px-1 flex items-center gap-1.5">
-              <span className="w-3 h-px bg-gray-700" />Supporto
-            </div>
-            <div className="space-y-0.5">
-              {supportModulesList.filter((m) => m.name.toLowerCase().includes(moduleSearch.trim().toLowerCase())).map((m) => <ModuleListItem key={m.slug} m={m} />)}
-            </div>
-          </>
-        )}
       </div>
 
       <div className="flex-1 min-w-0">
@@ -957,7 +944,6 @@ function BuilderPage({ token, baseUrl, allModules, onModulesChanged, preselectSl
                     <Icon name="edit" size={13} />
                   </h2>
                 )}
-                {modules.find((m) => m.slug === selected)?.support_module && <span className="text-xs bg-cp-purple/20 text-cp-purple px-2 py-1 rounded">Supporto</span>}
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => setPropTab('cronologia')} className="text-xs text-gray-500 hover:text-ink transition flex items-center gap-1"><Icon name="refresh" size={12} />Cronologia</button>
@@ -1934,10 +1920,10 @@ function BuilderPage({ token, baseUrl, allModules, onModulesChanged, preselectSl
                 }
 
                 if (step.block_type === 'financial_statement') {
-                  // righe_module è quasi sempre un modulo di supporto diverso da quello
+                  // righe_module è quasi sempre un modulo diverso da quello
                   // su cui vive questo blocco (es. il blocco sta su "movimenti", visibile
                   // in sidebar, ma le righe dare/avere vivono su "movimenti_righe",
-                  // support_module nascosto) — per questo il blocco NON assume "questo
+                  // un modulo a parte) — per questo il blocco NON assume "questo
                   // modulo" come le altre viste (report_aggregate raggruppato usa lo
                   // stesso pattern con source_module).
                   const righeMod = fieldCache.find((m) => m.slug === step.righe_module)
@@ -2758,14 +2744,6 @@ function BuilderPage({ token, baseUrl, allModules, onModulesChanged, preselectSl
                   </div>
                   <span className="text-sm text-gray-400">{newModuleName || 'Anteprima modulo'}</span>
                 </div>
-
-                <label className="flex items-start gap-2 mb-5 cursor-pointer">
-                  <input type="checkbox" checked={newModuleSupport} onChange={(e) => setNewModuleSupport(e.target.checked)} className="accent-cp-primary mt-0.5" />
-                  <span>
-                    <span className="text-xs text-gray-300 block">Modulo di supporto</span>
-                    <span className="text-[10px] text-gray-600 block mt-0.5">Non compare nello Store né nel menu laterale — usalo per moduli che esistono solo come collegati ad altri (es. righe di un ordine), non per moduli che le persone devono aprire direttamente. Resta un modulo vero, modificabile qui nel Builder in ogni momento.</span>
-                  </span>
-                </label>
 
                 <div className="mb-5">
                   <label className="flex items-start gap-2 cursor-pointer">

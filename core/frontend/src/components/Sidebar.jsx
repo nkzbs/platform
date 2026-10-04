@@ -192,7 +192,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
           // di "Amministrazione" vanno DOPO (si accodano alla sezione Amministrazione
           // già esistente dai moduli reali, stesso group_name = stessa intestazione,
           // nessun secondo blocco duplicato).
-          const visible = modules.filter((m) => !m.support_module)
+          const visible = modules
           // Ordine delle sezioni = ordine di primo incontro scorrendo i moduli (già
           // ordinati per sort_order dal backend) — niente da configurare a parte, la
           // sezione appare dove appare per primo il modulo con priorità più alta.
