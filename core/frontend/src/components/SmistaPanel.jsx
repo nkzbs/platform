@@ -66,7 +66,7 @@ export default function SmistaPanel({ token, q, row, modules, onClose, onDone })
     onDone(res.data.message)
   }
 
-  const inp = 'w-full bg-surface-page text-ink px-3 py-2 rounded-lg outline-none border border-gray-800 focus:border-accent text-sm'
+  const inp = 'w-full min-w-0 h-10 appearance-none bg-surface-page text-ink px-3 py-2 rounded-lg outline-none border border-gray-800 focus:border-accent text-sm'
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
       <div className="bg-surface-card rounded-md p-6 w-full max-w-lg border border-gray-800 max-h-[90vh] overflow-y-auto">
@@ -88,7 +88,7 @@ export default function SmistaPanel({ token, q, row, modules, onClose, onDone })
             {ai.proposta && <AiSource fonte={ai.fonte} proposta={ai.proposta} token={token} />}
           </div>
         )}
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
           <div><label className="text-xs text-gray-400 block mb-1">Importo (€)</label><input className={inp} inputMode="decimal" value={importo} onChange={(e) => { touch('importo'); setImporto(e.target.value) }} placeholder="da verificare" /></div>
           <div><label className="text-xs text-gray-400 block mb-1">Scadenza</label><input type="date" className={inp} value={scadenza} onChange={(e) => { touch('scadenza'); setScadenza(e.target.value) }} /></div>
           <div><label className="text-xs text-gray-400 block mb-1">Categoria</label>
@@ -106,7 +106,7 @@ export default function SmistaPanel({ token, q, row, modules, onClose, onDone })
                 <span className="block text-sm text-ink font-medium">{titolo}</span>
                 <span className="block text-xs text-gray-500">{desc}</span>
                 {modo === k && k === 'rate' && (
-                  <span className="mt-2 grid grid-cols-2 gap-2 block">
+                  <span className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 block">
                     <span><span className="text-xs text-gray-400 block mb-1">Numero di rate</span><input type="number" min="2" max="60" className={inp} value={nRate} onChange={(e) => setNRate(e.target.value)} /></span>
                     <span><span className="text-xs text-gray-400 block mb-1">Data della prima rata</span><input type="date" className={inp} value={prima} onChange={(e) => { touch('prima'); setPrima(e.target.value) }} /></span>
                     <span className="col-span-2 text-xs text-ink">{imp > 0 ? n + ' rate da ' + eur(rata) + ', dal ' + fmt(prima) + ' al ' + fmt(addMonths(prima, n - 1)) + (Math.round(rata * n * 100) / 100 !== Math.round(imp * 100) / 100 ? ' (arrotondate: ' + eur(rata * n) + ' in tutto)' : '') : 'Indica l\'importo per calcolare le rate.'}</span>
