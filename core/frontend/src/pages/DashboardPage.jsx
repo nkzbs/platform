@@ -236,12 +236,29 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
     setRiepilogoConfig({ giorno_cutoff: 27, entrate: { modulo: '', campo_importo: '', campo_data: '' }, gruppi: [], conti: { modulo: '', campo_tipo: '', valore_carta: '', valore_conto: '' } })
     setReportBlockConfig({ source_module: '', block_key: '' })
   }
-  const [spesaModules, setSpesaModules] = useState([]) // moduli dichiarati come spese (Builder → Ruoli del modulo), per la vista di "Come sta andando"
-  useEffect(() => { if (showAdd && newWidget.type === 'come_sta_andando') api.get('/module-roles').then((d) => setSpesaModules(Array.isArray(d) ? d.filter((m) => m.kind === 'spesa') : [])) }, [showAdd, newWidget.type]) // eslint-disable-line react-hooks/exhaustive-deps
+  const [declared, setDeclared] = useState([]) // moduli che hanno dichiarato di essere spese o entrate (Builder → Ruoli del modulo)
+  useEffect(() => { if (showAdd) api.get('/module-roles').then((d) => setDeclared(Array.isArray(d) ? d : [])) }, [showAdd]) // eslint-disable-line react-hooks/exhaustive-deps
+  const spesaModules = declared.filter((m) => m.kind === 'spesa')
+  // I widget di finanza compaiono solo se il progetto ha moduli di spese o entrate (o se stai modificando uno di quelli)
+  const showFinanza = declared.length > 0 || ['riepilogo_mensile', 'come_sta_andando'].includes(newWidget.type)
+  const TYPE_HELP = {
+    kpi: 'Un numero grande: la somma, la media o il conteggio di un campo di un modulo.',
+    periodo: 'Come il numero, ma per un periodo (oggi, settimana, mese) e con un colore se supera una soglia.',
+    aggregate_value: 'Un numero calcolato da una formula o da un aggregato definito nel Builder.',
+    table: 'Le ultime righe di un modulo, in una piccola tabella.',
+    checklist: 'Righe da spuntare, prese da uno o più moduli (es. cosa è già pagato e cosa no).',
+    coda: 'Le righe rimaste nello stato «nuovo» dei moduli che lo hanno dichiarato (Builder → Avvisi), con il pulsante per smistarle.',
+    yearly_breakdown: 'Un campo sommato mese per mese, con il confronto con l\'anno prima.',
+    category_pivot: 'Un campo sommato per categoria, anno su anno.',
+    weekly_breakdown: 'Un campo sommato per settimana, con una soglia (es. straordinari oltre un limite).',
+    riepilogo_mensile: 'Entrate, uscite, parte fissa e variabile e quanto resta da spendere nel mese. Serve scegliere i moduli.',
+    come_sta_andando: 'Come è andato il mese e l\'anno: totali, confronti, categorie e cose da guardare. Si può scegliere cosa conta e farlo spiegare dall\'AI.',
+  }
+
 
   const saveWidget = async () => {
     const w = { ...newWidget, page }
-    if (!w.label) w.label = w.module_slug || (w.type === 'checklist' ? 'Checklist' : w.type === 'come_sta_andando' ? 'Come sta andando' : w.type === 'coda' ? 'Da smistare' : 'Widget')
+    if (!w.label) w.label = w.module_slug || (w.type === 'checklist' ? 'Checklist' : w.type === 'come_sta_andando' ? 'Come sta andando' : w.type === 'coda' ? 'Coda' : 'Widget')
     if (w.type === 'checklist') w.config = checklistConfig
     if (w.type === 'periodo') w.config = periodoConfig
     if (w.type === 'riepilogo_mensile') w.config = riepilogoConfig
@@ -488,18 +505,29 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
               <div>
                 <label className="text-xs text-gray-400 block mb-1">Tipo</label>
                 <select className="w-full bg-surface-page text-ink px-4 py-3 rounded-lg outline-none border border-gray-800 focus:border-accent transition" value={newWidget.type} onChange={(e) => setNewWidget({ ...newWidget, type: e.target.value })}>
-                  <option value="kpi">KPI — Numero aggregato</option>
-                  <option value="periodo">KPI per periodo — con soglia di allerta</option>
-                  <option value="table">Tabella — Ultimi record</option>
-                  <option value="coda">Coda da smistare — righe nello stato "nuovo" dei moduli</option>
-                  {features.analisi && <option value="come_sta_andando">Come sta andando — mese e da inizio anno</option>}
-                  <option value="checklist">Checklist — Elenco spuntabile multi-modulo</option>
-                  <option value="riepilogo_mensile">Riepilogo mensile — Entrate/Uscite/Fisso-Variabile/Spendibile</option>
-                  <option value="yearly_breakdown">Riepilogo mensile per anno — 12 mesi, confronto anno prec.</option>
-                  <option value="category_pivot">Pivot per categoria — anno su anno</option>
-                  <option value="weekly_breakdown">Andamento settimanale — con soglia</option>
-                  <option value="aggregate_value">Aggregato singolo — un numero (Formula/Aggregato del Builder)</option>
+                  <optgroup label="Numeri">
+                    <option value="kpi">Numero — somma, media o conteggio di un campo</option>
+                    <option value="periodo">Numero con soglia — per periodo, con allerta</option>
+                    <option value="aggregate_value">Numero da formula — dal Builder</option>
+                  </optgroup>
+                  <optgroup label="Elenchi">
+                    <option value="table">Tabella — ultime righe di un modulo</option>
+                    <option value="checklist">Checklist — righe da spuntare, da più moduli</option>
+                    <option value="coda">Coda — righe nello stato «nuovo» dei moduli</option>
+                  </optgroup>
+                  <optgroup label="Andamenti">
+                    <option value="yearly_breakdown">Mesi dell'anno — 12 mesi, con l'anno prima</option>
+                    <option value="category_pivot">Per categoria — anno su anno</option>
+                    <option value="weekly_breakdown">Per settimana — con soglia</option>
+                  </optgroup>
+                  {showFinanza && (
+                    <optgroup label="Finanza (per moduli di spese ed entrate)">
+                      <option value="riepilogo_mensile">Riepilogo mensile — entrate, uscite, fisso/variabile, spendibile</option>
+                      {features.analisi && <option value="come_sta_andando">Come sta andando — mese e da inizio anno</option>}
+                    </optgroup>
+                  )}
                 </select>
+                {TYPE_HELP[newWidget.type] && <div className="text-xs text-gray-500 mt-1.5">{TYPE_HELP[newWidget.type]}</div>}
               </div>
               {!['checklist', 'riepilogo_mensile', 'come_sta_andando', 'coda', ...REPORT_WIDGET_TYPES].includes(newWidget.type) && (
                 <div>
