@@ -74,6 +74,7 @@ async function main() {
     db.prepare("INSERT INTO modules (name, slug, icon, color, installed, sort_order, schema_json) VALUES (?, ?, 'box', '#2563EB', 1, 50, ?)").run(slug, slug, schema);
   }
   const moduleAi = require('./module-ai'), moduleRoles = require('./module-roles');
+  moduleAi.setMaster(true); // AI accesa: poi ogni modulo accende i suoi potenziamenti
   for (const slug of ['spese_casa', 'spese_personali']) moduleRoles.set(slug, { kind: 'spesa', uses: ['avvisi', 'mail'], roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato' } });
   const newBill = (extra = {}) => db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run('spese_casa', null,
     JSON.stringify({ descrizione: 'A2A Energia', importo: 0, data: '2026-09-07', categoria: 'Altro', note: 'Importato da Gmail', _stato: 'da_smistare', ...extra })).lastInsertRowid;

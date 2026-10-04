@@ -4,6 +4,7 @@ import WhatsAppRecipientsPanel from '../components/WhatsAppRecipientsPanel'
 import WhatsAppLogPanel from '../components/WhatsAppLogPanel'
 import ExportDatiPage from './ExportDatiPage'
 import BackupPage from './BackupPage'
+import AiSettingsPage from '../components/AiSettingsPage'
 import DigestSettingsTab from '../components/DigestSettingsTab'
 import { API } from '../lib/api'
 import useApi from '../lib/useApi'
@@ -298,6 +299,7 @@ const SETTINGS_TABS = [
   { key: 'sito_web', icon: 'globe', label: 'Sito Web' },
   { key: 'connessioni', icon: 'link', label: 'Connessioni' },
   { key: 'notifiche', icon: 'bell', label: 'Notifiche' },
+  { key: 'assistente', icon: 'wand', label: 'AI' },
   { key: 'export_dati', icon: 'download', label: 'Dati' },
   { key: 'account', icon: 'user', label: 'Il mio account' },
 ]
@@ -341,6 +343,8 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
 
       {tab === 'notifiche' && <DigestSettingsTab token={token} features={features} />}
 
+
+      {tab === 'assistente' && <AiSettingsPage token={token} />}
 
       {tab === 'export_dati' && canExport && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-w-5xl">

@@ -12,17 +12,29 @@ const router = express.Router();
 // Stato e interruttore dell'assistente + quanto si è speso nel mese (letto da Super Admin).
 router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
   const [budget, key] = await Promise.all([ai.budget(), aiKey.status()]);
-  res.json({ report_enabled: reportAi.isEnabled(), budget, key });
+  res.json({ enabled: moduleAi.masterOn(), report_enabled: reportAi.isEnabled(), budget, key, modules: moduleAi.overviewModules() });
+});
+
+// "Potenzia": accende l'AI e, su ogni modulo, i potenziamenti che i suoi ruoli permettono.
+router.post('/power-up', requireAuth, requireAdmin, (req, res) => {
+  moduleAi.setMaster(true);
+  const attivati = moduleAi.powerUp();
+  logAudit(req.user.username, 'ai.power_up', null, { moduli: attivati.map((m) => m.slug) });
+  res.json({ ok: true, enabled: true, attivati });
 });
 
 // Cambia solo gli interruttori presenti nella richiesta.
 router.put('/settings', requireAuth, requireAdmin, (req, res) => {
   const body = req.body || {};
+  if ('enabled' in body) {
+    moduleAi.setMaster(!!body.enabled);
+    logAudit(req.user.username, body.enabled ? 'ai.on' : 'ai.off', null, null);
+  }
   if ('report_enabled' in body) {
     reportAi.setEnabled(!!body.report_enabled);
     logAudit(req.user.username, body.report_enabled ? 'ai.report.on' : 'ai.report.off', null, null);
   }
-  res.json({ report_enabled: reportAi.isEnabled() });
+  res.json({ enabled: moduleAi.masterOn(), report_enabled: reportAi.isEnabled() });
 });
 
 // "Spiega questo report": riceve i totali già calcolati e mostrati nella pagina (mai righe).

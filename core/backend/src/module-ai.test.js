@@ -25,6 +25,7 @@ const ai = require('./module-ai');
 const roles = require('./module-roles');
 db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('Spese casa', 'spese_casa', 'box', '#000', 1, 1, 50, '{}')").run();
 
+ai.setMaster(true);
 test('un modulo nuovo non ha nessun potenziamento', () => { assertEq(ai.get('spese_casa'), []); assertEq(ai.can('spese_casa', 'triage'), false); });
 test('si accende solo quello che si sceglie; le chiavi strane sono ignorate', () => {
   assertEq(ai.set('spese_casa', ['triage', 'boh', 'explain']), ['triage', 'explain']);
@@ -40,11 +41,29 @@ test('con i ruoli dichiarati lavora', () => {
   assertEq(ai.can('spese_casa', 'import'), false, 'import non acceso');
 });
 test('spegnere toglie tutto', () => { ai.set('spese_casa', []); assertEq(ai.can('spese_casa', 'triage'), false); });
-test('un widget è spiegabile solo se lo dice la sua configurazione', () => {
-  assertEq(ai.widgetExplainable({ config: { explainable: true } }), true);
+test('con l\'AI accesa un widget è spiegabile di default, e si spegne dalla sua configurazione', () => {
+  assertEq(ai.widgetExplainable({ config: {} }), true);
   assertEq(ai.widgetExplainable({ config: '{"explainable":true}' }), true);
-  assertEq(ai.widgetExplainable({ config: {} }), false);
+  assertEq(ai.widgetExplainable({ config: { explainable: false } }), false);
   assertEq(ai.widgetExplainable(null), false);
+});
+test('l\'interruttore generale spento ferma tutto: nessun potenziamento, nessun widget spiegabile', () => {
+  roles.set('spese_casa', { kind: 'spesa', uses: [], roles: { importo: 'importo', categoria: 'categoria', stato: '_stato', data: 'data' } });
+  ai.set('spese_casa', ['triage', 'explain']);
+  assertEq(ai.can('spese_casa', 'triage'), true);
+  ai.setMaster(false);
+  assertEq(ai.masterOn(), false); assertEq(ai.can('spese_casa', 'triage'), false); assertEq(ai.widgetExplainable({ config: {} }), false);
+  ai.setMaster(true);
+});
+test('"Potenzia" accende i potenziamenti collegati dove i ruoli lo permettono, e solo lì', () => {
+  db.prepare("INSERT OR IGNORE INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('Entrate', 'entrate_t', 'box', '#000', 1, 1, 51, '{}')").run();
+  roles.set('entrate_t', { kind: 'entrata', uses: [], roles: { importo: 'importo', data: 'data' } });
+  ai.set('spese_casa', []);
+  const out = ai.powerUp();
+  assertEq(out.find((m) => m.slug === 'spese_casa').attivati, ['triage', 'explain']);
+  assertEq(out.find((m) => m.slug === 'entrate_t').attivati, ['explain'], 'senza stato e categoria non si può smistare');
+  assertEq(ai.powerUp(), [], 'rilanciare non cambia niente');
+  assertEq(ai.overviewModules().find((m) => m.slug === 'entrate_t').features.find((f) => f.key === 'triage').missing_roles, ['categoria', 'stato']);
 });
 
 console.log(`\n${'='.repeat(60)}`);

@@ -265,7 +265,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
     if (REPORT_WIDGET_TYPES.includes(w.type)) w.config = reportBlockConfig
     if (w.type === 'come_sta_andando') {
       const grp = String(newWidget.entrate_include || '').split(',').map((x) => x.trim()).filter(Boolean)
-      w.config = { explainable: !!newWidget.explainable, spese_modules: newWidget.spese_modules || [], entrate_include_groups: grp, accantonamento: newWidget.accantonamento !== false, solo_spese: !!newWidget.solo_spese }
+      w.config = { explainable: newWidget.explainable !== false, spese_modules: newWidget.spese_modules || [], entrate_include_groups: grp, accantonamento: newWidget.accantonamento !== false, solo_spese: !!newWidget.solo_spese }
     }
     const saved = editingWidgetId ? await api.patch('/dashboard/widgets/' + editingWidgetId, w) : await api.post('/dashboard/widgets', w)
     if (saved && saved.ok !== false) {
@@ -288,7 +288,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
       conti: cfg.conti || { modulo: '', campo_tipo: '', valore_carta: '', valore_conto: '' },
     })
     if (REPORT_WIDGET_TYPES.includes(w.type)) setReportBlockConfig({ source_module: cfg.source_module || '', block_key: cfg.block_key || '' })
-    if (w.type === 'come_sta_andando') setNewWidget((n) => ({ ...n, explainable: !!cfg.explainable, spese_modules: cfg.spese_modules || [], entrate_include: (cfg.entrate_include_groups || []).join(', '), accantonamento: cfg.accantonamento !== false, solo_spese: !!cfg.solo_spese }))
+    if (w.type === 'come_sta_andando') setNewWidget((n) => ({ ...n, explainable: cfg.explainable !== false, spese_modules: cfg.spese_modules || [], entrate_include: (cfg.entrate_include_groups || []).join(', '), accantonamento: cfg.accantonamento !== false, solo_spese: !!cfg.solo_spese }))
     setEditingWidgetId(w.id)
     setShowAdd(true)
   }
@@ -540,8 +540,8 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
               )}
               {newWidget.type === 'come_sta_andando' && (
                 <label className="flex items-start gap-2.5 cursor-pointer text-sm text-gray-300">
-                  <input type="checkbox" className="mt-1" checked={!!newWidget.explainable} onChange={(e) => setNewWidget({ ...newWidget, explainable: e.target.checked })} />
-                  <span>Spiegabile con l'AI<span className="block text-xs text-gray-500">Compare «Spiega con l'AI» sul widget. L'AI legge solo i totali mostrati, mai le righe. Serve la chiave Mistral.</span></span>
+                  <input type="checkbox" className="mt-1" checked={newWidget.explainable !== false} onChange={(e) => setNewWidget({ ...newWidget, explainable: e.target.checked })} />
+                  <span>Spiegabile con l'AI<span className="block text-xs text-gray-500">Con l'AI accesa (Impostazioni → AI) compare «Spiega con l'AI» sul widget. Legge solo i totali mostrati, mai le righe.</span></span>
                 </label>
               )}
               {newWidget.type === 'come_sta_andando' && (

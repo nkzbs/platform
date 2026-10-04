@@ -118,6 +118,29 @@ async function main() {
     assertEq(r.status, 400); assertEq(data(id)._stato, 'da_smistare');
   });
 
+  console.log('\n--- proposta dell\'AI per precompilare il pannello ---');
+  const moduleAi = require('./module-ai');
+  await test('con l\'AI spenta (o "Smistare" spento sul modulo) la proposta si rifiuta: 403', async () => {
+    const id = newRow();
+    assertEq((await post('costi', id + '/proposta', {})).status, 403);
+    moduleAi.setMaster(true); moduleAi.set('costi', ['triage']);
+    moduleAi.setMaster(false); assertEq((await post('costi', id + '/proposta', {})).status, 403, 'interruttore generale spento');
+    moduleAi.setMaster(true);
+  });
+  await test('una proposta già pronta (preparata all\'arrivo) si restituisce subito, senza chiamare nessuno', async () => {
+    const id = newRow();
+    const sid = db.prepare("INSERT INTO ai_suggestions (module_slug, record_id, payload) VALUES ('costi', ?, ?)").run(id, JSON.stringify({ proposta: { categoria: 'Luce', importo: 44, scadenza: '2026-10-31', confidenza: 'alta' }, corrente: {} })).lastInsertRowid;
+    const j = await (await post('costi', id + '/proposta', {})).json();
+    assertEq(j.suggestion_id, sid); assertEq(j.proposta.categoria, 'Luce'); assertEq(j.proposta.importo, 44);
+    // smistando con quella proposta, la proposta si chiude come accettata
+    const r = await post('costi', id, { modo: 'uno', importo: 44, categoria: 'Luce', suggestion_id: sid });
+    assertEq(r.status, 200); assertEq(db.prepare('SELECT status FROM ai_suggestions WHERE id = ?').get(sid).status, 'accepted');
+  });
+  await test('le code dicono se il modulo ha l\'AI, così il pannello sa se chiedere la proposta', async () => {
+    const q = await (await fetch(BASE + '/api/module-roles/queues', { headers: H })).json();
+    assertEq(q.find((x) => x.module_slug === 'costi').ai, true); assertEq(q.find((x) => x.module_slug === 'senza_piano').ai, false);
+  });
+
   console.log('\n--- i casi in cui si rifiuta ---');
   await test('una riga già smistata non si smista due volte (409)', async () => {
     const id = newRow(); await post('costi', id, { modo: 'uno' });

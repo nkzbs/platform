@@ -138,6 +138,7 @@ async function main() {
   console.log('\n--- "Spiega questo report" ---');
 
   const moduleAi = require('./module-ai'), moduleRoles = require('./module-roles');
+  moduleAi.setMaster(true);
   db.prepare("INSERT OR IGNORE INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('Spese casa', 'spese_casa', 'box', '#000', 1, 1, 50, '{}')").run();
   moduleRoles.set('spese_casa', { kind: 'spesa', uses: [], roles: { importo: 'importo', data: 'data' } });
   const REPORT = { modulo: 'spese_casa', titolo: 'Spese casa', periodo: 'Mese precedente', metrica: 'Importo', funzione: 'sum', totale: 300, totale_confronto: 250,

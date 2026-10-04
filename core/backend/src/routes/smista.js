@@ -11,6 +11,8 @@ const { logAudit } = require('../audit-log');
 const { encryptFields, decryptFields } = require('../crypto-fields');
 const { ruleFor, ownedOrAllowed } = require('../permissions');
 const moduleRoles = require('../module-roles');
+const moduleAi = require('../module-ai');
+const aiSuggestions = require('../ai-suggestions');
 
 const router = express.Router();
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -26,6 +28,21 @@ function logHistory(slug, id, actor, before, after) {
 }
 const hasTransition = (schema, from, to) => !!(schema.workflow && (schema.workflow.transitions || []).some((t) => t.from === from && t.to === to));
 const fail = (res, status, error) => res.status(status).json({ error });
+
+// La proposta dell'AI per una riga da smistare (categoria, importo, scadenza letti dalla bolletta). Se esiste già (preparata all'arrivo della mail) è
+// immediata; altrimenti la si chiede ora. Solo se il modulo ha "Smistare" acceso. Non scrive niente: il pannello la usa per precompilare i campi.
+router.post('/:slug/:id/proposta', requireAuth, async (req, res) => {
+  const slug = req.params.slug, id = parseInt(req.params.id, 10);
+  if (!moduleAi.can(slug, 'triage')) return fail(res, 403, 'L\'AI non è accesa su questo modulo.');
+  const row = db.prepare('SELECT 1 FROM records WHERE id = ? AND module_slug = ?').get(id, slug);
+  if (!row) return fail(res, 404, 'Riga non trovata');
+  const esistente = aiSuggestions.listPending(slug).find((x) => x.record_id === id);
+  if (esistente) return res.json({ suggestion_id: esistente.id, proposta: esistente.proposta, corrente: esistente.corrente });
+  const out = await aiSuggestions.suggestForRecord({ moduleSlug: slug, recordId: id, force: true });
+  if (out.id) return res.json({ suggestion_id: out.id, proposta: out.payload.proposta, corrente: out.payload.corrente });
+  if (out.error) return res.status(out.status === 429 ? 429 : 502).json({ error: out.error, code: out.code });
+  res.json({ proposta: null, motivo: out.skipped || 'nessuna proposta utile' });
+});
 
 router.post('/:slug/:id', requireAuth, (req, res) => {
   const slug = req.params.slug;
@@ -59,6 +76,7 @@ router.post('/:slug/:id', requireAuth, (req, res) => {
   }
   const importo = Number(data[R.importo]) || 0;
 
+  const chiudiProposta = () => { if (b.suggestion_id) { try { db.prepare("UPDATE ai_suggestions SET status = 'accepted', decided_at = CURRENT_TIMESTAMP WHERE id = ? AND module_slug = ? AND record_id = ? AND status = 'pending'").run(parseInt(b.suggestion_id, 10), slug, row.id); } catch (e) { /* mai bloccare */ } } };
   const save = (patch, toState) => {
     const next = { ...data, ...patch, [R.stato]: toState };
     db.prepare('UPDATE records SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND module_slug = ?').run(JSON.stringify(encryptFields(next, schema.fields)), row.id, slug);
@@ -71,7 +89,7 @@ router.post('/:slug/:id', requireAuth, (req, res) => {
   // ── un pagamento solo
   if (modo === 'uno') {
     if (!hasTransition(schema, A.states.nuovo, A.states.da_fare)) return fail(res, 422, 'Il modulo non permette di passare da "nuovo" a "da fare".');
-    save({}, A.states.da_fare);
+    save({}, A.states.da_fare); chiudiProposta();
     logAudit(req.user.username, 'smista.uno', slug + '#' + row.id, null);
     return res.json({ ok: true, modo, stato: A.states.da_fare, message: 'Smistata: ora è in «' + A.states.da_fare.replace(/_/g, ' ') + '»' + (data[R.scadenza] ? ', scade il ' + fmtDate(data[R.scadenza]) : '') + '.' });
   }
@@ -82,7 +100,7 @@ router.post('/:slug/:id', requireAuth, (req, res) => {
     if (!hasTransition(schema, A.states.nuovo, A.states.da_fare) || !hasTransition(schema, A.states.da_fare, A.states.fatto)) return fail(res, 422, 'Il modulo non permette di segnarla già pagata.');
     const quando = b.data_pagamento && ISO.test(b.data_pagamento) ? b.data_pagamento : new Date().toISOString().slice(0, 10);
     save({}, A.states.da_fare);
-    save(R.data_pagamento ? { [R.data_pagamento]: quando } : {}, A.states.fatto);
+    save(R.data_pagamento ? { [R.data_pagamento]: quando } : {}, A.states.fatto); chiudiProposta();
     logAudit(req.user.username, 'smista.pagata', slug + '#' + row.id, null);
     return res.json({ ok: true, modo, stato: A.states.fatto, message: 'Smistata e segnata «' + A.states.fatto.replace(/_/g, ' ') + '» il ' + fmtDate(quando) + '.' });
   }
