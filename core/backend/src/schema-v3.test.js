@@ -6,7 +6,7 @@
 
 const {
   isV3, isV2, toV3, toV2, toV2Lenient, parseSchemaNormalized,
-  getAutomationSteps, getDocumentTemplates,
+  getAutomationSteps,
 } = require('./schema-v3');
 
 let passed = 0, failed = 0;
@@ -72,12 +72,11 @@ test('fields/relations/workflow/scope/permissions/aggregati diventano step con b
     permissions: { rules: [{ role: 'agente', view: true }] },
     validazione_creazione: { expr: 'campo:x > 0' },
     aggregati: [{ key: 'tot', expr: 'sum(righe.importo)' }],
-    form_steps: [{ titolo: 'Passo 1', campi: ['nome'] }],
   };
   const v3 = toV3(v2);
   assertEq(v3.version, 3);
   const types = v3.steps.map((s) => s.block_type);
-  assertEq(types, ['field', 'relation', 'workflow_state', 'workflow_transition', 'scope', 'permissions', 'validazione_creazione', 'report_aggregate', 'form_step']);
+  assertEq(types, ['field', 'relation', 'workflow_state', 'workflow_transition', 'scope', 'permissions', 'validazione_creazione', 'report_aggregate']);
   // ogni step porta un id univoco generato, oltre ai campi originali
   v3.steps.forEach((s) => { if (!s.id) throw new Error('step senza id: ' + s.block_type); });
   const fieldStep = v3.steps.find((s) => s.block_type === 'field');
@@ -127,14 +126,10 @@ test('blocco "automation" senza equivalente v2 -> lancia esplicitamente', () => 
   assertThrows(() => toV2(v3), 'automation');
 });
 
-test('blocco "document_template" senza equivalente v2 -> lancia esplicitamente', () => {
-  const v3 = { version: 3, steps: [{ id: 'd1', block_type: 'document_template' }] };
-  assertThrows(() => toV2(v3), 'document_template');
-});
-
-test('blocco "form_step" senza equivalente v2 -> lancia esplicitamente', () => {
-  const v3 = { version: 3, steps: [{ id: 'f1', block_type: 'form_step' }] };
-  assertThrows(() => toV2(v3), 'form_step');
+test('i blocchi rimossi dal motore (document_template, form_step, reconciliation, financial_statement, distance_buckets) sono "sconosciuti": lancia in modo esplicito', () => {
+  for (const t of ['document_template', 'form_step', 'reconciliation', 'financial_statement', 'distance_buckets']) {
+    assertThrows(() => toV2({ version: 3, steps: [{ id: 'x1', block_type: t }] }), 'sconosciuto');
+  }
 });
 
 test('block_type sconosciuto -> lancia esplicitamente (non ignora silenziosamente)', () => {
@@ -153,25 +148,22 @@ test('blocchi non rappresentabili finiscono in _v3_unsupported invece di far fal
       { id: 'fld1', block_type: 'field', key: 'nome', label: 'Nome' },
       { id: 'a1', block_type: 'automation', label: 'Automazione X' },
       { id: 'c1', block_type: 'condition' },
-      { id: 'd1', block_type: 'document_template', nome: 'Bolla' },
     ],
   };
   const out = toV2Lenient(v3);
   assertEq(out.fields.length, 1);
   assertEq(out.fields[0].key, 'nome');
-  assertEq(out._v3_unsupported.length, 3);
+  assertEq(out._v3_unsupported.length, 2);
   // i blocchi in _v3_unsupported restano step v3 completi (con id e block_type), non "rest"
   const auto = out._v3_unsupported.find((s) => s.block_type === 'automation');
   assertEq(auto.label, 'Automazione X');
   assertEq(auto.id, 'a1');
 });
 
-test('form_step viene raccolto in out.form_steps (rappresentabile, non finisce in _v3_unsupported)', () => {
-  const v3 = { version: 3, steps: [{ id: 'f1', block_type: 'form_step', titolo: 'Passo 1', campi: ['nome'] }] };
+test('un blocco rimosso dal motore (es. form_step) in uno schema già salvato viene ignorato in lettura, non fa fallire il modulo', () => {
+  const v3 = { version: 3, steps: [{ id: 'fld1', block_type: 'field', key: 'nome' }, { id: 'f1', block_type: 'form_step', titolo: 'Passo 1' }] };
   const out = toV2Lenient(v3);
-  assertEq(out.form_steps.length, 1);
-  assertEq(out.form_steps[0].titolo, 'Passo 1');
-  assertEq(out._v3_unsupported.length, 0);
+  assertEq(out.fields.length, 1); assertEq(out._v3_unsupported.length, 0);
 });
 
 test('view_tabs viene raccolto in out.view_tabs (rappresentabile, singleton come scope)', () => {
@@ -230,9 +222,9 @@ test('JSON non valido -> oggetto vuoto, non lancia', () => {
   assertEq(parseSchemaNormalized(null), {});
 });
 
-// ─── getAutomationSteps / getDocumentTemplates ───────────────────────────────
+// ─── getAutomationSteps ───────────────────────────────
 
-console.log('\n--- getAutomationSteps / getDocumentTemplates ---');
+console.log('\n--- getAutomationSteps ---');
 
 test('getAutomationSteps estrae solo i blocchi automation, id inclusi', () => {
   const json = JSON.stringify({
@@ -254,9 +246,9 @@ test('getAutomationSteps su schema v2 legacy -> array vuoto (mai automazioni pos
 
 // Bug reale 2026-08-10: un modulo ripubblicato via API diretta (mai attraverso il
 // vero editor v3) viene salvato in forma v2-lenient — campi nativi v2 + un array
-// _v3_unsupported che contiene gli step v3-only (automation/document_template)
-// così come sono, per non perderli. getAutomationSteps/getDocumentTemplates
-// guardavano SOLO schema.steps sotto isV3(schema): su questa forma tornavano
+// _v3_unsupported che contiene gli step v3-only (automation/condition)
+// così come sono, per non perderli. getAutomationSteps
+// guardava SOLO schema.steps sotto isV3(schema): su questa forma tornavano
 // sempre [], e fireTrigger() non trovava mai l'automazione da eseguire — trovato
 // perché "Crea piano rateale alla creazione" (debiti_casa) aveva smesso di
 // generare le rate pur essendo ancora presente nello schema pubblicato.
@@ -272,33 +264,6 @@ test('getAutomationSteps su schema v2-lenient (con _v3_unsupported) -> trova com
   const steps = getAutomationSteps(json);
   assertEq(steps.length, 1);
   assertEq(steps[0].id, 'aut1');
-});
-
-test('getDocumentTemplates estrae solo i blocchi document_template', () => {
-  const json = JSON.stringify({
-    version: 3,
-    steps: [
-      { id: 'fld1', block_type: 'field', key: 'a' },
-      { id: 'doc1', block_type: 'document_template', nome: 'Bolla 80mm', formato: '80mm' },
-    ],
-  });
-  const templates = getDocumentTemplates(json);
-  assertEq(templates.length, 1);
-  assertEq(templates[0].nome, 'Bolla 80mm');
-});
-
-test('getDocumentTemplates su JSON non valido -> array vuoto, non lancia', () => {
-  assertEq(getDocumentTemplates('{rotto'), []);
-});
-
-test('getDocumentTemplates su schema v2-lenient (con _v3_unsupported) -> trova comunque i template', () => {
-  const json = JSON.stringify({
-    fields: [{ key: 'a' }],
-    _v3_unsupported: [{ id: 'doc1', block_type: 'document_template', nome: 'Bolla' }],
-  });
-  const templates = getDocumentTemplates(json);
-  assertEq(templates.length, 1);
-  assertEq(templates[0].nome, 'Bolla');
 });
 
 // ─── SOMMARIO ─────────────────────────────────────────────────────────────────

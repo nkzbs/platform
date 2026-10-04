@@ -4,7 +4,6 @@ const toast = (message, type = 'success') => window.dispatchEvent(new CustomEven
 import useApi from '../../lib/useApi'
 import Icon from '../../components/Icon'
 import Tile from '../../components/Tile'
-import PrintModal from '../../components/PrintModal'
 import FormDrawer from '../../components/FormDrawer'
 import Select from '../../components/Select'
 import FieldEditorInput from './FieldEditorInput'
@@ -143,22 +142,6 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   const [childEditForms, setChildEditForms] = useState({})
   const [childSaving, setChildSaving] = useState({})
   const [childUploading, setChildUploading] = useState({})
-  const [printTemplates, setPrintTemplates] = useState([])
-  const [printMenuOpen, setPrintMenuOpen] = useState(false)
-  const [printResult, setPrintResult] = useState(null)
-
-  useEffect(() => {
-    api.get('/records/' + mod.slug + '/print-templates').then((data) => { if (data) setPrintTemplates(data) })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mod.slug])
-
-  const openPrint = async (templateId) => {
-    setPrintMenuOpen(false)
-    const data = await api.get('/records/' + mod.slug + '/' + recordId + '/print/' + templateId)
-    if (data) setPrintResult(data)
-    else toast('Impossibile generare il documento', 'error')
-  }
-
   const loadAttachments = () => {
     if (!allegatiConfig) return
     api.get('/records/' + mod.slug + '/' + recordId + '/attachments').then((data) => { if (data) setAttachments(data) })
@@ -431,18 +414,6 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
       wide
       headerExtra={(
         <>
-          {!editing && record && printTemplates.length > 0 && (
-            <div className="relative">
-              <button onClick={() => setPrintMenuOpen((p) => !p)} className="text-xs text-gray-400 hover:text-ink transition flex items-center gap-1"><Icon name="file" size={12} />Stampa</button>
-              {printMenuOpen && (
-                <div className="absolute right-0 top-6 bg-surface-page border border-gray-700 rounded-lg shadow-xl z-10 min-w-[160px] overflow-hidden">
-                  {printTemplates.map((t) => (
-                    <button key={t.id} onClick={() => openPrint(t.id)} className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-gray-800 transition">{t.nome}</button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
           {!editing && record && <button onClick={startEditing} className="text-xs text-accent hover:opacity-80 transition flex items-center gap-1"><Icon name="edit" size={12} />Modifica</button>}
         </>
       )}
@@ -912,9 +883,6 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
             })}
           </>
         )}
-      {printResult && (
-        <PrintModal html={printResult.html} formato={printResult.formato} nome={printResult.nome} onClose={() => setPrintResult(null)} />
-      )}
     </FormDrawer>
   )
 }

@@ -12,7 +12,6 @@ import BottomPanel from './BottomPanel'
 import PropertiesPanel from './PropertiesPanel'
 import BuilderPreviewPanel from './BuilderPreviewPanel'
 import { computeValidations } from './validation'
-import { buildFullHtml } from '../../components/PrintModal'
 
 // Mappa statica block_type → categoria, duplicata a livello di modulo (non
 // dentro il componente) apposta: serve sia dentro selectModule (definita
@@ -25,10 +24,9 @@ const BLOCK_TYPE_CATEGORY = {
   relation: 'Relazioni',
   workflow_state: 'Workflow', workflow_transition: 'Workflow',
   permissions: 'Permessi', validazione_creazione: 'Permessi',
-  report_aggregate: 'Calcolo', financial_statement: 'Calcolo', yearly_breakdown: 'Calcolo', category_pivot: 'Calcolo', weekly_breakdown: 'Calcolo',
+  report_aggregate: 'Calcolo', yearly_breakdown: 'Calcolo', category_pivot: 'Calcolo', weekly_breakdown: 'Calcolo',
   connection_required: 'Automazione', automation: 'Automazione',
-  document_template: 'Stampa',
-  form_step: 'Layout form', branch_create: 'Layout form', reconciliation: 'Layout form', distance_buckets: 'Layout form', period_view: 'Layout form', parent_children_view: 'Layout form', view_tabs: 'Layout form',
+  branch_create: 'Layout form', period_view: 'Layout form', parent_children_view: 'Layout form', view_tabs: 'Layout form',
 }
 
 // Etichetta leggibile per tipo di blocco — usata solo per la riga di riepilogo
@@ -40,9 +38,8 @@ const BLOCK_TYPE_CATEGORY = {
 const BLOCK_TYPE_LABEL = {
   field: 'Campo', relation: 'Relazione', workflow_state: 'Stato workflow', workflow_transition: 'Transizione workflow',
   permissions: 'Permessi', validazione_creazione: 'Validazione alla creazione', allegati: 'Allegati',
-  connection_required: 'Richiede connessione', automation: 'Automazione', document_template: 'Modello documento',
-  form_step: 'Passo form', branch_create: 'Crea in filiale', reconciliation: 'Riconciliazione',
-  financial_statement: 'Bilancio', distance_buckets: 'Fasce distanza', period_view: 'Vista periodo',
+  connection_required: 'Richiede connessione', automation: 'Automazione',
+  branch_create: 'Crea in filiale', period_view: 'Vista periodo',
   parent_children_view: 'Vista padre/figli', yearly_breakdown: 'Riepilogo annuale', category_pivot: 'Pivot categoria',
   weekly_breakdown: 'Riepilogo settimanale', view_tabs: 'Tab di vista', report_aggregate: 'Report aggregato',
 }
@@ -51,78 +48,7 @@ function summaryForStep(step) {
   return step.label ? (typeLabel + ' — ' + step.label) : typeLabel
 }
 
-// Anteprima dal vivo del documento di stampa mentre lo si scrive — stesso principio del
-// FormulaEditor (debounce verso un endpoint server-side che è l'unica fonte di verità,
-// mai una simulazione del rendering lato client). Un modulo senza record ancora non può
-// avere un'anteprima reale: lo dice esplicitamente invece di mostrare un iframe vuoto o
-// rotto. Il record da usare è scelto dall'utente (di default il più recente) perché lo
-// stesso template può rendere in modo molto diverso a seconda dei dati — utile controllare
-// più di un record prima di fidarsi del layout.
-function DocumentTemplatePreview({ slug, api, template }) {
-  const [records, setRecords] = useState(null)
-  const [selectedId, setSelectedId] = useState('')
-  const [preview, setPreview] = useState(null)
-  const debounceRef = useRef(null)
-
-  useEffect(() => {
-    let cancelled = false
-    api.get('/records/' + slug).then((data) => { if (!cancelled) setRecords(data || []) })
-    return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug])
-
-  useEffect(() => {
-    if (!template.contenuto_html || !template.contenuto_html.trim() || !records || records.length === 0) {
-      setPreview(null)
-      return
-    }
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(async () => {
-      const res = await api.post('/builder/' + slug + '/preview-print', {
-        template: { nome: template.nome, formato: template.formato, contenuto_html: template.contenuto_html },
-        record_id: selectedId || null,
-      })
-      setPreview(res.data || null)
-    }, 450)
-    return () => clearTimeout(debounceRef.current)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [template.contenuto_html, template.formato, selectedId, records])
-
-  if (records === null) return <div className="text-[11px] text-gray-600 mt-3">Caricamento anteprima…</div>
-
-  if (records.length === 0) {
-    return (
-      <div className="text-[11px] text-gray-500 mt-3 bg-surface-page border border-dashed border-gray-800 rounded-lg p-3">
-        Crea almeno un record in questo modulo per vedere l'anteprima dal vivo del documento.
-      </div>
-    )
-  }
-
-  const recordLabel = (r) => {
-    const d = r.data || {}
-    return d.numero || d.nome || d.titolo || d.descrizione || ('record #' + r.id)
-  }
-
-  return (
-    <div className="mt-3">
-      <div className="flex items-center gap-2 mb-2">
-        <label className="text-[10px] text-gray-500">Anteprima sul record</label>
-        <Select className="w-auto" placeholder="Più recente"
-          value={selectedId} onChange={(val) => setSelectedId(val)}
-          options={records.slice(0, 25).map((r) => ({ value: r.id, label: '#' + r.id + ' — ' + recordLabel(r) }))} />
-        {!preview && (template.contenuto_html || '').trim() && <span className="text-[10px] text-gray-600">Aggiorno…</span>}
-      </div>
-      {preview && preview.html && (
-        <div className="border border-gray-800 rounded-lg overflow-hidden bg-white">
-          <iframe title="preview-stampa" srcDoc={buildFullHtml(preview.html, template.formato, template.nome)}
-            className="w-full" style={{ height: 280, border: 'none' }} />
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Anteprima "a vuoto" di un'automazione — stesso spirito di DocumentTemplatePreview sopra
+// Anteprima "a vuoto" di un'automazione — stesso spirito della formula
 // (server come unica fonte di verità, non una riscrittura lato client della logica), ma
 // non dal vivo/debounced: ogni prova esegue per davvero runAzioni in modalità dryRun sul
 // backend (letture reali, nessuna scrittura — vedi automation-engine.js), quindi un
@@ -372,7 +298,6 @@ function BuilderPage({ token, baseUrl, allModules, onModulesChanged, preselectSl
         permissions: draft.permissions || null,
         validazione_creazione: draft.validazione_creazione || null,
         allegati: draft.allegati || null,
-        form_steps: draft.form_steps || [],
         aggregati: draft.aggregati || [],
         // Automazioni/condizioni: il backend le mette da parte qui quando appiattisce
         // a v2 (vedi toV2Lenient) — senza riportarle dentro, si perdevano silenziosamente
@@ -721,12 +646,7 @@ function BuilderPage({ token, baseUrl, allModules, onModulesChanged, preselectSl
     { label: 'Richiede connessione', desc: 'Serve SOLO se il modulo dipende da un connettore fuori dalle sue automazioni (es. un poller dedicato come quello Gmail) — se invece è una tua automazione a usare Slack/WhatsApp/ecc, il modulo lo segnala da solo, non serve aggiungere questo blocco a mano.', icon: 'plug', color: '#F59E0B', category: 'Automazione', block_type: 'connection_required', defaults: { integration_id: 'google' }, disabled: schema && schema.steps.some((s) => s.block_type === 'connection_required'), note: 'Già presente su questo modulo' },
     { label: 'Formula / Aggregato', desc: 'Calcolo su relazioni (sum/avg/count…).', icon: 'cpu', color: '#F87171', category: 'Calcolo', block_type: 'report_aggregate', defaults: { key: 'agg_' + Date.now(), label: 'Nuovo aggregato', expr: '', format: 'number' } },
     { label: 'Automazione', desc: 'Quando succede qualcosa in questo modulo, esegui delle azioni (con Se/Altrimenti).', icon: 'zap', color: '#FBBF24', category: 'Automazione', block_type: 'automation', defaults: { label: 'Nuova automazione', enabled: true, trigger: { evento: 'nuovo_record', stato: '', campo: '' }, azioni: [] } },
-    { label: 'Documento stampabile', desc: 'Un documento (bolla, fattura, ricevuta) generabile e stampabile da un record di questo modulo.', icon: 'file', color: '#06B6D4', category: 'Stampa', block_type: 'document_template', defaults: { nome: 'Nuovo documento', formato: 'a4', contenuto_html: '' } },
-    { label: 'Passo del wizard', desc: 'Con almeno 2 di questi, il form di creazione diventa un wizard multi-step invece di un unico form lungo.', icon: 'list', color: '#A78BFA', category: 'Layout form', block_type: 'form_step', defaults: { titolo: 'Nuovo passo', campi: [], righe_figlio: [] } },
     { label: 'Creazione con scelta', desc: "Un bottone che chiede prima una scelta (es. \"Diretto\" o \"A rate\") e poi mostra campi diversi, creando il record in un modulo diverso a seconda della scelta — es. un pagamento diretto crea una Spesa, un pagamento a rate crea un Debito.", icon: 'git-branch', color: '#EC4899', category: 'Layout form', block_type: 'branch_create', defaults: { label: 'Nuovo', branches: [] } },
-    { label: 'Riconciliazione a doppia lista', desc: "Due liste affiancate con abbinamento automatico (stesso importo e direzione, data più vicina) e conferma manuale — es. abbina le transazioni bancarie ai movimenti contabili interni. Sostituisce l'intera vista del modulo.", icon: 'link', color: '#06B6D4', category: 'Layout form', block_type: 'reconciliation', defaults: { key: 'rec_' + Date.now(), label: 'Riconciliazione', source_a: { module: '', amount_field: '', date_field: '', link_field: '' }, source_b: { module: '', metric: '', date_field: '' } }, disabled: schema && schema.steps.some((s) => s.block_type === 'reconciliation'), note: 'Un solo blocco per modulo' },
-    { label: 'Bilancio contabile', desc: "Bilancio di Verifica, Conto Economico e Stato Patrimoniale calcolati sulle righe dare/avere di questo modulo, raggruppate per conto — convenzione dare/avere universale (Ricavo/Passivo/Capitale = avere−dare, Costo/Attivo = dare−avere), utile e pareggio calcolati automaticamente. Va messo sul modulo che contiene le righe contabili (dare/avere), es. \"movimenti_righe\".", icon: 'bar-chart', color: '#10B981', category: 'Calcolo', block_type: 'financial_statement', defaults: { key: 'bilancio_' + Date.now(), label: 'Contabilità Generale', righe_module: '', conto_relation: '', tipo_field: '', nome_field: '', codice_field: '', dare_field: '', avere_field: '' } },
-    { label: 'Vista per distanza da una data', desc: "Raggruppa i record in bucket per giorni di distanza da oggi rispetto a un campo data (es. scadute/entro 7/entro 30/oltre 30 per una scadenza) — con conteggio e somma opzionale per bucket, filtri opzionali. Sostituisce l'intera vista del modulo.", icon: 'list', color: '#F59E0B', category: 'Layout form', block_type: 'distance_buckets', defaults: { key: 'scadenza_' + Date.now(), label: 'Scadenzario', date_field: '', metric_field: '', metric_format: 'currency', buckets: [{ key: 'scadute', label: 'Scadute', max_days: -1 }, { key: 'entro7', label: 'Entro 7 giorni', max_days: 7 }, { key: 'entro30', label: 'Entro 30 giorni', max_days: 30 }, { key: 'oltre30', label: 'Oltre 30 giorni', max_days: null }], filters: [] }, disabled: schema && schema.steps.some((s) => s.block_type === 'distance_buckets'), note: 'Un solo blocco per modulo' },
     { label: 'Vista per periodo navigabile', desc: "Naviga avanti/indietro per mese o anno (es. spese del mese, entrate/uscite dell'anno) con metriche (somma/conteggio) per il periodo attivo, opzionalmente confrontate col periodo precedente, e lista filtrata sotto. Sostituisce l'intera vista del modulo.", icon: 'calendar', color: '#10B981', category: 'Layout form', block_type: 'period_view', defaults: { key: 'periodo_' + Date.now(), label: 'Vista periodo', granularity: 'mese', date_field: '', compare_previous: false, metrics: [], filters: [] }, disabled: schema && schema.steps.some((s) => s.block_type === 'period_view'), note: 'Un solo blocco per modulo' },
     { label: 'Genitori con figli', desc: "Ogni record di questo modulo con un riepilogo dei suoi record collegati in un altro modulo (es. un Debito con le sue Rate: pallini numerati, progresso, residuo). Sostituisce l'intera vista del modulo.", icon: 'git-branch', color: '#8B5CF6', category: 'Layout form', block_type: 'parent_children_view', defaults: { key: 'figli_' + Date.now(), label: 'Piani', children_module: '', children_relation: '', children_status_field: '_stato', children_status_done_value: '', children_order_field: '', amount_field: '', child_amount_field: '' }, disabled: schema && schema.steps.some((s) => s.block_type === 'parent_children_view'), note: 'Un solo blocco per modulo' },
     { label: 'Riepilogo mensile per anno', desc: "Tabella con tutti i 12 mesi di un anno (navigabile), ciascuno con le sue metriche, opzionalmente confrontato con lo stesso mese dell'anno precedente. Si aggiunge alla vista del modulo, non la sostituisce — se ne possono aggiungere più di uno.", icon: 'bar-chart', color: '#F59E0B', category: 'Calcolo', block_type: 'yearly_breakdown', defaults: { key: 'riepilogo_' + Date.now(), label: 'Riepilogo mensile', source_module: '', date_field: '', compare_previous_year: true, metrics: [], filters: [] } },
@@ -734,8 +654,8 @@ function BuilderPage({ token, baseUrl, allModules, onModulesChanged, preselectSl
     { label: 'Ore per settimana', desc: "Barre con le settimane ISO di un mese (navigabile) e il loro totale, con una soglia opzionale (es. straordinari oltre le ore settimanali previste). Si aggiunge alla vista del modulo, non la sostituisce.", icon: 'bar-chart', color: '#2563EB', category: 'Calcolo', block_type: 'weekly_breakdown', defaults: { key: 'settimane_' + Date.now(), label: 'Ore per settimana', source_module: '', date_field: '', metric_field: '', metric_func: 'sum', metric_format: 'number', threshold: '', filters: [] } },
     { label: 'Tab della vista', desc: "Più viste che sostituiscono la tabella, alternabili a tab sullo stesso modulo — es. un tab \"Spese\" (la vista mensile propria) e un tab \"Debiti\" (il progresso di un altro modulo). Ogni tab riusa un blocco già dichiarato altrove (qui o su un altro modulo), non lo ridefinisce.", icon: 'list', color: '#8B5CF6', category: 'Layout form', block_type: 'view_tabs', defaults: { tabs: [] }, disabled: schema && schema.steps.some((s) => s.block_type === 'view_tabs'), note: 'Un solo blocco per modulo' },
   ]
-  const CATEGORY_ORDER = ['Dati', 'Relazioni', 'Workflow', 'Permessi', 'Calcolo', 'Automazione', 'Stampa', 'Layout form']
-  const CATEGORY_ICON = { Dati: 'list', Relazioni: 'link', Workflow: 'refresh', Permessi: 'eye', Calcolo: 'bar-chart', Automazione: 'zap', Stampa: 'file', 'Layout form': 'grid' }
+  const CATEGORY_ORDER = ['Dati', 'Relazioni', 'Workflow', 'Permessi', 'Calcolo', 'Automazione', 'Layout form']
+  const CATEGORY_ICON = { Dati: 'list', Relazioni: 'link', Workflow: 'refresh', Permessi: 'eye', Calcolo: 'bar-chart', Automazione: 'zap', 'Layout form': 'grid' }
   const categoryOf = (blockType) => BLOCK_TYPE_CATEGORY[blockType] || (blockCatalog.find((b) => b.block_type === blockType) || {}).category
   const filteredCatalog = blockCatalog.filter((it) => !pickerQuery.trim() || it.label.toLowerCase().includes(pickerQuery.trim().toLowerCase()))
   const catalogByCategory = CATEGORY_ORDER.map((cat) => ({ cat, items: filteredCatalog.filter((it) => it.category === cat) })).filter((g) => g.items.length > 0)
@@ -1718,53 +1638,6 @@ function BuilderPage({ token, baseUrl, allModules, onModulesChanged, preselectSl
                   </div>
                 )
 
-                if (step.block_type === 'form_step') {
-                  const ownFieldRelKeys = schema.steps
-                    .filter((s) => s.block_type === 'field' || s.block_type === 'relation')
-                    .map((s) => ({ key: s.key, label: s.label || s.key }))
-                  const selectedCampi = step.campi || []
-                  const toggleCampo = (key) => updateStep(idx, 'campi', selectedCampi.includes(key) ? selectedCampi.filter((k) => k !== key) : [...selectedCampi, key])
-                  return (
-                    <div key={step.id} {...dragHandlers(idx)}
-                      className="bg-surface-card rounded-md border border-gray-800 p-4 cursor-grab active:cursor-grabbing"
-                      style={{ borderLeft: '3px solid #A78BFA' }}>
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-400">
-                          <span className="text-gray-600 select-none">&#8942;&#8942;</span>
-                          <Icon name="list" size={12} /> Passo del wizard
-                        </div>
-                        <button onClick={() => removeStep(idx)} className="text-red-400/60 hover:text-red-400 transition"><Icon name="trash" size={14} /></button>
-                      </div>
-                      <div className="text-[10px] text-gray-600 mb-3">Se ci sono almeno 2 blocchi "Passo del wizard" in questo modulo, il form di creazione diventa un wizard multi-step (Avanti/Indietro) invece di un unico form lungo. L'ordine dei passi segue l'ordine dei blocchi nel canvas.</div>
-                      <div className="mb-3">
-                        <label className="text-[10px] text-gray-500 block mb-1">Titolo del passo</label>
-                        <input className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-700 focus:border-cp-primary transition placeholder-gray-600"
-                          placeholder="es. Dati cliente, Righe prodotto, Pagamento" value={step.titolo || ''} onChange={(e) => updateStep(idx, 'titolo', e.target.value)} />
-                      </div>
-                      <div className="mb-3">
-                        <div className="text-[10px] text-gray-500 mb-1.5">Campi e relazioni in questo passo</div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {ownFieldRelKeys.map((f) => (
-                            <button key={f.key} onClick={() => toggleCampo(f.key)}
-                              className={'px-2 py-1 rounded text-[11px] border transition ' + (selectedCampi.includes(f.key) ? 'bg-cp-purple/20 border-cp-purple/50 text-cp-purple' : 'bg-gray-800/50 border-gray-700 text-gray-500 hover:text-gray-300')}>
-                              {f.label}
-                            </button>
-                          ))}
-                          {ownFieldRelKeys.length === 0 && <div className="text-[10px] text-gray-700">Aggiungi prima campi/relazioni al modulo.</div>}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-gray-500 block mb-1">Moduli figli (righe embedded) in questo passo — uno per riga, slug esatto</label>
-                        <textarea
-                          className="w-full bg-surface-page text-gray-300 px-3 py-2 rounded-lg text-xs outline-none border border-gray-700 focus:border-cp-primary transition font-mono"
-                          rows={2} placeholder={'ordini_righe'}
-                          value={(step.righe_figlio || []).join('\n')}
-                          onChange={(e) => updateStep(idx, 'righe_figlio', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))}
-                        />
-                      </div>
-                    </div>
-                  )
-                }
 
                 if (step.block_type === 'branch_create') {
                   const branches = step.branches || []
@@ -1835,226 +1708,8 @@ function BuilderPage({ token, baseUrl, allModules, onModulesChanged, preselectSl
                   )
                 }
 
-                if (step.block_type === 'reconciliation') {
-                  const sourceA = step.source_a || {}
-                  const sourceB = step.source_b || {}
-                  const updateA = (patch) => updateStep(idx, 'source_a', { ...sourceA, ...patch })
-                  const updateB = (patch) => updateStep(idx, 'source_b', { ...sourceB, ...patch })
-                  const modA = fieldCache.find((m) => m.slug === sourceA.module)
-                  const modB = fieldCache.find((m) => m.slug === sourceB.module)
-                  const relsA = (modA && modA.relations || []).filter((r) => r.type === 'many_to_one')
-                  const relsB = (modB && modB.relations || []).filter((r) => r.type === 'many_to_one')
-                  const filterOptionsFor = (mod, rels) => ['_stato', ...(mod && mod.fields || []).map((f) => f.key),
-                    ...rels.flatMap((r) => { const t = fieldCache.find((m) => m.slug === r.target_module); return (t && t.fields || []).map((f) => r.key + '.' + f.key) })]
-                  return (
-                    <div key={step.id} {...dragHandlers(idx)}
-                      className="bg-surface-card rounded-md border border-gray-800 p-4 cursor-grab active:cursor-grabbing"
-                      style={{ borderLeft: '3px solid #06B6D4' }}>
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-400">
-                          <span className="text-gray-600 select-none">&#8942;&#8942;</span>
-                          <Icon name="link" size={12} /> Riconciliazione a doppia lista
-                        </div>
-                        <button onClick={() => removeStep(idx)} className="text-red-400/60 hover:text-red-400 transition"><Icon name="trash" size={14} /></button>
-                      </div>
-                      <input className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-700 focus:border-cp-primary transition mb-3" placeholder="Titolo" value={step.label || ''} onChange={(e) => updateStep(idx, 'label', e.target.value)} />
 
-                      <div className="bg-surface-page rounded-lg border border-gray-700 p-3 mb-2.5">
-                        <div className="text-[11px] text-gray-400 font-semibold mb-2">Lista A — da riconciliare</div>
-                        <div className="grid grid-cols-2 gap-2 mb-2">
-                          <Select value={sourceA.module || ''} onChange={(v) => updateA({ module: v })} placeholder="Modulo"
-                            options={fieldCache.map((m) => ({ value: m.slug, label: m.name }))} />
-                          <Select placeholder="Campo importo..." value={sourceA.amount_field || ''} onChange={(val) => updateA({ amount_field: val })}
-                            options={(modA && modA.fields || []).map((f) => ({ value: f.key, label: f.label }))} />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 mb-2">
-                          <Select placeholder="Direzione: solo dal segno dell'importo" value={sourceA.direction_field || ''} onChange={(val) => updateA({ direction_field: val || undefined })}
-                            options={(modA && modA.fields || []).filter((f) => f.type === 'select').map((f) => ({ value: f.key, label: 'Direzione da: ' + f.label }))} />
-                          <Select placeholder="Campo data..." value={sourceA.date_field || ''} onChange={(val) => updateA({ date_field: val })}
-                            options={(modA && modA.fields || []).filter((f) => f.type === 'date' || f.type === 'datetime').map((f) => ({ value: f.key, label: f.label }))} />
-                        </div>
-                        {sourceA.direction_field && (
-                          <input className="w-full bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700 mb-2" placeholder="Valori che contano come entrata, separati da virgola (es. Accredito, Bonifico In)"
-                            value={(sourceA.direction_positive_values || []).join(', ')} onChange={(e) => updateA({ direction_positive_values: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} />
-                        )}
-                        <Select className="w-full mb-2" placeholder="Campo dove salvare il collegamento..." value={sourceA.link_field || ''} onChange={(val) => updateA({ link_field: val })}
-                          options={(modA && modA.fields || []).map((f) => ({ value: f.key, label: f.label }))} />
-                        <div className="grid grid-cols-2 gap-2">
-                          <Select placeholder="Nessun filtro" value={(sourceA.filter && sourceA.filter.campo) || ''} onChange={(val) => updateA({ filter: val ? { campo: val, valori: (sourceA.filter && sourceA.filter.valori) || [] } : undefined })}
-                            options={filterOptionsFor(modA, relsA).map((k) => ({ value: k, label: k }))} />
-                          <input className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" placeholder="valori (virgola)" disabled={!sourceA.filter}
-                            value={(sourceA.filter && sourceA.filter.valori || []).join(', ')} onChange={(e) => updateA({ filter: { ...sourceA.filter, valori: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) } })} />
-                        </div>
-                      </div>
 
-                      <div className="bg-surface-page rounded-lg border border-gray-700 p-3 mb-2.5">
-                        <div className="text-[11px] text-gray-400 font-semibold mb-2">Lista B — candidati interni</div>
-                        <div className="grid grid-cols-2 gap-2 mb-2">
-                          <Select value={sourceB.module || ''} onChange={(v) => updateB({ module: v })} placeholder="Modulo"
-                            options={fieldCache.map((m) => ({ value: m.slug, label: m.name }))} />
-                          <Select placeholder="Campo importo (es. Dare)..." value={sourceB.metric || ''} onChange={(val) => updateB({ metric: val })}
-                            options={(modB && modB.fields || []).map((f) => ({ value: f.key, label: f.label }))} />
-                        </div>
-                        <Select className="w-full mb-2" placeholder="Sottrai (opzionale, es. Avere)..." value={sourceB.metric_subtract || ''} onChange={(val) => updateB({ metric_subtract: val || undefined })}
-                          options={(modB && modB.fields || []).map((f) => ({ value: f.key, label: f.label }))} />
-                        <Select className="w-full" placeholder="Campo data..." value={sourceB.date_field || ''} onChange={(val) => updateB({ date_field: val })}
-                          options={[
-                            ...(modB && modB.fields || []).map((f) => ({ value: f.key, label: f.label })),
-                            ...relsB.flatMap((rel) => {
-                              const target = fieldCache.find((m) => m.slug === rel.target_module)
-                              return (target && target.fields || []).filter((f) => f.type === 'date' || f.type === 'datetime').map((f) => ({ value: rel.key + '.' + f.key, label: 'via ' + rel.label + ' → ' + f.label }))
-                            }),
-                          ]} />
-                        <div className="grid grid-cols-2 gap-2 mt-2">
-                          <Select placeholder="Nessun filtro (es. limita ai soli conti Cassa/Banca)" value={(sourceB.filter && sourceB.filter.campo) || ''} onChange={(val) => updateB({ filter: val ? { campo: val, valori: (sourceB.filter && sourceB.filter.valori) || [] } : undefined })}
-                            options={filterOptionsFor(modB, relsB).map((k) => ({ value: k, label: k }))} />
-                          <input className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" placeholder="valori (virgola)" disabled={!sourceB.filter}
-                            value={(sourceB.filter && sourceB.filter.valori || []).join(', ')} onChange={(e) => updateB({ filter: { ...sourceB.filter, valori: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) } })} />
-                        </div>
-                      </div>
-
-                      <input className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-700" placeholder="Chiave stato dopo il collegamento (opzionale, es. riconciliato — deve esistere nel workflow del modulo A)"
-                        value={step.transition_to || ''} onChange={(e) => updateStep(idx, 'transition_to', e.target.value || undefined)} />
-                    </div>
-                  )
-                }
-
-                if (step.block_type === 'financial_statement') {
-                  // righe_module è quasi sempre un modulo diverso da quello
-                  // su cui vive questo blocco (es. il blocco sta su "movimenti", visibile
-                  // in sidebar, ma le righe dare/avere vivono su "movimenti_righe",
-                  // un modulo a parte) — per questo il blocco NON assume "questo
-                  // modulo" come le altre viste (report_aggregate raggruppato usa lo
-                  // stesso pattern con source_module).
-                  const righeMod = fieldCache.find((m) => m.slug === step.righe_module)
-                  const relsRighe = (righeMod && righeMod.relations || []).filter((r) => r.type === 'many_to_one')
-                  const contoRel = relsRighe.find((r) => r.key === step.conto_relation)
-                  const contoMod = contoRel && fieldCache.find((m) => m.slug === contoRel.target_module)
-                  const filterRel = relsRighe.find((r) => r.key === step.filter_relation)
-                  const filterMod = filterRel && fieldCache.find((m) => m.slug === filterRel.target_module)
-                  return (
-                    <div key={step.id} {...dragHandlers(idx)}
-                      className="bg-surface-card rounded-md border border-gray-800 p-4 cursor-grab active:cursor-grabbing"
-                      style={{ borderLeft: '3px solid #10B981' }}>
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-400">
-                          <span className="text-gray-600 select-none">&#8942;&#8942;</span>
-                          <Icon name="bar-chart" size={12} /> Bilancio contabile
-                        </div>
-                        <button onClick={() => removeStep(idx)} className="text-red-400/60 hover:text-red-400 transition"><Icon name="trash" size={14} /></button>
-                      </div>
-                      <input className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-700 focus:border-cp-primary transition mb-2.5" placeholder="Titolo" value={step.label || ''} onChange={(e) => updateStep(idx, 'label', e.target.value)} />
-
-                      <Select value={step.righe_module || ''} onChange={(v) => updateStep(idx, 'righe_module', v)} placeholder="Modulo con le righe dare/avere (es. movimenti_righe)"
-                        options={fieldCache.map((m) => ({ value: m.slug, label: m.name }))} className="mb-2.5" />
-
-                      <div className="bg-surface-page rounded-lg border border-gray-700 p-3 mb-2.5">
-                        <div className="text-[11px] text-gray-400 font-semibold mb-2">Piano dei conti</div>
-                        <Select className="w-full mb-2" placeholder="Relazione verso il piano dei conti..." value={step.conto_relation || ''} onChange={(val) => updateStep(idx, 'conto_relation', val)} disabled={!righeMod}
-                          options={relsRighe.map((r) => ({ value: r.key, label: r.label + ' → ' + r.target_module }))} />
-                        {contoMod && (
-                          <div className="grid grid-cols-3 gap-2">
-                            <Select placeholder="Codice..." value={step.codice_field || ''} onChange={(val) => updateStep(idx, 'codice_field', val)}
-                              options={(contoMod.fields || []).map((f) => ({ value: f.key, label: f.label }))} />
-                            <Select placeholder="Nome..." value={step.nome_field || ''} onChange={(val) => updateStep(idx, 'nome_field', val)}
-                              options={(contoMod.fields || []).map((f) => ({ value: f.key, label: f.label }))} />
-                            <Select placeholder="Tipo (Ricavo/Costo/...)..." value={step.tipo_field || ''} onChange={(val) => updateStep(idx, 'tipo_field', val)}
-                              options={(contoMod.fields || []).map((f) => ({ value: f.key, label: f.label }))} />
-                          </div>
-                        )}
-                        <div className="text-[10px] text-gray-600 mt-2">Il campo "Tipo" deve contenere esattamente uno tra: Ricavo, Costo, Attivo, Passivo, Capitale.</div>
-                      </div>
-
-                      <div className="bg-surface-page rounded-lg border border-gray-700 p-3 mb-2.5">
-                        <div className="text-[11px] text-gray-400 font-semibold mb-2">Righe dare/avere (sul modulo righe sopra)</div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Select placeholder="Campo Dare..." value={step.dare_field || ''} onChange={(val) => updateStep(idx, 'dare_field', val)} disabled={!righeMod}
-                            options={(righeMod && righeMod.fields || []).filter((f) => ['number', 'currency'].includes(f.type)).map((f) => ({ value: f.key, label: f.label }))} />
-                          <Select placeholder="Campo Avere..." value={step.avere_field || ''} onChange={(val) => updateStep(idx, 'avere_field', val)} disabled={!righeMod}
-                            options={(righeMod && righeMod.fields || []).filter((f) => ['number', 'currency'].includes(f.type)).map((f) => ({ value: f.key, label: f.label }))} />
-                        </div>
-                      </div>
-
-                      <div className="bg-surface-page rounded-lg border border-gray-700 p-3">
-                        <div className="text-[11px] text-gray-400 font-semibold mb-2">Filtro righe (opzionale — es. solo movimenti confermati)</div>
-                        <div className="grid grid-cols-2 gap-2 mb-2">
-                          <Select placeholder="Nessun filtro" value={step.filter_relation || ''} onChange={(val) => updateStep(idx, 'filter_relation', val || undefined)} disabled={!righeMod}
-                            options={relsRighe.map((r) => ({ value: r.key, label: r.label + ' → ' + r.target_module }))} />
-                          <Select placeholder="Campo..." value={step.filter_field || ''} onChange={(val) => updateStep(idx, 'filter_field', val || undefined)} disabled={!filterMod}
-                            options={(filterMod && filterMod.fields || []).map((f) => ({ value: f.key, label: f.label }))} />
-                        </div>
-                        {step.filter_relation && step.filter_field && (
-                          <input className="w-full bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" placeholder="Valore richiesto (es. confermato)"
-                            value={step.filter_value || ''} onChange={(e) => updateStep(idx, 'filter_value', e.target.value)} />
-                        )}
-                      </div>
-                    </div>
-                  )
-                }
-
-                if (step.block_type === 'distance_buckets') {
-                  const ownMod = fieldCache.find((m) => m.slug === selected)
-                  const relsOwn = (ownMod && ownMod.relations || []).filter((r) => r.type === 'many_to_one')
-                  const buckets = step.buckets || []
-                  const filters = step.filters || []
-                  const updateBucket = (i, patch) => updateStep(idx, 'buckets', buckets.map((b, bi) => bi === i ? { ...b, ...patch } : b))
-                  const addBucket = () => updateStep(idx, 'buckets', [...buckets, { key: 'bucket_' + Date.now(), label: 'Nuovo bucket', max_days: null }])
-                  const removeBucket = (i) => updateStep(idx, 'buckets', buckets.filter((_, bi) => bi !== i))
-                  const updateFilter = (i, patch) => updateStep(idx, 'filters', filters.map((f, fi) => fi === i ? { ...f, ...patch } : f))
-                  const addFilter = () => updateStep(idx, 'filters', [...filters, { field: '_stato', op: '!=', value: '' }])
-                  const removeFilter = (i) => updateStep(idx, 'filters', filters.filter((_, fi) => fi !== i))
-                  const filterFieldOptions = ['_stato', ...(ownMod && ownMod.fields || []).map((f) => f.key),
-                    ...relsOwn.flatMap((r) => { const t = fieldCache.find((m) => m.slug === r.target_module); return (t && t.fields || []).map((f) => r.key + '.' + f.key) })]
-                  return (
-                    <div key={step.id} {...dragHandlers(idx)}
-                      className="bg-surface-card rounded-md border border-gray-800 p-4 cursor-grab active:cursor-grabbing"
-                      style={{ borderLeft: '3px solid #F59E0B' }}>
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-400">
-                          <span className="text-gray-600 select-none">&#8942;&#8942;</span>
-                          <Icon name="list" size={12} /> Vista per distanza da una data
-                        </div>
-                        <button onClick={() => removeStep(idx)} className="text-red-400/60 hover:text-red-400 transition"><Icon name="trash" size={14} /></button>
-                      </div>
-                      <input className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-700 focus:border-cp-primary transition mb-2.5" placeholder="Titolo" value={step.label || ''} onChange={(e) => updateStep(idx, 'label', e.target.value)} />
-
-                      <div className="grid grid-cols-2 gap-2 mb-2.5">
-                        <Select placeholder="Campo data..." value={step.date_field || ''} onChange={(val) => updateStep(idx, 'date_field', val)}
-                          options={(ownMod && ownMod.fields || []).filter((f) => f.type === 'date' || f.type === 'datetime').map((f) => ({ value: f.key, label: f.label }))} />
-                        <Select placeholder="Nessuna metrica (solo conteggio)" value={step.metric_field || ''} onChange={(val) => updateStep(idx, 'metric_field', val || undefined)}
-                          options={(ownMod && ownMod.fields || []).filter((f) => ['number', 'currency', 'computed'].includes(f.type)).map((f) => ({ value: f.key, label: f.label }))} />
-                      </div>
-
-                      <div className="bg-surface-page rounded-lg border border-gray-700 p-3 mb-2.5">
-                        <div className="text-[11px] text-gray-400 font-semibold mb-2">Bucket (in ordine — l'ultimo senza "max giorni" è il catch-all)</div>
-                        {buckets.map((b, i) => (
-                          <div key={i} className="grid grid-cols-[1fr_1fr_80px_28px] gap-2 mb-1.5 items-center">
-                            <input className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" placeholder="chiave" value={b.key || ''} onChange={(e) => updateBucket(i, { key: e.target.value })} />
-                            <input className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" placeholder="etichetta" value={b.label || ''} onChange={(e) => updateBucket(i, { label: e.target.value })} />
-                            <input type="number" className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" placeholder="max gg" value={b.max_days ?? ''} onChange={(e) => updateBucket(i, { max_days: e.target.value === '' ? null : parseInt(e.target.value) })} />
-                            <button onClick={() => removeBucket(i)} className="text-red-400/60 hover:text-red-400 transition"><Icon name="trash" size={12} /></button>
-                          </div>
-                        ))}
-                        <button onClick={addBucket} className="text-xs text-cp-primary hover:opacity-80 transition mt-1">+ Aggiungi bucket</button>
-                      </div>
-
-                      <div className="bg-surface-page rounded-lg border border-gray-700 p-3">
-                        <div className="text-[11px] text-gray-400 font-semibold mb-2">Filtri (opzionali, tutti richiesti — es. escludi pagate/annullate con 2 filtri "!=")</div>
-                        {filters.map((f, i) => (
-                          <div key={i} className="grid grid-cols-[1fr_70px_1fr_28px] gap-2 mb-1.5 items-center">
-                            <Select value={f.field || ''} onChange={(val) => updateFilter(i, { field: val })}
-                              options={filterFieldOptions.map((k) => ({ value: k, label: k }))} />
-                            <Select value={f.op || '=='} onChange={(val) => updateFilter(i, { op: val })}
-                              options={['==', '!=', '>', '<', '>=', '<='].map((o) => ({ value: o, label: o }))} />
-                            <input className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" placeholder="valore" value={f.value || ''} onChange={(e) => updateFilter(i, { value: e.target.value })} />
-                            <button onClick={() => removeFilter(i)} className="text-red-400/60 hover:text-red-400 transition"><Icon name="trash" size={12} /></button>
-                          </div>
-                        ))}
-                        <button onClick={addFilter} className="text-xs text-cp-primary hover:opacity-80 transition mt-1">+ Aggiungi filtro</button>
-                      </div>
-                    </div>
-                  )
-                }
 
                 if (step.block_type === 'period_view') {
                   const ownMod = fieldCache.find((m) => m.slug === selected)
@@ -2328,8 +1983,8 @@ function BuilderPage({ token, baseUrl, allModules, onModulesChanged, preselectSl
                   const addTab = () => updateTabs([...tabs, { key: 'tab_' + Date.now(), label: '', block_type: 'period_view', block_key: '', source_module: null }])
                   const updateTab = (ti, patch) => updateTabs(tabs.map((t, i) => i === ti ? { ...t, ...patch } : t))
                   const removeTab = (ti) => updateTabs(tabs.filter((_, i) => i !== ti))
-                  const BLOCK_TYPE_LABELS = { period_view: 'Vista per periodo', distance_buckets: 'Vista per distanza', parent_children_view: 'Genitori con figli', reconciliation: 'Riconciliazione', financial_statement: 'Bilancio contabile' }
-                  const BLOCK_ARRAY_KEY = { period_view: 'period_views', distance_buckets: 'distance_buckets', parent_children_view: 'parent_children_views', reconciliation: 'reconciliations', financial_statement: 'financial_statements' }
+                  const BLOCK_TYPE_LABELS = { period_view: 'Vista per periodo', parent_children_view: 'Genitori con figli' }
+                  const BLOCK_ARRAY_KEY = { period_view: 'period_views', parent_children_view: 'parent_children_views' }
                   return (
                     <div key={step.id} {...dragHandlers(idx)}
                       className="bg-surface-card rounded-md border border-gray-800 p-4 cursor-grab active:cursor-grabbing"
@@ -2376,49 +2031,6 @@ function BuilderPage({ token, baseUrl, allModules, onModulesChanged, preselectSl
                   )
                 }
 
-                if (step.block_type === 'document_template') return (
-                  <div key={step.id} {...dragHandlers(idx)}
-                    className="bg-surface-card rounded-md border border-gray-800 p-4 cursor-grab active:cursor-grabbing"
-                    style={{ borderLeft: '3px solid #06B6D4' }}>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2 text-xs font-semibold text-gray-400">
-                        <span className="text-gray-600 select-none">&#8942;&#8942;</span>
-                        <Icon name="file" size={12} /> Documento stampabile
-                      </div>
-                      <button onClick={() => removeStep(idx)} className="text-red-400/60 hover:text-red-400 transition"><Icon name="trash" size={14} /></button>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 mb-3">
-                      <div className="col-span-2">
-                        <label className="text-[10px] text-gray-500 block mb-1">Nome (il bottone che vede l'utente)</label>
-                        <input className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-700 focus:border-cp-primary transition placeholder-gray-600"
-                          placeholder="es. Bolla 80mm, Fattura" value={step.nome || ''} onChange={(e) => updateStep(idx, 'nome', e.target.value)} />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-gray-500 block mb-1">Formato</label>
-                        <Select className="w-full"
-                          value={step.formato || 'a4'} onChange={(val) => updateStep(idx, 'formato', val)}
-                          options={[{ value: 'a4', label: 'Pagina intera' }, { value: '80mm', label: '80mm (scontrino/bolla)' }]} />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-gray-500 block mb-1">Contenuto HTML</label>
-                      <textarea
-                        className="w-full bg-surface-page text-gray-300 px-3 py-2 rounded-lg text-xs outline-none border border-gray-700 focus:border-cp-primary transition font-mono"
-                        rows={10}
-                        placeholder={'<h2>Ordine {{campo:numero}}</h2>\n<div>Cliente: {{campo:cliente}}</div>\n{{#righe modulo="ordini_righe" campo="ordine"}}\n  <div>{{campo:prodotto}} x {{campo:quantita}}</div>\n{{/righe}}\n<div>Totale: {{campo:totale}}</div>'}
-                        value={step.contenuto_html || ''}
-                        onChange={(e) => updateStep(idx, 'contenuto_html', e.target.value)}
-                      />
-                      <div className="text-[10px] text-gray-600 mt-2 space-y-0.5">
-                        <div><code className="text-cyan-500">{'{{campo:X}}'}</code> — campo X del record (una relazione mostra il nome collegato, non l'id)</div>
-                        <div><code className="text-cyan-500">{'{{azienda:X}}'}</code> — ragione_sociale / indirizzo / piva / logo_url del tenant</div>
-                        <div><code className="text-cyan-500">{'{{oggi}}'}</code> — data odierna</div>
-                        <div><code className="text-cyan-500">{'{{#righe modulo="..." campo="..."}}...{{/righe}}'}</code> — ripete il contenuto per ogni riga figlia (es. righe ordine)</div>
-                      </div>
-                      <DocumentTemplatePreview slug={selected} api={api} template={step} />
-                    </div>
-                  </div>
-                )
 
                 if (step.block_type === 'report_aggregate') {
                   // Due forme distinte, mai miste sullo stesso blocco: "valore singolo"

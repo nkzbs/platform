@@ -379,7 +379,7 @@ function parseValueLiteral(raw) {
 function compareValues(fieldValue, op, literal) {
   let a = fieldValue, b = literal;
   // Un campo checkbox/boolean è salvato come booleano JS vero (true/false), mai come
-  // stringa — ma il letterale di un filtro (formula testuale o distance_buckets) arriva
+  // stringa — ma il letterale di un filtro (formula testuale o altre viste) arriva
   // sempre come stringa o numero (VALUE non ammette un token booleano nudo). Senza
   // questa coercizione 'false' (stringa) == false (booleano) risulta FALSE in JS
   // (ToNumber("false") è NaN), quindi ogni filtro su un campo checkbox fallirebbe

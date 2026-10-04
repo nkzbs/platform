@@ -5,7 +5,7 @@ import RecordDetailModal from './RecordDetailModal'
 
 // Vista navigabile per periodo (mese o anno) — GET /records/:slug/period-view/:key
 // (records.js + period-view.js). Sostituisce l'intera vista del modulo, stesso
-// trattamento di ReconciliationView/DistanceBucketsView. Se il modulo ha un workflow,
+// trattamento di le altre viste. Se il modulo ha un workflow,
 // aggiunge da sola due cose che sennò servirebbero pagine a parte: chip di filtro per
 // stato (stesso concetto di filter_tab, ma sullo stato invece che su un campo select) e
 // un cerchio cliccabile per riga (tap-to-pay).

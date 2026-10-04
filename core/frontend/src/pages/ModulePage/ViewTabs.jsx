@@ -2,10 +2,7 @@ import React, { useState, useEffect } from 'react'
 import useApi from '../../lib/useApi'
 import { parseSchemaFrontend } from '../../lib/schema-v3-frontend'
 import PeriodView from './PeriodView'
-import DistanceBucketsView from './DistanceBucketsView'
 import ParentChildrenView from './ParentChildrenView'
-import ReconciliationView from './ReconciliationView'
-import FinancialStatementView from './FinancialStatementView'
 
 // Più viste "sostituisce tutta la tabella" alternabili a tab sullo stesso modulo —
 // es. Spese Casa: tab "Spese" (period_view proprio) + tab "Debiti" (parent_children_view
@@ -14,10 +11,7 @@ import FinancialStatementView from './FinancialStatementView'
 // componenti/route già usati quando quel blocco è la vista unica di un modulo.
 const BLOCK_ARRAY = {
   period_view: 'period_views',
-  distance_buckets: 'distance_buckets',
   parent_children_view: 'parent_children_views',
-  reconciliation: 'reconciliations',
-  financial_statement: 'financial_statements',
 }
 
 function ViewTabs({ tabs, mod, schema, token, tableColumns, records }) {
@@ -59,17 +53,14 @@ function ViewTabs({ tabs, mod, schema, token, tableColumns, records }) {
 
         // tableColumns/records hanno senso solo per il modulo PROPRIO (le colonne/righe
         // già caricate da ModulePage) — per una tab su un modulo diverso, i componenti
-        // che le usano (PeriodView/DistanceBucketsView per le colonne della tabella
+        // che le usano (PeriodView per le colonne della tabella
         // filtrata, ParentChildrenView per il titolo scorciatoia) restano senza, si
         // adattano già a quel caso (mostrano solo l'id se non trovano tableColumns[0]).
         const srcTableColumns = isOwn ? tableColumns : []
         const srcRecords = isOwn ? records : []
 
         if (activeTab.block_type === 'period_view') return <PeriodView config={config} mod={srcMod} schema={srcSchema} token={token} tableColumns={srcTableColumns} records={srcRecords} />
-        if (activeTab.block_type === 'distance_buckets') return <DistanceBucketsView config={config} mod={srcMod} schema={srcSchema} token={token} tableColumns={srcTableColumns} records={srcRecords} />
         if (activeTab.block_type === 'parent_children_view') return <ParentChildrenView config={config} mod={srcMod} schema={srcSchema} token={token} tableColumns={srcTableColumns} records={srcRecords} />
-        if (activeTab.block_type === 'reconciliation') return <ReconciliationView config={config} defaultModuleSlug={srcMod.slug} token={token} />
-        if (activeTab.block_type === 'financial_statement') return <FinancialStatementView config={config} defaultModuleSlug={srcMod.slug} token={token} />
         return null
       })()}
     </div>

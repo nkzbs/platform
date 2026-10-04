@@ -2,17 +2,13 @@ const express = require('express');
 const db = require('../db');
 const { requireAuth, requireAdmin } = require('./auth');
 const { evaluateFormula, evaluateSteps, getModuleRows, aggregateValues, loadModuleMap, toDayCount, compareValues } = require('../formula');
-const { parseSchemaNormalized, getDocumentTemplates } = require('../schema-v3');
-const { renderDocumentTemplate } = require('../print-templates');
+const { parseSchemaNormalized } = require('../schema-v3');
 const { fireTrigger } = require('../automation-engine');
 const { logAudit } = require('../audit-log');
 const { encryptFields, decryptFields } = require('../crypto-fields');
 const { attachComputedFields: attachComputedFieldsShared } = require('../computed-fields');
 const { ruleFor, ownedOrAllowed, filterViewable, isOwnRecord } = require('../permissions');
 const { deleteUploadById } = require('../lib/upload-storage');
-const { suggestMatch } = require('../reconciliation');
-const { computeStatement } = require('../financial-statement');
-const { computeDistanceBuckets } = require('../distance-buckets');
 const { computePeriodView, shiftPeriod, dateToIsoYearWeek } = require('../period-view');
 const { computeParentChildren } = require('../parent-children-view');
 const { computeYearlyBreakdown } = require('../yearly-breakdown');
@@ -38,7 +34,7 @@ function attachComputedFields(record, schema, moduleSlug) {
 }
 
 // Come sopra, ma per le righe "piatte" ({__id, ...campi}, nessun sotto-oggetto data) usate
-// dai blocchi Builder che leggono i record grezzi da sé (distance_buckets, period_view,
+// dai blocchi Builder che leggono i record grezzi da sé (period_view,
 // parent_children_view, yearly_breakdown/category_pivot/weekly_breakdown via
 // loadFilteredRows) — un campo computed non è MAI persistito nel record, quindi
 // date_field/metric_field/group_by che puntano a un campo computed leggerebbero sempre
@@ -348,7 +344,7 @@ function resolveFieldPath(row, path, relationCache) {
 }
 
 // Costruisce una cache id->data per ogni relazione many_to_one usata dai path con
-// notazione "relazione.campo" in un blocco reconciliation — una query per relazione
+// notazione "relazione.campo" in una vista — una query per relazione
 // coinvolta, non una per riga (altrimenti N righe = N query).
 function buildRelationCache(db, sourceModule, modMap, paths) {
   const cache = {};
@@ -363,186 +359,6 @@ function buildRelationCache(db, sourceModule, modMap, paths) {
   });
   return cache;
 }
-
-// Righe A ancora da riconciliare + candidati B liberi, con un suggerimento di
-// abbinamento per ciascuna riga A (stesso importo+direzione, data più vicina — vedi
-// reconciliation.js). Sola lettura, nessuna scrittura: il collegamento vero avviene
-// solo con la conferma esplicita su POST .../link sotto.
-router.get('/:slug/reconciliation/:key/candidates', requireAuth, (req, res) => {
-  const schema = getModuleSchema(req.params.slug) || {};
-  const rule = ruleFor(schema, req.user.role);
-  if (rule && !rule.view) return res.status(403).json({ error: 'Non hai i permessi per vedere questo modulo' });
-  const config = (schema.reconciliations || []).find((r) => r.key === req.params.key);
-  if (!config) return res.status(404).json({ error: 'Blocco di riconciliazione non trovato' });
-
-  const modMap = loadModuleMap(db);
-  // filter è {campo, valori:[...]} (o {campo, valore} singolare per compatibilità) — campo
-  // può essere "relazione.campo" (es. "conto.codice"), valori confrontati in OR (una
-  // transazione bancaria Cassa O Banca, non serve un singolo conto) — stesso motivo di
-  // filters[] su distance_buckets, qui applicato sia a A che a B (B non aveva alcun filtro
-  // prima: senza, RiconciliazioneBancaria non può restringere i candidati interni ai soli
-  // conti Cassa/Banca).
-  const matchesFilter = (row, filter, cache) => {
-    if (!filter) return true;
-    const val = resolveFieldPath(row, filter.campo, cache);
-    const allowed = filter.valori || (filter.valore !== undefined ? [filter.valore] : []);
-    return allowed.some((v) => String(val) === String(v));
-  };
-
-  const aRowsRaw = db.prepare('SELECT id, data FROM records WHERE module_slug = ?').all(config.source_a.module);
-  const aRows = aRowsRaw.map((r) => { try { return { __id: r.id, ...JSON.parse(r.data) }; } catch (e) { return { __id: r.id }; } });
-  const aFilterPaths = config.source_a.filter ? [config.source_a.filter.campo] : [];
-  const aCache = buildRelationCache(db, config.source_a.module, modMap, aFilterPaths);
-  const aFiltered = aRows.filter((r) => matchesFilter(r, config.source_a.filter, aCache));
-  // Un solo campo di collegamento su A (link_field), che contiene l'id del record B
-  // abbinato — non due campi separati (parent/riga): la riga B stessa È già
-  // l'informazione completa, un secondo id "del padre" sarebbe ridondante e rischia di
-  // disallinearsi dal primo se qualcosa li scrive in momenti diversi.
-  const pending = aFiltered.filter((r) => !r[config.source_a.link_field]);
-
-  const bRowsRaw = db.prepare('SELECT id, data FROM records WHERE module_slug = ?').all(config.source_b.module);
-  const bFilterPaths = [config.source_b.date_field, ...(config.source_b.filter ? [config.source_b.filter.campo] : [])];
-  const bCache = buildRelationCache(db, config.source_b.module, modMap, bFilterPaths);
-  const bRows = bRowsRaw.map((r) => {
-    let data; try { data = JSON.parse(r.data); } catch (e) { data = {}; }
-    return { __id: r.id, ...data };
-  }).filter((r) => matchesFilter(r, config.source_b.filter, bCache));
-  // Righe B già collegate a QUALUNQUE riga A (anche non pending, es. già confermate in
-  // passato) non sono candidati liberi — altrimenti la stessa riga interna potrebbe
-  // essere abbinata due volte a transazioni bancarie diverse.
-  const linkedBIds = new Set(aRows.filter((r) => r[config.source_a.link_field]).map((r) => String(r[config.source_a.link_field])));
-  const freeB = bRows.filter((b) => !linkedBIds.has(String(b.__id)));
-
-  // Se date_field usa la notazione "relazione.campo", scrive il valore già risolto
-  // sulla riga SOTTO QUELLA STESSA chiave letterale (es. "movimento.data") — così
-  // suggestMatch (in reconciliation.js, che legge sempre row[path] alla lettera, senza
-  // sapere nulla di relazioni) trova il dato senza bisogno di conoscere la cache.
-  const bResolved = freeB.map((b) => {
-    if (!config.source_b.date_field.includes('.')) return b;
-    return { ...b, [config.source_b.date_field]: resolveFieldPath(b, config.source_b.date_field, bCache) };
-  });
-
-  const results = pending.map((a) => {
-    const suggestion = suggestMatch(a, bResolved, config);
-    return { a, suggestion_id: suggestion ? suggestion.__id : null };
-  });
-
-  res.json({ pending: results, candidates: bResolved });
-});
-
-// Conferma un abbinamento — scrive SOLO su A (mai su B, che resta la fonte "di verità"
-// dei movimenti interni), opzionalmente esegue una transizione di workflow su A.
-router.post('/:slug/reconciliation/:key/link', requireAuth, requireAdmin, (req, res) => {
-  const { a_id, b_id } = req.body;
-  if (!a_id || !b_id) return res.status(400).json({ error: 'a_id e b_id obbligatori' });
-  const schema = getModuleSchema(req.params.slug) || {};
-  const config = (schema.reconciliations || []).find((r) => r.key === req.params.key);
-  if (!config) return res.status(404).json({ error: 'Blocco di riconciliazione non trovato' });
-
-  const aRecord = db.prepare('SELECT * FROM records WHERE module_slug = ? AND id = ?').get(config.source_a.module, a_id);
-  if (!aRecord) return res.status(404).json({ error: 'Record A non trovato' });
-  let aData; try { aData = JSON.parse(aRecord.data); } catch (e) { aData = {}; }
-
-  aData[config.source_a.link_field] = b_id;
-
-  // Transizione di stato opzionale dopo il collegamento — verifica SOLO che la
-  // transizione esista davvero nel workflow dallo stato attuale (stesso controllo di
-  // base di POST .../transition più sotto in questo file); le forme di validazione più
-  // avanzate di quella route (espressione bloccante, confronto con record collegato,
-  // ruoli abilitati) non sono replicate qui — se un domani servissero anche per una
-  // riconciliazione, è un'estensione a parte, non un limite silenzioso: se la
-  // transizione non è ammessa, il collegamento viene comunque salvato ma lo stato non
-  // cambia, segnalato nella risposta.
-  let transitioned = null; // null = nessuna transizione configurata (non "riuscita")
-  if (config.transition_to) {
-    const aSchema = getModuleSchema(config.source_a.module) || {};
-    const workflow = aSchema.workflow;
-    const allowed = workflow && (workflow.transitions || []).some((t) => t.from === aData._stato && t.to === config.transition_to);
-    if (allowed) aData._stato = config.transition_to;
-    else transitioned = false;
-  }
-  db.prepare('UPDATE records SET data = ? WHERE id = ?').run(JSON.stringify(aData), a_id);
-
-  logAudit(req.user.username, 'records.reconciliation_link', config.source_a.module + '#' + a_id, { b_id });
-  res.json({ ok: true, transitioned });
-});
-
-// Bilancio di Verifica / Conto Economico / Stato Patrimoniale — la configurazione vive
-// sul modulo VISIBILE da cui si naviga (es. "movimenti"), ma le righe dare/avere vivono
-// quasi sempre su un modulo di supporto nascosto dalla sidebar (es. "movimenti_righe",
-// support_module — vedi modules.support_module), quindi il blocco porta un
-// `righe_module` esplicito invece di assumere che le righe siano sullo stesso modulo
-// dove il blocco è dichiarato (stesso motivo per cui report_aggregate ha
-// `source_module`). Filtra opzionalmente per un campo su una relazione (es.
-// movimento._stato == 'confermato', per escludere bozze/annullati), raggruppa per
-// conto via la relazione dichiarata, e delega tutta l'aritmetica contabile
-// (convenzione dare/avere universale) a financial-statement.js — nessuna logica di
-// segno qui, solo risoluzione dati.
-router.get('/:slug/financial-statement/:key', requireAuth, (req, res) => {
-  const schema = getModuleSchema(req.params.slug) || {};
-  const rule = ruleFor(schema, req.user.role);
-  if (rule && !rule.view) return res.status(403).json({ error: 'Non hai i permessi per vedere questo modulo' });
-  const config = (schema.financial_statements || []).find((f) => f.key === req.params.key);
-  if (!config) return res.status(404).json({ error: 'Bilancio non trovato' });
-
-  const modMap = loadModuleMap(db);
-  const righeModule = config.righe_module;
-  const righeSchema = modMap[righeModule];
-  if (!righeSchema) return res.status(400).json({ error: `Modulo righe "${righeModule}" non trovato o non installato` });
-  const contoRel = (righeSchema.relations || []).find((r) => r.key === config.conto_relation && r.type === 'many_to_one');
-  if (!contoRel) return res.status(400).json({ error: `Relazione "${config.conto_relation}" non trovata su "${righeModule}"` });
-
-  let rows = getModuleRows(db, righeModule);
-  if (config.filter_relation && config.filter_field) {
-    const filterRel = (righeSchema.relations || []).find((r) => r.key === config.filter_relation && r.type === 'many_to_one');
-    if (filterRel) {
-      const cache = buildRelationCache(db, righeModule, modMap, [config.filter_relation + '.' + config.filter_field]);
-      rows = rows.filter((r) => String(resolveFieldPath(r, config.filter_relation + '.' + config.filter_field, cache)) === String(config.filter_value));
-    }
-  }
-
-  const righe = rows.map((r) => ({ conto_id: r[config.conto_relation], dare: r[config.dare_field], avere: r[config.avere_field] }));
-  const contiRaw = db.prepare('SELECT id, data FROM records WHERE module_slug = ?').all(contoRel.target_module);
-  const conti = contiRaw.map((c) => {
-    let d = {}; try { d = JSON.parse(c.data); } catch (e) { /* record corrotto, trattato come vuoto */ }
-    return { id: c.id, codice: d[config.codice_field], nome: d[config.nome_field], tipo: d[config.tipo_field] };
-  });
-
-  const result = computeStatement(righe, conti);
-  res.json({ key: config.key, label: config.label, ...result });
-});
-
-// Vista bucketizzata per distanza (in giorni) da OGGI di un campo data — es. Scadenzario
-// (giorni alla scadenza). A differenza di financial_statement, opera sempre sul MODULO
-// dichiarante stesso (i record da bucketizzare sono quelli visibili, non un modulo di
-// supporto nascosto) — niente indirection verso un altro modulo.
-router.get('/:slug/distance-buckets/:key', requireAuth, (req, res) => {
-  const schema = getModuleSchema(req.params.slug) || {};
-  const rule = ruleFor(schema, req.user.role);
-  if (rule && !rule.view) return res.status(403).json({ error: 'Non hai i permessi per vedere questo modulo' });
-  const config = (schema.distance_buckets || []).find((d) => d.key === req.params.key);
-  if (!config) return res.status(404).json({ error: 'Vista non trovata' });
-
-  const modMap = loadModuleMap(db);
-  const rawRows = attachComputedToFlatRows(db.prepare('SELECT id, data FROM records WHERE module_slug = ?').all(req.params.slug)
-    .map((r) => { try { return { __id: r.id, ...JSON.parse(r.data || '{}') }; } catch (e) { return { __id: r.id }; } }), schema, req.params.slug);
-
-  const filterPaths = (config.filters || []).map((f) => f.field).filter((p) => p && p.includes('.'));
-  const relCache = buildRelationCache(db, req.params.slug, modMap, filterPaths);
-  const passesFilters = (row) => (config.filters || []).every((f) => {
-    const val = resolveFieldPath(row, f.field, relCache);
-    return compareValues(val, f.op || '==', f.value);
-  });
-
-  const today = toDayCount(new Date().toISOString().slice(0, 10));
-  const rows = rawRows.filter(passesFilters).map((row) => {
-    const day = toDayCount(row[config.date_field]);
-    return { __id: row.__id, giorni: day === null ? null : day - today, metricValue: config.metric_field ? row[config.metric_field] : null };
-  });
-
-  const result = computeDistanceBuckets(rows, config.buckets || [], config.metric_format);
-  res.json({ key: config.key, label: config.label, metric_label: config.metric_label, ...result });
-});
 
 // Vista navigabile per periodo (mese o anno) — es. Spese Casa (mese corrente, avanti/
 // indietro), Report (anno corrente vs precedente). y/m in query indicano il periodo
@@ -859,20 +675,6 @@ router.post('/:slug/bulk-set-field', requireAuth, requireAdmin, (req, res) => {
   res.json({ ok: true, count: rows.length });
 });
 
-// ─── STAMPA/PDF ──────────────────────────────────────────────────────────────
-// Elenco dei documenti stampabili configurati sul modulo (blocchi document_template
-// del Builder) — usato dal frontend per popolare il bottone/dropdown "Stampa" senza
-// dover conoscere in anticipo quali template esistono su quale modulo. Registrata
-// PRIMA di GET /:slug/:id: con lo stesso numero di segmenti di path, Express
-// userebbe altrimenti quella (più generica) interpretando "print-templates" come
-// un :id.
-router.get('/:slug/print-templates', requireAuth, (req, res) => {
-  const mod = db.prepare('SELECT schema_json FROM modules WHERE slug = ?').get(req.params.slug);
-  if (!mod) return res.status(404).json({ error: 'Modulo non trovato' });
-  const templates = getDocumentTemplates(mod.schema_json).map((t) => ({ id: t.id, nome: t.nome, formato: t.formato }));
-  res.json(templates);
-});
-
 router.get('/:slug/:id', requireAuth, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const record = db.prepare('SELECT * FROM records WHERE id = ? AND module_slug = ?').get(req.params.id, req.params.slug);
@@ -883,30 +685,6 @@ router.get('/:slug/:id', requireAuth, (req, res) => {
   }
   const parsed = { ...record, data: decryptFields(JSON.parse(record.data), schema.fields) };
   res.json(attachComputedFields(parsed, schema, req.params.slug));
-});
-
-// Risolve un template di stampa per UN record specifico — stesso controllo permessi
-// di GET /:slug/:id (un documento non deve essere stampabile da chi non potrebbe
-// nemmeno vedere il record). Ritorna l'HTML già pronto (token risolti), il
-// frontend lo incapsula solo per la stampa (iframe + window.print()).
-router.get('/:slug/:id/print/:templateId', requireAuth, (req, res) => {
-  const schema = getModuleSchema(req.params.slug) || {};
-  const record = db.prepare('SELECT * FROM records WHERE id = ? AND module_slug = ?').get(req.params.id, req.params.slug);
-  if (!record) return res.status(404).json({ error: 'Record non trovato' });
-  const rule = ruleFor(schema, req.user.role);
-  if (rule && (!rule.view || !ownedOrAllowed(rule, record, req.user))) {
-    return res.status(403).json({ error: 'Non hai i permessi per vedere questo record' });
-  }
-  const mod = db.prepare('SELECT schema_json FROM modules WHERE slug = ?').get(req.params.slug);
-  const template = getDocumentTemplates(mod.schema_json).find((t) => t.id === req.params.templateId);
-  if (!template) return res.status(404).json({ error: 'Template di stampa non trovato' });
-
-  const parsed = { ...record, data: decryptFields(JSON.parse(record.data), schema.fields) };
-  const attached = attachComputedFields(parsed, schema, req.params.slug);
-  const azienda = db.prepare('SELECT ragione_sociale, indirizzo, piva, logo_url FROM tenant_settings WHERE id = 1').get() || {};
-
-  const html = renderDocumentTemplate(template, schema, attached, azienda);
-  res.json({ html, formato: template.formato, nome: template.nome });
 });
 
 router.get('/:slug/:id/history', requireAuth, (req, res) => {

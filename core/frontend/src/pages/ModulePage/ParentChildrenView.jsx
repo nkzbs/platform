@@ -5,7 +5,7 @@ import { parseSchemaFrontend } from '../../lib/schema-v3-frontend'
 
 // Lista di genitori con riepilogo dei figli — GET /records/:slug/parent-children/:key
 // (records.js + parent-children-view.js). Sostituisce l'intera vista del modulo, stesso
-// trattamento di ReconciliationView/DistanceBucketsView/PeriodView.
+// trattamento di PeriodView.
 function eur(n) {
   return (n || 0).toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 })
 }

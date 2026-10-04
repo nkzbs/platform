@@ -4,7 +4,6 @@ const { requireAuth, requireAdmin } = require('./auth');
 const { validateFormula, evaluateFormula, validateSteps, evaluateSteps, loadModuleMap } = require('../formula');
 const { parseSchemaNormalized, isV3, toV2Lenient, getAutomationSteps } = require('../schema-v3');
 const { logAudit } = require('../audit-log');
-const { renderDocumentTemplate } = require('../print-templates');
 const { attachComputedFields } = require('../computed-fields');
 const { decryptFields } = require('../crypto-fields');
 const { extractRefs } = require('../formula');
@@ -25,14 +24,13 @@ router.get('/schema-cache', requireAuth, requireAdmin, (req, res) => {
     // relazione" (le relazioni N:1 proprie del modulo corrente) — mancava, quindi quei
     // selettori risultavano sempre vuoti indipendentemente da quanti moduli/relazioni
     // esistessero davvero.
-    // period_views/distance_buckets/ecc. servono all'editor di view_tabs, per popolare
+    // period_views/parent_children_views servono all'editor di view_tabs, per popolare
     // "quale blocco di questo modulo" dopo aver scelto il tipo — stesso bisogno di
     // fields/relations sopra, non ricaricare lo schema intero a ogni scelta.
     return {
       ...m, fields: schema.fields || [], relations: schema.relations || [],
-      period_views: schema.period_views || [], distance_buckets: schema.distance_buckets || [],
-      parent_children_views: schema.parent_children_views || [], reconciliations: schema.reconciliations || [],
-      financial_statements: schema.financial_statements || [],
+      period_views: schema.period_views || [],
+      parent_children_views: schema.parent_children_views || [],
     };
   });
   res.json(full);
@@ -128,40 +126,7 @@ router.post('/formula/check', requireAuth, requireAdmin, (req, res) => {
   res.json(evaluateFormula(expr || '', db, context || null));
 });
 
-// Anteprima dal vivo di un documento di stampa mentre lo si scrive nel Builder — stesso
-// principio di /formula/check: un'unica fonte di verità server-side (renderDocumentTemplate,
-// la stessa funzione usata dalla stampa vera in routes/records.js), non una copia della
-// logica di rendering lato frontend. Il template arriva così com'è scritto ORA nel
-// contenuto_html del blocco (mai ancora salvato/pubblicato), non quello che risulta
-// dall'ultima pubblicazione — altrimenti l'anteprima mostrerebbe la versione vecchia mentre
-// si modifica quella nuova. Schema letto dal DRAFT se presente, non dal pubblicato, per lo
-// stesso motivo: un campo appena aggiunto nel draft deve risolversi nel token {{campo:X}}
-// subito, non solo dopo aver pubblicato.
-router.post('/:slug/preview-print', requireAuth, requireAdmin, (req, res) => {
-  const { template, record_id } = req.body || {};
-  if (!template || !template.contenuto_html) return res.status(400).json({ error: 'Template mancante' });
-
-  const module = db.prepare('SELECT schema_json, schema_json_draft FROM modules WHERE slug = ?').get(req.params.slug);
-  if (!module) return res.status(404).json({ error: 'Modulo non trovato' });
-  const schema = parseSchemaNormalized(module.schema_json_draft || module.schema_json);
-
-  let recordRow;
-  if (record_id) {
-    recordRow = db.prepare('SELECT id, data FROM records WHERE id = ? AND module_slug = ?').get(record_id, req.params.slug);
-  } else {
-    recordRow = db.prepare('SELECT id, data FROM records WHERE module_slug = ? ORDER BY id DESC LIMIT 1').get(req.params.slug);
-  }
-  if (!recordRow) return res.json({ no_records: true });
-
-  const parsed = { id: recordRow.id, data: decryptFields(JSON.parse(recordRow.data), schema.fields) };
-  const attached = attachComputedFields(db, parsed, schema, req.params.slug);
-  const azienda = db.prepare('SELECT ragione_sociale, indirizzo, piva, logo_url FROM tenant_settings WHERE id = 1').get() || {};
-
-  const html = renderDocumentTemplate(template, schema, attached, azienda);
-  res.json({ html, formato: template.formato || 'a4', nome: template.nome || '', record_id: recordRow.id });
-});
-
-// Anteprima "a vuoto" di un'automazione — stesso principio di /preview-print, ma per il
+// Anteprima "a vuoto" di un'automazione — stesso principio di /formula/check, ma per il
 // blocco 'automation': l'automazione arriva così com'è scritta ORA nell'editor (anche non
 // salvata), si sceglie un record reale su cui provarla, e runAzioni gira con {dryRun:true}
 // (vedi automation-engine.js — ogni punto che scrive record/notifiche/log/WhatsApp reale è
@@ -343,8 +308,8 @@ router.post('/:slug/publish', requireAuth, requireAdmin, (req, res) => {
     });
   };
   // Bug reale trovato applicando branch_create a Spese/Debiti: TUTTE le validazioni qui
-  // sotto (automation, branch_create, reconciliation, financial_statement,
-  // distance_buckets, period_view, parent_children_view, yearly_breakdown,
+  // sotto (automation, branch_create,
+  // period_view, parent_children_view, yearly_breakdown,
   // category_pivot, weekly_breakdown) erano racchiuse in un "if (isV3(draftParsed))" —
   // corretto SOLO per automation (concetto che non esiste in v2, .steps è comunque
   // undefined->[] su un draft v2, non serve nemmeno la guardia), ma sbagliato per tutte
@@ -399,82 +364,6 @@ router.post('/:slug/publish', requireAuth, requireAdmin, (req, res) => {
             formulaErrors.push({ label, errors: [`Opzione "${b.label || i + 1}": campo "${f.key}" non trovato su "${targetSlug}"`] });
           }
         });
-      });
-    });
-    // reconciliation: entrambi i moduli sorgente devono esistere, con i campi minimi
-    // indicati — un modulo/campo sbagliato qui fallirebbe silenziosamente a runtime
-    // (candidati sempre vuoti) invece che a pubblicazione.
-    (draftParsed.steps || []).filter((s) => s.block_type === 'reconciliation').forEach((rc) => {
-      const label = rc.label || 'Riconciliazione';
-      const a = rc.source_a || {}, b = rc.source_b || {};
-      if (!a.module || !allModuleSlugs.has(a.module)) formulaErrors.push({ label, errors: [`Lista A: modulo "${a.module || ''}" non esiste`] });
-      if (!a.amount_field) formulaErrors.push({ label, errors: ['Lista A: manca il campo importo'] });
-      if (!a.date_field) formulaErrors.push({ label, errors: ['Lista A: manca il campo data'] });
-      if (!a.link_field) formulaErrors.push({ label, errors: ['Lista A: manca il campo dove salvare il collegamento'] });
-      if (!b.module || !allModuleSlugs.has(b.module)) formulaErrors.push({ label, errors: [`Lista B: modulo "${b.module || ''}" non esiste`] });
-      if (!b.metric) formulaErrors.push({ label, errors: ['Lista B: manca il campo importo'] });
-      if (!b.date_field) formulaErrors.push({ label, errors: ['Lista B: manca il campo data'] });
-    });
-    // financial_statement: il modulo righe (di solito un modulo di supporto nascosto
-    // dalla sidebar, es. "movimenti_righe") deve esistere, la relazione verso il piano
-    // dei conti deve esistere su QUEL modulo, e tutti i campi dichiarati devono esistere
-    // sui rispettivi moduli — altrimenti il bilancio tornerebbe silenziosamente vuoto o
-    // con saldi a zero invece di segnalare l'errore subito.
-    (normalized.financial_statements || []).forEach((fst) => {
-      const label = fst.label || 'Bilancio';
-      const modMap = loadModuleMap(db);
-      if (!fst.righe_module) { formulaErrors.push({ label, errors: ['Manca il modulo righe (dare/avere)'] }); return; }
-      const righe = modMap[fst.righe_module];
-      if (!righe) { formulaErrors.push({ label, errors: [`Modulo righe "${fst.righe_module}" non trovato o non installato`] }); return; }
-      if (!fst.conto_relation) { formulaErrors.push({ label, errors: ['Manca la relazione verso il piano dei conti'] }); return; }
-      const contoRel = (righe.relations || []).find((r) => r.key === fst.conto_relation && r.type === 'many_to_one');
-      if (!contoRel) { formulaErrors.push({ label, errors: [`Relazione "${fst.conto_relation}" non trovata (o non many_to_one) su "${fst.righe_module}"`] }); return; }
-      const contoFields = (modMap[contoRel.target_module] || {}).fields || [];
-      ['tipo_field', 'nome_field', 'codice_field'].forEach((k) => {
-        if (!fst[k]) { formulaErrors.push({ label, errors: [`Manca "${k}"`] }); return; }
-        if (!contoFields.some((f) => f.key === fst[k])) formulaErrors.push({ label, errors: [`Campo "${fst[k]}" non trovato nel modulo "${contoRel.target_module}"`] });
-      });
-      ['dare_field', 'avere_field'].forEach((k) => {
-        if (!fst[k]) { formulaErrors.push({ label, errors: [`Manca "${k}"`] }); return; }
-        if (!(righe.fields || []).some((f) => f.key === fst[k])) formulaErrors.push({ label, errors: [`Campo "${fst[k]}" non trovato su "${fst.righe_module}"`] });
-      });
-      if (fst.filter_relation && !(righe.relations || []).some((r) => r.key === fst.filter_relation && r.type === 'many_to_one')) {
-        formulaErrors.push({ label, errors: [`Relazione filtro "${fst.filter_relation}" non trovata (o non many_to_one) su "${fst.righe_module}"`] });
-      }
-    });
-    // distance_buckets: opera sempre sul modulo dichiarante (niente righe_module) — il
-    // campo data e l'eventuale campo metrica devono esistere qui, i bucket devono avere
-    // chiavi uniche, e ogni campo filtro (anche via "relazione.campo") deve risolversi
-    // davvero — stessa disciplina degli altri blocchi: un riferimento sbagliato qui
-    // tornerebbe una vista sempre vuota invece di un errore a pubblicazione.
-    (normalized.distance_buckets || []).forEach((dbk) => {
-      const label = dbk.label || 'Vista per distanza';
-      const modMap = loadModuleMap(db);
-      const own = modMap[req.params.slug] || {};
-      if (!dbk.date_field) { formulaErrors.push({ label, errors: ['Manca il campo data'] }); return; }
-      if (!(own.fields || []).some((f) => f.key === dbk.date_field)) formulaErrors.push({ label, errors: [`Campo data "${dbk.date_field}" non trovato`] });
-      if (dbk.metric_field && !(own.fields || []).some((f) => f.key === dbk.metric_field)) {
-        formulaErrors.push({ label, errors: [`Campo metrica "${dbk.metric_field}" non trovato`] });
-      }
-      const buckets = dbk.buckets || [];
-      if (buckets.length === 0) formulaErrors.push({ label, errors: ['Serve almeno un bucket'] });
-      const keys = buckets.map((b) => b.key).filter(Boolean);
-      if (new Set(keys).size !== keys.length) formulaErrors.push({ label, errors: ['Le chiavi dei bucket devono essere uniche'] });
-      buckets.forEach((b, i) => {
-        if (!b.key || !b.label) formulaErrors.push({ label, errors: [`Bucket ${i + 1}: manca chiave o etichetta`] });
-      });
-      (dbk.filters || []).forEach((f) => {
-        if (!f.field) { formulaErrors.push({ label, errors: ['Filtro senza campo'] }); return; }
-        if (f.field === '_stato' || (f.field.includes('.') && f.field.endsWith('._stato'))) return;
-        if (!f.field.includes('.')) {
-          if (!(own.fields || []).some((x) => x.key === f.field)) formulaErrors.push({ label, errors: [`Campo filtro "${f.field}" non trovato`] });
-          return;
-        }
-        const [relKey, targetField] = f.field.split('.');
-        const rel = (own.relations || []).find((r) => r.key === relKey && r.type === 'many_to_one');
-        if (!rel) { formulaErrors.push({ label, errors: [`Relazione "${relKey}" non trovata (o non many_to_one)`] }); return; }
-        const targetFields = (modMap[rel.target_module] || {}).fields || [];
-        if (!targetFields.some((x) => x.key === targetField)) formulaErrors.push({ label, errors: [`Campo "${targetField}" non trovato nel modulo "${rel.target_module}"`] });
       });
     });
     // period_view: granularità valida, campo data esistente, ogni metrica ha un campo
@@ -594,9 +483,7 @@ router.post('/:slug/publish', requireAuth, requireAdmin, (req, res) => {
     // parent_children_view di un ALTRO modulo via source_module) — ogni tab referenzia
     // un blocco già dichiarato altrove per key, non lo ridefinisce.
     const TAB_BLOCK_ARRAY = {
-      period_view: 'period_views', distance_buckets: 'distance_buckets',
-      parent_children_view: 'parent_children_views', reconciliation: 'reconciliations',
-      financial_statement: 'financial_statements',
+      period_view: 'period_views', parent_children_view: 'parent_children_views',
     };
     if (normalized.view_tabs && normalized.view_tabs.tabs) {
       const label = 'Tab della vista';

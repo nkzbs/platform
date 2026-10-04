@@ -29,8 +29,7 @@
 export const STEP_TYPES_V3 = [
   'field', 'relation', 'workflow_state', 'workflow_transition',
   'scope', 'permissions', 'validazione_creazione', 'computed', 'report_aggregate', 'condition', 'automation',
-  'document_template', 'form_step', 'connection_required', 'branch_create', 'reconciliation',
-  'financial_statement', 'distance_buckets', 'period_view', 'parent_children_view',
+  'connection_required', 'branch_create', 'period_view', 'parent_children_view',
   'yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'view_tabs',
 ]
 
@@ -71,11 +70,7 @@ export function toV3(schemaV2) {
   if (s.validazione_creazione) steps.push({ id: genId('vcr'), block_type: 'validazione_creazione', ...s.validazione_creazione })
   if (s.allegati) steps.push({ id: genId('alg'), block_type: 'allegati', ...s.allegati })
   ;(s.aggregati || []).forEach((a) => steps.push({ id: genId('agg'), block_type: 'report_aggregate', ...a }))
-  ;(s.form_steps || []).forEach((fs) => steps.push({ id: genId('fst'), block_type: 'form_step', ...fs }))
   ;(s.branch_creates || []).forEach((bc) => steps.push({ id: genId('brc'), block_type: 'branch_create', ...bc }))
-  ;(s.reconciliations || []).forEach((rc) => steps.push({ id: genId('rec'), block_type: 'reconciliation', ...rc }))
-  ;(s.financial_statements || []).forEach((fs2) => steps.push({ id: genId('fin'), block_type: 'financial_statement', ...fs2 }))
-  ;(s.distance_buckets || []).forEach((db2) => steps.push({ id: genId('dbk'), block_type: 'distance_buckets', ...db2 }))
   ;(s.period_views || []).forEach((pv) => steps.push({ id: genId('pvw'), block_type: 'period_view', ...pv }))
   ;(s.parent_children_views || []).forEach((pc) => steps.push({ id: genId('pcv'), block_type: 'parent_children_view', ...pc }))
   ;(s.yearly_breakdowns || []).forEach((yb) => steps.push({ id: genId('ybk'), block_type: 'yearly_breakdown', ...yb }))
@@ -83,7 +78,7 @@ export function toV3(schemaV2) {
   ;(s.weekly_breakdowns || []).forEach((wb) => steps.push({ id: genId('wbk'), block_type: 'weekly_breakdown', ...wb }))
   if (s.requires_connection) steps.push({ id: genId('con'), block_type: 'connection_required', integration_id: s.requires_connection })
 
-  // Blocchi v3-only (automation, condition, document_template) che toV2Lenient
+  // Blocchi v3-only (automation, condition) che toV2Lenient
   // mette da parte quando appiattisce a v2 — sono già step v3 completi (id +
   // block_type inclusi), vanno solo riaccodati così come sono. SENZA questo,
   // riaprire il Builder su un modulo esistente e ripubblicare cancellava
@@ -94,8 +89,7 @@ export function toV3(schemaV2) {
 }
 
 // ─── v3 -> v2 (stretta) ────────────────────────────────────────────────────────
-// Un modulo che contiene un blocco senza equivalente v2 (condition, automation,
-// document_template, form_step) non può fare la conversione inversa senza
+// Un modulo che contiene un blocco senza equivalente v2 (condition, automation, branch_create...) non può fare la conversione inversa senza
 // perdita: lancia un errore esplicito invece di scartare silenziosamente il
 // blocco, così l'eventuale downgrade è una scelta consapevole di chi pubblica.
 export function toV2(schemaV3) {
@@ -116,12 +110,7 @@ export function toV2(schemaV3) {
     else if (block_type === 'report_aggregate') out.aggregati.push(rest)
     else if (block_type === 'condition') throw new Error('Impossibile convertire a v2: contiene un blocco "condition" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
     else if (block_type === 'automation') throw new Error('Impossibile convertire a v2: contiene un blocco "automation" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
-    else if (block_type === 'document_template') throw new Error('Impossibile convertire a v2: contiene un blocco "document_template" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
-    else if (block_type === 'form_step') throw new Error('Impossibile convertire a v2: contiene un blocco "form_step" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
     else if (block_type === 'branch_create') throw new Error('Impossibile convertire a v2: contiene un blocco "branch_create" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
-    else if (block_type === 'reconciliation') throw new Error('Impossibile convertire a v2: contiene un blocco "reconciliation" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
-    else if (block_type === 'financial_statement') throw new Error('Impossibile convertire a v2: contiene un blocco "financial_statement" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
-    else if (block_type === 'distance_buckets') throw new Error('Impossibile convertire a v2: contiene un blocco "distance_buckets" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
     else if (block_type === 'period_view') throw new Error('Impossibile convertire a v2: contiene un blocco "period_view" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
     else if (block_type === 'parent_children_view') throw new Error('Impossibile convertire a v2: contiene un blocco "parent_children_view" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
     else if (block_type === 'yearly_breakdown') throw new Error('Impossibile convertire a v2: contiene un blocco "yearly_breakdown" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
@@ -142,7 +131,7 @@ export function toV2(schemaV3) {
 // tutti i propri campi solo perché li contiene.
 export function toV2Lenient(schemaV3) {
   const steps = (schemaV3 && schemaV3.steps) || []
-  const out = { fields: [], relations: [], workflow: null, scope: null, permissions: null, validazione_creazione: null, aggregati: [], allegati: null, form_steps: [], branch_creates: [], reconciliations: [], financial_statements: [], distance_buckets: [], period_views: [], parent_children_views: [], yearly_breakdowns: [], category_pivots: [], weekly_breakdowns: [], view_tabs: null, requires_connection: null, _v3_unsupported: [] }
+  const out = { fields: [], relations: [], workflow: null, scope: null, permissions: null, validazione_creazione: null, aggregati: [], allegati: null,  branch_creates: [],    period_views: [], parent_children_views: [], yearly_breakdowns: [], category_pivots: [], weekly_breakdowns: [], view_tabs: null, requires_connection: null, _v3_unsupported: [] }
   const states = []
   const transitions = []
 
@@ -157,11 +146,7 @@ export function toV2Lenient(schemaV3) {
     else if (block_type === 'validazione_creazione') out.validazione_creazione = rest
     else if (block_type === 'allegati') out.allegati = rest
     else if (block_type === 'report_aggregate') out.aggregati.push(rest)
-    else if (block_type === 'form_step') out.form_steps.push(rest)
     else if (block_type === 'branch_create') out.branch_creates.push(rest)
-    else if (block_type === 'reconciliation') out.reconciliations.push(rest)
-    else if (block_type === 'financial_statement') out.financial_statements.push(rest)
-    else if (block_type === 'distance_buckets') out.distance_buckets.push(rest)
     else if (block_type === 'period_view') out.period_views.push(rest)
     else if (block_type === 'parent_children_view') out.parent_children_views.push(rest)
     else if (block_type === 'yearly_breakdown') out.yearly_breakdowns.push(rest)
@@ -169,7 +154,7 @@ export function toV2Lenient(schemaV3) {
     else if (block_type === 'weekly_breakdown') out.weekly_breakdowns.push(rest)
     else if (block_type === 'view_tabs') out.view_tabs = rest
     else if (block_type === 'connection_required') out.requires_connection = rest.integration_id
-    else if (block_type === 'condition' || block_type === 'automation' || block_type === 'document_template') out._v3_unsupported.push(step)
+    else if (block_type === 'condition' || block_type === 'automation') out._v3_unsupported.push(step)
     // Tipo sconosciuto: ignorato silenziosamente qui (a differenza di toV2 strict) —
     // la lettura runtime deve essere permissiva, la validazione rigorosa resta a
     // carico di publish/validate nel Builder.
@@ -196,7 +181,7 @@ export function parseSchemaNormalized(jsonString) {
 // di un primitivo Builder fatta in questa sessione, mai attraverso il vero editor
 // v3) viene salvato in forma v2-lenient: campi nativi v2 (fields/relations/ecc.)
 // più un array `_v3_unsupported` che contiene ESATTAMENTE gli step v3-only
-// (automation/condition/document_template) così come sono — vedi toV2Lenient()
+// (automation/condition) così come sono — vedi toV2Lenient()
 // sopra. Con `isV3(schema)` falso su quella forma, getAutomationSteps tornava
 // sempre [], e fireTrigger() (automation-engine.js) non trovava mai nessuna
 // automazione da eseguire — silenziosamente, il record veniva comunque salvato.
@@ -210,15 +195,6 @@ export function getAutomationSteps(jsonString) {
   return (schema._v3_unsupported || []).filter((s) => s.block_type === 'automation')
 }
 
-// Estrae i blocchi 'document_template' (documenti stampabili) definiti nello
-// schema pubblicato di un modulo — stesso pattern (e stesso bug corretto sopra)
-// di getAutomationSteps.
-export function getDocumentTemplates(jsonString) {
-  let schema
-  try { schema = JSON.parse(jsonString || '{}') } catch (e) { return [] }
-  if (isV3(schema)) return (schema.steps || []).filter((s) => s.block_type === 'document_template')
-  return (schema._v3_unsupported || []).filter((s) => s.block_type === 'document_template')
-}
 
 // ─── Azioni "interne" dell'motore automazioni ──────────────────────────────────
 // Fonte UNICA di verità per: (a) l'etichetta mostrata nell'editor Automazioni del

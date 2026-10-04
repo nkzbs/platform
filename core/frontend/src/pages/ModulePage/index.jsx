@@ -5,7 +5,6 @@ import useApi from '../../lib/useApi'
 import { parseSchemaFrontend, getRequiredConnectors } from '../../lib/schema-v3-frontend'
 import Icon from '../../components/Icon'
 import FormDrawer from '../../components/FormDrawer'
-import Wizard from '../../components/Wizard'
 import Select from '../../components/Select'
 import FieldEditorInput from './FieldEditorInput'
 import RecordDetailModal from './RecordDetailModal'
@@ -14,9 +13,6 @@ import AiSuggestionsPanel from '../../components/AiSuggestionsPanel'
 import ImportPdf from '../../components/ImportPdf'
 import SchemaReports from './SchemaReports'
 import BranchCreateModal from './BranchCreateModal'
-import ReconciliationView from './ReconciliationView'
-import FinancialStatementView from './FinancialStatementView'
-import DistanceBucketsView from './DistanceBucketsView'
 import PeriodView from './PeriodView'
 import ParentChildrenView from './ParentChildrenView'
 import YearlyBreakdownView from './YearlyBreakdownView'
@@ -32,9 +28,6 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
   const [schema, setSchema] = useState(null)
   const [showNew, setShowNew] = useState(false)
   const [branchCreateOpen, setBranchCreateOpen] = useState(null)
-  // Wizard multi-step opzionale (schema.form_steps) — un modulo senza questa config
-  // resta a singolo step come sempre; nessun impatto sul comportamento esistente.
-  const [wizardStepIdx, setWizardStepIdx] = useState(0)
   const [showReport, setShowReport] = useState(false)
   const [form, setForm] = useState({})
   const [relatedCache, setRelatedCache] = useState({})
@@ -452,13 +445,6 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
   const canCreate = canDo('create')
   const canDelete = canDo('delete')
 
-  // ─── Wizard multi-step (opzionale) ───────────────────────────────────────────
-  // schema.form_steps: [{ titolo, campi: [chiavi campo/relazione], righe_figlio:
-  // [slug modulo figlio] }]. Assente/vuoto -> comportamento invariato (singolo
-  // step, tutto visibile come sempre). Le stesse funzioni di rendering servono
-  // sia al percorso piatto sia a quello a step, per non duplicare il markup.
-  const formSteps = (schema && schema.form_steps) || []
-  const hasWizard = formSteps.length > 0
   const visibleEditableFields = editableFields.filter((f) => {
     if (!f.visible_if || !f.visible_if.enabled || !f.visible_if.field) return true
     const v = String(form[f.visible_if.field] ?? '')
@@ -542,15 +528,6 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
         )}
       </div>
     )
-  }
-
-  // Un passo del wizard è "valido" (si può avanzare) se tutti i campi required
-  // assegnati a quel passo hanno un valore nel form in bozza.
-  const stepIsValid = (step) => {
-    const stepFieldKeys = step.campi || []
-    return visibleEditableFields
-      .filter((f) => f.required && stepFieldKeys.includes(f.key))
-      .every((f) => form[f.key] !== undefined && form[f.key] !== null && form[f.key] !== '')
   }
 
   const previewImportCsv = async (file) => {
@@ -658,7 +635,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
                 </button>
               ))
             ) : canCreate && (
-              <button onClick={() => { setShowNew(true); setWizardStepIdx(0); setForm(workflow && workflow.states && workflow.states.length > 0 ? { _stato: workflow.states[0].key } : {}) }} className="bg-accent hover:opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+              <button onClick={() => { setShowNew(true); setForm(workflow && workflow.states && workflow.states.length > 0 ? { _stato: workflow.states[0].key } : {}) }} className="bg-accent hover:opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
                 <Icon name="plus" size={14} />Nuovo
               </button>
             )}
@@ -730,12 +707,6 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
       {schema && schema.aggregati && schema.aggregati.length > 0 && (
         <div className="mb-6">
           <SchemaReports aggregates={schema.aggregati} defaultModuleSlug={mod.slug} token={token} />
-        </div>
-      )}
-
-      {schema && schema.financial_statements && schema.financial_statements.length > 0 && (
-        <div className="mb-6">
-          <FinancialStatementView config={schema.financial_statements[0]} defaultModuleSlug={mod.slug} token={token} />
         </div>
       )}
 
@@ -811,10 +782,6 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
         <ParentChildrenView config={schema.parent_children_views[0]} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} />
       ) : schema && schema.period_views && schema.period_views.length > 0 ? (
         <PeriodView config={schema.period_views[0]} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} />
-      ) : schema && schema.distance_buckets && schema.distance_buckets.length > 0 ? (
-        <DistanceBucketsView config={schema.distance_buckets[0]} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} />
-      ) : schema && schema.reconciliations && schema.reconciliations.length > 0 ? (
-        <ReconciliationView config={schema.reconciliations[0]} defaultModuleSlug={mod.slug} token={token} />
       ) : mod.list_view === 'card_grid' ? (
         displayRecords.length === 0 ? (
           <div className="bg-surface-card rounded-md p-12 text-center border border-gray-800">
@@ -1089,13 +1056,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
       )}
 
       {showNew && editableFields.length > 0 && (() => {
-        const isLastStep = !hasWizard || wizardStepIdx === formSteps.length - 1
-        const closeAll = () => { setShowNew(false); setForm({}); setEmbeddedRows({}); setWizardStepIdx(0) }
-        const currentStep = hasWizard ? formSteps[wizardStepIdx] : null
-        const stepFieldKeys = currentStep ? (currentStep.campi || []) : null
-        const stepRelations = hasWizard ? relations.filter((r) => stepFieldKeys.includes(r.key)) : relations
-        const stepFields = hasWizard ? visibleEditableFields.filter((f) => stepFieldKeys.includes(f.key)) : visibleEditableFields
-        const stepChildren = hasWizard ? embeddedChildren.filter((c) => (currentStep.righe_figlio || []).includes(c.module_slug)) : embeddedChildren
+        const closeAll = () => { setShowNew(false); setForm({}); setEmbeddedRows({}) }
 
         return (
           <FormDrawer
@@ -1103,35 +1064,24 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
             onClose={closeAll}
             footer={(
               <div className="flex gap-3">
-                {hasWizard && wizardStepIdx > 0 && (
-                  <button onClick={() => setWizardStepIdx((i) => i - 1)} disabled={creating} className="flex-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-white py-3 rounded-lg transition">Indietro</button>
-                )}
-                {(!hasWizard || wizardStepIdx === 0) && (
-                  <button onClick={closeAll} disabled={creating} className="flex-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-white py-3 rounded-lg transition">Annulla</button>
-                )}
-                {isLastStep ? (
-                  <button onClick={create} disabled={creating} className="flex-1 bg-accent hover:opacity-90 disabled:opacity-50 text-white py-3 rounded-lg transition font-medium">{creating ? 'Salvataggio...' : 'Salva'}</button>
-                ) : (
-                  <button onClick={() => setWizardStepIdx((i) => i + 1)} disabled={!stepIsValid(currentStep)} className="flex-1 bg-accent hover:opacity-90 disabled:opacity-50 text-white py-3 rounded-lg transition font-medium">Avanti</button>
-                )}
+                <button onClick={closeAll} disabled={creating} className="flex-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-white py-3 rounded-lg transition">Annulla</button>
+                <button onClick={create} disabled={creating} className="flex-1 bg-accent hover:opacity-90 disabled:opacity-50 text-white py-3 rounded-lg transition font-medium">{creating ? 'Salvataggio...' : 'Salva'}</button>
               </div>
             )}
           >
-            {hasWizard && <Wizard steps={formSteps} currentIndex={wizardStepIdx} />}
-
             <div className="space-y-3 mb-6">
-              {(!hasWizard || wizardStepIdx === 0) && workflow && (
+              {workflow && (
                 <div>
                   <label className="text-xs text-gray-400 block mb-1">Stato iniziale</label>
                   <Select value={form._stato || ''} onChange={(v) => setForm({ ...form, _stato: v })}
                     options={workflow.states.filter((s) => s.initial || true).map((s) => ({ value: s.key, label: s.label }))} />
                 </div>
               )}
-              {stepRelations.map(renderRelationField)}
-              {stepFields.map(renderRegularField)}
+              {relations.map(renderRelationField)}
+              {visibleEditableFields.map(renderRegularField)}
             </div>
 
-            {isLastStep && Object.entries(liveResults).some(([, r]) => r.valid && r.value === true) && (
+            {Object.entries(liveResults).some(([, r]) => r.valid && r.value === true) && (
               <div className="space-y-2 mb-5">
                 {Object.entries(liveResults).filter(([, r]) => r.valid && r.value === true).map(([key, r]) => (
                   <div key={key} className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs rounded-lg px-3 py-2">
@@ -1141,7 +1091,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
               </div>
             )}
 
-            {stepChildren.map(renderChildBlock)}
+            {embeddedChildren.map(renderChildBlock)}
           </FormDrawer>
         )
       })()}
