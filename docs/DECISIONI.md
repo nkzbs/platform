@@ -371,10 +371,13 @@ Seguito del registro precedente, nell'ordine in cui è stato fatto. Tutto è onl
 
 - **Due buchi degli avvisi chiusi**: (1) l'avviso sulle righe nuove non dipende più da come nascono ma da un controllo unico ogni minuto (`avvisi.js`), che copre anche automazioni e importazioni; (2) le mail che sembrano bollette ma da mittenti senza regola si mettono in lista e si segnalano con un messaggio (`gmail-unknown.js`), invece di perdersi in silenzio.
 
+- **"Power up" dell'AI**: Impostazioni → AI con interruttore generale (spento di default; su Finance l'AI è stata lasciata spenta perché Nima la accenda e veda l'effetto), «Accendi e potenzia», chiave
+  e spesa del mese. Con l'AI accesa: **Smista già compilato** dalla bolletta, **Spiega** acceso di default sui widget, **Importa da PDF**, **Chiedi ai dati** (query strutturata validata due volte, mai SQL) e **monitoraggio**
+  mensile su WhatsApp (acceso sui due widget di Finance: primo messaggio il 2 novembre alle 9). Ogni potenziamento usa i ruoli dichiarati dai moduli, senza nomi di Finance nel codice.
+
 ### Ancora aperto (non bloccante)
 
-- **Monitoraggio su WhatsApp**: messaggio periodico con "come sta andando" e commento dell'AI; non costruito.
-- **AI "Importare"** e "Spiegare" su altri widget (Riepilogo mensile, Checklist): non collegati.
+- **"Spiegare"** sugli altri widget (Riepilogo mensile, Checklist): non collegato.
 - **Dati di Finance**: righe "da smistare" vecchie o a 0 €, scadenza A2A 30/04/2028, settembre con 1.100 € ancora "da pagare" (affitto, Spese Casa, rata PayPal), affitto registrato in un solo mese su sei
   (il confronto lo segnala come anomalia), 4 righe scadute, marzo–maggio della Quarta Cartella "da verificare". Il primo riepilogo delle 8:00 sarà rumoroso finché non si puliscono.
 - **Sicurezza, a carico di Nima**: app Google in produzione (altrimenti il collegamento può scadere dopo circa 7 giorni e Gmail si ferma), password del NAS, 2FA del Super Admin.

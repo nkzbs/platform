@@ -344,7 +344,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
       {tab === 'notifiche' && <DigestSettingsTab token={token} features={features} />}
 
 
-      {tab === 'assistente' && <AiSettingsPage token={token} />}
+      {tab === 'assistente' && <AiSettingsPage token={token} onChanged={onFeaturesChanged} />}
 
       {tab === 'export_dati' && canExport && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-w-5xl">

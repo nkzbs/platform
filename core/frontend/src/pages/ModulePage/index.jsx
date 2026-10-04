@@ -11,6 +11,7 @@ import FieldEditorInput from './FieldEditorInput'
 import RecordDetailModal from './RecordDetailModal'
 import ReportPanel from './ReportPanel'
 import AiSuggestionsPanel from '../../components/AiSuggestionsPanel'
+import ImportPdf from '../../components/ImportPdf'
 import SchemaReports from './SchemaReports'
 import BranchCreateModal from './BranchCreateModal'
 import ReconciliationView from './ReconciliationView'
@@ -619,6 +620,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
                 <Icon name="trash" size={14} />{zeroingGiacenze ? 'Azzero...' : 'Azzera tutte le giacenze'}
               </button>
             )}
+            {canCreate && <ImportPdf token={token} mod={mod} onCreated={loadRecords} />}
             <button onClick={exportCsv} className="bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2" title="Esporta CSV">
               <Icon name="download" size={14} />CSV
             </button>

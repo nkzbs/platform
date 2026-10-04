@@ -42,8 +42,8 @@ function moduliAmmessi() {
 }
 
 // Chiede a Super Admin la proposta. Ritorna { suggestion } oppure { error, status, code }.
-async function classify({ mittente, oggetto, testo, rilevato, moduloAttuale, allegati, indizioEnergia }) {
-  const moduli = moduliAmmessi();
+async function classify({ mittente, oggetto, testo, rilevato, moduloAttuale, allegati, indizioEnergia, moduli: moduliDati }) {
+  const moduli = moduliDati || moduliAmmessi();
   if (!Object.keys(moduli).length) return { error: 'Nessun modulo di spese con categorie installato', status: 400 };
   try {
     const res = await fetch(SUPER_ADMIN_URL + '/api/tenant-ai/classify-bill', {
@@ -58,6 +58,20 @@ async function classify({ mittente, oggetto, testo, rilevato, moduloAttuale, all
   } catch (e) {
     return { error: 'Assistente non raggiungibile', status: 502 };
   }
+}
+
+// "Importare": da un PDF caricato a mano (non da una mail) propone i campi di una riga nuova. Solo se il modulo ha "Importare" acceso. Non scrive niente.
+async function proposeFromDocument({ moduleSlug, filename, bytes }) {
+  if (!moduleAi.can(moduleSlug, 'import')) return { error: 'L\'importazione con l\'AI non è accesa su questo modulo.', status: 403 };
+  const att = require('./attachment-text');
+  const pdf = await att.textFromBuffers([{ bytes, filename, mimeType: 'application/pdf' }]);
+  if (!pdf || pdf.trim().length < 20) return { error: 'Non riesco a leggere il testo di questo PDF (forse è una scansione).', status: 422 };
+  const out = await classify({
+    moduli: { [moduleSlug]: { categorie: allowedCategories(moduleSlug) } }, allegati: att.relevantExtract(pdf) || undefined, indizioEnergia: att.energyHint(pdf),
+    mittente: '', oggetto: String(filename || '').replace(/\.pdf$/i, '').slice(0, 120), testo: '', rilevato: { importo: null, scadenza: null }, moduloAttuale: moduleSlug,
+  });
+  if (out.error) return { error: out.error, status: out.status, code: out.code };
+  return { proposta: out.suggestion };
 }
 
 function hasPending(moduleSlug, recordId) {
@@ -180,4 +194,4 @@ async function budget() {
   } catch (e) { return null; }
 }
 
-module.exports = { suggestForRecord, accept, dismiss, listPending, overview, budget, allowedCategories, triageModules };
+module.exports = { proposeFromDocument, suggestForRecord, accept, dismiss, listPending, overview, budget, allowedCategories, triageModules };

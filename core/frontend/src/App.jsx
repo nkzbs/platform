@@ -4,6 +4,7 @@ import { API, notifyUnauthorized, setAuth, clearAuth } from './lib/api'
 import Login from './components/Login'
 import Sidebar from './components/Sidebar'
 import Icon from './components/Icon'
+import AskData from './components/AskData'
 import DashboardPage from './pages/DashboardPage'
 import LibreriaPage from './pages/LibreriaPage'
 import MovimentiPage from './pages/MovimentiPage'
@@ -123,6 +124,7 @@ export default function App() {
   const [builderOpenNew, setBuilderOpenNew] = useState(false)
   const openBuilderNewModule = () => { setBuilderOpenNew(true); setCurrentPage('builder') }
   const [tenantName, setTenantName] = useState('')
+  const [aiOn, setAiOn] = useState(false) // interruttore generale dell'AI
   const [features, setFeatures] = useState({}) // funzioni facoltative accese su questo progetto (da /api/tenant-info)
   const [tenantLogoUrl, setTenantLogoUrl] = useState('')
   const [hidePlatformName, setHidePlatformName] = useState(false)
@@ -166,6 +168,7 @@ export default function App() {
     const data = await res.json()
     setTenantName(data.name || '')
     setFeatures(data.features || {})
+    setAiOn(!!data.ai)
     setTenantLogoUrl((data.logo_url || ''))
     setHidePlatformName(!!data.hide_platform_name)
     setLoginCms(data.login_headline ? {
@@ -244,7 +247,10 @@ export default function App() {
           <button onClick={() => setMobileNavOpen(true)} className="md:hidden text-gray-400 hover:text-ink transition flex-shrink-0" title="Apri menu">
             <Icon name="menu" size={20} />
           </button>
-          <GlobalSearch token={token} modules={installedModules} onNavigate={setCurrentPage} />
+          <div className="flex items-center gap-4">
+            {aiOn && user && user.role === 'admin' && <AskData token={token} />}
+            <GlobalSearch token={token} modules={installedModules} onNavigate={setCurrentPage} />
+          </div>
         </div>
         <div className="p-4 md:p-8">
         {currentPage === 'dashboard' && <DashboardPage user={user} modules={installedModules} token={token} features={features} onNavigate={setCurrentPage} />}

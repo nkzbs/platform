@@ -9,7 +9,7 @@ const moduleRoles = require('./module-roles');
 const FEATURES = {
   triage: { label: 'Smistare', description: 'Propone categoria, importo e scadenza per le righe da smistare.', needs: ['importo', 'categoria', 'stato'] },
   explain: { label: 'Spiegare', description: 'Racconta i numeri del modulo (totali, confronti, anomalie).', needs: ['importo', 'data'] },
-  import: { label: 'Importare', description: 'Legge allegati e PDF e propone le righe da creare.', needs: ['importo', 'data'] },
+  import: { label: 'Importare', description: 'Da un PDF caricato (bolletta, fattura) propone la riga da creare.', needs: ['importo', 'data'] },
 };
 const KEYS = Object.keys(FEATURES);
 
@@ -68,7 +68,7 @@ function overviewModules() {
 }
 
 // "Potenzia": accende, su ogni modulo, i potenziamenti collegati che i suoi ruoli permettono. Ritorna cosa è stato acceso.
-const CONNECTED = ['triage', 'explain'];
+const CONNECTED = ['triage', 'explain', 'import'];
 function powerUp() {
   const out = [];
   for (const m of moduleRoles.list({})) {

@@ -6,6 +6,7 @@ const { logAudit } = require('../audit-log');
 const { status: budgetStatus } = require('../lib/ai-budget');
 const { redact } = require('../lib/ai-redact');
 const reportAi = require('../lib/ai-report');
+const askAi = require('../lib/ai-ask');
 
 const router = express.Router();
 
@@ -171,6 +172,27 @@ router.post('/explain-insights', requireInternalSecret, async (req, res) => {
     const check = reportAi.verifyNumbers(text, s.numeri);
     if (!check.ok) return res.status(502).json({ error: 'Il testo conteneva un numero non presente nei dati (' + check.numero + '): scartato', code: 'ai_unverified' });
     res.json({ text });
+  } catch (e) {
+    res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
+  }
+});
+
+// ─── "Chiedi ai tuoi dati" ───────────────────────────────────────────────────────
+// Il tenant manda la domanda e il catalogo dei moduli (mai record). Torna una query strutturata, validata qui contro il catalogo;
+// il tenant la rivalida e la esegue con il suo codice.
+router.post('/ask-data', requireInternalSecret, async (req, res) => {
+  const { tenant_slug, data } = req.body || {};
+  if (!tenant_slug) return res.status(400).json({ error: 'tenant_slug obbligatorio' });
+  const s = askAi.sanitizeAsk(data);
+  if (s.error) return res.status(400).json({ error: s.error });
+  if (!isProviderConfigured('mistral', tenant_slug)) return res.status(503).json({ error: 'Nessuna chiave Mistral: inseriscila in Impostazioni → AI.', code: 'ai_not_configured' });
+  try {
+    const text = await callAI('mistral', { system: askAi.ASK_PROMPT, user: JSON.stringify(s.payload), maxTokens: 300, tenantSlug: tenant_slug });
+    const raw = parseJsonObject(text);
+    if (!raw) return res.status(502).json({ error: 'Risposta dell\'AI non valida' });
+    const v = askAi.validateQuery(raw, s.payload.catalogo);
+    if (v.error) return res.status(422).json({ error: v.error, code: 'ai_unanswerable' });
+    res.json({ query: v.query });
   } catch (e) {
     res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
   }

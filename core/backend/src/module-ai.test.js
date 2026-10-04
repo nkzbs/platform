@@ -60,8 +60,8 @@ test('"Potenzia" accende i potenziamenti collegati dove i ruoli lo permettono, e
   roles.set('entrate_t', { kind: 'entrata', uses: [], roles: { importo: 'importo', data: 'data' } });
   ai.set('spese_casa', []);
   const out = ai.powerUp();
-  assertEq(out.find((m) => m.slug === 'spese_casa').attivati, ['triage', 'explain']);
-  assertEq(out.find((m) => m.slug === 'entrate_t').attivati, ['explain'], 'senza stato e categoria non si può smistare');
+  assertEq(out.find((m) => m.slug === 'spese_casa').attivati, ['triage', 'explain', 'import']);
+  assertEq(out.find((m) => m.slug === 'entrate_t').attivati, ['explain', 'import'], 'senza stato e categoria non si può smistare');
   assertEq(ai.powerUp(), [], 'rilanciare non cambia niente');
   assertEq(ai.overviewModules().find((m) => m.slug === 'entrate_t').features.find((f) => f.key === 'triage').missing_roles, ['categoria', 'stato']);
 });

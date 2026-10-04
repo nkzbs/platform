@@ -4,14 +4,16 @@ import Icon from './Icon'
 
 // Impostazioni → AI: un posto solo per accendere l'AI. Interruttore generale, chiave Mistral, spesa del mese e, per ogni modulo che ha dichiarato
 // a cosa serve, i potenziamenti. «Accendi e potenzia» accende tutto quello che i ruoli dei moduli permettono. L'AI propone o racconta, non scrive da sola.
-const SOON = { import: 'In arrivo' }
+const SOON = {}
 const EFFETTI = [
   ['Smista già compilato', 'Aprendo «Smista» su una bolletta, l\'AI ha già letto il PDF e propone categoria, importo e scadenza: confermi con un clic.'],
   ['Spiega con l\'AI', 'Su «Come sta andando» e sui report dei moduli compare il pulsante che racconta i numeri.'],
   ['Mail da leggere', 'Le bollette in arrivo dai mittenti con una regola hanno già la loro proposta pronta.'],
+  ['Importa da PDF', 'Nel modulo compare «Importa da PDF»: carichi una bolletta e l\'AI propone la riga.'],
+  ['Chiedi ai dati', 'In alto compare «Chiedi ai dati»: fai una domanda sui tuoi numeri e ricevi la risposta, con il filtro usato.'],
 ]
 
-export default function AiSettingsPage({ token }) {
+export default function AiSettingsPage({ token, onChanged }) {
   const api = useApi(token)
   const [st, setSt] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -26,11 +28,11 @@ export default function AiSettingsPage({ token }) {
     setBusy(true); setMsg(null)
     const res = await api.post('/ai/power-up', {})
     setBusy(false)
-    if (res.ok) { setFatto(res.data.attivati || []); await load() } else setMsg({ ok: false, text: (res.data && res.data.error) || 'Non sono riuscito ad accendere l\'AI.' })
+    if (res.ok) { setFatto(res.data.attivati || []); await load(); if (onChanged) onChanged() } else setMsg({ ok: false, text: (res.data && res.data.error) || 'Non sono riuscito ad accendere l\'AI.' })
   }
   const spegni = async () => {
     if (!window.confirm('Spegnere l\'AI? Nessun potenziamento lavora finché non la riaccendi. Le impostazioni dei moduli restano.')) return
-    setBusy(true); await api.put('/ai/settings', { enabled: false }); setBusy(false); setFatto(null); load()
+    setBusy(true); await api.put('/ai/settings', { enabled: false }); setBusy(false); setFatto(null); load(); if (onChanged) onChanged()
   }
   const toggleFeature = async (m, key) => {
     const on = m.features.filter((f) => f.enabled).map((f) => f.key)
@@ -77,7 +79,7 @@ export default function AiSettingsPage({ token }) {
           <div className="text-sm font-semibold text-green-400 mb-1">Potenziato</div>
           {fatto.length === 0
             ? <div className="text-xs text-gray-400">Nessun modulo da potenziare: o lo sono già tutti, o nessun modulo ha ancora dichiarato i suoi ruoli (Builder → Ruoli del modulo).</div>
-            : <ul className="text-xs text-gray-300 space-y-0.5 mb-3">{fatto.map((m) => <li key={m.slug}><span className="text-ink font-medium">{m.name}</span>: {m.attivati.map((k) => (k === 'triage' ? 'Smistare' : k === 'explain' ? 'Spiegare' : k)).join(', ')}</li>)}</ul>}
+            : <ul className="text-xs text-gray-300 space-y-0.5 mb-3">{fatto.map((m) => <li key={m.slug}><span className="text-ink font-medium">{m.name}</span>: {m.attivati.map((k) => (k === 'triage' ? 'Smistare' : k === 'explain' ? 'Spiegare' : k === 'import' ? 'Importare' : k)).join(', ')}</li>)}</ul>}
           <div className="text-[11px] uppercase tracking-wide text-gray-500 mb-1.5">Cosa vedrai adesso</div>
           <div className="space-y-1.5">{EFFETTI.map(([t, d]) => <div key={t} className="text-xs"><span className="text-ink font-medium">{t}.</span> <span className="text-gray-400">{d}</span></div>)}</div>
         </section>

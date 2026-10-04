@@ -192,16 +192,31 @@ I widget sono dati (`dashboard_widgets`: tipo, configurazione, ruoli e utenti ch
 
 ## Assistente AI (Mistral)
 
-L'AI **non è una funzione globale**: ogni modulo accende da solo i potenziamenti che vuole (Builder → Proprietà → "Potenziamenti AI", `module-ai.js`, tabella
-`module_ai`, rotte `/api/module-ai`). `can(modulo, potenziamento)` è l'unico punto che dice se è attivo: acceso **e** con i ruoli richiesti dichiarati
-(smistare: importo, categoria, stato; spiegare e importare: importo, data). Senza interruttore un modulo non ha AI. L'AI **propone o racconta**,
-non scrive mai da sola nei dati.
+C'è un **interruttore generale** (Impostazioni → AI, `module-ai.js` `masterOn`, colonna `tenant_settings.ai_enabled`, spento di default): spento, nessun potenziamento
+lavora e i pulsanti spariscono. Acceso, ogni modulo accende da solo i potenziamenti che vuole (Impostazioni → AI → "Potenziamenti per modulo", o Builder → Proprietà → "Potenziamenti AI";
+tabella `module_ai`, rotte `/api/module-ai`). `can(modulo, potenziamento)` è l'unico punto che dice se è attivo: master acceso, potenziamento acceso **e** ruoli richiesti dichiarati
+(smistare: importo, categoria, stato; spiegare e importare: importo, data). **«Accendi e potenzia»** (`POST /api/ai/power-up`) accende il master e, su ogni modulo, tutto ciò che i suoi ruoli
+permettono. L'AI **propone o racconta**, non scrive mai da sola nei dati. La pagina mostra anche la chiave Mistral e la spesa del mese rispetto al tetto.
 
-| Potenziamento | Stato | Cosa fa |
-|---|---|---|
-| **Smistare** (`triage`) | collegato | Per le bollette in arrivo da Gmail propone categoria, importo, scadenza e fornitore. La proposta compare sopra l'elenco del modulo; "Accetta" applica i campi **senza cambiare lo stato** (lo smisti tu), "Ignora" la chiude |
-| **Spiegare** (`explain`) | collegato | Pulsante «Spiega con l'AI» nei report del modulo (`ReportPanel.jsx`, `POST /api/ai/explain-report`, serve il modulo con "Spiegare" acceso). Per i widget "Come sta andando" si accende dal widget (casella "Spiegabile", `config.explainable`) |
-| **Importare** (`import`) | non collegato | Progettato: leggere allegati e PDF e proporre le righe |
+| Potenziamento | Cosa fa |
+|---|---|
+| **Smistare** (`triage`) | Per le bollette in arrivo da Gmail prepara categoria, importo, scadenza e fornitore. Apri «Smista» sulla riga e il pannello è **già compilato** («L'AI ha letto la bolletta: Elettricità, 44,00 €…», `POST /api/smista/:modulo/:id/proposta`); confermi con un clic, e la proposta si chiude come accettata. Anche sopra l'elenco del modulo; "Accetta" non cambia lo stato |
+| **Spiegare** (`explain`) | Pulsante «Spiega con l'AI» nei report del modulo (`POST /api/ai/explain-report`) e sui widget «Come sta andando». Con l'AI accesa i widget sono spiegabili **di default**; si spegne dalla casella del widget (`config.explainable: false`) |
+| **Importare** (`import`) | «Importa da PDF» nella pagina del modulo (`ImportPdf.jsx`): carichi una bolletta o una fattura (max 3 MB), l'AI legge il PDF e propone i campi (`POST /api/ai/import/:modulo/proposta`, non scrive); confermi e la riga nasce nello stato «nuovo» con il PDF allegato (`/crea`), poi passa dalla coda «Da smistare». A Super Admin va solo un estratto del testo, mai il file |
+
+### Chiedi ai dati
+
+Pulsante «Chiedi ai dati» in alto (solo admin, solo con l'AI accesa). Una domanda ("quanto ho speso di luce nel 2025?") diventa una **query strutturata, mai SQL**: il tenant manda a Super Admin
+(`/api/tenant-ai/ask-data`) la domanda (ripulita dai dati personali) e il **catalogo** dei moduli con importo dichiarato (nomi, ruoli, categorie ammesse: nessun record). `lib/ai-ask.js` valida la risposta
+del modello contro il catalogo (modulo e ruoli esistenti, calcolo tra somma/conteggio/media/massimo/minimo, filtri uguale/contiene/maggiore/minore, categoria tra quelle ammesse, periodo valido, al
+massimo 4 filtri, la data solo come periodo). Il progetto la **rivalida** (`ask-data.js`) e la **esegue con il proprio codice**, rispettando i permessi del modulo; le righe nello stato «nuovo» e a data
+incerta non contano e il risultato dice quante sono state escluse. La risposta mostra il numero, il dettaglio per mese/anno/categoria e **cosa è stato capito** (modulo, calcolo, filtri, periodo), così si controlla.
+
+### Monitoraggio mensile
+
+Ogni widget «Come sta andando» ha la casella «Invia ogni mese su WhatsApp» (`config.monitor`). Il giorno 2 alle 9 (ora italiana) `monitor.js` manda un messaggio per widget con l'ultimo mese concluso:
+numeri della sua vista, cose da guardare e, con l'AI accesa e se risponde, il commento. Senza AI il messaggio parte lo stesso, coi soli numeri. Va ai destinatari con il tag «report»; ogni mese si invia
+una volta sola (`monitor_sent`). Anteprima di sola lettura: `GET /api/insights/monitor-preview?widget=ID`.
 
 Il flusso dello smistamento:
 

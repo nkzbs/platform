@@ -134,8 +134,11 @@ app.get('/api/tenant-info', (req, res) => {
   } catch (e) { /* tabella non ancora pronta: fallback ai default, mai bloccare il login */ }
   let enabledFeatures = {};
   try { enabledFeatures = features.all(); } catch (e) { /* tabella non pronta */ }
+  let aiOn = false;
+  try { aiOn = require('./module-ai').masterOn(); } catch (e) { /* tabella non pronta */ }
   res.json({
     features: enabledFeatures,
+    ai: aiOn, // interruttore generale dell'AI (Impostazioni → AI): mostra o nasconde «Chiedi ai dati»
     name: process.env.TENANT_NAME || null,
     logo_url: branding.logo_url,
     accent_color: branding.accent_color,
