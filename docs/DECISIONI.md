@@ -353,7 +353,7 @@ Seguito del registro precedente, nell'ordine in cui è stato fatto. Tutto è onl
 - **Via i nomi di Finance dai valori di riserva** (riepilogo, insights, Gmail, capacità, frontend). Restano solo la migrazione `FINANCE` in `module-roles.js` e i
   Movimenti bancari, che **non si rendono modulari perché non servono** (spenti su Finance). La migrazione scrive i valori una volta sola: chi ha spento tutto apposta non li ritrova.
 - **Regola Gmail con tipo** (*bolletta* o *semplice*) e modulo di destinazione; la riga usa campi e stato dichiarati dal modulo.
-- **Coda "Da smistare" in dashboard** con pulsante **Smista** (transizione normale del modulo). **L'AI non c'entra**: non legge e non smista. Se un modulo ha "Smistare"
+- **Coda "Da smistare" in dashboard** con pulsante **Smista**: apre un pannello con tre scelte (un pagamento, in rate, già pagata) invece del clic cieco di prima; l'utente aveva chiesto di capire dove va la riga e come dividere il pagamento. Le rate usano il piano del modulo dei debiti (la sua automazione genera le righe), dichiarato dal modulo come "piano a rate". **L'AI non c'entra**: non legge e non smista. Se un modulo ha "Smistare"
   acceso, l'AI propone solo nell'elenco del modulo, e "Accetta" non cambia lo stato.
 - **"Come sta andando" per vista**: un widget per Personale e uno per Casa. La vista (moduli, gruppi, accantonamento, **solo spese**) è nella configurazione del widget e la legge
   il server. Casa è di sole spese: i contributi alla casa non servono come entrate, "in Spese casa io vedo le cose".
@@ -366,6 +366,8 @@ Seguito del registro precedente, nell'ordine in cui è stato fatto. Tutto è onl
   Resta una riga a cavallo della mezzanotte (09/06/2023, 07:00–00:00) con durata calcolata negativa: la formula fa uscita meno entrata. Nel modulo c'è una bozza più vecchia della versione pubblicata: non va pubblicata.
 - **Accesso di Federica**: scelta moduli per utente (Utenti & Ruoli → "Moduli accessibili": Timbrature e Spese casa). Nasconde dal menu ma non blocca l'API; se non si spunta nulla l'utente vede tutto.
   I widget della dashboard sono tutti solo admin.
+
+- **Widget generici e facili da usare**: l'elenco dei tipi è in gruppi con una riga di spiegazione, e i widget di finanza compaiono solo nei progetti che hanno spese o entrate ("deve essere generico e facile da usare"). Riepilogo mensile e Come sta andando restano widget di finanza, non resi configurabili fino a perdere il vocabolario.
 
 ### Ancora aperto (non bloccante)
 

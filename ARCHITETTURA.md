@@ -160,7 +160,7 @@ campi scritti nel codice (`module-roles.js`, tabella `module_roles`, rotte `/api
 |---|---|
 | **Tipo** (spesa, entrata) e **usi** (riepiloghi, avvisi, mail) | Quali moduli entrano in "Come sta andando", nel riepilogo del mattino, tra le destinazioni delle regole Gmail |
 | **Ruoli dei campi** (importo, data, scadenza, categoria, descrizione, stato, gruppo, fisso) | Quale campo del modulo è l'importo, la data... Un campo senza ruolo non viene letto né scritto |
-| **Avvisi**: stato "nuovo" e "da fare", avviso su riga nuova, scadenze nel riepilogo, come si chiamano le righe ("bolletta/bollette"), etichetta breve, tag destinatari | Parole e stati dei messaggi WhatsApp e della coda "Da smistare" |
+| **Avvisi**: stato "nuovo", "da fare" e "fatto", piano a rate, avviso su riga nuova, scadenze nel riepilogo, come si chiamano le righe ("bolletta/bollette"), etichetta breve, tag destinatari | Parole e stati dei messaggi WhatsApp e della coda "Da smistare" |
 | **Criteri dei riepiloghi** (entrate): categorie, gruppi e descrizioni escluse, categorie stipendio e risparmio, campo accantonamento | Cosa non conta come entrata, cosa è stipendio, cosa è risparmio |
 
 I valori di Finance (`spese_personali`, `spese_casa`, `entrate`) sono dichiarati da una **migrazione** all'avvio (`seedIfEmpty`, una volta sola per modulo:
@@ -169,11 +169,15 @@ una scelta fatta dal Builder, anche "tutto spento", non si ripristina). Un modul
 
 ## Dashboard: widget
 
-I widget sono dati (`dashboard_widgets`: tipo, configurazione, ruoli e utenti che li vedono). Oltre a KPI, tabelle, checklist e riepiloghi:
+I widget sono dati (`dashboard_widgets`: tipo, configurazione, ruoli e utenti che li vedono). "Aggiungi widget" li elenca in gruppi: **Numeri** (KPI, KPI per periodo, numero da formula), **Elenchi** (tabella, checklist, coda), **Andamenti** (mesi dell'anno, per categoria, per settimana) e **Finanza** (riepilogo mensile, come sta andando), quest'ultimo solo se il progetto ha moduli dichiarati come spese o entrate. Ogni tipo ha sotto una riga che dice cosa fa. Oltre ai widget generici:
 
-- **Coda da smistare** (`coda`, `QueueWidget.jsx`): le righe nello stato "nuovo" di tutti i moduli che lo hanno dichiarato. Il pulsante **Smista** cambia lo stato
-  da "nuovo" a "da fare" con la transizione normale del modulo (`POST /api/records/:slug/:id/transition`: permessi, controlli, storico e automazioni come sempre).
-  L'AI non c'entra: è un click.
+- **Coda da smistare** (`coda`, `QueueWidget.jsx`): le righe nello stato "nuovo" di tutti i moduli che lo hanno dichiarato. Il pulsante **Smista** apre un pannello
+  (`SmistaPanel.jsx`) con importo, scadenza e categoria modificabili e tre scelte, eseguite dal server (`POST /api/smista/:modulo/:id`, `routes/smista.js`):
+  **un pagamento** (da "nuovo" a "da fare"), **in rate** (crea il piano nel modulo dichiarato e lascia che la sua automazione generi le rate; le rate sostituiscono
+  la riga e il PDF passa alla prima; se nessuna rata viene generata si annulla tutto) e **già pagata** (passa per "da fare" fino a "fatto", con la data di pagamento).
+  Le transizioni devono esistere nel workflow del modulo; la risposta dice dove è finita la riga. L'AI non c'entra: è un click.
+  Il modulo dichiara in Avvisi gli stati "nuovo", "da fare" e "fatto" e il **piano a rate** (modulo dei piani e i suoi cinque campi: nome, importo totale, numero rate,
+  importo rata, data prima rata); senza piano dichiarato la scelta "in rate" non compare.
 - **Come sta andando** (`come_sta_andando`): uno o più widget, ciascuno con la sua **vista** nella configurazione: moduli di spese, gruppi di entrate inclusi,
   se conta l'accantonamento, **solo spese** (per la casa: spese pagate e da pagare, fisse e variabili, categorie e confronti, senza entrate, saldo e risparmio).
   La vista la legge il server dal widget salvato (`GET /api/insights?widget=ID`), mai dal browser; la spiegazione salvata ha chiave per widget (`2026-09@w14`).
