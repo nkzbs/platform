@@ -175,3 +175,10 @@ docker logs --tail 50 super-admin-backend
 - Il Mac non è affidabile per costruire le immagini (Docker Desktop può bloccarsi scaricando le immagini base
   e produce arm64): si costruisce sul NAS, come fa `redeploy-nas.sh`.
 - Un tenant si può tenere sul solo volume dati anche con il container fermo: i dati non dipendono dal container.
+
+## Aggiornare un tenant (Super Admin → Tenant → Aggiorna)
+- Il pulsante **Aggiorna** sulla riga del tenant ricrea il container con l'ultima immagine, sullo stesso volume dati (i dati non si toccano). Si apre un popup con i passi veri e, a fine corsa, **AGGIORNATO** solo dopo che il tenant risponde. Se c'è una sessione attiva (ultimi 3 minuti) avvisa e offre "Aggiorna comunque".
+- Da script: `bash scripts/redeploy-nas.sh core` costruisce l'immagine, poi chiede il login a Super Admin per ricreare i tenant. Con il 2FA attivo il login dello script fallisce: l'immagine resta pronta e si preme **Aggiorna** a mano. Lo script non ritenta più il login se viene rifiutato (ogni tentativo conta nel limite di 10 ogni 5 minuti).
+
+## Se Finance o Super Admin danno 521 da Cloudflare
+Cloudflare punta alla porta 4000, cioè al container `platform-nginx`. Se è fermo (`docker ps -a`), si riavvia con `docker start platform-nginx`. Capitato dopo un riavvio notturno del NAS (2026-10-06 → 10-10): il container aveva il riavvio automatico ma non è ripartito, causa non accertata.
