@@ -988,23 +988,38 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
         </div>
       )}
       {upd && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-          <div className="bg-surface-card border border-gray-800 rounded-lg w-full max-w-lg shadow-xl">
-            <div className="px-5 pt-5 pb-3">
-              <h2 className="text-base font-semibold text-ink">Aggiornamento di {upd.t.name}</h2>
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-surface-card border border-gray-800 rounded-xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="px-6 pt-6 pb-4 flex items-center gap-3">
+              <div className={'w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ' + (upd.state === 'ok' ? 'bg-green-500/15 text-green-500' : upd.state === 'ko' ? 'bg-red-500/15 text-red-500' : upd.state === 'busy' ? 'bg-amber-500/15 text-amber-500' : 'bg-cp-primary/15 text-cp-primary')}>
+                <Icon name={upd.state === 'ok' ? 'check' : upd.state === 'ko' ? 'alert-triangle' : 'refresh'} size={18} className={upd.state === 'running' ? 'animate-spin' : ''} />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold text-ink leading-tight">{upd.state === 'ok' ? 'Aggiornato' : upd.state === 'ko' ? 'Non aggiornato' : upd.state === 'busy' ? 'Sessione attiva' : 'Aggiornamento in corso'}</h2>
+                <div className="text-sm text-gray-500">{upd.t.name}</div>
+              </div>
             </div>
-            <div className="mx-5 mb-3 bg-black/30 rounded-md p-3 max-h-64 overflow-y-auto font-mono text-xs text-gray-300 space-y-1">
-              {upd.lines.map((l, i) => (
-                <div key={i}><span className="text-gray-600">{new Date(l.at).toLocaleTimeString('it-IT')}</span> {l.msg}</div>
-              ))}
-              {upd.state === 'running' && <div className="text-gray-500">…</div>}
-            </div>
-            {upd.state === 'ok' && <div className="mx-5 mb-3 rounded-md bg-green-900/30 border border-green-900/50 text-green-400 text-center font-bold tracking-wide py-3">AGGIORNATO</div>}
-            {upd.state === 'ko' && <div className="mx-5 mb-3 rounded-md bg-red-900/30 border border-red-900/50 text-red-400 text-center py-3"><div className="font-bold tracking-wide">NON AGGIORNATO</div>{upd.note && <div className="text-xs mt-1">{upd.note}</div>}</div>}
-            {upd.state === 'busy' && <div className="mx-5 mb-3 rounded-md bg-amber-900/20 border border-amber-900/40 text-amber-400 text-sm text-center py-3">{upd.note}. Aggiornando, l'utente collegato viene scollegato per qualche secondo.</div>}
-            <div className="px-5 pb-5 flex justify-end gap-2">
-              {upd.state === 'busy' && <button onClick={() => runUpdate(upd.t, true)} className="text-sm px-4 py-2 rounded-lg bg-cp-primary hover:bg-cp-primary-hover text-white">Aggiorna comunque</button>}
-              <button onClick={() => setUpd(null)} disabled={upd.state === 'running'} className="text-sm px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 disabled:opacity-40">{upd.state === 'running' ? 'Attendi…' : 'Chiudi'}</button>
+            <ol className="px-6 pb-4 space-y-2.5 max-h-72 overflow-y-auto">
+              {upd.lines.map((l, i) => {
+                const last = i === upd.lines.length - 1
+                const working = upd.state === 'running' && last
+                return (
+                  <li key={i} className="flex items-start gap-3 text-sm">
+                    <span className="mt-0.5 w-4 h-4 flex-shrink-0 flex items-center justify-center">
+                      {working ? <Icon name="refresh" size={14} className="animate-spin text-cp-primary" /> : <Icon name="check" size={14} className="text-green-500" />}
+                    </span>
+                    <span className="flex-1 text-ink">{l.msg}</span>
+                    <span className="text-xs text-gray-500 tabular-nums mt-0.5">{new Date(l.at).toLocaleTimeString('it-IT')}</span>
+                  </li>
+                )
+              })}
+            </ol>
+            {upd.state === 'ok' && <div className="mx-6 mb-5 rounded-lg bg-green-500/10 border border-green-500/30 text-green-600 text-center font-semibold tracking-wide py-3">AGGIORNATO</div>}
+            {upd.state === 'ko' && <div className="mx-6 mb-5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-600 text-center py-3"><div className="font-semibold tracking-wide">NON AGGIORNATO</div>{upd.note && <div className="text-xs mt-1 px-3">{upd.note}</div>}</div>}
+            {upd.state === 'busy' && <div className="mx-6 mb-5 text-sm text-gray-500">{upd.note}. Aggiornando, l'utente collegato viene scollegato per qualche secondo.</div>}
+            <div className="px-6 py-4 border-t border-gray-800 flex justify-end gap-2">
+              {upd.state === 'busy' && <button onClick={() => runUpdate(upd.t, true)} className="text-sm px-4 py-2 rounded-lg bg-cp-primary hover:bg-cp-primary-hover text-white transition">Aggiorna comunque</button>}
+              <button onClick={() => setUpd(null)} disabled={upd.state === 'running'} className="text-sm px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 transition disabled:opacity-40">{upd.state === 'running' ? 'Attendi…' : 'Chiudi'}</button>
             </div>
           </div>
         </div>
