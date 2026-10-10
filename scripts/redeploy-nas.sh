@@ -59,8 +59,12 @@ if has core; then
   PW=$(cat "$BK/nas-super-admin-password.txt")
   api() { curl -s -X "$1" -H 'Host: admin.platform-core.it' -H 'Content-Type: application/json' ${TOKEN:+-H "Authorization: Bearer $TOKEN"} ${3:+-d "$3"} "http://192.168.1.2:4000/api$2"; }
   for i in $(seq 1 15); do
-    TOKEN=$(api POST /auth/login "{\"username\":\"admin\",\"password\":\"$PW\"}" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{process.stdout.write(JSON.parse(s).token||'')}catch(e){}})")
-    [ -n "$TOKEN" ] && break; sleep 2
+    RESP=$(api POST /auth/login "{\"username\":\"admin\",\"password\":\"$PW\"}")
+    TOKEN=$(printf '%s' "$RESP" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{process.stdout.write(JSON.parse(s).token||'')}catch(e){}})")
+    [ -n "$TOKEN" ] && break
+    # Super Admin che risponde con un JSON (password errata, 2FA, troppi tentativi) NON si riprova: ogni tentativo conta nel limite di accesso.
+    printf '%s' "$RESP" | grep -q '^{' && { echo "Super Admin rifiuta il login: $RESP" | head -c 200; echo; exit 1; }
+    sleep 2
   done
   [ -n "$TOKEN" ] || { echo "Login a Super Admin fallito"; exit 1; }
   api POST /tenants/redeploy-all '{}' | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const o=JSON.parse(s);for(const r of (o.results||o)) console.log('  ',r.slug,'->',r.ok?'aggiornato':('saltato: '+(r.skipped||r.error)))}catch(e){console.log(s.slice(0,300))}})"
