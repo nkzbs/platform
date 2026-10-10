@@ -450,24 +450,79 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
               )}
               {w.type === 'riepilogo_mensile' && (() => {
                 const d = data
-                const riga = (lbl, val, bold, colore) => (
-                  <div className={'flex items-center justify-between text-sm py-1.5 border-b border-gray-800/50 last:border-0' + (bold ? ' font-semibold' : '')}>
-                    <span className={bold ? 'text-ink' : 'text-gray-400'}>{lbl}</span>
-                    <span className={'font-mono ' + (bold ? 'text-ink' : 'text-gray-300')} style={colore ? { color: colore } : undefined}>{(val || 0).toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 })}</span>
+                const n = (v) => Number(v) || 0
+                const eur = (v) => n(v).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })
+                const intero = (v) => { const [a, b] = Math.abs(n(v)).toFixed(2).split('.'); return { segno: n(v) < 0 ? '−' : '', a: Number(a).toLocaleString('it-IT'), b } }
+                const sp = intero(d.spendibile)
+                const ok = n(d.spendibile) >= 0
+                const colore = ok ? '#10B981' : '#EF4444'
+                const base = Math.max(n(d.entrateTotale), n(d.uscite), 1)
+                const pc = (v) => Math.max(0, Math.min(100, (n(v) / base) * 100))
+                const usato = n(d.entrateTotale) > 0 ? Math.round((n(d.uscite) / n(d.entrateTotale)) * 100) : null
+                const { anno, mese } = meseTarget((w.config || {}).giorno_cutoff)
+                const nomeMese = new Date(anno, mese, 1).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })
+                const tot = Math.max(n(d.fissa) + n(d.variabile), 1)
+                const Voce = ({ label, value, col }) => (
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[11px] uppercase tracking-wide text-gray-500">{label}</div>
+                    <div className="text-sm font-semibold tabular-nums" style={{ color: col || undefined }}>{eur(value)}</div>
                   </div>
                 )
                 return (
-                  <div className="p-5">
-                    <div className="text-sm font-medium text-ink mb-2">{w.label}</div>
-                    {riga('Entrate', d.entrateTotale)}
-                    {riga('Uscite', d.uscite)}
-                    {riga('Fissa', d.fissa)}
-                    {riga('Variabile', d.variabile)}
-                    {riga('Previsto Carta', d.prevCarta)}
-                    {riga('Previsto Conto', d.prevConto)}
-                    {riga('Pagato', d.pagato, false, '#10B981')}
-                    {riga('Da Pagare', d.daPagare, false, '#F59E0B')}
-                    {riga('Spendibile', d.spendibile, true, d.spendibile >= 0 ? '#10B981' : '#F87171')}
+                  <div className="p-5 h-full flex flex-col">
+                    <div className="flex items-baseline justify-between mb-4">
+                      <div className="text-sm font-semibold text-ink">{w.label}</div>
+                      <div className="text-xs text-gray-500 capitalize">{nomeMese}</div>
+                    </div>
+
+                    <div className="rounded-xl px-4 py-4 mb-4" style={{ background: colore + '14', border: '1px solid ' + colore + '33' }}>
+                      <div className="text-[11px] uppercase tracking-wide text-gray-500">Ancora spendibile</div>
+                      <div className="flex items-baseline gap-0.5 tabular-nums" style={{ color: colore }}>
+                        <span className="text-4xl font-bold tracking-tight">{sp.segno}{sp.a}</span>
+                        <span className="text-xl font-semibold">,{sp.b}</span>
+                        <span className="text-xl font-semibold ml-1">€</span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {usato === null ? 'Nessuna entrata registrata per questo mese' : ok ? 'Hai usato il ' + usato + '% delle entrate' : 'Hai superato le entrate del ' + (usato - 100) + '%'}
+                      </div>
+                    </div>
+
+                    <div className="mb-1 flex items-center justify-between text-xs text-gray-500">
+                      <span>Uscite sul mese</span>
+                      <span className="tabular-nums">{eur(d.uscite)} su {eur(d.entrateTotale)}</span>
+                    </div>
+                    <div className="relative h-3 rounded-full bg-gray-800/60 overflow-visible mb-2">
+                      <div className="absolute inset-y-0 left-0 rounded-l-full" style={{ width: pc(d.pagato) + '%', background: '#10B981', borderRadius: pc(d.daPagare) ? '9999px 0 0 9999px' : 9999 }} />
+                      <div className="absolute inset-y-0" style={{ left: pc(d.pagato) + '%', width: pc(d.daPagare) + '%', background: '#F59E0B', borderRadius: pc(d.pagato) ? '0 9999px 9999px 0' : 9999 }} />
+                      {n(d.entrateTotale) > 0 && n(d.uscite) > n(d.entrateTotale) && <div className="absolute -top-1 -bottom-1 w-0.5 bg-ink/70" style={{ left: pc(d.entrateTotale) + '%' }} title="Entrate del mese" />}
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
+                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: '#10B981' }} />Pagato {eur(d.pagato)}</span>
+                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: '#F59E0B' }} />Da pagare {eur(d.daPagare)}</span>
+                    </div>
+
+                    <div className="flex gap-4 py-3 border-t border-gray-800">
+                      <Voce label="Entrate" value={d.entrateTotale} col="#10B981" />
+                      <Voce label="Uscite" value={d.uscite} />
+                    </div>
+
+                    <div className="py-3 border-t border-gray-800">
+                      <div className="flex items-center justify-between text-xs text-gray-500 mb-1.5">
+                        <span>Fisse <b className="text-ink font-semibold tabular-nums">{eur(d.fissa)}</b></span>
+                        <span>Variabili <b className="text-ink font-semibold tabular-nums">{eur(d.variabile)}</b></span>
+                      </div>
+                      <div className="flex h-2 rounded-full overflow-hidden bg-gray-800/60">
+                        <div style={{ width: (n(d.fissa) / tot) * 100 + '%', background: '#6366F1' }} />
+                        <div style={{ width: (n(d.variabile) / tot) * 100 + '%', background: '#A5B4FC' }} />
+                      </div>
+                    </div>
+
+                    {(n(d.prevCarta) > 0 || n(d.prevConto) > 0) && (
+                      <div className="flex gap-4 pt-3 border-t border-gray-800 mt-auto">
+                        <Voce label="Dal conto" value={d.prevConto} />
+                        <Voce label="Dalla carta" value={d.prevCarta} />
+                      </div>
+                    )}
                   </div>
                 )
               })()}
