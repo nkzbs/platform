@@ -90,7 +90,16 @@ function PropertiesPanel({ token, baseUrl, mod, schema, fieldCache, allModules, 
             <div className="border-t border-gray-800 pt-3">
               <Toggle checked={mod.active !== 0} onChange={(v) => onUpdate({ active: v })} label="Visibile in sidebar" />
               <Toggle checked={mod.quick_toggle !== 0} onChange={(v) => onUpdate({ quick_toggle: v })} label="Cerchio rapido in tabella" hint="Utile per pagamenti/scadenze, fuorviante su workflow generici." />
-              <Toggle checked={mod.list_view === 'card_grid'} onChange={(v) => onUpdate({ list_view: v ? 'card_grid' : 'table' })} label="Vista a card" hint="Griglia di card colorate invece di una tabella." />
+              <div className="py-2">
+                <label className="text-xs text-gray-400 block mb-1">Come si vede l'elenco</label>
+                <select value={mod.list_view === 'card_grid' || mod.list_view === 'archive' ? mod.list_view : 'table'} onChange={(e) => onUpdate({ list_view: e.target.value })}
+                  className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent">
+                  <option value="table">Tabella</option>
+                  <option value="card_grid">Card colorate</option>
+                  <option value="archive">Archivio (cartelle e anteprima file)</option>
+                </select>
+                {mod.list_view === 'archive' && <div className="text-[11px] text-gray-500 mt-1">Cartelle = il primo campo «scelta»; i file = il primo campo «file» del modulo.</div>}
+              </div>
             </div>
 
             {fileFields.length > 0 && (

@@ -638,7 +638,7 @@ router.patch('/:slug', requireAuth, requireAdmin, (req, res) => {
   // stringa vuota vuol dire "nessuna sezione", mostrato in cima senza intestazione.
   if (group_name !== undefined) db.prepare('UPDATE modules SET group_name = ? WHERE slug = ?').run(group_name && group_name.trim() ? group_name.trim() : null, req.params.slug);
   if (group_order !== undefined) db.prepare('UPDATE modules SET group_order = ? WHERE slug = ?').run(parseInt(group_order) || 0, req.params.slug);
-  if (list_view !== undefined) db.prepare('UPDATE modules SET list_view = ? WHERE slug = ?').run(list_view === 'card_grid' ? 'card_grid' : 'table', req.params.slug);
+  if (list_view !== undefined) db.prepare('UPDATE modules SET list_view = ? WHERE slug = ?').run(['card_grid', 'archive'].includes(list_view) ? list_view : 'table', req.params.slug);
   if (batch_upload_field !== undefined) db.prepare('UPDATE modules SET batch_upload_field = ? WHERE slug = ?').run(batch_upload_field || null, req.params.slug);
   if (batch_upload_category_field !== undefined) db.prepare('UPDATE modules SET batch_upload_category_field = ? WHERE slug = ?').run(batch_upload_category_field || null, req.params.slug);
   const updated = db.prepare('SELECT * FROM modules WHERE slug = ?').get(req.params.slug);

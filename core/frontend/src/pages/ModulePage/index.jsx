@@ -19,6 +19,7 @@ import YearlyBreakdownView from './YearlyBreakdownView'
 import CategoryPivotView from './CategoryPivotView'
 import WeeklyBreakdownView from './WeeklyBreakdownView'
 import ViewTabs from './ViewTabs'
+import ArchiveView from './ArchiveView'
 import FormulaEditor from '../BuilderPage/FormulaEditor'
 import { StepChainEditor } from '../BuilderPage/StepChainEditor'
 
@@ -754,7 +755,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
         </div>
       )}
 
-      {filterTabField && filterTabOptions.length > 0 && (
+      {filterTabField && filterTabOptions.length > 0 && mod.list_view !== 'archive' && (
         <div className="flex items-center gap-1 mb-4 flex-wrap">
           <button onClick={() => setActiveFilterTab(null)} className={'px-3 py-1.5 rounded-lg text-sm font-medium transition ' + (activeFilterTab === null ? 'bg-accent text-white' : 'bg-gray-800 text-gray-400 hover:text-ink')}>
             Tutti
@@ -782,6 +783,8 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
         <ParentChildrenView config={schema.parent_children_views[0]} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} />
       ) : schema && schema.period_views && schema.period_views.length > 0 ? (
         <PeriodView config={schema.period_views[0]} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} />
+      ) : mod.list_view === 'archive' ? (
+        <ArchiveView mod={mod} schema={schema} records={displayRecords} token={token} canEdit={canDo('edit')} onOpen={(id) => setDetailId(id)} onChanged={loadRecords} />
       ) : mod.list_view === 'card_grid' ? (
         displayRecords.length === 0 ? (
           <div className="bg-surface-card rounded-md p-12 text-center border border-gray-800">

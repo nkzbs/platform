@@ -13,7 +13,7 @@ export function createIcon(lucide) {
   const ICONS = {
     home: lucide.Home, users: lucide.Users, box: lucide.Box, store: lucide.Store,
     tool: lucide.Wrench, plug: lucide.Plug, zap: lucide.Zap, user: lucide.User,
-    file: lucide.File, 'credit-card': lucide.CreditCard, 'bar-chart': lucide.BarChart3,
+    file: lucide.File, folder: lucide.Folder, 'credit-card': lucide.CreditCard, 'bar-chart': lucide.BarChart3,
     plus: lucide.Plus, x: lucide.X, check: lucide.Check, star: lucide.Star,
     menu: lucide.Menu, edit: lucide.Pencil, trash: lucide.Trash2, logout: lucide.LogOut,
     save: lucide.Save, settings: lucide.Settings, 'arrow-up': lucide.ArrowUp,
