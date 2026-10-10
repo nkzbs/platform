@@ -697,7 +697,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
         </div>
       )}
 
-      <AiSuggestionsPanel token={token} isAdmin={!!(user && user.role === 'admin')} moduleSlug={mod.slug} onChanged={loadRecords} />
+      <AiSuggestionsPanel token={token} isAdmin={!!(user && user.role === 'admin')} moduleSlug={mod.slug} onChanged={loadRecords} searching={search.trim() !== ''} />
 
       {showReport && (
         <div className="mb-6">
