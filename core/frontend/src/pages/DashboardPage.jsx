@@ -159,7 +159,14 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
         const contiTipoById = {}
         ;(contiRec || []).forEach((c) => { contiTipoById[c.id] = c.data[cfg.conti?.campo_tipo] })
 
-        const entrateMese = (entrateRec || []).filter((r) => inMeseTarget(r.data[cfg.entrate?.campo_data], anno, mese))
+        // Lo stipendio di fine mese (di solito il 27, ma anche prima se cade nel weekend) paga il mese DOPO: le entrate di un mese vanno da 5 giorni
+        // prima del cutoff del mese prima a 6 giorni prima del cutoff del mese; le uscite restano il mese di calendario.
+        const cutoff = Math.max(2, (cfg.giorno_cutoff || 27) - 5)
+        const p2 = (n) => String(n).padStart(2, '0')
+        const prev = new Date(anno, mese - 1, 1)
+        const daData = prev.getFullYear() + '-' + p2(prev.getMonth() + 1) + '-' + p2(cutoff)
+        const aData = anno + '-' + p2(mese + 1) + '-' + p2(cutoff - 1)
+        const entrateMese = (entrateRec || []).filter((r) => { const d = String(r.data[cfg.entrate?.campo_data] || '').slice(0, 10); return d >= daData && d <= aData })
         const entrateTotale = entrateMese.reduce((s, r) => s + (parseFloat(r.data[cfg.entrate?.campo_importo]) || 0), 0)
 
         let uscite = 0, fissa = 0, pagato = 0, prevCarta = 0, prevConto = 0
