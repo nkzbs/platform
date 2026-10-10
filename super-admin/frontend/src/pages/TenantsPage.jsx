@@ -278,27 +278,38 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
     }
   }
 
-  // Aggiorna: ricrea il container del tenant con l'ultima immagine, sullo stesso volume dati (i dati non si toccano). Se c'è una sessione attiva
-  // chiede conferma prima di forzare: l'utente collegato viene scollegato per qualche secondo.
-  const redeploy = async (t) => {
-    if (!confirm('Aggiornare "' + t.name + '" all\'ultima versione? Dura pochi secondi, i dati non si toccano.')) return
-    setActionSlug(t.slug)
-    setError('')
+  // Aggiorna: ricrea il container del tenant con l'ultima immagine, sullo stesso volume dati (i dati non si toccano).
+  // Il popup mostra i passi veri man mano che il server li esegue (stream di righe JSON) e chiude con AGGIORNATO / NON AGGIORNATO.
+  const [upd, setUpd] = useState(null) // { t, lines: [{at,msg}], state: 'running'|'ok'|'ko'|'busy', note }
+  const runUpdate = async (t, force) => {
+    setUpd({ t, lines: [], state: 'running', note: '' })
+    const add = (msg, at) => setUpd((u) => u && { ...u, lines: [...u.lines, { at: at || new Date().toISOString(), msg }] })
     try {
-      let res = await fetch(API + '/tenants/' + t.slug + '/redeploy', { method: 'POST', headers, body: '{}' })
-      let data = await res.json().catch(() => ({}))
-      if (res.status === 409 && data.active_session && confirm('C\'è una sessione attiva (' + data.active_session.username + '). Aggiorno lo stesso? Verrà scollegata per qualche secondo.')) {
-        res = await fetch(API + '/tenants/' + t.slug + '/redeploy', { method: 'POST', headers, body: JSON.stringify({ force: true }) })
-        data = await res.json().catch(() => ({}))
+      const res = await fetch(API + '/tenants/' + t.slug + '/redeploy?stream=1', { method: 'POST', headers, body: JSON.stringify({ force: !!force }) })
+      if (!res.ok || !res.body) { const d = await res.json().catch(() => ({})); add('Errore: ' + (d.error || res.status)); setUpd((u) => u && { ...u, state: 'ko' }); return }
+      const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = ''; let last = null
+      for (;;) {
+        const { value, done } = await reader.read()
+        if (done) break
+        buf += dec.decode(value, { stream: true })
+        let i
+        while ((i = buf.indexOf('\n')) >= 0) {
+          const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1)
+          if (!line) continue
+          let o; try { o = JSON.parse(line) } catch (e) { continue }
+          if (o.msg) add(o.msg, o.at)
+          if (o.done) last = o
+        }
       }
-      if (!res.ok) setError('Aggiornamento di "' + t.name + '" non eseguito: ' + (data.error || res.status))
+      if (!last) setUpd((u) => u && { ...u, state: 'ko', note: 'Collegamento interrotto: controlla lo stato nei Dettagli.' })
+      else if (last.ok) setUpd((u) => u && { ...u, state: last.healthy === false ? 'ko' : 'ok', note: last.healthy === false ? 'Il container è stato ricreato ma il tenant non risponde ancora.' : '' })
+      else if (last.skipped === 'active_session') setUpd((u) => u && { ...u, state: 'busy', note: 'Sessione attiva: ' + last.active_session.username })
+      else setUpd((u) => u && { ...u, state: 'ko', note: last.error || '' })
     } catch (e) {
-      setError('Errore di rete: ' + e.message)
-    } finally {
-      setActionSlug(null)
-      load()
-    }
+      add('Errore di rete: ' + e.message); setUpd((u) => u && { ...u, state: 'ko' })
+    } finally { load() }
   }
+  const redeploy = (t) => runUpdate(t, false)
 
   const resetCredentials = async (t) => {
     if (!confirm('Generare nuove credenziali per "' + t.name + '"? La password attuale smetterà subito di funzionare.')) return
@@ -973,6 +984,28 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+      {upd && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-surface-card border border-gray-800 rounded-lg w-full max-w-lg shadow-xl">
+            <div className="px-5 pt-5 pb-3">
+              <h2 className="text-base font-semibold text-ink">Aggiornamento di {upd.t.name}</h2>
+            </div>
+            <div className="mx-5 mb-3 bg-black/30 rounded-md p-3 max-h-64 overflow-y-auto font-mono text-xs text-gray-300 space-y-1">
+              {upd.lines.map((l, i) => (
+                <div key={i}><span className="text-gray-600">{new Date(l.at).toLocaleTimeString('it-IT')}</span> {l.msg}</div>
+              ))}
+              {upd.state === 'running' && <div className="text-gray-500">…</div>}
+            </div>
+            {upd.state === 'ok' && <div className="mx-5 mb-3 rounded-md bg-green-900/30 border border-green-900/50 text-green-400 text-center font-bold tracking-wide py-3">AGGIORNATO</div>}
+            {upd.state === 'ko' && <div className="mx-5 mb-3 rounded-md bg-red-900/30 border border-red-900/50 text-red-400 text-center py-3"><div className="font-bold tracking-wide">NON AGGIORNATO</div>{upd.note && <div className="text-xs mt-1">{upd.note}</div>}</div>}
+            {upd.state === 'busy' && <div className="mx-5 mb-3 rounded-md bg-amber-900/20 border border-amber-900/40 text-amber-400 text-sm text-center py-3">{upd.note}. Aggiornando, l'utente collegato viene scollegato per qualche secondo.</div>}
+            <div className="px-5 pb-5 flex justify-end gap-2">
+              {upd.state === 'busy' && <button onClick={() => runUpdate(upd.t, true)} className="text-sm px-4 py-2 rounded-lg bg-cp-primary hover:bg-cp-primary-hover text-white">Aggiorna comunque</button>}
+              <button onClick={() => setUpd(null)} disabled={upd.state === 'running'} className="text-sm px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 disabled:opacity-40">{upd.state === 'running' ? 'Attendi…' : 'Chiudi'}</button>
+            </div>
           </div>
         </div>
       )}

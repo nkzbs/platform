@@ -429,7 +429,9 @@ router.post('/:slug/start', requireAuth, requireTenantScope, async (req, res) =>
 // in quel momento. Blocca a meno di force:true. Ritorna un risultato tipizzato
 // invece di scrivere su `res` — così sia la route singola sia quella bulk (sotto)
 // possono riusarla senza duplicare la logica di ricreazione container.
-async function redeployTenant(tenant, { force, actor }) {
+async function redeployTenant(tenant, { force, actor, log }) {
+  const say = (m) => { try { if (log) log(m) } catch (e) { /* un log non deve mai fermare l'aggiornamento */ } }
+  say('Controllo se qualcuno sta usando "' + tenant.name + '"…')
   if (!force && fs.existsSync(tenant.db_path)) {
     let tdb;
     try {
@@ -439,8 +441,10 @@ async function redeployTenant(tenant, { force, actor }) {
       // sembrerebbe sempre "attiva ora" altrimenti. Vedi core/backend/src/routes/auth.js.
       const recent = tdb.prepare("SELECT username, last_active_at FROM sessions WHERE last_active_at >= datetime('now', '-3 minutes') ORDER BY last_active_at DESC LIMIT 1").get();
       if (recent) {
+        say('Sessione attiva: ' + recent.username + ' (ultima azione ' + recent.last_active_at + ' UTC). Mi fermo.')
         return { ok: false, skipped: 'active_session', active_session: recent };
       }
+      say('Nessuna sessione attiva negli ultimi 3 minuti.')
     } catch (e) {
       // Tabella 'sessions' non ancora presente (tenant mai riavviato dopo
       // l'introduzione del log accessi) — nessun blocco, nulla da rilevare.
@@ -453,6 +457,8 @@ async function redeployTenant(tenant, { force, actor }) {
   // avvengono ATOMICAMENTE dentro il docker-provisioner (un solo endpoint), non
   // più come due passi separati da qui — stesso comportamento (container già
   // assente/non trovato non blocca la ricreazione), solo spostato.
+  say(force ? 'Aggiornamento forzato: eventuali utenti collegati vengono scollegati.' : 'Via libera.')
+  say('Fermo il vecchio container, lo rimuovo e ne creo uno nuovo con l\'ultima immagine (stessi dati)…')
   await provisionerRequest('POST', '/tenants/' + tenant.slug + '/redeploy', {
     port: tenant.port,
     env: [
@@ -468,14 +474,42 @@ async function redeployTenant(tenant, { force, actor }) {
     ],
   });
 
+  say('Nuovo container creato.')
   db.prepare('UPDATE tenants SET status = ? WHERE slug = ?').run('active', tenant.slug);
   logAudit(actor || 'system', 'tenant.redeploy', tenant.slug, { forced: !!force });
-  return { ok: true };
+  // Con un log attivo (popup di Super Admin) aspetto che il tenant risponda davvero, così "AGGIORNATO" vuol dire che è su e non solo che il container è partito.
+  if (log) {
+    say('Attendo che il tenant risponda…')
+    let up = false
+    for (let i = 0; i < 40 && !up; i++) {
+      await new Promise((r) => setTimeout(r, 1500))
+      try { const r = await fetch('http://platform-' + tenant.slug + ':80/api/tenant-info', { signal: AbortSignal.timeout(3000) }); up = r.ok } catch (e) { /* ancora in avvio */ }
+    }
+    if (!up) { say('Il tenant non risponde entro 60 secondi: controlla nei Dettagli.'); return { ok: true, healthy: false } }
+    say('Il tenant risponde correttamente.')
+  }
+  return { ok: true, healthy: true };
 }
 
 router.post('/:slug/redeploy', requireAuth, requireTenantScope, async (req, res) => {
   const { slug } = req.params;
   const force = !!(req.body && req.body.force);
+  // ?stream=1: una riga JSON per ogni passo (popup di avanzamento in Super Admin), poi una riga finale {done:true,...}.
+  if (req.query.stream === '1') {
+    res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('X-Accel-Buffering', 'no');
+    const send = (o) => { try { res.write(JSON.stringify(o) + '\n') } catch (e) { /* client chiuso */ } };
+    try {
+      const result = await redeployTenant(req.tenant, { force, actor: req.user.username, log: (msg) => send({ msg, at: new Date().toISOString() }) });
+      if (result.ok) syncNginxDomains().catch(() => {});
+      send({ done: true, ok: !!result.ok, healthy: result.healthy, skipped: result.skipped, active_session: result.active_session });
+    } catch (err) {
+      send({ msg: 'Errore: ' + err.message, at: new Date().toISOString() });
+      send({ done: true, ok: false, error: err.message });
+    }
+    return res.end();
+  }
   try {
     const tenant = req.tenant;
     const result = await redeployTenant(tenant, { force, actor: req.user.username });
