@@ -206,7 +206,7 @@ function ChecklistWidget({ config, token, label, color, modules, user }) {
           <div className="text-gray-500">Da pagare <span className="font-semibold" style={{ color }}>{formatAmount(daPagare)}</span></div>
         </div>
       </div>
-      <div className="divide-y divide-gray-800 max-h-96 overflow-y-auto">
+      <div className="divide-y divide-gray-800 max-h-72 overflow-y-auto">
         {loading && <div className="px-5 py-6 text-sm text-gray-600">Caricamento…</div>}
         {!loading && rows.length === 0 && <div className="px-5 py-6 text-sm text-gray-600">Nessuna spesa nel periodo selezionato.</div>}
         {!loading && rows.map((r) => {

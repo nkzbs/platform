@@ -389,7 +389,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
         {widgets.map((w) => {
           const data = widgetData[w.id] || {}
           // yearly_breakdown/category_pivot/weekly_breakdown riusano YearlyBreakdownView/
@@ -398,7 +398,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
           // rounded-xl border p-5), niente doppia cornice qui, solo 'relative' per
           // ancorare i controlli di editMode.
           return (
-            <div key={w.id} className={(['yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'come_sta_andando'].includes(w.type) ? 'relative' : 'bg-surface-card rounded-md border border-gray-800 overflow-hidden relative') + (['checklist', 'riepilogo_mensile', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'come_sta_andando', 'coda'].includes(w.type) ? ' col-span-full' : '')}>
+            <div key={w.id} className={(['yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'come_sta_andando'].includes(w.type) ? 'relative' : 'bg-surface-card rounded-md border border-gray-800 overflow-hidden relative') + (['checklist', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? ' col-span-full' : ['riepilogo_mensile', 'come_sta_andando', 'coda'].includes(w.type) ? ' col-span-full lg:col-span-3' : ' lg:col-span-2')}>
               {editMode && (() => {
                 const r = w.roles || [], ids = w.user_ids || []
                 const nomi = ids.map((id) => { const x = allUsers.find((u) => u.id === id); return x ? (x.display_name || x.username) : null }).filter(Boolean)
