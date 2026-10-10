@@ -278,6 +278,28 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
     }
   }
 
+  // Aggiorna: ricrea il container del tenant con l'ultima immagine, sullo stesso volume dati (i dati non si toccano). Se c'è una sessione attiva
+  // chiede conferma prima di forzare: l'utente collegato viene scollegato per qualche secondo.
+  const redeploy = async (t) => {
+    if (!confirm('Aggiornare "' + t.name + '" all\'ultima versione? Dura pochi secondi, i dati non si toccano.')) return
+    setActionSlug(t.slug)
+    setError('')
+    try {
+      let res = await fetch(API + '/tenants/' + t.slug + '/redeploy', { method: 'POST', headers, body: '{}' })
+      let data = await res.json().catch(() => ({}))
+      if (res.status === 409 && data.active_session && confirm('C\'è una sessione attiva (' + data.active_session.username + '). Aggiorno lo stesso? Verrà scollegata per qualche secondo.')) {
+        res = await fetch(API + '/tenants/' + t.slug + '/redeploy', { method: 'POST', headers, body: JSON.stringify({ force: true }) })
+        data = await res.json().catch(() => ({}))
+      }
+      if (!res.ok) setError('Aggiornamento di "' + t.name + '" non eseguito: ' + (data.error || res.status))
+    } catch (e) {
+      setError('Errore di rete: ' + e.message)
+    } finally {
+      setActionSlug(null)
+      load()
+    }
+  }
+
   const resetCredentials = async (t) => {
     if (!confirm('Generare nuove credenziali per "' + t.name + '"? La password attuale smetterà subito di funzionare.')) return
     setResettingSlug(t.slug)
@@ -534,6 +556,13 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                     Dettagli
                     <Icon name={expanded ? 'chevron-down' : 'chevron-right'} size={12} />
                   </button>
+                  {t.status === 'active' && (
+                    <button onClick={() => redeploy(t)} disabled={actionSlug === t.slug} title="Ricrea il container con l'ultima versione; i dati non si toccano"
+                      className="text-sm px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition disabled:opacity-40 flex items-center gap-1.5">
+                      <Icon name="refresh" size={12} />
+                      Aggiorna
+                    </button>
+                  )}
                   <button
                     onClick={() => toggle(t)}
                     disabled={t.status === 'creating' || t.status === 'error' || actionSlug === t.slug}
