@@ -171,7 +171,8 @@ router.get('/oauth/callback', async (req, res) => {
 // POST /disconnect
 router.post('/disconnect', requireAuth, requireAdmin, (req, res) => {
   const cfg = getCreds();
-  setCreds({ client_id: cfg.client_id, client_secret: cfg.client_secret }, false);
+  // Si perdono i token, non le scelte: "salva su Drive" e la cartella restano, così ricollegare non spegne in silenzio il salvataggio dei nuovi file su Drive.
+  setCreds({ client_id: cfg.client_id, client_secret: cfg.client_secret, drive_enabled: cfg.drive_enabled, drive_folder_id: cfg.drive_folder_id }, false);
   res.json({ ok: true });
 });
 
