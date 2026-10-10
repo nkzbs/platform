@@ -174,6 +174,10 @@ db.exec(`
 if (!db.prepare("SELECT 1 FROM pragma_table_info('ai_usage_log') WHERE name = 'tenant_slug'").get()) {
   db.exec('ALTER TABLE ai_usage_log ADD COLUMN tenant_slug TEXT');
 }
+// Backup settimanale via mail (weekly-backup-mail.js): acceso/spento per tenant, ultimo invio, e la passphrase che cifra l'allegato (cifrata a riposo).
+for (const col of ['backup_mail_weekly INTEGER DEFAULT 0', 'backup_mail_last_sent TEXT', 'backup_mail_passphrase TEXT']) {
+  if (!db.prepare("SELECT 1 FROM pragma_table_info('tenants') WHERE name = ?").get(col.split(' ')[0])) db.exec('ALTER TABLE tenants ADD COLUMN ' + col);
+}
 db.prepare('INSERT OR IGNORE INTO update_manager (id) VALUES (1)').run();
 
 // Seed del registro moduli — solo se completamente vuoto (prima installazione).

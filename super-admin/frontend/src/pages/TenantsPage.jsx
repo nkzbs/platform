@@ -335,6 +335,31 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
     }
   }
 
+  // Backup settimanale via mail: acceso/spento, invio di prova, passphrase dell'allegato cifrato.
+  const [mailBusy, setMailBusy] = useState(null)
+  const [mailMsg, setMailMsg] = useState({})
+  const [passVisible, setPassVisible] = useState({})
+  const toggleMail = async (slug, enabled) => {
+    setMailBusy(slug); setMailMsg((m) => ({ ...m, [slug]: null }))
+    const res = await fetch(API + '/tenants/' + slug + '/backup-mail', { method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }) })
+    setMailBusy(null)
+    if (res.ok) loadBackupSettings(slug); else setMailMsg((m) => ({ ...m, [slug]: { ok: false, text: 'Non riuscito.' } }))
+  }
+  const sendMailNow = async (slug) => {
+    setMailBusy(slug); setMailMsg((m) => ({ ...m, [slug]: null }))
+    const res = await fetch(API + '/tenants/' + slug + '/backup-mail/send-now', { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: '{}' })
+    const data = await res.json().catch(() => ({}))
+    setMailBusy(null)
+    setMailMsg((m) => ({ ...m, [slug]: res.ok ? { ok: true, text: 'Mail inviata (' + data.size_mb + ' MB): controlla la posta.' } : { ok: false, text: data.error || 'Invio non riuscito.' } }))
+    loadBackupSettings(slug)
+  }
+  const showPassphrase = async (slug) => {
+    if (passVisible[slug]) { setPassVisible((p) => ({ ...p, [slug]: null })); return }
+    const res = await fetch(API + '/tenants/' + slug + '/backup-mail/passphrase', { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: '{}' })
+    const data = await res.json().catch(() => ({}))
+    setPassVisible((p) => ({ ...p, [slug]: res.ok ? data.passphrase : null }))
+  }
+
   const loadBackupSettings = async (slug) => {
     const res = await fetch(API + '/tenants/' + slug + '/backup-settings', { headers })
     if (res.ok) {
@@ -696,6 +721,39 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                         {backingUpSlug === t.slug ? 'Backup in corso...' : 'Backup ora'}
                       </button>
                     </div>
+                    {(() => {
+                      const bs = offsiteSettingsBySlug[t.slug] || {}
+                      const on = !!bs.backup_mail_weekly
+                      return (
+                        <div className="mb-4 rounded-lg border border-gray-800 p-3">
+                          <div className="flex items-center justify-between gap-3 flex-wrap">
+                            <div>
+                              <div className="text-sm text-ink font-medium">Backup settimanale via mail</div>
+                              <div className="text-xs text-gray-500 mt-0.5">Ogni lunedì dalle 08:00 ricevi la copia del database, compressa e cifrata. Non contiene i file caricati (documenti, PDF, foto).</div>
+                            </div>
+                            <button onClick={() => toggleMail(t.slug, !on)} disabled={mailBusy === t.slug || bs.backup_mail_smtp_ready === false}
+                              className={'text-xs px-3 py-1.5 rounded-lg transition disabled:opacity-50 ' + (on ? 'bg-green-900/30 text-green-400 border border-green-900/50' : 'bg-gray-800 hover:bg-gray-700 text-gray-300')}>
+                              {on ? 'Acceso' : 'Spento'}
+                            </button>
+                          </div>
+                          {bs.backup_mail_smtp_ready === false && <div className="text-xs text-amber-400 mt-2">La posta non è configurata su questo Super Admin: non posso inviare.</div>}
+                          {on && (
+                            <div className="mt-3 flex items-center gap-2 flex-wrap text-xs">
+                              <button onClick={() => sendMailNow(t.slug)} disabled={mailBusy === t.slug} className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300">{mailBusy === t.slug ? 'Invio…' : 'Invia ora una prova'}</button>
+                              <button onClick={() => showPassphrase(t.slug)} className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300">{passVisible[t.slug] ? 'Nascondi passphrase' : 'Mostra passphrase'}</button>
+                              <span className="text-gray-500">{bs.backup_mail_last_sent ? 'Ultimo invio: ' + new Date(bs.backup_mail_last_sent).toLocaleString('it-IT') : 'Ancora nessun invio'}</span>
+                            </div>
+                          )}
+                          {on && passVisible[t.slug] && (
+                            <div className="mt-2 text-xs">
+                              <code className="px-2 py-1 rounded bg-black/20 text-ink select-all break-all">{passVisible[t.slug]}</code>
+                              <div className="text-gray-500 mt-1">Conservala in un posto sicuro (gestore di password): senza, le copie ricevute non si riaprono. Il comando per riaprirle è scritto in ogni mail.</div>
+                            </div>
+                          )}
+                          {mailMsg[t.slug] && <div className={'text-xs mt-2 ' + (mailMsg[t.slug].ok ? 'text-green-400' : 'text-red-400')}>{mailMsg[t.slug].text}</div>}
+                        </div>
+                      )
+                    })()}
                     {backupMsg[t.slug] && (
                       backupMsg[t.slug].ok
                         ? <div className="text-xs text-green-400 mb-2">

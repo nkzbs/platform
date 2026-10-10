@@ -164,4 +164,33 @@ async function notifyAIBudget({ level, spentEur, budgetEur, tenantSlug }) {
   }
 }
 
-module.exports = { notifyBackupResult, notifyBackupVerifyFailure, notifyAIBudget };
+// Mail settimanale con la copia cifrata del database di un tenant in allegato (vedi weekly-backup-mail.js).
+async function sendWeeklyBackupMail({ tenantName, tenantSlug, attachmentName, attachment, sizeMb, backupDate }) {
+  const to = process.env.NOTIFY_EMAIL_TO;
+  const t = getTransporter();
+  if (!t || !to) return { sent: false, reason: 'smtp_not_configured' };
+  const subject = 'Backup settimanale ' + tenantName + ' — ' + backupDate;
+  const comando = 'openssl enc -d -aes-256-cbc -pbkdf2 -in ' + attachmentName + ' -out ' + tenantSlug + '.db.gz && gunzip ' + tenantSlug + '.db.gz';
+  const text = 'In allegato la copia del database di "' + tenantName + '" del ' + backupDate + ' (' + sizeMb + ' MB, compressa e cifrata).\n\n'
+    + 'Per riaprirla serve la passphrase (Super Admin → Tenant → Backup → "Mostra passphrase"). Poi, da Terminale:\n' + comando + '\n\n'
+    + 'Contiene solo il database, NON i file caricati (documenti, PDF, foto).';
+  const html = wrapMailHtml({
+    accentColor: '#2563eb',
+    title: 'Backup settimanale — ' + tenantName,
+    lines: [
+      'In allegato la copia del database di <b>' + tenantName + '</b> del ' + backupDate + ' (' + sizeMb + ' MB, compressa e cifrata).',
+      'Per riaprirla serve la <b>passphrase</b> (Super Admin → Tenant → Backup → «Mostra passphrase»). Poi, da Terminale:<br><code style="font-size:12px;word-break:break-all;">' + comando + '</code>',
+      'Contiene solo il database, <b>non</b> i file caricati (documenti, PDF, foto).',
+    ],
+    footer: 'Platform Super Admin — backup settimanale',
+  });
+  try {
+    await t.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to, subject, text, html, attachments: [{ filename: attachmentName, content: attachment }] });
+    return { sent: true };
+  } catch (e) {
+    console.error('[notifier] invio backup settimanale fallito:', e.message);
+    return { sent: false, reason: e.message };
+  }
+}
+
+module.exports = { notifyBackupResult, notifyBackupVerifyFailure, notifyAIBudget, sendWeeklyBackupMail };

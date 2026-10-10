@@ -180,8 +180,8 @@ function ChecklistWidget({ config, token, label, color, modules, user, onMese })
   }
 
   const monthNav = period === 'questo_mese' ? currentMonthRange(config?.giorno_cutoff, monthOffset) : null
-  // Dice alla dashboard quale mese stai guardando con le frecce (null = quello di partenza), così il Riepilogo si allinea.
-  const meseVisto = monthNav && monthOffset !== 0 ? monthNav.from.slice(0, 7) : null
+  // Dice alla dashboard quale mese stai guardando con le frecce (sempre, anche quello di partenza), così il Riepilogo mostra lo stesso mese e il giorno del cambio mese si decide in un posto solo (il widget Checklist).
+  const meseVisto = monthNav ? monthNav.from.slice(0, 7) : null
   useEffect(() => { if (onMese) onMese(meseVisto) }, [meseVisto]) // eslint-disable-line react-hooks/exhaustive-deps
   const moduleLabel = (slug) => (modules.find((m) => m.slug === slug) || {}).name || slug
 

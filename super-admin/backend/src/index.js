@@ -23,6 +23,7 @@ const guidaRoutes = require('./routes/guida');
 const aiUsageRoutes = require('./routes/ai-usage');
 const tenantAiRoutes = require('./routes/tenant-ai');
 const { startBackupScheduler } = require('./backup-scheduler');
+const { startWeeklyBackupMail } = require('./weekly-backup-mail');
 const { startBackupVerifyScheduler } = require('./backup-verify');
 const { startUpdateScheduler } = require('./update-scheduler');
 const { startAnalyticsScheduler } = require('./analytics-scheduler');
@@ -92,6 +93,7 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log('Super Admin backend running on port ' + PORT);
   startBackupScheduler();
+  startWeeklyBackupMail();
   startBackupVerifyScheduler();
   startUpdateScheduler();
   startAnalyticsScheduler();

@@ -746,7 +746,30 @@ router.get('/:slug/backup-settings', requireAuth, requireTenantScope, (req, res)
     // principio di mascheramento già in uso altrove nel progetto per i segreti.
     backup_offsite_url: tenant.backup_offsite_url || null,
     backup_offsite_credentials_configured: !!tenant.backup_offsite_credentials,
+    // Backup settimanale via mail: acceso, ultimo invio e se la posta di Super Admin è configurata (la passphrase non si restituisce qui)
+    backup_mail_weekly: !!tenant.backup_mail_weekly,
+    backup_mail_last_sent: tenant.backup_mail_last_sent || null,
+    backup_mail_smtp_ready: !!(process.env.SMTP_HOST && process.env.NOTIFY_EMAIL_TO),
   });
+});
+
+// Backup settimanale via mail: accendi/spegni, invio di prova, e la passphrase che cifra l'allegato (la lettura è registrata nel log attività).
+const weeklyMail = require('../weekly-backup-mail');
+router.put('/:slug/backup-mail', requireAuth, requireTenantScope, (req, res) => {
+  const t = weeklyMail.setEnabled(req.params.slug, !!(req.body && req.body.enabled));
+  if (!t) return res.status(404).json({ error: 'Tenant non trovato' });
+  logAudit(req.user.username, 'tenant.backup_mail.' + (t.backup_mail_weekly ? 'on' : 'off'), req.params.slug, null);
+  res.json({ backup_mail_weekly: !!t.backup_mail_weekly, backup_mail_last_sent: t.backup_mail_last_sent || null });
+});
+router.post('/:slug/backup-mail/send-now', requireAuth, requireTenantScope, async (req, res) => {
+  const r = await weeklyMail.sendNow(req.params.slug, { actor: req.user.username });
+  res.status(r.ok ? 200 : 502).json(r);
+});
+router.post('/:slug/backup-mail/passphrase', requireAuth, requireTenantScope, (req, res) => {
+  const p = weeklyMail.getPassphrase(req.tenant);
+  if (!p) return res.status(404).json({ error: 'Backup via mail non ancora attivo.' });
+  logAudit(req.user.username, 'tenant.backup_mail.passphrase_view', req.params.slug, null);
+  res.json({ passphrase: p });
 });
 
 router.patch('/:slug/backup-settings', requireAuth, requireTenantScope, (req, res) => {

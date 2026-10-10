@@ -182,3 +182,11 @@ docker logs --tail 50 super-admin-backend
 
 ## Se Finance o Super Admin danno 521 da Cloudflare
 Cloudflare punta alla porta 4000, cioè al container `platform-nginx`. Se è fermo (`docker ps -a`), si riavvia con `docker start platform-nginx`. Capitato dopo un riavvio notturno del NAS (2026-10-06 → 10-10): il container aveva il riavvio automatico ma non è ripartito, causa non accertata.
+
+## Backup settimanale via mail
+- Super Admin → Tenant → Dettagli → **Backup** → blocco **Backup settimanale via mail** (spento di default, per tenant). Ogni lunedì dalle 08:00 ora italiana (o al primo controllo utile della settimana, se il NAS era spento) arriva a `NOTIFY_EMAIL_TO` la copia del database, **compressa e cifrata**.
+- La passphrase si crea alla prima accensione e non cambia più (cambiarla renderebbe illeggibili le mail vecchie): si legge con **Mostra passphrase** (l'azione resta nel log attività). Va conservata in un gestore di password.
+- Per riaprire un allegato: `openssl enc -d -aes-256-cbc -pbkdf2 -in finance-AAAA-MM-GG.db.gz.enc -out finance.db.gz && gunzip finance.db.gz` (il comando è anche nel testo della mail).
+- **Non contiene i file caricati** (documenti, PDF, foto): quelli stanno nel volume di upload del tenant e vanno copiati a parte.
+- Un invio fallito manda una mail di errore e non si ripete ogni 15 minuti; "Invia ora una prova" prova subito. Limite: allegato fino a 18 MB.
+- Codice: `super-admin/backend/src/weekly-backup-mail.js`, test `weekly-backup-mail.test.js`.

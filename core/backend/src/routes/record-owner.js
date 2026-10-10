@@ -8,7 +8,7 @@ const express = require('express');
 const db = require('../db');
 const { requireAuth, requireAdmin } = require('./auth');
 const { logAudit } = require('../audit-log');
-const { defaultOwnerId } = require('../record-owner');
+const { defaultOwnerId, adoptOrphans } = require('../record-owner');
 
 const router = express.Router();
 const guard = [requireAuth, requireAdmin];
@@ -46,7 +46,8 @@ router.put('/', ...guard, (req, res) => {
   const val = id === null || id === undefined || id === '' ? null : parseInt(id, 10);
   db.prepare('UPDATE tenant_settings SET default_owner_user_id = ? WHERE id = 1').run(val);
   logAudit(req.user.username, 'record_owner.default', String(val), null);
-  res.json({ default_owner_user_id: val });
+  const adottate = adoptOrphans();
+  res.json({ default_owner_user_id: val, righe_adottate: adottate });
 });
 
 router.post('/assign', ...guard, (req, res) => {

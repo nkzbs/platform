@@ -24,4 +24,16 @@ function ownerFor(sourceRecordId) {
   return defaultOwnerId();
 }
 
-module.exports = { defaultOwnerId, ownerFor };
+// Se c'è un proprietario predefinito, le righe rimaste senza proprietario (arrivate prima che lo si scegliesse) passano a lui.
+// Idempotente; non tocca mai le righe che hanno già un proprietario.
+function adoptOrphans() {
+  try {
+    const owner = defaultOwnerId();
+    if (!owner) return 0;
+    const n = db.prepare('UPDATE records SET user_id = ? WHERE user_id IS NULL').run(owner).changes;
+    if (n) { try { require('./audit-log').logAudit('system', 'record_owner.adopt', String(owner), { righe: n }); } catch (e) { /* mai bloccare */ } }
+    return n;
+  } catch (e) { return 0; }
+}
+
+module.exports = { defaultOwnerId, ownerFor, adoptOrphans };
