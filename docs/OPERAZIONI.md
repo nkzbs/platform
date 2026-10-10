@@ -190,3 +190,17 @@ Cloudflare punta alla porta 4000, cioè al container `platform-nginx`. Se è fer
 - **Non contiene i file caricati** (documenti, PDF, foto): quelli stanno nel volume di upload del tenant e vanno copiati a parte.
 - Un invio fallito manda una mail di errore e non si ripete ogni 15 minuti; "Invia ora una prova" prova subito. Limite: allegato fino a 18 MB.
 - Codice: `super-admin/backend/src/weekly-backup-mail.js`, test `weekly-backup-mail.test.js`.
+
+## Google: collegare, ricollegare, scadenza
+- Impostazioni → Connessioni → Google. Con l'app Google in modalità **«Test»** il collegamento **scade dopo 7 giorni** (errore `invalid_grant`): in Google Cloud Console → Google Auth Platform → Pubblico, mettere l'app **«In produzione»** (per uso personale va bene anche senza la verifica Google: compare «app non verificata», si prosegue da **Avanzate**). Nella schermata dei permessi vanno spuntate **tutte** le caselle (Gmail, Calendario, Drive).
+- Senza il collegamento **non si aprono i documenti** (stanno su Google Drive) e **non entrano le bollette da Gmail**. L'anteprima dell'archivio lo dice.
+- Scollegare cancella i token ma conserva Client ID/Secret, «Salva su Drive» e la cartella. Se dopo il ricollegamento il pulsante «Salva su Drive» (Impostazioni → Google) è spento, riaccenderlo.
+- Controllo dal server: la connessione sta in `connections` (`integration_id = 'google'`); un `getValidAccessToken()` che risponde «Refresh fallito: invalid_grant» vuol dire collegamento da rifare.
+
+## Proprietario delle righe e permessi
+- **Utenti → «Proprietario delle righe automatiche»**: sceglie chi diventa proprietario di ciò che arriva da Gmail, dall'estratto conto e dalle rate. Sotto, «Righe già presenti» riassegna per modulo (anteprima del numero, poi «Assegna»; cambia solo l'intestatario).
+- Serve nei moduli con la regola «vede solo i propri» (oggi Spese Personali per il ruolo `user`): una riga di un altro utente, o senza proprietario, non la vede nessuno tranne l'admin. Le Spese Casa non hanno la restrizione.
+- Per cambiare la regola di un modulo: Builder → modulo → blocco **Permessi** → riga del ruolo.
+
+## Archivio Documenti: cartelle
+Nel Builder, modulo Documenti → «Come si vede l'elenco» → **Archivio**. Le cartelle si rinominano, si creano e si eliminano (se vuote) dalla vista stessa (matita, «Nuova cartella», cestino). Se non si riesce a rinominare perché il nome è usato in una regola del modulo, cambiarlo dal Builder.

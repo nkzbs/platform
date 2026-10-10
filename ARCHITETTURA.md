@@ -110,6 +110,22 @@ moduli con una versione: salvare di nuovo lo stesso modulo crea la versione succ
 il tenant riceve una copia sua, ricorda da quale versione viene e mostra "Aggiorna" quando ne esiste una più
 nuova (l'aggiornamento sovrascrive la copia locale, ed è avvisato prima).
 
+### Come si vede l'elenco di un modulo
+
+`modules.list_view` ha tre valori: `table` (tabella, anche a schede su telefono), `card_grid` (card colorate) e `archive` (**archivio**, vedi sotto). Si sceglie nel Builder, proprietà del modulo, «Come si vede l'elenco».
+
+### Documenti: la vista ad archivio
+
+`ModulePage/ArchiveView.jsx`, generica: nessun nome di modulo o di campo. Le **cartelle** sono i valori del primo campo «scelta» del modulo (anche vuote, sbiadite), il file è il primo campo «file», il titolo il primo campo di testo. Si entra in una cartella con le briciole «Archivio › cartella › anno»; una cartella con almeno 8 file e almeno 2 anni si divide da sola in **sottocartelle per anno**, letto dal titolo (`ClientStatements_20190830…`, `CU-2021…`) o, se manca, dalla data del record. Schede con icona per tipo (miniatura per le immagini), elenco alternativo, **anteprima** a schermo intero (immagini e PDF con il visualizzatore del browser; il file è protetto, quindi si scarica con il token e si mostra da blob), ricerca piatta su tutto l'archivio.
+I file stanno su **Google Drive** (`uploads.stored_name = 'drive:<id>'`) o in `/data/uploads/<tenant>`: `GET /api/uploads/:id` li serve dall'uno o dall'altro; senza il collegamento a Google i file su Drive non si aprono (l'anteprima lo dice).
+
+**Cartelle modificabili**: una cartella è un valore del campo scelta, quindi `POST /api/field-options/:modulo/:campo` (`routes/field-options.js`) **rinomina** (schema pubblicato + tutte le righe, in una transazione, con una riga di cronologia), **aggiunge** o **toglie** (solo se vuota). Rifiuta nomi doppi (anche con maiuscole diverse), vuoti, oltre 60 caratteri, e la rinomina se il vecchio nome è citato in una regola del modulo (condizioni, automazioni). Può farlo chi ha il permesso di modifica sul modulo.
+Nei moduli con archivio il modulo «Nuovo» mette il file in testa, compila il titolo dal nome del file e parte dalla cartella aperta; i collegamenti facoltativi stanno chiusi in fondo.
+
+### Chi vede quali righe: permessi e proprietario
+
+Il blocco `permissions` di un modulo dà una regola per ruolo (vedi, crea, modifica, elimina, **vede solo le proprie**). Una riga è «propria» se `records.user_id` è l'utente. Le righe che non le crea una persona (Gmail, estratto conto, rate generate da un'automazione) prendono un proprietario (`record-owner.js`): quello della riga che le genera, altrimenti il **proprietario predefinito** (`tenant_settings.default_owner_user_id`, scelto in Utenti → «Proprietario delle righe automatiche»). Le righe rimaste senza proprietario passano a lui all'avvio e quando lo si cambia; le righe esistenti si riassegnano con un'azione esplicita dell'admin (`routes/record-owner.js`, con anteprima: cambia solo `user_id`). L'admin vede sempre tutto.
+
 ## Parlare tra le parti
 
 - **Browser → tenant**: JWT di sessione (24 ore), password con bcrypt, 2FA con TOTP facoltativo,
@@ -127,12 +143,15 @@ Lo scheduler di Super Admin controlla ogni 15 minuti e fa una copia di ogni tena
 Facoltativamente la copia viene sincronizzata fuori dal NAS (offsite) e verificata una volta a settimana.
 Dal tenant, la voce **Export dati** scarica il database o un export JSON completo.
 
+**Backup settimanale via mail** (`super-admin/backend/src/weekly-backup-mail.js`): acceso per tenant da Super Admin → Backup. Ogni lunedì dalle 08:00 ora italiana (o al primo controllo utile della settimana, se il NAS era spento) manda a `NOTIFY_EMAIL_TO` la copia del database, compressa (gzip) e cifrata con la passphrase del tenant (AES-256-CBC, PBKDF2-SHA256, formato `openssl enc`: si riapre con un comando da Terminale, scritto nella mail). La passphrase si crea alla prima accensione, sta cifrata nel registro di Super Admin e non cambia mai (si legge con «Mostra passphrase», azione registrata nel log). Contiene solo il database, **non i file caricati**. Un errore manda una mail di errore e non si ripete ogni 15 minuti.
+
 ## Collegamenti esterni
 
 Google (Gmail in lettura, Calendar, Drive) e WhatsApp (CallMeBot) si configurano per tenant da Impostazioni → Connessioni. Le **regole Gmail** stanno dentro
 la riga Google (si vedono con Google collegato) e i **destinatari WhatsApp** e gli **ultimi invii** dentro la riga WhatsApp: sono impostazioni del sistema
 (tabelle `gmail_rules`, `whatsapp_recipients`), non moduli. L'elenco mostra solo i collegamenti attivi o richiesti dai moduli installati. Le credenziali
 Google (Client ID e Secret, token) stanno nella tabella `connections` del tenant.
+Il collegamento a Google (`connections.integration_id = 'google'`) serve a Gmail (lettura delle bollette), Calendar e Drive. Con l'app Google in modalità «Test» il token di rinnovo **scade dopo 7 giorni** (errore `invalid_grant`): serve pubblicare l'app «In produzione» o ricollegare. Scollegare cancella i token ma conserva Client ID/Secret, «Salva su Drive» e la cartella.
 
 **Regole Gmail** (`gmail-poller.js`, ogni 15 minuti): ogni regola ha mittente, **modulo di destinazione**, categoria e **tipo**. *Bolletta* cerca importo e
 scadenza nel testo e nei PDF; *semplice* prende solo oggetto, data e allegati (ordini, contratti, documenti). La riga creata scrive solo i campi che il
@@ -191,6 +210,9 @@ I widget sono dati (`dashboard_widgets`: tipo, configurazione, ruoli e utenti ch
 - **Come sta andando** (`come_sta_andando`): uno o più widget, ciascuno con la sua **vista** nella configurazione: moduli di spese, gruppi di entrate inclusi,
   se conta l'accantonamento, **solo spese** (per la casa: spese pagate e da pagare, fisse e variabili, categorie e confronti, senza entrate, saldo e risparmio).
   La vista la legge il server dal widget salvato (`GET /api/insights?widget=ID`), mai dal browser; la spiegazione salvata ha chiave per widget (`2026-09@w14`).
+- **Riepilogo mensile** (`riepilogo_mensile`, `components/RiepilogoMensile.jsx`): riquadri animati con lo **spendibile** in grande e un anello, entrate, uscite, pagato/da pagare, fissa/variabile e **previsto carta/conto (sempre visibili, anche a zero)**. Le **uscite** sono il mese di calendario; le **entrate** sono quelle dello stipendio di fine mese precedente (finestra dal giorno di cutoff meno 5 del mese prima al giorno prima del cutoff meno 5: lo stipendio può arrivare prima del 27). Il mese è **sempre quello della Checklist** (che riporta le frecce al widget), quindi il giorno del cambio mese si decide in un posto solo: il cutoff del widget Checklist. Calcolato dal browser dai record che l'utente può vedere (un modulo «solo propri» senza righe proprie non entra nel conto).
+- **Layout**: il Riepilogo e la coda sono a tutta larghezza, «Come sta andando» a due colonne su schermo largo, la Checklist a tutta larghezza; su telefono «Come sta andando» e Checklist partono chiusi (stato in `localStorage`). L'ordine è `sort_order`, modificabile con le frecce in «Modifica layout».
+- **Smista, quarta scelta «Sposta in un altro modulo»** (`GET /api/smista/:modulo/:id/destinazioni` e `modo: 'sposta'`): la riga cambia modulo di spesa (stessi id e allegati; se non aveva proprietario diventa di chi la sposta) e resta «da smistare» lì. Destinazioni = moduli con lo stesso `kind` e gli avvisi dichiarati; i campi si abbinano per **ruolo**, gli altri solo con stessa chiave e tipo (e stesso modulo collegato per le relazioni, valore ammesso per le scelte); ciò che non passa viene mostrato prima e scritto nella cronologia.
 - Ogni widget può essere nascosto a un ruolo: su Finance sono tutti solo admin. La scelta moduli per utente (Utenti & Ruoli) nasconde i moduli dal menu ma non
   blocca l'API; per un blocco vero ci sono i permessi per ruolo nei moduli.
 

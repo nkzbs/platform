@@ -2,7 +2,7 @@
 
 Il coltello multiuso personale di Nima per i suoi progetti: un motore unico che, installando
 moduli, diventa il gestionale di cui ho bisogno (oggi **Finance**, per le finanze personali).
-Non è un prodotto per altri e non ha clienti. Versione **0.1.0**.
+Non è un prodotto per altri e non ha clienti. Versione **0.1.1**.
 
 ```
 Tenant   un progetto (Finance, Timbrature, ...): un'istanza con i suoi dati e i suoi moduli
@@ -21,6 +21,7 @@ Perché esiste, cosa non sarà mai e la regola che tiene fuori l'eccesso: [`PLAT
 | [`ARCHITETTURA.md`](ARCHITETTURA.md) | Come è fatto: parti, flussi, dati, sicurezza |
 | [`docs/OPERAZIONI.md`](docs/OPERAZIONI.md) | Mettere online, aggiornare, backup, ripristino, cosa fare se qualcosa non va |
 | [`docs/DECISIONI.md`](docs/DECISIONI.md) | Cosa è stato tolto e perché (registro delle decisioni) |
+| [`docs/NOTE-DI-RILASCIO.md`](docs/NOTE-DI-RILASCIO.md) | Cosa c'è in ogni versione, cosa è da verificare, cosa sapere |
 | [`docs/TEST-FINANCE.md`](docs/TEST-FINANCE.md) | Lista di prove a mano per Finance: cosa fare e cosa deve succedere |
 
 ## Struttura
@@ -54,7 +55,7 @@ Ogni backend ha la sua suite, nessuna dipendenza esterna (i servizi esterni sono
 
 ```bash
 cd core/backend && npm test            # 42 suite
-cd super-admin/backend && npm test     # 17 suite
+cd super-admin/backend && npm test     # 18 suite
 ```
 
 I frontend si verificano compilando: `cd core/frontend && npx vite build` (idem `super-admin/frontend`).
@@ -65,5 +66,7 @@ I frontend si verificano compilando: `cd core/frontend && npx vite build` (idem 
 bash scripts/redeploy-nas.sh            # tutto: backend, frontend, core
 bash scripts/redeploy-nas.sh core       # solo alcune parti
 ```
+
+Costruisce le immagini sul NAS. Per ricreare i tenant lo script accede a Super Admin; con il 2FA attivo non può, e si ferma dicendolo: l'immagine è pronta e il tenant si aggiorna da Super Admin con il pulsante **Aggiorna** (popup di avanzamento). Dettagli in [`docs/OPERAZIONI.md`](docs/OPERAZIONI.md).
 
 Dettagli, rollback e primo avvio in [`docs/OPERAZIONI.md`](docs/OPERAZIONI.md).

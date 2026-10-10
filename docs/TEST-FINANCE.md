@@ -1,6 +1,6 @@
 # Test di Finance
 
-Lista di prove per verificare a mano che Finance funzioni, dopo gli ultimi cambiamenti (ruoli dei moduli, avvisi, coda "Da smistare", "Smista", AI, monitoraggio).
+Lista di prove per verificare a mano che Finance funzioni, dopo gli ultimi cambiamenti (ruoli dei moduli, avvisi, coda "Da smistare", "Smista", AI, monitoraggio, riepilogo mensile, archivio Documenti, backup via mail). Versione 0.1.1.
 Ogni prova dice **cosa fare** e **cosa deve succedere**. I test automatici (`npm test`) coprono il codice con servizi simulati: qui si prova con i dati veri.
 Spunta man mano; se qualcosa non torna, annota cosa hai visto (schermata e passo) e riportalo.
 
@@ -9,7 +9,7 @@ Spunta man mano; se qualcosa non torna, annota cosa hai visto (schermata e passo
 ## 1. Accesso e dashboard
 
 - [ ] Il menu ha 8 moduli: Entrate, Spese personali, Spese casa, Documenti, Conti, Debiti casa, Debiti personali, Timbrature (nessun modulo nascosto: Pagamenti e Ricorrenti sono stati ritirati).
-- [ ] Accedi come admin. La dashboard ha, nell'ordine: **Da smistare**, **Come sta andando — Personale**, **Come sta andando — Casa**, Riepilogo mensile, Checklist.
+- [ ] Accedi come admin. La dashboard ha, nell'ordine che preferisci (frecce in «Modifica layout»): **Da smistare**, **Riepilogo mensile**, **Come sta andando — Personale** e **Casa** su due colonne, Checklist. Su telefono «Come sta andando» e Checklist sono chiusi e si aprono con un tocco.
 - [ ] **Personale** mostra per settembre entrate 1.799,58 € e spese 1.321,45 €. Il pulsante Mese / Da inizio anno cambia la vista.
 - [ ] **Casa** mostra solo spese (niente entrate, saldo, risparmio), con "già pagate" e "ancora da pagare".
 - [ ] "Modifica layout" → "Aggiungi widget": l'elenco è in gruppi (Numeri, Elenchi, Andamenti, Finanza) e ogni tipo ha una riga che spiega cosa fa.
@@ -23,6 +23,15 @@ Spunta man mano; se qualcosa non torna, annota cosa hai visto (schermata e passo
 - [ ] *Dividi in rate* (es. 3 rate): il pannello mostra "3 rate da X €, dal … al …". Dopo la conferma: in **Debiti** compare il piano, in Spese le 3 rate "da pagare" collegate, la riga originale non c'è più e il PDF (se c'era) è sulla prima rata.
 - [ ] *Già pagata*: la riga finisce "pagato" con la data scelta.
 - [ ] Smistare due volte la stessa riga non è possibile (la riga non è più nella coda).
+
+- [ ] **Smista → «Sposta in un altro modulo»**: su una riga in coda scegli la destinazione (Casa ↔ Personale): il pannello elenca ciò che non passerebbe; dopo la conferma la riga è nell'altra coda, ancora «da smistare».
+
+## 2b. Riepilogo mensile
+
+- [ ] Mostra **tutte** le voci: Spendibile, Entrate, Uscite, Pagato, Da pagare, Fissa, Variabile, **Previsto Carta e Previsto Conto anche a 0,00 €**.
+- [ ] Le Entrate del mese sono lo stipendio del mese prima (per ottobre: 1.799,58 €); le Uscite coincidono con la Checklist (ottobre: Casa 1.208,16 € + Personali 1.000,50 € = 2.208,66 €, come utente che vede entrambi i moduli).
+- [ ] Cambiando mese con le frecce della **Checklist**, il Riepilogo cambia insieme. Il giorno del cambio mese è quello impostato nel widget Checklist (27).
+- [ ] Come **nima** (non admin) le righe personali si vedono: se mancano, controllare il proprietario delle righe (Utenti).
 
 ## 3. Avvisi WhatsApp
 
@@ -60,6 +69,19 @@ Vedi `docs/OPERAZIONI.md` → "Utenti, accessi e 2FA". Dopo averli creati, prova
 - [ ] Riga di cautela: la scelta moduli per utente nasconde i moduli dal menu ma **non blocca l'API**.
 
 - [ ] **Widget per utente:** sulla riga dell'utente non admin, "Widget · N" mostra i widget della dashboard; spuntane uno (es. "Come sta andando — Casa" per Federica). Accedendo come lei, vede solo quello. In "Modifica layout" ogni widget indica a chi è visibile.
+
+## 6b. Archivio Documenti e Google
+
+- [ ] **Google collegato** (Impostazioni → Google) e «Salva su Drive» acceso; un documento si apre in anteprima (se dice che Google non risponde, ricollega).
+- [ ] Documenti in vista **Archivio**: la radice mostra solo cartelle (le vuote sbiadite); Estratto conto si divide in sottocartelle per anno.
+- [ ] **Cartelle**: matita → rinomina (il nome cambia anche nei documenti); «Nuova cartella» la crea; il cestino compare solo sulle vuote. Un nome già usato viene rifiutato.
+- [ ] **Nuovo documento** dentro una cartella: il Tipo è già quello, il file è il primo campo, il titolo si compila dal nome del file, i «Collegamenti» sono chiusi in fondo.
+- [ ] La ricerca in alto cerca in tutto l'archivio, non solo nella cartella aperta.
+
+## 6c. Backup via mail e Gmail
+
+- [ ] Super Admin → Finance → Backup → **Backup settimanale via mail**: acceso; «Invia ora una prova» → arriva una mail con un allegato `.db.gz.enc`. Salva la **passphrase** in un gestore di password e prova a riaprire l'allegato con il comando scritto nella mail.
+- [ ] **Gmail**: inoltrati una bolletta a te stesso; entro pochi minuti deve comparire in «Da smistare» (e arrivare l'avviso WhatsApp). L'ultima riga da Gmail risale al 2 ottobre: se non compare, il controllo non gira.
 
 ## 7. 2FA
 
