@@ -67,7 +67,11 @@ function Preview({ item, token, folders, folderField, canEdit, onMove, onDetail,
     setUrl(null); setErr('')
     if (!file || !file.id) return undefined
     fetch(API + '/uploads/' + file.id, { headers: { Authorization: 'Bearer ' + token } }).then(async (r) => {
-      if (!r.ok) throw new Error('non riesco ad aprire il file')
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}))
+        const m = String(d.error || '')
+        throw new Error(/Drive|invalid_grant|Refresh/i.test(m) ? 'Google Drive non risponde: il collegamento a Google è scaduto. Ricollega Google dalle impostazioni delle integrazioni.' : r.status === 404 ? 'Il file non si trova più (' + (m || 'assente') + ').' : 'Non riesco ad aprire il file' + (m ? ': ' + m : '.'))
+      }
       const b = await r.blob(); if (!vivo) return
       obj = URL.createObjectURL(kind === 'pdf' && b.type !== 'application/pdf' ? new Blob([b], { type: 'application/pdf' }) : b); setUrl(obj)
     }).catch((e) => vivo && setErr(e.message))
