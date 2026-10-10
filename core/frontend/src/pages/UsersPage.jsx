@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
+import RecordOwnerCard from '../components/RecordOwnerCard'
 
 function UsersPage({ token }) {
   const api = useApi(token)
@@ -230,6 +231,8 @@ function UsersPage({ token }) {
           </div>
         ))}
       </div>
+
+      <RecordOwnerCard token={token} />
 
       <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
         <h2 className="text-lg font-semibold text-ink">Ruoli</h2>

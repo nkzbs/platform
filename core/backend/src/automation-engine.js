@@ -691,7 +691,7 @@ function runAzioni(azioni, recordData, moduleSlug, automationLabel, recordId, lo
         const dati = resolveDati(cfg.dati || {}, recordData, null, { targetModuleSlug: cfg.modulo, sourceRecordId: recordId });
         try {
           if (dryRun) { dryLog.push({ desc: 'crea_record in ' + cfg.modulo + ' con ' + JSON.stringify(dati) }); return; }
-          const resultNuovo = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(cfg.modulo, null, JSON.stringify(dati));
+          const resultNuovo = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(cfg.modulo, require('./record-owner').ownerFor(recordId), JSON.stringify(dati));
           fireNuovoRecordCascata(cfg.modulo, resultNuovo.lastInsertRowid, dati);
           db.prepare('INSERT INTO automation_logs (module_slug, automation_label, trigger_desc, action_desc, esito, record_id) VALUES (?, ?, ?, ?, ?, ?)').run(moduleSlug, automationLabel, logged.triggerDesc, 'crea_record in ' + cfg.modulo, 'eseguito', recordId || null);
         } catch (e) {
@@ -710,7 +710,7 @@ function runAzioni(azioni, recordData, moduleSlug, automationLabel, recordId, lo
         for (let i = 1; i <= n && i <= 500; i++) {
           const dati = resolveDati(cfg.dati || {}, recordData, i, { targetModuleSlug: cfg.modulo, sourceRecordId: recordId });
           try {
-            const resultN = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(cfg.modulo, null, JSON.stringify(dati));
+            const resultN = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(cfg.modulo, require('./record-owner').ownerFor(recordId), JSON.stringify(dati));
             fireNuovoRecordCascata(cfg.modulo, resultN.lastInsertRowid, dati);
           } catch (e) {
             console.error('automation-engine: crea_record_n_volte iterazione ' + i + ' fallita:', e.message);

@@ -404,3 +404,9 @@ Il Builder resta completo (quello di Super Admin serve per gli altri tenant), ma
 - Azioni automazione: applica_prezzo_listino, aggiorna_figli, aggiorna_figli_via_router, libera_altri_con_stesso_valore, trova_o_crea_e_aggiorna, aggrega_in_record, crea_record_da_padre, storna_riferimento, registra_provvigione.
 - Restano: crea_record, crea_record_n_volte, notifica_interna, invia_notifica, invia_report_periodico, aggiorna_record.
 - Un blocco sconosciuto nei vecchi schemi viene ignorato (lenient), non rompe il modulo.
+
+## 2026-10-10 — Proprietario delle righe automatiche e "Sposta in…"
+- **Problema**: Spese Personali ha la regola "ognuno vede solo le proprie righe". Le righe che arrivano da Gmail, dall'estratto conto o dalle automazioni nascevano senza proprietario (e le 427 esistenti erano dell'admin): un utente normale non le vedeva, e Checklist/Riepilogo mostravano solo Casa.
+- **Scelta**: la regola resta (se un giorno Federica ha le Personali vede solo le sue). Le righe automatiche prendono un proprietario: quello della riga che le genera (le rate sono di chi ha creato il piano), altrimenti il "proprietario predefinito" scelto in Utenti (`tenant_settings.default_owner_user_id`, `core/backend/src/record-owner.js`). Le righe esistenti si riassegnano con un'azione esplicita dell'admin (Utenti → "Proprietario delle righe automatiche", con anteprima del numero), che cambia solo `records.user_id`.
+- **Sposta in…** (Smista): una riga "da smistare" può cambiare modulo di spesa (Casa ↔ Personale). Destinazioni = moduli con lo stesso `kind` e gli avvisi dichiarati. I campi si abbinano per ruolo, gli altri solo con stessa chiave e tipo; ciò che non passa viene mostrato prima e scritto nella cronologia. Stesso id, stessi allegati; se la riga non aveva proprietario diventa di chi la sposta.
+- Test: `core/backend/src/sposta-proprietario.test.js`.

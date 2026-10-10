@@ -22,6 +22,7 @@ const { startScheduler } = require('./scheduler');
 const { startGmailPoller } = require('./gmail-poller');
 const aiRoutes = require('./routes/ai');
 const notificationSettingsRoutes = require('./routes/notification-settings');
+const recordOwnerRoutes = require('./routes/record-owner');
 const insightsRoutes = require('./routes/insights');
 const bankRoutes = require('./routes/bank');
 const featuresRoutes = require('./routes/features');
@@ -90,6 +91,7 @@ const routeMounts = [
   ['/module-roles', moduleRolesRoutes],
   ['/module-ai', moduleAiRoutes],
   ['/smista', smistaRoutes],
+  ['/record-owner', recordOwnerRoutes],
   ['/', notificationSettingsRoutes],
   ['/digest', digestRoutes],
   ['/site-pages', siteAdminRouter],

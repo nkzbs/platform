@@ -251,7 +251,7 @@ function registerAsExpense(id, { categoria, descrizione } = {}) {
     categoria: categoria || m.category_hint || 'Altro', fisso: false, _stato: 'pagato',
     note: 'Da estratto conto (' + m.date + ')',
   };
-  const rid = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, NULL, ?)').run(slug, JSON.stringify(data)).lastInsertRowid;
+  const rid = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(slug, require('./record-owner').defaultOwnerId(), JSON.stringify(data)).lastInsertRowid;
   db.prepare('UPDATE bank_movements SET match_module = ?, match_id = ? WHERE id = ?').run(slug, rid, id);
   return { record_id: rid, data };
 }

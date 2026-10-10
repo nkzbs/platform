@@ -44,6 +44,85 @@ router.post('/:slug/:id/proposta', requireAuth, async (req, res) => {
   res.json({ proposta: null, motivo: out.skipped || 'nessuna proposta utile' });
 });
 
+
+// ── Spostare una riga in un altro modulo di spesa (es. da Casa a Personale) ──────────────────────────────────────────
+// Le destinazioni possibili sono i moduli che dichiarano lo stesso tipo di righe (kind) e gli avvisi. I campi si abbinano per RUOLO
+// (importo, data, scadenza, categoria, descrizione, stato…), non per nome; gli altri passano solo se nel modulo di destinazione c'è un campo
+// con la stessa chiave e lo stesso tipo (e, per una relazione, lo stesso modulo collegato; per una scelta, un valore ammesso).
+// Quello che non passa non si perde in silenzio: l'elenco viene mostrato prima di confermare e scritto nella cronologia della riga.
+const fieldsOf = (schema) => (schema.fields || []);
+const optionValues = (f) => (Array.isArray(f.options) ? f.options.map((o) => (typeof o === 'string' ? o : o.value)) : null);
+const isEmpty = (v) => v === undefined || v === null || v === '';
+
+function mappaRiga(srcSchema, srcDecl, tgtSchema, tgtDecl, data) {
+  const sR = { stato: '_stato', ...srcDecl.roles }, tR = { stato: '_stato', ...tgtDecl.roles };
+  const out = {}, persi = [], usati = new Set();
+  const tgtFields = fieldsOf(tgtSchema);
+  const label = (key) => (fieldsOf(srcSchema).find((f) => f.key === key) || {}).label || key;
+  const mettiSeAmmesso = (srcKey, tgtKey) => {
+    const v = data[srcKey];
+    const tf = tgtFields.find((f) => f.key === tgtKey);
+    const ammessi = tf ? optionValues(tf) : null;
+    if (ammessi && !isEmpty(v) && !ammessi.includes(v)) { persi.push({ key: srcKey, label: label(srcKey), motivo: 'valore «' + v + '» non previsto nella destinazione' }); return; }
+    if (!isEmpty(v)) out[tgtKey] = v;
+  };
+  // 1. per ruolo
+  Object.keys(sR).forEach((k) => {
+    if (k === 'stato' || !sR[k] || !tR[k]) return;
+    usati.add(sR[k]);
+    mettiSeAmmesso(sR[k], tR[k]);
+  });
+  // 2. gli altri campi, solo se stessa chiave e stesso tipo
+  fieldsOf(srcSchema).forEach((f) => {
+    if (usati.has(f.key)) return;
+    const v = data[f.key];
+    if (isEmpty(v)) return;
+    const tf = tgtFields.find((x) => x.key === f.key);
+    if (tf && tf.type === f.type) { mettiSeAmmesso(f.key, f.key); return; }
+    persi.push({ key: f.key, label: f.label || f.key, motivo: tf ? 'tipo diverso nella destinazione' : 'non esiste nella destinazione' });
+  });
+  // 3. relazioni (sono fuori da fields): passano solo verso lo stesso modulo collegato
+  (srcSchema.relations || []).forEach((r) => {
+    const v = data[r.key];
+    if (isEmpty(v)) return;
+    const tr = (tgtSchema.relations || []).find((x) => x.key === r.key && x.target_module === r.target_module);
+    if (tr) out[r.key] = v; else persi.push({ key: r.key, label: r.key.replace(/_/g, ' '), motivo: 'collegamento non previsto nella destinazione' });
+  });
+  // 4. stato: se è uno dei tre dichiarati si traduce, altrimenti resta se la destinazione lo conosce, sennò parte dall'iniziale
+  const sA = srcDecl.avvisi.states, tA = tgtDecl.avvisi.states;
+  const stato = data[sR.stato];
+  const nome = ['nuovo', 'da_fare', 'fatto'].find((k) => sA[k] && sA[k] === stato);
+  const tgtStates = ((tgtSchema.workflow && tgtSchema.workflow.states) || []);
+  if (nome && tA[nome]) out[tR.stato] = tA[nome];
+  else if (tgtStates.some((x) => x.key === stato)) out[tR.stato] = stato;
+  else { const init = tgtStates.find((x) => x.initial); if (init) out[tR.stato] = init.key; }
+  return { data: out, persi };
+}
+
+function destinazioniPer(slug) {
+  const decl = moduleRoles.get(slug);
+  if (!decl) return [];
+  return moduleRoles.list({ use: 'avvisi' }).filter((m) => m.module_slug !== slug && m.kind === decl.kind).map((m) => {
+    const mod = db.prepare('SELECT name FROM modules WHERE slug = ? AND installed = 1').get(m.module_slug);
+    return mod ? { slug: m.module_slug, name: mod.name } : null;
+  }).filter(Boolean);
+}
+
+// Le destinazioni possibili per spostare una riga e, per ciascuna, cosa non passerebbe.
+router.get('/:slug/:id/destinazioni', requireAuth, (req, res) => {
+  const slug = req.params.slug;
+  const schema = schemaOf(slug), decl = moduleRoles.get(slug);
+  if (!schema || !decl) return fail(res, 404, 'Modulo non trovato');
+  const row = db.prepare('SELECT * FROM records WHERE id = ? AND module_slug = ?').get(req.params.id, slug);
+  if (!row) return fail(res, 404, 'Riga non trovata');
+  const before = decryptFields(JSON.parse(row.data), schema.fields);
+  res.json(destinazioniPer(slug).map((d) => {
+    const ts = schemaOf(d.slug), td = moduleRoles.get(d.slug);
+    if (!ts || !td) return null;
+    return { ...d, persi: mappaRiga(schema, decl, ts, td, before).persi };
+  }).filter(Boolean));
+});
+
 router.post('/:slug/:id', requireAuth, (req, res) => {
   const slug = req.params.slug;
   const schema = schemaOf(slug);
@@ -61,8 +140,8 @@ router.post('/:slug/:id', requireAuth, (req, res) => {
   if (before[R.stato] !== A.states.nuovo) return fail(res, 409, 'Questa riga non è più da smistare.');
 
   const b = req.body || {};
-  const modo = ['uno', 'rate', 'pagata'].includes(b.modo) ? b.modo : null;
-  if (!modo) return fail(res, 400, 'Scegli come smistare: un pagamento, in rate o già pagata.');
+  const modo = ['uno', 'rate', 'pagata', 'sposta'].includes(b.modo) ? b.modo : null;
+  if (!modo) return fail(res, 400, 'Scegli come smistare: un pagamento, in rate, già pagata o spostala in un altro modulo.');
 
   // Modifiche fatte nel pannello prima di confermare
   const data = { ...before };
@@ -85,6 +164,28 @@ router.post('/:slug/:id', requireAuth, (req, res) => {
     Object.assign(data, next);
   };
   const fmtDate = (iso) => String(iso || '').split('-').reverse().join('/');
+
+
+  // ── sposta in un altro modulo di spesa: la riga cambia modulo (stesso id, stessi allegati; il proprietario resta lo stesso, e se non ne aveva diventa chi la sposta) e resta da smistare lì
+  if (modo === 'sposta') {
+    const verso = String(b.verso || '');
+    if (!destinazioniPer(slug).some((d) => d.slug === verso)) return fail(res, 400, 'Non puoi spostare questa riga in quel modulo.');
+    const ts = schemaOf(verso), td = moduleRoles.get(verso);
+    if (!ts || !td) return fail(res, 404, 'Modulo di destinazione non trovato');
+    const ruleT = ruleFor(ts, req.user.role);
+    if (ruleT && !ruleT.create) return fail(res, 403, 'Non hai i permessi per inserire righe nel modulo di destinazione.');
+    const m = mappaRiga(schema, decl, ts, td, data);
+    const nuovoNome = (db.prepare('SELECT name FROM modules WHERE slug = ?').get(verso) || {}).name || verso;
+    const tx = db.transaction(() => {
+      db.prepare('UPDATE records SET module_slug = ?, data = ?, user_id = COALESCE(user_id, ?), updated_at = CURRENT_TIMESTAMP WHERE id = ? AND module_slug = ?').run(verso, JSON.stringify(encryptFields(m.data, ts.fields)), req.user.id, row.id, slug);
+      db.prepare('UPDATE record_attachments SET module_slug = ? WHERE module_slug = ? AND record_id = ?').run(verso, slug, row.id);
+      try { db.prepare("UPDATE ai_suggestions SET status = 'dismissed', decided_at = CURRENT_TIMESTAMP WHERE module_slug = ? AND record_id = ? AND status = 'pending'").run(slug, row.id); } catch (e) { /* tabella non pronta */ }
+    });
+    tx();
+    logHistory(verso, row.id, req.user.username, { ...before, _modulo: slug }, { ...m.data, _modulo: verso, _campi_non_passati: m.persi.map((p) => p.label) });
+    logAudit(req.user.username, 'smista.sposta', slug + '#' + row.id, { verso, persi: m.persi.length });
+    return res.json({ ok: true, modo, verso, persi: m.persi, message: 'Spostata in «' + nuovoNome + '»: è nella sua coda da smistare.' + (m.persi.length ? ' Non sono passati: ' + m.persi.map((p) => p.label).join(', ') + '.' : '') });
+  }
 
   // ── un pagamento solo
   if (modo === 'uno') {

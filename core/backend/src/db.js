@@ -464,6 +464,8 @@ try {
 // oggi (fallback ai colori/logo di default nel frontend), mai un colore/logo
 // a sorpresa scelto per lui.
 ensureColumn('tenant_settings', 'accent_color', 'TEXT DEFAULT NULL');
+// Proprietario predefinito delle righe automatiche (Gmail, estratto conto): vedi record-owner.js.
+ensureColumn('tenant_settings', 'default_owner_user_id', 'INTEGER DEFAULT NULL');
 // White-label completo (2026-08-15): un tenant che ha già logo/nome propri può
 // nascondere anche il nome "Platform" davanti al proprio (login e sidebar
 // mostrano solo il brand del tenant) — opzione generica per chiunque, non

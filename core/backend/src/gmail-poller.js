@@ -249,7 +249,7 @@ async function processaMessaggio(accessToken, msgId, rule) {
   if (!moduleSlug) { console.error('[gmail-poller] regola', rule.mittente, ': nessun modulo può ricevere righe dalle mail (Builder → Ruoli del modulo)'); return; }
   const { data: dataRecord, campi: F } = costruisciRiga({ rule, declared: mr.get(moduleSlug), subject, importo, scadenza, dataSpesa });
 
-  const result = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(moduleSlug, null, JSON.stringify(dataRecord));
+  const result = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(moduleSlug, require('./record-owner').defaultOwnerId(), JSON.stringify(dataRecord));
   const recordId = result.lastInsertRowid;
   // La riga resta in "da smistare" finché non la smisti tu; 
   // Se il modulo ha "Smistare" acceso (Builder → Potenziamenti AI), l'AI prepara una proposta: non scrive nulla da sola.
