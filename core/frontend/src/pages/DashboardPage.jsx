@@ -20,6 +20,9 @@ import WeeklyBreakdownView from './ModulePage/WeeklyBreakdownView'
 function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, features = {} }) {
   const api = useApi(token)
   const [editMode, setEditMode] = useState(false)
+  // Mese scelto con le frecce della Checklist ('AAAA-MM', null = quello di partenza): il Riepilogo mensile lo segue.
+  const [meseSel, setMeseSel] = useState(null)
+  const meseScelto = (cutoff) => (meseSel ? { anno: Number(meseSel.slice(0, 4)), mese: Number(meseSel.slice(5, 7)) - 1 } : meseTarget(cutoff))
   // Su telefono i widget lunghi si chiudono con un tocco (su PC sono sempre aperti): di default chiusi "come sta andando" e checklist.
   const [aperti, setAperti] = useState(() => { try { return JSON.parse(localStorage.getItem('dash_aperti') || '{}') } catch (e) { return {} } })
   const isAperto = (w) => (w.id in aperti ? aperti[w.id] : !['come_sta_andando', 'checklist'].includes(w.type))
@@ -155,7 +158,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
     widgets.forEach(async (w) => {
       if (w.type === 'riepilogo_mensile') {
         const cfg = w.config || {}
-        const { anno, mese } = meseTarget(cfg.giorno_cutoff)
+        const { anno, mese } = meseScelto(cfg.giorno_cutoff)
         const [entrateRec, contiRec, ...gruppiRec] = await Promise.all([
           cfg.entrate?.modulo ? api.get('/records/' + cfg.entrate.modulo) : Promise.resolve([]),
           cfg.conti?.modulo ? api.get('/records/' + cfg.conti.modulo) : Promise.resolve([]),
@@ -236,7 +239,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
         }
       }
     })
-  }, [widgets])
+  }, [widgets, meseSel])
 
   const REPORT_WIDGET_TYPES = ['yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'aggregate_value']
   const resetWidgetForm = () => {
@@ -450,13 +453,13 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                 </div>
               )}
               {w.type === 'riepilogo_mensile' && (() => {
-                const { anno, mese } = meseTarget((w.config || {}).giorno_cutoff)
+                const { anno, mese } = meseScelto((w.config || {}).giorno_cutoff)
                 return <RiepilogoMensile data={data} label={w.label} nomeMese={new Date(anno, mese, 1).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })} />
               })()}
               {w.type === 'coda' && <QueueWidget token={token} onNavigate={onNavigate} modules={modules} />}
               {w.type === 'come_sta_andando' && <InsightsCard token={token} widgetId={w.id} title={w.label} onNavigate={features.movimenti ? onNavigate : undefined} />}
               {w.type === 'checklist' && (
-                <ChecklistWidget config={w.config} token={token} label={w.label} color={w.color} modules={modules} user={user} />
+                <ChecklistWidget config={w.config} token={token} label={w.label} color={w.color} modules={modules} user={user} onMese={setMeseSel} />
               )}
               {w.type === 'periodo' && (() => {
                 const cfg = w.config || {}
