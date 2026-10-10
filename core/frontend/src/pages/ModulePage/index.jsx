@@ -697,7 +697,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
         </div>
       )}
 
-      <AiSuggestionsPanel token={token} isAdmin={!!(user && user.role === 'admin')} moduleSlug={mod.slug} onChanged={loadRecords} searching={search.trim() !== ''} />
+      <AiSuggestionsPanel token={token} isAdmin={!!(user && user.role === 'admin')} moduleSlug={mod.slug} onChanged={loadRecords} />
 
       {showReport && (
         <div className="mb-6">
@@ -784,7 +784,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
       ) : schema && schema.period_views && schema.period_views.length > 0 ? (
         <PeriodView config={schema.period_views[0]} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} />
       ) : mod.list_view === 'archive' ? (
-        <ArchiveView mod={mod} schema={schema} records={displayRecords} token={token} canEdit={canDo('edit')} onOpen={(id) => setDetailId(id)} onChanged={loadRecords} />
+        <ArchiveView mod={mod} schema={schema} records={displayRecords} token={token} canEdit={canDo('edit')} onOpen={(id) => setDetailId(id)} onChanged={loadRecords} onSchemaChanged={async () => { await loadSchema(); await loadRecords() }} searching={search.trim() !== ''} />
       ) : mod.list_view === 'card_grid' ? (
         displayRecords.length === 0 ? (
           <div className="bg-surface-card rounded-md p-12 text-center border border-gray-800">

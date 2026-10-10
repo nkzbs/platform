@@ -128,7 +128,7 @@ const ANNO = /(?:^|[^0-9])((?:19|20)\d{2})(?=\d{4}(?![0-9])|[^0-9]|$)/
 const annoDi = (titolo, data) => { const m = ANNO.exec(String(titolo || '')); if (m) return m[1]; const d = String(data || '').slice(0, 4); return /^\d{4}$/.test(d) ? d : '' }
 const SOTTO_CARTELLE_DA = 8 // una cartella con almeno 8 file e almeno 2 anni diversi si divide in sottocartelle per anno
 
-export default function ArchiveView({ mod, schema, records, token, canEdit, onOpen, onChanged, searching }) {
+export default function ArchiveView({ mod, schema, records, token, canEdit, onOpen, onChanged, onSchemaChanged, searching }) {
   const api = useApi(token)
   const fields = (schema && schema.fields) || []
   const folderField = fields.find((f) => f.type === 'select')
@@ -143,6 +143,10 @@ export default function ArchiveView({ mod, schema, records, token, canEdit, onOp
   const [anteprima, setAnteprima] = useState(null)
   const [dropSu, setDropSu] = useState(null)
   const [msg, setMsg] = useState('')
+  const [errore, setErrore] = useState('')
+  // Modifica delle cartelle: editing = valore della cartella che si sta rinominando, o '__nuova__' per crearne una; testo = quello scritto
+  const [editing, setEditing] = useState(null)
+  const [testo, setTesto] = useState('')
 
   const folders = useMemo(() => (folderField && Array.isArray(folderField.options) ? folderField.options.map((o) => ({ value: optVal(o), label: optLabel(o) })) : []), [folderField])
   const items = useMemo(() => records.map((r) => {
@@ -177,17 +181,57 @@ export default function ArchiveView({ mod, schema, records, token, canEdit, onOp
   useEffect(() => { if (!msg) return undefined; const t = setTimeout(() => setMsg(''), 4000); return () => clearTimeout(t) }, [msg])
   const apri = (it) => { if (it.file) setAnteprima(it); else onOpen(it.id) }
 
+  const chiamaOpzioni = async (body, okMsg) => {
+    setErrore('')
+    const r = await api.post('/field-options/' + mod.slug + '/' + folderField.key, body)
+    if (!r.ok) { setErrore((r.data && r.data.error) || 'Non sono riuscito a modificare le cartelle.'); return false }
+    setMsg(okMsg(r.data)); setEditing(null)
+    onSchemaChanged && (await onSchemaChanged())
+    return true
+  }
+  const avviaRinomina = (f) => { setErrore(''); setEditing(f.value); setTesto(f.label) }
+  const salvaEdit = () => {
+    const t = testo.trim()
+    if (editing === '__nuova__') return t ? chiamaOpzioni({ action: 'add', value: t }, () => 'Cartella «' + t + '» creata.') : setEditing(null)
+    if (!t || t === editing) { setEditing(null); return undefined }
+    return chiamaOpzioni({ action: 'rename', from: editing, to: t }, (d) => 'Cartella rinominata in «' + t + '»' + (d.righe ? ' (' + d.righe + (d.righe === 1 ? ' documento aggiornato' : ' documenti aggiornati') + ')' : '') + '.')
+  }
+  const togliCartella = (f) => { if (window.confirm('Eliminare la cartella «' + f.label + '»? È vuota.')) chiamaOpzioni({ action: 'remove', value: f.value }, () => 'Cartella «' + f.label + '» eliminata.') }
+
   // Cartella grande: icona, nome, numero di documenti
-  const Cartella = ({ nome, n, color, onClick, drop, value, sub }) => (
-    <button type="button" onClick={onClick}
-      onDragOver={drop ? (e) => { e.preventDefault(); setDropSu(value) } : undefined} onDragLeave={drop ? () => setDropSu(null) : undefined}
-      onDrop={drop ? (e) => { e.preventDefault(); setDropSu(null); const id = Number(e.dataTransfer.getData('text/plain')); const it = items.find((x) => x.id === id); if (it) sposta(it, value) } : undefined}
-      className={'group text-left rounded-2xl border p-4 transition ' + (dropSu === value && drop ? 'border-accent border-dashed bg-accent/5' : n === 0 ? 'border-gray-800/70 bg-surface-card/50 hover:border-gray-700' : 'border-gray-800 bg-surface-card hover:border-gray-600 hover:-translate-y-0.5')}>
-      <span className="w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition" style={{ background: color + (n === 0 ? '12' : '22'), color: n === 0 ? color + '88' : color }}><Icon name="folder" size={26} /></span>
-      <span className="block text-sm text-ink font-semibold leading-snug break-words">{nome}</span>
-      <span className="block text-xs text-gray-500 mt-0.5">{n === 0 ? 'vuota' : n + (n === 1 ? ' documento' : ' documenti')}{sub ? ' · ' + sub : ''}</span>
-    </button>
-  )
+  const Cartella = ({ nome, n, color, onClick, drop, value, sub, folder }) => {
+    const inModifica = folder && editing === value
+    return (
+      <div role="button" tabIndex={0} onClick={inModifica ? undefined : onClick} onKeyDown={(e) => { if (!inModifica && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick() } }}
+        onDragOver={drop ? (e) => { e.preventDefault(); setDropSu(value) } : undefined} onDragLeave={drop ? () => setDropSu(null) : undefined}
+        onDrop={drop ? (e) => { e.preventDefault(); setDropSu(null); const id = Number(e.dataTransfer.getData('text/plain')); const it = items.find((x) => x.id === id); if (it) sposta(it, value) } : undefined}
+        className={'group relative text-left rounded-2xl border p-4 transition cursor-pointer ' + (dropSu === value && drop ? 'border-accent border-dashed bg-accent/5' : n === 0 ? 'border-gray-800/70 bg-surface-card/50 hover:border-gray-700' : 'border-gray-800 bg-surface-card hover:border-gray-600 hover:-translate-y-0.5')}>
+        {folder && canEdit && !inModifica && (
+          <span className="absolute top-2 right-2 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition">
+            <button type="button" title="Rinomina" aria-label={'Rinomina ' + nome} onClick={(e) => { e.stopPropagation(); avviaRinomina(folder) }} className="w-7 h-7 rounded-lg bg-gray-800/80 hover:bg-gray-700 text-gray-300 flex items-center justify-center"><Icon name="edit" size={13} /></button>
+            {n === 0 && <button type="button" title="Elimina (è vuota)" aria-label={'Elimina ' + nome} onClick={(e) => { e.stopPropagation(); togliCartella(folder) }} className="w-7 h-7 rounded-lg bg-gray-800/80 hover:bg-red-900/50 text-red-400 flex items-center justify-center"><Icon name="trash" size={13} /></button>}
+          </span>
+        )}
+        <span className="w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition" style={{ background: color + (n === 0 ? '12' : '22'), color: n === 0 ? color + '88' : color }}><Icon name="folder" size={26} /></span>
+        {inModifica ? (
+          <span className="block" onClick={(e) => e.stopPropagation()}>
+            <input autoFocus value={testo} onChange={(e) => setTesto(e.target.value)} maxLength={60}
+              onKeyDown={(e) => { if (e.key === 'Enter') salvaEdit(); if (e.key === 'Escape') setEditing(null) }}
+              className="w-full bg-surface-page text-ink px-2 py-1.5 rounded-lg text-sm outline-none border border-accent" />
+            <span className="flex gap-1.5 mt-2">
+              <button type="button" onClick={salvaEdit} className="text-xs px-2.5 py-1 rounded-lg bg-accent text-white">Salva</button>
+              <button type="button" onClick={() => setEditing(null)} className="text-xs px-2.5 py-1 rounded-lg bg-gray-800 text-gray-300">Annulla</button>
+            </span>
+          </span>
+        ) : (
+          <>
+            <span className="block text-sm text-ink font-semibold leading-snug break-words">{nome}</span>
+            <span className="block text-xs text-gray-500 mt-0.5">{n === 0 ? 'vuota' : n + (n === 1 ? ' documento' : ' documenti')}{sub ? ' · ' + sub : ''}</span>
+          </>
+        )}
+      </div>
+    )
+  }
 
   const inCima = path.length > 0 && !searching
   const briciole = (
@@ -251,6 +295,7 @@ export default function ArchiveView({ mod, schema, records, token, canEdit, onOp
   return (
     <div>
       {msg && <div className="text-xs text-green-500 bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-2 mb-3">{msg}</div>}
+      {errore && <div className="text-xs text-red-400 bg-red-900/20 border border-red-900/40 rounded-lg px-3 py-2 mb-3">{errore}</div>}
 
       {searching ? listaFile : (
         <>
@@ -258,10 +303,26 @@ export default function ArchiveView({ mod, schema, records, token, canEdit, onOp
           {path.length === 0 && (
             <>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                {folders.map((f, i) => <Cartella key={f.value} nome={f.label} n={inCartella(f.value).length} color={colorFor(i)} value={f.value} drop={canEdit} onClick={() => setPath([f.value])} sub={(() => { const a = [...new Set(inCartella(f.value).map((x) => x.anno).filter(Boolean))].sort(); return a.length > 1 ? a[0] + '–' + a[a.length - 1] : '' })()} />)}
+                {folders.map((f, i) => <Cartella key={f.value} nome={f.label} n={inCartella(f.value).length} color={colorFor(i)} value={f.value} folder={f} drop={canEdit} onClick={() => setPath([f.value])} sub={(() => { const a = [...new Set(inCartella(f.value).map((x) => x.anno).filter(Boolean))].sort(); return a.length > 1 ? a[0] + '–' + a[a.length - 1] : '' })()} />)}
+                {canEdit && folderField && (editing === '__nuova__' ? (
+                  <div className="rounded-2xl border border-accent p-4 bg-surface-card">
+                    <span className="w-12 h-12 rounded-xl flex items-center justify-center mb-3 bg-accent/15 text-accent"><Icon name="folder" size={26} /></span>
+                    <input autoFocus value={testo} onChange={(e) => setTesto(e.target.value)} maxLength={60} placeholder="Nome della cartella"
+                      onKeyDown={(e) => { if (e.key === 'Enter') salvaEdit(); if (e.key === 'Escape') setEditing(null) }}
+                      className="w-full bg-surface-page text-ink px-2 py-1.5 rounded-lg text-sm outline-none border border-accent" />
+                    <span className="flex gap-1.5 mt-2">
+                      <button type="button" onClick={salvaEdit} className="text-xs px-2.5 py-1 rounded-lg bg-accent text-white">Crea</button>
+                      <button type="button" onClick={() => setEditing(null)} className="text-xs px-2.5 py-1 rounded-lg bg-gray-800 text-gray-300">Annulla</button>
+                    </span>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => { setErrore(''); setEditing('__nuova__'); setTesto('') }} className="rounded-2xl border border-dashed border-gray-700 hover:border-accent hover:bg-accent/5 p-4 flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-accent transition min-h-[130px]">
+                    <Icon name="plus" size={22} /><span className="text-sm font-medium">Nuova cartella</span>
+                  </button>
+                ))}
                 {senzaCartella.length > 0 && <Cartella nome="Senza cartella" n={senzaCartella.length} color="#9CA3AF" value="" drop={canEdit} onClick={() => setPath([''])} />}
               </div>
-              {canEdit && folderField && <div className="hidden lg:block text-xs text-gray-500 mt-4">Per spostare un file basta trascinarlo su una cartella: apri una cartella e trascina, oppure usa «Cartella» nell'anteprima.</div>}
+              {canEdit && folderField && <div className="hidden lg:block text-xs text-gray-500 mt-4">Per spostare un file basta trascinarlo su una cartella: apri una cartella e trascina, oppure usa «Cartella» nell'anteprima. Con la matita rinomini una cartella, con «Nuova cartella» ne crei una.</div>}
             </>
           )}
           {cart !== undefined && dividi && anno === undefined && (
