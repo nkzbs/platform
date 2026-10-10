@@ -19,6 +19,10 @@ import WeeklyBreakdownView from './ModulePage/WeeklyBreakdownView'
 function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, features = {} }) {
   const api = useApi(token)
   const [editMode, setEditMode] = useState(false)
+  // Su telefono i widget lunghi si chiudono con un tocco (su PC sono sempre aperti): di default chiusi "come sta andando" e checklist.
+  const [aperti, setAperti] = useState(() => { try { return JSON.parse(localStorage.getItem('dash_aperti') || '{}') } catch (e) { return {} } })
+  const isAperto = (w) => (w.id in aperti ? aperti[w.id] : !['come_sta_andando', 'checklist'].includes(w.type))
+  const toggleAperto = (w) => setAperti((a) => { const n = { ...a, [w.id]: !isAperto(w) }; try { localStorage.setItem('dash_aperti', JSON.stringify(n)) } catch (e) { /* storage non disponibile */ } return n })
   // Prima i widget vivevano in localStorage (per browser, non per tenant — due persone
   // sulla stessa istanza vedevano dashboard diverse, e sparivano cambiando browser).
   // Ora sono dati reali del tenant (tabella dashboard_widgets), condivisi da chiunque
@@ -398,7 +402,13 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
           // rounded-xl border p-5), niente doppia cornice qui, solo 'relative' per
           // ancorare i controlli di editMode.
           return (
-            <div key={w.id} className={(['yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'come_sta_andando'].includes(w.type) ? 'relative' : 'bg-surface-card rounded-md border border-gray-800 overflow-hidden relative') + (['checklist', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? ' col-span-full' : ['riepilogo_mensile', 'come_sta_andando', 'coda'].includes(w.type) ? ' col-span-full lg:col-span-3' : ' lg:col-span-2')}>
+            <div key={w.id} className={(!isAperto(w) ? 'max-lg:[&>*:not(.wbar)]:hidden ' : '') + (['yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'come_sta_andando'].includes(w.type) ? 'relative' : 'bg-surface-card rounded-md border border-gray-800 overflow-hidden relative') + (['checklist', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? ' col-span-full' : ['riepilogo_mensile', 'come_sta_andando', 'coda'].includes(w.type) ? ' col-span-full lg:col-span-3' : ' lg:col-span-2')}>
+              {['come_sta_andando', 'checklist', 'coda', 'riepilogo_mensile'].includes(w.type) && !editMode && (
+                <button type="button" onClick={() => toggleAperto(w)} className={'wbar lg:hidden w-full flex items-center justify-between text-sm ' + (isAperto(w) ? 'justify-end px-1 py-1 text-xs text-gray-500' : 'px-4 py-3 font-medium text-ink bg-surface-card rounded-md border border-gray-800')}>
+                  {isAperto(w) ? null : <span>{w.label}</span>}
+                  <span className="flex items-center gap-1">{isAperto(w) ? 'Riduci' : ''}<Icon name={isAperto(w) ? 'chevron-up' : 'chevron-down'} size={14} /></span>
+                </button>
+              )}
               {editMode && (() => {
                 const r = w.roles || [], ids = w.user_ids || []
                 const nomi = ids.map((id) => { const x = allUsers.find((u) => u.id === id); return x ? (x.display_name || x.username) : null }).filter(Boolean)

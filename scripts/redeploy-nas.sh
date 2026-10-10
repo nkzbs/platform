@@ -63,7 +63,7 @@ if has core; then
     TOKEN=$(printf '%s' "$RESP" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{process.stdout.write(JSON.parse(s).token||'')}catch(e){}})")
     [ -n "$TOKEN" ] && break
     # Super Admin che risponde con un JSON (password errata, 2FA, troppi tentativi) NON si riprova: ogni tentativo conta nel limite di accesso.
-    printf '%s' "$RESP" | grep -q '^{' && { echo "Super Admin rifiuta il login: $RESP" | head -c 200; echo; exit 1; }
+    printf '%s' "$RESP" | grep -q '^{' && { if printf '%s' "$RESP" | grep -q needs_2fa; then echo "Super Admin chiede il codice 2FA: l'immagine è pronta, premi Aggiorna sul tenant in Super Admin."; else echo "Super Admin rifiuta il login: $(printf '%s' "$RESP" | sed 's/"pending_token":"[^"]*"//g' | head -c 160)"; fi; exit 1; }
     sleep 2
   done
   [ -n "$TOKEN" ] || { echo "Login a Super Admin fallito"; exit 1; }
