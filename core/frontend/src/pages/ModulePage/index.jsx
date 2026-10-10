@@ -33,6 +33,9 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
   const [form, setForm] = useState({})
   const [relatedCache, setRelatedCache] = useState({})
   const [detailId, setDetailId] = useState(null)
+  // Modulo "nuovo" semplice: i collegamenti facoltativi stanno chiusi in fondo; in un archivio il nuovo documento parte dalla cartella aperta
+  const [mostraCollegamenti, setMostraCollegamenti] = useState(false)
+  const [cartellaCorrente, setCartellaCorrente] = useState('')
   const [uploading, setUploading] = useState({})
   // Quick-create: quale relazione ha aperto il mini-form (null = chiuso) + i suoi valori
   const [quickCreateRel, setQuickCreateRel] = useState(null)
@@ -161,7 +164,12 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
     setUploading((p) => ({ ...p, [fieldKey]: false }))
     if (res.ok) {
       const uploaded = await res.json()
-      setForm((p) => ({ ...p, [fieldKey]: uploaded }))
+      setForm((p) => {
+        const next = { ...p, [fieldKey]: uploaded }
+        const tf = mod.list_view === 'archive' ? fields.find((f) => f.type === 'text') : null
+        if (tf && !String(p[tf.key] || '').trim() && uploaded && uploaded.name) next[tf.key] = String(uploaded.name).replace(/\.[^.]+$/, '')
+        return next
+      })
     } else {
       window.alert('Upload non riuscito')
     }
@@ -636,7 +644,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
                 </button>
               ))
             ) : canCreate && (
-              <button onClick={() => { setShowNew(true); setForm(workflow && workflow.states && workflow.states.length > 0 ? { _stato: workflow.states[0].key } : {}) }} className="bg-accent hover:opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+              <button onClick={() => { setShowNew(true); setMostraCollegamenti(false); const ff = mod.list_view === 'archive' ? fields.find((f) => f.type === 'select') : null; setForm({ ...(workflow && workflow.states && workflow.states.length > 0 ? { _stato: workflow.states[0].key } : {}), ...(ff && cartellaCorrente ? { [ff.key]: cartellaCorrente } : {}) }) }} className="bg-accent hover:opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
                 <Icon name="plus" size={14} />Nuovo
               </button>
             )}
@@ -784,7 +792,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
       ) : schema && schema.period_views && schema.period_views.length > 0 ? (
         <PeriodView config={schema.period_views[0]} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} />
       ) : mod.list_view === 'archive' ? (
-        <ArchiveView mod={mod} schema={schema} records={displayRecords} token={token} canEdit={canDo('edit')} onOpen={(id) => setDetailId(id)} onChanged={loadRecords} onSchemaChanged={async () => { await loadSchema(); await loadRecords() }} searching={search.trim() !== ''} />
+        <ArchiveView mod={mod} schema={schema} records={displayRecords} token={token} canEdit={canDo('edit')} onOpen={(id) => setDetailId(id)} onChanged={loadRecords} onCartella={setCartellaCorrente} onSchemaChanged={async () => { await loadSchema(); await loadRecords() }} searching={search.trim() !== ''} />
       ) : mod.list_view === 'card_grid' ? (
         displayRecords.length === 0 ? (
           <div className="bg-surface-card rounded-md p-12 text-center border border-gray-800">
@@ -1115,8 +1123,30 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
                     options={workflow.states.filter((s) => s.initial || true).map((s) => ({ value: s.key, label: s.label }))} />
                 </div>
               )}
-              {relations.map(renderRelationField)}
-              {visibleEditableFields.map(renderRegularField)}
+              {(() => {
+                // Prima ciò che serve davvero: in un archivio il file in testa, poi i campi obbligatori, poi gli altri; i collegamenti
+                // facoltativi (spese, debiti…) stanno chiusi in fondo, a meno che uno sia obbligatorio.
+                const arch = mod.list_view === 'archive'
+                const peso = (f) => (arch && f.type === 'file' ? 0 : f.required ? 1 : 2)
+                const campi = [...visibleEditableFields].sort((a, b) => peso(a) - peso(b))
+                const obbl = relations.filter((r) => r.required)
+                const facolt = relations.filter((r) => !r.required)
+                return (
+                  <>
+                    {obbl.map(renderRelationField)}
+                    {campi.map(renderRegularField)}
+                    {facolt.length > 0 && (
+                      <div className="border-t border-gray-800 pt-3">
+                        <button type="button" onClick={() => setMostraCollegamenti((v) => !v)} className="w-full flex items-center justify-between text-sm text-gray-400 hover:text-ink py-1">
+                          <span>Collegamenti <span className="text-xs text-gray-600">(facoltativo)</span></span>
+                          <Icon name={mostraCollegamenti ? 'chevron-down' : 'chevron-right'} size={14} />
+                        </button>
+                        {mostraCollegamenti && <div className="space-y-3 mt-2">{facolt.map(renderRelationField)}</div>}
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
             </div>
 
             {Object.entries(liveResults).some(([, r]) => r.valid && r.value === true) && (

@@ -128,7 +128,7 @@ const ANNO = /(?:^|[^0-9])((?:19|20)\d{2})(?=\d{4}(?![0-9])|[^0-9]|$)/
 const annoDi = (titolo, data) => { const m = ANNO.exec(String(titolo || '')); if (m) return m[1]; const d = String(data || '').slice(0, 4); return /^\d{4}$/.test(d) ? d : '' }
 const SOTTO_CARTELLE_DA = 8 // una cartella con almeno 8 file e almeno 2 anni diversi si divide in sottocartelle per anno
 
-export default function ArchiveView({ mod, schema, records, token, canEdit, onOpen, onChanged, onSchemaChanged, searching }) {
+export default function ArchiveView({ mod, schema, records, token, canEdit, onOpen, onChanged, onSchemaChanged, onCartella, searching }) {
   const api = useApi(token)
   const fields = (schema && schema.fields) || []
   const folderField = fields.find((f) => f.type === 'select')
@@ -164,6 +164,7 @@ export default function ArchiveView({ mod, schema, records, token, canEdit, onOp
   const inCartella = (v) => items.filter((i) => i.folderValue === v)
   const senzaCartella = items.filter((i) => !i.folderValue)
   const [cart, anno] = path
+  useEffect(() => { if (onCartella) onCartella(cart && cart !== '' ? cart : '') }, [cart]) // eslint-disable-line react-hooks/exhaustive-deps
   const correnti = cart === undefined ? [] : cart === '' ? senzaCartella : inCartella(cart)
   const anni = [...new Set(correnti.map((i) => i.anno))]
   const dividi = correnti.length >= SOTTO_CARTELLE_DA && anni.filter(Boolean).length >= 2
