@@ -189,6 +189,18 @@ Cosa avvisare e con quali parole lo **dichiara il modulo** (Builder → Ruoli de
   Sostituisce il «Riepilogo del mattino» (08:00) e i report settimanale/mensile automatici dei moduli, che contavano le spese per data senza guardare lo stato di pagamento: la scheda **Report** elenca le
   automazioni vecchie ancora nei moduli e le toglie con un pulsante (`/api/reports/legacy`, con cronologia del modulo).
 
+### Bot Telegram
+
+`telegram.js`, `routes/telegram.js`, scheda Impostazioni → **Report → Telegram** (collegare il bot, admin) e **Il mio account** (collegare il proprio telefono, ogni utente). È un secondo canale dei report e un bot a doppio senso, **senza scritture libere**: legge con comandi fissi (`/pagare`, `/scadute`, `/smistare`) e scrive solo con un tocco su un bottone.
+
+- **Collegamento del bot**: l'admin incolla il codice segreto di BotFather; l'app lo controlla con `getMe`, registra il webhook (`/api/telegram/webhook`) con un **segreto** e lo salva **cifrato** (riga `telegram` di `connections`). Il token non esce mai dalle API.
+- **Il webhook** risponde solo se l'header `X-Telegram-Bot-Api-Secret-Token` è giusto (confronto a tempo costante), altrimenti 403; risponde sempre 200 a Telegram dopo l'elaborazione. Solo chat **private**, al massimo **20 messaggi al minuto** per chat.
+- **Una chat conta solo se è collegata a un utente** (`telegram_links`), con un **codice monouso di 10 minuti** generato dall'app da loggato (`telegram_link_codes`); si scollega dall'app o con `/scollega`. Una chat sconosciuta riceve solo le istruzioni per collegarsi, mai dati.
+- **Cosa vede e fa un utente** è ciò che vede e fa nell'app: moduli assegnati (`user_modules`), permessi del ruolo, regola «solo propri» (`reports.js` legge le righe con `filterViewable`), e per le scritture le stesse regole di `runTransition` (`routes/records.js`: permessi, workflow, validazioni, automazioni come «Registra data pagamento»), condivisa con la rotta `/:slug/:id/transition`. Ogni azione finisce nel registro attività (`telegram.pay`, `telegram.undo`, `telegram.link`…).
+- **Il bottone «✅ Pagata»** (`pay:<modulo>:<id>`) sui messaggi delle scadute porta la voce da «da pagare» a «pagato» (gli stati li dichiara il modulo) e diventa «↩ Annulla» (`undo:…`, se il workflow ammette il ritorno). Premerlo due volte non fa danni; un dato manomesso, un modulo non assegnato o una riga non «da pagare» si rifiutano.
+- **I report** (`reports.js`) vanno su **tutti i canali accesi** (impostazioni `canali`): WhatsApp con il messaggio completo, ogni telefono Telegram con la **sua** versione (solo ciò che può vedere), in HTML (testo sempre «escapato») e con i bottoni «Pagata» e «Apri l'app».
+- **Limiti dichiarati**: il bot non ha il 2FA (il telefono collegato e sbloccato basta: per questo le azioni sono pochissime e si revocano dall'app); i messaggi stanno sui server di Telegram (non cifrati end-to-end); le **domande libere con l'AI non ci sono ancora**.
+
 ## Ruoli dei moduli: le funzioni non conoscono i nomi
 
 Ogni modulo dichiara nel Builder (Proprietà → "Ruoli del modulo") a cosa serve; le funzioni leggono la dichiarazione invece di avere nomi di moduli e di

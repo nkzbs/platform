@@ -18,6 +18,7 @@ const FINESTRA_ORE = 5; // dopo l'ora scelta il report può ancora partire per 5
 const MAX_PAGARE = 8, MAX_SMISTARE = 6, MAX_SCADUTE = 8; // messaggi corti: il resto è «+ altre N»
 
 const DEFAULTS = {
+  canali: { whatsapp: true, telegram: true }, // dove arrivano i report; Telegram parte solo se il bot è collegato e ci sono telefoni collegati
   pagare: { enabled: true, day: 27, hour: 18, stipendio: true },
   smistare: { enabled: true, hour: 19 },
   scadute: { enabled: true, weekday: 1, hour: 19 }, // 1 = lunedì
@@ -60,13 +61,20 @@ function settings() {
   let saved = {};
   try { const r = db.prepare('SELECT report_settings s FROM tenant_settings WHERE id = 1').get(); saved = r && r.s ? JSON.parse(r.s) : {}; } catch (e) { saved = {}; }
   const out = {};
-  for (const k of KINDS) out[k] = { ...DEFAULTS[k], ...(saved[k] || {}) };
+  for (const k of [...KINDS, 'canali']) out[k] = { ...DEFAULTS[k], ...(saved[k] || {}) };
   return out;
 }
 function saveSettings(kind, patch) {
-  if (!KINDS.includes(kind)) return { error: 'Report sconosciuto' };
+  if (![...KINDS, 'canali'].includes(kind)) return { error: 'Report sconosciuto' };
   const cur = settings(), next = { ...cur[kind] };
   const p = patch || {};
+  if (kind === 'canali') {
+    if (p.whatsapp != null) next.whatsapp = !!p.whatsapp;
+    if (p.telegram != null) next.telegram = !!p.telegram;
+    cur.canali = next;
+    db.prepare('UPDATE tenant_settings SET report_settings = ? WHERE id = 1').run(JSON.stringify(cur));
+    return { settings: cur };
+  }
   const int = (v, lo, hi) => { const n = parseInt(v, 10); return Number.isInteger(n) && n >= lo && n <= hi ? n : null; };
   if (p.enabled != null) next.enabled = !!p.enabled;
   if (p.hour != null) { const h = int(p.hour, 6, 22); if (h == null) return { error: "L'ora deve essere tra le 6 e le 22." }; next.hour = h; }
@@ -81,39 +89,49 @@ function saveSettings(kind, patch) {
 function isEnabled() { const s = settings(); return KINDS.some((k) => s[k].enabled); }
 
 // ── lettura dei dati, sempre attraverso ciò che i moduli dichiarano ───────────────────────────────────────────────────
-function avvisiModules() {
+function avvisiModules(scope) {
   let declared = [];
   try { declared = require('./module-roles').list({ use: 'avvisi' }); } catch (e) { /* tabella non pronta */ }
+  if (scope && scope.slugs) declared = declared.filter((m) => scope.slugs.has(m.module_slug)); // un utente vede solo i moduli che gli sono assegnati
   return declared.map((m) => ({ slug: m.module_slug, label: m.avvisi.label || String(m.name || m.module_slug).toLowerCase(), roles: { stato: '_stato', ...m.roles }, states: m.avvisi.states, scadenze: !!m.avvisi.scadenze, nuovo: !!m.avvisi.nuovo, noun_s: m.avvisi.noun_s, noun_p: m.avvisi.noun_p }));
 }
-function rows(slug) {
-  const out = [];
-  for (const r of db.prepare('SELECT data FROM records WHERE module_slug = ?').all(slug)) { try { out.push(JSON.parse(r.data)); } catch (e) { /* riga illeggibile */ } }
-  return out;
+// Righe di un modulo: { id, data }. Con `scope.user` (non admin) solo quelle che quell'utente può vedere (regola «solo propri» compresa).
+function rows(slug, scope) {
+  let recs = db.prepare('SELECT * FROM records WHERE module_slug = ?').all(slug).map((r) => { try { return { ...r, data: JSON.parse(r.data) }; } catch (e) { return null; } }).filter(Boolean);
+  if (scope && scope.user && scope.user.role !== 'admin') {
+    try {
+      const { parseSchemaNormalized } = require('./schema-v3');
+      const { ruleFor, filterViewable } = require('./permissions');
+      const m = db.prepare('SELECT schema_json FROM modules WHERE slug = ?').get(slug);
+      recs = filterViewable(recs, ruleFor(parseSchemaNormalized(m.schema_json), scope.user.role), scope.user);
+    } catch (e) { recs = []; }
+  }
+  return recs.map((r) => ({ id: r.id, data: r.data }));
 }
 // Le righe "da pagare" dei moduli che hanno acceso le scadenze, con la loro scadenza (`scadenza` se c'è, altrimenti `data`).
-function daPagare() {
+function daPagare(scope) {
   const items = [];
-  for (const m of avvisiModules()) {
+  for (const m of avvisiModules(scope)) {
     if (!m.scadenze || !m.states.da_fare) continue;
     const R = m.roles;
-    for (const d of rows(m.slug)) {
+    for (const { id, data: d } of rows(m.slug, scope)) {
       if (d[R.stato || '_stato'] !== m.states.da_fare) continue;
       const due = d[R.scadenza || 'scadenza'] || d[R.data || 'data'];
       if (!due) continue;
-      items.push({ descrizione: String(d[R.descrizione || 'descrizione'] || '(senza descrizione)').trim(), label: m.label, importo: Number(d[R.importo || 'importo']) || 0, due: String(due).slice(0, 10) });
+      items.push({ slug: m.slug, id, descrizione: String(d[R.descrizione || 'descrizione'] || '(senza descrizione)').trim(), label: m.label, importo: Number(d[R.importo || 'importo']) || 0, due: String(due).slice(0, 10) });
     }
   }
   return items;
 }
 // Ultimo stipendio: l'entrata più recente in una delle categorie dichiarate come stipendio (Builder → Riepiloghi), nel modulo di tipo entrata.
-function ultimoStipendio() {
+function ultimoStipendio(scope) {
   let best = null;
   try {
     for (const m of require('./module-roles').list()) {
       const cats = ((m.riepiloghi || {}).salary_categories) || [];
+      if (scope && scope.slugs && !scope.slugs.has(m.module_slug)) continue;
       if (m.kind !== 'entrata' || !cats.length || !m.roles || !m.roles.categoria || !m.roles.importo || !m.roles.data) continue;
-      for (const d of rows(m.module_slug)) {
+      for (const { data: d } of rows(m.module_slug, scope)) {
         if (!cats.includes(d[m.roles.categoria])) continue;
         const data = String(d[m.roles.data] || '').slice(0, 10);
         if (data && (!best || data > best.data)) best = { data, importo: Number(d[m.roles.importo]) || 0 };
@@ -124,10 +142,10 @@ function ultimoStipendio() {
 }
 
 // ── i tre messaggi ────────────────────────────────────────────────────────────────────────────────────────────────────
-function buildPagare(now = new Date()) {
+function buildPagare(now = new Date(), scope = null) {
   const cfg = settings(), s = cfg.pagare, today = romeParts(now).date;
   const fine = endOfWindow(today, s.day), lateFrom = addDays(today, -LATE_DAYS);
-  const tutti = daPagare();
+  const tutti = daPagare(scope);
   const scadute = tutti.filter((x) => x.due < today && x.due >= lateFrom).sort((a, b) => a.due.localeCompare(b.due));
   const nel = tutti.filter((x) => x.due >= today && x.due <= fine).sort((a, b) => a.due.localeCompare(b.due) || b.importo - a.importo);
   const tot = (a) => a.reduce((t, x) => t + x.importo, 0);
@@ -149,18 +167,18 @@ function buildPagare(now = new Date()) {
     parts.push('*In arrivo*\n' + lines.join('\n'));
   }
   if (s.stipendio) {
-    const st = ultimoStipendio();
+    const st = ultimoStipendio(scope);
     if (st) { const resto = st.importo - totale; parts.push('💰 Stipendio ' + fmtCompact(st.importo) + ' → ' + (resto >= 0 ? 'restano *' + fmtCompact(resto) + '*' : 'mancano *' + fmtCompact(-resto) + '*')); }
   }
   return { text: parts.join('\n\n'), counts: { voci: nel.length, scadute: scadute.length, totale } };
 }
 
-function buildSmistare() {
+function buildSmistare(now = new Date(), scope = null) {
   const righe = []; let nome = null;
-  for (const m of avvisiModules()) {
+  for (const m of avvisiModules(scope)) {
     if (!m.nuovo || !m.states.nuovo) continue;
     const R = m.roles;
-    for (const d of rows(m.slug)) {
+    for (const { data: d } of rows(m.slug, scope)) {
       if (d[R.stato || '_stato'] !== m.states.nuovo) continue;
       nome = nome || { s: m.noun_s || 'riga', p: m.noun_p || 'righe' };
       const imp = Number(d[R.importo || 'importo']) || 0, scad = d[R.scadenza || 'scadenza'] || d[R.data || 'data'];
@@ -174,37 +192,70 @@ function buildSmistare() {
   return { text: '📥 *Da smistare* · ' + n + ' ' + (n === 1 ? nome.s : nome.p) + '\n\n' + lines.join('\n') + '\n\nTi ricordo ogni sera finché non le smisti.', counts: { voci: n } };
 }
 
-function buildScadute(now = new Date()) {
+function buildScadute(now = new Date(), scope = null) {
   const today = romeParts(now).date, lateFrom = addDays(today, -LATE_DAYS);
-  const s = daPagare().filter((x) => x.due < today && x.due >= lateFrom).sort((a, b) => a.due.localeCompare(b.due));
+  const s = daPagare(scope).filter((x) => x.due < today && x.due >= lateFrom).sort((a, b) => a.due.localeCompare(b.due));
   if (!s.length) return null;
   const totale = s.reduce((t, x) => t + x.importo, 0);
   const lines = s.slice(0, MAX_SCADUTE).map((x) => '• ' + x.descrizione + ' — ' + fmtCompact(x.importo) + ' · da ' + daysBetween(x.due, today) + ' gg');
   if (s.length > MAX_SCADUTE) lines.push('+ altre ' + (s.length - MAX_SCADUTE));
-  return { text: '⚠ *Scadute* · ' + fmtEur(totale) + ' (' + s.length + (s.length === 1 ? ' voce' : ' voci') + ')\n\n' + lines.join('\n') + '\n\nGià pagate? Spuntale nella Checklist.', counts: { voci: s.length, totale } };
+  return { text: '⚠ *Scadute* · ' + fmtEur(totale) + ' (' + s.length + (s.length === 1 ? ' voce' : ' voci') + ')\n\n' + lines.join('\n') + '\n\nGià pagate? Spuntale nella Checklist.', counts: { voci: s.length, totale }, items: s.slice(0, MAX_SCADUTE) };
 }
 
-const build = (kind, now) => (kind === 'pagare' ? buildPagare(now) : kind === 'smistare' ? buildSmistare(now) : kind === 'scadute' ? buildScadute(now) : null);
+const build = (kind, now, scope) => (kind === 'pagare' ? buildPagare(now, scope) : kind === 'smistare' ? buildSmistare(now, scope) : kind === 'scadute' ? buildScadute(now, scope) : null);
 const LABEL = { pagare: 'Report: da pagare', smistare: 'Report: da smistare', scadute: 'Report: voci scadute' };
 
 function writeLog(kind, esito, descrizione) {
   try { db.prepare("INSERT INTO automation_logs (module_slug, automation_label, trigger_desc, action_desc, esito) VALUES ('sistema', ?, ?, ?, ?)").run(LABEL[kind], 'pianificato', String(descrizione).slice(0, 400), esito); } catch (e) { /* mai bloccare */ }
 }
 
-// Invia un report ora. Ritorna { esito }: 'inviato' | 'parziale' | 'FALLITO' | 'nulla da segnalare' | 'non configurato'.
+// Invia un report ora, su tutti i canali accesi (WhatsApp e/o Telegram). Ritorna { esito }: 'inviato' | 'parziale' | 'FALLITO' | 'nulla da segnalare' | 'non configurato'.
+// WhatsApp riceve il messaggio completo; ogni telefono Telegram riceve la SUA versione (solo i moduli e le righe che quell'utente può vedere), con i bottoni.
 async function sendReport(kind, { now = new Date(), actor = 'sistema' } = {}) {
   if (!KINDS.includes(kind)) return { esito: 'FALLITO', motivo: 'Report sconosciuto' };
-  const row = db.prepare("SELECT credentials FROM connections WHERE integration_id = 'whatsapp_callmebot'").get();
-  let creds = null; try { creds = row && row.credentials ? JSON.parse(row.credentials) : null; } catch (e) { /* illeggibili */ }
-  if (!creds || !creds.api_key) return { esito: 'non configurato', motivo: 'WhatsApp (CallMeBot) non è collegato' };
-  const dest = require('./notification-settings').recipientsForTag(TAG);
-  if (!dest.length) return { esito: 'non configurato', motivo: 'Nessun destinatario attivo con il tag "' + TAG + '"' };
+  const canali = settings().canali;
+  const tg = require('./telegram');
+
+  // WhatsApp: collegato e con almeno un destinatario?
+  let waCreds = null; let dest = [];
+  if (canali.whatsapp) {
+    const row = db.prepare("SELECT credentials FROM connections WHERE integration_id = 'whatsapp_callmebot'").get();
+    try { waCreds = row && row.credentials ? JSON.parse(row.credentials) : null; } catch (e) { waCreds = null; }
+    dest = require('./notification-settings').recipientsForTag(TAG);
+  }
+  const waOk = !!(canali.whatsapp && waCreds && waCreds.api_key && dest.length);
+  const links = canali.telegram && tg.isConfigured() ? tg.listLinks() : [];
+  const tgOk = links.length > 0;
+  if (!waOk && !tgOk) {
+    const motivo = !canali.whatsapp && !canali.telegram ? 'Tutti i canali sono spenti'
+      : canali.whatsapp && !(waCreds && waCreds.api_key) ? 'WhatsApp (CallMeBot) non è collegato' + (canali.telegram ? ' e nessun telefono è collegato a Telegram' : '')
+      : canali.whatsapp && !dest.length ? 'Nessun destinatario attivo con il tag "' + TAG + '"' : 'Nessun telefono collegato a Telegram';
+    return { esito: 'non configurato', motivo };
+  }
   const r = build(kind, now);
   if (!r) { writeLog(kind, 'nulla da segnalare', 'Niente da segnalare'); return { esito: 'nulla da segnalare' }; }
-  const out = await whatsapp.sendAll({ destinatari: dest, testo: r.text, apiKey: creds.api_key, kind: 'report' });
-  writeLog(kind, out.esito, JSON.stringify(r.counts) + ' — ' + out.dettaglio);
-  logAudit(actor, 'report.send.' + kind, null, { esito: out.esito });
-  return { esito: out.esito, dettaglio: out.dettaglio, counts: r.counts };
+
+  const parti = []; // { canale, ok, dettaglio }
+  if (waOk) {
+    const out = await whatsapp.sendAll({ destinatari: dest, testo: r.text, apiKey: waCreds.api_key, kind: 'report' });
+    parti.push({ canale: 'WhatsApp', ok: out.esito === 'inviato' ? 1 : out.esito === 'parziale' ? 0.5 : 0, dettaglio: out.dettaglio });
+  }
+  if (tgOk) {
+    for (const l of links) {
+      const user = tg.linkedUser(l.chat_id);
+      if (!user) continue;
+      const mio = build(kind, now, tg.scopeFor(user)); // la versione di questo utente
+      if (!mio) continue;                               // niente da dire per lui: nessun messaggio
+      const o = await tg.sendReportTo(l.chat_id, kind, mio);
+      parti.push({ canale: 'Telegram', ok: o.ok ? 1 : 0, dettaglio: (user.display_name || user.username) + (o.ok ? ' ✓' : ' ✗ ' + o.reason) });
+    }
+  }
+  const tot = parti.length, somma = parti.reduce((t, p) => t + p.ok, 0);
+  const esito = !tot ? 'nulla da segnalare' : somma === tot ? 'inviato' : somma === 0 ? 'FALLITO' : 'parziale';
+  const dettaglio = parti.map((p) => p.canale + ': ' + p.dettaglio).join(' | ');
+  writeLog(kind, esito, JSON.stringify(r.counts) + ' — ' + dettaglio);
+  logAudit(actor, 'report.send.' + kind, null, { esito });
+  return { esito, dettaglio, counts: r.counts };
 }
 
 // Il report è «dovuto» adesso? Ritorna la chiave che lo identifica (per non mandarlo due volte) oppure null.

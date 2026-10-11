@@ -87,6 +87,16 @@ Vedi `docs/OPERAZIONI.md` → "Utenti, accessi e 2FA". Dopo averli creati, prova
 - [ ] Super Admin → Finance → Backup → **Backup settimanale via mail**: acceso; «Invia ora una prova» → arriva una mail con un allegato `.db.gz.enc`. Salva la **passphrase** in un gestore di password e prova a riaprire l'allegato con il comando scritto nella mail.
 - [ ] **Gmail**: inoltrati una bolletta a te stesso; entro pochi minuti deve comparire in «Da smistare» (e arrivare l'avviso WhatsApp). L'ultima riga da Gmail risale al 2 ottobre: se non compare, il controllo non gira.
 
+## 6d. Bot Telegram
+
+- [ ] **Collegamento** (vedi `docs/OPERAZIONI.md` → Bot Telegram): bot creato con BotFather, codice incollato in Impostazioni → Report → Telegram, compare `@nome_del_bot`.
+- [ ] **Il mio telefono**: «Collega il mio Telegram» → tocchi il link → Avvia → il bot risponde «✅ Collegato a Finance come …» e il telefono compare in elenco.
+- [ ] **/scadute** mostra le voci scadute **con un bottone «✅ Pagata» per voce**. Tocca uno: la voce passa a «pagato» in Finance (controlla nella Checklist) e il bottone diventa «↩ Annulla». Annulla la riporta a «da pagare».
+- [ ] **/pagare** e **/smistare** rispondono con gli stessi dati dei report.
+- [ ] **Report**: «Invia ora» su una scheda manda il messaggio anche su Telegram, con i bottoni e «Apri l'app».
+- [ ] **Federica** (dopo averla collegata): il bot le mostra **solo Casa**; non può chiudere voci di Spese Personali, nemmeno con il bottone di un messaggio inoltrato.
+- [ ] **Sicurezza**: da un altro telefono non collegato scrivi al bot: risponde solo con le istruzioni, nessun dato. «Scollega» il tuo telefono: il bot non risponde più ai comandi.
+
 ## 7. 2FA
 
 - [ ] Attiva il 2FA dal proprio account (Impostazioni → Il mio account): scansiona il QR con un'app authenticator e **salva i codici di recupero** (si vedono una volta sola).

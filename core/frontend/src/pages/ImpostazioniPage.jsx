@@ -339,7 +339,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
 
       {tab === 'connessioni' && <ConnessioniTab token={token} features={features} />}
 
-      {tab === 'notifiche' && <ReportsSettingsTab token={token} features={features} />}
+      {tab === 'notifiche' && <ReportsSettingsTab token={token} user={user} features={features} />}
 
 
       {tab === 'assistente' && <AiSettingsPage token={token} onChanged={onFeaturesChanged} />}

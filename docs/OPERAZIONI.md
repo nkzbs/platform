@@ -204,3 +204,11 @@ Cloudflare punta alla porta 4000, cioè al container `platform-nginx`. Se è fer
 
 ## Archivio Documenti: cartelle
 Nel Builder, modulo Documenti → «Come si vede l'elenco» → **Archivio**. Le cartelle si rinominano, si creano e si eliminano (se vuote) dalla vista stessa (matita, «Nuova cartella», cestino). Se non si riesce a rinominare perché il nome è usato in una regola del modulo, cambiarlo dal Builder.
+
+## Bot Telegram: attivarlo
+1. **Crea il bot** (una volta, lo fa chi amministra): in Telegram cerca **@BotFather**, scrivi `/newbot`, scegli un nome e un nome utente che finisce con «bot». BotFather ti dà un **codice segreto** (`123456789:AA…`): non va dato a nessuno né scritto in chat.
+2. **Collegalo a Finance**: Impostazioni → **Report → Telegram**, incolla il codice, «Collega il bot». L'app lo controlla, registra il webhook e mostra `@nome_del_bot`. Il codice resta cifrato nel database.
+3. **Collega ogni telefono**: ognuno, da loggato, in **Il mio account** (o nella stessa scheda) preme «Collega il mio Telegram», tocca il link dal telefono e preme **Avvia**. Il codice vale 10 minuti e una volta sola.
+4. **Scegli dove arrivano i report**: Impostazioni → Report → «Dove arrivano i report» (WhatsApp e/o Telegram).
+- **Revocare**: «Scollega» accanto al telefono (il proprio; l'admin qualunque), o `/scollega` dalla chat. «Scollega il bot» toglie anche il webhook e tutti i telefoni. Se il codice segreto è finito in mani sbagliate: `/revoke` su BotFather e ricollegare con il nuovo.
+- **Se non arriva niente**: il tenant deve essere raggiungibile da fuori in https (il webhook è `…/api/telegram/webhook`); controllare che il bot sia collegato e che il telefono compaia nell'elenco.

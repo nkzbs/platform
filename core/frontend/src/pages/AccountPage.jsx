@@ -1,3 +1,4 @@
+import TelegramCard from '../components/TelegramCard'
 import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
@@ -168,6 +169,8 @@ function AccountPage({ token, user }) {
           </div>
         )}
       </div>
+
+      <TelegramCard token={token} user={user} className="lg:col-span-2" />
     </div>
   )
 }

@@ -752,6 +752,8 @@ router.delete('/:slug', requireAuth, requireAdmin, (req, res) => {
 });
 
 module.exports = router;
+// Gli slug dei moduli che QUESTO utente vede (assegnazione moduli + permessi del ruolo): lo usa anche il bot Telegram, per non mostrare altro.
+module.exports.visibleSlugsFor = (user) => filterByRolePermissions(getVisibleInstalledModules(user), user.role).map((m) => m.slug).filter((x) => x !== 'dashboard');
 // Riusata da routes/assessment.js (2026-09-08, "Suggerimenti di miglioramento"
 // — installare direttamente il modulo che il pannello consiglia) — stesso
 // identico percorso già usato da questo file per un'installazione dallo

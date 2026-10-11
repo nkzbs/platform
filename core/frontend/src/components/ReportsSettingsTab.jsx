@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from './Icon'
+import TelegramCard from './TelegramCard'
 
 // Report su WhatsApp: tre messaggi, ognuno risponde a una sola domanda e non parte se non c'è niente da dire.
 // Cosa conta come "da pagare" o "da smistare" lo dichiarano i moduli (Builder → Avvisi); qui si sceglie solo quando mandarli.
@@ -18,7 +19,7 @@ const REPORT = {
   scadute: { titolo: 'Voci scadute', icona: 'alert-triangle', vuoto: 'Nessuna voce scaduta: il messaggio non partirebbe.' },
 }
 
-export default function ReportsSettingsTab({ token, features = {} }) {
+export default function ReportsSettingsTab({ token, user, features = {} }) {
   const api = useApi(token)
   const [data, setData] = useState(null) // { settings, last_sent }
   const [busy, setBusy] = useState(null)
@@ -95,6 +96,20 @@ export default function ReportsSettingsTab({ token, features = {} }) {
   if (!data) return <div className="max-w-2xl text-sm text-gray-500">Caricamento…</div>
   return (
     <div className="max-w-2xl space-y-4">
+      <section className="bg-surface-card border border-gray-800 rounded-xl p-5">
+        <h2 className="text-sm font-semibold text-ink mb-1">Dove arrivano i report</h2>
+        <p className="text-xs text-gray-500 mb-3">Telegram parte solo se il bot è collegato e c'è almeno un telefono collegato. Ogni telefono riceve la sua versione: solo ciò che vede nell'app.</p>
+        <div className="flex items-center gap-6 flex-wrap">
+          {[['whatsapp', 'WhatsApp'], ['telegram', 'Telegram']].map(([k, l]) => (
+            <label key={k} className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input type="checkbox" checked={data.settings.canali[k]} onChange={(e) => save('canali', { [k]: e.target.checked })} disabled={!!busy} /> {l}
+            </label>
+          ))}
+        </div>
+      </section>
+
+      <TelegramCard token={token} user={user} />
+
       {Object.keys(REPORT).map((kind) => {
         const s = data.settings[kind], R = REPORT[kind]
         return (

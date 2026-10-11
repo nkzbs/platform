@@ -550,6 +550,9 @@ ensureColumn('tenant_settings', 'digest_last_sent', 'TEXT DEFAULT NULL');
 // Report su WhatsApp (reports.js): impostazioni dei tre report in JSON. Le colonne digest_* sono del vecchio riepilogo del mattino e non si usano più.
 ensureColumn('tenant_settings', 'report_settings', 'TEXT DEFAULT NULL');
 db.exec('CREATE TABLE IF NOT EXISTS report_sent (kind TEXT NOT NULL, key TEXT NOT NULL, sent_at DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (kind, key))');
+// Bot Telegram (telegram.js): ogni chat collegata appartiene a UN utente dell'app (con i suoi permessi); il codice di collegamento è monouso e dura 10 minuti.
+db.exec('CREATE TABLE IF NOT EXISTS telegram_links (id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id TEXT NOT NULL UNIQUE, user_id INTEGER NOT NULL, label TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)');
+db.exec('CREATE TABLE IF NOT EXISTS telegram_link_codes (code TEXT PRIMARY KEY, user_id INTEGER NOT NULL, expires_at INTEGER NOT NULL)');
 
 // Suggerimenti dell'AI su un record. L'AI PROPONE, mai scrive: un suggerimento resta
 // 'pending' finché non lo si accetta (applica i campi al record) o lo si ignora.
