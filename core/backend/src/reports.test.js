@@ -79,30 +79,35 @@ global.fetch = async (url) => {
   };
   await test('totale con le scadute, diviso per modulo; esclude il pagato, il lontano, il residuo antico e le righe da smistare', () => {
     fixture(); const r = R.buildPagare(IL27);
-    ok(r.text.includes('Da pagare dal 27/10 al 26/11'), r.text);
-    ok(r.text.includes('*Totale: 844,17 €*'), r.text); // 550 + 200 + 44 + 50,17
-    ok(r.text.includes('casa 594,00 €') && r.text.includes('pers. 250,17 €'), r.text);
-    ok(r.text.includes('di cui scadute: 50,17 €'), r.text);
+    ok(r.text.includes('*Da pagare* · fino al 26/11'), r.text);
+    ok(r.text.includes('*844,17 €*'), r.text); // 550 + 200 + 44 + 50,17
+    ok(r.text.includes('casa 594 €') && r.text.includes('pers. 250,17 €'), r.text);
+    ok(r.text.includes('⚠ *Scadute 50,17 €* — 1 voce dal 20/10') && r.text.includes('«Voci scadute»'), r.text);
     ['Già pagata', 'Troppo avanti', 'Residuo antico', 'Bolletta nuova'].forEach((x) => ok(!r.text.includes(x), 'non deve esserci ' + x));
     eq(r.counts.scadute, 1);
   });
-  await test('le righe sono in ordine di data, con la scadenza che batte la data, e le scadute segnate', () => {
+  await test('le righe «in arrivo» sono in ordine di data, con la scadenza che batte la data; le scadute non si ripetono se hanno il loro messaggio', () => {
     const t = R.buildPagare(IL27).text;
-    ok(t.indexOf('20/10 Scaduta di recente') < t.indexOf('27/10 Affitto') && t.indexOf('27/10 Affitto') < t.indexOf('05/11 A2A'), t);
-    ok(t.includes('20/10 Scaduta di recente — 50,17 € (pers.) ⚠'), t);
+    ok(t.indexOf('27/10  Affitto') < t.indexOf('27/10  Benzina') && t.indexOf('27/10  Benzina') < t.indexOf('05/11  A2A'), t);
+    ok(t.includes('27/10  Affitto ottobre — 550 €') && t.includes('05/11  A2A Energia — 44 €'), t);
+    ok(!t.includes('Scaduta di recente'), 'le scadute le elenca il loro messaggio');
+  });
+  await test('con il messaggio «scadute» spento, le scadute si elencano nel messaggio del 27', () => {
+    R.saveSettings('scadute', { enabled: false }); const t = R.buildPagare(IL27).text; R.saveSettings('scadute', { enabled: true });
+    ok(t.includes('20/10  Scaduta di recente — 50,17 €') && !t.includes('«Voci scadute»'), t);
   });
   await test('«ultimo stipendio → ti restano»: lo stipendio meno il totale; spegnibile; se manca lo stipendio la riga non c\'è', () => {
-    ok(R.buildPagare(IL27).text.includes('Ultimo stipendio 1799,58 € (25/09) → ti restano 955,41 €'));
-    R.saveSettings('pagare', { stipendio: false }); ok(!R.buildPagare(IL27).text.includes('Ultimo stipendio')); R.saveSettings('pagare', { stipendio: true });
-    db.prepare("DELETE FROM records WHERE module_slug = 'entrate'").run(); ok(!R.buildPagare(IL27).text.includes('Ultimo stipendio'));
+    ok(R.buildPagare(IL27).text.includes('💰 Stipendio 1.799,58 € → restano *955,41 €*'));
+    R.saveSettings('pagare', { stipendio: false }); ok(!R.buildPagare(IL27).text.includes('💰 Stipendio')); R.saveSettings('pagare', { stipendio: true });
+    db.prepare("DELETE FROM records WHERE module_slug = 'entrate'").run(); ok(!R.buildPagare(IL27).text.includes('💰 Stipendio'));
   });
   await test('se il totale supera lo stipendio dice «mancano»', () => {
     put('entrate', { descrizione: 'Stipendio', importo: 100, data: '2026-09-26', categoria: 'Stipendio' }); // più recente: conta questo
-    ok(R.buildPagare(IL27).text.includes('mancano 744,17 €'), R.buildPagare(IL27).text);
+    ok(R.buildPagare(IL27).text.includes('mancano *744,17 €*'), R.buildPagare(IL27).text);
   });
-  await test('oltre 25 righe: le prime 25 e «… e altre N», con il totale su tutte', () => {
+  await test('oltre 8 righe: le prime 8 e «+ altre N», con il totale su tutte', () => {
     reset(); for (let i = 1; i <= 28; i++) put('spese_casa', { descrizione: 'Voce ' + i, importo: 10, data: '2026-11-' + String(Math.min(i, 25)).padStart(2, '0'), ...stato('da_pagare') });
-    const t = R.buildPagare(IL27).text; ok(t.includes('… e altre 3'), t); ok(t.includes('280,00 €'));
+    const t = R.buildPagare(IL27).text; ok(t.includes('+ altre 20'), t); ok(t.includes('*280,00 €*'), t);
   });
   await test('niente da pagare: il report lo dice (è mensile, una conferma serve)', () => {
     reset(); ok(R.buildPagare(IL27).text.includes('Niente da pagare'));
@@ -112,7 +117,7 @@ global.fetch = async (url) => {
   const SERA = rome('2026-10-12', 19, 5);
   await test('elenca le righe nello stato «nuovo» con l\'importo (o «da verificare») e dice che arriverà ogni sera', () => {
     reset(); put('spese_casa', { descrizione: 'A2A Energia', importo: 44, data: '2026-10-01', ...stato('da_smistare') }); put('spese_personali', { descrizione: 'Internet', importo: 0, data: '2026-10-02', ...stato('da_smistare') });
-    const r = R.buildSmistare(); ok(r.text.includes('Da smistare: 2'), r.text); ok(r.text.includes('A2A Energia — 44,00 €') && r.text.includes('Internet — importo da verificare'), r.text); ok(/ogni sera/.test(r.text));
+    const r = R.buildSmistare(); ok(r.text.includes('*Da smistare* · 2'), r.text); ok(r.text.includes('A2A Energia — 44 €') && r.text.includes('Internet — importo da verificare'), r.text); ok(/ogni sera/.test(r.text));
   });
   await test('coda vuota → nessun messaggio', () => { reset(); eq(R.buildSmistare(), null); });
   const SM = { enabled: true, hour: 19 };
@@ -125,7 +130,7 @@ global.fetch = async (url) => {
     reset(); put('spese_personali', { descrizione: 'Benzina + treno', importo: 200, data: '2026-09-27', ...stato('da_pagare') }); put('spese_casa', { descrizione: 'Pagata', importo: 5, data: '2026-09-27', ...stato('pagato') });
     put('spese_casa', { descrizione: 'Futura', importo: 5, data: '2026-10-30', ...stato('da_pagare') }); put('spese_casa', { descrizione: 'Antica', importo: 5, data: '2026-06-01', ...stato('da_pagare') });
     const t = R.buildScadute(rome('2026-10-12', 19)).text;
-    ok(t.includes('Voci scadute (1) — 200,00 €') && t.includes('da 15 giorni (27/09)'), t); ['Pagata', 'Futura', 'Antica'].forEach((x) => ok(!t.includes(x), x));
+    ok(t.includes('*Scadute* · 200,00 € (1 voce)') && t.includes('da 15 gg'), t); ['Pagata', 'Futura', 'Antica'].forEach((x) => ok(!t.includes(x), x));
   });
   await test('nessuna scaduta → nessun messaggio', () => { reset(); eq(R.buildScadute(rome('2026-10-12', 19)), null); });
   const SC = { enabled: true, weekday: 1, hour: 19 };
@@ -143,7 +148,7 @@ global.fetch = async (url) => {
   await test('il controllo manda il report dovuto UNA volta sola, anche se gira ogni minuto', async () => {
     fixture(); sent = [];
     await R.tick(IL27); await R.tick(rome('2026-10-27', 18, 1, 1)); await R.tick(rome('2026-10-27', 19, 30, 1));
-    eq(sent.filter((t) => t.includes('Da pagare dal')).length, 1);
+    eq(sent.filter((t) => t.includes('*Da pagare*')).length, 1);
     eq(db.prepare("SELECT COUNT(*) c FROM report_sent WHERE kind = 'pagare'").get().c, 1);
   });
   await test('da smistare: parte la sera, resta muto se la coda è vuota, e il giorno dopo ritorna se c\'è ancora qualcosa', async () => {
@@ -153,7 +158,7 @@ global.fetch = async (url) => {
     await R.tick(rome('2026-10-12', 20)); eq(sent.length, 1, 'ora c\'è una bolletta'); await R.tick(rome('2026-10-12', 21)); eq(sent.length, 1, 'non due volte lo stesso giorno');
     await R.tick(rome('2026-10-13', 19, 2)); eq(sent.length, 2, 'il giorno dopo ancora');
     db.prepare("UPDATE records SET data = ? WHERE module_slug = 'spese_casa'").run(JSON.stringify({ descrizione: 'A2A', importo: 44, data: '2026-10-01', _stato: 'da_pagare' }));
-    await R.tick(rome('2026-10-14', 19, 2)); eq(sent.filter((t) => t.includes('Da smistare')).length, 2, 'smistata: smette');
+    await R.tick(rome('2026-10-14', 19, 2)); eq(sent.filter((t) => t.includes('*Da smistare*')).length, 2, 'smistata: smette');
   });
   await test('un report spento non parte; le impostazioni si salvano e si controllano', async () => {
     fixture(); sent = []; R.saveSettings('pagare', { enabled: false }); await R.tick(IL27); eq(sent.length, 0); R.saveSettings('pagare', { enabled: true });

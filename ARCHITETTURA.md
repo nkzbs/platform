@@ -180,7 +180,7 @@ Cosa avvisare e con quali parole lo **dichiara il modulo** (Builder → Ruoli de
   (il mensile sì: «Niente da pagare»). Un controllo ogni minuto, ora italiana; ogni invio si segna **prima** di partire (tabella `report_sent`: un report già mandato = una riga `kind + chiave`),
   quindi un errore non diventa un messaggio al minuto, e se il NAS era spento all'ora esatta il report parte appena torna entro la finestra (5 ore, o fino al giorno-paga per il mensile).
   - **«Quanto devo pagare»**: ogni 27 alle 18:00, se il 27 cade di sabato o domenica il **venerdì prima**. Tutto ciò che è «da pagare» dal giorno del report al **26 del mese dopo**, più le voci scadute
-    (non oltre 45 giorni: oltre sono residui), con totale, divisione per modulo ed elenco per data (le prime 25). Facoltativa la riga «ultimo stipendio → ti restano» (entrata più recente nelle categorie
+    (non oltre 45 giorni: oltre sono residui), con il totale, la divisione per modulo, le scadute in una riga (l'elenco sta nel loro messaggio, se è acceso: non si ripetono due volte) e le prime 8 voci «in arrivo» per data (poi «+ altre N»). Messaggi compatti: migliaia con il punto, centesimi solo se servono nelle righe. Facoltativa la riga «ultimo stipendio → ti restano» (entrata più recente nelle categorie
     dichiarate come stipendio in Builder → Riepiloghi).
   - **«Da smistare»**: ogni sera alle 19:00 le righe nello stato «nuovo» (bollette da Gmail…), **finché la coda non è vuota**; il primo avviso, entro un minuto dall'arrivo, resta quello di `avvisi.js`.
   - **«Voci scadute»**: ogni lunedì alle 19:00, solo se ce ne sono, con «da N giorni». Si spengono da sole spuntando le voci nella Checklist.

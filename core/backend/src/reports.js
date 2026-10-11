@@ -15,7 +15,7 @@ const TZ = 'Europe/Rome';
 const LATE_DAYS = 45; // oltre questa soglia una riga "da pagare" è un residuo vecchio, non una scadenza
 const KINDS = ['pagare', 'smistare', 'scadute'];
 const FINESTRA_ORE = 5; // dopo l'ora scelta il report può ancora partire per 5 ore (utile se il NAS era spento all'ora esatta)
-const MAX_PAGARE = 25, MAX_SMISTARE = 8, MAX_SCADUTE = 10;
+const MAX_PAGARE = 8, MAX_SMISTARE = 6, MAX_SCADUTE = 8; // messaggi corti: il resto è «+ altre N»
 
 const DEFAULTS = {
   pagare: { enabled: true, day: 27, hour: 18, stipendio: true },
@@ -25,7 +25,10 @@ const DEFAULTS = {
 
 // la tabella report_sent (un report già mandato = una riga kind+key) è creata in db.js
 
-const fmtEur = (n) => Number(n || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+const NUM = { useGrouping: 'always' };
+const fmtEur = (n) => Number(n || 0).toLocaleString('it-IT', { ...NUM, minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+// nelle righe dei messaggi i centesimi compaiono solo se ci sono: «550 €», «50,58 €»
+const fmtCompact = (n) => { const v = Number(n || 0); return v.toLocaleString('it-IT', { ...NUM, minimumFractionDigits: Math.abs(v - Math.round(v)) < 0.005 ? 0 : 2, maximumFractionDigits: 2 }) + ' €'; };
 const humanize = (v) => { const t = String(v || '').replace(/_/g, ' ').trim(); return t.charAt(0).toUpperCase() + t.slice(1); };
 const shortDate = (iso) => iso.slice(8, 10) + '/' + iso.slice(5, 7);
 
@@ -122,26 +125,32 @@ function ultimoStipendio() {
 
 // ── i tre messaggi ────────────────────────────────────────────────────────────────────────────────────────────────────
 function buildPagare(now = new Date()) {
-  const s = settings().pagare, today = romeParts(now).date;
+  const cfg = settings(), s = cfg.pagare, today = romeParts(now).date;
   const fine = endOfWindow(today, s.day), lateFrom = addDays(today, -LATE_DAYS);
   const tutti = daPagare();
-  const scadute = tutti.filter((x) => x.due < today && x.due >= lateFrom);
-  const nel = tutti.filter((x) => x.due >= today && x.due <= fine);
+  const scadute = tutti.filter((x) => x.due < today && x.due >= lateFrom).sort((a, b) => a.due.localeCompare(b.due));
+  const nel = tutti.filter((x) => x.due >= today && x.due <= fine).sort((a, b) => a.due.localeCompare(b.due) || b.importo - a.importo);
   const tot = (a) => a.reduce((t, x) => t + x.importo, 0);
   const totale = tot(nel) + tot(scadute);
+  const intest = '💳 *Da pagare* · fino al ' + shortDate(fine);
+  if (!nel.length && !scadute.length) return { text: intest + '\n\nNiente da pagare in questo periodo.', counts: { voci: 0, scadute: 0, totale: 0 } };
   const perModulo = {};
   [...nel, ...scadute].forEach((x) => { perModulo[x.label] = (perModulo[x.label] || 0) + x.importo; });
-  const parts = ['*💳 Da pagare dal ' + shortDate(today) + ' al ' + shortDate(fine) + '*'];
-  if (!nel.length && !scadute.length) { parts.push('Niente da pagare in questo periodo.'); return { text: parts.join('\n\n'), counts: { voci: 0, scadute: 0, totale: 0 } }; }
-  const dettaglio = Object.entries(perModulo).map(([l, v]) => l + ' ' + fmtEur(v)).join(' · ');
-  parts.push('*Totale: ' + fmtEur(totale) + '*' + (Object.keys(perModulo).length > 1 ? ' (' + dettaglio + ')' : '') + (scadute.length ? '\ndi cui scadute: ' + fmtEur(tot(scadute)) + ' (' + scadute.length + (scadute.length === 1 ? ' voce' : ' voci') + ')' : ''));
-  const righe = [...scadute.map((x) => ({ ...x, scad: true })), ...nel].sort((a, b) => a.due.localeCompare(b.due) || b.importo - a.importo);
-  const lines = righe.slice(0, MAX_PAGARE).map((x) => shortDate(x.due) + ' ' + x.descrizione + ' — ' + fmtEur(x.importo) + ' (' + x.label + ')' + (x.scad ? ' ⚠' : ''));
-  if (righe.length > MAX_PAGARE) lines.push('… e altre ' + (righe.length - MAX_PAGARE));
-  parts.push(lines.join('\n'));
+  const parts = [intest, '*' + fmtEur(totale) + '*' + (Object.keys(perModulo).length > 1 ? '  (' + Object.entries(perModulo).map(([l, v]) => l + ' ' + fmtCompact(v)).join(' · ') + ')' : '')];
+  if (scadute.length) {
+    // le scadute le elenca il loro messaggio, se è acceso: qui basta il totale (non si ripetono due volte)
+    parts.push('⚠ *Scadute ' + fmtCompact(tot(scadute)) + '* — ' + scadute.length + (scadute.length === 1 ? ' voce' : ' voci') + ' dal ' + shortDate(scadute[0].due)
+      + (cfg.scadute.enabled ? '\n→ l\'elenco è nel messaggio «Voci scadute»' : ''));
+    if (!cfg.scadute.enabled) parts.push(scadute.slice(0, MAX_PAGARE).map((x) => shortDate(x.due) + '  ' + x.descrizione + ' — ' + fmtCompact(x.importo)).join('\n'));
+  }
+  if (nel.length) {
+    const lines = nel.slice(0, MAX_PAGARE).map((x) => shortDate(x.due) + '  ' + x.descrizione + ' — ' + fmtCompact(x.importo));
+    if (nel.length > MAX_PAGARE) lines.push('+ altre ' + (nel.length - MAX_PAGARE));
+    parts.push('*In arrivo*\n' + lines.join('\n'));
+  }
   if (s.stipendio) {
     const st = ultimoStipendio();
-    if (st) { const resto = st.importo - totale; parts.push('Ultimo stipendio ' + fmtEur(st.importo) + ' (' + shortDate(st.data) + ') → ' + (resto >= 0 ? 'ti restano ' + fmtEur(resto) : 'mancano ' + fmtEur(-resto))); }
+    if (st) { const resto = st.importo - totale; parts.push('💰 Stipendio ' + fmtCompact(st.importo) + ' → ' + (resto >= 0 ? 'restano *' + fmtCompact(resto) + '*' : 'mancano *' + fmtCompact(-resto) + '*')); }
   }
   return { text: parts.join('\n\n'), counts: { voci: nel.length, scadute: scadute.length, totale } };
 }
@@ -153,16 +162,16 @@ function buildSmistare() {
     const R = m.roles;
     for (const d of rows(m.slug)) {
       if (d[R.stato || '_stato'] !== m.states.nuovo) continue;
-      nome = nome || { s: m.noun_s || 'riga', p: m.noun_p || 'righe', stato: m.states.nuovo };
+      nome = nome || { s: m.noun_s || 'riga', p: m.noun_p || 'righe' };
       const imp = Number(d[R.importo || 'importo']) || 0, scad = d[R.scadenza || 'scadenza'] || d[R.data || 'data'];
-      righe.push(String(d[R.descrizione || 'descrizione'] || '(senza descrizione)').trim() + ' — ' + (imp > 0 ? fmtEur(imp) : 'importo da verificare') + (scad ? ' · ' + shortDate(String(scad).slice(0, 10)) : ''));
+      righe.push(String(d[R.descrizione || 'descrizione'] || '(senza descrizione)').trim() + ' — ' + (imp > 0 ? fmtCompact(imp) : 'importo da verificare') + (scad ? ' · ' + shortDate(String(scad).slice(0, 10)) : ''));
     }
   }
   if (!righe.length) return null;
   const n = righe.length;
   const lines = righe.slice(0, MAX_SMISTARE).map((x) => '• ' + x);
-  if (n > MAX_SMISTARE) lines.push('… e altre ' + (n - MAX_SMISTARE));
-  return { text: '*📥 Da smistare: ' + n + ' ' + (n === 1 ? nome.s : nome.p) + '*\n\n' + lines.join('\n') + '\n\nApri l\'app per smistarle: finché ce ne sono, ti arriva ogni sera.', counts: { voci: n } };
+  if (n > MAX_SMISTARE) lines.push('+ altre ' + (n - MAX_SMISTARE));
+  return { text: '📥 *Da smistare* · ' + n + ' ' + (n === 1 ? nome.s : nome.p) + '\n\n' + lines.join('\n') + '\n\nTi ricordo ogni sera finché non le smisti.', counts: { voci: n } };
 }
 
 function buildScadute(now = new Date()) {
@@ -170,9 +179,9 @@ function buildScadute(now = new Date()) {
   const s = daPagare().filter((x) => x.due < today && x.due >= lateFrom).sort((a, b) => a.due.localeCompare(b.due));
   if (!s.length) return null;
   const totale = s.reduce((t, x) => t + x.importo, 0);
-  const lines = s.slice(0, MAX_SCADUTE).map((x) => '• ' + x.descrizione + ' (' + x.label + ') ' + fmtEur(x.importo) + ' — da ' + daysBetween(x.due, today) + ' giorni (' + shortDate(x.due) + ')');
-  if (s.length > MAX_SCADUTE) lines.push('… e altre ' + (s.length - MAX_SCADUTE));
-  return { text: '*⚠ Voci scadute (' + s.length + ') — ' + fmtEur(totale) + '*\n\n' + lines.join('\n') + '\n\nSe le hai già pagate, spuntale nella Checklist e non arrivano più.', counts: { voci: s.length, totale } };
+  const lines = s.slice(0, MAX_SCADUTE).map((x) => '• ' + x.descrizione + ' — ' + fmtCompact(x.importo) + ' · da ' + daysBetween(x.due, today) + ' gg');
+  if (s.length > MAX_SCADUTE) lines.push('+ altre ' + (s.length - MAX_SCADUTE));
+  return { text: '⚠ *Scadute* · ' + fmtEur(totale) + ' (' + s.length + (s.length === 1 ? ' voce' : ' voci') + ')\n\n' + lines.join('\n') + '\n\nGià pagate? Spuntale nella Checklist.', counts: { voci: s.length, totale } };
 }
 
 const build = (kind, now) => (kind === 'pagare' ? buildPagare(now) : kind === 'smistare' ? buildSmistare(now) : kind === 'scadute' ? buildScadute(now) : null);
