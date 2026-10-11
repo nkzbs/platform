@@ -127,7 +127,7 @@ async function sendReportTo(chatId, kind, result) {
 }
 
 // ── cosa fa il bot quando riceve qualcosa ───────────────────────────────────────────────────────────────────────────────
-const AIUTO = '<b>Cosa so fare</b>\n/pagare — quanto devi pagare\n/scadute — le voci scadute, con il bottone «Pagata»\n/smistare — le righe da smistare\n\n<b>Oppure scrivimi come parli</b>, per esempio:\n• «quanto ho speso di benzina a settembre?»\n• «ho pagato l\'affitto»\n• «smista la bolletta A2A in 3 rate»\n• «ho speso 20 euro di benzina»\n• mandami il <b>PDF</b> di una bolletta e lo leggo\n\nOgni modifica ti viene mostrata con un bottone di conferma: senza il tuo tocco non cambio niente.\n/scollega — scollega questo telefono';
+const AIUTO = '<b>Cosa so fare</b>\n/pagare — quanto devi pagare\n/scadute — le voci scadute, con il bottone «Pagata»\n/smistare — le righe da smistare\n\n<b>Oppure scrivimi come parli</b>, per esempio:\n• «quanto ho speso di benzina a settembre?»\n• «ho pagato l\'affitto»\n• «smista la bolletta A2A in 3 rate»\n• «ho speso 20 euro di benzina»\n• mandami la <b>foto di uno scontrino</b> o il <b>PDF</b> di una bolletta e li leggo\n\nOgni modifica ti viene mostrata con un bottone di conferma: senza il tuo tocco non cambio niente.\n/scollega — scollega questo telefono';
 const NON_COLLEGATO = 'Questo telefono non è collegato a Finance.\nNell\'app: <b>Impostazioni → Report → Telegram → Collega il mio Telegram</b>, poi tocca il link che ti viene mostrato.';
 const hits = new Map(); // chat → istanti degli ultimi messaggi
 function tooMany(chatId, now) {
@@ -199,9 +199,16 @@ async function handleMessage(msg, now) {
   if (cmd === '/scollega') { db.prepare('DELETE FROM telegram_links WHERE chat_id = ?').run(chatId); logAudit(user.username, 'telegram.unlink', chatId, null); return sendMessage(chatId, 'Scollegato. Per ricollegarti genera un nuovo codice dall\'app.'); }
   const kind = { '/pagare': 'pagare', '/scadute': 'scadute', '/smistare': 'smistare' }[cmd];
   if (kind) return runCommand(chatId, user, kind, now);
-  // un file: se è un PDF si legge (l'AI propone i campi, tu confermi)
-  if (msg.document || (msg.photo && msg.photo.length)) {
-    const out = await require('./bot-actions').importaDocumento(user, chatId, msg.document || null, downloadFile);
+  // una foto (scontrino) o un file: la foto di uno scontrino e un PDF di bolletta si leggono con l'AI; poi tu confermi
+  if (msg.photo && msg.photo.length) {
+    if (aiTooMany(chatId, now)) return sendMessage(chatId, 'Un momento, sto ricevendo troppe richieste: riprova tra un minuto.');
+    const act = require('./bot-actions'); const out = await act.importaFoto(user, chatId, act.fotoMigliore(msg.photo), downloadFile);
+    return sendMessage(chatId, out.html, out.keyboard);
+  }
+  if (msg.document) {
+    if (aiTooMany(chatId, now)) return sendMessage(chatId, 'Un momento, sto ricevendo troppe richieste: riprova tra un minuto.');
+    const act = require('./bot-actions'); const d = msg.document;
+    const out = /^image\//.test(d.mime_type || '') ? await act.importaFoto(user, chatId, d.file_size && d.file_size > 3 * 1024 * 1024 ? null : d, downloadFile) : await act.importaDocumento(user, chatId, d, downloadFile);
     return sendMessage(chatId, out.html, out.keyboard);
   }
   if (!text || text.startsWith('/')) return sendMessage(chatId, 'Non ho capito. Prova con /pagare, /scadute o /smistare (o /aiuto).');
@@ -218,7 +225,7 @@ async function handleCallback(cb, now) {
   const user = linkedUser(chatId);
   if (!user) return answer('Questo telefono non è collegato a Finance.');
   const act = require('./bot-actions');
-  const conf = /^(ok|no|pk|im):([a-z0-9]+)(?::(\d+))?$/.exec(String(cb.data || ''));
+  const conf = /^(ok|dp|no|pk|im):([a-z0-9]+)(?::(\d+))?$/.exec(String(cb.data || ''));
   if (conf) {
     const [, kind, pid, idx] = conf;
     const out = kind === 'im' ? await act.scegliModuloImport(user, chatId, pid, idx, downloadFile) : await act.tocca(user, chatId, kind, pid, idx, { fileFn: downloadFile });

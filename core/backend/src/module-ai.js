@@ -9,7 +9,7 @@ const moduleRoles = require('./module-roles');
 const FEATURES = {
   triage: { label: 'Smistare', description: 'Propone categoria, importo e scadenza per le righe da smistare.', needs: ['importo', 'categoria', 'stato'] },
   explain: { label: 'Spiegare', description: 'Racconta i numeri del modulo (totali, confronti, anomalie).', needs: ['importo', 'data'] },
-  import: { label: 'Importare', description: 'Da un PDF caricato (bolletta, fattura) propone la riga da creare.', needs: ['importo', 'data'] },
+  import: { label: 'Importare', description: 'Da un PDF caricato (bolletta, fattura) o dalla foto di uno scontrino (dal bot Telegram) propone la riga da creare.', needs: ['importo', 'data'] },
 };
 const KEYS = Object.keys(FEATURES);
 

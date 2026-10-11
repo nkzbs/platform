@@ -8,6 +8,7 @@ const { redact } = require('../lib/ai-redact');
 const reportAi = require('../lib/ai-report');
 const askAi = require('../lib/ai-ask');
 const botAi = require('../lib/ai-bot');
+const receiptAi = require('../lib/ai-receipt');
 
 const router = express.Router();
 
@@ -214,6 +215,26 @@ router.post('/bot-intent', requireInternalSecret, async (req, res) => {
     const v = botAi.validateIntent(raw, s.payload.moduli);
     if (v.error) return res.status(422).json({ error: v.error, code: 'ai_unanswerable' });
     res.json({ intent: v.intent });
+  } catch (e) {
+    res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
+  }
+});
+
+// ─── Bot Telegram: foto di uno scontrino → pochi campi validati ──────────────────────────────────────────────────────────
+// Il tenant manda l'immagine (max 3 MB) e le categorie ammesse. Torna la ricevuta validata; il tenant la rivalida e chiede conferma. L'immagine non si salva qui.
+router.post('/receipt', requireInternalSecret, async (req, res) => {
+  const { tenant_slug, data } = req.body || {};
+  if (!tenant_slug) return res.status(400).json({ error: 'tenant_slug obbligatorio' });
+  const s = receiptAi.sanitizeReceipt(data);
+  if (s.error) return res.status(400).json({ error: s.error });
+  if (!isProviderConfigured('mistral', tenant_slug)) return res.status(503).json({ error: 'Nessuna chiave Mistral: inseriscila in Impostazioni → AI.', code: 'ai_not_configured' });
+  try {
+    const text = await callAI('mistral', { system: receiptAi.RECEIPT_PROMPT, user: receiptAi.promptFor(s.payload.categorie), images: [{ mime: s.payload.mime, base64: s.payload.base64 }], maxTokens: 300, timeoutMs: 40000, tenantSlug: tenant_slug });
+    const raw = parseJsonObject(text);
+    if (!raw) return res.status(502).json({ error: 'Risposta dell\'AI non valida' });
+    const v = receiptAi.validateReceipt(raw, s.payload.categorie);
+    if (v.error) return res.status(422).json({ error: v.error, code: v.error === 'illeggibile' ? 'ai_unreadable' : 'ai_unanswerable' });
+    res.json({ ricevuta: v.ricevuta });
   } catch (e) {
     res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
   }

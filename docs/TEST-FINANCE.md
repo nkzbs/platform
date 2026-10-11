@@ -101,6 +101,10 @@ Vedi `docs/OPERAZIONI.md` → "Utenti, accessi e 2FA". Dopo averli creati, prova
 - [ ] **Nuova spesa:** «ho speso 20 euro di benzina» → riepilogo con modulo, importo e «già pagata»; «✅ Aggiungi» la crea (guarda in Spese). Con due moduli chiede «Dove la aggiungo?».
 - [ ] **Smista:** «smista la bolletta A2A come un pagamento» e «… in 3 rate» (se il modulo ha il piano a rate).
 - [ ] **PDF:** mandagli il PDF di una bolletta (modulo con «Importare» acceso) → mostra i campi letti; «✅ Aggiungi» crea la riga «da smistare» con il PDF allegato. Una **foto** risponde che per ora si leggono solo PDF.
+- [ ] **Foto di uno scontrino** (modulo con «Importare» acceso): mandala come foto; il bot mostra esercente, data, totale e categoria, e «Controlla il totale sullo scontrino». Confronta il **totale** con lo scontrino: se è giusto «✅ Aggiungi (pagata)», la spesa compare in Spese con la **foto allegata**; «🕓 Da pagare» la crea da pagare.
+- [ ] **Scontrino difficile:** una foto storta, sfocata o con il totale tagliato → il bot dice di rifarla; non scrive niente. Una foto che non è uno scontrino idem.
+- [ ] **Doppione:** manda due volte lo stesso scontrino (dopo aver aggiunto il primo) → il secondo mostra «Esiste già una spesa simile».
+- [ ] Se compare un errore del tipo «il modello non legge le immagini», serve impostare `MISTRAL_VISION_MODEL` (per esempio un modello Pixtral) su Super Admin.
 - [ ] **Cose che NON deve fare:** «elimina tutte le spese» o «cancella l'affitto» → risponde che non lo fa. Una proposta già usata o vecchia di oltre 15 minuti dice «scaduta».
 - [ ] **Federica:** dalle sue frasi non vede né tocca le spese personali; una spesa nuova finisce in Casa.
 - [ ] **Sicurezza**: da un altro telefono non collegato scrivi al bot: risponde solo con le istruzioni, nessun dato. «Scollega» il tuo telefono: il bot non risponde più ai comandi.

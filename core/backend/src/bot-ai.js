@@ -7,6 +7,7 @@ const moduleRoles = require('./module-roles');
 const moduleAi = require('./module-ai');
 const askData = require('./ask-data');
 const { validateIntent } = require('../../../shared/ai-bot-intent.js');
+const { validateReceipt } = require('../../../shared/ai-receipt.js');
 const { logAudit } = require('./audit-log');
 
 const SUPER_ADMIN_URL = process.env.SUPER_ADMIN_URL || 'http://super-admin-backend:3000';
@@ -32,11 +33,11 @@ function moduliPerUtente(user) {
   });
 }
 
-async function viaSuperAdmin(path, data) {
+async function viaSuperAdmin(path, data, timeoutMs = 30000) {
   try {
     const r = await fetch(SUPER_ADMIN_URL + '/api/tenant-ai/' + path, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET },
-      body: JSON.stringify({ tenant_slug: process.env.TENANT_SLUG, data }), signal: AbortSignal.timeout(30000),
+      body: JSON.stringify({ tenant_slug: process.env.TENANT_SLUG, data }), signal: AbortSignal.timeout(timeoutMs),
     });
     const body = await r.json().catch(() => ({}));
     if (!r.ok) return { error: body.error || 'L\'AI non è disponibile in questo momento.', code: body.code || (r.status === 429 ? 'ai_limit' : r.status === 422 ? 'ai_unanswerable' : 'ai_down') };
@@ -78,4 +79,16 @@ async function ask(domanda, user, now = new Date()) {
   return { html };
 }
 
-module.exports = { interpret, ask, moduliPerUtente, visibleSlugs, esc, eur };
+// Foto di uno scontrino → { ricevuta } validata (esercente, data, totale, categoria, confidenza) oppure { error, code }. L'immagine va a Super Admin e al modello solo in questo
+// passaggio e non si salva lì; qui si rivalida con le stesse regole prima di proporre qualsiasi cosa.
+async function leggiScontrino(base64, categorie, now = new Date()) {
+  if (!moduleAi.masterOn()) return { error: 'L\'AI non è accesa (Impostazioni → AI).', code: 'ai_off' };
+  const r = await viaSuperAdmin('receipt', { image_base64: base64, categorie }, 60000);
+  if (r.error) return r;
+  const oggi = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(now);
+  const v = validateReceipt(r.body && r.body.ricevuta ? { leggibile: true, ...r.body.ricevuta } : null, categorie, oggi);
+  if (v.error) return { error: v.error, code: v.error === 'illeggibile' ? 'ai_unreadable' : 'ai_unanswerable' };
+  return { ricevuta: v.ricevuta };
+}
+
+module.exports = { interpret, ask, leggiScontrino, moduliPerUtente, visibleSlugs, esc, eur };

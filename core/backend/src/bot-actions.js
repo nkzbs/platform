@@ -13,6 +13,7 @@ const moduleAi = require('./module-ai');
 const { logAudit } = require('./audit-log');
 const { callAs } = require('./lib/internal-api');
 const { moduliPerUtente, esc, eur } = require('./bot-ai');
+const { imageKind } = require('../../../shared/ai-receipt.js');
 
 const TTL_MS = 15 * 60 * 1000;
 const MAX_CANDIDATI = 6;
@@ -189,6 +190,26 @@ async function esegui(user, a, { fileFn } = {}) {
     logAudit(user.username, 'telegram.nuova_spesa', a.slug + '#' + (r.data && r.data.id), { via: 'bot' });
     return { html: '✅ Aggiunta in <b>' + esc(a.nome) + '</b>: ' + esc(a.descrizione) };
   }
+  if (a.tipo === 'scontrino') {
+    const m = moduliPerUtente(user).find((x) => x.slug === a.slug);
+    if (!m) return { html: '⚠ Non hai più accesso a questo modulo.' };
+    const d = costruisciSpesa(m, { descrizione: a.ric.esercente, importo: a.ric.totale, data: a.ric.data, pagata: a.pagata, categoria: a.ric.categoria && m.categorie.includes(a.ric.categoria) ? a.ric.categoria : null });
+    const r = await callAs(user, 'POST', '/records/' + a.slug, d);
+    if (!r.ok) return { html: '⚠ Non sono riuscito ad aggiungerla: ' + esc((r.data && (r.data.error || (r.data.errors || []).join('; '))) || 'errore') };
+    const recId = r.data && r.data.id;
+    logAudit(user.username, 'telegram.scontrino', a.slug + '#' + recId, { via: 'bot', pagata: !!a.pagata });
+    let nota = '';
+    try {
+      const f = fileFn ? await fileFn(a.file_id) : { ok: false };
+      if (f.ok && recId) {
+        const bytes = Buffer.from(f.base64, 'base64'), mime = imageKind(bytes) || 'image/jpeg', nome = 'scontrino-' + (a.ric.data || oggiRoma()) + (mime === 'image/png' ? '.png' : mime === 'image/webp' ? '.webp' : '.jpg');
+        const stored = await require('./lib/upload-storage').saveUploadBuffer(bytes, nome, mime);
+        const up = db.prepare('INSERT INTO uploads (original_name, stored_name, mime_type, size, uploaded_by) VALUES (?, ?, ?, ?, ?)').run(nome, stored, mime, bytes.length, user.id).lastInsertRowid;
+        db.prepare('INSERT INTO record_attachments (module_slug, record_id, upload_id, tipo) VALUES (?, ?, ?, ?)').run(a.slug, recId, up, 'scontrino');
+      } else nota = ' (la foto non è stata allegata)';
+    } catch (e) { console.error('[bot] foto dello scontrino non allegata:', e.message); nota = ' (la foto non è stata allegata)'; }
+    return { html: '✅ Aggiunta in <b>' + esc(a.nome) + '</b>: ' + esc(a.ric.esercente) + ' — ' + eur(a.ric.totale) + (a.pagata ? ' · pagata' : ' · da pagare') + nota };
+  }
   if (a.tipo === 'import') {
     if (!fileFn) return { html: '⚠ File non disponibile.' };
     const f = await fileFn(a.file_id);
@@ -204,9 +225,10 @@ async function esegui(user, a, { fileFn } = {}) {
 // Il tocco su un elemento di una scelta (pk) o su un bottone di conferma (ok): ritorna { html, keyboard? } o { html } finale.
 async function tocca(user, chatId, kind, id, indice, ctx) {
   if (kind === 'no') { takePending(id, chatId, user.id); return { html: 'Annullato.' }; }
-  const a = kind === 'pk' ? peekPending(id, chatId, user.id) : takePending(id, chatId, user.id);
+  const a = kind === 'pk' ? peekPending(id, chatId, user.id) : takePending(id, chatId, user.id); // pk, ok, dp
   if (!a) return { html: 'Questa proposta è scaduta o è già stata usata.', scaduta: true };
-  if (kind === 'ok') return esegui(user, a, ctx);
+  if (kind === 'ok') return esegui(user, a.tipo === 'scontrino' ? { ...a, pagata: true } : a, ctx);
+  if (kind === 'dp') return a.tipo === 'scontrino' ? esegui(user, { ...a, pagata: false }, ctx) : { html: 'Azione non riconosciuta.' };
   // pk: scelta di un candidato / di un modulo
   const i = parseInt(indice, 10);
   if (a.tipo === 'scelta_modulo') {
@@ -242,9 +264,9 @@ async function proponiImport(user, chatId, doc, fileFn, slug) {
   };
 }
 async function importaDocumento(user, chatId, doc, fileFn) {
-  if (!doc) return { html: 'Per ora leggo solo i <b>PDF</b> (bollette e fatture). Mandami il file come PDF.' };
+  if (!doc) return { html: 'Mandami una <b>foto dello scontrino</b> o il <b>PDF</b> di una bolletta.' };
   const nome = String(doc.file_name || '');
-  if (!(doc.mime_type === 'application/pdf' || /\.pdf$/i.test(nome))) return { html: 'Per ora leggo solo i <b>PDF</b>.' };
+  if (!(doc.mime_type === 'application/pdf' || /\.pdf$/i.test(nome))) return { html: 'Leggo i <b>PDF</b> (bollette) e le <b>foto</b> di scontrini (JPEG, PNG, WebP).' };
   if (doc.file_size && doc.file_size > MAX_PDF) return { html: 'Il PDF è troppo grande (massimo 3 MB).' };
   if (!moduleAi.masterOn()) return { html: 'L\'AI non è accesa (Impostazioni → AI): non posso leggere il PDF.' };
   const mods = moduliImport(user);
@@ -258,7 +280,52 @@ async function scegliModuloImport(user, chatId, id, indice, fileFn) {
   if (!a || a.tipo !== 'import_modulo') return { html: 'Questa proposta è scaduta o è già stata usata.' };
   const slug = a.slugs[parseInt(indice, 10)];
   if (!slug) return { html: 'Scelta non valida.' };
+  if (a.modo === 'scontrino') return proponiScontrino(user, chatId, a.doc, fileFn, slug);
   return proponiImport(user, chatId, a.doc, fileFn, slug);
 }
 
-module.exports = { proponi, tocca, esegui, cambiaStato, importaDocumento, scegliModuloImport, trova, tokens, savePending, takePending, peekPending, MAX_PDF };
+
+// ── foto di uno scontrino ──────────────────────────────────────────────────────────────────────────────────────────────────
+// La foto va a Mistral (tramite Super Admin) per leggere esercente, data e TOTALE; il bot mostra cosa ha letto, avvisa se esiste già una spesa uguale e propone di aggiungerla
+// («pagata» o «da pagare»). Solo il tocco crea la riga; la foto resta allegata come prova.
+function trovaSimile(user, slug, importo, data, scope) {
+  const { rows } = require('./reports');
+  const m = moduleRoles.get(slug); if (!m) return null;
+  const R = { stato: '_stato', ...m.roles };
+  const giorni = (a, b) => Math.abs((new Date(a + 'T00:00:00Z') - new Date(b + 'T00:00:00Z')) / 86400000);
+  for (const { data: d } of rows(slug, scope)) {
+    const dt = String(d[R.data || 'data'] || '').slice(0, 10), sc = String(d[R.scadenza || 'scadenza'] || '').slice(0, 10);
+    if (Math.abs((Number(d[R.importo || 'importo']) || 0) - importo) < 0.005 && ((dt && giorni(dt, data) <= 2) || (sc && giorni(sc, data) <= 2))) return { descrizione: String(d[R.descrizione || 'descrizione'] || '').trim(), due: dt || sc };
+  }
+  return null;
+}
+function fotoMigliore(photos) { const ok = (photos || []).filter((p) => !p.file_size || p.file_size <= MAX_PDF); return ok.length ? ok[ok.length - 1] : null; }
+
+async function proponiScontrino(user, chatId, foto, fileFn, slug) {
+  const f = await fileFn(foto.file_id);
+  if (!f.ok) return { html: '⚠ ' + esc(f.error) };
+  if (!imageKind(Buffer.from(f.base64, 'base64'))) return { html: 'Leggo solo foto JPEG, PNG o WebP. Se hai un iPhone, mandala come <b>foto</b> (non come file).' };
+  const m = moduliPerUtente(user).find((x) => x.slug === slug);
+  if (!m) return { html: 'Non hai accesso a questo modulo.' };
+  const r = await require('./bot-ai').leggiScontrino(f.base64, m.categorie, new Date());
+  if (r.error) return { html: r.code === 'ai_unreadable' ? 'Non riesco a leggere lo scontrino. Riprova con una foto più nitida, dritta e con tutto il totale in vista.' : '⚠ ' + esc(r.error) };
+  const ric = r.ricevuta, data = ric.data || oggiRoma();
+  const simile = trovaSimile(user, slug, ric.totale, data, require('./telegram').scopeFor(user));
+  const id = savePending(chatId, user.id, { tipo: 'scontrino', slug, nome: m.name, file_id: foto.file_id, ric });
+  return {
+    html: '🧾 <b>' + esc(ric.esercente) + '</b> — ' + eur(ric.totale) + '\n• ' + shortDate(data) + (ric.data ? '' : ' (oggi: la data non si legge)') + (ric.categoria ? ' · categoria ' + esc(ric.categoria) : '') + '\n• sicurezza di lettura: ' + esc(ric.confidenza)
+      + (simile ? '\n\n⚠ Esiste già una spesa simile: <b>' + esc(simile.descrizione) + '</b> (' + shortDate(simile.due) + '). Aggiungi solo se è un\'altra.' : '') + '\n\nLo aggiungo in <b>' + esc(m.name) + '</b>. <b>Controlla il totale sullo scontrino</b>: poi scegli se è già pagata.',
+    keyboard: [[btn('✅ Aggiungi (pagata)', 'ok:' + id), btn('🕓 Da pagare', 'dp:' + id)], [btn('✖ Annulla', 'no:' + id)]],
+  };
+}
+async function importaFoto(user, chatId, foto, fileFn) {
+  if (!foto) return { html: 'La foto è troppo grande (massimo 3 MB): mandala di nuovo, anche ridimensionata.' };
+  if (!moduleAi.masterOn()) return { html: 'L\'AI non è accesa (Impostazioni → AI): non posso leggere lo scontrino.' };
+  const mods = moduliImport(user);
+  if (!mods.length) return { html: 'La lettura di scontrini non è accesa su nessuno dei tuoi moduli (Builder → Potenziamenti AI → Importare).' };
+  if (mods.length === 1) return proponiScontrino(user, chatId, foto, fileFn, mods[0].slug);
+  const id = savePending(chatId, user.id, { tipo: 'import_modulo', modo: 'scontrino', doc: { file_id: foto.file_id }, slugs: mods.map((m) => m.slug) });
+  return { html: 'Dove registro lo scontrino?', keyboard: [mods.map((m, i) => btn(m.name, 'im:' + id + ':' + i)), [btn('✖ Annulla', 'no:' + id)]] };
+}
+
+module.exports = { importaFoto, fotoMigliore, proponi, tocca, esegui, cambiaStato, importaDocumento, scegliModuloImport, trova, tokens, savePending, takePending, peekPending, MAX_PDF };
