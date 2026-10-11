@@ -49,7 +49,7 @@ export default function TelegramCard({ token, user, className = '' }) {
         <div className="w-9 h-9 rounded-lg bg-surface-page border border-gray-800 flex items-center justify-center text-accent flex-shrink-0"><Icon name="bell" size={16} /></div>
         <div>
           <h2 className="text-sm font-semibold text-ink">Telegram</h2>
-          <p className="text-xs text-gray-500 mt-0.5 max-w-md">I report arrivano con i bottoni: sotto le voci scadute c'è <b className="text-gray-300">«✅ Pagata»</b>, e chiude la voce in Finance. Il bot mostra e fa solo ciò che puoi vedere e fare nell'app. Comandi: /pagare, /scadute, /smistare.</p>
+          <p className="text-xs text-gray-500 mt-0.5 max-w-md">I report arrivano con i bottoni (<b className="text-gray-300">«✅ Pagata»</b> chiude la voce). Puoi anche <b className="text-gray-300">scrivere al bot come parli</b> («ho pagato l'affitto», «quanto ho speso di benzina a settembre?», «ho speso 20 euro di benzina», «smista la bolletta A2A in 3 rate») o mandargli il <b className="text-gray-300">PDF</b> di una bolletta. Ogni modifica ti viene mostrata con un bottone di conferma: senza il tuo tocco non cambia niente. Il bot vede e fa solo ciò che puoi vedere e fare nell'app. Le frasi libere richiedono l'AI accesa (Impostazioni → AI).</p>
         </div>
       </div>
 

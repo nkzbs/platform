@@ -553,6 +553,8 @@ db.exec('CREATE TABLE IF NOT EXISTS report_sent (kind TEXT NOT NULL, key TEXT NO
 // Bot Telegram (telegram.js): ogni chat collegata appartiene a UN utente dell'app (con i suoi permessi); il codice di collegamento è monouso e dura 10 minuti.
 db.exec('CREATE TABLE IF NOT EXISTS telegram_links (id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id TEXT NOT NULL UNIQUE, user_id INTEGER NOT NULL, label TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)');
 db.exec('CREATE TABLE IF NOT EXISTS telegram_link_codes (code TEXT PRIMARY KEY, user_id INTEGER NOT NULL, expires_at INTEGER NOT NULL)');
+// Azioni proposte dal bot in attesa di un tocco di conferma (valgono 15 minuti, una volta sola, solo per la chat e l'utente che le hanno originate).
+db.exec('CREATE TABLE IF NOT EXISTS telegram_pending (id TEXT PRIMARY KEY, chat_id TEXT NOT NULL, user_id INTEGER NOT NULL, action TEXT NOT NULL, expires_at INTEGER NOT NULL)');
 
 // Suggerimenti dell'AI su un record. L'AI PROPONE, mai scrive: un suggerimento resta
 // 'pending' finché non lo si accetta (applica i campi al record) o lo si ignora.

@@ -95,6 +95,14 @@ Vedi `docs/OPERAZIONI.md` → "Utenti, accessi e 2FA". Dopo averli creati, prova
 - [ ] **/pagare** e **/smistare** rispondono con gli stessi dati dei report.
 - [ ] **Report**: «Invia ora» su una scheda manda il messaggio anche su Telegram, con i bottoni e «Apri l'app».
 - [ ] **Federica** (dopo averla collegata): il bot le mostra **solo Casa**; non può chiudere voci di Spese Personali, nemmeno con il bottone di un messaggio inoltrato.
+- [ ] **Frasi libere** (serve l'AI accesa): scrivi «ho pagato l'affitto» → il bot mostra la voce e «✅ Sì, pagata»: **finché non tocchi, in Finance non cambia niente**. Dopo il tocco la voce è «pagato».
+- [ ] **Più voci simili** («spese mese»): il bot chiede quale e il tocco su una la chiude, le altre restano.
+- [ ] **Domanda:** «quanto ho speso di benzina a settembre?» → risposta con totale e «Ho capito: …» (controlla che corrisponda).
+- [ ] **Nuova spesa:** «ho speso 20 euro di benzina» → riepilogo con modulo, importo e «già pagata»; «✅ Aggiungi» la crea (guarda in Spese). Con due moduli chiede «Dove la aggiungo?».
+- [ ] **Smista:** «smista la bolletta A2A come un pagamento» e «… in 3 rate» (se il modulo ha il piano a rate).
+- [ ] **PDF:** mandagli il PDF di una bolletta (modulo con «Importare» acceso) → mostra i campi letti; «✅ Aggiungi» crea la riga «da smistare» con il PDF allegato. Una **foto** risponde che per ora si leggono solo PDF.
+- [ ] **Cose che NON deve fare:** «elimina tutte le spese» o «cancella l'affitto» → risponde che non lo fa. Una proposta già usata o vecchia di oltre 15 minuti dice «scaduta».
+- [ ] **Federica:** dalle sue frasi non vede né tocca le spese personali; una spesa nuova finisce in Casa.
 - [ ] **Sicurezza**: da un altro telefono non collegato scrivi al bot: risponde solo con le istruzioni, nessun dato. «Scollega» il tuo telefono: il bot non risponde più ai comandi.
 
 ## 7. 2FA

@@ -140,7 +140,8 @@ async function main() {
   await test('/pagare e /smistare funzionano; senza righe da smistare lo dice', async () => {
     tg._resetRate(); calls.length = 0; await post(upd(555, '/pagare')); ok(/Da pagare/.test(ultimi('sendMessage')[0].body.text));
     calls.length = 0; await post(upd(555, '/smistare')); ok(/Niente da smistare/.test(ultimi('sendMessage')[0].body.text));
-    calls.length = 0; await post(upd(555, 'ciao')); ok(/Non ho capito/.test(ultimi('sendMessage')[0].body.text));
+    calls.length = 0; await post(upd(555, 'ciao')); ok(/AI non è accesa/.test(ultimi('sendMessage')[0].body.text), ultimi('sendMessage')[0].body.text); // le frasi libere passano dall'AI, spenta qui
+    calls.length = 0; await post(upd(555, '/boh')); ok(/Non ho capito/.test(ultimi('sendMessage')[0].body.text));
   });
 
   console.log('\n--- il bottone «Pagata» ---');

@@ -102,7 +102,7 @@ function consumeLinkCode(code, chatId, label) {
   return user;
 }
 function linkedUser(chatId) {
-  return db.prepare('SELECT u.id, u.username, u.display_name, u.role FROM telegram_links l JOIN users u ON u.id = l.user_id WHERE l.chat_id = ? AND u.active = 1').get(String(chatId)) || null;
+  return db.prepare('SELECT u.id, u.username, u.display_name, u.role, u.linked_module_slug, u.linked_record_id FROM telegram_links l JOIN users u ON u.id = l.user_id WHERE l.chat_id = ? AND u.active = 1').get(String(chatId)) || null;
 }
 const listLinks = () => db.prepare('SELECT l.id, l.chat_id, l.label, l.created_at, l.user_id, u.username, u.display_name FROM telegram_links l LEFT JOIN users u ON u.id = l.user_id ORDER BY l.id').all();
 function revokeLink(id) { const l = db.prepare('SELECT * FROM telegram_links WHERE id = ?').get(id); if (l) db.prepare('DELETE FROM telegram_links WHERE id = ?').run(id); return l || null; }
@@ -127,13 +127,57 @@ async function sendReportTo(chatId, kind, result) {
 }
 
 // ── cosa fa il bot quando riceve qualcosa ───────────────────────────────────────────────────────────────────────────────
-const AIUTO = '<b>Cosa so fare</b>\n/pagare — quanto devi pagare\n/scadute — le voci scadute, con il bottone «Pagata»\n/smistare — le righe da smistare\n/scollega — scollega questo telefono';
+const AIUTO = '<b>Cosa so fare</b>\n/pagare — quanto devi pagare\n/scadute — le voci scadute, con il bottone «Pagata»\n/smistare — le righe da smistare\n\n<b>Oppure scrivimi come parli</b>, per esempio:\n• «quanto ho speso di benzina a settembre?»\n• «ho pagato l\'affitto»\n• «smista la bolletta A2A in 3 rate»\n• «ho speso 20 euro di benzina»\n• mandami il <b>PDF</b> di una bolletta e lo leggo\n\nOgni modifica ti viene mostrata con un bottone di conferma: senza il tuo tocco non cambio niente.\n/scollega — scollega questo telefono';
 const NON_COLLEGATO = 'Questo telefono non è collegato a Finance.\nNell\'app: <b>Impostazioni → Report → Telegram → Collega il mio Telegram</b>, poi tocca il link che ti viene mostrato.';
 const hits = new Map(); // chat → istanti degli ultimi messaggi
 function tooMany(chatId, now) {
   const arr = (hits.get(chatId) || []).filter((t) => now - t < 60000);
   arr.push(now); hits.set(chatId, arr);
   return arr.length > RATE_PER_MIN;
+}
+
+
+// ── file e messaggi: scaricare un PDF mandato in chat, modificare un messaggio già inviato ──────────────────────────────
+async function downloadFile(fileId) {
+  try {
+    const c = creds(); if (!c) return { ok: false, error: 'Telegram non è collegato.' };
+    const f = await call(c.bot_token, 'getFile', { file_id: fileId });
+    const res = await fetch(API + '/file/bot' + c.bot_token + '/' + f.file_path, { signal: AbortSignal.timeout(30000) });
+    if (!res.ok) return { ok: false, error: 'Non riesco a scaricare il file da Telegram.' };
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length > 3 * 1024 * 1024) return { ok: false, error: 'Il file è troppo grande (massimo 3 MB).' };
+    return { ok: true, base64: buf.toString('base64') };
+  } catch (e) { return { ok: false, error: 'Non riesco a scaricare il file: ' + e.message }; }
+}
+async function editText(chatId, messageId, html, keyboard) {
+  try { await api('editMessageText', { chat_id: chatId, message_id: messageId, text: html, parse_mode: 'HTML', disable_web_page_preview: true, reply_markup: { inline_keyboard: keyboard || [] } }); } catch (e) { /* messaggio troppo vecchio o invariato */ }
+}
+const aiHits = new Map(); // limite più stretto per le frasi che passano dall'AI: 8 al minuto per chat (costano)
+function aiTooMany(chatId, now) { const arr = (aiHits.get(chatId) || []).filter((t) => now - t < 60000); arr.push(now); aiHits.set(chatId, arr); return arr.length > 8; }
+
+// Una frase libera: l'AI la traduce in UNA azione dell'elenco; le letture rispondono subito, le scritture diventano una proposta con bottoni.
+async function handleFree(chatId, user, text, now) {
+  if (aiTooMany(chatId, now)) return sendMessage(chatId, 'Un momento, sto ricevendo troppe frasi: riprova tra un minuto.');
+  api('sendChatAction', { chat_id: chatId, action: 'typing' }).catch(() => {});
+  const bot = require('./bot-ai'), act = require('./bot-actions');
+  const r = await bot.interpret(text, user, new Date(now));
+  if (r.error) return sendMessage(chatId, r.code === 'ai_unanswerable' ? 'Non ho capito. ' + 'Prova con /aiuto per vedere cosa posso fare.' : esc(r.error));
+  const it = r.intent;
+  if (it.azione === 'altro') return sendMessage(chatId, 'Questo non so ancora farlo (non elimino né modifico dati a piacere). Scrivi /aiuto per vedere cosa posso fare.');
+  if (it.azione === 'elenco') return runCommand(chatId, user, it.cosa, now);
+  if (it.azione === 'domanda') {
+    const a = await bot.ask(text, user, new Date(now));
+    return sendMessage(chatId, a.error ? (a.code === 'ai_unanswerable' ? 'Non riesco a rispondere a questa domanda con i dati che ho: prova a riformularla (periodo, categoria, modulo).' : esc(a.error)) : a.html);
+  }
+  const p = act.proponi(user, it, chatId);
+  return sendMessage(chatId, p.html, p.keyboard);
+}
+
+async function runCommand(chatId, user, kind, now) {
+  const result = require('./reports').build(kind, new Date(now), scopeFor(user));
+  if (!result) return sendMessage(chatId, kind === 'smistare' ? 'Niente da smistare: la coda è vuota. 👍' : 'Nessuna voce scaduta. 👍');
+  const r = renderReport(kind, result);
+  return sendMessage(chatId, r.html, r.keyboard);
 }
 
 async function handleMessage(msg, now) {
@@ -154,13 +198,14 @@ async function handleMessage(msg, now) {
   if (cmd === '/start' || cmd === '/aiuto' || cmd === '/help') return sendMessage(chatId, 'Ciao ' + esc(user.display_name || user.username) + '!\n\n' + AIUTO);
   if (cmd === '/scollega') { db.prepare('DELETE FROM telegram_links WHERE chat_id = ?').run(chatId); logAudit(user.username, 'telegram.unlink', chatId, null); return sendMessage(chatId, 'Scollegato. Per ricollegarti genera un nuovo codice dall\'app.'); }
   const kind = { '/pagare': 'pagare', '/scadute': 'scadute', '/smistare': 'smistare' }[cmd];
-  if (kind) {
-    const result = require('./reports').build(kind, new Date(now), scopeFor(user));
-    if (!result) return sendMessage(chatId, kind === 'smistare' ? 'Niente da smistare: la coda è vuota. 👍' : 'Nessuna voce scaduta. 👍');
-    const r = renderReport(kind, result);
-    return sendMessage(chatId, r.html, r.keyboard);
+  if (kind) return runCommand(chatId, user, kind, now);
+  // un file: se è un PDF si legge (l'AI propone i campi, tu confermi)
+  if (msg.document || (msg.photo && msg.photo.length)) {
+    const out = await require('./bot-actions').importaDocumento(user, chatId, msg.document || null, downloadFile);
+    return sendMessage(chatId, out.html, out.keyboard);
   }
-  return sendMessage(chatId, 'Non ho capito. Prova con /pagare, /scadute o /smistare (o /aiuto).');
+  if (!text || text.startsWith('/')) return sendMessage(chatId, 'Non ho capito. Prova con /pagare, /scadute o /smistare (o /aiuto).');
+  return handleFree(chatId, user, text, now);
 }
 
 // Il bottone «Pagata» / «Annulla»: stessi controlli dell'app, poi si aggiorna la tastiera del messaggio.
@@ -172,31 +217,20 @@ async function handleCallback(cb, now) {
   if (tooMany(chatId, now)) return answer('Troppe richieste, riprova tra un minuto.');
   const user = linkedUser(chatId);
   if (!user) return answer('Questo telefono non è collegato a Finance.');
+  const act = require('./bot-actions');
+  const conf = /^(ok|no|pk|im):([a-z0-9]+)(?::(\d+))?$/.exec(String(cb.data || ''));
+  if (conf) {
+    const [, kind, pid, idx] = conf;
+    const out = kind === 'im' ? await act.scegliModuloImport(user, chatId, pid, idx, downloadFile) : await act.tocca(user, chatId, kind, pid, idx, { fileFn: downloadFile });
+    await answer(kind === 'no' ? 'Annullato.' : out.scaduta ? 'Scaduta.' : 'Fatto.');
+    return editText(chatId, cb.message.message_id, out.html, out.keyboard);
+  }
   const m = /^(pay|undo):([a-z0-9_]+):(\d+)$/.exec(String(cb.data || ''));
   if (!m) return answer('Azione non riconosciuta.');
   const [, azione, slug, idStr] = m, id = parseInt(idStr, 10);
-
-  const { visibleSlugsFor } = require('./routes/modules');
-  if (!visibleSlugsFor(user).includes(slug)) return answer('Non hai accesso a questo modulo.');
-  const decl = require('./module-roles').get(slug);
-  const S = decl && decl.avvisi && decl.avvisi.states;
-  if (!S || !S.da_fare || !S.fatto) return answer('Questo modulo non ha stati «da pagare» e «pagato».');
-  const row = db.prepare('SELECT data FROM records WHERE id = ? AND module_slug = ?').get(id, slug);
-  if (!row) return answer('Voce non trovata (forse è stata eliminata).');
-  const R = { stato: '_stato', ...decl.roles };
-  const stato = JSON.parse(row.data)[R.stato];
-  const desc = String(JSON.parse(row.data)[R.descrizione || 'descrizione'] || 'voce');
-
-  const target = azione === 'pay' ? S.fatto : S.da_fare;
-  if (stato === target) { await refreshButton(cb, azione, slug, id, desc); return answer(azione === 'pay' ? 'Era già segnata come pagata.' : 'Era già «da pagare».'); }
-  if (stato !== (azione === 'pay' ? S.da_fare : S.fatto)) return answer('Questa voce non è più «' + String(azione === 'pay' ? S.da_fare : S.fatto).replace(/_/g, ' ') + '».');
-
-  const { runTransition } = require('./routes/records');
-  const out = runTransition(user, slug, id, target);
-  if (out.status !== 200) return answer(out.status === 422 ? (azione === 'undo' ? 'Da qui non si può annullare: fallo dall\'app.' : 'Non si può segnare pagata da questo stato.') : (out.body.error || 'Non riuscito.'));
-  logAudit(user.username, 'telegram.' + azione, slug + '#' + id, { via: 'bot' });
-  await refreshButton(cb, azione, slug, id, desc);
-  return answer(azione === 'pay' ? '✅ Segnata pagata: ' + desc : '↩ Annullato: ' + desc);
+  const r = act.cambiaStato(user, slug, id, azione);
+  if (r.ok) await refreshButton(cb, azione, slug, id, r.desc || 'voce');
+  return answer(r.msg);
 }
 // Dopo «Pagata» il bottone diventa «↩ Annulla» (e viceversa): si ricostruisce solo quel bottone nella tastiera del messaggio.
 async function refreshButton(cb, azione, slug, id, desc) {
@@ -217,4 +251,4 @@ async function handleUpdate(update, now = Date.now()) {
   } catch (e) { console.error('[telegram]', e.message); }
 }
 
-module.exports = { KINDS, isConfigured, status, connect, disconnect, secretMatches, createLinkCode, consumeLinkCode, linkedUser, listLinks, revokeLink, scopeFor, renderReport, sendReportTo, sendMessage, handleUpdate, waToHtml, esc, _resetRate: () => hits.clear() };
+module.exports = { downloadFile, KINDS, isConfigured, status, connect, disconnect, secretMatches, createLinkCode, consumeLinkCode, linkedUser, listLinks, revokeLink, scopeFor, renderReport, sendReportTo, sendMessage, handleUpdate, waToHtml, esc, _resetRate: () => { hits.clear(); aiHits.clear(); } };

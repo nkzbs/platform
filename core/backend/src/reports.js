@@ -308,4 +308,4 @@ function startReports() {
   console.log('Report su WhatsApp: controllo ogni minuto (da pagare il 27, da smistare ogni sera, scadute il lunedì)');
 }
 
-module.exports = { KINDS, TAG, DEFAULTS, settings, saveSettings, isEnabled, build, buildPagare, buildSmistare, buildScadute, sendReport, tick, dueKey, lastSent, startReports, romeParts, sendDateFor, endOfWindow, addDays, weekdayOf };
+module.exports = { rows, avvisiModules, KINDS, TAG, DEFAULTS, settings, saveSettings, isEnabled, build, buildPagare, buildSmistare, buildScadute, sendReport, tick, dueKey, lastSent, startReports, romeParts, sendDateFor, endOfWindow, addDays, weekdayOf };

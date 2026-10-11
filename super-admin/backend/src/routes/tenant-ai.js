@@ -7,6 +7,7 @@ const { status: budgetStatus } = require('../lib/ai-budget');
 const { redact } = require('../lib/ai-redact');
 const reportAi = require('../lib/ai-report');
 const askAi = require('../lib/ai-ask');
+const botAi = require('../lib/ai-bot');
 
 const router = express.Router();
 
@@ -193,6 +194,26 @@ router.post('/ask-data', requireInternalSecret, async (req, res) => {
     const v = askAi.validateQuery(raw, s.payload.catalogo);
     if (v.error) return res.status(422).json({ error: v.error, code: 'ai_unanswerable' });
     res.json({ query: v.query });
+  } catch (e) {
+    res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
+  }
+});
+
+// ─── Bot Telegram: da una frase a UNA azione scelta da un elenco chiuso ────────────────────────────────────────────────
+// Il tenant manda la frase e i moduli di spesa (mai record). Torna l'intento validato; il tenant lo rivalida, risolve la riga e chiede conferma per ogni scrittura.
+router.post('/bot-intent', requireInternalSecret, async (req, res) => {
+  const { tenant_slug, data } = req.body || {};
+  if (!tenant_slug) return res.status(400).json({ error: 'tenant_slug obbligatorio' });
+  const s = botAi.sanitizeBot(data);
+  if (s.error) return res.status(400).json({ error: s.error });
+  if (!isProviderConfigured('mistral', tenant_slug)) return res.status(503).json({ error: 'Nessuna chiave Mistral: inseriscila in Impostazioni → AI.', code: 'ai_not_configured' });
+  try {
+    const text = await callAI('mistral', { system: botAi.BOT_PROMPT, user: JSON.stringify(s.payload), maxTokens: 250, tenantSlug: tenant_slug });
+    const raw = parseJsonObject(text);
+    if (!raw) return res.status(502).json({ error: 'Risposta dell\'AI non valida' });
+    const v = botAi.validateIntent(raw, s.payload.moduli);
+    if (v.error) return res.status(422).json({ error: v.error, code: 'ai_unanswerable' });
+    res.json({ intent: v.intent });
   } catch (e) {
     res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
   }
