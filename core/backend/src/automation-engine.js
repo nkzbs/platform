@@ -502,10 +502,10 @@ function runAzioni(azioni, recordData, moduleSlug, automationLabel, recordId, lo
         return tmpl.replace(/\{\{(\w+)\}\}/g, (_, k) => recordData && recordData[k] !== undefined ? String(recordData[k]) : '');
       };
       const testo = interpolate(cfg.messaggio) || automationLabel;
-      // Con il riepilogo del mattino acceso, gli avvisi "scadenza" per singola riga non partono più:
-      // arrivano tutti insieme nel riepilogo (un messaggio al giorno invece di uno per riga).
-      if (cfg.trigger_tag === require('./daily-digest').TAG && require('./daily-digest').isEnabled()) {
-        if (dryRun) { dryLog.push({ desc: 'invia_notifica [' + cfg.trigger_tag + ']: sostituita dal riepilogo del mattino' }); return; }
+      // Con i report su WhatsApp accesi, gli avvisi "scadenza" per singola riga non partono più:
+      // le scadenze arrivano nei report (da pagare, scadute) invece di un messaggio per riga.
+      if (cfg.trigger_tag === require('./reports').TAG && require('./reports').isEnabled()) {
+        if (dryRun) { dryLog.push({ desc: 'invia_notifica [' + cfg.trigger_tag + ']: sostituita dai report su WhatsApp' }); return; }
         db.prepare('INSERT INTO automation_logs (module_slug, automation_label, trigger_desc, action_desc, esito, record_id) VALUES (?, ?, ?, ?, ?, ?)').run(moduleSlug, automationLabel, logged.triggerDesc, 'invia_notifica [' + cfg.trigger_tag + ']: ' + testo.slice(0, 60), 'sostituita dal riepilogo', recordId || null);
         return;
       }

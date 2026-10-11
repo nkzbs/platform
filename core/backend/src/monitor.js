@@ -5,7 +5,7 @@
 const db = require('./db');
 const insights = require('./insights');
 const moduleAi = require('./module-ai');
-const { romeParts } = require('./daily-digest');
+const { romeParts } = require('./reports');
 
 const GIORNO = 2, ORA = 9;
 const MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];

@@ -542,11 +542,14 @@ ensureColumn('tenant_settings', 'ai_bollette_enabled', 'INTEGER DEFAULT 0');
 ensureColumn('tenant_settings', 'ai_report_enabled', 'INTEGER DEFAULT 0');
 ensureColumn('tenant_settings', 'ai_enabled', 'INTEGER DEFAULT 0'); // interruttore generale dell'AI (Impostazioni → AI): spento, nessun potenziamento lavora
 
-// Riepilogo del mattino su WhatsApp (un solo messaggio al giorno con scadenze di oggi, di domani e in ritardo).
+// Vecchio riepilogo del mattino su WhatsApp (sostituito dai report: vedi reports.js).
 // Spento finché non lo si accende; l'ora è quella italiana.
 ensureColumn('tenant_settings', 'digest_enabled', 'INTEGER DEFAULT 0');
 ensureColumn('tenant_settings', 'digest_hour', 'INTEGER DEFAULT 8');
 ensureColumn('tenant_settings', 'digest_last_sent', 'TEXT DEFAULT NULL');
+// Report su WhatsApp (reports.js): impostazioni dei tre report in JSON. Le colonne digest_* sono del vecchio riepilogo del mattino e non si usano più.
+ensureColumn('tenant_settings', 'report_settings', 'TEXT DEFAULT NULL');
+db.exec('CREATE TABLE IF NOT EXISTS report_sent (kind TEXT NOT NULL, key TEXT NOT NULL, sent_at DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (kind, key))');
 
 // Suggerimenti dell'AI su un record. L'AI PROPONE, mai scrive: un suggerimento resta
 // 'pending' finché non lo si accetta (applica i campi al record) o lo si ignora.

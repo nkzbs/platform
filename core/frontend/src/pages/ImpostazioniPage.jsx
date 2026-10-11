@@ -5,7 +5,7 @@ import WhatsAppLogPanel from '../components/WhatsAppLogPanel'
 import ExportDatiPage from './ExportDatiPage'
 import BackupPage from './BackupPage'
 import AiSettingsPage from '../components/AiSettingsPage'
-import DigestSettingsTab from '../components/DigestSettingsTab'
+import ReportsSettingsTab from '../components/ReportsSettingsTab'
 import { API } from '../lib/api'
 import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
@@ -296,7 +296,7 @@ const SETTINGS_TABS = [
   { key: 'moduli', icon: 'box', label: 'Moduli' },
   { key: 'sito_web', icon: 'globe', label: 'Sito Web' },
   { key: 'connessioni', icon: 'link', label: 'Connessioni' },
-  { key: 'notifiche', icon: 'bell', label: 'Notifiche' },
+  { key: 'notifiche', icon: 'bell', label: 'Report' },
   { key: 'assistente', icon: 'wand', label: 'AI' },
   { key: 'export_dati', icon: 'download', label: 'Dati' },
   { key: 'account', icon: 'user', label: 'Il mio account' },
@@ -339,7 +339,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
 
       {tab === 'connessioni' && <ConnessioniTab token={token} features={features} />}
 
-      {tab === 'notifiche' && <DigestSettingsTab token={token} features={features} />}
+      {tab === 'notifiche' && <ReportsSettingsTab token={token} features={features} />}
 
 
       {tab === 'assistente' && <AiSettingsPage token={token} onChanged={onFeaturesChanged} />}

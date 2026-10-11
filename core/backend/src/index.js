@@ -32,8 +32,8 @@ const moduleRolesRoutes = require('./routes/module-roles');
 const moduleAiRoutes = require('./routes/module-ai');
 const smistaRoutes = require('./routes/smista');
 const moduleRoles = require('./module-roles');
-const digestRoutes = require('./routes/digest');
-const { startDailyDigest } = require('./daily-digest');
+const reportsRoutes = require('./routes/reports');
+const { startReports } = require('./reports');
 const { startAvvisi } = require('./avvisi');
 const { startMonitor } = require('./monitor');
 const { startAuditRetentionScheduler } = require('./audit-retention-scheduler');
@@ -95,7 +95,7 @@ const routeMounts = [
   ['/record-owner', recordOwnerRoutes],
   ['/field-options', fieldOptionsRoutes],
   ['/', notificationSettingsRoutes],
-  ['/digest', digestRoutes],
+  ['/reports', reportsRoutes],
   ['/site-pages', siteAdminRouter],
 ];
 app.use('/api', apiGlobalLimiter);
@@ -180,7 +180,7 @@ if (features.seedIfEmpty()) console.log('Funzioni: tenant con moduli di finanza,
 app.listen(PORT, () => {
   console.log('Platform Core [' + (process.env.TENANT_SLUG || 'default') + '] running on port ' + PORT);
   startScheduler();
-  startDailyDigest(); // il controllo ogni minuto parte sempre; se la funzione è spenta non fa niente
+  startReports(); // il controllo ogni minuto parte sempre; se la funzione è spenta non fa niente
   startMonitor(); // il giorno 2 alle 9: "come sta andando" su WhatsApp, per i widget che lo hanno acceso
   startAvvisi(); // ogni minuto: righe nuove in "da smistare" (da qualunque via) -> un messaggio WhatsApp
   startGmailPoller();

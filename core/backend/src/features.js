@@ -12,7 +12,8 @@ const FEATURES = {
   sito_web: { label: 'Sito Web', description: 'Pagine pubbliche del progetto, con il loro editor. Resta spento al pubblico finché non lo attivi dalla scheda Sito Web.' },
   movimenti: { label: 'Movimenti bancari', description: 'Carica gli estratti conto in PDF, vedi i movimenti reali e completa le spese che mancano.' },
   analisi: { label: 'Come sta andando', description: 'Scheda in dashboard con entrate, spese, risparmio, confronti e anomalie, spiegata dall\'assistente.' },
-  riepilogo_mattino: { label: 'Riepilogo del mattino', description: 'Un messaggio WhatsApp al giorno con le spese di oggi, domani e in ritardo.' },
+  // la chiave tecnica resta «riepilogo_mattino» (è salvata nei tenant esistenti); oggi accende i report su WhatsApp
+  riepilogo_mattino: { label: 'Report su WhatsApp', description: 'Tre messaggi WhatsApp: cosa devi pagare ogni 27, le bollette da smistare ogni sera finché ce ne sono, le voci scadute ogni lunedì.' },
 };
 const KEYS = Object.keys(FEATURES);
 

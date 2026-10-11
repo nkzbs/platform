@@ -176,9 +176,18 @@ Cosa avvisare e con quali parole lo **dichiara il modulo** (Builder → Ruoli de
   bolletta (bolletta, fattura, scadenza, "da pagare", "avviso di pagamento", "estratto conto"; senza promozioni) il cui mittente non ha una regola. Finiscono in una lista (Impostazioni →
   Connessioni → Google → "Mail non riconosciute", con «Crea regola» e «Ignora», tabella `gmail_unknown`) e partono in **un solo messaggio WhatsApp**. Un mittente ignorato non torna a
   segnalarsi; creando la regola le sue mail escono dalla lista.
-- **Riepilogo del mattino** (`daily-digest.js`): lavoro a parte che gira ogni minuto e, all'ora italiana scelta, manda un solo messaggio con le
-  scadenze di oggi, domani e in ritardo dei moduli che hanno acceso "scadenze nel riepilogo" e il numero di righe nello stato "nuovo". Spento di default.
-  Senza moduli dichiarati non porta nessuna riga.
+- **Report su WhatsApp** (`reports.js`, scheda Impostazioni → **Report**, rotte `/api/reports/*`): tre messaggi, ognuno risponde a una sola domanda e **non parte se non c'è niente da dire**
+  (il mensile sì: «Niente da pagare»). Un controllo ogni minuto, ora italiana; ogni invio si segna **prima** di partire (tabella `report_sent`: un report già mandato = una riga `kind + chiave`),
+  quindi un errore non diventa un messaggio al minuto, e se il NAS era spento all'ora esatta il report parte appena torna entro la finestra (5 ore, o fino al giorno-paga per il mensile).
+  - **«Quanto devo pagare»**: ogni 27 alle 18:00, se il 27 cade di sabato o domenica il **venerdì prima**. Tutto ciò che è «da pagare» dal giorno del report al **26 del mese dopo**, più le voci scadute
+    (non oltre 45 giorni: oltre sono residui), con totale, divisione per modulo ed elenco per data (le prime 25). Facoltativa la riga «ultimo stipendio → ti restano» (entrata più recente nelle categorie
+    dichiarate come stipendio in Builder → Riepiloghi).
+  - **«Da smistare»**: ogni sera alle 19:00 le righe nello stato «nuovo» (bollette da Gmail…), **finché la coda non è vuota**; il primo avviso, entro un minuto dall'arrivo, resta quello di `avvisi.js`.
+  - **«Voci scadute»**: ogni lunedì alle 19:00, solo se ce ne sono, con «da N giorni». Si spengono da sole spuntando le voci nella Checklist.
+  Quali moduli contano e cosa significa «da pagare» o «nuovo» lo dichiarano i moduli (Builder → Avvisi, `scadenze` acceso): nel codice non ci sono nomi. Le impostazioni (acceso, giorno, ora) stanno in `tenant_settings.report_settings`
+  (JSON); i destinatari sono quelli con il tag `scadenza`. Con almeno un report acceso gli avvisi `invia_notifica` con tag `scadenza` dei moduli restano muti (stesso accorgimento del vecchio riepilogo).
+  Sostituisce il «Riepilogo del mattino» (08:00) e i report settimanale/mensile automatici dei moduli, che contavano le spese per data senza guardare lo stato di pagamento: la scheda **Report** elenca le
+  automazioni vecchie ancora nei moduli e le toglie con un pulsante (`/api/reports/legacy`, con cronologia del modulo).
 
 ## Ruoli dei moduli: le funzioni non conoscono i nomi
 
@@ -187,7 +196,7 @@ campi scritti nel codice (`module-roles.js`, tabella `module_roles`, rotte `/api
 
 | Cosa si dichiara | A cosa serve |
 |---|---|
-| **Tipo** (spesa, entrata) e **usi** (riepiloghi, avvisi, mail) | Quali moduli entrano in "Come sta andando", nel riepilogo del mattino, tra le destinazioni delle regole Gmail |
+| **Tipo** (spesa, entrata) e **usi** (riepiloghi, avvisi, mail) | Quali moduli entrano in "Come sta andando", nei report su WhatsApp, tra le destinazioni delle regole Gmail |
 | **Ruoli dei campi** (importo, data, scadenza, categoria, descrizione, stato, gruppo, fisso) | Quale campo del modulo è l'importo, la data... Un campo senza ruolo non viene letto né scritto |
 | **Avvisi**: stato "nuovo", "da fare" e "fatto", piano a rate, avviso su riga nuova, scadenze nel riepilogo, come si chiamano le righe ("bolletta/bollette"), etichetta breve, tag destinatari | Parole e stati dei messaggi WhatsApp e della coda "Da smistare" |
 | **Criteri dei riepiloghi** (entrate): categorie, gruppi e descrizioni escluse, categorie stipendio e risparmio, campo accantonamento | Cosa non conta come entrata, cosa è stipendio, cosa è risparmio |
@@ -329,7 +338,7 @@ Oggi **non c'è una schermata** per accenderle (la sezione "Capacità" della Lib
 | `sito_web` | Scheda Sito Web e il suo editor (`/api/site-pages`); il sito pubblico resta spento finché non lo attivi |
 | `movimenti` | Pagina Movimenti, rotte `/api/bank/*`, lettura degli estratti PDF (non modulare, spenta su Finance) |
 | `analisi` | Widget "Come sta andando" disponibile in "Aggiungi widget", rotte `/api/insights/*` |
-| `riepilogo_mattino` | Riepilogo WhatsApp del mattino (scheda Notifiche, rotte `/api/digest/*`) |
+| `riepilogo_mattino` | Report su WhatsApp (scheda Report, rotte `/api/reports/*`); la chiave tecnica è rimasta quella del vecchio riepilogo del mattino |
 
 Un progetto **nuovo non ne ha nessuna**: le loro rotte rispondono 403 `feature_off` e le schede si adattano. Il valore di partenza di un progetto che già le usa
 viene dai dati: `movimenti`, `analisi` e `riepilogo_mattino` partono accese se almeno un modulo ha dichiarato di essere una spesa o un'entrata; `whatsapp`,

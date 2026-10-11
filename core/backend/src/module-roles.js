@@ -1,6 +1,6 @@
 'use strict';
 // Ruoli dei moduli: ogni modulo dichiara a cosa serve (spesa o entrata), quali dei suoi campi sono l'importo, la data, la scadenza...
-// e dove "lavora" (riepiloghi, avvisi, mail). Le funzioni (Come sta andando, riepilogo del mattino, Gmail) leggono questa
+// e dove "lavora" (riepiloghi, avvisi, mail). Le funzioni (Come sta andando, report su WhatsApp, Gmail) leggono questa
 // dichiarazione invece di conoscere nomi di moduli e di campi scritti nel codice. Si modifica dal Builder.
 const db = require('./db');
 

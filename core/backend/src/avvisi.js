@@ -1,6 +1,6 @@
 // Avvisi WhatsApp di un modulo quando arriva una riga nello stato "nuovo" (es. una bolletta da Gmail in "da smistare").
 // Quando avvisare, che cosa conta come "nuovo", come si chiamano le righe e a quale tag vanno i destinatari lo dichiara il modulo
-// (Builder → Avvisi, vedi module-roles.js). Stesso canale e stessi destinatari del riepilogo del mattino. Mai un errore verso il chiamante.
+// (Builder → Avvisi, vedi module-roles.js). Stesso canale e stessi destinatari dei report su WhatsApp (reports.js). Mai un errore verso il chiamante.
 const db = require('./db');
 const whatsapp = require('./whatsapp');
 const moduleRoles = require('./module-roles');
