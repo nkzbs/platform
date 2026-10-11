@@ -134,7 +134,7 @@ function getDestinatariPerTag(tag) {
 function getCredentials(integrationId) {
   const row = db.prepare('SELECT credentials FROM connections WHERE integration_id = ?').get(integrationId);
   if (!row || !row.credentials) return null;
-  try { return JSON.parse(row.credentials); } catch { return null; }
+  return require('./secrets-at-rest').unseal(row.credentials);
 }
 
 async function callRealAPI(integrationId, azione, config, recordData) {

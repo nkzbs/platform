@@ -212,3 +212,10 @@ Nel Builder, modulo Documenti → «Come si vede l'elenco» → **Archivio**. Le
 4. **Scegli dove arrivano i report**: Impostazioni → Report → «Dove arrivano i report» (WhatsApp e/o Telegram).
 - **Revocare**: «Scollega» accanto al telefono (il proprio; l'admin qualunque), o `/scollega` dalla chat. «Scollega il bot» toglie anche il webhook e tutti i telefoni. Se il codice segreto è finito in mani sbagliate: `/revoke` su BotFather e ricollegare con il nuovo.
 - **Se non arriva niente**: il tenant deve essere raggiungibile da fuori in https (il webhook è `…/api/telegram/webhook`); controllare che il bot sia collegato e che il telefono compaia nell'elenco.
+
+## Segreti cifrati e la chiave del progetto
+- Le credenziali dei collegamenti (Google, WhatsApp, Telegram…) e i segreti del 2FA stanno nel database **cifrati** con `ENCRYPTION_KEY` del progetto (la stessa dei campi cifrati). Al primo avvio dopo l'aggiornamento il sistema cifra da solo ciò che era in chiaro e scrive nel log di avvio `Segreti cifrati a riposo: N collegamenti, N segreti 2FA`.
+- **Senza la chiave** quei valori non si leggono: Google, WhatsApp e Telegram risultano «non collegati» e il 2FA va riconfigurato (con i codici di recupero, o da admin). La chiave sta nel registro di Super Admin (`super-admin-01.db`): conservala **insieme ai backup**.
+- I backup fatti **prima** dell'aggiornamento (i 7 giornalieri, le copie sul Mac) contengono ancora i segreti **in chiaro**: scadono da soli in una settimana (quelli automatici); le copie manuali vanno cancellate quando non servono più.
+- Se dopo un ripristino i collegamenti risultano scollegati ma la chiave è giusta, guarda nel log di avvio se compare «NON riusciti».
+- **Librerie**: ogni tanto `npm audit --omit=dev` in `core/backend`, `super-admin/backend`, `super-admin/docker-provisioner`. Non usare `npm audit fix` negli ultimi due senza controllare che `dockerode` resti ≥ 4.0.5. Il **provisioner** non si aggiorna con `redeploy-nas.sh`: ha un'immagine sua (`docker-provisioner:0.1`).

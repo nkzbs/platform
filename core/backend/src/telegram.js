@@ -11,7 +11,7 @@
 //   • le domande libere (AI) NON ci sono ancora: solo comandi fissi.
 const crypto = require('crypto');
 const db = require('./db');
-const { encrypt, decrypt } = require('./crypto-fields');
+const { decrypt } = require('./crypto-fields');
 const { logAudit } = require('./audit-log');
 
 const API = 'https://api.telegram.org';
@@ -23,15 +23,15 @@ const KINDS = ['pagare', 'smistare', 'scadute'];
 function creds() {
   try {
     const row = db.prepare("SELECT credentials FROM connections WHERE integration_id = 'telegram'").get();
-    if (!row || !row.credentials) return null;
-    const c = JSON.parse(row.credentials);
-    if (!c.bot_token) return null;
-    return { ...c, bot_token: decrypt(c.bot_token) };
+    const c = row && require('./secrets-at-rest').unseal(row.credentials);
+    if (!c || !c.bot_token) return null;
+    const token = decrypt(c.bot_token); // un vecchio valore cifrato per campo si legge ancora; uno in chiaro torna com'è
+    return token && token !== '[errore decifratura]' ? { ...c, bot_token: token } : null;
   } catch (e) { return null; }
 }
 const isConfigured = () => !!creds();
 function saveCreds(c) {
-  const json = JSON.stringify({ ...c, bot_token: c.bot_token ? encrypt(c.bot_token) : null });
+  const json = require('./secrets-at-rest').seal(c); // tutto il JSON cifrato a riposo
   if (db.prepare("SELECT 1 FROM connections WHERE integration_id = 'telegram'").get()) db.prepare("UPDATE connections SET credentials = ?, connected = ?, connected_at = CURRENT_TIMESTAMP WHERE integration_id = 'telegram'").run(json, c.bot_token ? 1 : 0);
   else db.prepare("INSERT INTO connections (integration_id, connected, credentials, connected_at) VALUES ('telegram', ?, ?, CURRENT_TIMESTAMP)").run(c.bot_token ? 1 : 0, json);
 }

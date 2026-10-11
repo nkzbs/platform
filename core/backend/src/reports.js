@@ -220,7 +220,7 @@ async function sendReport(kind, { now = new Date(), actor = 'sistema' } = {}) {
   let waCreds = null; let dest = [];
   if (canali.whatsapp) {
     const row = db.prepare("SELECT credentials FROM connections WHERE integration_id = 'whatsapp_callmebot'").get();
-    try { waCreds = row && row.credentials ? JSON.parse(row.credentials) : null; } catch (e) { waCreds = null; }
+    waCreds = row ? require('./secrets-at-rest').unseal(row.credentials) : null;
     dest = require('./notification-settings').recipientsForTag(TAG);
   }
   const waOk = !!(canali.whatsapp && waCreds && waCreds.api_key && dest.length);

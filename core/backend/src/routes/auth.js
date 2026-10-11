@@ -134,7 +134,7 @@ router.post('/login/2fa-verify', loginLimiter, (req, res) => {
   const normalizedCode = String(code || '').trim();
   let usedBackupCode = false;
 
-  if (/^\d{6}$/.test(normalizedCode) && authenticator.check(normalizedCode, user.totp_secret)) {
+  if (/^\d{6}$/.test(normalizedCode) && authenticator.check(normalizedCode, require('../secrets-at-rest').unsealText(user.totp_secret) || '')) {
     // codice TOTP valido, procede
   } else {
     // Prova come codice di recupero (formato XXXX-XXXX) — a singolo uso, vedi
@@ -161,9 +161,11 @@ router.post('/login/2fa-verify', loginLimiter, (req, res) => {
 // confermato con un codice reale (sotto) prima che totp_enabled diventi 1.
 router.post('/2fa/setup', requireAuth, async (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  // Con il 2FA già attivo un nuovo segreto sostituirebbe quello in uso prima di essere confermato e chiuderebbe fuori l'utente: prima va disattivato.
+  if (user.totp_enabled) return res.status(409).json({ error: 'Il 2FA è già attivo: disattivalo prima di configurarlo di nuovo.' });
   const secret = authenticator.generateSecret();
   const uri = authenticator.keyuri(user.username, 'Platform', secret);
-  db.prepare('UPDATE users SET totp_secret = ? WHERE id = ?').run(secret, user.id);
+  db.prepare('UPDATE users SET totp_secret = ? WHERE id = ?').run(require('../secrets-at-rest').sealText(secret), user.id);
   const qr = await QRCode.toDataURL(uri);
   res.json({ secret, otpauth_uri: uri, qr_data_uri: qr });
 });
@@ -172,7 +174,7 @@ router.post('/2fa/confirm', requireAuth, (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
   if (!user.totp_secret) return res.status(400).json({ error: 'Nessuna configurazione 2FA in corso — avvia prima /2fa/setup' });
   const code = String(req.body.code || '').trim();
-  if (!authenticator.check(code, user.totp_secret)) return res.status(400).json({ error: 'Codice non valido' });
+  if (!authenticator.check(code, require('../secrets-at-rest').unsealText(user.totp_secret) || '')) return res.status(400).json({ error: 'Codice non valido' });
 
   const { plain, hashed } = genBackupCodes(bcrypt);
   db.prepare('UPDATE users SET totp_enabled = 1, totp_backup_codes = ? WHERE id = ?').run(JSON.stringify(hashed), user.id);

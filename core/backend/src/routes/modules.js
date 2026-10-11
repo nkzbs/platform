@@ -680,10 +680,10 @@ function cleanupOrphanConnections(excludeSlug, integrationIds) {
       // stessa logica di POST /integrazioni/google/disconnect.
       const row = db.prepare("SELECT credentials FROM connections WHERE integration_id = 'google'").get();
       if (row && row.credentials) {
-        let creds = {};
-        try { creds = JSON.parse(row.credentials) || {}; } catch {}
+        const sar = require('../secrets-at-rest');
+        const creds = sar.unseal(row.credentials) || {};
         db.prepare("UPDATE connections SET credentials = ?, connected = 0 WHERE integration_id = 'google'")
-          .run(JSON.stringify({ client_id: creds.client_id, client_secret: creds.client_secret }));
+          .run(sar.seal({ client_id: creds.client_id, client_secret: creds.client_secret }));
       }
     } else {
       db.prepare('DELETE FROM connections WHERE integration_id = ?').run(integrationId);

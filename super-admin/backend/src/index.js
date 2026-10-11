@@ -90,6 +90,8 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Errore interno' });
 });
 
+{ const m = require('./secrets-at-rest').migrate(); if (m.totp || m.falliti) console.log('Segreti 2FA cifrati a riposo: ' + m.totp + (m.falliti ? ' (' + m.falliti + ' NON riusciti)' : '')); }
+
 app.listen(PORT, () => {
   console.log('Super Admin backend running on port ' + PORT);
   startBackupScheduler();

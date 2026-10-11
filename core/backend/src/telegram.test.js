@@ -81,12 +81,12 @@ async function main() {
     eq(r.status, 200); eq((await r.json()).bot_username, 'finance_test_bot');
     const wh = ultimi('setWebhook')[0].body; eq(wh.url, 'https://finance.example.it/api/telegram/webhook'); ok(wh.secret_token.length >= 32, 'segreto lungo');
     const raw = db.prepare("SELECT credentials FROM connections WHERE integration_id = 'telegram'").get().credentials;
-    ok(!raw.includes(TOKEN), 'il token non è in chiaro'); ok(JSON.parse(raw).bot_token.startsWith('enc:'));
+    ok(!raw.includes(TOKEN), 'il token non è in chiaro'); ok(raw.startsWith('enc:'), 'tutto il JSON è cifrato'); eq(require('./secrets-at-rest').unseal(raw).bot_token, TOKEN, 'si rilegge');
     const st = await (await api('/status', { headers: HN })).json(); eq(st.configured, true); ok(!JSON.stringify(st).includes('AAAA'), 'nessun segreto in /status');
   });
 
   console.log('\n--- il webhook ---');
-  const secret = () => JSON.parse(db.prepare("SELECT credentials FROM connections WHERE integration_id = 'telegram'").get().credentials).secret;
+  const secret = () => require('./secrets-at-rest').unseal(db.prepare("SELECT credentials FROM connections WHERE integration_id = 'telegram'").get().credentials).secret;
   const upd = (chat, text, extra = {}) => ({ update_id: Math.floor(Math.random() * 1e9), message: { message_id: 1, chat: { id: chat, type: 'private' }, from: { id: chat, first_name: 'Prova' }, text, ...extra } });
   const post = (body, sec = secret()) => api('/webhook', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(sec ? { 'x-telegram-bot-api-secret-token': sec } : {}) }, body: JSON.stringify(body) });
   await test('senza il segreto giusto: 403 e il bot non risponde', async () => {

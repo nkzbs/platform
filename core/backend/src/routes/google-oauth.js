@@ -25,11 +25,11 @@ const router = express.Router();
 function getCreds() {
   const row = db.prepare("SELECT credentials FROM connections WHERE integration_id = 'google'").get();
   if (!row || !row.credentials) return {};
-  try { return JSON.parse(row.credentials) || {}; } catch { return {}; }
+  return require('../secrets-at-rest').unseal(row.credentials) || {};
 }
 
 function setCreds(next, connected) {
-  const json = JSON.stringify(next);
+  const json = require('../secrets-at-rest').seal(next); // cifrato a riposo
   const row = db.prepare("SELECT integration_id FROM connections WHERE integration_id = 'google'").get();
   if (row) {
     db.prepare('UPDATE connections SET credentials = ?' + (connected !== undefined ? ', connected = ?, connected_at = CURRENT_TIMESTAMP' : '') + " WHERE integration_id = 'google'")

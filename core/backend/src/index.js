@@ -175,6 +175,7 @@ app.use((err, req, res, next) => {
 // Destinatari WhatsApp e regole Gmail non sono più moduli: porta nelle tabelle nuove le righe rimaste.
 require('./notification-settings').migrateLegacy();
 require('./record-owner').adoptOrphans();
+{ const m = require('./secrets-at-rest').migrate(); if (m.connessioni || m.totp || m.falliti) console.log('Segreti cifrati a riposo: ' + m.connessioni + ' collegamenti, ' + m.totp + ' segreti 2FA' + (m.falliti ? ' (' + m.falliti + ' NON riusciti)' : '')); }
 require('./legacy-cleanup').removeStubModules();
 if (moduleRoles.seedIfEmpty()) console.log('Ruoli dei moduli: dichiarati per i moduli di finanza già presenti');
 if (features.seedIfEmpty()) console.log('Funzioni: tenant con moduli di finanza, funzioni accese; le altre restano spente');

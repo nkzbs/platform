@@ -447,3 +447,11 @@ Il Builder resta completo (quello di Super Admin serve per gli altri tenant), ma
 - **Esclusi di proposito**: eliminare, modificare campi liberi, utenti, impostazioni, backup. **Rimandato**: leggere foto di scontrini (servirebbe un OCR/visione nel gateway AI; per ora solo PDF), conversazioni con memoria.
 - **Prove «al contrario»**: togliendo il controllo di proprietà della proposta, o il filtro per utente nella ricerca delle voci, due test falliscono.
 - Test: `telegram-bot.test.js` (22), `ai-bot.test.js` in Super Admin (11).
+
+## 2026-10-11 — Segreti cifrati a riposo e librerie aggiornate
+- **Problema** (domanda di Nima sulla sicurezza): nel database di Finance erano **in chiaro** i token e il segreto di Google (accesso a Gmail e Drive), la chiave di CallMeBot, il segreto del webhook Telegram e i **segreti del 2FA**; vale anche per i segreti 2FA di Super Admin. Chi avesse un file del database o un backup li leggeva.
+- **Scelta**: cifrarli con la chiave del progetto, tutto in un modulo (`secrets-at-rest.js`), con lettura retrocompatibile e migrazione all'avvio verificata. Prova «al contrario» fatta dai test: un valore manomesso o con chiave sbagliata diventa «assente», non un testo di errore.
+- **Trovato lungo la strada**: l'admin di Finance risultava **senza 2FA** (segreto avviato e mai confermato); e `/2fa/setup` poteva **sostituire il segreto di un utente con il 2FA già attivo** chiudendolo fuori: ora risponde 409 se il 2FA è già attivo.
+- **Librerie**: `npm audit fix` in Finance (era 1 critico e 3 moderati → 0) e in Super Admin; nodemailer 6 → 10 (API verificata con un trasporto di prova); nel provisioner (ha `docker.sock`) 1 critico e 1 alto corretti con `dockerode` 4.0.12. Restano 2 moderati su `uuid` (non raggiungibile da noi) che `npm audit fix` può chiudere solo riportando indietro `dockerode`: lasciati, annotato in ARCHITETTURA.
+- **Non fatto, di proposito**: cifrare le chiavi dei tenant nel registro di Super Admin (servono al ripristino; una chiave sullo stesso server non protegge da chi ha il server). **Da fare dal proprietario**: ruotare le password vecchie, ruotare i segreti già usciti in backup in chiaro (vedi OPERAZIONI), rilasciare il provisioner.
+- Test: `secrets-at-rest.test.js` in Finance (9) e in Super Admin (2).

@@ -29,7 +29,7 @@ async function notifyNuovaRiga(slug, data) {
     const msg = buildNuovaRiga(slug, data);
     if (!msg) return { skipped: 'il modulo non avvisa' };
     const row = db.prepare("SELECT credentials FROM connections WHERE integration_id = 'whatsapp_callmebot'").get();
-    let creds = null; try { creds = row && row.credentials ? JSON.parse(row.credentials) : null; } catch (e) { /* illeggibili */ }
+    const creds = row ? require('./secrets-at-rest').unseal(row.credentials) : null;
     if (!creds || !creds.api_key) return { skipped: 'whatsapp non collegato' };
     const dest = require('./notification-settings').recipientsForTag(msg.tag);
     if (!dest.length) return { skipped: 'nessun destinatario' };
@@ -84,7 +84,7 @@ async function sendText(tag, testo, kind = 'avviso') {
   try {
     if (!require('./features').isEnabled('whatsapp')) return { skipped: 'whatsapp non attivo' };
     const row = db.prepare("SELECT credentials FROM connections WHERE integration_id = 'whatsapp_callmebot'").get();
-    let creds = null; try { creds = row && row.credentials ? JSON.parse(row.credentials) : null; } catch (e) { /* illeggibili */ }
+    const creds = row ? require('./secrets-at-rest').unseal(row.credentials) : null;
     if (!creds || !creds.api_key) return { skipped: 'whatsapp non collegato' };
     const dest = require('./notification-settings').recipientsForTag(tag);
     if (!dest.length) return { skipped: 'nessun destinatario' };

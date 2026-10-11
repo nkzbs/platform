@@ -73,7 +73,7 @@ async function main() {
   db.prepare("INSERT INTO user_modules (user_id, module_slug) VALUES (6, 'spese_casa')").run();
   await tg.connect(TOKEN, 'https://finance.example.it');
   db.prepare("INSERT INTO telegram_links (chat_id, user_id, label) VALUES ('555', 5, 'nima'), ('666', 6, 'fede')").run();
-  const secret = JSON.parse(db.prepare("SELECT credentials FROM connections WHERE integration_id = 'telegram'").get().credentials).secret;
+  const secret = require('./secrets-at-rest').unseal(db.prepare("SELECT credentials FROM connections WHERE integration_id = 'telegram'").get().credentials).secret;
   const post = (body) => realFetch(BASE + '/api/telegram/webhook', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-telegram-bot-api-secret-token': secret }, body: JSON.stringify(body) });
   const upd = (chat, text, extra = {}) => ({ update_id: 1, message: { message_id: 1, chat: { id: chat, type: 'private' }, from: { id: chat, first_name: 'P' }, text, ...extra } });
   const say = async (chat, text) => { tg._resetRate(); calls.length = 0; await post(upd(chat, text)); return ultimi('sendMessage').slice(-1)[0] ? ultimi('sendMessage').slice(-1)[0].body : null; };
