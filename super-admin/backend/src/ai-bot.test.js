@@ -20,7 +20,7 @@ console.log('\n--- cosa esce verso il modello ---');
 test('la frase è ripulita dai dati personali; niente record, solo i moduli', () => {
   const s = bot.sanitizeBot({ frase: 'ho pagato mario.rossi@x.it con IBAN IT60X0542811101000000123456', moduli: MODULI, oggi: '2026-10-11' });
   ok(!s.payload.frase.includes('mario.rossi') && !s.payload.frase.includes('IT60X05'), s.payload.frase);
-  eq(Object.keys(s.payload).sort(), ['frase', 'moduli', 'oggi']);
+  eq(Object.keys(s.payload).sort(), ['frase', 'moduli', 'oggi', 'timbrature']);
 });
 test('frase vuota o senza moduli: errore; frase lunghissima: tagliata', () => {
   ok(!!bot.sanitizeBot({ frase: ' ', moduli: MODULI }).error); ok(!!bot.sanitizeBot({ frase: 'ciao', moduli: [] }).error);
@@ -63,6 +63,18 @@ test('un modulo inventato o una categoria che non è del modulo non passano (div
 });
 test('«pagata» è vero solo se è proprio true (non una stringa)', () => {
   eq(bot.validateIntent({ azione: 'nuova_spesa', descrizione: 'Cena', importo: 30, pagata: 'true' }, mod).intent.pagata, false);
+});
+test('timbra: solo entrata/uscita, ora HH:MM valida, data recente e non futura; ore: periodo dell\'elenco', () => {
+  eq(bot.validateIntent({ azione: 'timbra', tipo: 'entrata', ora: '07:05', data: '2026-10-10' }, mod, '2026-10-12').intent, { azione: 'timbra', tipo: 'entrata', ora: '07:05', data: '2026-10-10' });
+  eq(bot.validateIntent({ azione: 'timbra', tipo: 'uscita', ora: '25:99', data: '2026-10-20' }, mod, '2026-10-12').intent, { azione: 'timbra', tipo: 'uscita', ora: null, data: null }, 'ora e data non valide → null');
+  eq(bot.validateIntent({ azione: 'timbra', tipo: 'uscita', data: '2025-01-01' }, mod, '2026-10-12').intent.data, null, 'troppo vecchia');
+  ok(!!bot.validateIntent({ azione: 'timbra', tipo: 'cancella' }, mod).error);
+  eq(bot.validateIntent({ azione: 'ore', periodo: 'mese', sql: 'x' }, mod).intent, { azione: 'ore', periodo: 'mese' });
+  eq(bot.validateIntent({ azione: 'ore', periodo: 'sempre' }, mod).intent.periodo, 'settimana');
+});
+test('senza moduli di spesa ma con le timbrature la frase è accettata', () => {
+  ok(!bot.sanitizeBot({ frase: 'sono entrata', oggi: '2026-10-12', timbrature: true, moduli: [] }).error);
+  ok(!!bot.sanitizeBot({ frase: 'sono entrata', oggi: '2026-10-12', moduli: [] }).error);
 });
 test('risposta non oggetto: errore', () => { ok(!!bot.validateIntent('boh', mod).error); ok(!!bot.validateIntent(null, mod).error); });
 

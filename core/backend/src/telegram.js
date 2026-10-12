@@ -127,7 +127,7 @@ async function sendReportTo(chatId, kind, result) {
 }
 
 // ── cosa fa il bot quando riceve qualcosa ───────────────────────────────────────────────────────────────────────────────
-const AIUTO = '<b>Cosa so fare</b>\n/pagare — quanto devi pagare\n/scadute — le voci scadute, con il bottone «Pagata»\n/smistare — le righe da smistare\n\n<b>Oppure scrivimi come parli</b>, per esempio:\n• «quanto ho speso di benzina a settembre?»\n• «ho pagato l\'affitto»\n• «smista la bolletta A2A in 3 rate»\n• «ho speso 20 euro di benzina»\n• mandami la <b>foto di uno scontrino</b> o il <b>PDF</b> di una bolletta e li leggo\n\nOgni modifica ti viene mostrata con un bottone di conferma: senza il tuo tocco non cambio niente.\n/scollega — scollega questo telefono';
+const AIUTO = '<b>Cosa so fare</b>\n/pagare — quanto devi pagare\n/scadute — le voci scadute, con il bottone «Pagata»\n/smistare — le righe da smistare\n/timbra — entrata e uscita (se hai le timbrature)\n/ore — le ore della settimana\n\n<b>Oppure scrivimi come parli</b>, per esempio:\n• «quanto ho speso di benzina a settembre?»\n• «ho pagato l\'affitto»\n• «smista la bolletta A2A in 3 rate»\n• «ho speso 20 euro di benzina»\n• «sono entrata», «uscita alle 12:30», «quante ore ho fatto questa settimana?»\n• mandami la <b>foto di uno scontrino</b> o il <b>PDF</b> di una bolletta e li leggo\n\nOgni modifica ti viene mostrata con un bottone di conferma: senza il tuo tocco non cambio niente (le timbrature si registrano subito, con il bottone «Annulla»).\n/scollega — scollega questo telefono';
 const NON_COLLEGATO = 'Questo telefono non è collegato a Finance.\nNell\'app: <b>Impostazioni → Report → Telegram → Collega il mio Telegram</b>, poi tocca il link che ti viene mostrato.';
 const hits = new Map(); // chat → istanti degli ultimi messaggi
 function tooMany(chatId, now) {
@@ -169,6 +169,11 @@ async function handleFree(chatId, user, text, now) {
     const a = await bot.ask(text, user, new Date(now));
     return sendMessage(chatId, a.error ? (a.code === 'ai_unanswerable' ? 'Non riesco a rispondere a questa domanda con i dati che ho: prova a riformularla (periodo, categoria, modulo).' : esc(a.error)) : a.html);
   }
+  if (it.azione === 'timbra' || it.azione === 'ore') {
+    const tb = require('./bot-timbrature');
+    const out = it.azione === 'timbra' ? await tb.timbra(user, chatId, it, new Date(now)) : tb.ore(user, it.periodo, new Date(now));
+    return sendMessage(chatId, out.html, out.keyboard);
+  }
   const p = act.proponi(user, it, chatId);
   return sendMessage(chatId, p.html, p.keyboard);
 }
@@ -197,6 +202,12 @@ async function handleMessage(msg, now) {
   if (!user) return sendMessage(chatId, NON_COLLEGATO);
   if (cmd === '/start' || cmd === '/aiuto' || cmd === '/help') return sendMessage(chatId, 'Ciao ' + esc(user.display_name || user.username) + '!\n\n' + AIUTO);
   if (cmd === '/scollega') { db.prepare('DELETE FROM telegram_links WHERE chat_id = ?').run(chatId); logAudit(user.username, 'telegram.unlink', chatId, null); return sendMessage(chatId, 'Scollegato. Per ricollegarti genera un nuovo codice dall\'app.'); }
+  if (cmd === '/timbra' || cmd === '/ore') {
+    const tb = require('./bot-timbrature');
+    if (!tb.haPresenze(user)) return sendMessage(chatId, 'Non hai un modulo di timbrature.');
+    const out = cmd === '/ore' ? tb.ore(user, 'settimana', new Date(now)) : tb.menu();
+    return sendMessage(chatId, out.html, out.keyboard);
+  }
   const kind = { '/pagare': 'pagare', '/scadute': 'scadute', '/smistare': 'smistare' }[cmd];
   if (kind) return runCommand(chatId, user, kind, now);
   // una foto (scontrino) o un file: la foto di uno scontrino e un PDF di bolletta si leggono con l'AI; poi tu confermi
@@ -225,6 +236,15 @@ async function handleCallback(cb, now) {
   const user = linkedUser(chatId);
   if (!user) return answer('Questo telefono non è collegato a Finance.');
   const act = require('./bot-actions');
+  const tbm = /^(tb|tu):([a-z0-9]+)$/.exec(String(cb.data || ''));
+  if (tbm) {
+    const tb = require('./bot-timbrature');
+    if (tbm[1] === 'tu') { const out = await tb.annulla(user, chatId, tbm[2]); await answer(out.scaduta ? 'Scaduta.' : 'Fatto.'); return editText(chatId, cb.message.message_id, out.html, []); }
+    if (!tb.haPresenze(user)) return answer('Non hai un modulo di timbrature.');
+    const out = tbm[2] === 'o' ? tb.ore(user, 'settimana', new Date(now)) : await tb.timbra(user, chatId, { tipo: tbm[2] === 'e' ? 'entrata' : 'uscita', ora: null, data: null }, new Date(now));
+    await answer('Fatto.');
+    return sendMessage(chatId, out.html, out.keyboard);
+  }
   const conf = /^(ok|dp|no|pk|im):([a-z0-9]+)(?::(\d+))?$/.exec(String(cb.data || ''));
   if (conf) {
     const [, kind, pid, idx] = conf;

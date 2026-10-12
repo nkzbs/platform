@@ -2,7 +2,9 @@
 // Bot Telegram: le regole che dicono cosa può essere una risposta dell'AI. Condivise tra Super Admin (che valida la risposta del modello) e il tenant (che la
 // rivalida prima di agire): le stesse regole in entrambi i posti, mai due copie che si allontanano. Qualsiasi cosa fuori elenco diventa «altro» o un errore, mai
 // un'azione. Vedi super-admin/backend/src/lib/ai-bot.js e core/backend/src/bot-ai.js.
-const AZIONI = ['domanda', 'elenco', 'segna_pagata', 'riapri', 'smista', 'nuova_spesa', 'altro'];
+const AZIONI = ['domanda', 'elenco', 'segna_pagata', 'riapri', 'smista', 'nuova_spesa', 'timbra', 'ore', 'altro'];
+const PERIODI_ORE = ['oggi', 'settimana', 'mese', 'mese_scorso'];
+const ORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 const COSE = ['pagare', 'scadute', 'smistare'];
 const MODI = ['uno', 'rate', 'pagata'];
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -12,7 +14,7 @@ const clean = (v, n) => String(v == null ? '' : v).replace(/[\r\n]+/g, ' ').trim
 const validDate = (s) => { if (!ISO.test(String(s))) return false; const d = new Date(s + 'T00:00:00Z'); return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s; };
 
 // Valida la risposta del modello contro i moduli disponibili. Ritorna { intent } oppure { error }.
-function validateIntent(raw, moduli) {
+function validateIntent(raw, moduli, oggi) {
   if (!raw || typeof raw !== 'object') return { error: 'Risposta non valida' };
   const azione = AZIONI.includes(raw.azione) ? raw.azione : 'altro';
   if (azione === 'domanda' || azione === 'altro') return { intent: { azione } };
@@ -31,6 +33,16 @@ function validateIntent(raw, moduli) {
     return { intent: { azione, cerca, modo, n_rate, importo: importo == null ? null : Math.round(importo * 100) / 100, scadenza } };
   }
 
+  if (azione === 'timbra') {
+    if (raw.tipo !== 'entrata' && raw.tipo !== 'uscita') return { error: 'Non ho capito se è un\'entrata o un\'uscita' };
+    const ora = ORA.test(String(raw.ora || '')) ? raw.ora : null;
+    // la data di una timbratura: valida e vicina (non nel futuro, non più vecchia di due mesi) se si conosce «oggi»; altrimenti solo valida
+    let data = raw.data && validDate(raw.data) ? raw.data : null;
+    if (data && oggi) { const g = (iso) => Math.round((new Date(iso + 'T00:00:00Z') - new Date(oggi + 'T00:00:00Z')) / 86400000); if (g(data) > 0 || g(data) < -62) data = null; }
+    return { intent: { azione, tipo: raw.tipo, ora, data } };
+  }
+  if (azione === 'ore') return { intent: { azione, periodo: PERIODI_ORE.includes(raw.periodo) ? raw.periodo : 'settimana' } };
+
   // nuova_spesa
   const importo = Number(raw.importo);
   if (!(Number.isFinite(importo) && importo > 0 && importo <= 100000)) return { error: 'Importo non valido' };
@@ -43,4 +55,4 @@ function validateIntent(raw, moduli) {
 }
 
 
-export { AZIONI, COSE, MODI, ISO, validateIntent, validDate };
+export { AZIONI, COSE, MODI, PERIODI_ORE, ISO, validateIntent, validDate };

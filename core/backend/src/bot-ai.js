@@ -49,10 +49,13 @@ async function viaSuperAdmin(path, data, timeoutMs = 30000) {
 async function interpret(frase, user, now = new Date()) {
   if (!moduleAi.masterOn()) return { error: 'L\'AI non è accesa (Impostazioni → AI).', code: 'ai_off' };
   const moduli = moduliPerUtente(user).map((m) => ({ slug: m.slug, name: m.name, etichetta: m.etichetta, categorie: m.categorie }));
-  if (!moduli.length) return { error: 'Non hai moduli di spesa a cui il bot possa lavorare.', code: 'no_modules' };
-  const r = await viaSuperAdmin('bot-intent', { frase, oggi: now.toISOString().slice(0, 10), moduli });
+  const timbrature = require('./bot-timbrature').haPresenze(user);
+  if (!moduli.length && !timbrature) return { error: 'Non hai moduli a cui il bot possa lavorare.', code: 'no_modules' };
+  const oggi = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(now);
+  const r = await viaSuperAdmin('bot-intent', { frase, oggi, timbrature, moduli });
   if (r.error) return r;
-  const v = validateIntent(r.body && r.body.intent, moduli); // rivalidato qui, con le stesse regole
+  const v = validateIntent(r.body && r.body.intent, moduli, oggi); // rivalidato qui, con le stesse regole
+  if (v.intent && (v.intent.azione === 'timbra' || v.intent.azione === 'ore') && !timbrature) return { error: 'Non hai timbrature.', code: 'ai_unanswerable' };
   if (v.error) return { error: v.error, code: 'ai_unanswerable' };
   return { intent: v.intent };
 }

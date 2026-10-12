@@ -1,11 +1,12 @@
 'use strict';
-// Ruoli dei moduli: ogni modulo dichiara a cosa serve (spesa o entrata), quali dei suoi campi sono l'importo, la data, la scadenza...
+// Ruoli dei moduli: ogni modulo dichiara a cosa serve (spesa, entrata o presenze/timbrature), quali dei suoi campi sono l'importo, la data, la scadenza...
 // e dove "lavora" (riepiloghi, avvisi, mail). Le funzioni (Come sta andando, report su WhatsApp, Gmail) leggono questa
 // dichiarazione invece di conoscere nomi di moduli e di campi scritti nel codice. Si modifica dal Builder.
 const db = require('./db');
 
-const ROLE_KEYS = ['importo', 'data', 'scadenza', 'categoria', 'descrizione', 'stato', 'gruppo', 'fisso', 'data_pagamento'];
-const KINDS = ['spesa', 'entrata'];
+// presenze = timbrature: un modulo con una data, un'ora di inizio (entrata) e una di fine (uscita); ruoli `inizio` e `fine`.
+const ROLE_KEYS = ['importo', 'data', 'scadenza', 'categoria', 'descrizione', 'stato', 'gruppo', 'fisso', 'data_pagamento', 'inizio', 'fine'];
+const KINDS = ['spesa', 'entrata', 'presenze'];
 const USES = ['riepiloghi', 'avvisi', 'mail'];
 
 db.exec('CREATE TABLE IF NOT EXISTS module_roles (module_slug TEXT PRIMARY KEY, kind TEXT, uses TEXT NOT NULL DEFAULT \'[]\', roles TEXT NOT NULL DEFAULT \'{}\')');
@@ -83,6 +84,7 @@ const FINANCE = {
     avvisi: { states: { nuovo: 'da_smistare', da_fare: 'da_pagare', fatto: 'pagato' }, piano: { modulo: 'debiti_personali', campi: PIANO_FINANCE }, nuovo: true, scadenze: true, tag: 'scadenza', label: 'pers.', noun_s: 'bolletta', noun_p: 'bollette' } },
   spese_casa: { kind: 'spesa', uses: ['avvisi', 'mail'], roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', fisso: 'fisso', data_pagamento: 'data_pagamento' },
     avvisi: { states: { nuovo: 'da_smistare', da_fare: 'da_pagare', fatto: 'pagato' }, piano: { modulo: 'debiti_casa', campi: PIANO_FINANCE }, nuovo: true, scadenze: true, tag: 'scadenza', label: 'casa', noun_s: 'bolletta', noun_p: 'bollette' } },
+  timbrature: { kind: 'presenze', uses: [], roles: { data: 'data', inizio: 'entrata', fine: 'uscita' } },
   entrate: { kind: 'entrata', uses: ['riepiloghi'], roles: { importo: 'importo', data: 'data', categoria: 'categoria', descrizione: 'descrizione', gruppo: 'gruppo' },
     riepiloghi: { exclude_categories: ['Risparmi', 'Fondo'], exclude_groups: ['Casa'], exclude_descriptions: ['Saldo conto'], salary_categories: ['Stipendio'], savings_categories: ['Fondo'], savings_field: 'accantonamento_suggerito' } },
 };

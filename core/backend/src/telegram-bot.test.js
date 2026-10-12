@@ -296,6 +296,50 @@ async function main() {
     eq(db.prepare("SELECT COUNT(*) c FROM records WHERE module_slug = 'spese_personali' AND json_extract(data, '$.descrizione') = 'Panificio'").get().c, 1);
   });
 
+  console.log('\n--- timbrature ---');
+  add('timbrature', 'Timbrature', { version: 3, steps: [F('data', 'Data', 'date'), F('entrata', 'Entrata', 'time'), F('uscita', 'Uscita', 'time'), F('note', 'Note', 'text'), SOLO_PROPRI] });
+  roles.set('timbrature', { kind: 'presenze', uses: [], roles: { data: 'data', inizio: 'entrata', fine: 'uscita' } });
+  db.prepare("INSERT INTO user_modules (user_id, module_slug) VALUES (6, 'timbrature')").run();
+  const OGGI = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(new Date());
+  const timbra = (tipo, ora, data = null) => ({ azione: 'timbra', tipo, ora, data });
+  const righeTb = (uid) => db.prepare("SELECT id, data FROM records WHERE module_slug = 'timbrature' AND user_id = ? ORDER BY id").all(uid).map((r) => ({ id: r.id, d: JSON.parse(r.data) }));
+  await test('«sono entrata»: crea la riga SUBITO come Federica (con data e ora), con il bottone Annulla; un\'altra entrata aperta non si duplica', async () => {
+    intents['sono entrata'] = timbra('entrata', '07:00');
+    const m = await say(666, 'sono entrata'); ok(/Entrata/.test(m.text) && /07:00/.test(m.text), m.text); ok(cb(m, 'tu:'), 'bottone annulla');
+    const r = righeTb(6); eq(r.length, 1); eq(r[0].d.entrata, '07:00'); eq(r[0].d.data, OGGI); ok(!r[0].d.uscita);
+    ok(/già un'entrata/.test((await say(666, 'sono entrata')).text), 'niente doppioni'); eq(righeTb(6).length, 1);
+    ok(db.prepare("SELECT 1 FROM audit_log WHERE action = 'telegram.timbra' AND actor = 'fede'").get(), 'nel registro');
+  });
+  await test('«uscita alle 12:30»: chiude SOLO l\'entrata aperta, mostra le ore; Annulla ripristina il turno aperto', async () => {
+    intents['uscita alle 12:30'] = timbra('uscita', '12:30');
+    const m = await say(666, 'uscita alle 12:30'); ok(/Uscita/.test(m.text) && /5h 30m/.test(m.text), m.text);
+    eq(righeTb(6)[0].d.uscita, '12:30'); eq(righeTb(6).length, 1);
+    const t = await tap(666, cb(m, 'tu:')); ok(/Uscita annullata/.test(t.modifica.text), JSON.stringify(t.modifica)); ok(!righeTb(6)[0].d.uscita, 'di nuovo aperta');
+    ok(/Non si può più annullare/.test((await tap(666, cb(m, 'tu:'))).modifica.text), 'una volta sola');
+  });
+  await test('Annulla un\'entrata appena fatta toglie la riga; non lo può fare un altro utente', async () => {
+    db.prepare("DELETE FROM records WHERE module_slug = 'timbrature'").run();
+    const m = await say(666, 'sono entrata'); const id = cb(m, 'tu:'); eq(righeTb(6).length, 1);
+    ok(/Non si può più annullare/.test((await tap(555, id)).modifica.text), 'Nima non può'); eq(righeTb(6).length, 1);
+    ok(/Entrata annullata/.test((await tap(666, id)).modifica.text)); eq(righeTb(6).length, 0);
+  });
+  await test('uscita senza un\'entrata aperta: lo dice e non crea niente', async () => {
+    ok(/Non trovo un'entrata aperta/.test((await say(666, 'uscita alle 12:30')).text)); eq(righeTb(6).length, 0);
+  });
+  await test('«ore»: somma i turni di oggi, anche a cavallo della mezzanotte; i turni aperti non si contano; gli altri non vedono le righe di Federica', async () => {
+    put('timbrature', { data: OGGI, entrata: '07:00', uscita: '12:30' }, 6); put('timbrature', { data: OGGI, entrata: '22:00', uscita: '01:00' }, 6); put('timbrature', { data: OGGI, entrata: '15:00' }, 6);
+    intents['quante ore oggi'] = { azione: 'ore', periodo: 'oggi' };
+    const m = await say(666, 'quante ore oggi'); ok(/8h 30m/.test(m.text), m.text); ok(/1 turno è ancora aperto/.test(m.text), m.text);
+    ok(/Nessuna timbratura/.test((await say(555, 'quante ore oggi')).text), '«solo propri»: Nima non vede quelle di Federica');
+  });
+  await test('/timbra mostra i bottoni; il tocco su «Sono entrata» timbra subito; /ore risponde', async () => {
+    db.prepare("DELETE FROM records WHERE module_slug = 'timbrature'").run();
+    const m = await say(666, '/timbra'); ok(cb(m, 'tb:e') && cb(m, 'tb:u') && cb(m, 'tb:o'));
+    tg._resetRate(); calls.length = 0; await post({ update_id: 3, callback_query: { id: 'cbx', data: 'tb:e', message: { message_id: 78, chat: { id: 666, type: 'private' }, reply_markup: { inline_keyboard: [] } } } });
+    ok(/Entrata/.test(ultimi('sendMessage').slice(-1)[0].body.text)); eq(righeTb(6).length, 1);
+    ok(/Questa settimana/.test((await say(666, '/ore')).text));
+  });
+
   console.log('\n--- limiti ---');
   await test('dalla nona frase al minuto che passa dall\'AI, il bot chiede di aspettare (le prime otto passano)', async () => {
     tg._resetRate(); const testi = [];
