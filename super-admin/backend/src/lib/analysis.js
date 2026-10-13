@@ -20,6 +20,7 @@ const MAX_PROCESSI = 40;
 const deps = {
   callAI: (...a) => providers.callAI(...a), isConfigured: () => providers.isProviderConfigured(AI_PROVIDER),
   applyConfig: (...a) => require('./tenant-config-from-analysis').applyAnalysisConfigToTenant(...a), // ruoli e stati nel tenant appena creato
+  setupTenant: (slug, pacchetto) => require('./tenant-api-client').callTenantAPI(slug, 'POST', '/api/internal-setup/apply', pacchetto), // dichiarazioni dei moduli, report e AI
 };
 
 const t = (v, n) => String(v == null ? '' : v).replace(/[\r\n]+/g, ' ').trim().slice(0, n);
@@ -134,6 +135,47 @@ function withDependencies(ids) {
   return out;
 }
 
+// ── proposte di report e di AI, dalle dichiarazioni dei moduli scelti (nessun nome di settore: guardano solo i ruoli dichiarati) ───────────────────
+const dichiarazione = (r) => { try { return r && r.ruoli ? JSON.parse(r.ruoli) : null; } catch (e) { return null; } };
+function moduliDichiarati(ids) {
+  return ids.map((id) => db.prepare('SELECT id, name, slug, ruoli FROM registry_modules WHERE id = ?').get(id)).filter(Boolean)
+    .map((r) => ({ id: r.id, name: r.name, slug: r.slug, decl: dichiarazione(r) })).filter((m) => m.decl);
+}
+const elenca = (mm) => mm.map((m) => m.name).join(', ');
+
+// Quali report ha senso proporre e quali potenziamenti AI accendere, per i moduli scelti. Ogni voce ha una chiave stabile (per poterla togliere) e il perché.
+function proposte(ids) {
+  const mm = moduliDichiarati(ids), report = [], ai = [];
+  const av = (m) => m.decl.avvisi || {};
+  const conScadenza = mm.filter((m) => av(m).scadenze && av(m).states && av(m).states.da_fare);
+  const daPagare = conScadenza.filter((m) => m.decl.kind === 'spesa');
+  const coda = mm.filter((m) => av(m).nuovo && av(m).states && av(m).states.nuovo);
+  const presenze = mm.filter((m) => m.decl.kind === 'presenze');
+  if (daPagare.length) report.push({ key: 'report:riepilogo_periodo', tipo: 'riepilogo_periodo', nome: 'Quanto devo pagare', params: { stato: 'da_fare', giorno: 5, ora: 18, stipendio: false, titolo: 'In scadenza' }, perche: 'Totale di ciò che scade nel mese: ' + elenca(daPagare) + '.' });
+  if (conScadenza.length) report.push({ key: 'report:in_ritardo', tipo: 'in_ritardo', nome: 'Voci in ritardo', params: { stato: 'da_fare', freq: 'settimanale', weekday: 1, ora: 9, titolo: 'In ritardo', piede: '' }, perche: 'Ogni lunedì ciò che ha la scadenza passata: ' + elenca(conScadenza) + '.' });
+  if (coda.length) report.push({ key: 'report:coda', tipo: 'coda', nome: 'Da trattare', params: { stato: 'nuovo', freq: 'giornaliera', ora: 18, titolo: 'Da trattare', piede: '' }, perche: 'Ogni sera le righe nuove ancora da prendere in carico: ' + elenca(coda) + '.' });
+  if (presenze.length) report.push({ key: 'report:ore_settimana', tipo: 'ore_settimana', nome: 'Ore e straordinari', params: { freq: 'settimanale', weekday: 0, ora: 20, soglia_ore: 40 }, perche: 'Ogni domenica sera le ore di ognuno e lo straordinario oltre le 40 ore: ' + elenca(presenze) + '.' });
+  for (const m of mm) {
+    const R = m.decl.roles || {}, k = m.decl.kind;
+    if (k === 'spesa' && R.stato && R.importo && R.categoria && av(m).states && av(m).states.nuovo) ai.push({ key: 'ai:' + m.slug + ':triage', slug: m.slug, modulo: m.name, feature: 'triage', perche: 'Propone categoria, importo e scadenza per le righe da smistare.' });
+    if ((k === 'spesa' || k === 'entrata' || k === 'pratica') && R.importo && R.data) ai.push({ key: 'ai:' + m.slug + ':explain', slug: m.slug, modulo: m.name, feature: 'explain', perche: 'Racconta i numeri del modulo.' });
+    if (k === 'spesa' && R.importo && R.data) ai.push({ key: 'ai:' + m.slug + ':import', slug: m.slug, modulo: m.name, feature: 'import', perche: 'Legge un PDF o la foto di uno scontrino e propone la riga.' });
+  }
+  return { report, ai };
+}
+
+// Il pacchetto da mandare al tenant appena creato: ruoli dei moduli installati + le proposte NON tolte da chi ha l'analisi.
+function pacchettoTenant(ids, escludi) {
+  const out = new Set(escludi || []), p = proposte(ids);
+  const ai = {};
+  p.ai.filter((x) => !out.has(x.key)).forEach((x) => { (ai[x.slug] = ai[x.slug] || []).push(x.feature); });
+  return {
+    module_roles: moduliDichiarati(ids).map((m) => ({ slug: m.slug, ...m.decl })),
+    ai: Object.entries(ai).map(([slug, features]) => ({ slug, features })),
+    reports: p.report.filter((x) => !out.has(x.key)).map((x) => ({ tipo: x.tipo, nome: x.nome, params: x.params })),
+  };
+}
+
 // ── blueprint: cosa copre la Libreria e cosa va costruito (solo conteggi dal contenuto dell'analisi) ─────────────────
 function blueprint(processi) {
   const c = { coperto: 0, da_valutare: 0, da_costruire: 0 };
@@ -142,7 +184,7 @@ function blueprint(processi) {
   const moduliIds = withDependencies(diretti); // più i moduli che quelli richiedono
   const nomi = (ids) => ids.map((id) => (db.prepare('SELECT name FROM registry_modules WHERE id = ?').get(id) || {}).name).filter(Boolean);
   const ruoli = new Set(); processi.forEach((p) => (p.ruoli_coinvolti || []).forEach((r) => { if (r.tipo === 'utente') ruoli.add(r.nome.toLowerCase()); }));
-  return { processi: processi.length, ...c, moduli_ids: moduliIds, moduli_collegati: nomi(moduliIds.filter((id) => !diretti.includes(id))), ruoli_utente: ruoli.size, da_costruire: processi.filter((p) => p.copertura === 'da_costruire').map((p) => p.nome) };
+  return { processi: processi.length, ...c, proposte: proposte(moduliIds), moduli_ids: moduliIds, moduli_collegati: nomi(moduliIds.filter((id) => !diretti.includes(id))), ruoli_utente: ruoli.size, da_costruire: processi.filter((p) => p.copertura === 'da_costruire').map((p) => p.nome) };
 }
 
-module.exports = { deps, withDependencies, libraryModules, sanitizeProcesso, sanitizeProcessi, sanitizeProfilo, suggestProcesso, suggestProcessi, blueprint, COPERTURE };
+module.exports = { deps, withDependencies, proposte, pacchettoTenant, libraryModules, sanitizeProcesso, sanitizeProcessi, sanitizeProfilo, suggestProcesso, suggestProcessi, blueprint, COPERTURE };

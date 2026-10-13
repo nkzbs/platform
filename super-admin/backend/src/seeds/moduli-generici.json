@@ -33,7 +33,31 @@
   "icon": "clipboard",
   "color": "#9333EA",
   "group_name": "Generico",
-  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"fld_001\",\"block_type\":\"field\",\"key\":\"titolo\",\"label\":\"Titolo\",\"type\":\"text\",\"required\":true},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"descrizione\",\"label\":\"Descrizione\",\"type\":\"textarea\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"assegnato_a\",\"label\":\"Assegnato a\",\"type\":\"text\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"scadenza\",\"label\":\"Scadenza\",\"type\":\"date\"},{\"id\":\"wst_005\",\"block_type\":\"workflow_state\",\"key\":\"da_fare\",\"label\":\"Da fare\",\"color\":\"#94A3B8\",\"initial\":true},{\"id\":\"wst_006\",\"block_type\":\"workflow_state\",\"key\":\"in_corso\",\"label\":\"In corso\",\"color\":\"#3B82F6\"},{\"id\":\"wst_007\",\"block_type\":\"workflow_state\",\"key\":\"fatto\",\"label\":\"Fatto\",\"color\":\"#10B981\"},{\"id\":\"wtr_008\",\"block_type\":\"workflow_transition\",\"from\":\"da_fare\",\"to\":\"in_corso\",\"label\":\"Avvia\"},{\"id\":\"wtr_009\",\"block_type\":\"workflow_transition\",\"from\":\"in_corso\",\"to\":\"fatto\",\"label\":\"Completa\"},{\"id\":\"wtr_010\",\"block_type\":\"workflow_transition\",\"from\":\"fatto\",\"to\":\"da_fare\",\"label\":\"Riapri\"}]}"
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"fld_001\",\"block_type\":\"field\",\"key\":\"titolo\",\"label\":\"Titolo\",\"type\":\"text\",\"required\":true},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"descrizione\",\"label\":\"Descrizione\",\"type\":\"textarea\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"assegnato_a\",\"label\":\"Assegnato a\",\"type\":\"text\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"scadenza\",\"label\":\"Scadenza\",\"type\":\"date\"},{\"id\":\"wst_005\",\"block_type\":\"workflow_state\",\"key\":\"da_fare\",\"label\":\"Da fare\",\"color\":\"#94A3B8\",\"initial\":true},{\"id\":\"wst_006\",\"block_type\":\"workflow_state\",\"key\":\"in_corso\",\"label\":\"In corso\",\"color\":\"#3B82F6\"},{\"id\":\"wst_007\",\"block_type\":\"workflow_state\",\"key\":\"fatto\",\"label\":\"Fatto\",\"color\":\"#10B981\"},{\"id\":\"wtr_008\",\"block_type\":\"workflow_transition\",\"from\":\"da_fare\",\"to\":\"in_corso\",\"label\":\"Avvia\"},{\"id\":\"wtr_009\",\"block_type\":\"workflow_transition\",\"from\":\"in_corso\",\"to\":\"fatto\",\"label\":\"Completa\"},{\"id\":\"wtr_010\",\"block_type\":\"workflow_transition\",\"from\":\"fatto\",\"to\":\"da_fare\",\"label\":\"Riapri\"}]}",
+  "ruoli": {
+   "kind": "pratica",
+   "uses": [
+    "avvisi"
+   ],
+   "roles": {
+    "descrizione": "titolo",
+    "scadenza": "scadenza",
+    "stato": "_stato"
+   },
+   "avvisi": {
+    "states": {
+     "nuovo": "",
+     "da_fare": "da_fare",
+     "fatto": "fatto"
+    },
+    "nuovo": false,
+    "scadenze": true,
+    "tag": "scadenza",
+    "label": "attività",
+    "noun_s": "attività",
+    "noun_p": "attività"
+   }
+  }
  },
  {
   "slug": "calendario_generico",
@@ -99,13 +123,60 @@
   "schema_json": "{\"fields\":[{\"key\":\"titolo\",\"label\":\"Titolo\",\"type\":\"text\",\"required\":true},{\"key\":\"tipo\",\"label\":\"Tipo documento\",\"type\":\"select\",\"options\":[\"Contratto\",\"Procura\",\"Corrispondenza\",\"Fattura fornitore\",\"Altro\"]},{\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"key\":\"allegato\",\"label\":\"Allegato\",\"type\":\"file\"}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"}],\"workflow\":null,\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
  },
  {
+  "slug": "entrate_generico",
+  "name": "Entrate",
+  "description": "Entrate con importo, data e categoria.",
+  "icon": "arrow-up",
+  "color": "#10B981",
+  "group_name": "Generico",
+  "schema_json": "{\"version\": 3, \"steps\": [{\"id\": \"fld_des01\", \"block_type\": \"field\", \"key\": \"descrizione\", \"label\": \"Descrizione\", \"type\": \"text\", \"required\": true}, {\"id\": \"fld_imp02\", \"block_type\": \"field\", \"key\": \"importo\", \"label\": \"Importo (€)\", \"type\": \"currency\", \"required\": true}, {\"id\": \"fld_dat03\", \"block_type\": \"field\", \"key\": \"data\", \"label\": \"Data\", \"type\": \"date\", \"required\": true, \"date_nav\": true}, {\"id\": \"fld_cat04\", \"block_type\": \"field\", \"key\": \"categoria\", \"label\": \"Categoria\", \"type\": \"select\", \"options\": [\"Altro\"], \"filter_tab\": true}, {\"id\": \"fld_not05\", \"block_type\": \"field\", \"key\": \"note\", \"label\": \"Note\", \"type\": \"textarea\"}]}",
+  "ruoli": {
+   "kind": "entrata",
+   "uses": [
+    "riepiloghi"
+   ],
+   "roles": {
+    "importo": "importo",
+    "data": "data",
+    "categoria": "categoria",
+    "descrizione": "descrizione",
+    "note": "note"
+   }
+  }
+ },
+ {
   "slug": "fatture_generico",
   "name": "Fatture",
   "description": "Fatture emesse ai clienti: numero, data, scadenza, imponibile, IVA e totale, con stati (bozza, emessa, pagata, scaduta).",
   "icon": "file",
   "color": "#DC2626",
   "group_name": "Generico",
-  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"numero\",\"label\":\"Numero fattura\",\"type\":\"text\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"data_emissione\",\"label\":\"Data emissione\",\"type\":\"date\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"scadenza\",\"label\":\"Scadenza\",\"type\":\"date\"},{\"id\":\"fld_005\",\"block_type\":\"field\",\"key\":\"imponibile_calcolato\",\"label\":\"Imponibile calcolato\",\"type\":\"computed\",\"expr\":\"sum_children(fatture_righe_generico.imponibile_riga)\"},{\"id\":\"fld_006\",\"block_type\":\"field\",\"key\":\"iva_calcolata\",\"label\":\"IVA calcolata\",\"type\":\"computed\",\"expr\":\"sum_children(fatture_righe_generico.iva_riga)\"},{\"id\":\"fld_007\",\"block_type\":\"field\",\"key\":\"totale_lordo_calcolato\",\"label\":\"Totale fattura\",\"type\":\"computed\",\"expr\":\"sum_children(fatture_righe_generico.imponibile_riga) + sum_children(fatture_righe_generico.iva_riga)\"},{\"id\":\"wst_008\",\"block_type\":\"workflow_state\",\"key\":\"bozza\",\"label\":\"Bozza\",\"color\":\"#94A3B8\",\"initial\":true},{\"id\":\"wst_009\",\"block_type\":\"workflow_state\",\"key\":\"emessa\",\"label\":\"Emessa\",\"color\":\"#3B82F6\"},{\"id\":\"wst_010\",\"block_type\":\"workflow_state\",\"key\":\"pagata\",\"label\":\"Pagata\",\"color\":\"#10B981\"},{\"id\":\"wst_011\",\"block_type\":\"workflow_state\",\"key\":\"scaduta\",\"label\":\"Scaduta\",\"color\":\"#EF4444\"},{\"id\":\"wtr_012\",\"block_type\":\"workflow_transition\",\"from\":\"bozza\",\"to\":\"emessa\",\"label\":\"Emetti\"},{\"id\":\"wtr_013\",\"block_type\":\"workflow_transition\",\"from\":\"emessa\",\"to\":\"pagata\",\"label\":\"Segna pagata\"},{\"id\":\"wtr_014\",\"block_type\":\"workflow_transition\",\"from\":\"emessa\",\"to\":\"scaduta\",\"label\":\"Segna scaduta\"},{\"id\":\"aut_incasso\",\"block_type\":\"automation\",\"label\":\"Registra incasso in prima nota\",\"trigger\":{\"evento\":\"cambio_stato\",\"stato\":\"pagata\"},\"azioni\":[{\"target\":\"__interno__\",\"azione\":\"crea_record_da_padre\",\"config\":{\"figli_fissi\":[{\"modulo_destinazione_figli\":\"movimenti_generico\",\"mappatura_campi_figli\":{\"causale\":\"Incasso fattura\",\"importo\":\"campo:totale_lordo_calcolato\",\"data\":\"_oggi_\",\"tipo\":\"Entrata\"}}]}}]},{\"id\":\"prm_015\",\"block_type\":\"permissions\",\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":false}]}]}"
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"numero\",\"label\":\"Numero fattura\",\"type\":\"text\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"data_emissione\",\"label\":\"Data emissione\",\"type\":\"date\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"scadenza\",\"label\":\"Scadenza\",\"type\":\"date\"},{\"id\":\"fld_005\",\"block_type\":\"field\",\"key\":\"imponibile_calcolato\",\"label\":\"Imponibile calcolato\",\"type\":\"computed\",\"expr\":\"sum_children(fatture_righe_generico.imponibile_riga)\"},{\"id\":\"fld_006\",\"block_type\":\"field\",\"key\":\"iva_calcolata\",\"label\":\"IVA calcolata\",\"type\":\"computed\",\"expr\":\"sum_children(fatture_righe_generico.iva_riga)\"},{\"id\":\"fld_007\",\"block_type\":\"field\",\"key\":\"totale_lordo_calcolato\",\"label\":\"Totale fattura\",\"type\":\"computed\",\"expr\":\"sum_children(fatture_righe_generico.imponibile_riga) + sum_children(fatture_righe_generico.iva_riga)\"},{\"id\":\"wst_008\",\"block_type\":\"workflow_state\",\"key\":\"bozza\",\"label\":\"Bozza\",\"color\":\"#94A3B8\",\"initial\":true},{\"id\":\"wst_009\",\"block_type\":\"workflow_state\",\"key\":\"emessa\",\"label\":\"Emessa\",\"color\":\"#3B82F6\"},{\"id\":\"wst_010\",\"block_type\":\"workflow_state\",\"key\":\"pagata\",\"label\":\"Pagata\",\"color\":\"#10B981\"},{\"id\":\"wst_011\",\"block_type\":\"workflow_state\",\"key\":\"scaduta\",\"label\":\"Scaduta\",\"color\":\"#EF4444\"},{\"id\":\"wtr_012\",\"block_type\":\"workflow_transition\",\"from\":\"bozza\",\"to\":\"emessa\",\"label\":\"Emetti\"},{\"id\":\"wtr_013\",\"block_type\":\"workflow_transition\",\"from\":\"emessa\",\"to\":\"pagata\",\"label\":\"Segna pagata\"},{\"id\":\"wtr_014\",\"block_type\":\"workflow_transition\",\"from\":\"emessa\",\"to\":\"scaduta\",\"label\":\"Segna scaduta\"},{\"id\":\"aut_incasso\",\"block_type\":\"automation\",\"label\":\"Registra incasso in prima nota\",\"trigger\":{\"evento\":\"cambio_stato\",\"stato\":\"pagata\"},\"azioni\":[{\"target\":\"__interno__\",\"azione\":\"crea_record_da_padre\",\"config\":{\"figli_fissi\":[{\"modulo_destinazione_figli\":\"movimenti_generico\",\"mappatura_campi_figli\":{\"causale\":\"Incasso fattura\",\"importo\":\"campo:totale_lordo_calcolato\",\"data\":\"_oggi_\",\"tipo\":\"Entrata\"}}]}}]},{\"id\":\"prm_015\",\"block_type\":\"permissions\",\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":false}]}]}",
+  "ruoli": {
+   "kind": "pratica",
+   "uses": [
+    "avvisi"
+   ],
+   "roles": {
+    "descrizione": "numero",
+    "data": "data_emissione",
+    "scadenza": "scadenza",
+    "stato": "_stato"
+   },
+   "avvisi": {
+    "states": {
+     "nuovo": "bozza",
+     "da_fare": "emessa",
+     "fatto": "pagata"
+    },
+    "nuovo": false,
+    "scadenze": true,
+    "tag": "scadenza",
+    "label": "fatture",
+    "noun_s": "fattura",
+    "noun_p": "fatture"
+   }
+  }
  },
  {
   "slug": "formazione_generico",
@@ -150,7 +221,32 @@
   "icon": "alert-triangle",
   "color": "#DC2626",
   "group_name": "Generico",
-  "schema_json": "{\"fields\":[{\"key\":\"importo_scoperto\",\"label\":\"Importo scoperto\",\"type\":\"currency\"},{\"key\":\"data_scadenza_originale\",\"label\":\"Scadenza originale\",\"type\":\"date\"}],\"relations\":[{\"key\":\"fattura\",\"label\":\"Fattura\",\"type\":\"many_to_one\",\"target_module\":\"fatture_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"numero\"}],\"workflow\":{\"states\":[{\"key\":\"aperto\",\"label\":\"Aperto\",\"color\":\"#F59E0B\",\"initial\":true},{\"key\":\"sollecitato\",\"label\":\"Sollecitato\",\"color\":\"#DC2626\"},{\"key\":\"recuperato\",\"label\":\"Recuperato\",\"color\":\"#10B981\"},{\"key\":\"perso\",\"label\":\"Perso\",\"color\":\"#6B7280\"}],\"transitions\":[{\"from\":\"aperto\",\"to\":\"sollecitato\",\"label\":\"Sollecita\"},{\"from\":\"sollecitato\",\"to\":\"recuperato\",\"label\":\"Segna recuperato\"},{\"from\":\"sollecitato\",\"to\":\"perso\",\"label\":\"Segna perso\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[{\"id\":\"aut_011\",\"block_type\":\"automation\",\"label\":\"Notifica insoluto aperto\",\"trigger\":{\"evento\":\"cambio_stato\",\"stato\":\"aperto\"},\"azioni\":[{\"target\":\"__interno__\",\"azione\":\"notifica_interna\",\"config\":{\"message\":\"Nuovo insoluto registrato — verificare con il cliente.\"}}]}]}"
+  "schema_json": "{\"fields\":[{\"key\":\"importo_scoperto\",\"label\":\"Importo scoperto\",\"type\":\"currency\"},{\"key\":\"data_scadenza_originale\",\"label\":\"Scadenza originale\",\"type\":\"date\"}],\"relations\":[{\"key\":\"fattura\",\"label\":\"Fattura\",\"type\":\"many_to_one\",\"target_module\":\"fatture_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"numero\"}],\"workflow\":{\"states\":[{\"key\":\"aperto\",\"label\":\"Aperto\",\"color\":\"#F59E0B\",\"initial\":true},{\"key\":\"sollecitato\",\"label\":\"Sollecitato\",\"color\":\"#DC2626\"},{\"key\":\"recuperato\",\"label\":\"Recuperato\",\"color\":\"#10B981\"},{\"key\":\"perso\",\"label\":\"Perso\",\"color\":\"#6B7280\"}],\"transitions\":[{\"from\":\"aperto\",\"to\":\"sollecitato\",\"label\":\"Sollecita\"},{\"from\":\"sollecitato\",\"to\":\"recuperato\",\"label\":\"Segna recuperato\"},{\"from\":\"sollecitato\",\"to\":\"perso\",\"label\":\"Segna perso\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[{\"id\":\"aut_011\",\"block_type\":\"automation\",\"label\":\"Notifica insoluto aperto\",\"trigger\":{\"evento\":\"cambio_stato\",\"stato\":\"aperto\"},\"azioni\":[{\"target\":\"__interno__\",\"azione\":\"notifica_interna\",\"config\":{\"message\":\"Nuovo insoluto registrato — verificare con il cliente.\"}}]}]}",
+  "ruoli": {
+   "kind": "pratica",
+   "uses": [
+    "avvisi"
+   ],
+   "roles": {
+    "descrizione": "importo_scoperto",
+    "importo": "importo_scoperto",
+    "scadenza": "data_scadenza_originale",
+    "stato": "_stato"
+   },
+   "avvisi": {
+    "states": {
+     "nuovo": "aperto",
+     "da_fare": "sollecitato",
+     "fatto": "recuperato"
+    },
+    "nuovo": false,
+    "scadenze": true,
+    "tag": "scadenza",
+    "label": "insoluti",
+    "noun_s": "insoluto",
+    "noun_p": "insoluti"
+   }
+  }
  },
  {
   "slug": "newsletter_iscritti_generico",
@@ -177,7 +273,32 @@
   "icon": "tool",
   "color": "#7C3AED",
   "group_name": "Generico",
-  "schema_json": "{\"fields\":[{\"key\":\"asset\",\"label\":\"Asset\",\"type\":\"text\",\"required\":true},{\"key\":\"tipo_intervento\",\"label\":\"Tipo intervento\",\"type\":\"select\",\"options\":[\"Ordinaria\",\"Straordinaria\",\"Guasto\"]},{\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"key\":\"descrizione\",\"label\":\"Descrizione\",\"type\":\"textarea\"}],\"relations\":[],\"workflow\":{\"states\":[{\"key\":\"segnalata\",\"label\":\"Segnalata\",\"color\":\"#94A3B8\",\"initial\":true},{\"key\":\"in_corso\",\"label\":\"In corso\",\"color\":\"#3B82F6\"},{\"key\":\"completata\",\"label\":\"Completata\",\"color\":\"#10B981\"}],\"transitions\":[{\"from\":\"segnalata\",\"to\":\"in_corso\",\"label\":\"Avvia\"},{\"from\":\"in_corso\",\"to\":\"completata\",\"label\":\"Completa\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+  "schema_json": "{\"fields\":[{\"key\":\"asset\",\"label\":\"Asset\",\"type\":\"text\",\"required\":true},{\"key\":\"tipo_intervento\",\"label\":\"Tipo intervento\",\"type\":\"select\",\"options\":[\"Ordinaria\",\"Straordinaria\",\"Guasto\"]},{\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"key\":\"descrizione\",\"label\":\"Descrizione\",\"type\":\"textarea\"}],\"relations\":[],\"workflow\":{\"states\":[{\"key\":\"segnalata\",\"label\":\"Segnalata\",\"color\":\"#94A3B8\",\"initial\":true},{\"key\":\"in_corso\",\"label\":\"In corso\",\"color\":\"#3B82F6\"},{\"key\":\"completata\",\"label\":\"Completata\",\"color\":\"#10B981\"}],\"transitions\":[{\"from\":\"segnalata\",\"to\":\"in_corso\",\"label\":\"Avvia\"},{\"from\":\"in_corso\",\"to\":\"completata\",\"label\":\"Completa\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}",
+  "ruoli": {
+   "kind": "pratica",
+   "uses": [
+    "avvisi"
+   ],
+   "roles": {
+    "descrizione": "descrizione",
+    "data": "data",
+    "categoria": "tipo_intervento",
+    "stato": "_stato"
+   },
+   "avvisi": {
+    "states": {
+     "nuovo": "segnalata",
+     "da_fare": "in_corso",
+     "fatto": "completata"
+    },
+    "nuovo": true,
+    "scadenze": false,
+    "tag": "scadenza",
+    "label": "manutenzioni",
+    "noun_s": "manutenzione",
+    "noun_p": "manutenzioni"
+   }
+  }
  },
  {
   "slug": "movimenti_generico",
@@ -222,7 +343,31 @@
   "icon": "file",
   "color": "#0EA5E9",
   "group_name": "Generico",
-  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"numero\",\"label\":\"Numero ordine\",\"type\":\"text\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"importo_totale_calcolato\",\"label\":\"Importo totale\",\"type\":\"computed\",\"expr\":\"sum_children(ordini_righe_generico.totale_riga)\"},{\"id\":\"wst_005\",\"block_type\":\"workflow_state\",\"key\":\"bozza\",\"label\":\"Bozza\",\"color\":\"#F59E0B\",\"initial\":true},{\"id\":\"wst_006\",\"block_type\":\"workflow_state\",\"key\":\"confermato\",\"label\":\"Confermato\",\"color\":\"#3B82F6\"},{\"id\":\"wst_007\",\"block_type\":\"workflow_state\",\"key\":\"evaso\",\"label\":\"Evaso\",\"color\":\"#10B981\"},{\"id\":\"wst_008\",\"block_type\":\"workflow_state\",\"key\":\"annullato\",\"label\":\"Annullato\",\"color\":\"#EF4444\"},{\"id\":\"wtr_009\",\"block_type\":\"workflow_transition\",\"from\":\"bozza\",\"to\":\"confermato\",\"label\":\"Conferma\"},{\"id\":\"wtr_010\",\"block_type\":\"workflow_transition\",\"from\":\"confermato\",\"to\":\"evaso\",\"label\":\"Segna evaso\"},{\"id\":\"wtr_011\",\"block_type\":\"workflow_transition\",\"from\":\"bozza\",\"to\":\"annullato\",\"label\":\"Annulla\"},{\"id\":\"wtr_012\",\"block_type\":\"workflow_transition\",\"from\":\"confermato\",\"to\":\"annullato\",\"label\":\"Annulla\"},{\"id\":\"aut_evaso\",\"block_type\":\"automation\",\"label\":\"Notifica evasione ordine\",\"trigger\":{\"evento\":\"cambio_stato\",\"stato\":\"evaso\"},\"azioni\":[{\"target\":\"__interno__\",\"azione\":\"notifica_interna\",\"config\":{\"messaggio\":\"Ordine evaso — procedere con la fatturazione.\"}}]},{\"id\":\"prm_013\",\"block_type\":\"permissions\",\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":false}]}]}"
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"numero\",\"label\":\"Numero ordine\",\"type\":\"text\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"importo_totale_calcolato\",\"label\":\"Importo totale\",\"type\":\"computed\",\"expr\":\"sum_children(ordini_righe_generico.totale_riga)\"},{\"id\":\"wst_005\",\"block_type\":\"workflow_state\",\"key\":\"bozza\",\"label\":\"Bozza\",\"color\":\"#F59E0B\",\"initial\":true},{\"id\":\"wst_006\",\"block_type\":\"workflow_state\",\"key\":\"confermato\",\"label\":\"Confermato\",\"color\":\"#3B82F6\"},{\"id\":\"wst_007\",\"block_type\":\"workflow_state\",\"key\":\"evaso\",\"label\":\"Evaso\",\"color\":\"#10B981\"},{\"id\":\"wst_008\",\"block_type\":\"workflow_state\",\"key\":\"annullato\",\"label\":\"Annullato\",\"color\":\"#EF4444\"},{\"id\":\"wtr_009\",\"block_type\":\"workflow_transition\",\"from\":\"bozza\",\"to\":\"confermato\",\"label\":\"Conferma\"},{\"id\":\"wtr_010\",\"block_type\":\"workflow_transition\",\"from\":\"confermato\",\"to\":\"evaso\",\"label\":\"Segna evaso\"},{\"id\":\"wtr_011\",\"block_type\":\"workflow_transition\",\"from\":\"bozza\",\"to\":\"annullato\",\"label\":\"Annulla\"},{\"id\":\"wtr_012\",\"block_type\":\"workflow_transition\",\"from\":\"confermato\",\"to\":\"annullato\",\"label\":\"Annulla\"},{\"id\":\"aut_evaso\",\"block_type\":\"automation\",\"label\":\"Notifica evasione ordine\",\"trigger\":{\"evento\":\"cambio_stato\",\"stato\":\"evaso\"},\"azioni\":[{\"target\":\"__interno__\",\"azione\":\"notifica_interna\",\"config\":{\"messaggio\":\"Ordine evaso — procedere con la fatturazione.\"}}]},{\"id\":\"prm_013\",\"block_type\":\"permissions\",\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":false}]}]}",
+  "ruoli": {
+   "kind": "pratica",
+   "uses": [
+    "avvisi"
+   ],
+   "roles": {
+    "descrizione": "numero",
+    "data": "data",
+    "stato": "_stato"
+   },
+   "avvisi": {
+    "states": {
+     "nuovo": "bozza",
+     "da_fare": "confermato",
+     "fatto": "evaso"
+    },
+    "nuovo": false,
+    "scadenze": false,
+    "tag": "scadenza",
+    "label": "ordini",
+    "noun_s": "ordine",
+    "noun_p": "ordini"
+   }
+  }
  },
  {
   "slug": "ordini_acquisto_generico",
@@ -231,7 +376,31 @@
   "icon": "download",
   "color": "#B45309",
   "group_name": "Generico",
-  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"fornitore\",\"label\":\"Fornitore\",\"type\":\"many_to_one\",\"target_module\":\"fornitori_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"numero\",\"label\":\"Numero ordine\",\"type\":\"text\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"importo_totale_calcolato\",\"label\":\"Importo totale\",\"type\":\"computed\",\"expr\":\"sum_children(ordini_acquisto_righe_generico.totale_riga)\"},{\"id\":\"wst_005\",\"block_type\":\"workflow_state\",\"key\":\"bozza\",\"label\":\"Bozza\",\"color\":\"#F59E0B\",\"initial\":true},{\"id\":\"wst_006\",\"block_type\":\"workflow_state\",\"key\":\"inviato\",\"label\":\"Inviato\",\"color\":\"#3B82F6\"},{\"id\":\"wst_007\",\"block_type\":\"workflow_state\",\"key\":\"ricevuto\",\"label\":\"Ricevuto\",\"color\":\"#10B981\"},{\"id\":\"wtr_008\",\"block_type\":\"workflow_transition\",\"from\":\"bozza\",\"to\":\"inviato\",\"label\":\"Invia\"},{\"id\":\"wtr_009\",\"block_type\":\"workflow_transition\",\"from\":\"inviato\",\"to\":\"ricevuto\",\"label\":\"Segna ricevuto\"},{\"id\":\"prm_010\",\"block_type\":\"permissions\",\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":false}]}]}"
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"fornitore\",\"label\":\"Fornitore\",\"type\":\"many_to_one\",\"target_module\":\"fornitori_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"numero\",\"label\":\"Numero ordine\",\"type\":\"text\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"importo_totale_calcolato\",\"label\":\"Importo totale\",\"type\":\"computed\",\"expr\":\"sum_children(ordini_acquisto_righe_generico.totale_riga)\"},{\"id\":\"wst_005\",\"block_type\":\"workflow_state\",\"key\":\"bozza\",\"label\":\"Bozza\",\"color\":\"#F59E0B\",\"initial\":true},{\"id\":\"wst_006\",\"block_type\":\"workflow_state\",\"key\":\"inviato\",\"label\":\"Inviato\",\"color\":\"#3B82F6\"},{\"id\":\"wst_007\",\"block_type\":\"workflow_state\",\"key\":\"ricevuto\",\"label\":\"Ricevuto\",\"color\":\"#10B981\"},{\"id\":\"wtr_008\",\"block_type\":\"workflow_transition\",\"from\":\"bozza\",\"to\":\"inviato\",\"label\":\"Invia\"},{\"id\":\"wtr_009\",\"block_type\":\"workflow_transition\",\"from\":\"inviato\",\"to\":\"ricevuto\",\"label\":\"Segna ricevuto\"},{\"id\":\"prm_010\",\"block_type\":\"permissions\",\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":false}]}]}",
+  "ruoli": {
+   "kind": "pratica",
+   "uses": [
+    "avvisi"
+   ],
+   "roles": {
+    "descrizione": "numero",
+    "data": "data",
+    "stato": "_stato"
+   },
+   "avvisi": {
+    "states": {
+     "nuovo": "bozza",
+     "da_fare": "inviato",
+     "fatto": "ricevuto"
+    },
+    "nuovo": false,
+    "scadenze": false,
+    "tag": "scadenza",
+    "label": "acquisti",
+    "noun_s": "ordine di acquisto",
+    "noun_p": "ordini di acquisto"
+   }
+  }
  },
  {
   "slug": "ore_lavorate_generico",
@@ -267,7 +436,31 @@
   "icon": "calendar",
   "color": "#DB2777",
   "group_name": "Generico",
-  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"risorsa\",\"label\":\"Risorsa\",\"type\":\"text\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"data_inizio\",\"label\":\"Data/ora inizio\",\"type\":\"datetime\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"data_fine\",\"label\":\"Data/ora fine\",\"type\":\"datetime\"},{\"id\":\"wst_005\",\"block_type\":\"workflow_state\",\"key\":\"richiesta\",\"label\":\"Richiesta\",\"color\":\"#94A3B8\",\"initial\":true},{\"id\":\"wst_006\",\"block_type\":\"workflow_state\",\"key\":\"confermata\",\"label\":\"Confermata\",\"color\":\"#3B82F6\"},{\"id\":\"wst_007\",\"block_type\":\"workflow_state\",\"key\":\"in_corso\",\"label\":\"In corso\",\"color\":\"#8B5CF6\"},{\"id\":\"wst_008\",\"block_type\":\"workflow_state\",\"key\":\"conclusa\",\"label\":\"Conclusa\",\"color\":\"#10B981\"},{\"id\":\"wst_009\",\"block_type\":\"workflow_state\",\"key\":\"annullata\",\"label\":\"Annullata\",\"color\":\"#EF4444\"},{\"id\":\"wtr_010\",\"block_type\":\"workflow_transition\",\"from\":\"richiesta\",\"to\":\"confermata\",\"label\":\"Conferma\"},{\"id\":\"wtr_011\",\"block_type\":\"workflow_transition\",\"from\":\"confermata\",\"to\":\"in_corso\",\"label\":\"Check-in\"},{\"id\":\"wtr_012\",\"block_type\":\"workflow_transition\",\"from\":\"in_corso\",\"to\":\"conclusa\",\"label\":\"Check-out\"},{\"id\":\"wtr_013\",\"block_type\":\"workflow_transition\",\"from\":\"richiesta\",\"to\":\"annullata\",\"label\":\"Annulla\"},{\"id\":\"wtr_014\",\"block_type\":\"workflow_transition\",\"from\":\"confermata\",\"to\":\"annullata\",\"label\":\"Annulla\"}]}"
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"risorsa\",\"label\":\"Risorsa\",\"type\":\"text\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"data_inizio\",\"label\":\"Data/ora inizio\",\"type\":\"datetime\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"data_fine\",\"label\":\"Data/ora fine\",\"type\":\"datetime\"},{\"id\":\"wst_005\",\"block_type\":\"workflow_state\",\"key\":\"richiesta\",\"label\":\"Richiesta\",\"color\":\"#94A3B8\",\"initial\":true},{\"id\":\"wst_006\",\"block_type\":\"workflow_state\",\"key\":\"confermata\",\"label\":\"Confermata\",\"color\":\"#3B82F6\"},{\"id\":\"wst_007\",\"block_type\":\"workflow_state\",\"key\":\"in_corso\",\"label\":\"In corso\",\"color\":\"#8B5CF6\"},{\"id\":\"wst_008\",\"block_type\":\"workflow_state\",\"key\":\"conclusa\",\"label\":\"Conclusa\",\"color\":\"#10B981\"},{\"id\":\"wst_009\",\"block_type\":\"workflow_state\",\"key\":\"annullata\",\"label\":\"Annullata\",\"color\":\"#EF4444\"},{\"id\":\"wtr_010\",\"block_type\":\"workflow_transition\",\"from\":\"richiesta\",\"to\":\"confermata\",\"label\":\"Conferma\"},{\"id\":\"wtr_011\",\"block_type\":\"workflow_transition\",\"from\":\"confermata\",\"to\":\"in_corso\",\"label\":\"Check-in\"},{\"id\":\"wtr_012\",\"block_type\":\"workflow_transition\",\"from\":\"in_corso\",\"to\":\"conclusa\",\"label\":\"Check-out\"},{\"id\":\"wtr_013\",\"block_type\":\"workflow_transition\",\"from\":\"richiesta\",\"to\":\"annullata\",\"label\":\"Annulla\"},{\"id\":\"wtr_014\",\"block_type\":\"workflow_transition\",\"from\":\"confermata\",\"to\":\"annullata\",\"label\":\"Annulla\"}]}",
+  "ruoli": {
+   "kind": "pratica",
+   "uses": [
+    "avvisi"
+   ],
+   "roles": {
+    "descrizione": "risorsa",
+    "data": "data_inizio",
+    "stato": "_stato"
+   },
+   "avvisi": {
+    "states": {
+     "nuovo": "richiesta",
+     "da_fare": "confermata",
+     "fatto": "conclusa"
+    },
+    "nuovo": true,
+    "scadenze": false,
+    "tag": "scadenza",
+    "label": "prenotazioni",
+    "noun_s": "prenotazione",
+    "noun_p": "prenotazioni"
+   }
+  }
  },
  {
   "slug": "presenze_generico",
@@ -285,7 +478,32 @@
   "icon": "file",
   "color": "#65A30D",
   "group_name": "Generico",
-  "schema_json": "{\"fields\":[{\"key\":\"numero\",\"label\":\"Numero preventivo\",\"type\":\"text\"},{\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"key\":\"validita_giorni\",\"label\":\"Validità (giorni)\",\"type\":\"number\"},{\"key\":\"importo\",\"label\":\"Importo\",\"type\":\"currency\"}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"}],\"workflow\":{\"states\":[{\"key\":\"bozza\",\"label\":\"Bozza\",\"color\":\"#94A3B8\",\"initial\":true},{\"key\":\"inviato\",\"label\":\"Inviato\",\"color\":\"#3B82F6\"},{\"key\":\"accettato\",\"label\":\"Accettato\",\"color\":\"#10B981\"},{\"key\":\"rifiutato\",\"label\":\"Rifiutato\",\"color\":\"#EF4444\"},{\"key\":\"scaduto\",\"label\":\"Scaduto\",\"color\":\"#6B7280\"}],\"transitions\":[{\"from\":\"bozza\",\"to\":\"inviato\",\"label\":\"Invia\"},{\"from\":\"inviato\",\"to\":\"accettato\",\"label\":\"Segna accettato\"},{\"from\":\"inviato\",\"to\":\"rifiutato\",\"label\":\"Segna rifiutato\"},{\"from\":\"inviato\",\"to\":\"scaduto\",\"label\":\"Segna scaduto\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[{\"id\":\"aut_015\",\"block_type\":\"automation\",\"label\":\"Notifica preventivo accettato\",\"trigger\":{\"evento\":\"cambio_stato\",\"stato\":\"accettato\"},\"azioni\":[{\"target\":\"__interno__\",\"azione\":\"notifica_interna\",\"config\":{\"message\":\"Preventivo accettato dal cliente — procedere con l'ordine.\"}}]}]}"
+  "schema_json": "{\"fields\":[{\"key\":\"numero\",\"label\":\"Numero preventivo\",\"type\":\"text\"},{\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"key\":\"validita_giorni\",\"label\":\"Validità (giorni)\",\"type\":\"number\"},{\"key\":\"importo\",\"label\":\"Importo\",\"type\":\"currency\"}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"}],\"workflow\":{\"states\":[{\"key\":\"bozza\",\"label\":\"Bozza\",\"color\":\"#94A3B8\",\"initial\":true},{\"key\":\"inviato\",\"label\":\"Inviato\",\"color\":\"#3B82F6\"},{\"key\":\"accettato\",\"label\":\"Accettato\",\"color\":\"#10B981\"},{\"key\":\"rifiutato\",\"label\":\"Rifiutato\",\"color\":\"#EF4444\"},{\"key\":\"scaduto\",\"label\":\"Scaduto\",\"color\":\"#6B7280\"}],\"transitions\":[{\"from\":\"bozza\",\"to\":\"inviato\",\"label\":\"Invia\"},{\"from\":\"inviato\",\"to\":\"accettato\",\"label\":\"Segna accettato\"},{\"from\":\"inviato\",\"to\":\"rifiutato\",\"label\":\"Segna rifiutato\"},{\"from\":\"inviato\",\"to\":\"scaduto\",\"label\":\"Segna scaduto\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[{\"id\":\"aut_015\",\"block_type\":\"automation\",\"label\":\"Notifica preventivo accettato\",\"trigger\":{\"evento\":\"cambio_stato\",\"stato\":\"accettato\"},\"azioni\":[{\"target\":\"__interno__\",\"azione\":\"notifica_interna\",\"config\":{\"message\":\"Preventivo accettato dal cliente — procedere con l'ordine.\"}}]}]}",
+  "ruoli": {
+   "kind": "pratica",
+   "uses": [
+    "avvisi"
+   ],
+   "roles": {
+    "descrizione": "numero",
+    "data": "data",
+    "importo": "importo",
+    "stato": "_stato"
+   },
+   "avvisi": {
+    "states": {
+     "nuovo": "bozza",
+     "da_fare": "inviato",
+     "fatto": "accettato"
+    },
+    "nuovo": false,
+    "scadenze": false,
+    "tag": "scadenza",
+    "label": "preventivi",
+    "noun_s": "preventivo",
+    "noun_p": "preventivi"
+   }
+  }
  },
  {
   "slug": "prodotti_generico",
@@ -303,7 +521,32 @@
   "icon": "clipboard",
   "color": "#9333EA",
   "group_name": "Generico",
-  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"nome\",\"label\":\"Nome progetto\",\"type\":\"text\",\"required\":true},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"budget\",\"label\":\"Budget\",\"type\":\"currency\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"data_inizio\",\"label\":\"Data inizio\",\"type\":\"date\"},{\"id\":\"fld_005\",\"block_type\":\"field\",\"key\":\"data_fine_prevista\",\"label\":\"Data fine prevista\",\"type\":\"date\"},{\"id\":\"wst_006\",\"block_type\":\"workflow_state\",\"key\":\"pianificato\",\"label\":\"Pianificato\",\"color\":\"#94A3B8\",\"initial\":true},{\"id\":\"wst_007\",\"block_type\":\"workflow_state\",\"key\":\"in_corso\",\"label\":\"In corso\",\"color\":\"#3B82F6\"},{\"id\":\"wst_008\",\"block_type\":\"workflow_state\",\"key\":\"completato\",\"label\":\"Completato\",\"color\":\"#10B981\"},{\"id\":\"wst_009\",\"block_type\":\"workflow_state\",\"key\":\"sospeso\",\"label\":\"Sospeso\",\"color\":\"#F59E0B\"},{\"id\":\"wtr_010\",\"block_type\":\"workflow_transition\",\"from\":\"pianificato\",\"to\":\"in_corso\",\"label\":\"Avvia\"},{\"id\":\"wtr_011\",\"block_type\":\"workflow_transition\",\"from\":\"in_corso\",\"to\":\"completato\",\"label\":\"Completa\"},{\"id\":\"wtr_012\",\"block_type\":\"workflow_transition\",\"from\":\"in_corso\",\"to\":\"sospeso\",\"label\":\"Sospendi\"},{\"id\":\"wtr_013\",\"block_type\":\"workflow_transition\",\"from\":\"sospeso\",\"to\":\"in_corso\",\"label\":\"Riprendi\"}]}"
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"nome\",\"label\":\"Nome progetto\",\"type\":\"text\",\"required\":true},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"budget\",\"label\":\"Budget\",\"type\":\"currency\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"data_inizio\",\"label\":\"Data inizio\",\"type\":\"date\"},{\"id\":\"fld_005\",\"block_type\":\"field\",\"key\":\"data_fine_prevista\",\"label\":\"Data fine prevista\",\"type\":\"date\"},{\"id\":\"wst_006\",\"block_type\":\"workflow_state\",\"key\":\"pianificato\",\"label\":\"Pianificato\",\"color\":\"#94A3B8\",\"initial\":true},{\"id\":\"wst_007\",\"block_type\":\"workflow_state\",\"key\":\"in_corso\",\"label\":\"In corso\",\"color\":\"#3B82F6\"},{\"id\":\"wst_008\",\"block_type\":\"workflow_state\",\"key\":\"completato\",\"label\":\"Completato\",\"color\":\"#10B981\"},{\"id\":\"wst_009\",\"block_type\":\"workflow_state\",\"key\":\"sospeso\",\"label\":\"Sospeso\",\"color\":\"#F59E0B\"},{\"id\":\"wtr_010\",\"block_type\":\"workflow_transition\",\"from\":\"pianificato\",\"to\":\"in_corso\",\"label\":\"Avvia\"},{\"id\":\"wtr_011\",\"block_type\":\"workflow_transition\",\"from\":\"in_corso\",\"to\":\"completato\",\"label\":\"Completa\"},{\"id\":\"wtr_012\",\"block_type\":\"workflow_transition\",\"from\":\"in_corso\",\"to\":\"sospeso\",\"label\":\"Sospendi\"},{\"id\":\"wtr_013\",\"block_type\":\"workflow_transition\",\"from\":\"sospeso\",\"to\":\"in_corso\",\"label\":\"Riprendi\"}]}",
+  "ruoli": {
+   "kind": "pratica",
+   "uses": [
+    "avvisi"
+   ],
+   "roles": {
+    "descrizione": "nome",
+    "importo": "budget",
+    "scadenza": "data_fine_prevista",
+    "stato": "_stato"
+   },
+   "avvisi": {
+    "states": {
+     "nuovo": "pianificato",
+     "da_fare": "in_corso",
+     "fatto": "completato"
+    },
+    "nuovo": false,
+    "scadenze": true,
+    "tag": "scadenza",
+    "label": "progetti",
+    "noun_s": "progetto",
+    "noun_p": "progetti"
+   }
+  }
  },
  {
   "slug": "promozioni_generico",
@@ -330,7 +573,30 @@
   "icon": "alert-triangle",
   "color": "#EF4444",
   "group_name": "Generico",
-  "schema_json": "{\"fields\":[{\"key\":\"oggetto\",\"label\":\"Oggetto\",\"type\":\"text\",\"required\":true},{\"key\":\"descrizione\",\"label\":\"Descrizione\",\"type\":\"textarea\"}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"}],\"workflow\":{\"states\":[{\"key\":\"aperto\",\"label\":\"Aperto\",\"color\":\"#DC2626\",\"initial\":true},{\"key\":\"in_gestione\",\"label\":\"In gestione\",\"color\":\"#F59E0B\"},{\"key\":\"risolto\",\"label\":\"Risolto\",\"color\":\"#10B981\"},{\"key\":\"chiuso\",\"label\":\"Chiuso\",\"color\":\"#6B7280\"}],\"transitions\":[{\"from\":\"aperto\",\"to\":\"in_gestione\",\"label\":\"Prendi in carico\"},{\"from\":\"in_gestione\",\"to\":\"risolto\",\"label\":\"Risolvi\"},{\"from\":\"risolto\",\"to\":\"chiuso\",\"label\":\"Chiudi\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+  "schema_json": "{\"fields\":[{\"key\":\"oggetto\",\"label\":\"Oggetto\",\"type\":\"text\",\"required\":true},{\"key\":\"descrizione\",\"label\":\"Descrizione\",\"type\":\"textarea\"}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"}],\"workflow\":{\"states\":[{\"key\":\"aperto\",\"label\":\"Aperto\",\"color\":\"#DC2626\",\"initial\":true},{\"key\":\"in_gestione\",\"label\":\"In gestione\",\"color\":\"#F59E0B\"},{\"key\":\"risolto\",\"label\":\"Risolto\",\"color\":\"#10B981\"},{\"key\":\"chiuso\",\"label\":\"Chiuso\",\"color\":\"#6B7280\"}],\"transitions\":[{\"from\":\"aperto\",\"to\":\"in_gestione\",\"label\":\"Prendi in carico\"},{\"from\":\"in_gestione\",\"to\":\"risolto\",\"label\":\"Risolvi\"},{\"from\":\"risolto\",\"to\":\"chiuso\",\"label\":\"Chiudi\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}",
+  "ruoli": {
+   "kind": "pratica",
+   "uses": [
+    "avvisi"
+   ],
+   "roles": {
+    "descrizione": "oggetto",
+    "stato": "_stato"
+   },
+   "avvisi": {
+    "states": {
+     "nuovo": "aperto",
+     "da_fare": "in_gestione",
+     "fatto": "risolto"
+    },
+    "nuovo": true,
+    "scadenze": false,
+    "tag": "scadenza",
+    "label": "reclami",
+    "noun_s": "reclamo",
+    "noun_p": "reclami"
+   }
+  }
  },
  {
   "slug": "resi_generico",
@@ -339,7 +605,30 @@
   "icon": "download",
   "color": "#B45309",
   "group_name": "Generico",
-  "schema_json": "{\"fields\":[{\"key\":\"quantita\",\"label\":\"Quantità\",\"type\":\"number\"},{\"key\":\"motivo\",\"label\":\"Motivo\",\"type\":\"select\",\"options\":[\"Difetto\",\"Non conforme\",\"Ripensamento\",\"Errore spedizione\"]}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"key\":\"prodotto\",\"label\":\"Prodotto\",\"type\":\"many_to_one\",\"target_module\":\"prodotti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"nome\"}],\"workflow\":{\"states\":[{\"key\":\"richiesto\",\"label\":\"Richiesto\",\"color\":\"#94A3B8\",\"initial\":true},{\"key\":\"ricevuto\",\"label\":\"Ricevuto\",\"color\":\"#3B82F6\"},{\"key\":\"rimborsato\",\"label\":\"Rimborsato\",\"color\":\"#10B981\"},{\"key\":\"rifiutato\",\"label\":\"Rifiutato\",\"color\":\"#EF4444\"}],\"transitions\":[{\"from\":\"richiesto\",\"to\":\"ricevuto\",\"label\":\"Segna ricevuto\"},{\"from\":\"ricevuto\",\"to\":\"rimborsato\",\"label\":\"Rimborsa\"},{\"from\":\"ricevuto\",\"to\":\"rifiutato\",\"label\":\"Rifiuta\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+  "schema_json": "{\"fields\":[{\"key\":\"quantita\",\"label\":\"Quantità\",\"type\":\"number\"},{\"key\":\"motivo\",\"label\":\"Motivo\",\"type\":\"select\",\"options\":[\"Difetto\",\"Non conforme\",\"Ripensamento\",\"Errore spedizione\"]}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"key\":\"prodotto\",\"label\":\"Prodotto\",\"type\":\"many_to_one\",\"target_module\":\"prodotti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"nome\"}],\"workflow\":{\"states\":[{\"key\":\"richiesto\",\"label\":\"Richiesto\",\"color\":\"#94A3B8\",\"initial\":true},{\"key\":\"ricevuto\",\"label\":\"Ricevuto\",\"color\":\"#3B82F6\"},{\"key\":\"rimborsato\",\"label\":\"Rimborsato\",\"color\":\"#10B981\"},{\"key\":\"rifiutato\",\"label\":\"Rifiutato\",\"color\":\"#EF4444\"}],\"transitions\":[{\"from\":\"richiesto\",\"to\":\"ricevuto\",\"label\":\"Segna ricevuto\"},{\"from\":\"ricevuto\",\"to\":\"rimborsato\",\"label\":\"Rimborsa\"},{\"from\":\"ricevuto\",\"to\":\"rifiutato\",\"label\":\"Rifiuta\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}",
+  "ruoli": {
+   "kind": "pratica",
+   "uses": [
+    "avvisi"
+   ],
+   "roles": {
+    "descrizione": "motivo",
+    "stato": "_stato"
+   },
+   "avvisi": {
+    "states": {
+     "nuovo": "richiesto",
+     "da_fare": "ricevuto",
+     "fatto": "rimborsato"
+    },
+    "nuovo": true,
+    "scadenze": false,
+    "tag": "scadenza",
+    "label": "resi",
+    "noun_s": "reso",
+    "noun_p": "resi"
+   }
+  }
  },
  {
   "slug": "fatture_righe_generico",
@@ -375,7 +664,32 @@
   "icon": "calendar",
   "color": "#EA580C",
   "group_name": "Generico",
-  "schema_json": "{\"fields\":[{\"key\":\"titolo\",\"label\":\"Titolo\",\"type\":\"text\",\"required\":true},{\"key\":\"tipo\",\"label\":\"Tipo\",\"type\":\"select\",\"options\":[\"Fiscale\",\"Contrattuale\",\"Normativo\",\"Altro\"]},{\"key\":\"scadenza\",\"label\":\"Data scadenza\",\"type\":\"date\",\"required\":true}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente collegato (opzionale)\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"}],\"workflow\":{\"states\":[{\"key\":\"aperta\",\"label\":\"Aperta\",\"color\":\"#94A3B8\",\"initial\":true},{\"key\":\"in_corso\",\"label\":\"In corso\",\"color\":\"#3B82F6\"},{\"key\":\"completata\",\"label\":\"Completata\",\"color\":\"#10B981\"},{\"key\":\"scaduta\",\"label\":\"Scaduta\",\"color\":\"#EF4444\"}],\"transitions\":[{\"from\":\"aperta\",\"to\":\"in_corso\",\"label\":\"Avvia\"},{\"from\":\"in_corso\",\"to\":\"completata\",\"label\":\"Completa\"},{\"from\":\"aperta\",\"to\":\"scaduta\",\"label\":\"Segna scaduta\"},{\"from\":\"in_corso\",\"to\":\"scaduta\",\"label\":\"Segna scaduta\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+  "schema_json": "{\"fields\":[{\"key\":\"titolo\",\"label\":\"Titolo\",\"type\":\"text\",\"required\":true},{\"key\":\"tipo\",\"label\":\"Tipo\",\"type\":\"select\",\"options\":[\"Fiscale\",\"Contrattuale\",\"Normativo\",\"Altro\"]},{\"key\":\"scadenza\",\"label\":\"Data scadenza\",\"type\":\"date\",\"required\":true}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente collegato (opzionale)\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"}],\"workflow\":{\"states\":[{\"key\":\"aperta\",\"label\":\"Aperta\",\"color\":\"#94A3B8\",\"initial\":true},{\"key\":\"in_corso\",\"label\":\"In corso\",\"color\":\"#3B82F6\"},{\"key\":\"completata\",\"label\":\"Completata\",\"color\":\"#10B981\"},{\"key\":\"scaduta\",\"label\":\"Scaduta\",\"color\":\"#EF4444\"}],\"transitions\":[{\"from\":\"aperta\",\"to\":\"in_corso\",\"label\":\"Avvia\"},{\"from\":\"in_corso\",\"to\":\"completata\",\"label\":\"Completa\"},{\"from\":\"aperta\",\"to\":\"scaduta\",\"label\":\"Segna scaduta\"},{\"from\":\"in_corso\",\"to\":\"scaduta\",\"label\":\"Segna scaduta\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}",
+  "ruoli": {
+   "kind": "pratica",
+   "uses": [
+    "avvisi"
+   ],
+   "roles": {
+    "descrizione": "titolo",
+    "scadenza": "scadenza",
+    "categoria": "tipo",
+    "stato": "_stato"
+   },
+   "avvisi": {
+    "states": {
+     "nuovo": "",
+     "da_fare": "aperta",
+     "fatto": "completata"
+    },
+    "nuovo": false,
+    "scadenze": true,
+    "tag": "scadenza",
+    "label": "scadenze",
+    "noun_s": "scadenza",
+    "noun_p": "scadenze"
+   }
+  }
  },
  {
   "slug": "scheda_paziente_generico",
@@ -420,7 +734,70 @@
   "icon": "download",
   "color": "#0EA5E9",
   "group_name": "Generico",
-  "schema_json": "{\"fields\":[{\"key\":\"corriere\",\"label\":\"Corriere\",\"type\":\"text\"},{\"key\":\"numero_tracking\",\"label\":\"Numero tracking\",\"type\":\"text\"}],\"relations\":[{\"key\":\"ordine\",\"label\":\"Ordine\",\"type\":\"many_to_one\",\"target_module\":\"ordini_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"numero\"}],\"workflow\":{\"states\":[{\"key\":\"preparazione\",\"label\":\"In preparazione\",\"color\":\"#94A3B8\",\"initial\":true},{\"key\":\"spedito\",\"label\":\"Spedito\",\"color\":\"#3B82F6\"},{\"key\":\"consegnato\",\"label\":\"Consegnato\",\"color\":\"#10B981\"}],\"transitions\":[{\"from\":\"preparazione\",\"to\":\"spedito\",\"label\":\"Spedisci\"},{\"from\":\"spedito\",\"to\":\"consegnato\",\"label\":\"Segna consegnato\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+  "schema_json": "{\"fields\":[{\"key\":\"corriere\",\"label\":\"Corriere\",\"type\":\"text\"},{\"key\":\"numero_tracking\",\"label\":\"Numero tracking\",\"type\":\"text\"}],\"relations\":[{\"key\":\"ordine\",\"label\":\"Ordine\",\"type\":\"many_to_one\",\"target_module\":\"ordini_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"numero\"}],\"workflow\":{\"states\":[{\"key\":\"preparazione\",\"label\":\"In preparazione\",\"color\":\"#94A3B8\",\"initial\":true},{\"key\":\"spedito\",\"label\":\"Spedito\",\"color\":\"#3B82F6\"},{\"key\":\"consegnato\",\"label\":\"Consegnato\",\"color\":\"#10B981\"}],\"transitions\":[{\"from\":\"preparazione\",\"to\":\"spedito\",\"label\":\"Spedisci\"},{\"from\":\"spedito\",\"to\":\"consegnato\",\"label\":\"Segna consegnato\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}",
+  "ruoli": {
+   "kind": "pratica",
+   "uses": [
+    "avvisi"
+   ],
+   "roles": {
+    "descrizione": "numero_tracking",
+    "stato": "_stato"
+   },
+   "avvisi": {
+    "states": {
+     "nuovo": "preparazione",
+     "da_fare": "spedito",
+     "fatto": "consegnato"
+    },
+    "nuovo": false,
+    "scadenze": false,
+    "tag": "scadenza",
+    "label": "spedizioni",
+    "noun_s": "spedizione",
+    "noun_p": "spedizioni"
+   }
+  }
+ },
+ {
+  "slug": "spese_generico",
+  "name": "Spese",
+  "description": "Spese con importo, data, scadenza e categoria, con stati (da smistare, da pagare, pagato).",
+  "icon": "credit-card",
+  "color": "#10B981",
+  "group_name": "Generico",
+  "schema_json": "{\"version\": 3, \"steps\": [{\"id\": \"fld_des01\", \"block_type\": \"field\", \"key\": \"descrizione\", \"label\": \"Descrizione\", \"type\": \"text\", \"required\": true}, {\"id\": \"fld_imp02\", \"block_type\": \"field\", \"key\": \"importo\", \"label\": \"Importo (€)\", \"type\": \"currency\", \"required\": true}, {\"id\": \"fld_dat03\", \"block_type\": \"field\", \"key\": \"data\", \"label\": \"Data\", \"type\": \"date\", \"required\": true, \"date_nav\": true}, {\"id\": \"fld_sca04\", \"block_type\": \"field\", \"key\": \"scadenza\", \"label\": \"Scadenza\", \"type\": \"date\"}, {\"id\": \"fld_dat05\", \"block_type\": \"field\", \"key\": \"data_pagamento\", \"label\": \"Pagata il\", \"type\": \"date\"}, {\"id\": \"fld_cat06\", \"block_type\": \"field\", \"key\": \"categoria\", \"label\": \"Categoria\", \"type\": \"select\", \"options\": [\"Altro\"], \"filter_tab\": true}, {\"id\": \"fld_fis07\", \"block_type\": \"field\", \"key\": \"fisso\", \"label\": \"Spesa fissa\", \"type\": \"checkbox\"}, {\"id\": \"fld_not08\", \"block_type\": \"field\", \"key\": \"note\", \"label\": \"Note\", \"type\": \"textarea\"}, {\"id\": \"wst_01\", \"block_type\": \"workflow_state\", \"key\": \"da_smistare\", \"label\": \"Da smistare\", \"initial\": true, \"color\": \"#F59E0B\"}, {\"id\": \"wst_02\", \"block_type\": \"workflow_state\", \"key\": \"da_pagare\", \"label\": \"Da pagare\", \"color\": \"#3B82F6\"}, {\"id\": \"wst_03\", \"block_type\": \"workflow_state\", \"key\": \"pagato\", \"label\": \"Pagato\", \"color\": \"#10B981\"}, {\"id\": \"wtr_01\", \"block_type\": \"workflow_transition\", \"from\": \"da_smistare\", \"to\": \"da_pagare\", \"label\": \"Conferma\", \"roles\": []}, {\"id\": \"wtr_02\", \"block_type\": \"workflow_transition\", \"from\": \"da_pagare\", \"to\": \"pagato\", \"label\": \"Pagata\", \"roles\": []}, {\"id\": \"wtr_03\", \"block_type\": \"workflow_transition\", \"from\": \"pagato\", \"to\": \"da_pagare\", \"label\": \"Riapri\", \"roles\": []}]}",
+  "ruoli": {
+   "kind": "spesa",
+   "uses": [
+    "riepiloghi",
+    "avvisi"
+   ],
+   "roles": {
+    "importo": "importo",
+    "data": "data",
+    "scadenza": "scadenza",
+    "categoria": "categoria",
+    "descrizione": "descrizione",
+    "stato": "_stato",
+    "fisso": "fisso",
+    "data_pagamento": "data_pagamento",
+    "note": "note"
+   },
+   "avvisi": {
+    "states": {
+     "nuovo": "da_smistare",
+     "da_fare": "da_pagare",
+     "fatto": "pagato"
+    },
+    "nuovo": false,
+    "scadenze": true,
+    "tag": "scadenza",
+    "label": "spese",
+    "noun_s": "spesa",
+    "noun_p": "spese"
+   }
+  }
  },
  {
   "slug": "ticket_supporto_generico",
@@ -429,7 +806,49 @@
   "icon": "flag",
   "color": "#F59E0B",
   "group_name": "Generico",
-  "schema_json": "{\"fields\":[{\"key\":\"oggetto\",\"label\":\"Oggetto\",\"type\":\"text\",\"required\":true},{\"key\":\"priorita\",\"label\":\"Priorità\",\"type\":\"select\",\"options\":[\"Bassa\",\"Media\",\"Alta\",\"Urgente\"]}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"}],\"workflow\":{\"states\":[{\"key\":\"aperto\",\"label\":\"Aperto\",\"color\":\"#94A3B8\",\"initial\":true},{\"key\":\"in_corso\",\"label\":\"In corso\",\"color\":\"#3B82F6\"},{\"key\":\"risolto\",\"label\":\"Risolto\",\"color\":\"#10B981\"}],\"transitions\":[{\"from\":\"aperto\",\"to\":\"in_corso\",\"label\":\"Prendi in carico\"},{\"from\":\"in_corso\",\"to\":\"risolto\",\"label\":\"Risolvi\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+  "schema_json": "{\"fields\":[{\"key\":\"oggetto\",\"label\":\"Oggetto\",\"type\":\"text\",\"required\":true},{\"key\":\"priorita\",\"label\":\"Priorità\",\"type\":\"select\",\"options\":[\"Bassa\",\"Media\",\"Alta\",\"Urgente\"]}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"}],\"workflow\":{\"states\":[{\"key\":\"aperto\",\"label\":\"Aperto\",\"color\":\"#94A3B8\",\"initial\":true},{\"key\":\"in_corso\",\"label\":\"In corso\",\"color\":\"#3B82F6\"},{\"key\":\"risolto\",\"label\":\"Risolto\",\"color\":\"#10B981\"}],\"transitions\":[{\"from\":\"aperto\",\"to\":\"in_corso\",\"label\":\"Prendi in carico\"},{\"from\":\"in_corso\",\"to\":\"risolto\",\"label\":\"Risolvi\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}",
+  "ruoli": {
+   "kind": "pratica",
+   "uses": [
+    "avvisi"
+   ],
+   "roles": {
+    "descrizione": "oggetto",
+    "categoria": "priorita",
+    "stato": "_stato"
+   },
+   "avvisi": {
+    "states": {
+     "nuovo": "aperto",
+     "da_fare": "in_corso",
+     "fatto": "risolto"
+    },
+    "nuovo": true,
+    "scadenze": false,
+    "tag": "scadenza",
+    "label": "ticket",
+    "noun_s": "ticket",
+    "noun_p": "ticket"
+   }
+  }
+ },
+ {
+  "slug": "timbrature_generico",
+  "name": "Timbrature",
+  "description": "Entrata e uscita di una persona per giorno, con le ore calcolate e lo straordinario oltre la soglia settimanale.",
+  "icon": "calendar",
+  "color": "#F59E0B",
+  "group_name": "Generico",
+  "schema_json": "{\"version\": 3, \"steps\": [{\"id\": \"fld_dat01\", \"block_type\": \"field\", \"key\": \"data\", \"label\": \"Data\", \"type\": \"date\", \"required\": true, \"date_nav\": true}, {\"id\": \"fld_ent02\", \"block_type\": \"field\", \"key\": \"entrata\", \"label\": \"Entrata\", \"type\": \"time\", \"required\": true}, {\"id\": \"fld_usc03\", \"block_type\": \"field\", \"key\": \"uscita\", \"label\": \"Uscita\", \"type\": \"time\"}, {\"id\": \"fld_not04\", \"block_type\": \"field\", \"key\": \"note\", \"label\": \"Note\", \"type\": \"textarea\"}, {\"id\": \"fld_dur01\", \"block_type\": \"field\", \"key\": \"durata_minuti\", \"label\": \"Durata (minuti, calcolato)\", \"type\": \"computed\", \"steps\": [{\"id\": \"s1\", \"type\": \"own_field\", \"field\": \"entrata\", \"label\": \"entrata\"}, {\"id\": \"s2\", \"type\": \"own_field\", \"field\": \"uscita\", \"label\": \"uscita\"}, {\"id\": \"s3\", \"type\": \"arithmetic\", \"op\": \"-\", \"a\": \"s2\", \"b\": \"s1\", \"label\": \"durata\"}]}, {\"id\": \"agg_ore01\", \"block_type\": \"report_aggregate\", \"key\": \"ore_settimana_corrente\", \"label\": \"Ore settimana corrente\", \"format\": \"number\", \"expr\": \"sum_period(timbrature_generico.durata_minuti, timbrature_generico.data, 'settimana_corrente')\"}, {\"id\": \"pv_ore01\", \"block_type\": \"period_view\", \"key\": \"mese_timbrature\", \"label\": \"Ore\", \"granularity\": \"mese\", \"date_field\": \"data\", \"compare_previous\": true, \"metrics\": [{\"key\": \"ore_mese\", \"label\": \"Ore totali\", \"field\": \"durata_minuti\", \"func\": \"sum\", \"format\": \"number\"}], \"filters\": []}, {\"id\": \"wb_ore01\", \"block_type\": \"weekly_breakdown\", \"key\": \"ore_settimana\", \"label\": \"Ore per settimana (straordinari oltre 40h)\", \"date_field\": \"data\", \"metric_field\": \"durata_minuti\", \"metric_func\": \"sum\", \"metric_format\": \"number\", \"threshold\": 2400}]}",
+  "ruoli": {
+   "kind": "presenze",
+   "uses": [],
+   "roles": {
+    "data": "data",
+    "inizio": "entrata",
+    "fine": "uscita"
+   }
+  }
  },
  {
   "slug": "tracciabilita_lotti_generico",

@@ -101,7 +101,9 @@ async function main() {
     T.createTenant = async (o) => { optsRicevute = o; o.onStep('container'); await new Promise((r) => setTimeout(r, 60)); o.onStep('database'); await new Promise((r) => setTimeout(r, 60)); o.onStep('dominio'); return { tenant: { slug: o.slug }, initialPassword: 'pw-di-prova' }; };
     T.installModulesByIds = async (slug, ids) => { installati = ids; return { modules: ids.length }; };
     T.enqueueHostedCreation = (fn) => fn();
+    let setupRicevuto = null;
     A.deps.applyConfig = async () => ({ roles_created: ['ricezione'], modules_configured: [{}] });
+    A.deps.setupTenant = async (slug, pacchetto) => { setupRicevuto = { slug, pacchetto }; return { reports: ['r1', 'r2'], module_roles: ['a'] }; };
     try {
       const c = await (await api('POST', '', { name: 'Per creare', descrizione: 'x' })).json();
       await api('PATCH', '/' + c.id, { processi: [{ nome: 'Righe', registry_module_id: idA }, { nome: 'Altro', registry_module_id: idB }] });
@@ -113,6 +115,7 @@ async function main() {
       ok(st.tempi.container >= 0 && st.tempi.database >= 0 && 'moduli' in st.tempi && 'ruoli' in st.tempi, JSON.stringify(st.tempi)); ok(st.secondi >= 0);
       eq(st.credenziali, { username: 'admin', password: 'pw-di-prova' }, 'l\'accesso si vede una volta');
       eq((await (await api('GET', '/' + c.id + '/creazione')).json()).credenziali, undefined, 'e poi non c\'è più');
+      eq(setupRicevuto.slug, 'nuovo-test'); eq(Object.keys(setupRicevuto.pacchetto).sort(), ['ai', 'module_roles', 'reports']); eq([st.report_creati, st.moduli_dichiarati], [2, 1]);
       eq(optsRicevute.skipDefaults, true, 'niente moduli di default: ha scelto lui'); eq(installati.length >= 2, true);
       eq((await (await api('GET', '/' + c.id)).json()).tenant_slug, 'nuovo-test');
       T.createTenant = async () => { throw new Error('Docker non risponde'); };

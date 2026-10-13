@@ -75,9 +75,9 @@ router.get('/modules', requireAuth, (req, res) => {
 router.get('/generici', requireAuth, (req, res) => res.json(require('../lib/moduli-generici').stato()));
 router.post('/import-generici', requireAuth, (req, res) => {
   const g = require('../lib/moduli-generici');
-  const n = g.importa();
-  logAudit(req.user.username, 'registry.import_generici', null, { aggiunti: n });
-  res.json({ aggiunti: n, ...g.stato() });
+  const r = g.importa();
+  logAudit(req.user.username, 'registry.import_generici', null, r);
+  res.json({ ...r, ...g.stato() });
 });
 
 // Moduli di UN tenant, per il selettore "salva nella Libreria".

@@ -67,12 +67,12 @@ function LibreriaPage({ token }) {
   const loadGenerici = () => fetch(API + '/registry/generici', { headers }).then((r) => r.json()).then((d) => d && d.totale != null && setGenerici(d)).catch(() => {})
   useEffect(() => { loadGenerici() }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const importaGenerici = async () => {
-    if (!window.confirm('Aggiungere alla Libreria i ' + generici.mancanti.length + ' moduli generici che mancano? Quelli già presenti non si toccano.')) return
+    if (!window.confirm((generici.mancanti.length ? 'Aggiungere alla Libreria i ' + generici.mancanti.length + ' moduli generici che mancano' : 'Completare con i ruoli i ' + generici.da_completare.length + ' moduli generici già importati') + '? Quello che c\'è già non si tocca.')) return
     setBusy(true)
     const res = await fetch(API + '/registry/import-generici', { method: 'POST', headers })
     const d = await res.json().catch(() => ({}))
     setBusy(false)
-    if (res.ok) { setNotice({ ok: true, text: d.aggiunti + ' moduli generici aggiunti alla Libreria.' }); loadGenerici(); load() } else setNotice({ ok: false, text: d.error || 'Non riuscito.' })
+    if (res.ok) { setNotice({ ok: true, text: d.aggiunti + ' moduli generici aggiunti' + (d.completati ? ', ' + d.completati + ' completati con i ruoli' : '') + '.' }); loadGenerici(); load() } else setNotice({ ok: false, text: d.error || 'Non riuscito.' })
   }
   const load = async () => {
     const [m, t] = await Promise.all([
@@ -175,7 +175,7 @@ function LibreriaPage({ token }) {
           <p className="text-gray-500 text-sm mt-0.5">I tuoi moduli, con le loro versioni, pronti da installare in qualunque tenant.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {generici && generici.mancanti.length > 0 && <button onClick={importaGenerici} disabled={busy} className={ghostBtn + ' text-xs !py-2'}>Aggiungi i moduli generici ({generici.mancanti.length})</button>}
+          {generici && (generici.mancanti.length + (generici.da_completare || []).length) > 0 && <button onClick={importaGenerici} disabled={busy} className={ghostBtn + ' text-xs !py-2'}>{generici.mancanti.length ? 'Aggiungi i moduli generici (' + generici.mancanti.length + ')' : 'Completa i moduli generici (' + generici.da_completare.length + ')'}</button>}
           <button onClick={openDefaults} className={ghostBtn + ' text-xs !py-2'}>Moduli di default</button>
           <button onClick={openPublish} className={primaryBtn + ' text-xs !py-2 flex items-center gap-1.5'}><Icon name="plus" size={13} />Salva un modulo</button>
         </div>

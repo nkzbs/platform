@@ -6,7 +6,8 @@ const db = require('./db');
 
 // presenze = timbrature: un modulo con una data, un'ora di inizio (entrata) e una di fine (uscita); ruoli `inizio` e `fine`.
 const ROLE_KEYS = ['importo', 'data', 'scadenza', 'categoria', 'descrizione', 'stato', 'gruppo', 'fisso', 'data_pagamento', 'note', 'data_incerta', 'debito', 'inizio', 'fine'];
-const KINDS = ['spesa', 'entrata', 'presenze'];
+// pratica = una riga con stati e (se serve) una scadenza, senza essere denaro (ticket, ordini, scadenzario, manutenzioni…): entra negli avvisi e nei report, non nei riepiloghi di spese ed entrate.
+const KINDS = ['spesa', 'entrata', 'presenze', 'pratica'];
 const USES = ['riepiloghi', 'avvisi', 'mail', 'estratto'];
 
 db.exec('CREATE TABLE IF NOT EXISTS module_roles (module_slug TEXT PRIMARY KEY, kind TEXT, uses TEXT NOT NULL DEFAULT \'[]\', roles TEXT NOT NULL DEFAULT \'{}\')');

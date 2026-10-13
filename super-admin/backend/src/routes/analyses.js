@@ -21,7 +21,7 @@ const row = (id) => db.prepare('SELECT * FROM process_analyses WHERE id = ?').ge
 const json = (s, d) => { try { return JSON.parse(s); } catch (e) { return d; } };
 function full(r) {
   const processi = json(r.processi, []);
-  return { id: r.id, name: r.name, descrizione: r.descrizione, profilo: json(r.profilo, {}), processi, tenant_slug: r.tenant_slug, creazione: (json(r.creazione, null) || null), created_at: r.created_at, updated_at: r.updated_at, blueprint: analysis.blueprint(processi) };
+  return { id: r.id, name: r.name, descrizione: r.descrizione, profilo: json(r.profilo, {}), processi, tenant_slug: r.tenant_slug, scelte: json(r.scelte, {}), creazione: (json(r.creazione, null) || null), created_at: r.created_at, updated_at: r.updated_at, blueprint: analysis.blueprint(processi) };
 }
 const aiError = (res, e) => res.status(e.status || 500).json({ error: e.message, code: e.code });
 
@@ -73,6 +73,7 @@ router.patch('/:id', requireAuth, (req, res) => {
   const b = req.body || {}, sets = [], args = [];
   if (b.name != null) { const n = String(b.name).trim().slice(0, 80); if (!n) return res.status(400).json({ error: 'Il nome non può essere vuoto.' }); sets.push('name = ?'); args.push(n); }
   if (b.descrizione != null) { sets.push('descrizione = ?'); args.push(String(b.descrizione).slice(0, 4000)); }
+  if (b.scelte != null) { const esc = Array.isArray(b.scelte && b.scelte.escludi) ? b.scelte.escludi.map((x) => String(x).slice(0, 120)).slice(0, 200) : []; sets.push('scelte = ?'); args.push(JSON.stringify({ escludi: esc })); }
   if (b.profilo != null) { sets.push('profilo = ?'); args.push(JSON.stringify(analysis.sanitizeProfilo(b.profilo))); }
   if (b.processi != null) {
     const valid = new Set(analysis.libraryModules().map((m) => m.id));
@@ -103,7 +104,7 @@ function setCreazione(id, patch) {
   db.prepare('UPDATE process_analyses SET creazione = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify({ ...cur, ...patch }), id);
 }
 
-async function creaTenantInBackground({ id, name, slug, domain, actor, processi }) {
+async function creaTenantInBackground({ id, name, slug, domain, actor, processi, escludi }) {
   const t0 = Date.now(), segni = []; // [{ fase, t }]
   const segna = (fase) => { segni.push({ fase, t: Date.now() }); setCreazione(id, { fase }); };
   const tempi = () => { const out = {}; segni.forEach((s, i) => { const fine = (segni[i + 1] ? segni[i + 1].t : Date.now()); out[s.fase] = Math.round((fine - s.t) / 100) / 10; }); return out; };
@@ -123,9 +124,13 @@ async function creaTenantInBackground({ id, name, slug, domain, actor, processi 
     let config = null;
     try { config = await analysis.deps.applyConfig({ tenantSlug: tenant.slug, processi, installedRegistryModuleIds: moduleIds, actor }); }
     catch (e) { console.error('[analyses] ruoli e stati non applicati (non bloccante):', e.message); avvisi.push('Ruoli e stati del flusso non applicati: si impostano dal Builder.'); }
+    // ruoli dei moduli, report (spenti) e potenziamenti AI proposti, tranne quelli tolti: il tenant li completa senza sovrascrivere nulla
+    let setup = null;
+    try { setup = await analysis.deps.setupTenant(tenant.slug, analysis.pacchettoTenant(moduleIds, escludi)); }
+    catch (e) { console.error('[analyses] ruoli dei moduli, report e AI non applicati (non bloccante):', e.message); avvisi.push('Ruoli dei moduli, report e AI non applicati: si impostano dal Builder e da Impostazioni → Report.'); }
     segni.push({ fase: 'fine', t: Date.now() });
     const t = tempi(); delete t.fine;
-    setCreazione(id, { fase: 'finita', fine: Date.now(), secondi: Math.round((Date.now() - t0) / 100) / 10, tempi: t, moduli_installati: installed ? installed.modules : 0, ruoli_creati: config ? config.roles_created.length : 0, moduli_configurati: config ? config.modules_configured.length : 0, avvisi });
+    setCreazione(id, { fase: 'finita', fine: Date.now(), secondi: Math.round((Date.now() - t0) / 100) / 10, tempi: t, moduli_installati: installed ? installed.modules : 0, report_creati: setup ? setup.reports.length : 0, moduli_dichiarati: setup ? setup.module_roles.length : 0, ruoli_creati: config ? config.roles_created.length : 0, moduli_configurati: config ? config.modules_configured.length : 0, avvisi });
     logAudit(actor, 'analysis.create_tenant', tenant.slug, { analysis_id: id, modules: installed ? installed.modules : 0, roles: config ? config.roles_created.length : 0, secondi: Math.round((Date.now() - t0) / 1000) });
   } catch (e) {
     console.error('[analyses] creazione tenant fallita:', e.message);
@@ -144,7 +149,7 @@ router.post('/:id/create-tenant', requireAuth, (req, res) => {
   const valid = new Set(analysis.libraryModules().map((m) => m.id));
   const processi = analysis.sanitizeProcessi(json(r.processi, []), valid);
   setCreazione(r.id, { fase: 'container', inizio: Date.now(), nome: name, slug, tempi: {}, errore: null, avvisi: [] });
-  creaTenantInBackground({ id: r.id, name, slug, domain, actor: req.user.username, processi }); // senza await: la pagina segue l'avanzamento
+  creaTenantInBackground({ id: r.id, name, slug, domain, actor: req.user.username, processi, escludi: (json(r.scelte, {}).escludi) || [] }); // senza await: la pagina segue l'avanzamento
   res.status(202).json({ avviata: true });
 });
 

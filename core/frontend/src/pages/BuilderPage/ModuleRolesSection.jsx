@@ -3,7 +3,7 @@ import useApi from '../../lib/useApi'
 
 // Ruoli del modulo (Builder): a cosa serve il modulo e quali suoi campi sono importo, data, scadenza...
 // Le funzioni (Come sta andando, riepilogo del mattino, regole Gmail) leggono questa dichiarazione invece di nomi scritti nel codice.
-const KINDS = [['', 'Nessuno'], ['spesa', 'Spese'], ['entrata', 'Entrate'], ['presenze', 'Timbrature (presenze)']]
+const KINDS = [['', 'Nessuno'], ['spesa', 'Spese'], ['entrata', 'Entrate'], ['presenze', 'Timbrature (presenze)'], ['pratica', 'Pratiche (stati e scadenze, senza denaro)']]
 const USES = [['riepiloghi', 'Entra nei riepiloghi ("Come sta andando")'], ['avvisi', 'Entra negli avvisi e nel riepilogo del mattino'], ['mail', 'Può ricevere righe dalle mail (Gmail)'], ['estratto', 'Entra nell\'abbinamento con l\'estratto conto']]
 const ROLES = [['importo', 'Importo'], ['data', 'Data'], ['scadenza', 'Scadenza'], ['categoria', 'Categoria'], ['descrizione', 'Descrizione'], ['stato', 'Stato'], ['gruppo', 'Gruppo'], ['note', 'Note'], ['fisso', 'Spesa fissa'], ['data_pagamento', 'Pagata il'], ['data_incerta', 'Data incerta (sì/no)'], ['debito', 'Collegata a un debito'], ['inizio', 'Entrata (ora)'], ['fine', 'Uscita (ora)']]
 const sel = 'w-full bg-surface-page text-ink px-2.5 py-1.5 rounded-lg text-xs outline-none border border-gray-800 focus:border-accent'
@@ -52,14 +52,14 @@ export default function ModuleRolesSection({ token, baseUrl, slug, fields, state
         <>
           {cfg.kind === 'presenze' && <div className="mt-2 text-[10.5px] text-gray-500 leading-snug">Il bot Telegram usa questi campi per timbrare («sono entrata», «uscita alle 12:30») e dire le ore lavorate. Indica la data e i due campi orario.</div>}
           <div className="mt-2" style={cfg.kind === 'presenze' ? { display: 'none' } : undefined}>
-            {USES.map(([u, l]) => (
+            {USES.filter(([u]) => cfg.kind !== 'pratica' || u === 'avvisi').map(([u, l]) => (
               <label key={u} className="flex items-start gap-2 py-1 cursor-pointer text-[11px] text-gray-300 leading-tight">
                 <input type="checkbox" className="mt-0.5" checked={cfg.uses.includes(u)} onChange={() => toggleUse(u)} />{l}
               </label>
             ))}
           </div>
           <div className="mt-2 space-y-1.5">
-            {ROLES.filter(([k]) => cfg.kind === 'presenze' ? ['data', 'inizio', 'fine'].includes(k) : (['inizio', 'fine'].includes(k) ? false : cfg.kind === 'spesa' ? k !== 'gruppo' : !['fisso', 'data_pagamento', 'data_incerta', 'debito'].includes(k))).map(([k, l]) => (
+            {ROLES.filter(([k]) => cfg.kind === 'presenze' ? ['data', 'inizio', 'fine'].includes(k) : cfg.kind === 'pratica' ? ['descrizione', 'data', 'scadenza', 'categoria', 'stato', 'importo', 'note'].includes(k) : (['inizio', 'fine'].includes(k) ? false : cfg.kind === 'spesa' ? k !== 'gruppo' : !['fisso', 'data_pagamento', 'data_incerta', 'debito'].includes(k))).map(([k, l]) => (
               <div key={k} className="flex items-center gap-2">
                 <span className="text-[11px] text-gray-500 w-16 flex-shrink-0">{l}</span>
                 <select className={sel} value={cfg.roles[k] || ''} onChange={(e) => setRole(k, e.target.value)}>

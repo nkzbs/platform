@@ -34,6 +34,7 @@ const moduleAiRoutes = require('./routes/module-ai');
 const smistaRoutes = require('./routes/smista');
 const moduleRoles = require('./module-roles');
 const reportsRoutes = require('./routes/reports');
+const internalSetupRoutes = require('./routes/internal-setup');
 const { startReports } = require('./reports');
 const { startAvvisi } = require('./avvisi');
 const { startMonitor } = require('./monitor');
@@ -98,6 +99,7 @@ const routeMounts = [
   ['/telegram', telegramRoutes],
   ['/', notificationSettingsRoutes],
   ['/reports', reportsRoutes],
+  ['/internal-setup', internalSetupRoutes],
   ['/site-pages', siteAdminRouter],
 ];
 app.use('/api', apiGlobalLimiter);

@@ -182,7 +182,20 @@ function SuggestAI({ p, onChange, token, modules }) {
   )
 }
 
-export default function ProcessoEditor({ processo, onChange, onRemove, modules, token, defaultOpen = false }) {
+// La descrizione del modulo da costruire, dal processo: è ciò che si manda al Super Builder, che lo propone e tu lo rifinisci.
+export function promptModulo(p) {
+  const l = [`Modulo «${p.nome}»${p.reparto ? ' (' + p.reparto + ')' : ''}.`]
+  if (p.scopo) l.push('Scopo: ' + p.scopo + '.')
+  if (p.evento_innesco) l.push('Parte quando: ' + p.evento_innesco + '.')
+  if (p.input) l.push('Serve già pronto: ' + p.input + '.')
+  if (p.output) l.push('Produce: ' + p.output + '.')
+  if ((p.passaggi || []).length) l.push('Passaggi in ordine (diventano gli stati del flusso): ' + p.passaggi.map((s, i) => (i + 1) + '. ' + (s.titolo || s.descrizione) + (s.ruolo ? ' [' + s.ruolo + ']' : '')).join('; ') + '.')
+  if ((p.ruoli_coinvolti || []).length) l.push('Ruoli: ' + p.ruoli_coinvolti.map((r) => r.nome).join(', ') + '.')
+  if ((p.documenti_collegati || []).length) l.push('Documenti: ' + p.documenti_collegati.join(', ') + '.')
+  return l.join(' ')
+}
+
+export default function ProcessoEditor({ processo, onChange, onRemove, modules, token, onBuild, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen)
   const p = processo
   const ruoliDisponibili = (p.ruoli_coinvolti || []).map((r) => r.nome).filter(Boolean)
@@ -206,7 +219,10 @@ export default function ProcessoEditor({ processo, onChange, onRemove, modules, 
               <Select className="w-40" value={copertura} options={COPERTURA} onChange={(val) => onChange({ copertura: val })} />
             </div>
             {copertura === 'da_costruire' && !p.registry_module_id && (
-              <div className="text-xs text-gray-500 flex items-start gap-1.5"><Icon name="alert-triangle" size={12} className="text-red-400 mt-0.5 flex-shrink-0" /><span>Nessun modulo copre questo processo.{p.registry_module_reasoning ? ' ' + p.registry_module_reasoning : ''} Si può costruire con il Super Builder.</span></div>
+              <div className="text-xs text-gray-500 flex items-start gap-1.5"><Icon name="alert-triangle" size={12} className="text-red-400 mt-0.5 flex-shrink-0" /><span>Nessun modulo copre questo processo.{p.registry_module_reasoning ? ' ' + p.registry_module_reasoning : ''}</span></div>
+            )}
+            {copertura === 'da_costruire' && !p.registry_module_id && onBuild && (
+              <button type="button" onClick={() => onBuild({ prompt: promptModulo(p), moduleName: p.nome })} className="text-xs bg-cp-primary/20 hover:bg-cp-primary/30 text-cp-primary px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 w-fit"><Icon name="sparkles" size={12} />Costruiscilo nel Super Builder</button>
             )}
           </Section>
           <Section label="Il processo">

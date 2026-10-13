@@ -138,7 +138,7 @@ export default function App() {
           {page === 'dashboard' && <DashboardPage token={token} onNavigate={setPage} />}
           {page === 'tenants' && <TenantsPage token={token} onViewActivity={viewTenantActivity} onNavigate={setPage} />}
           {page === 'libreria' && <LibreriaPage token={token} />}
-          {page === 'analisi' && <AnalisiPage token={token} onNavigate={setPage} />}
+          {page === 'analisi' && <AnalisiPage token={token} onNavigate={setPage} onBuild={openBuilderWithPrefill} />}
           {page === 'super-builder' && <TenantBuilderPage token={token} initialPrompt={builderPrefill?.prompt} initialModuleName={builderPrefill?.moduleName} />}
           {page === 'attivita' && <ActivityPage token={token} initialTenantFilter={activityTenantFilter} />}
           {page === 'analytics' && <AnalyticsPage token={token} />}

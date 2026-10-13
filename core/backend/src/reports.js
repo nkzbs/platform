@@ -219,7 +219,7 @@ function righeInStato(scope, stato, conData = true) {
       if (d[R.stato || '_stato'] !== m.states[stato]) continue;
       const due = d[R.scadenza] || d[R.data];
       if (conData && !due) continue;
-      items.push({ slug: m.slug, id, descrizione: String(d[R.descrizione] || '(senza descrizione)').trim(), label: m.label, noun_s: m.noun_s, noun_p: m.noun_p, importo: Number(d[R.importo]) || 0, due: due ? String(due).slice(0, 10) : '' });
+      items.push({ slug: m.slug, id, descrizione: String(d[R.descrizione] || '(senza descrizione)').trim(), label: m.label, noun_s: m.noun_s, noun_p: m.noun_p, importo: R.importo ? Number(d[R.importo]) || 0 : null, due: due ? String(due).slice(0, 10) : '' }); // importo null = il modulo non ha un campo importo (es. un ticket)
     }
   }
   return items;
@@ -251,22 +251,22 @@ function buildRiepilogo(d, now = new Date(), scope = null) {
   const tutti = righeInStato(scope, d.stato);
   const scadute = d.include_scadute ? tutti.filter((x) => x.due < today && x.due >= lateFrom).sort((a, b) => a.due.localeCompare(b.due)) : [];
   const nel = tutti.filter((x) => x.due >= today && x.due <= fine).sort((a, b) => a.due.localeCompare(b.due) || b.importo - a.importo);
-  const tot = (a) => a.reduce((t, x) => t + x.importo, 0);
+  const tot = (a) => a.reduce((t, x) => t + (x.importo || 0), 0);
   const totale = tot(nel) + tot(scadute);
   const intest = intestazione(d, 'fino al ' + shortDate(fine));
   if (!nel.length && !scadute.length) return { text: intest + '\n\n' + TIPI.riepilogo_periodo.vuoto, counts: { voci: 0, scadute: 0, totale: 0 } };
   const perModulo = {};
-  [...nel, ...scadute].forEach((x) => { perModulo[x.label] = (perModulo[x.label] || 0) + x.importo; });
+  [...nel, ...scadute].forEach((x) => { perModulo[x.label] = (perModulo[x.label] || 0) + (x.importo || 0); });
   const parts = [intest, '*' + fmtEur(totale) + '*' + (Object.keys(perModulo).length > 1 ? '  (' + Object.entries(perModulo).map(([l, v]) => l + ' ' + fmtCompact(v)).join(' · ') + ')' : '')];
   if (scadute.length) {
     // le scadute le elenca il report «in ritardo», se ce n'è uno acceso: qui basta il totale (non si ripetono due volte)
     const altro = cfg.definizioni.find((x) => x.tipo === 'in_ritardo' && x.enabled && x.stato === d.stato);
     parts.push('⚠ *Scadute ' + fmtCompact(tot(scadute)) + '* — ' + scadute.length + (scadute.length === 1 ? ' voce' : ' voci') + ' dal ' + shortDate(scadute[0].due)
       + (altro ? '\n→ l\'elenco è nel messaggio «' + altro.nome + '»' : ''));
-    if (!altro) parts.push(scadute.slice(0, d.max_righe).map((x) => shortDate(x.due) + '  ' + x.descrizione + ' — ' + fmtCompact(x.importo)).join('\n'));
+    if (!altro) parts.push(scadute.slice(0, d.max_righe).map((x) => shortDate(x.due) + '  ' + x.descrizione + (x.importo == null ? '' : ' — ' + fmtCompact(x.importo))).join('\n'));
   }
   if (nel.length) {
-    const lines = nel.slice(0, d.max_righe).map((x) => shortDate(x.due) + '  ' + x.descrizione + ' — ' + fmtCompact(x.importo));
+    const lines = nel.slice(0, d.max_righe).map((x) => shortDate(x.due) + '  ' + x.descrizione + (x.importo == null ? '' : ' — ' + fmtCompact(x.importo)));
     if (nel.length > d.max_righe) lines.push('+ altre ' + (nel.length - d.max_righe));
     parts.push('*In arrivo*\n' + lines.join('\n'));
   }
@@ -281,7 +281,7 @@ function buildCoda(d, now = new Date(), scope = null) {
   const righe = []; let nome = null;
   for (const x of righeInStato(scope, d.stato, false)) {
     nome = nome || { s: x.noun_s || 'riga', p: x.noun_p || 'righe' };
-    righe.push(x.descrizione + ' — ' + (x.importo > 0 ? fmtCompact(x.importo) : 'importo da verificare') + (x.due ? ' · ' + shortDate(x.due) : ''));
+    righe.push(x.descrizione + (x.importo == null ? '' : ' — ' + (x.importo > 0 ? fmtCompact(x.importo) : 'importo da verificare')) + (x.due ? ' · ' + shortDate(x.due) : ''));
   }
   if (!righe.length) return null;
   const n = righe.length;
@@ -294,10 +294,10 @@ function buildInRitardo(d, now = new Date(), scope = null) {
   const today = romeParts(now).date, lateFrom = addDays(today, -d.scadute_max_giorni);
   const s = righeInStato(scope, d.stato).filter((x) => x.due < today && x.due >= lateFrom).sort((a, b) => a.due.localeCompare(b.due));
   if (!s.length) return null;
-  const totale = s.reduce((t, x) => t + x.importo, 0);
-  const lines = s.slice(0, d.max_righe).map((x) => '• ' + x.descrizione + ' — ' + fmtCompact(x.importo) + ' · da ' + daysBetween(x.due, today) + ' gg');
+  const totale = s.reduce((t, x) => t + (x.importo || 0), 0), conImporto = s.some((x) => x.importo != null);
+  const lines = s.slice(0, d.max_righe).map((x) => '• ' + x.descrizione + (x.importo == null ? '' : ' — ' + fmtCompact(x.importo)) + ' · da ' + daysBetween(x.due, today) + ' gg');
   if (s.length > d.max_righe) lines.push('+ altre ' + (s.length - d.max_righe));
-  return { text: intestazione(d, fmtEur(totale) + ' (' + s.length + (s.length === 1 ? ' voce' : ' voci') + ')') + '\n\n' + lines.join('\n') + (d.piede ? '\n\n' + d.piede : ''), counts: { voci: s.length, totale }, items: s.slice(0, d.max_righe) };
+  return { text: intestazione(d, (conImporto ? fmtEur(totale) + ' (' : '(') + s.length + (s.length === 1 ? ' voce' : ' voci') + ')') + '\n\n' + lines.join('\n') + (d.piede ? '\n\n' + d.piede : ''), counts: { voci: s.length, totale }, items: s.slice(0, d.max_righe) };
 }
 
 // Ore lavorate per persona. Con `scope.user` (non admin) solo le righe che quell'utente vede; senza scope (WhatsApp) tutte, divise per chi le ha create.

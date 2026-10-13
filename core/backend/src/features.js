@@ -13,7 +13,7 @@ const FEATURES = {
   movimenti: { label: 'Movimenti bancari', description: 'Carica gli estratti conto in PDF, vedi i movimenti reali e completa le spese che mancano.' },
   analisi: { label: 'Come sta andando', description: 'Scheda in dashboard con entrate, spese, risparmio, confronti e anomalie, spiegata dall\'assistente.' },
   // la chiave tecnica resta «riepilogo_mattino» (è salvata nei tenant esistenti); oggi accende i report su WhatsApp
-  riepilogo_mattino: { label: 'Report su WhatsApp', description: 'Tre messaggi WhatsApp: cosa devi pagare ogni 27, le bollette da smistare ogni sera finché ce ne sono, le voci scadute ogni lunedì.' },
+  riepilogo_mattino: { label: 'Report', description: 'Report pianificati su WhatsApp e Telegram, configurabili: quanto pagare, righe da trattare, voci in ritardo, ore lavorate e straordinari.' },
 };
 const KEYS = Object.keys(FEATURES);
 
