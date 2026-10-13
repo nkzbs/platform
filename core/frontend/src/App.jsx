@@ -10,6 +10,8 @@ import LibreriaPage from './pages/LibreriaPage'
 import MovimentiPage from './pages/MovimentiPage'
 import BuilderPage from './pages/BuilderPage'
 import SetupWizard from './components/SetupWizard'
+import ProductTour from './components/ProductTour'
+import { ONBOARDING_STEPS } from './components/onboardingSteps'
 import GuidaPage from './pages/GuidaPage'
 import AuditPage from './pages/AuditPage'
 import ImpostazioniPage from './pages/ImpostazioniPage'
@@ -134,6 +136,8 @@ export default function App() {
   // dall'hamburger nella barra in alto (nascosto sopra md, dove la sidebar è
   // sempre visibile come prima).
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [showTour, setShowTour] = useState(false) // il giro guidato: parte a richiesta, mai da solo
+  const finishTour = () => { setShowTour(false); setMobileNavOpen(false); setCurrentPage('dashboard') }
 
   const loadModules = async () => {
     if (!token) return
@@ -276,12 +280,16 @@ export default function App() {
             'sito_web' qui sotto instrada sullo stesso meccanismo di 'account'
             sopra, solo con un tab diverso. */}
         {(currentPage === 'impostazioni' || currentPage === 'account' || currentPage === 'sito_web' || currentPage === 'export_dati' || currentPage === 'connessioni') && user &&
-          <ImpostazioniPage token={token} user={user} features={features} modules={installedModules} onOpenInBuilder={openInBuilder} onFeaturesChanged={loadTenantName} initialTab={currentPage === 'impostazioni' ? undefined : currentPage} />}
+          <ImpostazioniPage token={token} user={user} features={features} modules={installedModules} onOpenInBuilder={openInBuilder} onFeaturesChanged={loadTenantName} onStartTour={() => setShowTour(true)} initialTab={currentPage === 'impostazioni' ? undefined : currentPage} />}
         {currentModule && !['dashboard', 'utenti', 'report'].includes(currentPage) && <ModulePage module={currentModule} token={token} user={user} onNavigate={setCurrentPage} />}
         </div>
       </main>
       <ToastContainer />
-      {token && user && <SetupWizard token={token} user={user} onNavigate={setCurrentPage} onOpenBuilderNewModule={openBuilderNewModule} />}
+      {token && user && <SetupWizard token={token} user={user} onNavigate={setCurrentPage} onOpenBuilderNewModule={openBuilderNewModule} onStartTour={() => setShowTour(true)} />}
+      {showTour && (
+        <ProductTour steps={ONBOARDING_STEPS} currentPage={currentPage} onNavigate={setCurrentPage} onFinish={finishTour}
+          onStepChange={(step) => setMobileNavOpen(window.innerWidth < 768 && !!step.target && step.target.startsWith('sidebar'))} />
+      )}
     </div>
   )
 }

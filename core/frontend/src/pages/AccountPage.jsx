@@ -16,7 +16,7 @@ import Icon from '../components/Icon'
 import { API } from '../lib/api'
 const ROLE_LABEL = { admin: 'Amministratore', user: 'Utente', agent: 'Agente' }
 
-function AccountPage({ token, user }) {
+function AccountPage({ token, user, onStartTour }) {
   const api = useApi(token)
   const [pw, setPw] = useState({ current_password: '', new_password: '' })
   const [pwBusy, setPwBusy] = useState(false)
@@ -169,6 +169,13 @@ function AccountPage({ token, user }) {
           </div>
         )}
       </div>
+
+      {onStartTour && (
+        <div className="bg-surface-card border border-gray-800 rounded-xl p-5 lg:col-span-2 flex items-center justify-between gap-4 flex-wrap">
+          <div><div className="text-ink text-sm font-medium">Giro guidato</div><div className="text-xs text-gray-500 mt-0.5">Un percorso breve che ti mostra dov'è ogni cosa, evidenziandola sulla pagina.</div></div>
+          <button onClick={onStartTour} className="text-sm px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 flex-shrink-0">Fai il giro guidato</button>
+        </div>
+      )}
 
       <TelegramCard token={token} user={user} mode="telefono" className="lg:col-span-2" />
     </div>

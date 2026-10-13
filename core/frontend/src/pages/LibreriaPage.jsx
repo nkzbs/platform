@@ -337,7 +337,7 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
       <p className="text-gray-500 text-sm mb-6">I tuoi moduli e quelli salvati nella Libreria, in un unico posto. <button onClick={() => setCollega(true)} className="text-accent hover:underline">Collega i moduli</button></p>
 
       {onCreateNewModule && (
-        <div className="flex items-center justify-between gap-4 flex-wrap bg-surface-card border border-gray-800 rounded-xl p-4 mb-5">
+        <div data-tour="libreria-nuovo" className="flex items-center justify-between gap-4 flex-wrap bg-surface-card border border-gray-800 rounded-xl p-4 mb-5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-accent/15 text-accent flex items-center justify-center flex-shrink-0"><Icon name="tool" size={18} /></div>
             <div>

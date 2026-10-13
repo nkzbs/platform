@@ -777,7 +777,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
               <Icon name="grid" size={14} />
             </button>
             <button onClick={() => { setShowCanvas(false); setWizardStep(1); setNewModuleRelation({ enabled: false, target_module: '', label: '', cardinality: 'many_to_one' }); setShowNewModule(true) }}
-              title="Nuovo modulo"
+              title="Nuovo modulo" data-tour="builder-nuovo"
               className="w-6 h-6 rounded-md flex items-center justify-center text-accent hover:text-white hover:bg-accent/20 transition"><Icon name="plus" size={14} /></button>
             <label title="Carica modulo da un file esportato (da questo o un altro tenant)"
               className={'w-6 h-6 rounded-md flex items-center justify-center transition cursor-pointer ' + (importingModule ? 'text-gray-600' : 'text-gray-500 hover:text-white hover:bg-white/5')}>

@@ -185,7 +185,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
           )}
         </div>
       </div>
-      <nav className="flex-1 min-h-0 overflow-y-auto py-3">
+      <nav data-tour="sidebar-nav" className="flex-1 min-h-0 overflow-y-auto py-3">
         {(() => {
           // Le pagine virtuali di "Generale" vanno PRIMA dei moduli reali (così quel
           // gruppo è il primo incontrato, subito dopo Dashboard, come in nico); quelle
@@ -202,7 +202,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
           const gruppi = []
           conGruppo.forEach((m) => { if (!gruppi.includes(m.group_name)) gruppi.push(m.group_name) })
           const renderItem = (m) => (
-            <button key={m.slug} onClick={() => handleNavigate(m.slug)} title={!expanded ? m.name : undefined}
+            <button key={m.slug} data-tour={'sidebar-' + m.slug} onClick={() => handleNavigate(m.slug)} title={!expanded ? m.name : undefined}
               className={'w-full flex items-center gap-3 py-2.5 text-sm transition ' + (!expanded ? 'justify-center px-2' : 'px-4') + ' ' + (currentPage === m.slug ? 'bg-accent/20 text-accent border-r-2 border-accent' : 'text-gray-400 hover:text-ink hover:bg-white/5')}>
               <span style={{ color: currentPage === m.slug ? '#60A5FA' : m.color }}><Icon name={m.icon} size={16} /></span>
               {expanded && m.name}
@@ -222,7 +222,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
         })()}
         <div className="mt-3 pt-3 border-t border-gray-800">
           {systemItems.map((item) => (
-            <button key={item.slug} onClick={() => handleNavigate(item.slug)} title={!expanded ? item.name : undefined}
+            <button key={item.slug} data-tour={'sidebar-' + item.slug} onClick={() => handleNavigate(item.slug)} title={!expanded ? item.name : undefined}
               className={'w-full flex items-center gap-3 py-2.5 text-sm transition ' + (!expanded ? 'justify-center px-2' : 'px-4') + ' ' + (currentPage === item.slug ? 'bg-accent/20 text-accent border-r-2 border-accent' : 'text-gray-400 hover:text-ink hover:bg-white/5')}>
               <Icon name={item.icon} size={16} />
               {expanded && item.name}

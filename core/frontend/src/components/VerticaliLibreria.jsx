@@ -62,7 +62,7 @@ export default function VerticaliLibreria({ token, installatiSlugs, onInstalled,
   const toggle = (id) => setScelti((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
 
   return (
-    <div className="mb-6">
+    <div data-tour="libreria-modelli" className="mb-6">
       <h2 className="text-sm font-semibold text-ink mb-1">Parti da un modello</h2>
       <p className="text-gray-500 text-xs mb-3">Un gruppo di moduli già pensati per funzionare insieme. Scegli quali tenere, poi li modifichi come tutti gli altri.</p>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">

@@ -6,7 +6,7 @@ import CollegaModuli from './CollegaModuli'
 // I primi passi di un tenant nuovo: scegliere cosa gestire, collegare i moduli, invitare chi lo usa, scegliere come avvisare.
 // Compare da solo (solo admin) finché il tenant è vuoto e non è stato chiuso. Ogni passo porta alla pagina giusta; cosa è già fatto si
 // legge dai dati veri. Chiudere il pannello lo riduce a una pillola in basso; «Non mostrare più» lo chiude per sempre.
-export default function SetupWizard({ token, user, onNavigate, onOpenBuilderNewModule }) {
+export default function SetupWizard({ token, user, onNavigate, onOpenBuilderNewModule, onStartTour }) {
   const api = useApi(token)
   const [stato, setStato] = useState(null)
   const [aperto, setAperto] = useState(true)
@@ -62,7 +62,10 @@ export default function SetupWizard({ token, user, onNavigate, onOpenBuilderNewM
             ))}
           </div>
           <div className="flex items-center justify-between gap-3 mt-4">
-            <button onClick={chiudiPerSempre} className="text-xs text-gray-500 hover:text-ink">Non mostrare più</button>
+            <div className="flex items-center gap-3">
+              <button onClick={chiudiPerSempre} className="text-xs text-gray-500 hover:text-ink">Non mostrare più</button>
+              {onStartTour && <button onClick={vai(onStartTour)} className="text-xs text-accent hover:underline">Fai il giro guidato</button>}
+            </div>
             <button onClick={() => setAperto(false)} className="text-sm px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200">Più tardi</button>
           </div>
         </div>

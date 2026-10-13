@@ -312,7 +312,7 @@ const SETTINGS_TABS = [
   { key: 'account', icon: 'user', label: 'Il mio account' },
 ]
 
-function ImpostazioniPage({ token, user, initialTab, features = {}, modules = [], onFeaturesChanged, onOpenInBuilder }) {
+function ImpostazioniPage({ token, user, initialTab, features = {}, modules = [], onFeaturesChanged, onOpenInBuilder, onStartTour }) {
   const isAdmin = user && user.role === 'admin'
   const [tab, setTab] = useState(initialTab || (isAdmin ? 'utenti' : 'account'))
   // Navigazione ripetuta verso il tab "Il mio account" (click sul proprio nome in
@@ -341,7 +341,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
       )}
 
       {tab === 'utenti' && <UsersPage token={token} />}
-      {tab === 'account' && <AccountPage token={token} user={user} />}
+      {tab === 'account' && <AccountPage token={token} user={user} onStartTour={onStartTour} />}
 
       {tab === 'moduli' && <ModuliTab token={token} />}
 
