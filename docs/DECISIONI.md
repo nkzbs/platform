@@ -38,7 +38,7 @@ servire a un tenant futuro" non è un motivo.
 
 - **Privacy dell'Attività di Super Admin** (13 ottobre): Super Admin non legge più cosa fanno gli utenti dentro un tenant. Dal tenant esce solo l'elenco degli **errori tecnici** (`/api/audit-log/internal/monitoring-feed` risponde solo con `error_logs`); le azioni degli utenti e i movimenti dei record restano nel tenant, nel suo registro e nello storico di ogni riga. Nell'Attività di Super Admin restano le azioni di Super Admin stesso e gli errori dei tenant.
 
-- **Il ponte «Apri →» è provvisorio** (13 ottobre): oggi Super Admin entra nei tenant come admin senza password e **per ora resta**. Decisione di Nima: **in futuro questo accesso non dovrà esserci**. Tutto ciò che si aggiunge a Super Admin va pensato senza dipendere da quel ponte (niente funzioni che leggono i dati di un tenant da lì), così toglierlo sarà solo una cancellazione.
+- **Accesso di Super Admin ai tenant, da ridurre** (13 ottobre): «Apri →» **chiede le credenziali admin del tenant** (non entra da solo) e resta. Decisione di Nima: **in futuro Super Admin non dovrà avere ponti verso i dati dei tenant**. Oggi i ponti reali sono: «Reset credenziali» (imposta una nuova password admin del tenant), le chiavi del tenant (`jwt_secret`, `encryption_key`) conservate nel database di Super Admin e il controllo dei container. Niente di nuovo in Super Admin deve dipendere da questi: così toglierli sarà solo una cancellazione.
 
 ### Tenuto, anche se "non serve oggi"
 

@@ -39,7 +39,7 @@ const GUIDA_SECTIONS = [
       },
       {
         title: 'Accesso come admin, reset credenziali, dominio', body: [
-          'Il pulsante "Apri →" nella scheda di un tenant apre quel tenant con una sessione admin reale, senza dover conoscere la password — utile per verificare un problema segnalato da un cliente. Ogni chiamata di questo tipo resta comunque nella cronologia Attività.',
+          'Il pulsante "Apri →" nella scheda di un tenant chiede le credenziali admin di quel tenant (non quelle di Super Admin) e poi lo apre: senza la password non si entra.',
           'Il reset credenziali genera nuove credenziali admin per un tenant che le ha perse o compromesse. Il dominio pubblico di un tenant (es. `nome.platform-core.it`) è modificabile dalla stessa scheda.',
         ]
       },
