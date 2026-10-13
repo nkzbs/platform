@@ -12,6 +12,7 @@ import Icon from '../components/Icon'
 import Tile from '../components/Tile'
 import UsersPage from './UsersPage'
 import AccountPage from './AccountPage'
+import SuggestionsTab from '../components/SuggestionsTab'
 import TelegramCard from '../components/TelegramCard'
 import SitoWebPage from './SitoWebPage'
 
@@ -304,11 +305,12 @@ const SETTINGS_TABS = [
   { key: 'connessioni', icon: 'link', label: 'Connessioni' },
   { key: 'notifiche', icon: 'bell', label: 'Report' },
   { key: 'assistente', icon: 'wand', label: 'AI' },
+  { key: 'suggerimenti', icon: 'sparkles', label: 'Suggerimenti' },
   { key: 'export_dati', icon: 'download', label: 'Dati' },
   { key: 'account', icon: 'user', label: 'Il mio account' },
 ]
 
-function ImpostazioniPage({ token, user, initialTab, features = {}, modules = [], onFeaturesChanged }) {
+function ImpostazioniPage({ token, user, initialTab, features = {}, modules = [], onFeaturesChanged, onOpenInBuilder }) {
   const isAdmin = user && user.role === 'admin'
   const [tab, setTab] = useState(initialTab || (isAdmin ? 'utenti' : 'account'))
   // Navigazione ripetuta verso il tab "Il mio account" (click sul proprio nome in
@@ -320,7 +322,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
   // e, se non è un agente, l'export dei dati.
   const canExport = user && user.role !== 'agente'
   const visibleTabs = isAdmin
-    ? SETTINGS_TABS.filter((t) => (t.key === 'sito_web' ? features.sito_web : t.key === 'notifiche' ? features.riepilogo_mattino : true))
+    ? SETTINGS_TABS.filter((t) => (t.key === 'sito_web' ? features.sito_web : t.key === 'notifiche' ? features.riepilogo_mattino : t.key === 'suggerimenti' ? features.suggerimenti : true))
     : SETTINGS_TABS.filter((t) => t.key === 'account' || (t.key === 'export_dati' && canExport))
 
   return (
@@ -345,6 +347,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
 
       {tab === 'connessioni' && <ConnessioniTab token={token} user={user} features={features} />}
 
+      {tab === 'suggerimenti' && features.suggerimenti && <SuggestionsTab token={token} onOpenInBuilder={onOpenInBuilder} />}
       {tab === 'notifiche' && <ReportsSettingsTab token={token} user={user} features={features} />}
 
 

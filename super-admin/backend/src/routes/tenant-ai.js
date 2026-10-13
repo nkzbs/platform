@@ -10,6 +10,7 @@ const askAi = require('../lib/ai-ask');
 const botAi = require('../lib/ai-bot');
 const receiptAi = require('../lib/ai-receipt');
 
+const suggestionAi = require('../lib/ai-suggestion');
 const router = express.Router();
 
 // Protegge /analyze — chiamato da core/backend (rete Docker interna, mai
@@ -195,6 +196,24 @@ router.post('/ask-data', requireInternalSecret, async (req, res) => {
     const v = askAi.validateQuery(raw, s.payload.catalogo);
     if (v.error) return res.status(422).json({ error: v.error, code: 'ai_unanswerable' });
     res.json({ query: v.query });
+  } catch (e) {
+    res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
+  }
+});
+
+// ─── Suggerimenti di miglioramento del tenant: «spiega e proponi» su una singola osservazione ──────────────────────────────
+router.post('/suggestion', requireInternalSecret, async (req, res) => {
+  const { tenant_slug, data } = req.body || {};
+  if (!tenant_slug) return res.status(400).json({ error: 'tenant_slug obbligatorio' });
+  const s = suggestionAi.sanitizeSuggestion(data);
+  if (s.error) return res.status(400).json({ error: s.error });
+  if (!isProviderConfigured('mistral', tenant_slug)) return res.status(503).json({ error: 'Nessuna chiave Mistral: inseriscila in Impostazioni → AI.', code: 'ai_not_configured' });
+  try {
+    const text = await callAI('mistral', { system: suggestionAi.SUGGESTION_PROMPT, user: JSON.stringify(s.payload), maxTokens: 500, tenantSlug: tenant_slug });
+    const raw = parseJsonObject(text);
+    const v = suggestionAi.validateSuggestion(raw);
+    if (v.error) return res.status(502).json({ error: v.error });
+    res.json({ proposta: v.proposta });
   } catch (e) {
     res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
   }

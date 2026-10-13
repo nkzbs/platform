@@ -35,6 +35,8 @@ const smistaRoutes = require('./routes/smista');
 const moduleRoles = require('./module-roles');
 const reportsRoutes = require('./routes/reports');
 const internalSetupRoutes = require('./routes/internal-setup');
+const suggestionsRoutes = require('./routes/suggestions');
+const { startSuggestions } = require('./suggestions');
 const { startReports } = require('./reports');
 const { startAvvisi } = require('./avvisi');
 const { startMonitor } = require('./monitor');
@@ -100,6 +102,7 @@ const routeMounts = [
   ['/', notificationSettingsRoutes],
   ['/reports', reportsRoutes],
   ['/internal-setup', internalSetupRoutes],
+  ['/suggestions', suggestionsRoutes],
   ['/site-pages', siteAdminRouter],
 ];
 app.use('/api', apiGlobalLimiter);
@@ -190,4 +193,5 @@ app.listen(PORT, () => {
   startAvvisi(); // ogni minuto: righe nuove in "da smistare" (da qualunque via) -> un messaggio WhatsApp
   startGmailPoller();
   startAuditRetentionScheduler();
+  startSuggestions(); // una volta al giorno, solo se la funzione «suggerimenti» è accesa
 });

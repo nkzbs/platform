@@ -60,6 +60,23 @@ function LibreriaPage({ token }) {
   const [pub, setPub] = useState({ tenant: '', module: '', description: '', release_notes: '' })
   const [pubModules, setPubModules] = useState([])
 
+  const [proposteT, setProposteT] = useState([]) // proposte dei tenant (in coda e già decise)
+  const [decisione, setDecisione] = useState(null) // { p, group_name, description } mentre si approva
+  const caricaProposte = () => fetch(API + '/registry/proposals', { headers }).then((r) => r.json()).then((d) => Array.isArray(d) && setProposteT(d)).catch(() => {})
+  useEffect(() => { caricaProposte() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const approva = async () => {
+    setBusy(true)
+    const res = await fetch(API + '/registry/proposals/' + decisione.p.id + '/approve', { method: 'POST', headers, body: JSON.stringify({ description: decisione.description, group_name: decisione.group_name }) })
+    const d = await res.json().catch(() => ({})); setBusy(false)
+    if (res.ok) { flash(true, '«' + decisione.p.name + '» è nella Libreria (v' + d.version + ').'); setDecisione(null); caricaProposte(); load() } else flash(false, d.error || 'Non riuscito.')
+  }
+  const rifiuta = async (p) => {
+    const reason = window.prompt('Perché la rifiuti? Lo vede chi ha proposto «' + p.name + '».')
+    if (reason == null) return
+    const res = await fetch(API + '/registry/proposals/' + p.id + '/reject', { method: 'POST', headers, body: JSON.stringify({ reason }) })
+    const d = await res.json().catch(() => ({}))
+    if (res.ok) { flash(true, 'Proposta rifiutata.'); caricaProposte() } else flash(false, d.error || 'Non riuscito.')
+  }
   const [generici, setGenerici] = useState(null) // { totale, presenti, mancanti }: i moduli generici di partenza
   const [defaultsOpen, setDefaultsOpen] = useState(false)
   const [defaultIds, setDefaultIds] = useState({})
@@ -183,6 +200,38 @@ function LibreriaPage({ token }) {
 
       {notice && (
         <div className={'text-sm p-3 rounded-lg mb-4 border ' + (notice.ok ? 'bg-green-900/20 text-green-400 border-green-900/40' : 'bg-red-900/30 text-red-400 border-red-900/50')}>{notice.text}</div>
+      )}
+
+      {proposteT.some((p) => p.status === 'pending') && (
+        <section className="bg-surface-card border border-cp-primary/40 rounded-xl p-4 mb-5">
+          <h2 className="text-sm font-semibold text-ink mb-1">Proposte dai tenant ({proposteT.filter((p) => p.status === 'pending').length})</h2>
+          <p className="text-xs text-gray-500 mb-3">Un tenant propone un suo modulo (solo lo schema, mai i dati). Controlla campi e stati: se i nomi delle scelte contengono nomi di persone o aziende, rifiuta.</p>
+          <div className="divide-y divide-gray-800">
+            {proposteT.filter((p) => p.status === 'pending').map((p) => (
+              <div key={p.id} className="py-3">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="min-w-0"><div className="text-sm text-ink font-medium">{p.name} <span className="text-gray-500 font-normal">· da {p.tenant_slug} · sarà v{p.versione_prossima}</span></div>
+                    {p.description && <div className="text-xs text-gray-400 mt-0.5">{p.description}</div>}
+                    {p.note && <div className="text-xs text-gray-500 mt-0.5 italic">Nota: {p.note}</div>}</div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button type="button" onClick={() => setDecisione({ p, description: p.description, group_name: p.group_name || '' })} className={primaryBtn + ' text-xs !py-1.5'}>Approva</button>
+                    <button type="button" onClick={() => rifiuta(p)} className={ghostBtn + ' text-xs !py-1.5'}>Rifiuta</button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-2">{p.campi.map((f) => <span key={f.key} className="text-[11px] px-2 py-0.5 rounded bg-surface-page border border-gray-800 text-gray-400">{f.label}</span>)}</div>
+                {p.stati.length > 0 && <div className="text-xs text-gray-500 mt-1.5">Stati: {p.stati.join(' → ')}</div>}
+                {p.relazioni.length > 0 && <div className="text-xs text-gray-500 mt-0.5">Collegato a: {p.relazioni.join(', ')}</div>}
+                {decisione && decisione.p.id === p.id && (
+                  <div className="mt-3 bg-surface-page border border-gray-800 rounded-lg p-3 space-y-2">
+                    <input className={inputCls} placeholder="Gruppo (es. Generico)" value={decisione.group_name} onChange={(e) => setDecisione({ ...decisione, group_name: e.target.value })} />
+                    <textarea className={inputCls + ' min-h-[60px]'} placeholder="Descrizione per la Libreria" value={decisione.description} onChange={(e) => setDecisione({ ...decisione, description: e.target.value })} />
+                    <div className="flex gap-2"><button type="button" onClick={approva} disabled={busy} className={primaryBtn + ' text-xs !py-1.5'}>{busy ? 'Pubblico…' : 'Metti nella Libreria'}</button><button type="button" onClick={() => setDecisione(null)} className={ghostBtn + ' text-xs !py-1.5'}>Annulla</button></div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       <div className="relative mb-5 max-w-md">

@@ -962,6 +962,22 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_records_module_slug ON records(module_slug);
   CREATE INDEX IF NOT EXISTS idx_records_user_id ON records(user_id);
   CREATE INDEX IF NOT EXISTS idx_record_history_record_id ON record_history(record_id);
+
+  -- Suggerimenti di miglioramento (suggestions.js): osservazioni sull'uso del tenant, calcolate in locale; la proposta dell'AI, se chiesta, sta nella colonna ai.
+  CREATE TABLE IF NOT EXISTS suggestions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    rule_key TEXT NOT NULL,
+    module_slug TEXT NOT NULL,
+    target TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL,
+    data TEXT NOT NULL DEFAULT '{}',
+    status TEXT NOT NULL DEFAULT 'open',
+    ai TEXT,
+    first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+    resolved_at DATETIME,
+    UNIQUE(rule_key, module_slug, target)
+  );
   CREATE INDEX IF NOT EXISTS idx_record_history_module_slug ON record_history(module_slug);
   CREATE INDEX IF NOT EXISTS idx_automation_deltas_source ON automation_deltas(source_module, source_record_id);
   CREATE INDEX IF NOT EXISTS idx_automation_logs_module_slug ON automation_logs(module_slug);

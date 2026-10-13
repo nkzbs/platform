@@ -80,6 +80,75 @@ router.post('/import-generici', requireAuth, (req, res) => {
   res.json({ ...r, ...g.stato() });
 });
 
+// ── Proposte dei tenant ───────────────────────────────────────────────────────────────────────────────────────────
+// Un tenant propone un suo modulo (solo lo schema): finisce in coda, e Super Admin lo approva (diventa una nuova versione nella Libreria, con l'origine di quel tenant) o lo rifiuta con
+// un motivo. Niente entra nella Libreria da solo: la Libreria alimenta l'analisi dei processi e gli altri tenant. Un tenant ha una sola proposta in attesa per modulo (una nuova la sostituisce).
+const { parseSchemaNormalized } = require('../../../../shared/schema-v3-core.js');
+const MAX_SCHEMA = 90 * 1024; // sotto il limite di 100 KB del corpo delle richieste: uno schema più grande di così è comunque fuori misura
+const riassunto = (schemaJson) => {
+  try { const s = parseSchemaNormalized(schemaJson); return { campi: (s.fields || []).map((f) => ({ key: f.key, label: f.label || f.key, type: f.type })), stati: ((s.workflow && s.workflow.states) || []).map((x) => x.label || x.key), relazioni: (s.relations || []).map((r) => r.target_module).filter(Boolean) }; }
+  catch (e) { return { campi: [], stati: [], relazioni: [] }; }
+};
+
+router.post('/public/proposals', requireInternalSecret, (req, res) => {
+  const b = req.body || {}, m = b.module || {};
+  const tenant = String(b.tenant_slug || '');
+  if (!db.prepare("SELECT 1 FROM tenants WHERE slug = ? AND status != 'deleted'").get(tenant)) return res.status(404).json({ error: 'Tenant sconosciuto' });
+  if (!/^[a-z0-9][a-z0-9_-]{0,60}$/i.test(String(m.slug || '')) || !String(m.name || '').trim()) return res.status(400).json({ error: 'Modulo non valido' });
+  const schemaJson = typeof m.schema_json === 'string' ? m.schema_json : JSON.stringify(m.schema_json || {});
+  if (schemaJson.length > MAX_SCHEMA) return res.status(400).json({ error: 'Lo schema è troppo grande per la Libreria.' });
+  let parsed; try { parsed = parseSchemaNormalized(schemaJson); } catch (e) { return res.status(400).json({ error: 'Lo schema del modulo non si legge.' }); }
+  if (!(parsed.fields || []).length) return res.status(400).json({ error: 'Un modulo senza campi non serve alla Libreria.' });
+  const clean = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
+  const vals = [clean(m.name, 80), clean(m.icon, 40) || 'box', clean(m.color, 20) || '#2563EB', clean(m.group_name, 60) || null, schemaJson, clean(b.description, 600), clean(b.note, 600)];
+  const pending = db.prepare("SELECT id FROM registry_proposals WHERE tenant_slug = ? AND slug = ? AND status = 'pending'").get(tenant, m.slug);
+  let id;
+  if (pending) { db.prepare('UPDATE registry_proposals SET name = ?, icon = ?, color = ?, group_name = ?, schema_json = ?, description = ?, note = ?, created_at = CURRENT_TIMESTAMP WHERE id = ?').run(...vals, pending.id); id = pending.id; }
+  else id = db.prepare('INSERT INTO registry_proposals (tenant_slug, slug, name, icon, color, group_name, schema_json, description, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(tenant, m.slug, ...vals).lastInsertRowid;
+  logAudit('tenant:' + tenant, 'registry.proposal', m.slug, { id, sostituisce: !!pending });
+  res.json({ id, status: 'pending', sostituita: !!pending });
+});
+
+router.get('/public/proposals', requireInternalSecret, (req, res) => {
+  res.json(db.prepare('SELECT id, slug, name, status, reason, created_at, decided_at, registry_module_id FROM registry_proposals WHERE tenant_slug = ? ORDER BY id DESC LIMIT 100').all(String(req.query.tenant_slug || '')));
+});
+
+router.get('/proposals', requireAuth, (req, res) => {
+  const rows = db.prepare("SELECT * FROM registry_proposals ORDER BY (status = 'pending') DESC, id DESC LIMIT 200").all();
+  res.json(rows.map((r) => {
+    const prev = db.prepare('SELECT MAX(version) AS v FROM registry_modules WHERE source_tenant_slug = ? AND slug = ?').get(r.tenant_slug, r.slug).v || 0;
+    const { schema_json, ...rest } = r;
+    return { ...rest, ...riassunto(schema_json), versione_prossima: prev + 1 };
+  }));
+});
+
+router.post('/proposals/:id/approve', requireAuth, (req, res) => {
+  const p = db.prepare('SELECT * FROM registry_proposals WHERE id = ?').get(req.params.id);
+  if (!p) return res.status(404).json({ error: 'Proposta non trovata' });
+  if (p.status !== 'pending') return res.status(400).json({ error: 'Questa proposta è già stata decisa.' });
+  const b = req.body || {};
+  const prev = db.prepare('SELECT MAX(version) AS v FROM registry_modules WHERE source_tenant_slug = ? AND slug = ?').get(p.tenant_slug, p.slug).v || 0;
+  const rid = db.transaction(() => {
+    const id = db.prepare(`INSERT INTO registry_modules (name, slug, description, icon, color, schema_json, version, source_tenant_slug, release_notes, group_name, support_module)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`).run(p.name, p.slug, String(b.description != null ? b.description : p.description).slice(0, 600), p.icon, p.color, p.schema_json, prev + 1, p.tenant_slug, String(b.release_notes != null ? b.release_notes : p.note).slice(0, 600), b.group_name != null ? (String(b.group_name).trim().slice(0, 60) || null) : p.group_name).lastInsertRowid;
+    db.prepare("UPDATE registry_proposals SET status = 'approved', registry_module_id = ?, decided_at = CURRENT_TIMESTAMP, decided_by = ? WHERE id = ?").run(id, req.user.username, p.id);
+    return id;
+  })();
+  logAudit(req.user.username, 'registry.proposal_approved', p.slug, { id: p.id, tenant_slug: p.tenant_slug, version: prev + 1 });
+  res.json({ ok: true, registry_module_id: rid, version: prev + 1 });
+});
+
+router.post('/proposals/:id/reject', requireAuth, (req, res) => {
+  const p = db.prepare('SELECT * FROM registry_proposals WHERE id = ?').get(req.params.id);
+  if (!p) return res.status(404).json({ error: 'Proposta non trovata' });
+  if (p.status !== 'pending') return res.status(400).json({ error: 'Questa proposta è già stata decisa.' });
+  const reason = String((req.body && req.body.reason) || '').trim().slice(0, 300);
+  if (!reason) return res.status(400).json({ error: 'Scrivi il motivo: lo vede chi ha proposto il modulo.' });
+  db.prepare("UPDATE registry_proposals SET status = 'rejected', reason = ?, decided_at = CURRENT_TIMESTAMP, decided_by = ? WHERE id = ?").run(reason, req.user.username, p.id);
+  logAudit(req.user.username, 'registry.proposal_rejected', p.slug, { id: p.id, tenant_slug: p.tenant_slug });
+  res.json({ ok: true });
+});
+
 // Moduli di UN tenant, per il selettore "salva nella Libreria".
 router.get('/tenants/:slug/modules', requireAuth, (req, res) => {
   const tdb = openTenantDbReadOnly(req.params.slug);

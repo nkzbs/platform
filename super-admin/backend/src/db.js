@@ -160,6 +160,26 @@ db.exec(`
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  -- Proposte di moduli dai tenant alla Libreria: arrivano in coda e le approva (o rifiuta) Super Admin. Un tenant può proporre un suo modulo (solo lo schema, mai i dati).
+  CREATE TABLE IF NOT EXISTS registry_proposals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_slug TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    name TEXT NOT NULL,
+    icon TEXT,
+    color TEXT,
+    group_name TEXT,
+    schema_json TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    note TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'pending',
+    reason TEXT,
+    registry_module_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    decided_at DATETIME,
+    decided_by TEXT
+  );
+
   -- Chiave Mistral di un tenant (cifrata). Un tenant senza riga usa la chiave generale di Super Admin.
   CREATE TABLE IF NOT EXISTS tenant_ai_keys (
     tenant_slug TEXT PRIMARY KEY,

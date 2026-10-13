@@ -29,6 +29,35 @@ router.get('/registry', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// ─── PROPONI ALLA LIBRERIA ─────────────────────────────────────────────────────────────────────────────────
+// Un modulo di questo tenant si può proporre alla Libreria di Super Admin: parte SOLO lo schema (mai le righe) e finisce in una coda; lo approva Super Admin (diventa una versione della Libreria)
+// o lo rifiuta con un motivo, che si vede qui. Niente entra nella Libreria da solo.
+router.post('/:slug/propose-to-registry', requireAuth, requireAdmin, async (req, res) => {
+  const m = db.prepare('SELECT name, slug, icon, color, group_name, schema_json, support_module, is_system FROM modules WHERE slug = ? AND installed = 1').get(req.params.slug);
+  if (!m) return res.status(404).json({ error: 'Modulo non trovato o non installato' });
+  if (m.is_system) return res.status(400).json({ error: 'I moduli di sistema non si propongono.' });
+  const b = req.body || {};
+  try {
+    const r = await fetch(SUPER_ADMIN_URL + '/api/registry/public/proposals', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET }, signal: AbortSignal.timeout(15000),
+      body: JSON.stringify({ tenant_slug: TENANT_SLUG, module: { slug: m.slug, name: m.name, icon: m.icon, color: m.color, group_name: m.group_name, schema_json: m.schema_json }, description: b.description, note: b.note }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) return res.status(r.status === 404 || r.status === 400 ? 400 : 502).json({ error: data.error || 'La Libreria non risponde.' });
+    logAudit(req.user.username, 'module.propose_registry', m.slug, { id: data.id });
+    res.json(data);
+  } catch (e) { res.status(502).json({ error: 'La Libreria non è raggiungibile in questo momento.' }); }
+});
+
+// Lo stato delle proposte di questo tenant (in attesa, approvata, rifiutata con motivo).
+router.get('/registry-proposals', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const r = await fetch(SUPER_ADMIN_URL + '/api/registry/public/proposals?tenant_slug=' + encodeURIComponent(TENANT_SLUG), { headers: { 'x-internal-secret': INTERNAL_SECRET }, signal: AbortSignal.timeout(10000) });
+    if (!r.ok) return res.json([]);
+    res.json(await r.json());
+  } catch (e) { res.json([]); }
+});
+
 // Nessun job in background: il controllo scatta solo quando il tenant riapre lo
 // Store (qui). Limite esplicito — se non lo riapre mai dopo aver installato un
 // modulo, non viene avvisato — ma è comunque un miglioramento reale rispetto a

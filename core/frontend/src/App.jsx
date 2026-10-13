@@ -275,7 +275,7 @@ export default function App() {
             'sito_web' qui sotto instrada sullo stesso meccanismo di 'account'
             sopra, solo con un tab diverso. */}
         {(currentPage === 'impostazioni' || currentPage === 'account' || currentPage === 'sito_web' || currentPage === 'export_dati') && user &&
-          <ImpostazioniPage token={token} user={user} features={features} modules={installedModules} onFeaturesChanged={loadTenantName} initialTab={currentPage === 'impostazioni' ? undefined : currentPage} />}
+          <ImpostazioniPage token={token} user={user} features={features} modules={installedModules} onOpenInBuilder={openInBuilder} onFeaturesChanged={loadTenantName} initialTab={currentPage === 'impostazioni' ? undefined : currentPage} />}
         {currentModule && !['dashboard', 'utenti', 'report'].includes(currentPage) && <ModulePage module={currentModule} token={token} user={user} onNavigate={setCurrentPage} />}
         </div>
       </main>

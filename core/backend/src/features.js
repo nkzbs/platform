@@ -14,6 +14,7 @@ const FEATURES = {
   analisi: { label: 'Come sta andando', description: 'Scheda in dashboard con entrate, spese, risparmio, confronti e anomalie, spiegata dall\'assistente.' },
   // la chiave tecnica resta «riepilogo_mattino» (è salvata nei tenant esistenti); oggi accende i report su WhatsApp
   riepilogo_mattino: { label: 'Report', description: 'Report pianificati su WhatsApp e Telegram, configurabili: quanto pagare, righe da trattare, voci in ritardo, ore lavorate e straordinari.' },
+  suggerimenti: { label: 'Suggerimenti', description: 'Ogni giorno osserva come usi i moduli (campi mai compilati, righe ferme, passaggi mai usati) e ti suggerisce come migliorarli; l\'AI spiega e propone su richiesta. Spento di partenza.' },
 };
 const KEYS = Object.keys(FEATURES);
 
