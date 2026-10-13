@@ -13,6 +13,7 @@ import TenantBuilderPage from './pages/TenantBuilderPage'
 import SettingsPage from './pages/SettingsPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import GuidaPage from './pages/GuidaPage'
+import AnalisiPage from './pages/AnalisiPage'
 
 // Semplificazione 2026-09-27: Platform torna a essere un side project a uso
 // personale — rimossi il Partner Portal, il CRM (Clienti/Clienti Core) e
@@ -137,6 +138,7 @@ export default function App() {
           {page === 'dashboard' && <DashboardPage token={token} onNavigate={setPage} />}
           {page === 'tenants' && <TenantsPage token={token} onViewActivity={viewTenantActivity} onNavigate={setPage} />}
           {page === 'libreria' && <LibreriaPage token={token} />}
+          {page === 'analisi' && <AnalisiPage token={token} onNavigate={setPage} />}
           {page === 'super-builder' && <TenantBuilderPage token={token} initialPrompt={builderPrefill?.prompt} initialModuleName={builderPrefill?.moduleName} />}
           {page === 'attivita' && <ActivityPage token={token} initialTenantFilter={activityTenantFilter} />}
           {page === 'analytics' && <AnalyticsPage token={token} />}

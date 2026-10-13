@@ -42,6 +42,8 @@ servire a un tenant futuro" non è un motivo.
 
 - **Report come definizioni, proprietario per modulo** (13 ottobre): i tre report non sono più tre messaggi scritti a mano ma definizioni (tipo + parametri) con quattro tipi generici; il proprietario delle righe automatiche si sceglie per modulo (con ripiego sul predefinito del progetto). Motivo: «Platform sempre generico e configurabile» (vedi `PLATFORM-VISIONE.md`). Un tipo nuovo di report richiede ancora codice (una primitiva), un report nuovo di un tipo esistente no.
 
+- **Analisi dei processi tornata, senza la parte commerciale** (13 ottobre): ripresa dal vecchio Platform (processo con ruoli, passaggi e bivi, copertura della Libreria, manuale stampabile, creazione del tenant con ruoli e stati). Restano fuori clienti, partner, preventivi, prezzi e licenze, e la misurazione prima/dopo che leggeva i dati dei tenant. Un'analisi è un documento di Super Admin, collegabile al tenant che ne nasce.
+
 ### Tenuto, anche se "non serve oggi"
 
 | Cosa | Perché |

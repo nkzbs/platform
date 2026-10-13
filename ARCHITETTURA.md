@@ -333,6 +333,14 @@ frasi brevi, nessun giudizio bene/male per le viste di sole spese) stanno in `su
 La vista **Da inizio anno** (`buildYearSnapshot`) va da gennaio all'ultimo mese concluso, con le stesse regole: mostra come si dividono le spese
 (rate = righe collegate a un debito o categoria Rata; fisse; variabili) e il confronto con lo stesso periodo dell'anno prima.
 
+## Analisi dei processi (Super Admin)
+
+`routes/analyses.js`, `lib/analysis.js`, `lib/tenant-config-from-analysis.js`, tabella `process_analyses`, pagina **Analisi**. Un'analisi è un documento di Super Admin: il racconto di un'attività, un profilo, e i **processi** (scopo, evento che lo fa partire, input/output, ruoli coinvolti di tipo utente/sistema/esterno, passaggi in ordine «step» o «decisione», eccezioni, documenti, sistemi, KPI, note, **modulo della Libreria che lo copre** e copertura: da valutare / coperto / da costruire).
+
+- **L'AI propone, mai scrive**: `suggest-processi` (da una descrizione) e `suggest-processo` (da un nome) ritornano bozze; tutto passa da `sanitizeProcesso` (campi noti, lunghezze, tipi) e un **modulo inventato diventa null** (deve esistere nella Libreria). Il modello vede solo il testo dell'analisi, ripulito dai dati personali (`ai-redact.js`), e nome/descrizione dei moduli: nessun dato di altri tenant. Costa sulla chiave AI di Super Admin.
+- **Salvataggio** automatico dalla pagina (PATCH ripulito server-side). Il manuale (`Manuale.jsx`) si stampa o si salva in PDF dal browser.
+- **Crea il tenant** (`POST /:id/create-tenant`): `createTenant` + installazione dei moduli scelti + `applyAnalysisConfigToTenant` (ruoli degli utenti e stati del flusso dai passaggi, **senza sovrascrivere** un modulo che ha già il suo flusso o i suoi permessi). Fuori dal perimetro, di proposito: clienti, preventivi, prezzi, licenze, e leggere dati dai tenant (privacy).
+
 ## Movimenti bancari
 
 `core/backend/src/bank-import.js`: si carica un estratto conto in PDF (`POST /api/bank/import`, solo admin), `pdftotext -layout` ne estrae il

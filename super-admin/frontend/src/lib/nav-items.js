@@ -32,6 +32,7 @@ export const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', color: '#3B82F6' },
   { id: 'tenants', label: 'Tenant', icon: 'building', color: '#F59E0B' },
   { id: 'libreria', label: 'Libreria', icon: 'store', color: '#EC4899' },
+  { id: 'analisi', label: 'Analisi', icon: 'git-branch', color: '#22C55E' },
   { id: 'super-builder', label: 'Super Builder', icon: 'wand', color: '#A855F7' },
   { id: 'attivita', label: 'Attività', icon: 'clipboard', color: '#64748B' },
   { id: 'analytics', label: 'Analytics', icon: 'bar-chart', color: '#0EA5E9' },

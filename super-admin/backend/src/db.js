@@ -147,6 +147,19 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_ai_usage_log_created_at ON ai_usage_log(created_at);
 
+  -- Analisi dei processi (routes/analyses.js): il racconto di un'attività, i suoi processi (JSON ripulito da lib/analysis.js) e, se ne è nato, il tenant.
+  CREATE TABLE IF NOT EXISTS process_analyses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    descrizione TEXT NOT NULL DEFAULT '',
+    profilo TEXT NOT NULL DEFAULT '{}',
+    processi TEXT NOT NULL DEFAULT '[]',
+    tenant_slug TEXT,
+    created_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
   -- Chiave Mistral di un tenant (cifrata). Un tenant senza riga usa la chiave generale di Super Admin.
   CREATE TABLE IF NOT EXISTS tenant_ai_keys (
     tenant_slug TEXT PRIMARY KEY,

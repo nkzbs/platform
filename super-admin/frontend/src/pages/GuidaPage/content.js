@@ -85,6 +85,18 @@ const GUIDA_SECTIONS = [
     ]
   },
   {
+    title: 'Analisi', icon: 'git-branch', color: '#22C55E',
+    topics: [
+      {
+        title: 'Dai processi al tenant', body: [
+          'Racconti come funziona un\'attività; l\'AI propone i processi (mai salvati da soli) e tu li rifinisci: scopo, ruoli, passaggi in ordine (anche i bivi), eccezioni, documenti, KPI. Per ogni processo scegli il modulo della Libreria che lo copre, oppure lo segni «da costruire».',
+          'Dall\'analisi si apre il manuale dei processi (si stampa o si salva in PDF) e, se vuoi, si crea il tenant: installa i moduli scelti, crea i ruoli degli utenti e trasforma i passaggi negli stati del flusso. Non tocca un modulo che ha già i suoi. Fino alla conferma non si scrive niente.',
+          'Il testo che racconti passa dall\'AI con i dati personali tolti, e costa sulla chiave di Super Admin (Impostazioni → Chiavi AI). Super Admin non legge dati dai tenant: l\'analisi riguarda solo ciò che scrivi qui.',
+        ]
+      },
+    ]
+  },
+  {
     title: 'Attività', icon: 'list', color: '#EF4444',
     topics: [
       {

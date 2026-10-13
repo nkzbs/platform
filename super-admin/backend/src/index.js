@@ -15,6 +15,7 @@ const tenantsRoutes = require('./routes/tenants');
 const tenantImportRoutes = require('./routes/tenant-import');
 const usersRoutes = require('./routes/users');
 const registryRoutes = require('./routes/registry');
+const analysesRoutes = require('./routes/analyses');
 const superBuilderRoutes = require('./routes/super-builder');
 const monitoringRoutes = require('./routes/monitoring');
 const analyticsRoutes = require('./routes/analytics');
@@ -49,6 +50,7 @@ app.use('/api', rateLimit({ windowMs: 60 * 1000, max: 600, message: 'Troppe rich
 app.use('/api/auth', authRoutes);
 app.use('/api/tenants', tenantImportRoutes);
 app.use('/api/tenants', tenantsRoutes);
+app.use('/api/analyses', analysesRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/registry', registryRoutes);
 app.use('/api/super-builder', superBuilderRoutes);
