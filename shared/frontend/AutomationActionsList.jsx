@@ -200,7 +200,7 @@ function InviaReportPeriodicoConfig({ config, onChange }) {
 // di questo file da tenere sincronizzata a mano con quella.
 const AZIONE_LABELS = Object.fromEntries(Object.entries(INTERNAL_ACTIONS).map(([k, v]) => [k, v.label]))
 
-function AutomationActionRow({ action, onChange, onRemove, connections }) {
+function AutomationActionRow({ action, onChange, onRemove, connections, allRoles }) {
   const isInterno = action.target === '__interno__'
   const connected = connections.filter((c) => c.connected)
   const currentIntg = connections.find((c) => c.id === action.target)
@@ -334,7 +334,7 @@ function AutomationActionsList({ azioni, onChange, connections, fields, allowCon
           <AutomationActionsList azioni={item.otherwise} onChange={(v) => update(idx, { ...item, otherwise: v })} connections={connections} fields={fields} allowCondition={true} allRoles={allRoles} />
         </div>
       ) : (
-        <AutomationActionRow key={item.id} action={item} onChange={(v) => update(idx, v)} onRemove={() => remove(idx)} connections={connections} />
+        <AutomationActionRow key={item.id} action={item} onChange={(v) => update(idx, v)} onRemove={() => remove(idx)} connections={connections} allRoles={allRoles} />
       ))}
       {list.length === 0 && <div className="text-[11px] text-gray-600 border border-dashed border-gray-800 rounded-lg py-3 text-center">Nessuna azione — aggiungine una.</div>}
       <div className="flex gap-2">

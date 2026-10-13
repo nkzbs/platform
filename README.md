@@ -58,6 +58,8 @@ cd core/backend && npm test            # 50 suite
 cd super-admin/backend && npm test     # 23 suite
 ```
 
+**Controllo completo** prima di mettere online: `bash scripts/verifica.sh` (lint, test dei due backend, compilazione dei due frontend: circa 2-3 minuti) oppure `bash scripts/verifica.sh veloce` (solo lint, pochi secondi). Il lint (`npm run lint`, ESLint) cerca solo errori veri: nomi che non esistono, chiavi doppie, codice irraggiungibile. Un hook (`.githooks/pre-push`, attivo con `git config core.hooksPath .githooks`) lo lancia a ogni push.
+
 I frontend si verificano compilando: `cd core/frontend && npx vite build` (idem `super-admin/frontend`).
 
 ## Mettere online sul NAS

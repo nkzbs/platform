@@ -201,7 +201,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
 
   const toggleDetails = (slug) => {
     setExpandedSlug((p) => (p === slug ? null : slug))
-    if (expandedSlug !== slug) { loadBackups(slug); loadSessions(slug); loadModuleStats(slug); loadBackupSettings(slug); loadAIRecommendations(slug) }
+    if (expandedSlug !== slug) { loadBackups(slug); loadSessions(slug); loadModuleStats(slug); loadBackupSettings(slug) }
   }
 
   const formatDuration = (loginAt, lastSeenAt) => {
@@ -503,7 +503,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
       ) : visibleTenants.length === 0 ? (
         <div className="bg-surface-card rounded-md p-8 text-center border border-gray-800 border-dashed">
           <div className="text-gray-500 text-sm">Nessun tenant corrisponde ai filtri scelti</div>
-          <button onClick={() => { setSearchQuery(''); setTenantStatusFilter(''); setVerticalFilter(''); setTenantsPage(1) }}
+          <button onClick={() => { setSearchQuery(''); setTenantStatusFilter(''); setTenantsPage(1) }}
             className="text-cp-primary hover:opacity-80 text-sm transition mt-1">Azzera tutti i filtri</button>
         </div>
       ) : (

@@ -547,7 +547,7 @@ function BuilderPage({ token, baseUrl, allModules, onModulesChanged, preselectSl
       // Copre sia una chiave campo (dentro le azioni/config) sia una chiave di stato
       // workflow (dentro il trigger cambio_stato) con lo stesso scan testuale.
       if (s.block_type === 'automation') {
-        const text = JSON.stringify({ trigger: s.trigger, azioni: s.azioni } || {})
+        const text = JSON.stringify({ trigger: s.trigger, azioni: s.azioni })
         if (wordRe.test(text)) usages.push(s.label || 'Automazione')
       }
       if (s.block_type === 'workflow_transition' && (s.from === oldKey || s.to === oldKey)) {

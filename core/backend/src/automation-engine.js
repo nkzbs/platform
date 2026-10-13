@@ -12,6 +12,8 @@
 // qui non esistono. Ogni esecuzione viene comunque loggata in automation_logs con
 // esito 'simulato', mai spacciata per una chiamata reale riuscita.
 
+const https = require('https');
+const http = require('http');
 const db = require('./db');
 const { getAutomationSteps, parseSchemaNormalized } = require('./schema-v3');
 const { attachComputedFields } = require('./computed-fields');
