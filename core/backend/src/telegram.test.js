@@ -196,6 +196,15 @@ async function main() {
     ok(nima.body.text.includes('Benzina') && !fede.body.text.includes('Benzina'), 'versioni diverse');
     ok(JSON.stringify(nima.body.reply_markup).includes('pay:spese_personali:'), 'Nima ha il bottone dei personali');
   });
+  await test('A CHI ARRIVA: un report può essere ristretto a certi utenti; nessuna scelta = tutti i telefoni collegati', async () => {
+    const fede = db.prepare("SELECT id FROM users WHERE username = 'fede'").get().id;
+    reports.saveSettings('scadute', { utenti: [fede] });
+    calls.length = 0; let o = await reports.sendReport('scadute', {}); eq(o.esito, 'inviato'); eq(ultimi('sendMessage').map((m) => m.body.chat_id), ['666'], 'solo Federica');
+    ok(reports.saveSettings('scadute', { utenti: [99999] }).error, 'utente inesistente'); ok(reports.saveSettings('scadute', { utenti: 'x' }).error, 'forma non valida');
+    reports.saveSettings('scadute', { utenti: [] });
+    calls.length = 0; o = await reports.sendReport('scadute', {}); eq(ultimi('sendMessage').map((m) => m.body.chat_id).sort(), ['555', '666'], 'nessuna scelta = tutti');
+    ok(reports.saveSettings('scadute', { tag: 'due parole' }).error, 'tag non valido'); eq(reports.saveSettings('scadute', { tag: 'famiglia' }).settings.scadute.tag, 'famiglia'); reports.saveSettings('scadute', { tag: 'scadenza' });
+  });
   await test('con Telegram spento nelle impostazioni dei report, non parte niente su Telegram', async () => {
     reports.saveSettings('canali', { telegram: false }); calls.length = 0; const o = await reports.sendReport('scadute', {});
     eq(o.esito, 'non configurato'); eq(ultimi('sendMessage').length, 0); reports.saveSettings('canali', { telegram: true });

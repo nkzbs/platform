@@ -24,10 +24,11 @@ export default function ReportsSettingsTab({ token, user, features = {} }) {
   const [result, setResult] = useState({}) // id -> { ok, text }
   const [aperti, setAperti] = useState({}) // id -> mostra le impostazioni del messaggio
   const [nuovoTipo, setNuovoTipo] = useState('')
+  const [telefoni, setTelefoni] = useState([]) // i telefoni Telegram collegati: { user_id, display_name, username }
   const [legacy, setLegacy] = useState(null)
   const [legacyMsg, setLegacyMsg] = useState('')
 
-  const load = async () => { const d = await api.get('/reports/settings'); if (d) setData(d); const l = await api.get('/reports/legacy'); if (l) setLegacy(l.automazioni || []) }
+  const load = async () => { const d = await api.get('/reports/settings'); if (d) setData(d); const l = await api.get('/reports/legacy'); if (l) setLegacy(l.automazioni || []); const t = await api.get('/telegram/status'); if (t && Array.isArray(t.links)) setTelefoni(t.links) }
   useEffect(() => { if (features.riepilogo_mattino) load() }, [features.riepilogo_mattino]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async (id, patch) => {
@@ -101,6 +102,29 @@ export default function ReportsSettingsTab({ token, user, features = {} }) {
     </div>
   )
 
+  // A chi arriva: su Telegram gli utenti scelti (nessuno = tutti i telefoni collegati), su WhatsApp i destinatari con il tag
+  const utentiTelefono = [...new Map(telefoni.filter((l) => l.user_id).map((l) => [l.user_id, l])).values()]
+  const Destinatari = ({ d }) => {
+    const scelti = d.utenti || []
+    const toggle = (id) => save(d.id, { utenti: scelti.includes(id) ? scelti.filter((x) => x !== id) : [...scelti, id] })
+    return (
+      <div className="space-y-2">
+        <div className="text-[11px] text-gray-500">A chi arriva su Telegram</div>
+        {utentiTelefono.length === 0 ? <div className="text-xs text-gray-600">Nessun telefono è collegato (Impostazioni → Connessioni → Telegram).</div> : (
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            <label className="flex items-center gap-1.5 text-sm text-gray-300 cursor-pointer"><input type="checkbox" checked={scelti.length === 0} onChange={() => save(d.id, { utenti: [] })} disabled={!!busy} /> Tutti</label>
+            {utentiTelefono.map((l) => (
+              <label key={l.user_id} className="flex items-center gap-1.5 text-sm text-gray-300 cursor-pointer"><input type="checkbox" checked={scelti.includes(l.user_id)} onChange={() => toggle(l.user_id)} disabled={!!busy} /> {l.display_name || l.username}</label>
+            ))}
+          </div>
+        )}
+        <Campo label="Tag dei destinatari WhatsApp (Impostazioni → Connessioni → WhatsApp)">
+          <input className={txt + ' max-w-[14rem]'} defaultValue={d.tag} key={d.id + 'tag' + d.tag} onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== d.tag && save(d.id, { tag: e.target.value.trim() })} />
+        </Campo>
+      </div>
+    )
+  }
+
   if (!features.riepilogo_mattino) return <div className="max-w-2xl text-sm text-gray-500">I report non sono attivi per questo progetto.</div>
   if (!data) return <div className="max-w-2xl text-sm text-gray-500">Caricamento…</div>
   return (
@@ -142,6 +166,7 @@ export default function ReportsSettingsTab({ token, user, features = {} }) {
                   Aggiungi «ultimo stipendio → ti restano»
                 </label>
               )}
+              <Destinatari d={d} />
               <button type="button" onClick={() => setAperti((a) => ({ ...a, [d.id]: !a[d.id] }))} className="text-xs text-gray-400 hover:text-ink">{aperti[d.id] ? '▾' : '▸'} Cosa guarda e come appare</button>
               {aperti[d.id] && (
                 <div className="grid sm:grid-cols-2 gap-3">
@@ -183,7 +208,7 @@ export default function ReportsSettingsTab({ token, user, features = {} }) {
         {nuovoTipo && <p className="text-xs text-gray-500 mt-2">{data.tipi[nuovoTipo].descrizione}</p>}
       </section>
 
-      <div className="text-xs text-gray-500 px-1">Li ricevono i destinatari con il tag <span className="font-mono text-gray-300">scadenza</span> in «Destinatari WhatsApp». Con i report accesi, gli avvisi «scadenza» per singola riga restano muti.</div>
+      <div className="text-xs text-gray-500 px-1">Su WhatsApp li ricevono i destinatari con il tag del report (di solito <span className="font-mono text-gray-300">scadenza</span>) in «Destinatari WhatsApp». Con i report accesi, gli avvisi «scadenza» per singola riga restano muti.</div>
 
       {legacy && legacy.length > 0 && (
         <section className="bg-surface-card border border-amber-900/40 rounded-xl p-5">

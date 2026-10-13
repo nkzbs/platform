@@ -145,6 +145,12 @@ global.fetch = async (url) => {
     eq((await R.sendReport('pagare', { now: IL27 })).esito, 'non configurato'); eq(sent.length, 0);
   });
   db.prepare("INSERT INTO whatsapp_recipients (nome, numero, triggers, attivo) VALUES ('Nima', '+39 333 111 1111', ?, 1)").run(JSON.stringify(['scadenza']));
+  await test('A CHI ARRIVA su WhatsApp: ogni report ha il suo tag dei destinatari', async () => {
+    fixture(); sent = [];
+    R.saveSettings('pagare', { tag: 'famiglia' }); const o = await R.sendReport('pagare', { now: IL27 });
+    eq(o.esito, 'non configurato'); ok(/tag "famiglia"/.test(o.motivo), o.motivo); eq(sent.length, 0);
+    R.saveSettings('pagare', { tag: 'scadenza' });
+  });
   await test('il controllo manda il report dovuto UNA volta sola, anche se gira ogni minuto', async () => {
     fixture(); sent = [];
     await R.tick(IL27); await R.tick(rome('2026-10-27', 18, 1, 1)); await R.tick(rome('2026-10-27', 19, 30, 1));

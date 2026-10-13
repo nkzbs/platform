@@ -46,6 +46,8 @@ const TIPI = {
   },
 };
 const FREQUENZE = ['mensile', 'giornaliera', 'settimanale'];
+// A chi arriva (per ogni definizione): `utenti` = gli utenti che li ricevono su Telegram (vuoto = tutti i telefoni collegati), `tag` = il tag dei destinatari WhatsApp.
+const DESTINATARI = { utenti: [], tag: 'scadenza' };
 
 // Le definizioni di partenza: i tre report storici (stessi id, così un messaggio già mandato non si ripete dopo l'aggiornamento).
 const DEFAULTS = {
@@ -90,7 +92,7 @@ function endOfWindow(iso, day) {
 }
 
 // ── impostazioni (JSON in tenant_settings.report_settings: { canali, definizioni: [...] }) ─────────────────────────────────
-const completa = (d) => ({ ...TIPI[d.tipo].base, ...d }); // una definizione con tutti i parametri (quelli non salvati prendono il valore di partenza del tipo)
+const completa = (d) => ({ ...DESTINATARI, ...TIPI[d.tipo].base, ...d }); // una definizione con tutti i parametri (quelli non salvati prendono il valore di partenza del tipo)
 const ID = /^[a-z][a-z0-9_]{1,30}$/; // l'id è anche il comando del bot (/id)
 function leggi() { try { const r = db.prepare('SELECT report_settings s FROM tenant_settings WHERE id = 1').get(); return r && r.s ? JSON.parse(r.s) : {}; } catch (e) { return {}; } }
 function scrivi(obj) { db.prepare('UPDATE tenant_settings SET report_settings = ? WHERE id = 1').run(JSON.stringify(obj)); }
@@ -142,6 +144,13 @@ function saveSettings(id, patch) {
   if (p.periodo != null && 'periodo' in T.base) { if (!oreCalc.PERIODI[p.periodo]) return { error: 'Periodo non valido.' }; d.periodo = p.periodo; }
   if (p.max_righe != null) { const n = int(p.max_righe, 1, 30); if (n == null) return { error: 'Le righe mostrate vanno da 1 a 30.' }; d.max_righe = n; }
   if (p.scadute_max_giorni != null) { const n = int(p.scadute_max_giorni, 1, 365); if (n == null) return { error: 'I giorni vanno da 1 a 365.' }; d.scadute_max_giorni = n; }
+  if (p.utenti != null) {
+    if (!Array.isArray(p.utenti)) return { error: 'Scelta degli utenti non valida.' };
+    const ids = [...new Set(p.utenti.map((x) => parseInt(x, 10)).filter((x) => Number.isInteger(x) && x > 0))];
+    if (ids.some((x) => !db.prepare('SELECT 1 FROM users WHERE id = ?').get(x))) return { error: 'Utente non trovato.' };
+    d.utenti = ids;
+  }
+  if (p.tag != null) { const t = String(p.tag).trim(); if (!/^[A-Za-z0-9_-]{1,40}$/.test(t)) return { error: 'Il tag può avere lettere, numeri, - e _.' }; d.tag = t; }
   if (p.stipendio != null) d.stipendio = !!p.stipendio;
   if (p.include_scadute != null) d.include_scadute = !!p.include_scadute;
   if (p.invia_se_vuoto != null) d.invia_se_vuoto = !!p.invia_se_vuoto;
@@ -328,15 +337,16 @@ async function sendReport(id, { now = new Date(), actor = 'sistema' } = {}) {
   if (canali.whatsapp) {
     const row = db.prepare("SELECT credentials FROM connections WHERE integration_id = 'whatsapp_callmebot'").get();
     waCreds = row ? require('./secrets-at-rest').unseal(row.credentials) : null;
-    dest = require('./notification-settings').recipientsForTag(TAG);
+    dest = require('./notification-settings').recipientsForTag(d.tag || TAG);
   }
   const waOk = !!(canali.whatsapp && waCreds && waCreds.api_key && dest.length);
-  const links = canali.telegram && tg.isConfigured() ? tg.listLinks() : [];
+  // Telegram: i telefoni collegati, ristretti agli utenti scelti per questo report (nessuna scelta = tutti)
+  const links = canali.telegram && tg.isConfigured() ? tg.listLinks().filter((l) => !d.utenti.length || d.utenti.includes(l.user_id)) : [];
   const tgOk = links.length > 0;
   if (!waOk && !tgOk) {
     const motivo = !canali.whatsapp && !canali.telegram ? 'Tutti i canali sono spenti'
       : canali.whatsapp && !(waCreds && waCreds.api_key) ? 'WhatsApp (CallMeBot) non è collegato' + (canali.telegram ? ' e nessun telefono è collegato a Telegram' : '')
-      : canali.whatsapp && !dest.length ? 'Nessun destinatario attivo con il tag "' + TAG + '"' : 'Nessun telefono collegato a Telegram';
+      : canali.whatsapp && !dest.length ? 'Nessun destinatario attivo con il tag "' + (d.tag || TAG) + '"' : (d.utenti.length ? 'Nessuno degli utenti scelti ha un telefono collegato a Telegram' : 'Nessun telefono collegato a Telegram');
     return { esito: 'non configurato', motivo };
   }
   const r = build(d, now);
