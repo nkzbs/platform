@@ -1,0 +1,470 @@
+[
+ {
+  "slug": "abbonamenti_generico",
+  "name": "Abbonamenti",
+  "description": "Abbonamenti e servizi ricorrenti: piano, prezzo mensile, data di inizio e rinnovo automatico.",
+  "icon": "refresh",
+  "color": "#8B5CF6",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"piano\",\"label\":\"Piano\",\"type\":\"text\"},{\"key\":\"prezzo_mensile\",\"label\":\"Prezzo mensile\",\"type\":\"currency\"},{\"key\":\"data_inizio\",\"label\":\"Data inizio\",\"type\":\"date\"},{\"key\":\"rinnovo_automatico\",\"label\":\"Rinnovo automatico\",\"type\":\"checkbox\"}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"}],\"workflow\":null,\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "ammortamenti_generico",
+  "name": "Ammortamenti",
+  "description": "Quote di ammortamento annuali di un bene, con valore residuo.",
+  "icon": "bar-chart",
+  "color": "#6366F1",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"anno\",\"label\":\"Anno\",\"type\":\"number\"},{\"key\":\"quota_ammortamento\",\"label\":\"Quota annuale\",\"type\":\"currency\"},{\"key\":\"valore_residuo\",\"label\":\"Valore residuo\",\"type\":\"currency\"}],\"relations\":[{\"key\":\"asset\",\"label\":\"Asset\",\"type\":\"many_to_one\",\"target_module\":\"asset_cespiti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"nome\"}],\"workflow\":null,\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "asset_cespiti_generico",
+  "name": "Asset e Cespiti",
+  "description": "Beni aziendali e cespiti: categoria, valore e data di acquisto, vita utile.",
+  "icon": "box",
+  "color": "#7C3AED",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"nome\",\"label\":\"Nome bene\",\"type\":\"text\",\"required\":true},{\"key\":\"categoria\",\"label\":\"Categoria\",\"type\":\"select\",\"options\":[\"Attrezzatura\",\"Macchinario\",\"Veicolo\",\"Immobile\",\"Informatico\",\"Altro\"]},{\"key\":\"valore_acquisto\",\"label\":\"Valore di acquisto\",\"type\":\"currency\"},{\"key\":\"data_acquisto\",\"label\":\"Data acquisto\",\"type\":\"date\"},{\"key\":\"vita_utile_anni\",\"label\":\"Vita utile (anni)\",\"type\":\"number\"}],\"relations\":[],\"workflow\":null,\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "attivita_generico",
+  "name": "Attività",
+  "description": "Cose da fare assegnate a una persona, con scadenza e stato (da fare, in corso, fatto).",
+  "icon": "clipboard",
+  "color": "#9333EA",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"fld_001\",\"block_type\":\"field\",\"key\":\"titolo\",\"label\":\"Titolo\",\"type\":\"text\",\"required\":true},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"descrizione\",\"label\":\"Descrizione\",\"type\":\"textarea\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"assegnato_a\",\"label\":\"Assegnato a\",\"type\":\"text\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"scadenza\",\"label\":\"Scadenza\",\"type\":\"date\"},{\"id\":\"wst_005\",\"block_type\":\"workflow_state\",\"key\":\"da_fare\",\"label\":\"Da fare\",\"color\":\"#94A3B8\",\"initial\":true},{\"id\":\"wst_006\",\"block_type\":\"workflow_state\",\"key\":\"in_corso\",\"label\":\"In corso\",\"color\":\"#3B82F6\"},{\"id\":\"wst_007\",\"block_type\":\"workflow_state\",\"key\":\"fatto\",\"label\":\"Fatto\",\"color\":\"#10B981\"},{\"id\":\"wtr_008\",\"block_type\":\"workflow_transition\",\"from\":\"da_fare\",\"to\":\"in_corso\",\"label\":\"Avvia\"},{\"id\":\"wtr_009\",\"block_type\":\"workflow_transition\",\"from\":\"in_corso\",\"to\":\"fatto\",\"label\":\"Completa\"},{\"id\":\"wtr_010\",\"block_type\":\"workflow_transition\",\"from\":\"fatto\",\"to\":\"da_fare\",\"label\":\"Riapri\"}]}"
+ },
+ {
+  "slug": "calendario_generico",
+  "name": "Calendario",
+  "description": "Appuntamenti e scadenze con inizio, fine, luogo e cliente collegato.",
+  "icon": "calendar",
+  "color": "#0EA5E9",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"fld_001\",\"block_type\":\"field\",\"key\":\"titolo\",\"label\":\"Titolo\",\"type\":\"text\",\"required\":true},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"data_inizio\",\"label\":\"Inizio\",\"type\":\"datetime\",\"required\":true},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"data_fine\",\"label\":\"Fine\",\"type\":\"datetime\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"luogo\",\"label\":\"Luogo\",\"type\":\"text\"},{\"id\":\"fld_005\",\"block_type\":\"field\",\"key\":\"note\",\"label\":\"Note\",\"type\":\"textarea\"},{\"id\":\"rel_006\",\"block_type\":\"relation\",\"key\":\"cliente\",\"label\":\"Cliente collegato (opzionale)\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"}]}"
+ },
+ {
+  "slug": "checklist_generico",
+  "name": "Checklist",
+  "description": "Elenchi di controlli da spuntare, anche per una procedura ripetuta.",
+  "icon": "check",
+  "color": "#059669",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"titolo\",\"label\":\"Titolo\",\"type\":\"text\",\"required\":true},{\"key\":\"completato\",\"label\":\"Completato\",\"type\":\"checkbox\"}],\"relations\":[{\"key\":\"progetto\",\"label\":\"Progetto collegato (opzionale)\",\"type\":\"many_to_one\",\"target_module\":\"progetti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"nome\"}],\"workflow\":null,\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "clienti_generico",
+  "name": "Clienti",
+  "description": "Anagrafica clienti: ragione sociale, partita IVA, codice fiscale, contatti e indirizzo.",
+  "icon": "user",
+  "color": "#2563EB",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"fld_001\",\"block_type\":\"field\",\"key\":\"ragione_sociale\",\"label\":\"Ragione sociale\",\"type\":\"text\",\"required\":true},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"piva\",\"label\":\"Partita IVA\",\"type\":\"text\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"codice_fiscale\",\"label\":\"Codice fiscale\",\"type\":\"text\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"telefono\",\"label\":\"Telefono\",\"type\":\"phone\"},{\"id\":\"fld_005\",\"block_type\":\"field\",\"key\":\"email\",\"label\":\"Email\",\"type\":\"email\"},{\"id\":\"fld_006\",\"block_type\":\"field\",\"key\":\"indirizzo\",\"label\":\"Indirizzo\",\"type\":\"text\"},{\"id\":\"fld_007\",\"block_type\":\"field\",\"key\":\"citta\",\"label\":\"Città\",\"type\":\"text\"},{\"id\":\"fld_008\",\"block_type\":\"field\",\"key\":\"note\",\"label\":\"Note\",\"type\":\"textarea\"}]}"
+ },
+ {
+  "slug": "comunicazioni_generico",
+  "name": "Comunicazioni",
+  "description": "Storico dei contatti con clienti o fornitori: data, canale, oggetto, note.",
+  "icon": "message-circle",
+  "color": "#0891B2",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"key\":\"canale\",\"label\":\"Canale\",\"type\":\"select\",\"options\":[\"Email\",\"Telefono\",\"Incontro\",\"Chat\"]},{\"key\":\"oggetto\",\"label\":\"Oggetto\",\"type\":\"text\"},{\"key\":\"note\",\"label\":\"Note\",\"type\":\"textarea\"}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"}],\"workflow\":null,\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "contratti_generico",
+  "name": "Contratti",
+  "description": "Contratti con tipo, date di inizio e fine e valore.",
+  "icon": "file",
+  "color": "#334155",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"tipo\",\"label\":\"Tipo contratto\",\"type\":\"text\"},{\"key\":\"data_inizio\",\"label\":\"Data inizio\",\"type\":\"date\"},{\"key\":\"data_fine\",\"label\":\"Data fine\",\"type\":\"date\"},{\"key\":\"valore\",\"label\":\"Valore\",\"type\":\"currency\"}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"}],\"workflow\":null,\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "dipendenti_generico",
+  "name": "Dipendenti",
+  "description": "Anagrafica del personale: nome, ruolo, data di assunzione, contatti.",
+  "icon": "users",
+  "color": "#4F46E5",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"fld_001\",\"block_type\":\"field\",\"key\":\"nome\",\"label\":\"Nome\",\"type\":\"text\",\"required\":true},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"cognome\",\"label\":\"Cognome\",\"type\":\"text\",\"required\":true},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"ruolo\",\"label\":\"Ruolo\",\"type\":\"text\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"data_assunzione\",\"label\":\"Data assunzione\",\"type\":\"date\"},{\"id\":\"fld_005\",\"block_type\":\"field\",\"key\":\"email\",\"label\":\"Email\",\"type\":\"email\"},{\"id\":\"fld_006\",\"block_type\":\"field\",\"key\":\"telefono\",\"label\":\"Telefono\",\"type\":\"phone\"}]}"
+ },
+ {
+  "slug": "documenti_generico",
+  "name": "Documenti",
+  "description": "Archivio di documenti con titolo, tipo, data e allegato.",
+  "icon": "file",
+  "color": "#334155",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"titolo\",\"label\":\"Titolo\",\"type\":\"text\",\"required\":true},{\"key\":\"tipo\",\"label\":\"Tipo documento\",\"type\":\"select\",\"options\":[\"Contratto\",\"Procura\",\"Corrispondenza\",\"Fattura fornitore\",\"Altro\"]},{\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"key\":\"allegato\",\"label\":\"Allegato\",\"type\":\"file\"}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"}],\"workflow\":null,\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "fatture_generico",
+  "name": "Fatture",
+  "description": "Fatture emesse ai clienti: numero, data, scadenza, imponibile, IVA e totale, con stati (bozza, emessa, pagata, scaduta).",
+  "icon": "file",
+  "color": "#DC2626",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"numero\",\"label\":\"Numero fattura\",\"type\":\"text\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"data_emissione\",\"label\":\"Data emissione\",\"type\":\"date\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"scadenza\",\"label\":\"Scadenza\",\"type\":\"date\"},{\"id\":\"fld_005\",\"block_type\":\"field\",\"key\":\"imponibile_calcolato\",\"label\":\"Imponibile calcolato\",\"type\":\"computed\",\"expr\":\"sum_children(fatture_righe_generico.imponibile_riga)\"},{\"id\":\"fld_006\",\"block_type\":\"field\",\"key\":\"iva_calcolata\",\"label\":\"IVA calcolata\",\"type\":\"computed\",\"expr\":\"sum_children(fatture_righe_generico.iva_riga)\"},{\"id\":\"fld_007\",\"block_type\":\"field\",\"key\":\"totale_lordo_calcolato\",\"label\":\"Totale fattura\",\"type\":\"computed\",\"expr\":\"sum_children(fatture_righe_generico.imponibile_riga) + sum_children(fatture_righe_generico.iva_riga)\"},{\"id\":\"wst_008\",\"block_type\":\"workflow_state\",\"key\":\"bozza\",\"label\":\"Bozza\",\"color\":\"#94A3B8\",\"initial\":true},{\"id\":\"wst_009\",\"block_type\":\"workflow_state\",\"key\":\"emessa\",\"label\":\"Emessa\",\"color\":\"#3B82F6\"},{\"id\":\"wst_010\",\"block_type\":\"workflow_state\",\"key\":\"pagata\",\"label\":\"Pagata\",\"color\":\"#10B981\"},{\"id\":\"wst_011\",\"block_type\":\"workflow_state\",\"key\":\"scaduta\",\"label\":\"Scaduta\",\"color\":\"#EF4444\"},{\"id\":\"wtr_012\",\"block_type\":\"workflow_transition\",\"from\":\"bozza\",\"to\":\"emessa\",\"label\":\"Emetti\"},{\"id\":\"wtr_013\",\"block_type\":\"workflow_transition\",\"from\":\"emessa\",\"to\":\"pagata\",\"label\":\"Segna pagata\"},{\"id\":\"wtr_014\",\"block_type\":\"workflow_transition\",\"from\":\"emessa\",\"to\":\"scaduta\",\"label\":\"Segna scaduta\"},{\"id\":\"aut_incasso\",\"block_type\":\"automation\",\"label\":\"Registra incasso in prima nota\",\"trigger\":{\"evento\":\"cambio_stato\",\"stato\":\"pagata\"},\"azioni\":[{\"target\":\"__interno__\",\"azione\":\"crea_record_da_padre\",\"config\":{\"figli_fissi\":[{\"modulo_destinazione_figli\":\"movimenti_generico\",\"mappatura_campi_figli\":{\"causale\":\"Incasso fattura\",\"importo\":\"campo:totale_lordo_calcolato\",\"data\":\"_oggi_\",\"tipo\":\"Entrata\"}}]}}]},{\"id\":\"prm_015\",\"block_type\":\"permissions\",\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":false}]}]}"
+ },
+ {
+  "slug": "formazione_generico",
+  "name": "Formazione",
+  "description": "Corsi di formazione seguiti dal personale, con data ed esito.",
+  "icon": "sparkles",
+  "color": "#0D9488",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"corso\",\"label\":\"Corso\",\"type\":\"text\",\"required\":true},{\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"key\":\"esito\",\"label\":\"Esito\",\"type\":\"select\",\"options\":[\"Superato\",\"Non superato\",\"In corso\"]}],\"relations\":[{\"key\":\"dipendente\",\"label\":\"Dipendente\",\"type\":\"many_to_one\",\"target_module\":\"dipendenti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"nome\"}],\"workflow\":null,\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "fornitori_generico",
+  "name": "Fornitori",
+  "description": "Anagrafica fornitori: ragione sociale, partita IVA, contatti, categoria.",
+  "icon": "box",
+  "color": "#7C3AED",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"fld_001\",\"block_type\":\"field\",\"key\":\"ragione_sociale\",\"label\":\"Ragione sociale\",\"type\":\"text\",\"required\":true},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"piva\",\"label\":\"Partita IVA\",\"type\":\"text\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"telefono\",\"label\":\"Telefono\",\"type\":\"phone\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"email\",\"label\":\"Email\",\"type\":\"email\"},{\"id\":\"fld_005\",\"block_type\":\"field\",\"key\":\"categoria\",\"label\":\"Categoria\",\"type\":\"select\",\"options\":[\"Materie prime\",\"Servizi\",\"Logistica\",\"Altro\"]}]}"
+ },
+ {
+  "slug": "giacenze_generico",
+  "name": "Giacenze",
+  "description": "Quantità disponibile di un prodotto e soglia minima di riordino.",
+  "icon": "box",
+  "color": "#B45309",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"quantita_disponibile\",\"label\":\"Quantità disponibile\",\"type\":\"number\"},{\"key\":\"soglia_minima\",\"label\":\"Soglia minima\",\"type\":\"number\"}],\"relations\":[{\"key\":\"prodotto\",\"label\":\"Prodotto\",\"type\":\"many_to_one\",\"target_module\":\"prodotti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"nome\"}],\"workflow\":null,\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "impianti_installati_generico",
+  "name": "Impianti Installati",
+  "description": "Impianti installati presso i clienti: tipo, potenza, data di installazione, garanzia e manutenzioni, con stati.",
+  "icon": "zap",
+  "color": "#F59E0B",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_cliente\",\"block_type\":\"relation\",\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"id\":\"fld_tipo\",\"block_type\":\"field\",\"key\":\"tipo_impianto\",\"label\":\"Tipo impianto\",\"type\":\"select\",\"required\":true,\"options\":[\"Fotovoltaico\",\"Climatizzazione\",\"Sicurezza / allarme\",\"Riscaldamento\",\"Depurazione acqua\",\"Altro\"]},{\"id\":\"fld_capacita\",\"block_type\":\"field\",\"key\":\"potenza_capacita\",\"label\":\"Potenza / capacità (es. 6 kW, 12000 BTU)\",\"type\":\"text\"},{\"id\":\"fld_data_install\",\"block_type\":\"field\",\"key\":\"data_installazione\",\"label\":\"Data installazione\",\"type\":\"date\",\"required\":true},{\"id\":\"fld_garanzia\",\"block_type\":\"field\",\"key\":\"scadenza_garanzia\",\"label\":\"Scadenza garanzia\",\"type\":\"date\"},{\"id\":\"fld_prossima_manut\",\"block_type\":\"field\",\"key\":\"prossima_manutenzione\",\"label\":\"Prossima manutenzione\",\"type\":\"date\"},{\"id\":\"fld_note\",\"block_type\":\"field\",\"key\":\"note_tecniche\",\"label\":\"Note tecniche\",\"type\":\"textarea\"},{\"id\":\"wst_preventivato\",\"block_type\":\"workflow_state\",\"key\":\"preventivato\",\"label\":\"Preventivato\",\"color\":\"#6B7280\",\"initial\":true},{\"id\":\"wst_installato\",\"block_type\":\"workflow_state\",\"key\":\"installato\",\"label\":\"Installato\",\"color\":\"#3B82F6\"},{\"id\":\"wst_garanzia_attiva\",\"block_type\":\"workflow_state\",\"key\":\"garanzia_attiva\",\"label\":\"In garanzia\",\"color\":\"#10B981\"},{\"id\":\"wst_manut_scaduta\",\"block_type\":\"workflow_state\",\"key\":\"manutenzione_scaduta\",\"label\":\"Manutenzione scaduta\",\"color\":\"#EF4444\"},{\"id\":\"wtr_1\",\"block_type\":\"workflow_transition\",\"from\":\"preventivato\",\"to\":\"installato\",\"label\":\"Installa\"},{\"id\":\"wtr_2\",\"block_type\":\"workflow_transition\",\"from\":\"installato\",\"to\":\"garanzia_attiva\",\"label\":\"Attiva garanzia\"},{\"id\":\"wtr_3\",\"block_type\":\"workflow_transition\",\"from\":\"garanzia_attiva\",\"to\":\"manutenzione_scaduta\",\"label\":\"Segnala manutenzione scaduta\"},{\"id\":\"wtr_4\",\"block_type\":\"workflow_transition\",\"from\":\"manutenzione_scaduta\",\"to\":\"garanzia_attiva\",\"label\":\"Manutenzione eseguita\"}]}"
+ },
+ {
+  "slug": "insoluti_generico",
+  "name": "Insoluti",
+  "description": "Pagamenti non incassati: importo scoperto e scadenza, con stati (aperto, sollecitato, recuperato, perso).",
+  "icon": "alert-triangle",
+  "color": "#DC2626",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"importo_scoperto\",\"label\":\"Importo scoperto\",\"type\":\"currency\"},{\"key\":\"data_scadenza_originale\",\"label\":\"Scadenza originale\",\"type\":\"date\"}],\"relations\":[{\"key\":\"fattura\",\"label\":\"Fattura\",\"type\":\"many_to_one\",\"target_module\":\"fatture_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"numero\"}],\"workflow\":{\"states\":[{\"key\":\"aperto\",\"label\":\"Aperto\",\"color\":\"#F59E0B\",\"initial\":true},{\"key\":\"sollecitato\",\"label\":\"Sollecitato\",\"color\":\"#DC2626\"},{\"key\":\"recuperato\",\"label\":\"Recuperato\",\"color\":\"#10B981\"},{\"key\":\"perso\",\"label\":\"Perso\",\"color\":\"#6B7280\"}],\"transitions\":[{\"from\":\"aperto\",\"to\":\"sollecitato\",\"label\":\"Sollecita\"},{\"from\":\"sollecitato\",\"to\":\"recuperato\",\"label\":\"Segna recuperato\"},{\"from\":\"sollecitato\",\"to\":\"perso\",\"label\":\"Segna perso\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[{\"id\":\"aut_011\",\"block_type\":\"automation\",\"label\":\"Notifica insoluto aperto\",\"trigger\":{\"evento\":\"cambio_stato\",\"stato\":\"aperto\"},\"azioni\":[{\"target\":\"__interno__\",\"azione\":\"notifica_interna\",\"config\":{\"message\":\"Nuovo insoluto registrato — verificare con il cliente.\"}}]}]}"
+ },
+ {
+  "slug": "newsletter_iscritti_generico",
+  "name": "Iscritti Newsletter",
+  "description": "Iscritti a una newsletter: nome, email, data di iscrizione, attivo o no.",
+  "icon": "bell",
+  "color": "#DB2777",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"nome\",\"label\":\"Nome\",\"type\":\"text\"},{\"key\":\"email\",\"label\":\"Email\",\"type\":\"email\",\"required\":true},{\"key\":\"iscritto_il\",\"label\":\"Iscritto il\",\"type\":\"date\"},{\"key\":\"attivo\",\"label\":\"Attivo\",\"type\":\"checkbox\"}],\"relations\":[],\"workflow\":null,\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "listini_generico",
+  "name": "Listini prezzi",
+  "description": "Prezzi speciali per periodo, per prodotto o cliente.",
+  "icon": "list",
+  "color": "#0891B2",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"prezzo_speciale\",\"label\":\"Prezzo speciale\",\"type\":\"currency\"},{\"key\":\"valido_dal\",\"label\":\"Valido dal\",\"type\":\"date\"},{\"key\":\"valido_al\",\"label\":\"Valido al\",\"type\":\"date\"}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"key\":\"prodotto\",\"label\":\"Prodotto\",\"type\":\"many_to_one\",\"target_module\":\"prodotti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"nome\"}],\"workflow\":null,\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "manutenzioni_generico",
+  "name": "Manutenzioni",
+  "description": "Interventi di manutenzione su un bene: tipo, data, descrizione, con stati (segnalata, in corso, completata).",
+  "icon": "tool",
+  "color": "#7C3AED",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"asset\",\"label\":\"Asset\",\"type\":\"text\",\"required\":true},{\"key\":\"tipo_intervento\",\"label\":\"Tipo intervento\",\"type\":\"select\",\"options\":[\"Ordinaria\",\"Straordinaria\",\"Guasto\"]},{\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"key\":\"descrizione\",\"label\":\"Descrizione\",\"type\":\"textarea\"}],\"relations\":[],\"workflow\":{\"states\":[{\"key\":\"segnalata\",\"label\":\"Segnalata\",\"color\":\"#94A3B8\",\"initial\":true},{\"key\":\"in_corso\",\"label\":\"In corso\",\"color\":\"#3B82F6\"},{\"key\":\"completata\",\"label\":\"Completata\",\"color\":\"#10B981\"}],\"transitions\":[{\"from\":\"segnalata\",\"to\":\"in_corso\",\"label\":\"Avvia\"},{\"from\":\"in_corso\",\"to\":\"completata\",\"label\":\"Completa\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "movimenti_generico",
+  "name": "Movimenti",
+  "description": "Prima nota: movimenti contabili con data, causale, importo e conto.",
+  "icon": "bar-chart",
+  "color": "#0891B2",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"conto\",\"label\":\"Conto\",\"type\":\"many_to_one\",\"target_module\":\"piano_conti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"nome\"},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"causale\",\"label\":\"Causale\",\"type\":\"text\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"importo\",\"label\":\"Importo\",\"type\":\"currency\"},{\"id\":\"fld_005\",\"block_type\":\"field\",\"key\":\"tipo\",\"label\":\"Tipo\",\"type\":\"select\",\"options\":[\"Entrata\",\"Uscita\"]}]}"
+ },
+ {
+  "slug": "movimenti_bancari_generico",
+  "name": "Movimenti Bancari",
+  "description": "Movimenti del conto corrente con data, descrizione, importo e riconciliazione.",
+  "icon": "bar-chart",
+  "color": "#0EA5E9",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"key\":\"descrizione\",\"label\":\"Descrizione\",\"type\":\"text\"},{\"key\":\"importo\",\"label\":\"Importo\",\"type\":\"currency\"},{\"key\":\"riconciliato\",\"label\":\"Riconciliato\",\"type\":\"checkbox\"}],\"relations\":[{\"key\":\"conto\",\"label\":\"Conto\",\"type\":\"many_to_one\",\"target_module\":\"piano_conti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"nome\"}],\"workflow\":null,\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "note_generico",
+  "name": "Note",
+  "description": "Note libere con titolo, contenuto e categoria.",
+  "icon": "file",
+  "color": "#CA8A04",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"fld_001\",\"block_type\":\"field\",\"key\":\"titolo\",\"label\":\"Titolo\",\"type\":\"text\",\"required\":true},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"contenuto\",\"label\":\"Contenuto\",\"type\":\"textarea\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"categoria\",\"label\":\"Categoria\",\"type\":\"text\"}]}"
+ },
+ {
+  "slug": "note_credito_generico",
+  "name": "Note Credito",
+  "description": "Note di credito: numero, data, motivo, importo.",
+  "icon": "file",
+  "color": "#DC2626",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"numero\",\"label\":\"Numero nota\",\"type\":\"text\"},{\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"key\":\"motivo\",\"label\":\"Motivo\",\"type\":\"select\",\"options\":[\"Reso merce\",\"Errore fatturazione\",\"Sconto post-vendita\",\"Altro\"]},{\"key\":\"importo\",\"label\":\"Importo\",\"type\":\"currency\"}],\"relations\":[{\"key\":\"fattura\",\"label\":\"Fattura originale\",\"type\":\"many_to_one\",\"target_module\":\"fatture_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"numero\"}],\"workflow\":null,\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "ordini_generico",
+  "name": "Ordini",
+  "description": "Ordini dei clienti: numero, data, importo totale, con stati (bozza, confermato, evaso, annullato).",
+  "icon": "file",
+  "color": "#0EA5E9",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"numero\",\"label\":\"Numero ordine\",\"type\":\"text\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"importo_totale_calcolato\",\"label\":\"Importo totale\",\"type\":\"computed\",\"expr\":\"sum_children(ordini_righe_generico.totale_riga)\"},{\"id\":\"wst_005\",\"block_type\":\"workflow_state\",\"key\":\"bozza\",\"label\":\"Bozza\",\"color\":\"#F59E0B\",\"initial\":true},{\"id\":\"wst_006\",\"block_type\":\"workflow_state\",\"key\":\"confermato\",\"label\":\"Confermato\",\"color\":\"#3B82F6\"},{\"id\":\"wst_007\",\"block_type\":\"workflow_state\",\"key\":\"evaso\",\"label\":\"Evaso\",\"color\":\"#10B981\"},{\"id\":\"wst_008\",\"block_type\":\"workflow_state\",\"key\":\"annullato\",\"label\":\"Annullato\",\"color\":\"#EF4444\"},{\"id\":\"wtr_009\",\"block_type\":\"workflow_transition\",\"from\":\"bozza\",\"to\":\"confermato\",\"label\":\"Conferma\"},{\"id\":\"wtr_010\",\"block_type\":\"workflow_transition\",\"from\":\"confermato\",\"to\":\"evaso\",\"label\":\"Segna evaso\"},{\"id\":\"wtr_011\",\"block_type\":\"workflow_transition\",\"from\":\"bozza\",\"to\":\"annullato\",\"label\":\"Annulla\"},{\"id\":\"wtr_012\",\"block_type\":\"workflow_transition\",\"from\":\"confermato\",\"to\":\"annullato\",\"label\":\"Annulla\"},{\"id\":\"aut_evaso\",\"block_type\":\"automation\",\"label\":\"Notifica evasione ordine\",\"trigger\":{\"evento\":\"cambio_stato\",\"stato\":\"evaso\"},\"azioni\":[{\"target\":\"__interno__\",\"azione\":\"notifica_interna\",\"config\":{\"messaggio\":\"Ordine evaso — procedere con la fatturazione.\"}}]},{\"id\":\"prm_013\",\"block_type\":\"permissions\",\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":false}]}]}"
+ },
+ {
+  "slug": "ordini_acquisto_generico",
+  "name": "Ordini Acquisto",
+  "description": "Ordini ai fornitori: numero, data, importo, con stati (bozza, inviato, ricevuto).",
+  "icon": "download",
+  "color": "#B45309",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"fornitore\",\"label\":\"Fornitore\",\"type\":\"many_to_one\",\"target_module\":\"fornitori_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"numero\",\"label\":\"Numero ordine\",\"type\":\"text\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"importo_totale_calcolato\",\"label\":\"Importo totale\",\"type\":\"computed\",\"expr\":\"sum_children(ordini_acquisto_righe_generico.totale_riga)\"},{\"id\":\"wst_005\",\"block_type\":\"workflow_state\",\"key\":\"bozza\",\"label\":\"Bozza\",\"color\":\"#F59E0B\",\"initial\":true},{\"id\":\"wst_006\",\"block_type\":\"workflow_state\",\"key\":\"inviato\",\"label\":\"Inviato\",\"color\":\"#3B82F6\"},{\"id\":\"wst_007\",\"block_type\":\"workflow_state\",\"key\":\"ricevuto\",\"label\":\"Ricevuto\",\"color\":\"#10B981\"},{\"id\":\"wtr_008\",\"block_type\":\"workflow_transition\",\"from\":\"bozza\",\"to\":\"inviato\",\"label\":\"Invia\"},{\"id\":\"wtr_009\",\"block_type\":\"workflow_transition\",\"from\":\"inviato\",\"to\":\"ricevuto\",\"label\":\"Segna ricevuto\"},{\"id\":\"prm_010\",\"block_type\":\"permissions\",\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":false}]}]}"
+ },
+ {
+  "slug": "ore_lavorate_generico",
+  "name": "Ore Lavorate",
+  "description": "Ore lavorate su un progetto da una persona, con descrizione dell'attività.",
+  "icon": "clock",
+  "color": "#65A30D",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"progetto\",\"label\":\"Progetto\",\"type\":\"many_to_one\",\"target_module\":\"progetti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"nome\"},{\"id\":\"rel_002\",\"block_type\":\"relation\",\"key\":\"dipendente\",\"label\":\"Dipendente\",\"type\":\"many_to_one\",\"target_module\":\"dipendenti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"nome\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"ore\",\"label\":\"Ore\",\"type\":\"number\"},{\"id\":\"fld_005\",\"block_type\":\"field\",\"key\":\"descrizione\",\"label\":\"Descrizione attività\",\"type\":\"textarea\"}]}"
+ },
+ {
+  "slug": "fatture_pagamenti_generico",
+  "name": "Pagamenti Fattura",
+  "description": "Pagamenti ricevuti per una fattura: data, importo, metodo.",
+  "icon": "credit-card",
+  "color": "#10B981",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"data\",\"label\":\"Data pagamento\",\"type\":\"date\"},{\"key\":\"importo\",\"label\":\"Importo\",\"type\":\"currency\"},{\"key\":\"metodo\",\"label\":\"Metodo\",\"type\":\"select\",\"options\":[\"Bonifico\",\"Contanti\",\"Carta\",\"RID/SDD\",\"Assegno\"]}],\"relations\":[{\"key\":\"fattura\",\"label\":\"Fattura\",\"type\":\"many_to_one\",\"target_module\":\"fatture_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"numero\"}],\"workflow\":null,\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "piano_conti_generico",
+  "name": "Piano dei Conti",
+  "description": "Piano dei conti: codice, nome del conto, tipo.",
+  "icon": "list",
+  "color": "#334155",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"fld_001\",\"block_type\":\"field\",\"key\":\"codice\",\"label\":\"Codice\",\"type\":\"text\",\"required\":true},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"nome\",\"label\":\"Nome conto\",\"type\":\"text\",\"required\":true},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"tipo\",\"label\":\"Tipo\",\"type\":\"select\",\"options\":[\"Attivo\",\"Passivo\",\"Costo\",\"Ricavo\"]}]}"
+ },
+ {
+  "slug": "prenotazioni_generico",
+  "name": "Prenotazioni",
+  "description": "Prenotazioni di una risorsa (camera, sala, mezzo, tavolo) con inizio e fine e stati (richiesta, confermata, in corso, conclusa, annullata).",
+  "icon": "calendar",
+  "color": "#DB2777",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"risorsa\",\"label\":\"Risorsa\",\"type\":\"text\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"data_inizio\",\"label\":\"Data/ora inizio\",\"type\":\"datetime\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"data_fine\",\"label\":\"Data/ora fine\",\"type\":\"datetime\"},{\"id\":\"wst_005\",\"block_type\":\"workflow_state\",\"key\":\"richiesta\",\"label\":\"Richiesta\",\"color\":\"#94A3B8\",\"initial\":true},{\"id\":\"wst_006\",\"block_type\":\"workflow_state\",\"key\":\"confermata\",\"label\":\"Confermata\",\"color\":\"#3B82F6\"},{\"id\":\"wst_007\",\"block_type\":\"workflow_state\",\"key\":\"in_corso\",\"label\":\"In corso\",\"color\":\"#8B5CF6\"},{\"id\":\"wst_008\",\"block_type\":\"workflow_state\",\"key\":\"conclusa\",\"label\":\"Conclusa\",\"color\":\"#10B981\"},{\"id\":\"wst_009\",\"block_type\":\"workflow_state\",\"key\":\"annullata\",\"label\":\"Annullata\",\"color\":\"#EF4444\"},{\"id\":\"wtr_010\",\"block_type\":\"workflow_transition\",\"from\":\"richiesta\",\"to\":\"confermata\",\"label\":\"Conferma\"},{\"id\":\"wtr_011\",\"block_type\":\"workflow_transition\",\"from\":\"confermata\",\"to\":\"in_corso\",\"label\":\"Check-in\"},{\"id\":\"wtr_012\",\"block_type\":\"workflow_transition\",\"from\":\"in_corso\",\"to\":\"conclusa\",\"label\":\"Check-out\"},{\"id\":\"wtr_013\",\"block_type\":\"workflow_transition\",\"from\":\"richiesta\",\"to\":\"annullata\",\"label\":\"Annulla\"},{\"id\":\"wtr_014\",\"block_type\":\"workflow_transition\",\"from\":\"confermata\",\"to\":\"annullata\",\"label\":\"Annulla\"}]}"
+ },
+ {
+  "slug": "presenze_generico",
+  "name": "Presenze",
+  "description": "Presenze e ore lavorate di una persona per giorno, con tipo (ordinario, ferie, malattia).",
+  "icon": "clock",
+  "color": "#0D9488",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"dipendente\",\"label\":\"Dipendente\",\"type\":\"many_to_one\",\"target_module\":\"dipendenti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"nome\"},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"ore_lavorate\",\"label\":\"Ore lavorate\",\"type\":\"number\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"tipo\",\"label\":\"Tipo\",\"type\":\"select\",\"options\":[\"Presenza\",\"Malattia\",\"Ferie\",\"Permesso\"]}]}"
+ },
+ {
+  "slug": "preventivi_generico",
+  "name": "Preventivi",
+  "description": "Preventivi: numero, data, validità in giorni, importo, con stati (bozza, inviato, accettato, rifiutato, scaduto).",
+  "icon": "file",
+  "color": "#65A30D",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"numero\",\"label\":\"Numero preventivo\",\"type\":\"text\"},{\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"key\":\"validita_giorni\",\"label\":\"Validità (giorni)\",\"type\":\"number\"},{\"key\":\"importo\",\"label\":\"Importo\",\"type\":\"currency\"}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"}],\"workflow\":{\"states\":[{\"key\":\"bozza\",\"label\":\"Bozza\",\"color\":\"#94A3B8\",\"initial\":true},{\"key\":\"inviato\",\"label\":\"Inviato\",\"color\":\"#3B82F6\"},{\"key\":\"accettato\",\"label\":\"Accettato\",\"color\":\"#10B981\"},{\"key\":\"rifiutato\",\"label\":\"Rifiutato\",\"color\":\"#EF4444\"},{\"key\":\"scaduto\",\"label\":\"Scaduto\",\"color\":\"#6B7280\"}],\"transitions\":[{\"from\":\"bozza\",\"to\":\"inviato\",\"label\":\"Invia\"},{\"from\":\"inviato\",\"to\":\"accettato\",\"label\":\"Segna accettato\"},{\"from\":\"inviato\",\"to\":\"rifiutato\",\"label\":\"Segna rifiutato\"},{\"from\":\"inviato\",\"to\":\"scaduto\",\"label\":\"Segna scaduto\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[{\"id\":\"aut_015\",\"block_type\":\"automation\",\"label\":\"Notifica preventivo accettato\",\"trigger\":{\"evento\":\"cambio_stato\",\"stato\":\"accettato\"},\"azioni\":[{\"target\":\"__interno__\",\"azione\":\"notifica_interna\",\"config\":{\"message\":\"Preventivo accettato dal cliente — procedere con l'ordine.\"}}]}]}"
+ },
+ {
+  "slug": "prodotti_generico",
+  "name": "Prodotti",
+  "description": "Catalogo prodotti: nome, codice, categoria, prezzo, unità di misura.",
+  "icon": "box",
+  "color": "#059669",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"fld_001\",\"block_type\":\"field\",\"key\":\"nome\",\"label\":\"Nome\",\"type\":\"text\",\"required\":true},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"codice\",\"label\":\"Codice\",\"type\":\"text\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"categoria\",\"label\":\"Categoria\",\"type\":\"text\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"prezzo\",\"label\":\"Prezzo\",\"type\":\"currency\"},{\"id\":\"fld_005\",\"block_type\":\"field\",\"key\":\"unita_misura\",\"label\":\"Unità di misura\",\"type\":\"select\",\"options\":[\"Pezzo\",\"Kg\",\"Litro\",\"Ora\",\"Servizio\"]},{\"id\":\"fld_006\",\"block_type\":\"field\",\"key\":\"descrizione\",\"label\":\"Descrizione\",\"type\":\"textarea\"}]}"
+ },
+ {
+  "slug": "progetti_generico",
+  "name": "Progetti",
+  "description": "Progetti o commesse: budget, date, cliente, con stati (pianificato, in corso, completato, sospeso).",
+  "icon": "clipboard",
+  "color": "#9333EA",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"nome\",\"label\":\"Nome progetto\",\"type\":\"text\",\"required\":true},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"budget\",\"label\":\"Budget\",\"type\":\"currency\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"data_inizio\",\"label\":\"Data inizio\",\"type\":\"date\"},{\"id\":\"fld_005\",\"block_type\":\"field\",\"key\":\"data_fine_prevista\",\"label\":\"Data fine prevista\",\"type\":\"date\"},{\"id\":\"wst_006\",\"block_type\":\"workflow_state\",\"key\":\"pianificato\",\"label\":\"Pianificato\",\"color\":\"#94A3B8\",\"initial\":true},{\"id\":\"wst_007\",\"block_type\":\"workflow_state\",\"key\":\"in_corso\",\"label\":\"In corso\",\"color\":\"#3B82F6\"},{\"id\":\"wst_008\",\"block_type\":\"workflow_state\",\"key\":\"completato\",\"label\":\"Completato\",\"color\":\"#10B981\"},{\"id\":\"wst_009\",\"block_type\":\"workflow_state\",\"key\":\"sospeso\",\"label\":\"Sospeso\",\"color\":\"#F59E0B\"},{\"id\":\"wtr_010\",\"block_type\":\"workflow_transition\",\"from\":\"pianificato\",\"to\":\"in_corso\",\"label\":\"Avvia\"},{\"id\":\"wtr_011\",\"block_type\":\"workflow_transition\",\"from\":\"in_corso\",\"to\":\"completato\",\"label\":\"Completa\"},{\"id\":\"wtr_012\",\"block_type\":\"workflow_transition\",\"from\":\"in_corso\",\"to\":\"sospeso\",\"label\":\"Sospendi\"},{\"id\":\"wtr_013\",\"block_type\":\"workflow_transition\",\"from\":\"sospeso\",\"to\":\"in_corso\",\"label\":\"Riprendi\"}]}"
+ },
+ {
+  "slug": "promozioni_generico",
+  "name": "Promozioni",
+  "description": "Campagne promozionali: nome, sconto percentuale, periodo di validità.",
+  "icon": "zap",
+  "color": "#EC4899",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"nome\",\"label\":\"Nome campagna\",\"type\":\"text\",\"required\":true},{\"key\":\"sconto_percentuale\",\"label\":\"Sconto %\",\"type\":\"number\"},{\"key\":\"data_inizio\",\"label\":\"Data inizio\",\"type\":\"date\"},{\"key\":\"data_fine\",\"label\":\"Data fine\",\"type\":\"date\"}],\"relations\":[{\"key\":\"prodotto\",\"label\":\"Prodotto\",\"type\":\"many_to_one\",\"target_module\":\"prodotti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"nome\"}],\"workflow\":null,\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "recensioni_generico",
+  "name": "Recensioni",
+  "description": "Recensioni dei clienti: valutazione da 1 a 5, commento, data.",
+  "icon": "star",
+  "color": "#F59E0B",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"valutazione\",\"label\":\"Valutazione (1-5)\",\"type\":\"number\",\"required\":true},{\"key\":\"commento\",\"label\":\"Commento\",\"type\":\"textarea\"},{\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"}],\"workflow\":null,\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "reclami_generico",
+  "name": "Reclami",
+  "description": "Reclami dei clienti: oggetto e descrizione, con stati (aperto, in gestione, risolto, chiuso).",
+  "icon": "alert-triangle",
+  "color": "#EF4444",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"oggetto\",\"label\":\"Oggetto\",\"type\":\"text\",\"required\":true},{\"key\":\"descrizione\",\"label\":\"Descrizione\",\"type\":\"textarea\"}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"}],\"workflow\":{\"states\":[{\"key\":\"aperto\",\"label\":\"Aperto\",\"color\":\"#DC2626\",\"initial\":true},{\"key\":\"in_gestione\",\"label\":\"In gestione\",\"color\":\"#F59E0B\"},{\"key\":\"risolto\",\"label\":\"Risolto\",\"color\":\"#10B981\"},{\"key\":\"chiuso\",\"label\":\"Chiuso\",\"color\":\"#6B7280\"}],\"transitions\":[{\"from\":\"aperto\",\"to\":\"in_gestione\",\"label\":\"Prendi in carico\"},{\"from\":\"in_gestione\",\"to\":\"risolto\",\"label\":\"Risolvi\"},{\"from\":\"risolto\",\"to\":\"chiuso\",\"label\":\"Chiudi\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "resi_generico",
+  "name": "Resi",
+  "description": "Resi di prodotti: quantità e motivo, con stati (richiesto, ricevuto, rimborsato, rifiutato).",
+  "icon": "download",
+  "color": "#B45309",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"quantita\",\"label\":\"Quantità\",\"type\":\"number\"},{\"key\":\"motivo\",\"label\":\"Motivo\",\"type\":\"select\",\"options\":[\"Difetto\",\"Non conforme\",\"Ripensamento\",\"Errore spedizione\"]}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"key\":\"prodotto\",\"label\":\"Prodotto\",\"type\":\"many_to_one\",\"target_module\":\"prodotti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"nome\"}],\"workflow\":{\"states\":[{\"key\":\"richiesto\",\"label\":\"Richiesto\",\"color\":\"#94A3B8\",\"initial\":true},{\"key\":\"ricevuto\",\"label\":\"Ricevuto\",\"color\":\"#3B82F6\"},{\"key\":\"rimborsato\",\"label\":\"Rimborsato\",\"color\":\"#10B981\"},{\"key\":\"rifiutato\",\"label\":\"Rifiutato\",\"color\":\"#EF4444\"}],\"transitions\":[{\"from\":\"richiesto\",\"to\":\"ricevuto\",\"label\":\"Segna ricevuto\"},{\"from\":\"ricevuto\",\"to\":\"rimborsato\",\"label\":\"Rimborsa\"},{\"from\":\"ricevuto\",\"to\":\"rifiutato\",\"label\":\"Rifiuta\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "fatture_righe_generico",
+  "name": "Righe Fattura",
+  "description": "Righe di una fattura: descrizione, quantità, prezzo, sconto, IVA e totali. Richiede Fatture e Prodotti.",
+  "icon": "file",
+  "color": "#DC2626",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"fattura\",\"label\":\"Fattura\",\"type\":\"many_to_one\",\"target_module\":\"fatture_generico\",\"display_mode\":\"embedded_inline\",\"display_field\":\"numero\"},{\"id\":\"rel_002\",\"block_type\":\"relation\",\"key\":\"prodotto\",\"label\":\"Prodotto\",\"type\":\"many_to_one\",\"target_module\":\"prodotti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"nome\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"descrizione\",\"label\":\"Descrizione\",\"type\":\"text\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"quantita\",\"label\":\"Quantità\",\"type\":\"number\",\"required\":true},{\"id\":\"fld_005\",\"block_type\":\"field\",\"key\":\"prezzo_unitario\",\"label\":\"Prezzo unitario\",\"type\":\"number\"},{\"id\":\"fld_006\",\"block_type\":\"field\",\"key\":\"sconto_percentuale\",\"label\":\"Sconto %\",\"type\":\"number\"},{\"id\":\"fld_007\",\"block_type\":\"field\",\"key\":\"aliquota_iva\",\"label\":\"IVA %\",\"type\":\"number\"},{\"id\":\"fld_008\",\"block_type\":\"field\",\"key\":\"totale_riga\",\"label\":\"Totale riga (netto)\",\"type\":\"computed\",\"expr\":\"round(quantita * prezzo_unitario * (1 - (sconto_percentuale / 100)), 2)\"},{\"id\":\"fld_009\",\"block_type\":\"field\",\"key\":\"imponibile_riga\",\"label\":\"Imponibile riga\",\"type\":\"computed\",\"expr\":\"round(quantita * prezzo_unitario * (1 - (sconto_percentuale / 100)), 2)\"},{\"id\":\"fld_010\",\"block_type\":\"field\",\"key\":\"iva_riga\",\"label\":\"IVA riga\",\"type\":\"computed\",\"expr\":\"round(quantita * prezzo_unitario * (1 - (sconto_percentuale / 100)) * (aliquota_iva / 100), 2)\"},{\"id\":\"prm_011\",\"block_type\":\"permissions\",\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":false}]}]}"
+ },
+ {
+  "slug": "ordini_righe_generico",
+  "name": "Righe Ordine",
+  "description": "Righe di un ordine cliente: prodotto, quantità, prezzo, totale riga. Richiede Ordini e Prodotti.",
+  "icon": "file",
+  "color": "#0EA5E9",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"ordine\",\"label\":\"Ordine\",\"type\":\"many_to_one\",\"target_module\":\"ordini_generico\",\"display_mode\":\"embedded_inline\",\"display_field\":\"numero\"},{\"id\":\"rel_002\",\"block_type\":\"relation\",\"key\":\"prodotto\",\"label\":\"Prodotto\",\"type\":\"many_to_one\",\"target_module\":\"prodotti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"nome\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"quantita\",\"label\":\"Quantità\",\"type\":\"number\",\"required\":true},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"prezzo_unitario\",\"label\":\"Prezzo unitario\",\"type\":\"number\"},{\"id\":\"fld_005\",\"block_type\":\"field\",\"key\":\"totale_riga\",\"label\":\"Totale riga\",\"type\":\"computed\",\"expr\":\"round(quantita * prezzo_unitario, 2)\"},{\"id\":\"prm_006\",\"block_type\":\"permissions\",\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":false}]}]}"
+ },
+ {
+  "slug": "ordini_acquisto_righe_generico",
+  "name": "Righe Ordine Acquisto",
+  "description": "Righe di un ordine fornitore: prodotto, quantità, prezzo. Richiede Ordini Acquisto e Prodotti.",
+  "icon": "download",
+  "color": "#B45309",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_001\",\"block_type\":\"relation\",\"key\":\"ordine_acquisto\",\"label\":\"Ordine acquisto\",\"type\":\"many_to_one\",\"target_module\":\"ordini_acquisto_generico\",\"display_mode\":\"embedded_inline\",\"display_field\":\"numero\"},{\"id\":\"rel_002\",\"block_type\":\"relation\",\"key\":\"prodotto\",\"label\":\"Prodotto\",\"type\":\"many_to_one\",\"target_module\":\"prodotti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"nome\"},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"quantita\",\"label\":\"Quantità\",\"type\":\"number\",\"required\":true},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"prezzo_unitario\",\"label\":\"Prezzo unitario\",\"type\":\"number\"},{\"id\":\"fld_005\",\"block_type\":\"field\",\"key\":\"totale_riga\",\"label\":\"Totale riga\",\"type\":\"computed\",\"expr\":\"round(quantita * prezzo_unitario, 2)\"},{\"id\":\"prm_006\",\"block_type\":\"permissions\",\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"owner_field\":\"\",\"create\":true,\"edit\":true,\"delete\":false}]}]}"
+ },
+ {
+  "slug": "scadenzario_generico",
+  "name": "Scadenzario",
+  "description": "Scadenze da ricordare con tipo e data, e stati (aperta, in corso, completata, scaduta).",
+  "icon": "calendar",
+  "color": "#EA580C",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"titolo\",\"label\":\"Titolo\",\"type\":\"text\",\"required\":true},{\"key\":\"tipo\",\"label\":\"Tipo\",\"type\":\"select\",\"options\":[\"Fiscale\",\"Contrattuale\",\"Normativo\",\"Altro\"]},{\"key\":\"scadenza\",\"label\":\"Data scadenza\",\"type\":\"date\",\"required\":true}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente collegato (opzionale)\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"}],\"workflow\":{\"states\":[{\"key\":\"aperta\",\"label\":\"Aperta\",\"color\":\"#94A3B8\",\"initial\":true},{\"key\":\"in_corso\",\"label\":\"In corso\",\"color\":\"#3B82F6\"},{\"key\":\"completata\",\"label\":\"Completata\",\"color\":\"#10B981\"},{\"key\":\"scaduta\",\"label\":\"Scaduta\",\"color\":\"#EF4444\"}],\"transitions\":[{\"from\":\"aperta\",\"to\":\"in_corso\",\"label\":\"Avvia\"},{\"from\":\"in_corso\",\"to\":\"completata\",\"label\":\"Completa\"},{\"from\":\"aperta\",\"to\":\"scaduta\",\"label\":\"Segna scaduta\"},{\"from\":\"in_corso\",\"to\":\"scaduta\",\"label\":\"Segna scaduta\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "scheda_paziente_generico",
+  "name": "Scheda Paziente",
+  "description": "Scheda di una persona seguita (studio medico, estetica, fisioterapia): anamnesi, allergie, consenso privacy, piano di trattamento, prossimo controllo.",
+  "icon": "clipboard",
+  "color": "#14B8A6",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"rel_paziente\",\"block_type\":\"relation\",\"key\":\"paziente\",\"label\":\"Paziente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"id\":\"fld_anamnesi\",\"block_type\":\"field\",\"key\":\"anamnesi\",\"label\":\"Anamnesi\",\"type\":\"textarea\"},{\"id\":\"fld_allergie\",\"block_type\":\"field\",\"key\":\"allergie_intolleranze\",\"label\":\"Allergie e intolleranze\",\"type\":\"textarea\"},{\"id\":\"fld_consenso\",\"block_type\":\"field\",\"key\":\"consenso_privacy\",\"label\":\"Consenso privacy raccolto\",\"type\":\"checkbox\",\"required\":true},{\"id\":\"fld_data_consenso\",\"block_type\":\"field\",\"key\":\"data_consenso\",\"label\":\"Data consenso\",\"type\":\"date\"},{\"id\":\"fld_piano\",\"block_type\":\"field\",\"key\":\"piano_trattamento\",\"label\":\"Piano di trattamento\",\"type\":\"textarea\"},{\"id\":\"fld_prossimo\",\"block_type\":\"field\",\"key\":\"prossimo_controllo\",\"label\":\"Prossimo controllo\",\"type\":\"date\"},{\"id\":\"wst_aperta\",\"block_type\":\"workflow_state\",\"key\":\"aperta\",\"label\":\"Aperta\",\"color\":\"#3B82F6\",\"initial\":true},{\"id\":\"wst_in_trattamento\",\"block_type\":\"workflow_state\",\"key\":\"in_trattamento\",\"label\":\"In trattamento\",\"color\":\"#F59E0B\"},{\"id\":\"wst_chiusa\",\"block_type\":\"workflow_state\",\"key\":\"chiusa\",\"label\":\"Chiusa\",\"color\":\"#6B7280\"},{\"id\":\"wtr_1\",\"block_type\":\"workflow_transition\",\"from\":\"aperta\",\"to\":\"in_trattamento\",\"label\":\"Avvia trattamento\"},{\"id\":\"wtr_2\",\"block_type\":\"workflow_transition\",\"from\":\"in_trattamento\",\"to\":\"chiusa\",\"label\":\"Chiudi\"}]}"
+ },
+ {
+  "slug": "segnalibri_generico",
+  "name": "Segnalibri",
+  "description": "Collegamenti web da conservare, con titolo, indirizzo, categoria.",
+  "icon": "link",
+  "color": "#0D9488",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"fld_001\",\"block_type\":\"field\",\"key\":\"titolo\",\"label\":\"Titolo\",\"type\":\"text\",\"required\":true},{\"id\":\"fld_002\",\"block_type\":\"field\",\"key\":\"url\",\"label\":\"URL\",\"type\":\"url\",\"required\":true},{\"id\":\"fld_003\",\"block_type\":\"field\",\"key\":\"categoria\",\"label\":\"Categoria\",\"type\":\"text\"},{\"id\":\"fld_004\",\"block_type\":\"field\",\"key\":\"note\",\"label\":\"Note\",\"type\":\"textarea\"}]}"
+ },
+ {
+  "slug": "soci_generico",
+  "name": "Soci",
+  "description": "Soci di un'associazione o di un club: anagrafica, tipo di tesseramento, quota annuale, date di iscrizione e scadenza, con stati.",
+  "icon": "user-check",
+  "color": "#8B5CF6",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"fld_nome\",\"block_type\":\"field\",\"key\":\"nome_cognome\",\"label\":\"Nome e cognome\",\"type\":\"text\",\"required\":true},{\"id\":\"fld_cf\",\"block_type\":\"field\",\"key\":\"codice_fiscale\",\"label\":\"Codice fiscale\",\"type\":\"text\"},{\"id\":\"fld_email\",\"block_type\":\"field\",\"key\":\"email\",\"label\":\"Email\",\"type\":\"email\"},{\"id\":\"fld_telefono\",\"block_type\":\"field\",\"key\":\"telefono\",\"label\":\"Telefono\",\"type\":\"text\"},{\"id\":\"fld_tipo\",\"block_type\":\"field\",\"key\":\"tipo_tesseramento\",\"label\":\"Tipo tesseramento\",\"type\":\"select\",\"options\":[\"Ordinario\",\"Sostenitore\",\"Onorario\",\"Junior\"]},{\"id\":\"fld_quota\",\"block_type\":\"field\",\"key\":\"quota_annuale\",\"label\":\"Quota annuale\",\"type\":\"currency\"},{\"id\":\"fld_iscrizione\",\"block_type\":\"field\",\"key\":\"data_iscrizione\",\"label\":\"Data iscrizione\",\"type\":\"date\",\"required\":true},{\"id\":\"fld_scadenza\",\"block_type\":\"field\",\"key\":\"data_scadenza\",\"label\":\"Data scadenza\",\"type\":\"date\"},{\"id\":\"wst_attivo\",\"block_type\":\"workflow_state\",\"key\":\"attivo\",\"label\":\"Attivo\",\"color\":\"#10B981\",\"initial\":true},{\"id\":\"wst_scaduto\",\"block_type\":\"workflow_state\",\"key\":\"scaduto\",\"label\":\"Scaduto\",\"color\":\"#EF4444\"},{\"id\":\"wtr_1\",\"block_type\":\"workflow_transition\",\"from\":\"attivo\",\"to\":\"scaduto\",\"label\":\"Segna scaduto\"},{\"id\":\"wtr_2\",\"block_type\":\"workflow_transition\",\"from\":\"scaduto\",\"to\":\"attivo\",\"label\":\"Rinnova tessera\"}]}"
+ },
+ {
+  "slug": "insoluti_solleciti_generico",
+  "name": "Solleciti Insoluti",
+  "description": "Solleciti inviati per un insoluto: data, canale, esito.",
+  "icon": "bell",
+  "color": "#EA580C",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"data\",\"label\":\"Data sollecito\",\"type\":\"date\"},{\"key\":\"canale\",\"label\":\"Canale\",\"type\":\"select\",\"options\":[\"Email\",\"Telefono\",\"Lettera\",\"PEC\"]},{\"key\":\"esito\",\"label\":\"Esito\",\"type\":\"text\"}],\"relations\":[{\"key\":\"insoluto\",\"label\":\"Insoluto\",\"type\":\"many_to_one\",\"target_module\":\"insoluti_generico\",\"display_mode\":\"embedded_inline\",\"display_field\":\"importo_scoperto\"}],\"workflow\":null,\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "spedizioni_generico",
+  "name": "Spedizioni",
+  "description": "Spedizioni con corriere e numero di tracking, con stati (in preparazione, spedito, consegnato).",
+  "icon": "download",
+  "color": "#0EA5E9",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"corriere\",\"label\":\"Corriere\",\"type\":\"text\"},{\"key\":\"numero_tracking\",\"label\":\"Numero tracking\",\"type\":\"text\"}],\"relations\":[{\"key\":\"ordine\",\"label\":\"Ordine\",\"type\":\"many_to_one\",\"target_module\":\"ordini_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"numero\"}],\"workflow\":{\"states\":[{\"key\":\"preparazione\",\"label\":\"In preparazione\",\"color\":\"#94A3B8\",\"initial\":true},{\"key\":\"spedito\",\"label\":\"Spedito\",\"color\":\"#3B82F6\"},{\"key\":\"consegnato\",\"label\":\"Consegnato\",\"color\":\"#10B981\"}],\"transitions\":[{\"from\":\"preparazione\",\"to\":\"spedito\",\"label\":\"Spedisci\"},{\"from\":\"spedito\",\"to\":\"consegnato\",\"label\":\"Segna consegnato\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "ticket_supporto_generico",
+  "name": "Ticket Supporto",
+  "description": "Richieste di assistenza dei clienti: oggetto, priorità, con stati (aperto, in corso, risolto).",
+  "icon": "flag",
+  "color": "#F59E0B",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"oggetto\",\"label\":\"Oggetto\",\"type\":\"text\",\"required\":true},{\"key\":\"priorita\",\"label\":\"Priorità\",\"type\":\"select\",\"options\":[\"Bassa\",\"Media\",\"Alta\",\"Urgente\"]}],\"relations\":[{\"key\":\"cliente\",\"label\":\"Cliente\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"}],\"workflow\":{\"states\":[{\"key\":\"aperto\",\"label\":\"Aperto\",\"color\":\"#94A3B8\",\"initial\":true},{\"key\":\"in_corso\",\"label\":\"In corso\",\"color\":\"#3B82F6\"},{\"key\":\"risolto\",\"label\":\"Risolto\",\"color\":\"#10B981\"}],\"transitions\":[{\"from\":\"aperto\",\"to\":\"in_corso\",\"label\":\"Prendi in carico\"},{\"from\":\"in_corso\",\"to\":\"risolto\",\"label\":\"Risolvi\"}]},\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "tracciabilita_lotti_generico",
+  "name": "Tracciabilità Lotti",
+  "description": "Tracciabilità dei lotti di produzione: numero lotto, produzione, quantità, scadenza, con stati.",
+  "icon": "factory",
+  "color": "#A16207",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"fld_lotto\",\"block_type\":\"field\",\"key\":\"numero_lotto\",\"label\":\"Numero lotto\",\"type\":\"text\",\"required\":true},{\"id\":\"rel_prodotto\",\"block_type\":\"relation\",\"key\":\"prodotto\",\"label\":\"Prodotto\",\"type\":\"many_to_one\",\"target_module\":\"prodotti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"nome\"},{\"id\":\"rel_fornitore\",\"block_type\":\"relation\",\"key\":\"fornitore\",\"label\":\"Fornitore materia prima\",\"type\":\"many_to_one\",\"target_module\":\"fornitori_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"id\":\"fld_data_prod\",\"block_type\":\"field\",\"key\":\"data_produzione\",\"label\":\"Data produzione\",\"type\":\"date\",\"required\":true},{\"id\":\"fld_quantita\",\"block_type\":\"field\",\"key\":\"quantita\",\"label\":\"Quantità\",\"type\":\"number\"},{\"id\":\"fld_um\",\"block_type\":\"field\",\"key\":\"unita_misura\",\"label\":\"Unità di misura\",\"type\":\"select\",\"options\":[\"kg\",\"l\",\"pz\",\"q.li\"]},{\"id\":\"fld_scadenza\",\"block_type\":\"field\",\"key\":\"data_scadenza\",\"label\":\"Data scadenza\",\"type\":\"date\"},{\"id\":\"wst_produzione\",\"block_type\":\"workflow_state\",\"key\":\"in_produzione\",\"label\":\"In produzione\",\"color\":\"#6B7280\",\"initial\":true},{\"id\":\"wst_confezionato\",\"block_type\":\"workflow_state\",\"key\":\"confezionato\",\"label\":\"Confezionato\",\"color\":\"#3B82F6\"},{\"id\":\"wst_spedito\",\"block_type\":\"workflow_state\",\"key\":\"spedito\",\"label\":\"Spedito\",\"color\":\"#10B981\"},{\"id\":\"wst_ritirato\",\"block_type\":\"workflow_state\",\"key\":\"ritirato\",\"label\":\"Ritirato\",\"color\":\"#EF4444\"},{\"id\":\"wtr_1\",\"block_type\":\"workflow_transition\",\"from\":\"in_produzione\",\"to\":\"confezionato\",\"label\":\"Confeziona\"},{\"id\":\"wtr_2\",\"block_type\":\"workflow_transition\",\"from\":\"confezionato\",\"to\":\"spedito\",\"label\":\"Spedisci\"},{\"id\":\"wtr_3\",\"block_type\":\"workflow_transition\",\"from\":\"spedito\",\"to\":\"ritirato\",\"label\":\"Richiama per sicurezza\"},{\"id\":\"wtr_4\",\"block_type\":\"workflow_transition\",\"from\":\"confezionato\",\"to\":\"ritirato\",\"label\":\"Richiama per sicurezza\"}]}"
+ },
+ {
+  "slug": "fornitori_valutazioni_generico",
+  "name": "Valutazioni Fornitori",
+  "description": "Valutazioni periodiche dei fornitori: data, punteggio da 1 a 10, note.",
+  "icon": "star",
+  "color": "#CA8A04",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"data\",\"label\":\"Data\",\"type\":\"date\"},{\"key\":\"punteggio\",\"label\":\"Punteggio (1-10)\",\"type\":\"number\"},{\"key\":\"note\",\"label\":\"Note\",\"type\":\"textarea\"}],\"relations\":[{\"key\":\"fornitore\",\"label\":\"Fornitore\",\"type\":\"many_to_one\",\"target_module\":\"fornitori_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"}],\"workflow\":null,\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "valutazioni_performance_generico",
+  "name": "Valutazioni Performance",
+  "description": "Valutazioni delle prestazioni del personale per periodo: punteggio da 1 a 10, note.",
+  "icon": "star",
+  "color": "#F59E0B",
+  "group_name": "Generico",
+  "schema_json": "{\"fields\":[{\"key\":\"periodo\",\"label\":\"Periodo\",\"type\":\"text\"},{\"key\":\"punteggio\",\"label\":\"Punteggio (1-10)\",\"type\":\"number\"},{\"key\":\"note\",\"label\":\"Note\",\"type\":\"textarea\"}],\"relations\":[{\"key\":\"dipendente\",\"label\":\"Dipendente\",\"type\":\"many_to_one\",\"target_module\":\"dipendenti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"nome\"}],\"workflow\":null,\"scope\":null,\"permissions\":{\"rules\":[{\"role\":\"amministrazione\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":true},{\"role\":\"operatore\",\"view\":true,\"view_own_only\":false,\"create\":true,\"edit\":true,\"delete\":false}]},\"validazione_creazione\":null,\"aggregati\":[],\"allegati\":null,\"form_steps\":[],\"requires_connection\":null,\"_v3_unsupported\":[]}"
+ },
+ {
+  "slug": "veicoli_generico",
+  "name": "Veicoli",
+  "description": "Veicoli o macchinari: targa o matricola, telaio, marca, modello, anno, utilizzo, prezzo, con stati (disponibile, riservato, venduto, in manutenzione).",
+  "icon": "tool",
+  "color": "#0EA5E9",
+  "group_name": "Generico",
+  "schema_json": "{\"version\":3,\"steps\":[{\"id\":\"fld_targa\",\"block_type\":\"field\",\"key\":\"targa_matricola\",\"label\":\"Targa / Matricola\",\"type\":\"text\",\"required\":true},{\"id\":\"fld_telaio\",\"block_type\":\"field\",\"key\":\"telaio_seriale\",\"label\":\"Numero di telaio / seriale\",\"type\":\"text\"},{\"id\":\"fld_marca\",\"block_type\":\"field\",\"key\":\"marca\",\"label\":\"Marca\",\"type\":\"text\",\"required\":true},{\"id\":\"fld_modello\",\"block_type\":\"field\",\"key\":\"modello\",\"label\":\"Modello\",\"type\":\"text\",\"required\":true},{\"id\":\"fld_anno\",\"block_type\":\"field\",\"key\":\"anno_immatricolazione\",\"label\":\"Anno immatricolazione\",\"type\":\"number\"},{\"id\":\"fld_km\",\"block_type\":\"field\",\"key\":\"km_ore_uso\",\"label\":\"Km / ore di utilizzo\",\"type\":\"number\"},{\"id\":\"fld_prezzo\",\"block_type\":\"field\",\"key\":\"prezzo\",\"label\":\"Prezzo\",\"type\":\"currency\"},{\"id\":\"rel_cliente\",\"block_type\":\"relation\",\"key\":\"cliente_proprietario\",\"label\":\"Cliente / proprietario attuale\",\"type\":\"many_to_one\",\"target_module\":\"clienti_generico\",\"display_mode\":\"select_inline\",\"display_field\":\"ragione_sociale\"},{\"id\":\"wst_disponibile\",\"block_type\":\"workflow_state\",\"key\":\"disponibile\",\"label\":\"Disponibile\",\"color\":\"#10B981\",\"initial\":true},{\"id\":\"wst_riservato\",\"block_type\":\"workflow_state\",\"key\":\"riservato\",\"label\":\"Riservato\",\"color\":\"#F59E0B\"},{\"id\":\"wst_venduto\",\"block_type\":\"workflow_state\",\"key\":\"venduto\",\"label\":\"Venduto\",\"color\":\"#3B82F6\"},{\"id\":\"wst_manutenzione\",\"block_type\":\"workflow_state\",\"key\":\"in_manutenzione\",\"label\":\"In manutenzione\",\"color\":\"#EF4444\"},{\"id\":\"wtr_1\",\"block_type\":\"workflow_transition\",\"from\":\"disponibile\",\"to\":\"riservato\",\"label\":\"Prenota\"},{\"id\":\"wtr_2\",\"block_type\":\"workflow_transition\",\"from\":\"riservato\",\"to\":\"venduto\",\"label\":\"Vendi\"},{\"id\":\"wtr_3\",\"block_type\":\"workflow_transition\",\"from\":\"riservato\",\"to\":\"disponibile\",\"label\":\"Annulla prenotazione\"},{\"id\":\"wtr_4\",\"block_type\":\"workflow_transition\",\"from\":\"disponibile\",\"to\":\"in_manutenzione\",\"label\":\"Manda in officina\"},{\"id\":\"wtr_5\",\"block_type\":\"workflow_transition\",\"from\":\"in_manutenzione\",\"to\":\"disponibile\",\"label\":\"Rientra disponibile\"}]}"
+ }
+]

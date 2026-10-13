@@ -55,7 +55,7 @@ Ogni backend ha la sua suite, nessuna dipendenza esterna (i servizi esterni sono
 
 ```bash
 cd core/backend && npm test            # 49 suite
-cd super-admin/backend && npm test     # 22 suite
+cd super-admin/backend && npm test     # 23 suite
 ```
 
 I frontend si verificano compilando: `cd core/frontend && npx vite build` (idem `super-admin/frontend`).

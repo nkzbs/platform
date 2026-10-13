@@ -113,13 +113,33 @@ async function suggestProcessi({ descrizione }) {
   return sanitizeProcessi(out && out.processi, new Set(mods.map((m) => m.id)));
 }
 
+// ── dipendenze: un modulo con una relazione verso un altro ha bisogno anche di quello (righe → fattura → cliente) ──────────────────────
+// Dato un elenco di id di moduli della Libreria, ritorna l'elenco completo con quelli richiesti dalle loro relazioni (a catena), nello stesso ordine + i collegati in coda.
+function withDependencies(ids) {
+  const { parseSchemaNormalized } = require('../../../../shared/schema-v3-core.js');
+  const out = [...new Set(ids)], seen = new Set(out);
+  for (let i = 0; i < out.length; i++) {
+    const row = db.prepare('SELECT schema_json, source_tenant_slug FROM registry_modules WHERE id = ?').get(out[i]);
+    if (!row) continue;
+    let rel = []; try { rel = parseSchemaNormalized(row.schema_json).relations || []; } catch (e) { /* schema illeggibile: nessuna dipendenza */ }
+    for (const r of rel) {
+      const slug = r && r.target_module; if (!slug) continue;
+      const dep = db.prepare('SELECT id FROM registry_modules WHERE slug = ? ORDER BY (source_tenant_slug IS ?) DESC, version DESC LIMIT 1').get(slug, row.source_tenant_slug);
+      if (dep && !seen.has(dep.id)) { seen.add(dep.id); out.push(dep.id); }
+    }
+  }
+  return out;
+}
+
 // ── blueprint: cosa copre la Libreria e cosa va costruito (solo conteggi dal contenuto dell'analisi) ─────────────────
 function blueprint(processi) {
   const c = { coperto: 0, da_valutare: 0, da_costruire: 0 };
   processi.forEach((p) => { c[p.copertura] = (c[p.copertura] || 0) + 1; });
-  const moduliIds = [...new Set(processi.map((p) => p.registry_module_id).filter(Boolean))];
+  const diretti = [...new Set(processi.map((p) => p.registry_module_id).filter(Boolean))];
+  const moduliIds = withDependencies(diretti); // più i moduli che quelli richiedono
+  const nomi = (ids) => ids.map((id) => (db.prepare('SELECT name FROM registry_modules WHERE id = ?').get(id) || {}).name).filter(Boolean);
   const ruoli = new Set(); processi.forEach((p) => (p.ruoli_coinvolti || []).forEach((r) => { if (r.tipo === 'utente') ruoli.add(r.nome.toLowerCase()); }));
-  return { processi: processi.length, ...c, moduli_ids: moduliIds, ruoli_utente: ruoli.size, da_costruire: processi.filter((p) => p.copertura === 'da_costruire').map((p) => p.nome) };
+  return { processi: processi.length, ...c, moduli_ids: moduliIds, moduli_collegati: nomi(moduliIds.filter((id) => !diretti.includes(id))), ruoli_utente: ruoli.size, da_costruire: processi.filter((p) => p.copertura === 'da_costruire').map((p) => p.nome) };
 }
 
-module.exports = { deps, libraryModules, sanitizeProcesso, sanitizeProcessi, sanitizeProfilo, suggestProcesso, suggestProcessi, blueprint, COPERTURE };
+module.exports = { deps, withDependencies, libraryModules, sanitizeProcesso, sanitizeProcessi, sanitizeProfilo, suggestProcesso, suggestProcessi, blueprint, COPERTURE };

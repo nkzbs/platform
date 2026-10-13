@@ -339,6 +339,7 @@ La vista **Da inizio anno** (`buildYearSnapshot`) va da gennaio all'ultimo mese 
 
 - **L'AI propone, mai scrive**: `suggest-processi` (da una descrizione) e `suggest-processo` (da un nome) ritornano bozze; tutto passa da `sanitizeProcesso` (campi noti, lunghezze, tipi) e un **modulo inventato diventa null** (deve esistere nella Libreria). Il modello vede solo il testo dell'analisi, ripulito dai dati personali (`ai-redact.js`), e nome/descrizione dei moduli: nessun dato di altri tenant. Costa sulla chiave AI di Super Admin.
 - **Salvataggio** automatico dalla pagina (PATCH ripulito server-side). Il manuale (`Manuale.jsx`) si stampa o si salva in PDF dal browser.
+- **I moduli generici** (`lib/moduli-generici.js`, `seeds/moduli-generici.json`, rotte `GET /api/registry/generici` e `POST /api/registry/import-generici`): 52 mattoncini senza settore con nome e descrizione, importabili nella Libreria senza sovrascrivere (origine `generici`). `withDependencies` aggiunge i moduli richiesti dalle relazioni (a catena) quando si crea il tenant.
 - **Crea il tenant** (`POST /:id/create-tenant`): `createTenant` + installazione dei moduli scelti + `applyAnalysisConfigToTenant` (ruoli degli utenti e stati del flusso dai passaggi, **senza sovrascrivere** un modulo che ha già il suo flusso o i suoi permessi). Fuori dal perimetro, di proposito: clienti, preventivi, prezzi, licenze, e leggere dati dai tenant (privacy).
 
 ## Movimenti bancari

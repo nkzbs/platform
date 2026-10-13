@@ -98,7 +98,7 @@ router.post('/:id/create-tenant', requireAuth, async (req, res) => {
   if (!name || !slug) return res.status(400).json({ error: 'Nome e slug obbligatori' });
   const valid = new Set(analysis.libraryModules().map((m) => m.id));
   const processi = analysis.sanitizeProcessi(json(r.processi, []), valid);
-  const moduleIds = [...new Set(processi.map((p) => p.registry_module_id).filter(Boolean))];
+  const moduleIds = analysis.withDependencies([...new Set(processi.map((p) => p.registry_module_id).filter(Boolean))]); // con i moduli richiesti dalle loro relazioni
   const { createTenant, enqueueHostedCreation, installModulesByIds } = require('./tenants');
   try {
     const { tenant, initialPassword } = await enqueueHostedCreation(() => createTenant({ name, slug, domain, actor: req.user.username }));

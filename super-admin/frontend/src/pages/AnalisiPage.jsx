@@ -200,6 +200,7 @@ export default function AnalisiPage({ token, onNavigate }) {
                   <div key={l} className="bg-surface-page rounded-lg p-3 border border-gray-800"><div className="text-[11px] text-gray-500">{l}</div><div className="text-xl font-semibold text-ink">{v}</div></div>
                 ))}
               </div>
+              {b.moduli_collegati && b.moduli_collegati.length > 0 && <p className="text-xs text-gray-500 mb-3">Moduli collegati che servono ai tuoi moduli e vengono aggiunti: {b.moduli_collegati.join(', ')}.</p>}
               {b.da_costruire.length > 0 && <p className="text-xs text-gray-500 mb-3">Da costruire: {b.da_costruire.join(', ')}. Si costruiscono nel Super Builder.</p>}
               <div className="flex gap-2 flex-wrap"><button type="button" className={btn} onClick={() => setShowManuale(true)}>Apri il manuale</button></div>
             </section>
@@ -212,7 +213,7 @@ export default function AnalisiPage({ token, onNavigate }) {
                 <p className="text-sm text-gray-400">Da questa analisi è nato il tenant <b className="text-ink">{a.tenant_slug}</b>. <button type="button" className="text-cp-primary underline" onClick={() => onNavigate && onNavigate('tenants')}>Vai ai tenant</button></p>
               ) : (
                 <>
-                  <p className="text-xs text-gray-500 mb-3">Installa i {b.moduli_ids.length} moduli scelti e crea i {b.ruoli_utente} ruoli degli utenti; i passaggi diventano gli stati del flusso dei moduli. Non tocca un modulo che ha già i suoi. Fino a questo tocco non è stato scritto niente.</p>
+                  <p className="text-xs text-gray-500 mb-3">Installa i {b.moduli_ids.length} moduli{b.moduli_collegati && b.moduli_collegati.length ? ' (compresi quelli collegati: ' + b.moduli_collegati.join(', ') + ')' : ' scelti'} e crea i {b.ruoli_utente} ruoli degli utenti; i passaggi diventano gli stati del flusso dei moduli. Non tocca un modulo che ha già i suoi. Fino a questo tocco non è stato scritto niente.</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
                     <input className={input} placeholder="Nome del tenant" value={tf.name} onChange={(e) => setTf({ name: e.target.value, slug: slugify(e.target.value) })} />
                     <input className={input + ' font-mono'} placeholder="indirizzo (solo minuscole e trattini)" value={tf.slug} onChange={(e) => setTf({ ...tf, slug: slugify(e.target.value) })} />
