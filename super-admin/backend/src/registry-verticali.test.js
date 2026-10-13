@@ -47,6 +47,15 @@ async function main() {
     db.prepare("DELETE FROM registry_modules WHERE slug IN ('promozioni_generico','newsletter_iscritti_generico','recensioni_generico','comunicazioni_generico')").run();
     const dopo = (await lista()).find((v) => v.name === 'Marketing'); eq([prima.moduli.length, dopo], [5, undefined], 'resta solo clienti: non si propone');
   });
+  await test('la guida di un verticale: da dove cominciare (prima ciò a cui gli altri si collegano), campi e stati dai moduli', async () => {
+    db.prepare('DELETE FROM registry_modules').run(); require('./lib/moduli-generici').importa();
+    const v = (await lista()).find((x) => x.name === 'Vendite e fatturazione'); const g = v.guida;
+    eq(g.moduli.length, v.moduli.length); eq(g.ordine.length, v.moduli.length);
+    ok(g.ordine.indexOf('Clienti') < g.ordine.indexOf('Ordini'), 'i clienti prima degli ordini');
+    ok(g.ordine.indexOf('Ordini') < g.ordine.indexOf('Righe Ordine'), 'gli ordini prima delle loro righe');
+    ok(g.moduli.every((m) => m.nome && Array.isArray(m.campi)) && g.moduli.some((m) => m.campi.length > 0), 'campi presenti');
+    ok(!JSON.stringify(v).includes('schema_json') && !JSON.stringify(v).includes('collegamentiSlug'), 'né schemi né dettagli interni');
+  });
   console.log(`\n${passed} passati, ${failed} falliti`);
   process.exit(failed ? 1 : 0);
 }

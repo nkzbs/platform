@@ -19,6 +19,7 @@ function scheda(rm, byslug) {
     campi: (s.fields || []).filter((f) => f.label || f.key).slice(0, 40).map((f) => ({ nome: f.label || f.key, tipo: TIPI[f.type] || f.type || 'testo', scelte: f.type === 'select' ? (f.options || []).map((o) => (o && o.label) || o).slice(0, 12) : undefined })),
     stati: ((s.workflow && s.workflow.states) || []).map((x) => x.label || x.key),
     collegamenti: uniq((s.relations || []).map((r) => nomeDi(r.target_module)).filter(Boolean)),
+    collegamentiSlug: uniq((s.relations || []).map((r) => r.target_module).filter(Boolean)),
   };
 }
 
@@ -58,4 +59,4 @@ function build(a) {
   };
 }
 
-module.exports = { build };
+module.exports = { build, scheda };

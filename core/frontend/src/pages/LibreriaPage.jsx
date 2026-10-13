@@ -70,6 +70,8 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
 
   // Installazione multipla: si spuntano più moduli dello store e si scaricano insieme (le relazioni tra loro si creano poi nel Builder).
   const [collega, setCollega] = useState(false)
+  const [ultimoModello, setUltimoModello] = useState(null) // id del modello appena installato (per «Guida del modello»)
+  const [richiestaGuida, setRichiestaGuida] = useState(null)
   const [selezione, setSelezione] = useState([]) // id dei moduli della Libreria spuntati
   const [bulk, setBulk] = useState({ busy: false, esito: null, errore: '' })
   const spunta = (id) => setSelezione((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
@@ -380,11 +382,12 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">
             <button onClick={() => setCollega(true)} className="text-xs px-3 py-1.5 rounded-lg bg-accent hover:opacity-90 text-white flex items-center gap-1.5"><Icon name="link" size={12} />Collega i moduli</button>
+            {ultimoModello && <button onClick={() => setRichiestaGuida(ultimoModello)} className="text-xs px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200">Guida del modello</button>}
             <button onClick={() => setBulk({ busy: false, esito: null, errore: '' })} className="text-xs text-gray-500 hover:text-ink">Chiudi</button>
           </div>
         </div>
       )}
-      <VerticaliLibreria token={token} installatiSlugs={new Set(modules.filter((m) => m.installed).flatMap((m) => [m.slug, m.registry_slug]).filter(Boolean))} onInstalled={(esito) => { setBulk({ busy: false, esito, errore: '' }); load(); loadRegistry(); onRefresh() }} />
+      <VerticaliLibreria token={token} installatiSlugs={new Set(modules.filter((m) => m.installed).flatMap((m) => [m.slug, m.registry_slug]).filter(Boolean))} richiestaGuida={richiestaGuida} onGuidaAperta={() => setRichiestaGuida(null)} onInstalled={(esito, v) => { setUltimoModello(v ? v.id : null); setBulk({ busy: false, esito, errore: '' }); load(); loadRegistry(); onRefresh() }} />
 
       <h2 className="text-sm font-semibold text-ink mb-3">Moduli</h2>
       <div className="relative mb-6 max-w-md">
