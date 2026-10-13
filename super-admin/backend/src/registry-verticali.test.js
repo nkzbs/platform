@@ -56,6 +56,27 @@ async function main() {
     ok(g.moduli.every((m) => m.nome && Array.isArray(m.campi)) && g.moduli.some((m) => m.campi.length > 0), 'campi presenti');
     ok(!JSON.stringify(v).includes('schema_json') && !JSON.stringify(v).includes('collegamentiSlug'), 'né schemi né dettagli interni');
   });
+  const call = (m, u, b) => fetch(BASE + '/api/registry' + u, { method: m, headers: H, body: b ? JSON.stringify(b) : undefined });
+  await test('gestione: serve il login, nome e almeno un modulo; slug doppi tolti; i mancanti segnalati', async () => {
+    eq((await fetch(BASE + '/api/registry/verticals')).status, 401);
+    eq((await call('POST', '/verticals', { name: '', module_slugs: ['x'] })).status, 400); eq((await call('POST', '/verticals', { name: 'A', module_slugs: [] })).status, 400);
+    const v = await (await call('POST', '/verticals', { name: 'Mio', icon: 'tool', description: 'd', module_slugs: ['clienti_generico', 'ordini_generico', 'clienti_generico', 'sparito'] })).json();
+    eq(v.module_slugs, ['clienti_generico', 'ordini_generico', 'sparito']); eq(v.mancanti, 1);
+    const per = (await (await fetch(BASE + '/api/registry/public/verticals', { headers: HI })).json()).find((x) => x.name === 'Mio'); eq(per.moduli.map((m) => m.slug), ['clienti_generico', 'ordini_generico']);
+  });
+  await test('gestione: modifica (anche solo il nome), elimina, 404', async () => {
+    const mio = (await (await call('GET', '/verticals')).json()).find((x) => x.name === 'Mio');
+    const u = await (await call('PATCH', '/verticals/' + mio.id, { name: 'Mio 2' })).json(); eq([u.name, u.module_slugs.length], ['Mio 2', 3], 'i moduli restano se non li tocchi');
+    eq((await call('PATCH', '/verticals/' + mio.id, { module_slugs: [] })).status, 400);
+    eq((await call('PATCH', '/verticals/99999', { name: 'x' })).status, 404);
+    eq((await call('DELETE', '/verticals/' + mio.id)).status, 200); eq((await call('DELETE', '/verticals/' + mio.id)).status, 404);
+  });
+  await test('ripristina: rimette solo i predefiniti mancanti, senza toccare quelli modificati', async () => {
+    const l = await (await call('GET', '/verticals')).json(); const mk = l.find((x) => x.name === 'Marketing');
+    await call('PATCH', '/verticals/' + mk.id, { description: 'MODIFICATA' }); await call('DELETE', '/verticals/' + l.find((x) => x.name === 'Personale e presenze').id);
+    const r = await (await call('POST', '/verticals-ripristina')).json(); eq(r.aggiunti, 1);
+    eq(r.verticali.find((x) => x.name === 'Marketing').description, 'MODIFICATA'); eq(r.verticali.length, V.SEED.length);
+  });
   console.log(`\n${passed} passati, ${failed} falliti`);
   process.exit(failed ? 1 : 0);
 }

@@ -212,6 +212,19 @@ for (const col of ['backup_mail_weekly INTEGER DEFAULT 0', 'backup_mail_last_sen
   if (!db.prepare("SELECT 1 FROM pragma_table_info('tenants') WHERE name = ?").get(col.split(' ')[0])) db.exec('ALTER TABLE tenants ADD COLUMN ' + col);
 }
 db.prepare('INSERT OR IGNORE INTO update_manager (id) VALUES (1)').run();
+// I verticali proposti ai tenant: gruppi di moduli della Libreria con nome, icona e descrizione (dati, nessun settore nel codice). Si gestiscono da Libreria;
+// al primo avvio si riempiono dal file seeds/verticali.json (lib/verticali.js).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS registry_verticals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    icon TEXT,
+    description TEXT,
+    module_slugs TEXT NOT NULL DEFAULT '[]',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+`);
 if (!db.prepare('PRAGMA table_info(registry_modules)').all().some((c) => c.name === 'ruoli')) db.exec('ALTER TABLE registry_modules ADD COLUMN ruoli TEXT'); // dichiarazione dei ruoli del modulo (kind, campi, stati…), applicata ai tenant creati dall\'analisi
 if (!db.prepare('PRAGMA table_info(process_analyses)').all().some((c) => c.name === 'creazione')) db.exec('ALTER TABLE process_analyses ADD COLUMN creazione TEXT');
 if (!db.prepare('PRAGMA table_info(process_analyses)').all().some((c) => c.name === 'auto')) db.exec('ALTER TABLE process_analyses ADD COLUMN auto TEXT'); // avanzamento di «Fai tutto»

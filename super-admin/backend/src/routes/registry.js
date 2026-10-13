@@ -351,6 +351,38 @@ router.put('/default-modules', requireAuth, (req, res) => {
 // I verticali proposti (punti di partenza: gruppi di moduli, vedi lib/verticali.js). Mai gli schemi: il tenant installa i moduli uno per uno col solito percorso.
 router.get('/public/verticals', requireInternalSecret, (req, res) => res.json(require('../lib/verticali').elenco()));
 
+// Gestione dei verticali da Libreria (Super Admin): elenco completo, crea, modifica, elimina, ripristina i predefiniti. Sono solo dati: i moduli restano dove sono.
+router.get('/verticals', requireAuth, (req, res) => res.json(require('../lib/verticali').perGestione()));
+router.post('/verticals', requireAuth, (req, res) => {
+  const V = require('../lib/verticali'), v = V.leggi(req.body);
+  if (!v.name) return res.status(400).json({ error: 'Il verticale ha bisogno di un nome' });
+  if (!v.slugs.length) return res.status(400).json({ error: 'Scegli almeno un modulo' });
+  const ordine = (db.prepare('SELECT COALESCE(MAX(sort_order), 0) + 1 n FROM registry_verticals').get() || {}).n;
+  const id = db.prepare('INSERT INTO registry_verticals (name, icon, description, module_slugs, sort_order) VALUES (?, ?, ?, ?, ?)').run(v.name, v.icon, v.description, JSON.stringify(v.slugs), ordine).lastInsertRowid;
+  logAudit(req.user.username, 'registry.vertical_create', v.name, { id: Number(id), moduli: v.slugs.length });
+  res.json(V.perGestione().find((x) => x.id === Number(id)));
+});
+router.patch('/verticals/:id', requireAuth, (req, res) => {
+  const V = require('../lib/verticali'), cur = db.prepare('SELECT * FROM registry_verticals WHERE id = ?').get(req.params.id);
+  if (!cur) return res.status(404).json({ error: 'Verticale non trovato' });
+  const v = V.leggi(req.body, cur);
+  if (!v.name || !v.slugs.length) return res.status(400).json({ error: 'Servono un nome e almeno un modulo' });
+  db.prepare('UPDATE registry_verticals SET name = ?, icon = ?, description = ?, module_slugs = ? WHERE id = ?').run(v.name, v.icon, v.description, JSON.stringify(v.slugs), cur.id);
+  logAudit(req.user.username, 'registry.vertical_update', v.name, { id: cur.id });
+  res.json(V.perGestione().find((x) => x.id === cur.id));
+});
+router.delete('/verticals/:id', requireAuth, (req, res) => {
+  const r = db.prepare('DELETE FROM registry_verticals WHERE id = ?').run(req.params.id);
+  if (!r.changes) return res.status(404).json({ error: 'Verticale non trovato' });
+  logAudit(req.user.username, 'registry.vertical_delete', String(req.params.id), null);
+  res.json({ ok: true });
+});
+router.post('/verticals-ripristina', requireAuth, (req, res) => {
+  const aggiunti = require('../lib/verticali').ripristinaPredefiniti();
+  logAudit(req.user.username, 'registry.vertical_restore', null, { aggiunti });
+  res.json({ aggiunti, verticali: require('../lib/verticali').perGestione() });
+});
+
 // Elenco per la pagina Libreria del tenant. Mai schema_json: quello arriva solo
 // installando.
 router.get('/public/modules', requireInternalSecret, (req, res) => {

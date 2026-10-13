@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { API } from '../lib/api'
 import Icon from '../components/Icon'
 import Select from '../components/Select'
+import VerticaliAdmin from '../components/VerticaliAdmin'
 import { parseSchemaFrontend, getAutomationSteps, getRequiredConnectors } from '../lib/schema-v3-frontend'
 
 // La Libreria: i miei moduli, salvati con una versione, da installare in qualunque
@@ -210,6 +211,8 @@ function LibreriaPage({ token }) {
       {notice && (
         <div className={'text-sm p-3 rounded-lg mb-4 border ' + (notice.ok ? 'bg-green-900/20 text-green-400 border-green-900/40' : 'bg-red-900/30 text-red-400 border-red-900/50')}>{notice.text}</div>
       )}
+
+      <VerticaliAdmin token={token} modules={modules} />
 
       {proposteT.some((p) => p.status === 'pending') && (
         <section className="bg-surface-card border border-cp-primary/40 rounded-xl p-4 mb-5">
