@@ -66,6 +66,15 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
     else if (res && res.ok) setUninstalled({ name: m.name })
   }
 
+  // Installazione multipla: si spuntano più moduli dello store e si scaricano insieme (le relazioni tra loro si creano poi nel Builder).
+  const [selezione, setSelezione] = useState([]) // id dei moduli della Libreria spuntati
+  const [bulk, setBulk] = useState({ busy: false, esito: null, errore: '' })
+  const spunta = (id) => setSelezione((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
+  const installaSelezionati = async () => {
+    setBulk({ busy: true, esito: null, errore: '' })
+    const r = await api.post('/modules/registry/bulk-install', { ids: selezione })
+    if (r.ok) { setBulk({ busy: false, esito: r.data, errore: '' }); setSelezione([]); load(); loadRegistry() } else setBulk({ busy: false, esito: null, errore: (r.data && r.data.error) || 'Installazione non riuscita.' })
+  }
   const startInstall = (m) => { setInstalling(m); setInstallError('') }
 
   // Applica un aggiornamento pubblicato dal registro (2026-08-29) — punto che
@@ -263,6 +272,9 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
       <div key={(m._kind || 'own') + '-' + m.id} id={'module-card-' + m.slug}
         className="bg-surface-card rounded-xl border border-gray-800 hover:border-gray-700 transition p-4 flex flex-col cursor-pointer" onClick={() => openDetail(m)}>
         <div className="flex items-center gap-2.5 mb-2">
+          {!installed && m._kind === 'registry' && (
+            <input type="checkbox" className="flex-shrink-0 w-4 h-4 accent-[var(--accent)]" checked={selezione.includes(m.id)} onClick={(e) => e.stopPropagation()} onChange={() => spunta(m.id)} title="Scegli per installare più moduli insieme" />
+          )}
           <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: (m.color || '#2563EB') + '22', color: m.color || '#2563EB' }}>
             <Icon name={m.icon || 'box'} size={16} />
           </div>
@@ -365,6 +377,15 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
       </div>
 
       {section('Installati', installedList, true, q ? 'Nessun modulo installato corrisponde alla ricerca.' : 'Nessun modulo installato ancora.')}
+      {bulk.esito && (
+        <div className="bg-surface-card border border-gray-800 rounded-xl p-3.5 mb-4 text-sm flex items-start justify-between gap-3">
+          <div>
+            <div className="text-ink">{bulk.esito.installati.length} moduli installati{bulk.esito.saltati.length > 0 ? ', ' + bulk.esito.saltati.length + ' c\'erano già' : ''}. Ora puoi collegarli nel Builder (campo «relazione»).</div>
+            {bulk.esito.falliti.length > 0 && <div className="text-xs text-amber-400 mt-1">Non installati: {bulk.esito.falliti.join(', ')}.</div>}
+          </div>
+          <button onClick={() => setBulk({ busy: false, esito: null, errore: '' })} className="text-xs text-gray-500 hover:text-ink flex-shrink-0">Chiudi</button>
+        </div>
+      )}
       {section('Disponibili', availableList, false, q ? 'Nessun modulo disponibile corrisponde alla ricerca.' : 'Hai già installato tutto quello che c\'è nella Libreria.')}
 
       {proposte.length > 0 && (
@@ -378,6 +399,15 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {selezione.length > 0 && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-surface-card border border-gray-700 shadow-xl rounded-xl px-4 py-3 flex items-center gap-3 max-w-[92vw]">
+          <span className="text-sm text-ink">{selezione.length} selezionat{selezione.length === 1 ? 'o' : 'i'}</span>
+          {bulk.errore && <span className="text-xs text-amber-400">{bulk.errore}</span>}
+          <button onClick={() => setSelezione([])} disabled={bulk.busy} className="text-xs text-gray-400 hover:text-ink">Annulla</button>
+          <button onClick={installaSelezionati} disabled={bulk.busy} className="text-sm px-4 py-2 rounded-lg bg-accent hover:opacity-90 disabled:opacity-50 text-white">{bulk.busy ? 'Installo…' : 'Installa'}</button>
         </div>
       )}
 

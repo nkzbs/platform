@@ -473,3 +473,6 @@ Il Builder resta completo (quello di Super Admin serve per gli altri tenant), ma
 
 ## 2026-10-13 — Un solo Builder
 I due Builder (tenant e Super Admin) erano copie sincronizzate a mano. Ora c'è un'unica implementazione in `shared/frontend/builder/`, con alias Vite `@shared`/`@app` e una render-prop `moduleActions` per le azioni di promozione del modulo (tenant: Proponi alla Libreria; Super Admin: Salva nella Libreria). Super Admin ha l'alias Tailwind `accent`.
+
+## 2026-10-13 — Il verticale lo costruisce l'utente del tenant
+Nessun verticale «curato» da Super Admin: chi costruisce il proprio gestionale spunta più moduli nello store e li installa insieme (`POST /api/modules/registry/bulk-install`: salta i presenti, installa le dipendenze, segnala i falliti), poi crea le relazioni nel Builder. Un primo tentativo con verticali gestiti da Super Admin è stato scartato.

@@ -171,6 +171,37 @@ function findMissingDependencies(schemaJson) {
     .filter((slug, i, arr) => slug && !installedSlugs.has(slug) && arr.indexOf(slug) === i);
 }
 
+// ─── INSTALLAZIONE MULTIPLA DALLO STORE ────────────────────────────────────────────────────────────────────────
+// Chi costruisce il proprio gestionale sceglie più moduli dallo store e li scarica in un colpo solo; le relazioni tra loro le crea poi
+// lui (Builder). Ogni modulo non ancora presente si installa come uno singolo (stesso percorso, dipendenze comprese); quelli già presenti
+// si saltano, niente si sovrascrive. Risponde con cosa è entrato, cosa c'era già e cosa non è riuscito.
+router.post('/registry/bulk-install', requireAuth, requireAdmin, async (req, res) => {
+  const ids = [...new Set((Array.isArray(req.body && req.body.ids) ? req.body.ids : []).map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 100);
+  if (!ids.length) return res.status(400).json({ error: 'Scegli almeno un modulo' });
+  let libreria;
+  try {
+    const rr = await fetch(SUPER_ADMIN_URL + '/api/registry/public/modules?tenant_slug=' + encodeURIComponent(TENANT_SLUG), { headers: { 'x-internal-secret': INTERNAL_SECRET } });
+    if (!rr.ok) throw new Error('giù');
+    libreria = await rr.json();
+  } catch (e) { return res.status(502).json({ error: 'Libreria non raggiungibile' }); }
+  const presenti = () => new Set(db.prepare('SELECT slug, registry_slug FROM modules WHERE installed = 1').all().flatMap((m) => [m.slug, m.registry_slug]).filter(Boolean));
+  const installati = [], saltati = [], falliti = [];
+  const installa = async (id, slug) => {
+    if (presenti().has(slug)) { saltati.push(slug); return; }
+    try {
+      const m = await installRegistryModuleById(id, req.user.username);
+      installati.push(m.slug);
+      for (const dep of findMissingDependencies(m.schema_json)) {
+        const d = libreria.find((x) => x.slug === dep);
+        if (d) await installa(d.id, d.slug); else falliti.push(dep + ' (richiesto da ' + slug + ')');
+      }
+    } catch (e) { falliti.push(slug); }
+  };
+  for (const id of ids) { const m = libreria.find((x) => x.id === id); if (m) await installa(m.id, m.slug); else falliti.push('#' + id); }
+  logAudit(req.user.username, 'module.bulk_install', null, { installati: installati.length, saltati: saltati.length, falliti: falliti.length });
+  res.json({ installati, saltati, falliti });
+});
+
 router.post('/registry/:id/install', requireAuth, requireAdmin, async (req, res) => {
   let payload;
   try {
