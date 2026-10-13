@@ -43,6 +43,12 @@ function SettingsPage({ token }) {
   const [showDisable, setShowDisable] = useState(false)
   const [disabling, setDisabling] = useState(false)
 
+  // Chiavi AI: quella di Super Admin (distinta da quelle dei tenant) e il ripiego dei tenant senza chiave propria
+  const [keys, setKeys] = useState(null) // { admin, generale_presente, ripiego_tenant, tenant_con_chiave_propria }
+  const [keyInput, setKeyInput] = useState('')
+  const [keyMsg, setKeyMsg] = useState(null)
+  const [keyBusy, setKeyBusy] = useState(false)
+
   const [copied, setCopied] = useState(false)
   const copySecret = () => {
     navigator.clipboard.writeText(twofaSetup.secret).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500) })
@@ -52,9 +58,20 @@ function SettingsPage({ token }) {
 
   const loadTwofaStatus = () => fetch(API + '/auth/2fa/status', { headers }).then((r) => r.json()).then((d) => setTwofaEnabled(d.enabled))
 
+  const loadKeys = () => fetch(API + '/ai-usage/keys', { headers }).then((r) => r.json()).then((d) => d && d.admin && setKeys(d))
   useEffect(() => {
     loadTwofaStatus()
+    loadKeys()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const keyCall = async (method, path, body) => {
+    setKeyBusy(true); setKeyMsg(null)
+    const res = await fetch(API + '/ai-usage/keys' + path, { method, headers, body: body ? JSON.stringify(body) : undefined })
+    const data = await res.json().catch(() => ({}))
+    setKeyBusy(false)
+    if (!res.ok) { setKeyMsg({ ok: false, text: data.error || 'Non riuscito.' }); return }
+    setKeys(data); setKeyInput(''); setKeyMsg({ ok: true, text: 'Fatto.' })
+  }
 
   const changePassword = async () => {
     setMsg(null)
@@ -126,6 +143,36 @@ function SettingsPage({ token }) {
     <div className="max-w-2xl">
       <h1 className="text-lg font-bold text-ink tracking-[-0.35px] mb-1">Impostazioni</h1>
       <p className="text-gray-500 text-sm mb-6">Il tuo accesso a questo pannello.</p>
+
+      {/* CHIAVI AI */}
+      <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mb-4">
+        <SectionHead icon="key" title="Chiavi AI" sub="La chiave di Super Admin è solo sua: serve a costruire i tenant e ad analizzare i processi. Non la usa mai un tenant." />
+        {keys && (
+          <div className="space-y-4">
+            <div className="text-xs">
+              {keys.admin.source === 'admin' && <div className="text-green-400">Chiave di Super Admin salvata ({keys.admin.hint})</div>}
+              {keys.admin.source === 'generale' && <div className="text-gray-400">Super Admin usa la chiave generale (variabile d'ambiente del backend). Inserisci qui una chiave sua per separare la spesa.</div>}
+              {!keys.admin.configured && <div className="text-amber-400">Nessuna chiave: l'AI di Super Admin non funziona finché non ne inserisci una.</div>}
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <input type="password" autoComplete="off" spellCheck="false" value={keyInput} onChange={(e) => setKeyInput(e.target.value)} placeholder="Incolla la chiave Mistral di Super Admin" className={inputCls + ' flex-1 min-w-[220px]'} />
+              <button type="button" onClick={() => keyCall('PUT', '/admin', { key: keyInput })} disabled={keyBusy || !keyInput.trim()} className={primaryBtn}>Salva</button>
+              {keys.admin.source === 'admin' && <button type="button" onClick={() => keyCall('DELETE', '/admin')} disabled={keyBusy} className={ghostBtn}>Togli</button>}
+            </div>
+            <div className="border-t border-gray-800 pt-4">
+              <label className="flex items-start gap-2.5 cursor-pointer text-sm text-gray-300">
+                <input type="checkbox" className="mt-1" checked={keys.ripiego_tenant} onChange={(e) => keyCall('PUT', '/fallback', { on: e.target.checked })} disabled={keyBusy} />
+                <span>I tenant senza una chiave propria usano la chiave generale
+                  <span className="block text-xs text-gray-500 mt-0.5">{keys.generale_presente ? 'La chiave generale è presente.' : 'Non c\'è nessuna chiave generale: con o senza questa opzione, un tenant senza chiave sua non ha AI.'} Spenta questa opzione, ogni tenant deve inserire la sua (Impostazioni → AI del tenant).</span>
+                </span>
+              </label>
+              <div className="text-xs text-gray-500 mt-3">Tenant con chiave propria: {keys.tenant_con_chiave_propria.length ? keys.tenant_con_chiave_propria.join(', ') : 'nessuno'}</div>
+            </div>
+            {keyMsg && <div className={'text-xs ' + (keyMsg.ok ? 'text-green-400' : 'text-amber-400')}>{keyMsg.text}</div>}
+            <div className="text-xs text-gray-600">Le chiavi sono controllate con Mistral e conservate cifrate. Non vengono mostrate di nuovo.</div>
+          </div>
+        )}
+      </section>
 
       {/* PASSWORD */}
       <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mb-4">

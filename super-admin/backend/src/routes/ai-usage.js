@@ -73,4 +73,34 @@ router.get('/', requireAuth, (req, res) => {
   });
 });
 
+// ── chiavi AI ──────────────────────────────────────────────────────────────────────────────────────────────────
+// Super Admin ha una chiave sua, distinta da quella dei tenant e dal ripiego generale. Le chiavi non escono mai: si vede solo «configurata» e le ultime 4 cifre.
+const aiKey = require('../lib/ai-key');
+const { logAudit } = require('../audit-log');
+
+router.get('/keys', requireAuth, (req, res) => res.json(aiKey.overview()));
+
+router.put('/keys/admin', requireAuth, async (req, res) => {
+  const k = String((req.body && req.body.key) || '').trim();
+  if (k.length < 16 || /\s/.test(k)) return res.status(400).json({ error: 'La chiave non sembra valida (troppo corta o con spazi).' });
+  const v = await aiKey.validateMistralKey(k);
+  if (!v.ok) return res.status(400).json({ error: v.reason });
+  aiKey.setAdminKey(k);
+  logAudit(req.user.username, 'ai.key.admin.set', null, null);
+  res.json(aiKey.overview());
+});
+
+router.delete('/keys/admin', requireAuth, (req, res) => {
+  aiKey.clearAdminKey();
+  logAudit(req.user.username, 'ai.key.admin.clear', null, null);
+  res.json(aiKey.overview());
+});
+
+// Il ripiego: un tenant senza chiave propria usa la chiave generale (acceso) oppure non ha AI (spento).
+router.put('/keys/fallback', requireAuth, (req, res) => {
+  aiKey.setFallback(!!(req.body && req.body.on));
+  logAudit(req.user.username, 'ai.key.fallback', null, { on: aiKey.fallbackOn() });
+  res.json(aiKey.overview());
+});
+
 module.exports = router;

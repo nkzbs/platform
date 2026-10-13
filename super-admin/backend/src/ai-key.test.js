@@ -156,6 +156,28 @@ async function main() {
     assertEq(mistralChat[0].key, 'chiave-generale-super-admin');
   });
 
+  await test('CHIAVE SEPARATA di Super Admin: sua e basta, mai usata da un tenant; cifrata; non compare nel quadro', async () => {
+    const ADMIN = 'chiave-buona-finance-123456'; // una chiave valida per la prova
+    assertEq(aiKey.keyFor(null), 'chiave-generale-super-admin', 'senza chiave sua, Super Admin usa la generale');
+    aiKey.setAdminKey(ADMIN);
+    assertEq(aiKey.keyFor(null), ADMIN, 'ora Super Admin usa la sua');
+    assertEq(aiKey.keyFor('finance'), 'chiave-generale-super-admin', 'il tenant senza chiave sua NON usa quella di Super Admin');
+    assertEq(aiKey.keyFor('qualunque-altro'), 'chiave-generale-super-admin');
+    const raw = db.prepare('SELECT mistral_key FROM tenant_ai_keys WHERE tenant_slug = ?').get(aiKey.ADMIN_SLUG).mistral_key;
+    assertTrue(raw && !raw.includes(ADMIN), 'salvata cifrata');
+    const o = aiKey.overview(); assertEq(o.admin.source, 'admin'); assertEq(o.admin.hint, '…3456'); assertTrue(!JSON.stringify(o).includes(ADMIN), 'la chiave non esce');
+    assertTrue(!o.tenant_con_chiave_propria.includes(aiKey.ADMIN_SLUG), 'la riga di Super Admin non è un tenant');
+    aiKey.clearAdminKey(); assertEq(aiKey.keyFor(null), 'chiave-generale-super-admin');
+  });
+  await test('RIPIEGO SPENTO: un tenant senza chiave sua non ha AI (errore chiaro, Mistral non contattato); con chiave propria funziona; Super Admin non cambia', async () => {
+    aiKey.setFallback(false);
+    assertEq(aiKey.keyFor('finance'), null); assertEq(aiKey.keyStatus('finance').configured, false);
+    assertEq(aiKey.keyFor(null), 'chiave-generale-super-admin', 'Super Admin continua');
+    mistralChat = []; const r = await api('POST', '/classify-bill', bill('finance'));
+    assertEq(r.status, 503); assertEq((await r.json()).code, 'ai_not_configured'); assertEq(mistralChat.length, 0);
+    aiKey.setTenantKey('finance', GOOD); assertEq(aiKey.keyFor('finance'), GOOD);
+    aiKey.clearTenantKey('finance'); aiKey.setFallback(true); assertEq(aiKey.keyFor('finance'), 'chiave-generale-super-admin', 'riacceso: torna il ripiego');
+  });
   await test('i consumi sono registrati con il tenant che li ha fatti', () => {
     assertTrue(db.prepare("SELECT COUNT(*) c FROM ai_usage_log WHERE tenant_slug = 'timbrature'").get().c >= 1);
   });
