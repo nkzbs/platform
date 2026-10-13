@@ -60,7 +60,7 @@ app.use('/api/guida', guidaRoutes);
 app.use('/api/ai-usage', aiUsageRoutes);
 app.use('/api/tenant-ai', tenantAiRoutes);
 
-app.get('/health', (req, res) => res.json({ status: 'ok', version: '0.1.1' }));
+app.get('/health', (req, res) => res.json({ status: 'ok', version: '0.2.0' }));
 
 // G19 (PLATFORM-0.6-GAP-ANALYSIS.md) — pubblica di proposito, nessuna autenticazione: serve al
 // workflow GitHub Actions di uptime-check (.github/workflows/uptime-check.yml) per sapere quali

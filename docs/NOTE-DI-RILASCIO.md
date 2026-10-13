@@ -2,7 +2,12 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
-## Dopo la 0.1.1 (non ancora in una versione)
+## 0.2.0 (in preparazione: il tag arriva dopo le prove dal vivo)
+
+- **Un solo Builder** per tenant e Super Admin, con «Proponi alla Libreria» (tenant) e «Salva nella Libreria» (Super Admin).
+- **Store**: più moduli spuntati e installati insieme (dipendenze comprese, presenti saltati).
+- **Collega i moduli**: relazioni proposte dai nomi, confermate una per una.
+- **Primi passi** al primo avvio di un tenant vuoto.
 
 - **Report su WhatsApp ridisegnati** (11 ottobre): niente più riepilogo del mattino né report settimanali. Tre messaggi: **quanto devo pagare** (ogni 27, venerdì prima se è weekend, dal 27 al 26 con totale, scadute e «ti restano»), **da smistare** (ogni sera finché non smisti) e **voci scadute** (lunedì sera). Impostazioni → Report, con anteprima, «Invia ora» e pulsante per togliere i vecchi report dai moduli. Dopo l'aggiornamento di Finance: aprire Impostazioni → Report e premere «Toglili dai moduli».
 
