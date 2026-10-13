@@ -126,6 +126,32 @@ async function main() {
     } finally { T.createTenant = real.c; T.installModulesByIds = real.i; T.enqueueHostedCreation = real.e; }
   });
 
+  console.log('\n--- «Fai tutto» ---');
+  await test('un racconto → analisi completa in background: nome dell\'attività, processi proposti, tutti completati (un errore non ferma gli altri); nessun tenant creato da solo', async () => {
+    const precedente = A.deps.callAI;
+    A.deps.callAI = async (prov, { system, user }) => {
+      await new Promise((r) => setTimeout(r, 80)); // un'AI vera non risponde subito
+      if (/dalla descrizione di un'attività, elenca/.test(system)) return JSON.stringify({ nome_attivita: 'Officina Verdi', processi: [{ nome: 'Accettazione', reparto: 'Ricezione', registry_module_id: idA }, { nome: 'Ricambi', registry_module_id: 424242 }, { nome: 'Consegna' }] });
+      if (/Processo: Ricambi/.test(user)) throw new Error('modello in errore');
+      return JSON.stringify({ scopo: 'Scopo di prova', evento_innesco: 'Arriva il cliente', input: 'Anagrafica', output: 'Lavoro', ruoli_coinvolti: [{ nome: 'Ricezione', tipo: 'utente' }], passaggi: [{ titolo: 'Accetta', ruolo: 'Ricezione', descrizione: 'Registra', tipo: 'step' }], registry_module_id: idB });
+    };
+    try {
+      eq((await api('POST', '/auto', { descrizione: 'corta' })).status, 400);
+      A.deps.isConfigured = () => false; eq((await api('POST', '/auto', { descrizione: 'Un\'officina con sei meccanici che ripara auto e moto.' })).status, 503); A.deps.isConfigured = () => true;
+      const r = await api('POST', '/auto', { descrizione: 'Un\'officina con sei meccanici che ripara auto e moto, con preventivi e ricambi.' }); eq(r.status, 202);
+      const { id } = await r.json(); eq((await api('DELETE', '/' + id)).status, 409, 'non si toglie mentre si compila');
+      let a; for (let i = 0; i < 200; i++) { a = await (await api('GET', '/' + id)).json(); if (a.auto && (a.auto.fase === 'finita' || a.auto.fase === 'errore')) break; await new Promise((r) => setTimeout(r, 50)); }
+      eq(a.auto.fase, 'finita', JSON.stringify(a.auto)); eq(a.name, 'Officina Verdi'); eq([a.auto.fatti, a.auto.totale, a.auto.errori], [3, 3, 1]);
+      eq(a.processi.map((p) => p.nome), ['Accettazione', 'Ricambi', 'Consegna']);
+      const acc = a.processi[0]; eq(acc.registry_module_id, idA, 'il modulo già abbinato non si cambia'); eq(acc.scopo, 'Scopo di prova'); eq(acc.passaggi.length, 1);
+      eq(a.processi[1].scopo, '', 'quello che è fallito resta com\'era'); eq(a.processi[2].registry_module_id, idB); eq(a.tenant_slug, null, 'il tenant lo crea l\'utente, con un tocco');
+      eq((await api('DELETE', '/' + id)).status, 200, 'finita: si può togliere');
+      const r2 = await api('POST', '/auto', { descrizione: 'Un\'altra attività con descrizione abbastanza lunga.', name: 'Nome scelto' }); const id2 = (await r2.json()).id;
+      for (let i = 0; i < 200; i++) { a = await (await api('GET', '/' + id2)).json(); if (a.auto && a.auto.fase !== 'processi' && a.auto.fase !== 'completamento') break; await new Promise((r) => setTimeout(r, 50)); }
+      eq(a.name, 'Nome scelto', 'un nome dato dall\'utente non si cambia');
+    } finally { A.deps.callAI = precedente; }
+  });
+
   console.log(`\n${passed} passati, ${failed} falliti`);
   process.exit(failed ? 1 : 0);
 }

@@ -89,7 +89,7 @@ Regole:
 const MULTI_SPEC = `Sei un consulente che, dalla descrizione di un'attività, elenca i processi più plausibili che gestisce, in stile "manuale dei processi".
 
 Rispondi SOLO con un oggetto JSON in questa forma esatta, senza testo prima o dopo e senza blocchi markdown:
-{"processi": [{"nome": "Nome breve", "reparto": "Reparto plausibile", "scopo": "una frase", "registry_module_id": numero oppure null, "registry_module_reasoning": "una frase"}]}
+{"nome_attivita": "nome breve per questa attività, massimo 4 parole (es. Officina Rossi, Studio dentistico)", "processi": [{"nome": "Nome breve", "reparto": "Reparto plausibile", "scopo": "una frase", "registry_module_id": numero oppure null, "registry_module_reasoning": "una frase"}]}
 
 Regole:
 - Da 4 a 8 processi, i più concreti per QUESTA attività: non processi generici che andrebbero bene per qualunque attività.
@@ -108,6 +108,23 @@ async function suggestProcesso({ nome, reparto }) {
   const out = await ask(PROCESSO_SPEC, 'Processo: ' + redact(t(nome, 80)) + (reparto ? '\nReparto: ' + redact(t(reparto, 60)) : '') + '\n\nModuli disponibili:\n' + (moduleList(mods) || '(nessun modulo disponibile)'), 1800);
   const p = sanitizeProcesso({ ...out, nome }, new Set(mods.map((m) => m.id)));
   return p;
+}
+
+// Cosa applicare di una proposta a un processo: SOLO i campi ancora vuoti, mai ciò che è già scritto (la stessa regola del pulsante «Suggerisci con AI»).
+function applicaSuggerimento(p, s) {
+  const out = { ...p };
+  for (const k of ['scopo', 'evento_innesco', 'output', 'input']) if (!p[k] && s[k]) out[k] = s[k];
+  for (const k of ['ruoli_coinvolti', 'passaggi', 'sistemi_coinvolti', 'kpi']) if ((!p[k] || p[k].length === 0) && s[k] && s[k].length) out[k] = s[k];
+  if (!p.registry_module_id && s.registry_module_id) { out.registry_module_id = s.registry_module_id; out.copertura = 'coperto'; }
+  if (!s.registry_module_id && s.registry_module_reasoning) { out.registry_module_reasoning = s.registry_module_reasoning; if (!p.registry_module_id && (!p.copertura || p.copertura === 'da_valutare')) out.copertura = 'da_costruire'; }
+  return out;
+}
+
+// Dalla descrizione: il nome dell'attività e i processi proposti (una chiamata). `suggestProcessi` ne ritorna solo l'elenco.
+async function analizzaAttivita({ descrizione }) {
+  const mods = libraryModules();
+  const out = await ask(MULTI_SPEC, 'Descrizione dell\'attività: ' + redact(t(descrizione, 1500)) + '\n\nModuli disponibili:\n' + (moduleList(mods) || '(nessun modulo disponibile)'), 2200);
+  return { nome: t(out && out.nome_attivita, 60), processi: sanitizeProcessi(out && out.processi, new Set(mods.map((m) => m.id))) };
 }
 
 // Più processi da una descrizione: bozze «leggere» da accettare una per una.
@@ -187,4 +204,4 @@ function blueprint(processi) {
   return { processi: processi.length, ...c, proposte: proposte(moduliIds), moduli_ids: moduliIds, moduli_collegati: nomi(moduliIds.filter((id) => !diretti.includes(id))), ruoli_utente: ruoli.size, da_costruire: processi.filter((p) => p.copertura === 'da_costruire').map((p) => p.nome) };
 }
 
-module.exports = { deps, withDependencies, proposte, pacchettoTenant, libraryModules, sanitizeProcesso, sanitizeProcessi, sanitizeProfilo, suggestProcesso, suggestProcessi, blueprint, COPERTURE };
+module.exports = { deps, applicaSuggerimento, analizzaAttivita, withDependencies, proposte, pacchettoTenant, libraryModules, sanitizeProcesso, sanitizeProcessi, sanitizeProfilo, suggestProcesso, suggestProcessi, blueprint, COPERTURE };

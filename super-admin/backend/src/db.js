@@ -194,6 +194,7 @@ for (const col of ['backup_mail_weekly INTEGER DEFAULT 0', 'backup_mail_last_sen
 db.prepare('INSERT OR IGNORE INTO update_manager (id) VALUES (1)').run();
 if (!db.prepare('PRAGMA table_info(registry_modules)').all().some((c) => c.name === 'ruoli')) db.exec('ALTER TABLE registry_modules ADD COLUMN ruoli TEXT'); // dichiarazione dei ruoli del modulo (kind, campi, stati…), applicata ai tenant creati dall\'analisi
 if (!db.prepare('PRAGMA table_info(process_analyses)').all().some((c) => c.name === 'creazione')) db.exec('ALTER TABLE process_analyses ADD COLUMN creazione TEXT');
+if (!db.prepare('PRAGMA table_info(process_analyses)').all().some((c) => c.name === 'auto')) db.exec('ALTER TABLE process_analyses ADD COLUMN auto TEXT'); // avanzamento di «Fai tutto»
 if (!db.prepare('PRAGMA table_info(process_analyses)').all().some((c) => c.name === 'scelte')) db.exec("ALTER TABLE process_analyses ADD COLUMN scelte TEXT NOT NULL DEFAULT '{}'"); // proposte (report, AI) che l\'utente ha tolto // avanzamento della creazione del tenant dall\'analisi
 
 // Seed del registro moduli — solo se completamente vuoto (prima installazione).

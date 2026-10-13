@@ -21,7 +21,7 @@ const row = (id) => db.prepare('SELECT * FROM process_analyses WHERE id = ?').ge
 const json = (s, d) => { try { return JSON.parse(s); } catch (e) { return d; } };
 function full(r) {
   const processi = json(r.processi, []);
-  return { id: r.id, name: r.name, descrizione: r.descrizione, profilo: json(r.profilo, {}), processi, tenant_slug: r.tenant_slug, scelte: json(r.scelte, {}), creazione: (json(r.creazione, null) || null), created_at: r.created_at, updated_at: r.updated_at, blueprint: analysis.blueprint(processi) };
+  return { id: r.id, name: r.name, descrizione: r.descrizione, profilo: json(r.profilo, {}), processi, tenant_slug: r.tenant_slug, auto: json(r.auto, null), scelte: json(r.scelte, {}), creazione: (json(r.creazione, null) || null), created_at: r.created_at, updated_at: r.updated_at, blueprint: analysis.blueprint(processi) };
 }
 const aiError = (res, e) => res.status(e.status || 500).json({ error: e.message, code: e.code });
 
@@ -52,6 +52,53 @@ router.post('/suggest-processo', requireAuth, async (req, res) => {
     logAudit(req.user.username, 'analysis.suggest_processo', nome.slice(0, 60), { registry_module_id: suggestion.registry_module_id });
     res.json(suggestion);
   } catch (e) { aiError(res, e); }
+});
+
+// ── «Fai tutto»: dal racconto all'analisi completa, in background ─────────────────────────────────────────────────────
+// Una sola richiesta: crea l'analisi, fa proporre i processi (e il nome dell'attività), poi li completa tutti (tre alla volta, solo i campi vuoti). L'avanzamento sta in `auto`
+// (fase, fatti/totale) e i processi compaiono man mano. Non crea il tenant: quello resta un tocco, dal riepilogo.
+const setAuto = (id, patch) => { const r = row(id); const cur = (r && json(r.auto, null)) || {}; db.prepare('UPDATE process_analyses SET auto = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify({ ...cur, ...patch }), id); };
+const autoInCorso = (a) => !!a && (a.fase === 'processi' || a.fase === 'completamento') && Date.now() - a.inizio < 10 * 60 * 1000;
+
+async function faiTuttoInBackground(id, descrizione, nomeDato) {
+  try {
+    const { nome, processi } = await analysis.analizzaAttivita({ descrizione });
+    if (!processi.length) throw new Error('L\'AI non ha trovato processi: racconta qualcosa di più sull\'attività.');
+    db.prepare('UPDATE process_analyses SET processi = ?' + (nomeDato ? '' : ', name = ?') + ' WHERE id = ?').run(...[JSON.stringify(processi), ...(nomeDato ? [] : [nome || 'Nuova attività']), id]);
+    setAuto(id, { fase: 'completamento', fatti: 0, totale: processi.length, errori: 0 });
+    let next = 0, errori = 0, fatti = 0;
+    const valid = new Set(analysis.libraryModules().map((m) => m.id));
+    const lavora = async () => {
+      while (next < processi.length) {
+        const nomeProc = processi[next++].nome;
+        try {
+          const s = await analysis.suggestProcesso({ nome: nomeProc, reparto: (processi.find((x) => x.nome === nomeProc) || {}).reparto });
+          const cur = json(row(id).processi, []);
+          const merged = cur.map((p) => (p.nome === nomeProc ? analysis.sanitizeProcesso(analysis.applicaSuggerimento(p, s), valid) : p));
+          db.prepare('UPDATE process_analyses SET processi = ? WHERE id = ?').run(JSON.stringify(merged), id);
+        } catch (e) { errori++; console.error('[analyses] completamento di «' + nomeProc + '» non riuscito:', e.message); }
+        fatti++; setAuto(id, { fatti, errori });
+      }
+    };
+    await Promise.all([lavora(), lavora(), lavora()]);
+    setAuto(id, { fase: 'finita', fine: Date.now(), errori });
+    logAudit('analisi', 'analysis.fai_tutto', String(id), { processi: processi.length, errori });
+  } catch (e) {
+    console.error('[analyses] fai tutto non riuscito:', e.message);
+    setAuto(id, { fase: 'errore', errore: e.message });
+  }
+}
+
+router.post('/auto', requireAuth, (req, res) => {
+  const descrizione = String((req.body && req.body.descrizione) || '').trim().slice(0, 4000);
+  if (descrizione.length < 20) return res.status(400).json({ error: 'Racconta l\'attività in qualche riga.' });
+  if (!analysis.deps.isConfigured()) return res.status(503).json({ error: 'Nessuna chiave AI di Super Admin: inseriscila in Impostazioni → Chiavi AI.', code: 'ai_not_configured' });
+  const nomeDato = String((req.body && req.body.name) || '').trim().slice(0, 80);
+  const id = db.prepare('INSERT INTO process_analyses (name, descrizione, created_by) VALUES (?, ?, ?)').run(nomeDato || 'Nuova analisi', descrizione, req.user.username).lastInsertRowid;
+  setAuto(id, { fase: 'processi', inizio: Date.now(), fatti: 0, totale: 0, errori: 0 });
+  logAudit(req.user.username, 'analysis.create', String(id), { auto: true });
+  faiTuttoInBackground(id, descrizione, !!nomeDato); // senza await: la pagina segue l'avanzamento
+  res.status(202).json({ id });
 });
 
 router.post('/', requireAuth, (req, res) => {
@@ -86,6 +133,7 @@ router.patch('/:id', requireAuth, (req, res) => {
 router.delete('/:id', requireAuth, (req, res) => {
   const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
   if (inCorso(creazioneDi(r))) return res.status(409).json({ error: 'Il tenant è in creazione: aspetta che finisca.' });
+  if (autoInCorso(json(r.auto, null))) return res.status(409).json({ error: 'L\'analisi si sta compilando: aspetta che finisca.' });
   db.prepare('DELETE FROM process_analyses WHERE id = ?').run(r.id);
   logAudit(req.user.username, 'analysis.delete', String(r.id), { name: r.name });
   res.json({ ok: true });

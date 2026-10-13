@@ -89,7 +89,8 @@ const GUIDA_SECTIONS = [
     topics: [
       {
         title: 'Dai processi al tenant', body: [
-          'Racconti come funziona un\'attività; l\'AI propone i processi (mai salvati da soli) e tu li rifinisci: scopo, ruoli, passaggi in ordine (anche i bivi), eccezioni, documenti, KPI. Per ogni processo scegli il modulo della Libreria che lo copre, oppure lo segni «da costruire».',
+          'Il modo più veloce: «Fai tutto». Scrivi come funziona l\'attività e premi il pulsante: in circa un minuto l\'AI trova i processi, li completa e sceglie moduli, report e AI; poi vedi un riepilogo e crei il tenant con un tocco. I dettagli a passi restano disponibili.',
+          'A passi: racconti come funziona un\'attività; l\'AI propone i processi (mai salvati da soli) e tu li rifinisci: scopo, ruoli, passaggi in ordine (anche i bivi), eccezioni, documenti, KPI. Per ogni processo scegli il modulo della Libreria che lo copre, oppure lo segni «da costruire».',
           'Dall\'analisi si apre il manuale dei processi (si stampa o si salva in PDF) e, se vuoi, si crea il tenant: installa i moduli scelti, crea i ruoli degli utenti e trasforma i passaggi negli stati del flusso. Non tocca un modulo che ha già i suoi. Fino alla conferma non si scrive niente.',
           'Il testo che racconti passa dall\'AI con i dati personali tolti, e costa sulla chiave di Super Admin (Impostazioni → Chiavi AI). Super Admin non legge dati dai tenant: l\'analisi riguarda solo ciò che scrivi qui.',
         ]
