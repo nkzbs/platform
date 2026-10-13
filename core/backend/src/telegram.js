@@ -1,5 +1,5 @@
 'use strict';
-// Bot Telegram di Finance. Canale a doppio senso per i report: ti scrive (report con bottoni) e ti risponde (comandi in sola lettura, bottone «✅ Pagata»).
+// Bot Telegram dell'app. Canale a doppio senso per i report: ti scrive (report con bottoni) e ti risponde (comandi in sola lettura, bottone «✅ Pagata»).
 //
 // Sicurezza (il bot NON ha il 2FA, quindi i confini stanno qui):
 //   • un solo bot per il progetto; il suo token sta cifrato (crypto-fields) e non viene mai restituito;
@@ -128,7 +128,7 @@ async function sendReportTo(chatId, kind, result) {
 
 // ── cosa fa il bot quando riceve qualcosa ───────────────────────────────────────────────────────────────────────────────
 const AIUTO = '<b>Cosa so fare</b>\n/pagare — quanto devi pagare\n/scadute — le voci scadute, con il bottone «Pagata»\n/smistare — le righe da smistare\n/timbra — entrata e uscita (se hai le timbrature)\n/ore — le ore della settimana\n\n<b>Oppure scrivimi come parli</b>, per esempio:\n• «quanto ho speso di benzina a settembre?»\n• «ho pagato l\'affitto»\n• «smista la bolletta A2A in 3 rate»\n• «ho speso 20 euro di benzina»\n• «sono entrata», «uscita alle 12:30», «quante ore ho fatto questa settimana?»\n• mandami la <b>foto di uno scontrino</b> o il <b>PDF</b> di una bolletta e li leggo\n\nOgni modifica ti viene mostrata con un bottone di conferma: senza il tuo tocco non cambio niente (le timbrature si registrano subito, con il bottone «Annulla»).\n/scollega — scollega questo telefono';
-const NON_COLLEGATO = 'Questo telefono non è collegato a Finance.\nNell\'app: <b>Impostazioni → Il mio account → Telegram → Collega il mio Telegram</b>, poi tocca il link che ti viene mostrato.';
+const NON_COLLEGATO = 'Questo telefono non è collegato all\'app.\nNell\'app: <b>Impostazioni → Il mio account → Telegram → Collega il mio Telegram</b>, poi tocca il link che ti viene mostrato.';
 const hits = new Map(); // chat → istanti degli ultimi messaggi
 function tooMany(chatId, now) {
   const arr = (hits.get(chatId) || []).filter((t) => now - t < 60000);
@@ -196,7 +196,7 @@ async function handleMessage(msg, now) {
   if (cmd === '/start' && args[0]) {
     const user = consumeLinkCode(args[0], chatId, [msg.from && msg.from.first_name, msg.from && msg.from.username && '@' + msg.from.username].filter(Boolean).join(' '));
     if (!user) return sendMessage(chatId, 'Il codice non è valido o è scaduto. Generane uno nuovo dall\'app (dura 10 minuti, si usa una volta sola).');
-    return sendMessage(chatId, '✅ Collegato a Finance come <b>' + esc(user.display_name || user.username) + '</b>.\n\n' + AIUTO);
+    return sendMessage(chatId, '✅ Collegato come <b>' + esc(user.display_name || user.username) + '</b>.\n\n' + AIUTO);
   }
   const user = linkedUser(chatId);
   if (!user) return sendMessage(chatId, NON_COLLEGATO);
@@ -234,7 +234,7 @@ async function handleCallback(cb, now) {
   const answer = (text) => api('answerCallbackQuery', { callback_query_id: cb.id, text: String(text).slice(0, 190) }).catch(() => {});
   if (tooMany(chatId, now)) return answer('Troppe richieste, riprova tra un minuto.');
   const user = linkedUser(chatId);
-  if (!user) return answer('Questo telefono non è collegato a Finance.');
+  if (!user) return answer('Questo telefono non è collegato all\'app.');
   const act = require('./bot-actions');
   const tbm = /^(tb|tu):([a-z0-9]+)$/.exec(String(cb.data || ''));
   if (tbm) {

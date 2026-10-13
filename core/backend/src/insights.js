@@ -106,6 +106,19 @@ function installedModules(slugs) {
   return slugs.filter((s) => rows.includes(s));
 }
 
+// I «limiti» che si dicono all'assistente: derivano da ciò che i moduli dichiarano (moduli, categorie e gruppi esclusi), nessuna frase su moduli o categorie precise.
+function limitiVista(cfg) {
+  return 'Conta ciò che è registrato in questa istanza: moduli di spese (' + ([...installedModules(cfg.spese.modules)].join(', ') || 'nessuno') + ') e di entrate (' + ([...installedModules(cfg.entrate.modules)].join(', ') || 'nessuno') + '). I pagamenti con carta o da altri conti non registrati non compaiono.';
+}
+function limitiEsclusi(cfg) {
+  const E = cfg.entrate, parti = [];
+  if ((E.exclude_categories || []).length) parti.push('categorie ' + E.exclude_categories.join(', '));
+  if ((E.exclude_groups || []).length) parti.push('gruppi ' + E.exclude_groups.join(', '));
+  if ((E.exclude_descriptions || []).length) parti.push('righe chiamate ' + E.exclude_descriptions.join(', '));
+  return 'Non sono conteggiati come entrate: ' + (parti.join('; ') || 'nessuna esclusione dichiarata') + '.';
+}
+function limitiNuovo() { return 'Le righe ancora da smistare non contano come spese finché non le smisti.'; }
+
 // Legge i record una volta sola e li raggruppa per mese.
 function collect(cfg) {
   const entrate = {}, spese = {}, stipendi = {}, accantonato = {};
@@ -208,9 +221,7 @@ function buildSnapshot(month, now = new Date(), view = null) {
     if (c.media_6m >= cfg.anomaly.min_delta_eur && c.variazione_pct != null && c.variazione_pct >= cfg.anomaly.pct && delta >= cfg.anomaly.min_delta_eur) anomalie.push({ tipo: 'sopra_la_media', ...c });
     else if (c.media_6m === 0 && c.valore >= 50) anomalie.push({ tipo: 'categoria_nuova', ...c });
   }
-  const limiti = ['Vista personale: conta ciò che è registrato in Finance (' + [...installedModules(cfg.spese.modules)].join(', ') + ' per le spese). Le spese di casa (affitto, bollette) non sono incluse: contano solo le quote che versi tu alla casa, se registrate come "Contributo Casa". I pagamenti con carta o da altri conti non registrati non compaiono.',
-    'Non sono conteggiati come entrate: ' + ((cfg.entrate.exclude_categories || []).join(', ') || 'nessuna categoria esclusa') + ', i contributi alla casa e i riporti di saldo.',
-    'Le righe "da smistare" non contano come spese finché non le smisti.'];
+  const limiti = [limitiVista(cfg), limitiEsclusi(cfg), limitiNuovo(cfg)];
   if (col.senzaData.n) limiti.push('Non contate in nessun mese: ' + col.senzaData.n + ' spese (circa ' + Math.round(col.senzaData.totale) + ' €) la cui data vera è andata persa nell\'importazione.');
   if (acc.valore) limiti.push('L\'accantonamento (fondo o azioni, trattenuto in busta paga) non arriva sul conto: è contato come risparmio.' + (acc.stimato ? ' Per questo mese è una stima (circa ' + Math.round((acc.valore / (col.stipendi[month] || 1)) * 100) + '% del netto, come negli altri mesi): manca la riga con l\'importo vero.' : ''));
   if (month >= cur) limiti.unshift('Mese in corso: i dati sono parziali.');
@@ -219,7 +230,7 @@ function buildSnapshot(month, now = new Date(), view = null) {
   // Vista di sole spese (es. la casa): niente entrate, saldo e risparmio; contano le spese registrate nei moduli scelti.
   if (soloSpese) {
     const stS = spStato[month] || { pagate: 0, da_pagare: 0 }, fxS = spFix[month] || { fisse: 0, variabili: 0 };
-    const limitiS = ['Conta le spese registrate in: ' + [...installedModules(cfg.spese.modules)].join(', ') + '.', 'Le righe "da smistare" non contano come spese finché non le smisti.'];
+    const limitiS = ['Conta le spese registrate in: ' + [...installedModules(cfg.spese.modules)].join(', ') + '.', limitiNuovo()];
     if (month >= cur) limitiS.unshift('Mese in corso: i dati sono parziali.');
     return {
       available: true, key: month + viewKey(view), month, in_corso: month >= cur, solo_spese: true,
@@ -289,8 +300,7 @@ function buildYearSnapshot(year, now = new Date(), view = null) {
       categorie, limiti: ['Conta le spese registrate in: ' + [...installedModules(cfg.spese.modules)].join(', ') + '.', 'Le righe "da smistare" non contano come spese finché non le smisti.'],
     };
   }
-  const limiti = ['Vista personale: conta ciò che è registrato in Finance (' + [...installedModules(cfg.spese.modules)].join(', ') + ' per le spese). Le spese di casa non sono incluse: contano solo le quote che versi tu alla casa, se registrate come "Contributo Casa".',
-    'Non sono conteggiati come entrate: ' + ((cfg.entrate.exclude_categories || []).join(', ') || 'nessuna categoria esclusa') + ', i contributi alla casa e i riporti di saldo.'];
+  const limiti = [limitiVista(cfg), limitiEsclusi(cfg)];
   if (col.senzaData.n) limiti.push('Non contate in nessun mese: ' + col.senzaData.n + ' spese (circa ' + Math.round(col.senzaData.totale) + ' €) la cui data vera è andata persa nell\'importazione.');
   if (ac.valore) limiti.push('L\'accantonamento (fondo o azioni, trattenuto in busta paga) non arriva sul conto: è contato come risparmio.' + (ac.stimato ? ' Per alcuni mesi è una stima: manca la riga con l\'importo vero.' : ''));
   if (acP.valore === 0 && ac.valore > 0) limiti.push('L\'anno scorso non c\'era ancora l\'accantonamento: il confronto del risparmio non è alla pari.');

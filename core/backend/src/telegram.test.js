@@ -107,7 +107,7 @@ async function main() {
   await test('il codice è monouso: collega la chat all\'utente che l\'ha generato, la seconda volta non vale', async () => {
     const c = await nuovoCodice(HN); eq(c.url, 'https://t.me/finance_test_bot?start=' + c.code); eq(c.expires_in, 600);
     calls.length = 0; await post(upd(555, '/start ' + c.code));
-    ok(/Collegato a Finance come <b>Nima<\/b>/.test(ultimi('sendMessage')[0].body.text), ultimi('sendMessage')[0].body.text);
+    ok(/Collegato come <b>Nima<\/b>/.test(ultimi('sendMessage')[0].body.text), ultimi('sendMessage')[0].body.text);
     eq(tg.linkedUser(555).username, 'nima');
     calls.length = 0; await post(upd(999, '/start ' + c.code)); ok(/non è valido o è scaduto/.test(ultimi('sendMessage')[0].body.text)); eq(tg.linkedUser(999), null);
   });
