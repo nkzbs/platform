@@ -4,13 +4,14 @@ import useApi from '../../lib/useApi'
 // Ruoli del modulo (Builder): a cosa serve il modulo e quali suoi campi sono importo, data, scadenza...
 // Le funzioni (Come sta andando, riepilogo del mattino, regole Gmail) leggono questa dichiarazione invece di nomi scritti nel codice.
 const KINDS = [['', 'Nessuno'], ['spesa', 'Spese'], ['entrata', 'Entrate'], ['presenze', 'Timbrature (presenze)']]
-const USES = [['riepiloghi', 'Entra nei riepiloghi ("Come sta andando")'], ['avvisi', 'Entra negli avvisi e nel riepilogo del mattino'], ['mail', 'Può ricevere righe dalle mail (Gmail)']]
-const ROLES = [['importo', 'Importo'], ['data', 'Data'], ['scadenza', 'Scadenza'], ['categoria', 'Categoria'], ['descrizione', 'Descrizione'], ['stato', 'Stato'], ['gruppo', 'Gruppo'], ['fisso', 'Spesa fissa'], ['data_pagamento', 'Pagata il'], ['inizio', 'Entrata (ora)'], ['fine', 'Uscita (ora)']]
+const USES = [['riepiloghi', 'Entra nei riepiloghi ("Come sta andando")'], ['avvisi', 'Entra negli avvisi e nel riepilogo del mattino'], ['mail', 'Può ricevere righe dalle mail (Gmail)'], ['estratto', 'Entra nell\'abbinamento con l\'estratto conto']]
+const ROLES = [['importo', 'Importo'], ['data', 'Data'], ['scadenza', 'Scadenza'], ['categoria', 'Categoria'], ['descrizione', 'Descrizione'], ['stato', 'Stato'], ['gruppo', 'Gruppo'], ['note', 'Note'], ['fisso', 'Spesa fissa'], ['data_pagamento', 'Pagata il'], ['data_incerta', 'Data incerta (sì/no)'], ['debito', 'Collegata a un debito'], ['inizio', 'Entrata (ora)'], ['fine', 'Uscita (ora)']]
 const sel = 'w-full bg-surface-page text-ink px-2.5 py-1.5 rounded-lg text-xs outline-none border border-gray-800 focus:border-accent'
 
 const RP0 = { exclude_categories: [], exclude_groups: [], exclude_descriptions: [], salary_categories: [], savings_categories: [], savings_field: '' }
 const PIANO0 = { modulo: '', campi: { nome: '', importo_totale: '', n_rate: '', importo_rata: '', data_prima_rata: '' } }
 const PIANO_CAMPI = [['nome', 'Nome'], ['importo_totale', 'Importo totale'], ['n_rate', 'Numero di rate'], ['importo_rata', 'Importo di una rata'], ['data_prima_rata', 'Data della prima rata']]
+const ES0 = { giro_categories: [], registra: false, categoria_default: '' }
 const AV0 = { states: { nuovo: '', da_fare: '', fatto: '' }, piano: PIANO0, nuovo: false, scadenze: false, tag: 'scadenza', label: '', noun_s: 'riga', noun_p: 'righe' }
 const txt = 'w-full bg-surface-page text-ink px-2.5 py-1.5 rounded-lg text-xs outline-none border border-gray-800 focus:border-accent placeholder-gray-600'
 
@@ -19,17 +20,18 @@ export default function ModuleRolesSection({ token, baseUrl, slug, fields, state
   const [cfg, setCfg] = useState(null)
   const [saved, setSaved] = useState(false)
 
-  useEffect(() => { setCfg(null); api.get('/module-roles/' + slug).then((d) => setCfg(d && d.module_slug ? { ...d, riepiloghi: { ...RP0, ...(d.riepiloghi || {}) }, avvisi: { ...AV0, ...(d.avvisi || {}), states: { ...AV0.states, ...((d.avvisi || {}).states || {}) }, piano: { ...PIANO0, ...((d.avvisi || {}).piano || {}), campi: { ...PIANO0.campi, ...(((d.avvisi || {}).piano || {}).campi || {}) } } } } : { kind: null, uses: [], roles: {}, avvisi: AV0, riepiloghi: RP0 })) }, [slug]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setCfg(null); api.get('/module-roles/' + slug).then((d) => setCfg(d && d.module_slug ? { ...d, riepiloghi: { ...RP0, ...(d.riepiloghi || {}) }, estratto: { ...ES0, ...(d.estratto || {}) }, avvisi: { ...AV0, ...(d.avvisi || {}), states: { ...AV0.states, ...((d.avvisi || {}).states || {}) }, piano: { ...PIANO0, ...((d.avvisi || {}).piano || {}), campi: { ...PIANO0.campi, ...(((d.avvisi || {}).piano || {}).campi || {}) } } } } : { kind: null, uses: [], roles: {}, avvisi: AV0, riepiloghi: RP0, estratto: ES0 })) }, [slug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async (next) => {
     setCfg(next); setSaved(false)
-    const res = await api.put('/module-roles/' + slug, { kind: next.kind || null, uses: next.uses, roles: next.roles, avvisi: next.avvisi, riepiloghi: next.riepiloghi })
+    const res = await api.put('/module-roles/' + slug, { kind: next.kind || null, uses: next.uses, roles: next.roles, avvisi: next.avvisi, riepiloghi: next.riepiloghi, estratto: next.estratto })
     if (res.ok) setSaved(true)
   }
   if (!cfg) return null
   const options = [...(fields || []).map((f) => [f.key, f.label || f.key]), ['_stato', 'Stato del flusso (workflow)']]
   const setRole = (k, v) => save({ ...cfg, roles: { ...cfg.roles, [k]: v || undefined } })
   const setRp = (patch) => save({ ...cfg, riepiloghi: { ...cfg.riepiloghi, ...patch } })
+  const setEs = (patch) => save({ ...cfg, estratto: { ...cfg.estratto, ...patch } })
   const setAv = (patch) => save({ ...cfg, avvisi: { ...cfg.avvisi, ...patch } })
   const setAvState = (k, v) => save({ ...cfg, avvisi: { ...cfg.avvisi, states: { ...cfg.avvisi.states, [k]: v } } })
   const stateOpts = (states || []).map((st) => [st.key, st.label || st.key])
@@ -55,7 +57,7 @@ export default function ModuleRolesSection({ token, baseUrl, slug, fields, state
             ))}
           </div>
           <div className="mt-2 space-y-1.5">
-            {ROLES.filter(([k]) => cfg.kind === 'presenze' ? ['data', 'inizio', 'fine'].includes(k) : (['inizio', 'fine'].includes(k) ? false : cfg.kind === 'spesa' ? k !== 'gruppo' : !['fisso', 'data_pagamento'].includes(k))).map(([k, l]) => (
+            {ROLES.filter(([k]) => cfg.kind === 'presenze' ? ['data', 'inizio', 'fine'].includes(k) : (['inizio', 'fine'].includes(k) ? false : cfg.kind === 'spesa' ? k !== 'gruppo' : !['fisso', 'data_pagamento', 'data_incerta', 'debito'].includes(k))).map(([k, l]) => (
               <div key={k} className="flex items-center gap-2">
                 <span className="text-[11px] text-gray-500 w-16 flex-shrink-0">{l}</span>
                 <select className={sel} value={cfg.roles[k] || ''} onChange={(e) => setRole(k, e.target.value)}>
@@ -80,6 +82,27 @@ export default function ModuleRolesSection({ token, baseUrl, slug, fields, state
                 <option value="">—</option>
                 {(fields || []).map((f) => <option key={f.key} value={f.key}>{f.label || f.key}</option>)}
               </select>
+            </div>
+          )}
+          {cfg.uses.includes('riepiloghi') && cfg.kind === 'spesa' && (
+            <div className="mt-3 pt-2 border-t border-gray-800">
+              <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Criteri dei riepiloghi</div>
+              <div className="text-[11px] text-gray-500 mb-0.5">Categorie che sono rate (elenco separato da virgola)</div>
+              <input className={txt} placeholder="es. Rata" defaultValue={(cfg.riepiloghi.rate_categories || []).join(', ')} key={slug + 'rc'} onBlur={(e) => setRp({ rate_categories: e.target.value })} />
+            </div>
+          )}
+          {cfg.uses.includes('estratto') && cfg.kind === 'spesa' && (
+            <div className="mt-3 pt-2 border-t border-gray-800">
+              <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Estratto conto</div>
+              <div className="text-[11px] text-gray-500 mb-0.5">Categorie che sono un giro tra conti tuoi</div>
+              <input className={txt} placeholder="es. Contributo Casa" defaultValue={(cfg.estratto.giro_categories || []).join(', ')} key={slug + 'gc'} onBlur={(e) => setEs({ giro_categories: e.target.value.split(',').map((x) => x.trim()).filter(Boolean) })} />
+              <label className="flex items-start gap-2 py-1 mt-1.5 cursor-pointer text-[11px] text-gray-300 leading-tight"><input type="checkbox" className="mt-0.5" checked={!!cfg.estratto.registra} onChange={() => setEs({ registra: !cfg.estratto.registra })} />Qui si registrano le uscite dell'estratto che non hanno ancora una riga</label>
+              {cfg.estratto.registra && (
+                <>
+                  <div className="text-[11px] text-gray-500 mb-0.5 mt-1.5">Categoria se non ne scegli una</div>
+                  <input className={txt} placeholder="es. Altro" defaultValue={cfg.estratto.categoria_default || ''} key={slug + 'cd'} onBlur={(e) => setEs({ categoria_default: e.target.value })} />
+                </>
+              )}
             </div>
           )}
           {cfg.uses.includes('avvisi') && (

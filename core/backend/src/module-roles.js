@@ -5,9 +5,9 @@
 const db = require('./db');
 
 // presenze = timbrature: un modulo con una data, un'ora di inizio (entrata) e una di fine (uscita); ruoli `inizio` e `fine`.
-const ROLE_KEYS = ['importo', 'data', 'scadenza', 'categoria', 'descrizione', 'stato', 'gruppo', 'fisso', 'data_pagamento', 'inizio', 'fine'];
+const ROLE_KEYS = ['importo', 'data', 'scadenza', 'categoria', 'descrizione', 'stato', 'gruppo', 'fisso', 'data_pagamento', 'note', 'data_incerta', 'debito', 'inizio', 'fine'];
 const KINDS = ['spesa', 'entrata', 'presenze'];
-const USES = ['riepiloghi', 'avvisi', 'mail'];
+const USES = ['riepiloghi', 'avvisi', 'mail', 'estratto'];
 
 db.exec('CREATE TABLE IF NOT EXISTS module_roles (module_slug TEXT PRIMARY KEY, kind TEXT, uses TEXT NOT NULL DEFAULT \'[]\', roles TEXT NOT NULL DEFAULT \'{}\')');
 if (!db.prepare('PRAGMA table_info(module_roles)').all().some((c) => c.name === 'extra')) db.exec("ALTER TABLE module_roles ADD COLUMN extra TEXT NOT NULL DEFAULT '{}'");
@@ -15,10 +15,16 @@ if (!db.prepare('PRAGMA table_info(module_roles)').all().some((c) => c.name === 
 // Avvisi del modulo (WhatsApp): quali valori del suo stato contano ("nuovo" = da smistare, "da fare" = da pagare/da evadere...),
 // quando avvisare, e come chiamare le sue righe nei messaggi. Le funzioni non conoscono nomi di stati scritti nel codice.
 // Criteri dei riepiloghi ("Come sta andando") per un modulo di entrate: cosa non conta come entrata, cosa è stipendio, cosa è risparmio.
-const DEFAULT_RIEPILOGHI = { exclude_categories: [], exclude_groups: [], exclude_descriptions: [], salary_categories: [], savings_categories: [], savings_field: '' };
+const DEFAULT_RIEPILOGHI = { exclude_categories: [], exclude_groups: [], exclude_descriptions: [], salary_categories: [], savings_categories: [], rate_categories: [], savings_field: '' };
 // Piano a rate: dove si crea il piano quando una riga si divide in rate (un altro modulo, es. i debiti) e quali suoi campi sono nome, importo totale,
 // numero di rate, importo della rata e data della prima. Le righe delle rate le genera l'automazione di quel modulo, come per un piano creato a mano.
 const DEFAULT_PIANO = { modulo: '', campi: { nome: '', importo_totale: '', n_rate: '', importo_rata: '', data_prima_rata: '' } };
+// Estratto conto: il modulo entra nell'abbinamento dei movimenti bancari (uso «estratto»). `giro_categories` = categorie che rappresentano un giro tra conti
+// propri (si abbinano ai giri interni, non alle spese), `registra` = qui si registrano le uscite dell'estratto che non hanno ancora una riga, `categoria_default`
+// = categoria di una riga registrata dall'estratto se non se ne sceglie un'altra.
+// versione della dichiarazione: ogni salvataggio scrive la corrente; i valori di partenza nuovi (ruoli aggiunti dopo) si completano una volta sola, sulle dichiarazioni più vecchie
+const SCHEMA_V = 2;
+const DEFAULT_ESTRATTO = { giro_categories: [], registra: false, categoria_default: '' };
 const DEFAULT_AVVISI = { states: { nuovo: '', da_fare: '', fatto: '' }, piano: DEFAULT_PIANO, nuovo: false, scadenze: false, tag: 'scadenza', label: '', noun_s: 'riga', noun_p: 'righe' };
 
 function parse(row) {
@@ -30,7 +36,8 @@ function parse(row) {
   const av = extra.avvisi || (extra.states ? extra : {}); // forma vecchia: extra era direttamente gli avvisi
   return { module_slug: row.module_slug, kind: row.kind || null, uses, roles,
     avvisi: { ...DEFAULT_AVVISI, ...av, states: { ...DEFAULT_AVVISI.states, ...(av.states || {}) }, piano: { ...DEFAULT_PIANO, ...(av.piano || {}), campi: { ...DEFAULT_PIANO.campi, ...((av.piano || {}).campi || {}) } } },
-    riepiloghi: { ...DEFAULT_RIEPILOGHI, ...(extra.riepiloghi || {}) } };
+    riepiloghi: { ...DEFAULT_RIEPILOGHI, ...(extra.riepiloghi || {}) },
+    estratto: { ...DEFAULT_ESTRATTO, ...(extra.estratto || {}) } };
 }
 
 function get(slug) { return parse(db.prepare('SELECT * FROM module_roles WHERE module_slug = ?').get(slug)); }
@@ -63,31 +70,25 @@ function clean(input) {
   const list = (v) => (Array.isArray(v) ? v : typeof v === 'string' ? v.split(',') : []).map((x) => String(x).trim().slice(0, 60)).filter(Boolean).slice(0, 30);
   const riepiloghi = {
     exclude_categories: list(rp.exclude_categories), exclude_groups: list(rp.exclude_groups), exclude_descriptions: list(rp.exclude_descriptions),
-    salary_categories: list(rp.salary_categories), savings_categories: list(rp.savings_categories),
+    salary_categories: list(rp.salary_categories), savings_categories: list(rp.savings_categories), rate_categories: list(rp.rate_categories),
     savings_field: typeof rp.savings_field === 'string' && /^[A-Za-z0-9_]{1,60}$/.test(rp.savings_field.trim()) ? rp.savings_field.trim() : '',
   };
-  return { kind, uses, roles, avvisi, riepiloghi };
+  const es = (input && input.estratto) || {};
+  const estratto = { giro_categories: list(es.giro_categories), registra: !!es.registra, categoria_default: word(es.categoria_default, '', 60) };
+  return { kind, uses, roles, avvisi, riepiloghi, estratto };
 }
 
 function set(slug, input) {
   const c = clean(input);
   db.prepare('INSERT INTO module_roles (module_slug, kind, uses, roles, extra) VALUES (?, ?, ?, ?, ?) ON CONFLICT(module_slug) DO UPDATE SET kind = excluded.kind, uses = excluded.uses, roles = excluded.roles, extra = excluded.extra')
-    .run(slug, c.kind, JSON.stringify(c.uses), JSON.stringify(c.roles), JSON.stringify({ avvisi: c.avvisi, riepiloghi: c.riepiloghi }));
+    .run(slug, c.kind, JSON.stringify(c.uses), JSON.stringify(c.roles), JSON.stringify({ v: SCHEMA_V, avvisi: c.avvisi, riepiloghi: c.riepiloghi, estratto: c.estratto }));
   return get(slug);
 }
 
-// Valori di partenza per i moduli di finanza che esistono già: gli stessi nomi che le funzioni usavano prima, così per chi li ha
-// già niente cambia. Si scrivono solo dove non c'è ancora una dichiarazione (una scelta fatta dal Builder non si tocca).
-const PIANO_FINANCE = { nome: 'nome', importo_totale: 'importo_totale', n_rate: 'n_rate', importo_rata: 'importo_rata', data_prima_rata: 'data_prima_rata' };
-const FINANCE = {
-  spese_personali: { kind: 'spesa', uses: ['riepiloghi', 'avvisi', 'mail'], roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', fisso: 'fisso', data_pagamento: 'data_pagamento' },
-    avvisi: { states: { nuovo: 'da_smistare', da_fare: 'da_pagare', fatto: 'pagato' }, piano: { modulo: 'debiti_personali', campi: PIANO_FINANCE }, nuovo: true, scadenze: true, tag: 'scadenza', label: 'pers.', noun_s: 'bolletta', noun_p: 'bollette' } },
-  spese_casa: { kind: 'spesa', uses: ['avvisi', 'mail'], roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', fisso: 'fisso', data_pagamento: 'data_pagamento' },
-    avvisi: { states: { nuovo: 'da_smistare', da_fare: 'da_pagare', fatto: 'pagato' }, piano: { modulo: 'debiti_casa', campi: PIANO_FINANCE }, nuovo: true, scadenze: true, tag: 'scadenza', label: 'casa', noun_s: 'bolletta', noun_p: 'bollette' } },
-  timbrature: { kind: 'presenze', uses: [], roles: { data: 'data', inizio: 'entrata', fine: 'uscita' } },
-  entrate: { kind: 'entrata', uses: ['riepiloghi'], roles: { importo: 'importo', data: 'data', categoria: 'categoria', descrizione: 'descrizione', gruppo: 'gruppo' },
-    riepiloghi: { exclude_categories: ['Risparmi', 'Fondo'], exclude_groups: ['Casa'], exclude_descriptions: ['Saldo conto'], salary_categories: ['Stipendio'], savings_categories: ['Fondo'], savings_field: 'accantonamento_suggerito' } },
-};
+// Valori di partenza per i moduli di finanza che esistono già (dati in seeds/finance-roles.json: nomi di moduli e di campi stanno lì, non nel codice):
+// gli stessi nomi che le funzioni usavano prima, così per chi li ha già niente cambia. Si scrivono solo dove non c'è ancora una dichiarazione
+// (una scelta fatta dal Builder non si tocca).
+const FINANCE = require('./seeds/finance-roles.json');
 function seedIfEmpty() {
   let n = 0;
   for (const [slug, cfg] of Object.entries(FINANCE)) {
@@ -107,20 +108,27 @@ function seedIfEmpty() {
     // dichiarato prima del piano a rate: si aggiungono stato "fatto", piano e campo data di pagamento
     const avOld = parsed.avvisi || (parsed.states ? parsed : null); // forma vecchia: extra era direttamente gli avvisi
     const needPiano = cfg.avvisi && cfg.avvisi.piano && avOld && !('piano' in avOld);
-    if (!(needAvvisi || needRiep || needPiano)) continue;
+    // dichiarato prima dell'estratto conto: si aggiungono l'uso «estratto» e le sue scelte, e il campo note
+    const needEstratto = cfg.estratto && !parsed.estratto;
+    // ruoli aggiunti dopo (note, data incerta, debito) e categorie «rata»: si completano solo se mancano (una scelta già fatta non si tocca)
+    const vecchia = (parsed.v || 0) < SCHEMA_V;
+    const nuoviRuoli = vecchia ? ['note', 'data_incerta', 'debito'].filter((k) => cfg.roles[k] && !cur.roles[k]) : [];
+    const needRate = vecchia && cfg.riepiloghi && cfg.riepiloghi.rate_categories && parsed.riepiloghi && !('rate_categories' in parsed.riepiloghi);
+    if (!(needAvvisi || needRiep || needPiano || needEstratto || nuoviRuoli.length || needRate)) continue;
     let avvisi = needAvvisi ? cfg.avvisi : cur.avvisi, roles = cur.roles;
     if (needPiano) {
       avvisi = { ...avvisi, states: { ...avvisi.states, fatto: cfg.avvisi.states.fatto }, piano: cfg.avvisi.piano };
       roles = { ...roles, data_pagamento: roles.data_pagamento || cfg.roles.data_pagamento };
     }
-    set(slug, { kind: cur.kind, uses: cur.uses, roles, avvisi, riepiloghi: needRiep ? cfg.riepiloghi : cur.riepiloghi }); n++;
-  }
-  // Le regole Gmail fatte prima della scelta del modulo: si agganciano al modulo che usavano (Casa -> spese_casa, il resto -> spese_personali).
-  try {
-    for (const [gruppo, slug] of [['Casa', 'spese_casa'], ['Personale', 'spese_personali']]) {
-      if (db.prepare('SELECT 1 FROM modules WHERE slug = ?').get(slug)) db.prepare("UPDATE gmail_rules SET modulo = ? WHERE (modulo IS NULL OR modulo = '') AND gruppo = ?").run(slug, gruppo);
+    let uses = cur.uses;
+    if (needEstratto) {
+      if (!uses.includes('estratto') && (cfg.uses || []).includes('estratto')) uses = [...uses, 'estratto'];
     }
-  } catch (e) { /* tabella non pronta */ }
+    for (const k of nuoviRuoli) roles = { ...roles, [k]: cfg.roles[k] };
+    let riepiloghi = needRiep ? cfg.riepiloghi : cur.riepiloghi;
+    if (needRate) riepiloghi = { ...riepiloghi, rate_categories: cfg.riepiloghi.rate_categories };
+    set(slug, { kind: cur.kind, uses, roles, avvisi, riepiloghi, estratto: needEstratto ? cfg.estratto : cur.estratto }); n++;
+  }
   return n;
 }
 

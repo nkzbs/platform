@@ -76,7 +76,7 @@ async function main() {
   }
   const moduleAi = require('./module-ai'), moduleRoles = require('./module-roles');
   moduleAi.setMaster(true); // AI accesa: poi ogni modulo accende i suoi potenziamenti
-  for (const slug of ['spese_casa', 'spese_personali']) moduleRoles.set(slug, { kind: 'spesa', uses: ['avvisi', 'mail'], roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato' } });
+  for (const slug of ['spese_casa', 'spese_personali']) moduleRoles.set(slug, { kind: 'spesa', uses: ['avvisi', 'mail'], roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato' }, avvisi: { states: { nuovo: 'da_smistare', da_fare: 'da_pagare', fatto: 'pagato' } } });
   const newBill = (extra = {}) => db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run('spese_casa', null,
     JSON.stringify({ descrizione: 'A2A Energia', importo: 0, data: '2026-09-07', categoria: 'Altro', note: 'Importato da Gmail: ' + TESTO, _stato: 'da_smistare', ...extra })).lastInsertRowid;
   const getData = (id) => JSON.parse(db.prepare('SELECT data FROM records WHERE id = ?').get(id).data);
@@ -108,7 +108,7 @@ async function main() {
     assertEq(ai.triageModules().sort().join(), 'spese_casa,spese_personali');
     moduleRoles.set('spese_personali', { kind: 'spesa', uses: [], roles: { importo: 'importo' } });
     assertEq(ai.triageModules().join(), 'spese_casa', 'a spese_personali mancano categoria e stato');
-    moduleRoles.set('spese_personali', { kind: 'spesa', uses: ['avvisi', 'mail'], roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato' } });
+    moduleRoles.set('spese_personali', { kind: 'spesa', uses: ['avvisi', 'mail'], roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato' }, avvisi: { states: { nuovo: 'da_smistare', da_fare: 'da_pagare', fatto: 'pagato' } } });
   });
 
   await test('senza login nessuna rotta risponde', async () => {

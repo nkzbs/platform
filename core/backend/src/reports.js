@@ -116,9 +116,9 @@ function daPagare(scope) {
     const R = m.roles;
     for (const { id, data: d } of rows(m.slug, scope)) {
       if (d[R.stato || '_stato'] !== m.states.da_fare) continue;
-      const due = d[R.scadenza || 'scadenza'] || d[R.data || 'data'];
+      const due = d[R.scadenza] || d[R.data];
       if (!due) continue;
-      items.push({ slug: m.slug, id, descrizione: String(d[R.descrizione || 'descrizione'] || '(senza descrizione)').trim(), label: m.label, importo: Number(d[R.importo || 'importo']) || 0, due: String(due).slice(0, 10) });
+      items.push({ slug: m.slug, id, descrizione: String(d[R.descrizione] || '(senza descrizione)').trim(), label: m.label, importo: Number(d[R.importo]) || 0, due: String(due).slice(0, 10) });
     }
   }
   return items;
@@ -181,8 +181,8 @@ function buildSmistare(now = new Date(), scope = null) {
     for (const { data: d } of rows(m.slug, scope)) {
       if (d[R.stato || '_stato'] !== m.states.nuovo) continue;
       nome = nome || { s: m.noun_s || 'riga', p: m.noun_p || 'righe' };
-      const imp = Number(d[R.importo || 'importo']) || 0, scad = d[R.scadenza || 'scadenza'] || d[R.data || 'data'];
-      righe.push(String(d[R.descrizione || 'descrizione'] || '(senza descrizione)').trim() + ' — ' + (imp > 0 ? fmtCompact(imp) : 'importo da verificare') + (scad ? ' · ' + shortDate(String(scad).slice(0, 10)) : ''));
+      const imp = Number(d[R.importo]) || 0, scad = d[R.scadenza] || d[R.data];
+      righe.push(String(d[R.descrizione] || '(senza descrizione)').trim() + ' — ' + (imp > 0 ? fmtCompact(imp) : 'importo da verificare') + (scad ? ' · ' + shortDate(String(scad).slice(0, 10)) : ''));
     }
   }
   if (!righe.length) return null;

@@ -55,14 +55,14 @@ function trova(user, cerca, stato) {
     const R = { stato: '_stato', ...m.roles };
     for (const { id, data: d } of rows(m.module_slug, scope)) {
       if (d[R.stato] !== S[stato]) continue;
-      const desc = String(d[R.descrizione || 'descrizione'] || '');
+      const desc = String(d[R.descrizione] || '');
       const nd = norm(desc);
-      const imp = Number(d[R.importo || 'importo']) || 0;
+      const imp = Number(d[R.importo]) || 0;
       let score = toks.filter((t) => nd.includes(t)).length;
       if (importi.some((n) => Math.abs(n - imp) < 0.005)) score += 2;
       if (score === 0) continue;
       if (toks.length > 1 && !importi.length && score < Math.ceil(toks.length / 2)) continue; // frase lunga: almeno metà delle parole devono comparire
-      out.push({ slug: m.module_slug, id, descrizione: desc.trim() || '(senza descrizione)', importo: imp, due: String(d[R.scadenza || 'scadenza'] || d[R.data || 'data'] || '').slice(0, 10), label: m.avvisi.label || String(m.name || m.module_slug).toLowerCase(), score });
+      out.push({ slug: m.module_slug, id, descrizione: desc.trim() || '(senza descrizione)', importo: imp, due: String(d[R.scadenza] || d[R.data] || '').slice(0, 10), label: m.avvisi.label || String(m.name || m.module_slug).toLowerCase(), score });
     }
   }
   return out.sort((a, b) => b.score - a.score || (a.due || '').localeCompare(b.due || '')).slice(0, MAX_CANDIDATI);
@@ -82,7 +82,7 @@ function cambiaStato(user, slug, id, azione) {
   const row = db.prepare('SELECT data FROM records WHERE id = ? AND module_slug = ?').get(id, slug);
   if (!row) return { ok: false, msg: 'Voce non trovata (forse è stata eliminata).' };
   const R = { stato: '_stato', ...decl.roles };
-  const d = JSON.parse(row.data), stato = d[R.stato], desc = String(d[R.descrizione || 'descrizione'] || 'voce');
+  const d = JSON.parse(row.data), stato = d[R.stato], desc = String(d[R.descrizione] || 'voce');
   const target = azione === 'pay' ? S.fatto : S.da_fare;
   if (stato === target) return { ok: true, already: true, desc, msg: azione === 'pay' ? 'Era già segnata come pagata.' : 'Era già «da pagare».' };
   if (stato !== (azione === 'pay' ? S.da_fare : S.fatto)) return { ok: false, desc, msg: 'Questa voce non è più «' + String(azione === 'pay' ? S.da_fare : S.fatto).replace(/_/g, ' ') + '».' };
@@ -142,7 +142,9 @@ function proponiSmista(user, intent, chatId) {
 function costruisciSpesa(m, intent) {
   const decl = m.decl, R = { stato: '_stato', ...decl.roles }, S = decl.avvisi.states, data = intent.data || oggiRoma();
   const d = {};
-  d[R.descrizione || 'descrizione'] = intent.descrizione; d[R.importo || 'importo'] = intent.importo; d[R.data || 'data'] = data;
+  if (R.descrizione) d[R.descrizione] = intent.descrizione;
+  if (R.importo) d[R.importo] = intent.importo;
+  if (R.data) d[R.data] = data;
   const pagata = intent.pagata && S.fatto;
   d[R.stato] = pagata ? S.fatto : (S.da_fare || S.nuovo);
   if (pagata && R.data_pagamento) d[R.data_pagamento] = data;
@@ -152,7 +154,7 @@ function costruisciSpesa(m, intent) {
 }
 function riepilogoSpesa(m, intent, d) {
   const R = { stato: '_stato', ...m.decl.roles };
-  return 'Aggiungo in <b>' + esc(m.name) + '</b>:\n• <b>' + esc(intent.descrizione) + '</b> — ' + eur(intent.importo) + '\n• ' + shortDate(d[R.data || 'data']) + ' · ' + (intent.pagata ? '<b>già pagata</b>' : '<b>da pagare</b>' + (R.scadenza ? ' (scade lo stesso giorno)' : '')) + (intent.categoria ? '\n• categoria ' + esc(intent.categoria) : '');
+  return 'Aggiungo in <b>' + esc(m.name) + '</b>:\n• <b>' + esc(intent.descrizione) + '</b> — ' + eur(intent.importo) + '\n• ' + shortDate(d[R.data]) + ' · ' + (intent.pagata ? '<b>già pagata</b>' : '<b>da pagare</b>' + (R.scadenza ? ' (scade lo stesso giorno)' : '')) + (intent.categoria ? '\n• categoria ' + esc(intent.categoria) : '');
 }
 function proponiSpesa(user, intent, chatId) {
   const mods = moduliPerUtente(user);
@@ -294,8 +296,8 @@ function trovaSimile(user, slug, importo, data, scope) {
   const R = { stato: '_stato', ...m.roles };
   const giorni = (a, b) => Math.abs((new Date(a + 'T00:00:00Z') - new Date(b + 'T00:00:00Z')) / 86400000);
   for (const { data: d } of rows(slug, scope)) {
-    const dt = String(d[R.data || 'data'] || '').slice(0, 10), sc = String(d[R.scadenza || 'scadenza'] || '').slice(0, 10);
-    if (Math.abs((Number(d[R.importo || 'importo']) || 0) - importo) < 0.005 && ((dt && giorni(dt, data) <= 2) || (sc && giorni(sc, data) <= 2))) return { descrizione: String(d[R.descrizione || 'descrizione'] || '').trim(), due: dt || sc };
+    const dt = String(d[R.data] || '').slice(0, 10), sc = String(d[R.scadenza] || '').slice(0, 10);
+    if (Math.abs((Number(d[R.importo]) || 0) - importo) < 0.005 && ((dt && giorni(dt, data) <= 2) || (sc && giorni(sc, data) <= 2))) return { descrizione: String(d[R.descrizione] || '').trim(), due: dt || sc };
   }
   return null;
 }

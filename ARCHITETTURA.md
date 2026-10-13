@@ -213,12 +213,13 @@ campi scritti nel codice (`module-roles.js`, tabella `module_roles`, rotte `/api
 
 | Cosa si dichiara | A cosa serve |
 |---|---|
-| **Tipo** (spesa, entrata) e **usi** (riepiloghi, avvisi, mail) | Quali moduli entrano in "Come sta andando", nei report su WhatsApp, tra le destinazioni delle regole Gmail |
-| **Ruoli dei campi** (importo, data, scadenza, categoria, descrizione, stato, gruppo, fisso) | Quale campo del modulo è l'importo, la data... Un campo senza ruolo non viene letto né scritto |
+| **Tipo** (spesa, entrata, presenze) e **usi** (riepiloghi, avvisi, mail, estratto) | Quali moduli entrano in "Come sta andando", nei report, tra le destinazioni delle regole Gmail e nell'abbinamento con l'estratto conto |
+| **Ruoli dei campi** (importo, data, scadenza, categoria, descrizione, stato, gruppo, fisso, data di pagamento, note, data incerta, debito, inizio/fine) | Quale campo del modulo è l'importo, la data... Un campo senza ruolo non viene letto né scritto |
 | **Avvisi**: stato "nuovo", "da fare" e "fatto", piano a rate, avviso su riga nuova, scadenze nel riepilogo, come si chiamano le righe ("bolletta/bollette"), etichetta breve, tag destinatari | Parole e stati dei messaggi WhatsApp e della coda "Da smistare" |
-| **Criteri dei riepiloghi** (entrate): categorie, gruppi e descrizioni escluse, categorie stipendio e risparmio, campo accantonamento | Cosa non conta come entrata, cosa è stipendio, cosa è risparmio |
+| **Criteri dei riepiloghi**: categorie, gruppi e descrizioni escluse, categorie stipendio e risparmio, campo accantonamento (entrate); categorie «rata» (spese) | Cosa non conta come entrata, cosa è stipendio, cosa è risparmio, cosa è una rata |
+| **Estratto conto** (spese): categorie che sono un giro tra conti propri, «qui si registrano le uscite dell'estratto», categoria predefinita | Abbinamento dei movimenti bancari alle righe e registrazione delle uscite mancanti (`bank-import.js`) |
 
-I valori di Finance (`spese_personali`, `spese_casa`, `entrate`) sono dichiarati da una **migrazione** all'avvio (`seedIfEmpty`, una volta sola per modulo:
+I valori di Finance sono **dati**, non codice (`core/backend/src/seeds/finance-roles.json`) e li dichiara una **migrazione** all'avvio (`seedIfEmpty`, una volta sola per modulo e per versione della dichiarazione:
 una scelta fatta dal Builder, anche "tutto spento", non si ripristina). Un modulo senza dichiarazione non entra in nessuna funzione. `GET /api/module-roles/queues`
 (per qualunque utente collegato) elenca i moduli con uno stato "nuovo": serve alla coda in dashboard.
 
@@ -362,8 +363,7 @@ viene dai dati: `movimenti`, `analisi` e `riepilogo_mattino` partono accese se a
 `gmail`, `sito_web` se ci sono destinatari, regole o un sito attivo. `GET /api/tenant-info` (pubblico) dice quali sono accese. L'AI non è una capacità: la
 decide ogni modulo (vedi sopra). **Export e Backup** stanno in Impostazioni → Dati.
 
-**Onestà sul confine.** Il codice delle capacità sta ancora nel nucleo. I nomi dei moduli di Finance restano solo nella migrazione che dichiara i loro ruoli
-(`module-roles.js`, `FINANCE`) e nei Movimenti bancari. Il parser Gmail estrae importo e scadenza con regole pensate per le bollette italiane; la regola può scegliere
+**Onestà sul confine.** Il codice delle capacità sta ancora nel nucleo. I nomi dei moduli e dei campi di Finance stanno solo nel file di dati `seeds/finance-roles.json` (e nei moduli di esempio di `db.js`): non più nel codice di Movimenti bancari, Gmail, riepiloghi e bot. Il parser Gmail estrae importo e scadenza con regole pensate per le bollette italiane; la regola può scegliere
 il tipo "semplice" (solo oggetto, data e allegati) per mail che non sono bollette.
 
 ## Sicurezza, in sintesi

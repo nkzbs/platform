@@ -138,6 +138,13 @@ async function main() {
   console.log('\n--- importazione e abbinamento ---');
   const seedModule = (slug) => { db.prepare('DELETE FROM modules WHERE slug = ?').run(slug); db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES (?, ?, 'box', '#000', 1, 1, 50, '{}')").run(slug, slug); };
   ['spese_personali', 'spese_casa', 'entrate'].forEach(seedModule);
+  // i moduli dichiarano cosa sono e come partecipano all'estratto conto (Builder → Ruoli del modulo): il codice non conosce nomi
+  const moduleRoles = require('./module-roles');
+  const RS = { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', fisso: 'fisso', data_pagamento: 'data_pagamento', note: 'note' };
+  const AVV = { states: { nuovo: 'da_smistare', da_fare: 'da_pagare', fatto: 'pagato' } };
+  moduleRoles.set('spese_personali', { kind: 'spesa', uses: ['estratto'], roles: RS, avvisi: AVV, estratto: { giro_categories: ['Contributo Casa'], registra: true, categoria_default: 'Altro' } });
+  moduleRoles.set('spese_casa', { kind: 'spesa', uses: ['estratto'], roles: RS, avvisi: AVV, estratto: { giro_categories: [], registra: false } });
+  moduleRoles.set('entrate', { kind: 'entrata', uses: ['estratto'], roles: { importo: 'importo', data: 'data', categoria: 'categoria', descrizione: 'descrizione' }, riepiloghi: { salary_categories: ['Stipendio'] } });
   const rec = (slug, d) => db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, NULL, ?)').run(slug, JSON.stringify(d)).lastInsertRowid;
 
   let r1;
@@ -227,6 +234,22 @@ async function main() {
     assertEq(s.entrate_reali, 1800.5);
     assertTrue((await (await fetch(BASE + '/api/bank/movements?month=2026-09&filter=giri', { headers: H })).json()).length === 3);
     assertEq((await fetch(BASE + '/api/bank/summary?month=boh', { headers: H })).status, 400);
+  });
+
+  await test('GENERICO: un modulo con un altro nome e altri campi, dichiarato dal Builder, riceve le uscite e si abbina (nessun nome nel codice)', () => {
+    seedModule('uscite_x');
+    moduleRoles.set('spese_personali', { kind: 'spesa', uses: ['estratto'], roles: RS, avvisi: AVV, estratto: { giro_categories: ['Contributo Casa'], registra: false } });
+    moduleRoles.set('uscite_x', { kind: 'spesa', uses: ['estratto'], roles: { importo: 'valore', data: 'giorno', categoria: 'tipo', descrizione: 'cosa', stato: '_stato', data_pagamento: 'pagato_il' }, avvisi: { states: { fatto: 'chiusa' } }, estratto: { giro_categories: [], registra: true, categoria_default: 'Varie' } });
+    assertEq(bank.registraInfo().modulo, 'uscite_x');
+    db.prepare("UPDATE bank_movements SET match_id = NULL, match_module = NULL WHERE amount = -45.3").run();
+    const id = db.prepare("SELECT id FROM bank_movements WHERE amount = -45.3").get().id;
+    const out = bank.registerAsExpense(id, { descrizione: 'Prova', categoria: '' });
+    assertEq(out.data.valore, 45.3); assertEq(out.data.giorno, '2026-09-20'); assertEq(out.data.pagato_il, '2026-09-20'); assertEq(out.data._stato, 'chiusa');
+    assertTrue(out.data.importo === undefined && out.data.note === undefined && out.data.fisso === undefined, 'i campi senza ruolo non si scrivono');
+    assertEq(db.prepare('SELECT module_slug m FROM records WHERE id = ?').get(out.record_id).m, 'uscite_x');
+    // senza nessun modulo che «registra»: errore chiaro, non un nome di modulo
+    moduleRoles.set('uscite_x', { kind: 'spesa', uses: ['estratto'], roles: { importo: 'valore' }, estratto: { registra: false } });
+    assertTrue(/Nessun modulo/.test(bank.registerAsExpense(db.prepare("SELECT id FROM bank_movements WHERE amount = -2.5").get().id).error));
   });
 
   console.log(`\n${'='.repeat(60)}`);

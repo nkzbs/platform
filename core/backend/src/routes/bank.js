@@ -42,6 +42,8 @@ router.get('/movements', requireAuth, requireAdmin, (req, res) => {
   res.json(bank.listMovements({ month: req.query.month, filter: req.query.filter }));
 });
 
+// dove si registrano le uscite dell'estratto (modulo dichiarato nel Builder) e le sue categorie; null se nessun modulo lo ha dichiarato
+router.get('/target', requireAuth, (req, res) => res.json(bank.registraInfo()));
 router.post('/rematch', requireAuth, requireAdmin, (req, res) => res.json({ abbinati: bank.rematch() }));
 
 router.post('/movements/:id/register', requireAuth, requireAdmin, (req, res) => {

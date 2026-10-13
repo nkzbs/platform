@@ -651,30 +651,6 @@ router.post('/:slug/import', requireAuth, (req, res) => {
   res.json({ created, skipped, errors });
 });
 
-// Imposta un campo allo stesso valore per TUTTI i record di un modulo in un colpo
-// solo — azione di manutenzione generica (es. "azzera tutte le giacenze furgone",
-// richiesta esplicita per coffee), non hardcoded su un modulo specifico. Solo
-// admin: agisce su OGNI record del modulo, irreversibile a parte un backup del
-// tenant — non esposta come azione generale in UI, va collegata a un bottone
-// dedicato dove serve davvero (vedi ModulePage per giacenza_furgone).
-router.post('/:slug/bulk-set-field', requireAuth, requireAdmin, (req, res) => {
-  const { campo, valore } = req.body || {};
-  if (!campo) return res.status(400).json({ error: 'Campo obbligatorio' });
-  const rows = db.prepare('SELECT id, data FROM records WHERE module_slug = ?').all(req.params.slug);
-  const update = db.prepare('UPDATE records SET data = ? WHERE id = ?');
-  const tx = db.transaction(() => {
-    rows.forEach((r) => {
-      let d;
-      try { d = JSON.parse(r.data || '{}'); } catch { return; }
-      d[campo] = valore;
-      update.run(JSON.stringify(d), r.id);
-    });
-  });
-  tx();
-  logAudit(req.user.username, 'records.bulk_set_field', req.params.slug, { campo, valore, count: rows.length });
-  res.json({ ok: true, count: rows.length });
-});
-
 router.get('/:slug/:id', requireAuth, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const record = db.prepare('SELECT * FROM records WHERE id = ? AND module_slug = ?').get(req.params.id, req.params.slug);

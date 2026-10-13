@@ -185,21 +185,6 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
     if (data) setRecords(data)
   }
 
-  // Azzeramento giacenze furgone — richiesto esplicitamente per coffee ("pulizia
-  // totale furgoni"). Usa l'azione generica bulk-set-field (non hardcoded lato
-  // backend), il bottone qui è l'unica parte specifica a questo modulo, stesso
-  // principio delle pagine bespoke (Spese/Documenti) applicato a un solo bottone
-  // invece che a un'intera pagina.
-  const [zeroingGiacenze, setZeroingGiacenze] = useState(false)
-  const zeroGiacenzeFurgone = async () => {
-    if (!confirm('Azzerare la giacenza di TUTTI i furgoni (' + records.length + ' righe)? Azione non annullabile.')) return
-    setZeroingGiacenze(true)
-    const res = await api.post('/records/' + mod.slug + '/bulk-set-field', { campo: 'quantita', valore: 0 })
-    setZeroingGiacenze(false)
-    if (res && res.ok) { toast(res.data.count + ' giacenze azzerate'); loadRecords() }
-    else toast((res && res.data && res.data.error) || 'Errore nell\'azzeramento', 'error')
-  }
-
   useEffect(() => { loadSchema(); loadRecords(); loadEmbeddedChildren() }, [mod.slug])
 
   // Ricalcolo dal vivo dei campi computed marcati 'live', solo mentre il form di
@@ -600,12 +585,6 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
         </div>
         {editableFields.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
-            {mod.slug === 'giacenza_furgone' && user && user.role === 'admin' && (
-              <button onClick={zeroGiacenzeFurgone} disabled={zeroingGiacenze}
-                className="bg-red-900/30 hover:bg-red-900/50 disabled:opacity-50 text-red-400 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2" title="Azzera la giacenza di tutti i furgoni">
-                <Icon name="trash" size={14} />{zeroingGiacenze ? 'Azzero...' : 'Azzera tutte le giacenze'}
-              </button>
-            )}
             {canCreate && <ImportPdf token={token} mod={mod} onCreated={loadRecords} />}
             <button onClick={exportCsv} className="bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2" title="Esporta CSV">
               <Icon name="download" size={14} />CSV

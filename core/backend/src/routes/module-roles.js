@@ -13,7 +13,7 @@ const router = express.Router();
 router.get('/queues', requireAuth, (req, res) => {
   res.json(roles.list({ use: 'avvisi' }).filter((m) => m.avvisi.states.nuovo).map((m) => ({
     module_slug: m.module_slug, name: m.name, stato: m.roles.stato || '_stato', nuovo: m.avvisi.states.nuovo, da_fare: m.avvisi.states.da_fare || '',
-    descrizione: m.roles.descrizione || 'descrizione', importo: m.roles.importo || 'importo', scadenza: m.roles.scadenza || 'scadenza', data: m.roles.data || 'data',
+    descrizione: m.roles.descrizione || '', importo: m.roles.importo || '', scadenza: m.roles.scadenza || '', data: m.roles.data || '',
     ai: moduleAi.can(m.module_slug, 'triage'), categoria: m.roles.categoria || '', fatto: m.avvisi.states.fatto || '', rate: !!(m.avvisi.piano.modulo && Object.values(m.avvisi.piano.campi).every(Boolean)),
     noun_s: m.avvisi.noun_s, noun_p: m.avvisi.noun_p,
   })));
