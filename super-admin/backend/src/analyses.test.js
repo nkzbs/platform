@@ -190,6 +190,32 @@ async function main() {
     eq(r.blueprint.moduli_ids.sort(), [idA, idB].sort()); eq(r.blueprint.manca, [{ processo: 'Preventivare mario@rossi.it', voci: ['Firma digitale'] }]);
   });
 
+  console.log('\n--- correggi a parole ---');
+  await test('le operazioni: solo da una lista chiusa, processi e moduli veri, tetto di 12; l\'aggiunta ripulita', () => {
+    const procs = [{ nome: 'Uno' }, { nome: 'Due' }], valid = new Set([idA, idB]);
+    const ops = A.controllaCorrezioni(procs, [{ op: 'rimuovi', n: 2 }, { op: 'rimuovi', n: 9 }, { op: 'cancella_tutto', n: 1 }, { op: 'imposta_modulo', n: 1, registry_module_id: 4242 }, { op: 'imposta_modulo', n: 1, registry_module_id: idA }, { op: 'aggiungi_modulo', n: 1, id: idB }, { op: 'aggiungi', processo: { nome: '  Turni ', registry_module_id: 999 } }, { op: 'aggiungi', processo: { nome: '' } }, { op: 'rinomina', n: 1, nome: '' }, null], valid);
+    eq(ops.map((o) => o.op), ['rimuovi', 'imposta_modulo', 'aggiungi_modulo', 'aggiungi']); eq(ops[3].processo.registry_module_id, null); eq(ops[3].processo.nome, 'Turni');
+    eq(A.controllaCorrezioni(procs, Array.from({ length: 30 }, () => ({ op: 'rimuovi', n: 1 })), valid).length, 12);
+  });
+  await test('applica: i numeri sono quelli di ora (togliere e aggiungere per identità), il principale si imposta e non si ripete negli altri', () => {
+    const procs = [{ nome: 'Uno', registry_module_id: idA, moduli_extra: [idB] }, { nome: 'Due' }, { nome: 'Tre' }];
+    const r = A.applicaCorrezioni(procs, [{ op: 'rimuovi', n: 1 }, { op: 'rinomina', n: 3, nome: 'Terzo' }, { op: 'imposta_modulo', n: 2, registry_module_id: idB }, { op: 'aggiungi', processo: { nome: 'Nuovo' } }]);
+    eq(r.map((p) => p.nome), ['Due', 'Terzo', 'Nuovo']); eq(r[0].registry_module_id, idB); eq(r[2].copertura, 'da_costruire');
+  });
+  await test('propone SENZA scrivere, descrive in italiano; i dati personali non partono; poi si applica solo se confermato', async () => {
+    const c = await (await api('POST', '', { name: 'Da correggere', descrizione: 'x' })).json();
+    await api('PATCH', '/' + c.id, { processi: [{ nome: 'Preventivare', registry_module_id: idA, copertura: 'coperto' }, { nome: 'Fatturare' }] });
+    eq((await api('POST', '/' + c.id + '/correggi', { istruzione: 'ok' })).status, 400, 'frase troppo corta');
+    prompts = []; risposta = { operazioni: [{ op: 'rimuovi', n: 2 }, { op: 'aggiungi_modulo', n: 1, id: idB }, { op: 'imposta_modulo', n: 1, registry_module_id: 31337 }] };
+    const pr = await (await api('POST', '/' + c.id + '/correggi', { istruzione: 'Togli la fatturazione, scrivimi a mario@rossi.it e aggiungi i preventivi' })).json();
+    eq(pr.descrizioni, ['Tolgo il processo «Fatturare»', 'A «Preventivare» aggiungo il modulo «Preventivi»']); ok(!prompts.join('').includes('mario@rossi.it'), 'niente dati personali');
+    eq((await (await api('GET', '/' + c.id)).json()).processi.length, 2, 'finché non si conferma non cambia nulla');
+    const ap = await (await api('POST', '/' + c.id + '/correggi/applica', { operazioni: pr.operazioni })).json();
+    eq(ap.processi.map((p) => p.nome), ['Preventivare']); eq(ap.processi[0].moduli_extra, [idB]);
+    const sporche = await (await api('POST', '/' + c.id + '/correggi/applica', { operazioni: [{ op: 'rimuovi', n: 1 }, { op: 'drop_table' }, { op: 'aggiungi_modulo', n: 1, id: 777 }] })).json();
+    eq(sporche.processi.length, 0, 'il codice ricontrolla le operazioni che arrivano dal browser: valide quelle di lista, scartate le altre');
+  });
+
   console.log(`\n${passed} passati, ${failed} falliti`);
   process.exit(failed ? 1 : 0);
 }

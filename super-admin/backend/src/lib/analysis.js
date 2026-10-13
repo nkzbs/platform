@@ -178,6 +178,92 @@ function applicaApprofondimento(p, s) {
   return { ...p, moduli_extra: extra, manca: [...new Set([...(p.manca || []), ...(s.manca || [])])].slice(0, 8) };
 }
 
+
+// ── correzione a parole ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// «Togli la fatturazione e aggiungi i turni»: l'AI traduce la frase in poche OPERAZIONI da una lista chiusa, il codice le controlla (processi e moduli veri, tetti) e le
+// descrive in italiano per l'anteprima; niente si scrive finché chi ha l'analisi non conferma. In applicazione il codice ricontrolla tutto: l'elenco arriva dal browser.
+const CORREGGI_SPEC = `Sei un assistente che traduce una richiesta di modifica in operazioni su un'analisi dei processi. Ti do l'elenco numerato dei processi (con il modulo scelto) e i moduli disponibili.
+
+Rispondi SOLO con un oggetto JSON in questa forma esatta, senza testo prima o dopo e senza blocchi markdown:
+{"operazioni": [ ... ]}
+
+Operazioni ammesse (n = numero del processo dall'elenco):
+{"op": "rimuovi", "n": 2}
+{"op": "rinomina", "n": 2, "nome": "Nuovo nome"}
+{"op": "scopo", "n": 2, "scopo": "una frase"}
+{"op": "aggiungi", "processo": {"nome": "Nome breve", "reparto": "Reparto", "scopo": "una frase", "registry_module_id": numero oppure null}}
+{"op": "imposta_modulo", "n": 2, "registry_module_id": numero oppure null}
+{"op": "aggiungi_modulo", "n": 2, "id": numero}
+{"op": "togli_modulo", "n": 2, "id": numero}
+
+Regole:
+- Fai SOLO ciò che la richiesta dice, niente di più. Se la richiesta non è chiara o non c'entra, rispondi {"operazioni": []}.
+- Gli id di modulo DEVONO essere dell'elenco fornito: non inventare mai un id. Al massimo 12 operazioni.`;
+
+const OPS = ['rimuovi', 'rinomina', 'scopo', 'aggiungi', 'imposta_modulo', 'aggiungi_modulo', 'togli_modulo'];
+
+// Pulisce e controlla le operazioni contro l'analisi e la Libreria: tiene solo quelle valide. Ritorna le operazioni pulite (con n già validato).
+function controllaCorrezioni(processi, ops, valid) {
+  const out = [], n = processi.length;
+  const okN = (x) => Number.isInteger(Number(x)) && Number(x) >= 1 && Number(x) <= n;
+  const okId = (x) => Number.isInteger(Number(x)) && valid.has(Number(x));
+  for (const o of (Array.isArray(ops) ? ops : []).slice(0, 12)) {
+    if (!o || !OPS.includes(o.op)) continue;
+    if (o.op === 'aggiungi') {
+      const p = sanitizeProcesso({ ...(o.processo || {}) }, valid); if (!p.nome) continue;
+      out.push({ op: 'aggiungi', processo: { nome: p.nome, reparto: p.reparto, scopo: p.scopo, registry_module_id: p.registry_module_id } }); continue;
+    }
+    if (!okN(o.n)) continue;
+    const base = { op: o.op, n: Number(o.n) };
+    if (o.op === 'rimuovi') out.push(base);
+    else if (o.op === 'rinomina') { const nome = t(o.nome, 80); if (nome) out.push({ ...base, nome }); }
+    else if (o.op === 'scopo') { const scopo = t(o.scopo, 300); if (scopo) out.push({ ...base, scopo }); }
+    else if (o.op === 'imposta_modulo') { if (o.registry_module_id == null) out.push({ ...base, registry_module_id: null }); else if (okId(o.registry_module_id)) out.push({ ...base, registry_module_id: Number(o.registry_module_id) }); }
+    else if (okId(o.id)) out.push({ ...base, id: Number(o.id) });
+  }
+  return out;
+}
+
+// La frase di una operazione, per l'anteprima (la scrive il codice, non l'AI).
+function descriviCorrezione(processi, o, mods) {
+  const nome = (i) => '«' + (processi[i - 1] || {}).nome + '»', mod = (id) => '«' + ((mods.find((m) => m.id === id) || {}).name || id) + '»';
+  switch (o.op) {
+    case 'rimuovi': return 'Tolgo il processo ' + nome(o.n);
+    case 'rinomina': return 'Rinomino ' + nome(o.n) + ' in «' + o.nome + '»';
+    case 'scopo': return 'Cambio lo scopo di ' + nome(o.n);
+    case 'aggiungi': return 'Aggiungo il processo «' + o.processo.nome + '»' + (o.processo.registry_module_id ? ' con il modulo ' + mod(o.processo.registry_module_id) : '');
+    case 'imposta_modulo': return o.registry_module_id ? 'Per ' + nome(o.n) + ' uso il modulo ' + mod(o.registry_module_id) : 'Per ' + nome(o.n) + ' tolgo il modulo scelto';
+    case 'aggiungi_modulo': return 'A ' + nome(o.n) + ' aggiungo il modulo ' + mod(o.id);
+    default: return 'Da ' + nome(o.n) + ' tolgo il modulo ' + mod(o.id);
+  }
+}
+
+// L'AI propone: ritorna { operazioni, descrizioni } già controllate, senza scrivere niente.
+async function proponiCorrezioni(processi, istruzione) {
+  const mods = libraryModules(), valid = new Set(mods.map((m) => m.id));
+  const elenco = processi.map((p, i) => (i + 1) + '. ' + redact(t(p.nome, 80)) + ' | modulo: ' + ((mods.find((m) => m.id === p.registry_module_id) || {}).name || 'nessuno') + ((p.moduli_extra || []).length ? ' + ' + p.moduli_extra.map((id) => (mods.find((m) => m.id === id) || {}).name).filter(Boolean).join(', ') : '')).join('\n');
+  const r = await ask(CORREGGI_SPEC, 'Processi:\n' + (elenco || '(nessuno)') + '\n\nModuli disponibili:\n' + (moduleList(mods) || '(nessun modulo)') + '\n\nRichiesta: ' + redact(t(istruzione, 600)), 1500);
+  const operazioni = controllaCorrezioni(processi, r && r.operazioni, valid);
+  return { operazioni, descrizioni: operazioni.map((o) => descriviCorrezione(processi, o, mods)) };
+}
+
+// Applica operazioni (ricontrollate) all'elenco dei processi; i numeri si riferiscono all'elenco com'è ORA, quindi tolgono e aggiungono per identità, non per posizione.
+function applicaCorrezioni(processi, ops) {
+  const valid = new Set(libraryModules().map((m) => m.id));
+  const lavoro = processi.map((p) => ({ ...p })), tolti = new Set(), nuovi = [];
+  for (const o of controllaCorrezioni(processi, ops, valid)) {
+    if (o.op === 'aggiungi') { nuovi.push(sanitizeProcesso({ ...o.processo, copertura: o.processo.registry_module_id ? 'coperto' : 'da_costruire' }, valid)); continue; }
+    const p = lavoro[o.n - 1]; if (!p || tolti.has(o.n)) continue;
+    if (o.op === 'rimuovi') tolti.add(o.n);
+    else if (o.op === 'rinomina') p.nome = o.nome;
+    else if (o.op === 'scopo') p.scopo = o.scopo;
+    else if (o.op === 'imposta_modulo') { p.registry_module_id = o.registry_module_id; p.copertura = o.registry_module_id ? 'coperto' : (p.copertura === 'coperto' ? 'da_valutare' : p.copertura); p.moduli_extra = (p.moduli_extra || []).filter((id) => id !== o.registry_module_id); }
+    else if (o.op === 'aggiungi_modulo') { if (o.id !== p.registry_module_id && !(p.moduli_extra || []).includes(o.id)) p.moduli_extra = [...(p.moduli_extra || []), o.id]; }
+    else if (o.op === 'togli_modulo') p.moduli_extra = (p.moduli_extra || []).filter((id) => id !== o.id);
+  }
+  return sanitizeProcessi([...lavoro.filter((_, i) => !tolti.has(i + 1)), ...nuovi], valid);
+}
+
 // ── dipendenze: un modulo con una relazione verso un altro ha bisogno anche di quello (righe → fattura → cliente) ──────────────────────
 // Dato un elenco di id di moduli della Libreria, ritorna l'elenco completo con quelli richiesti dalle loro relazioni (a catena), nello stesso ordine + i collegati in coda.
 function withDependencies(ids) {
@@ -248,4 +334,4 @@ function blueprint(processi) {
   return { processi: processi.length, ...c, proposte: proposte(moduliIds), moduli_ids: moduliIds, moduli_collegati: nomi(moduliIds.filter((id) => !diretti.includes(id))), ruoli_utente: ruoli.size, da_costruire: processi.filter((p) => p.copertura === 'da_costruire').map((p) => p.nome), manca: processi.filter((p) => (p.manca || []).length).map((p) => ({ processo: p.nome, voci: p.manca })) };
 }
 
-module.exports = { deps, applicaSuggerimento, approfondisci, applicaApprofondimento, analizzaAttivita, withDependencies, proposte, pacchettoTenant, libraryModules, sanitizeProcesso, sanitizeProcessi, sanitizeProfilo, suggestProcesso, suggestProcessi, blueprint, COPERTURE };
+module.exports = { deps, applicaSuggerimento, proponiCorrezioni, applicaCorrezioni, controllaCorrezioni, approfondisci, applicaApprofondimento, analizzaAttivita, withDependencies, proposte, pacchettoTenant, libraryModules, sanitizeProcesso, sanitizeProcessi, sanitizeProfilo, suggestProcesso, suggestProcessi, blueprint, COPERTURE };

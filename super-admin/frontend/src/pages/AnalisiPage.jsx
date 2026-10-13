@@ -4,6 +4,7 @@ import Icon from '../components/Icon'
 import ProcessoEditor, { applySuggestion, needsEnrichment } from '../components/analyses/ProcessoEditor'
 import Manuale from '../components/analyses/Manuale'
 import Guida from '../components/analyses/Guida'
+import CorreggiAParole from '../components/analyses/CorreggiAParole'
 import { STAMPA_CSS } from '../components/analyses/stampa'
 
 // Analisi dei processi: racconti un'attività, l'AI propone i processi (mai salvati da soli), li rifinisci, vedi cosa copre la Libreria e cosa va costruito,
@@ -307,6 +308,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
             </div>
           )}
           <div className="flex gap-2 mt-4 flex-wrap"><button type="button" className={ghost} onClick={() => setVista('dettagli')}>Rivedi i dettagli</button><button type="button" className={ghost} onClick={() => { setVista('dettagli'); setShowManuale(true) }}>Apri il manuale</button><button type="button" className={ghost} onClick={() => { setVista('dettagli'); apriGuida() }}>Guida all'uso</button></div>
+          <div className="mt-4"><CorreggiAParole analysisId={a.id} req={req} btn={btn} ghost={ghost} input={input} onApplied={(d) => { setA(d); setProposte([]) }} /></div>
         </section>
         {a.processi.length > 0 && creaPanel('')}
       </div>
@@ -407,6 +409,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
               {b.manca && b.manca.length > 0 && <p className="text-xs text-gray-500 mb-3">Non coperto da nessun modulo: {b.manca.map((m) => m.processo + ' (' + m.voci.join(', ') + ')').join('; ')}.</p>}
               {b.da_costruire.length > 0 && <p className="text-xs text-gray-500 mb-3">Da costruire: {b.da_costruire.join(', ')}. Si costruiscono nel Super Builder.</p>}
               <div className="flex gap-2 flex-wrap"><button type="button" className={btn} onClick={() => setShowManuale(true)}>Apri il manuale</button><button type="button" className={ghost} onClick={apriGuida}>Guida all'uso</button><button type="button" className={ghost} onClick={approfondisci} disabled={approfondendo}>{approfondendo ? 'Controllo…' : 'Cosa manca?'}</button></div>
+              <div className="mt-4"><CorreggiAParole analysisId={a.id} req={req} btn={btn} ghost={ghost} input={input} onApplied={(d) => { setA(d); setProposte([]) }} /></div>
             </section>
           )}
 

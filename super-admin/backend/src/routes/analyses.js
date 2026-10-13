@@ -122,6 +122,22 @@ router.post('/:id/approfondisci', requireAuth, async (req, res) => {
   } catch (e) { aiError(res, e); }
 });
 
+// «Correggi a parole»: l'AI traduce la frase in operazioni controllate, SENZA scrivere; poi chi ha l'analisi conferma e solo allora si applicano (ricontrollate dal codice).
+router.post('/:id/correggi', requireAuth, async (req, res) => {
+  const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
+  const istruzione = String((req.body && req.body.istruzione) || '').trim().slice(0, 600);
+  if (istruzione.length < 5) return res.status(400).json({ error: 'Scrivi cosa vuoi cambiare.' });
+  if (!analysis.deps.isConfigured()) return res.status(503).json({ error: 'Nessuna chiave AI di Super Admin: inseriscila in Impostazioni → Chiavi AI.', code: 'ai_not_configured' });
+  try { res.json(await analysis.proponiCorrezioni(json(r.processi, []), istruzione)); } catch (e) { aiError(res, e); }
+});
+router.post('/:id/correggi/applica', requireAuth, (req, res) => {
+  const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
+  const nuovi = analysis.applicaCorrezioni(json(r.processi, []), req.body && req.body.operazioni);
+  db.prepare('UPDATE process_analyses SET processi = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify(nuovi), r.id);
+  logAudit(req.user.username, 'analysis.correggi', String(r.id), { operazioni: ((req.body && req.body.operazioni) || []).length });
+  res.json(full(row(r.id)));
+});
+
 router.post('/', requireAuth, (req, res) => {
   const name = String((req.body && req.body.name) || '').trim().slice(0, 80);
   if (!name) return res.status(400).json({ error: 'Dai un nome all\'analisi.' });
