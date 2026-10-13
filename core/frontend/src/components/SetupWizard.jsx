@@ -18,8 +18,8 @@ export default function SetupWizard({ token, user, onNavigate, onOpenBuilderNewM
   const p = stato.passi
   const vai = (fn) => () => { setAperto(false); fn() }
   const passi = [
-    { titolo: 'Scegli cosa gestire', fatto: p.moduli > 0, testo: 'Prendi più moduli dalla Libreria e installali insieme, oppure costruiscine uno da zero.', azioni: [
-      { label: 'Apri la Libreria', onClick: vai(() => onNavigate('libreria')) },
+    { titolo: 'Scegli cosa gestire', fatto: p.moduli > 0, testo: 'Parti da un modello (un gruppo di moduli già pronto), scegli i moduli uno per uno dalla Libreria, oppure costruiscine uno da zero.', azioni: [
+      { label: 'Scegli un modello o i moduli', onClick: vai(() => onNavigate('libreria')) },
       { label: 'Crea da zero', onClick: vai(onOpenBuilderNewModule), secondario: true } ] },
     { titolo: 'Collega i moduli', fatto: p.collegamenti > 0, bloccato: p.moduli < 2, testo: p.moduli < 2 ? 'Servono almeno due moduli.' : 'Ti propongo i collegamenti ovvi (un ordine appartiene a un cliente…): scegli quali creare.', azioni: [
       { label: 'Collega i moduli', onClick: () => setCollega(true) } ] },
@@ -31,7 +31,7 @@ export default function SetupWizard({ token, user, onNavigate, onOpenBuilderNewM
 
   if (!aperto) {
     return (
-      <button onClick={() => { setAperto(true); carica() }} className="fixed bottom-4 left-4 md:left-20 z-40 bg-accent text-white text-sm px-4 py-2.5 rounded-full shadow-lg hover:opacity-90 flex items-center gap-2">
+      <button onClick={() => { setAperto(true); carica() }} className="fixed bottom-4 right-4 z-40 bg-accent text-white text-sm px-4 py-2.5 rounded-full shadow-lg hover:opacity-90 flex items-center gap-2">
         <Icon name="check" size={14} />Primi passi {fatti}/{passi.length}
       </button>
     )

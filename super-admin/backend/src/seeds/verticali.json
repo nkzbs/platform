@@ -1,0 +1,153 @@
+[
+ {
+  "nome": "Vendite e fatturazione",
+  "icona": "store",
+  "descrizione": "Clienti, preventivi, ordini e fatture, dal preventivo all'incasso.",
+  "moduli": [
+   "clienti_generico",
+   "preventivi_generico",
+   "ordini_generico",
+   "ordini_righe_generico",
+   "fatture_generico",
+   "fatture_righe_generico",
+   "fatture_pagamenti_generico",
+   "prodotti_generico",
+   "listini_generico",
+   "note_credito_generico"
+  ]
+ },
+ {
+  "nome": "Contabilità e scadenze",
+  "icona": "wallet",
+  "descrizione": "Entrate, spese, scadenze e movimenti del conto, per sapere cosa entra, cosa esce e cosa scade.",
+  "moduli": [
+   "entrate_generico",
+   "spese_generico",
+   "scadenzario_generico",
+   "movimenti_generico",
+   "movimenti_bancari_generico",
+   "piano_conti_generico",
+   "insoluti_generico",
+   "insoluti_solleciti_generico"
+  ]
+ },
+ {
+  "nome": "Magazzino e acquisti",
+  "icona": "box",
+  "descrizione": "Prodotti, giacenze, fornitori e ordini d'acquisto, con resi, spedizioni e lotti.",
+  "moduli": [
+   "prodotti_generico",
+   "giacenze_generico",
+   "fornitori_generico",
+   "ordini_acquisto_generico",
+   "ordini_acquisto_righe_generico",
+   "resi_generico",
+   "spedizioni_generico",
+   "tracciabilita_lotti_generico",
+   "fornitori_valutazioni_generico"
+  ]
+ },
+ {
+  "nome": "Personale e presenze",
+  "icona": "users",
+  "descrizione": "Dipendenti, timbrature, ore lavorate, formazione e valutazioni.",
+  "moduli": [
+   "dipendenti_generico",
+   "timbrature_generico",
+   "presenze_generico",
+   "ore_lavorate_generico",
+   "formazione_generico",
+   "valutazioni_performance_generico"
+  ]
+ },
+ {
+  "nome": "Assistenza clienti",
+  "icona": "inbox",
+  "descrizione": "Richieste, reclami, contratti e storico dei contatti con i clienti.",
+  "moduli": [
+   "clienti_generico",
+   "ticket_supporto_generico",
+   "reclami_generico",
+   "comunicazioni_generico",
+   "recensioni_generico",
+   "contratti_generico"
+  ]
+ },
+ {
+  "nome": "Manutenzione e impianti",
+  "icona": "tool",
+  "descrizione": "Impianti e mezzi dei clienti, interventi di manutenzione e scadenze.",
+  "moduli": [
+   "clienti_generico",
+   "impianti_installati_generico",
+   "veicoli_generico",
+   "manutenzioni_generico",
+   "scadenzario_generico",
+   "asset_cespiti_generico",
+   "ammortamenti_generico"
+  ]
+ },
+ {
+  "nome": "Progetti e commesse",
+  "icona": "git-branch",
+  "descrizione": "Progetti con budget, attività da fare, ore lavorate e documenti.",
+  "moduli": [
+   "clienti_generico",
+   "progetti_generico",
+   "attivita_generico",
+   "ore_lavorate_generico",
+   "preventivi_generico",
+   "documenti_generico"
+  ]
+ },
+ {
+  "nome": "Appuntamenti e prenotazioni",
+  "icona": "calendar",
+  "descrizione": "Calendario, prenotazioni di risorse e schede delle persone seguite.",
+  "moduli": [
+   "clienti_generico",
+   "calendario_generico",
+   "prenotazioni_generico",
+   "scheda_paziente_generico",
+   "comunicazioni_generico"
+  ]
+ },
+ {
+  "nome": "Associazioni e soci",
+  "icona": "link",
+  "descrizione": "Soci, quote e abbonamenti, iscritti alla newsletter, eventi e documenti.",
+  "moduli": [
+   "soci_generico",
+   "abbonamenti_generico",
+   "newsletter_iscritti_generico",
+   "calendario_generico",
+   "entrate_generico",
+   "documenti_generico"
+  ]
+ },
+ {
+  "nome": "Marketing",
+  "icona": "mail",
+  "descrizione": "Promozioni, iscritti, recensioni e contatti con i clienti.",
+  "moduli": [
+   "clienti_generico",
+   "promozioni_generico",
+   "newsletter_iscritti_generico",
+   "recensioni_generico",
+   "comunicazioni_generico"
+  ]
+ },
+ {
+  "nome": "Organizzazione personale",
+  "icona": "file",
+  "descrizione": "Cose da fare, note, checklist, documenti e collegamenti da tenere a portata di mano.",
+  "moduli": [
+   "attivita_generico",
+   "note_generico",
+   "checklist_generico",
+   "documenti_generico",
+   "segnalibri_generico",
+   "calendario_generico"
+  ]
+ }
+]

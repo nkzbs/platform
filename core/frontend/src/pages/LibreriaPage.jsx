@@ -4,6 +4,7 @@ import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
 import RichText from '../components/RichText'
 import CollegaModuli from '../components/CollegaModuli'
+import VerticaliLibreria from '../components/VerticaliLibreria'
 import ProponiAllaLibreriaModal from '../components/ProponiAllaLibreria'
 import { parseSchemaFrontend, getAutomationSteps, getRequiredConnectors } from '../lib/schema-v3-frontend'
 
@@ -75,7 +76,7 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
   const installaSelezionati = async () => {
     setBulk({ busy: true, esito: null, errore: '' })
     const r = await api.post('/modules/registry/bulk-install', { ids: selezione })
-    if (r.ok) { setBulk({ busy: false, esito: r.data, errore: '' }); setSelezione([]); load(); loadRegistry() } else setBulk({ busy: false, esito: null, errore: (r.data && r.data.error) || 'Installazione non riuscita.' })
+    if (r.ok) { setBulk({ busy: false, esito: r.data, errore: '' }); setSelezione([]); load(); loadRegistry(); onRefresh() } else setBulk({ busy: false, esito: null, errore: (r.data && r.data.error) || 'Installazione non riuscita.' })
   }
   const startInstall = (m) => { setInstalling(m); setInstallError('') }
 
@@ -371,14 +372,6 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
       )}
 
 
-      <h2 className="text-sm font-semibold text-ink mb-3">Moduli</h2>
-      <div className="relative mb-6 max-w-md">
-        <Icon name="search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cerca moduli..."
-          className="w-full bg-surface-card text-ink pl-9 pr-3 py-2.5 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition placeholder-gray-600" />
-      </div>
-
-      {section('Installati', installedList, true, q ? 'Nessun modulo installato corrisponde alla ricerca.' : 'Nessun modulo installato ancora.')}
       {bulk.esito && (
         <div className="bg-surface-card border border-gray-800 rounded-xl p-3.5 mb-4 text-sm flex items-start justify-between gap-3">
           <div>
@@ -391,6 +384,16 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
           </div>
         </div>
       )}
+      <VerticaliLibreria token={token} installatiSlugs={new Set(modules.filter((m) => m.installed).flatMap((m) => [m.slug, m.registry_slug]).filter(Boolean))} onInstalled={(esito) => { setBulk({ busy: false, esito, errore: '' }); load(); loadRegistry(); onRefresh() }} />
+
+      <h2 className="text-sm font-semibold text-ink mb-3">Moduli</h2>
+      <div className="relative mb-6 max-w-md">
+        <Icon name="search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cerca moduli..."
+          className="w-full bg-surface-card text-ink pl-9 pr-3 py-2.5 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition placeholder-gray-600" />
+      </div>
+
+      {section('Installati', installedList, true, q ? 'Nessun modulo installato corrisponde alla ricerca.' : 'Nessun modulo installato ancora.')}
       {section('Disponibili', availableList, false, q ? 'Nessun modulo disponibile corrisponde alla ricerca.' : 'Hai già installato tutto quello che c\'è nella Libreria.')}
 
       {proposte.length > 0 && (

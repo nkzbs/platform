@@ -176,6 +176,15 @@ function findMissingDependencies(schemaJson) {
 router.get('/collegamenti/proposte', requireAuth, requireAdmin, (req, res) => res.json(require('../module-links').proposte()));
 router.post('/collegamenti/applica', requireAuth, requireAdmin, (req, res) => res.json(require('../module-links').applica(req.body && req.body.links, req.user)));
 
+// I verticali proposti da Super Admin (punti di partenza: gruppi di moduli). Si installano con l'installazione multipla qui sotto, dopo aver scelto quali moduli tenere.
+router.get('/registry-verticals', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const r = await fetch(SUPER_ADMIN_URL + '/api/registry/public/verticals?tenant_slug=' + encodeURIComponent(TENANT_SLUG), { headers: { 'x-internal-secret': INTERNAL_SECRET } });
+    if (!r.ok) throw new Error('giù');
+    res.json(await r.json());
+  } catch (e) { res.status(502).json({ error: 'Libreria non raggiungibile', unavailable: true }); }
+});
+
 // ─── INSTALLAZIONE MULTIPLA DALLO STORE ────────────────────────────────────────────────────────────────────────
 // Chi costruisce il proprio gestionale sceglie più moduli dallo store e li scarica in un colpo solo; le relazioni tra loro le crea poi
 // lui (Builder). Ogni modulo non ancora presente si installa come uno singolo (stesso percorso, dipendenze comprese); quelli già presenti

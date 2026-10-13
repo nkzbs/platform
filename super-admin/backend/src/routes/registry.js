@@ -326,6 +326,9 @@ router.put('/default-modules', requireAuth, (req, res) => {
 
 // ─── Uso da un backend tenant (secret interno) ─────────────────────────────────
 
+// I verticali proposti (punti di partenza: gruppi di moduli, vedi lib/verticali.js). Mai gli schemi: il tenant installa i moduli uno per uno col solito percorso.
+router.get('/public/verticals', requireInternalSecret, (req, res) => res.json(require('../lib/verticali').elenco()));
+
 // Elenco per la pagina Libreria del tenant. Mai schema_json: quello arriva solo
 // installando.
 router.get('/public/modules', requireInternalSecret, (req, res) => {
