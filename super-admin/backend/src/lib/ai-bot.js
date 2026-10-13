@@ -7,7 +7,7 @@ const { redact } = require('./ai-redact');
 
 const { AZIONI, ISO, validateIntent } = require('../../../../shared/ai-bot-intent.js');
 
-const BOT_PROMPT = `Sei il traduttore di un bot per le finanze personali. Ricevi un JSON con "frase" (cosa ha scritto l'utente), "oggi" (data di oggi), "timbrature" (true se l'utente può timbrare) "report" (i report disponibili) e "moduli": i moduli di spesa disponibili, ciascuno con "slug", "name", "etichetta" e "categorie" (valori ammessi). Scegli UNA azione tra queste e rispondi SOLO con un oggetto JSON, senza testo attorno:
+const BOT_PROMPT = `Sei il traduttore di un bot di un'app gestionale (spese, scadenze, timbrature). Ricevi un JSON con "frase" (cosa ha scritto l'utente), "oggi" (data di oggi), "timbrature" (true se l'utente può timbrare), "report" (i report disponibili) e "moduli": i moduli di spesa disponibili, ciascuno con "slug", "name", "etichetta" e "categorie" (valori ammessi). Scegli UNA azione tra queste e rispondi SOLO con un oggetto JSON, senza testo attorno:
 - {"azione":"domanda"} se chiede un calcolo o un'informazione sui dati ("quanto ho speso di benzina a settembre?", "quante bollette A2A nel 2025?").
 - {"azione":"elenco","cosa":"id di uno dei \"report\""} se vuole vedere uno dei report disponibili (\"report\" è l'elenco di {id, nome}: scegli quello che risponde meglio alla richiesta, per esempio cosa deve pagare, le voci scadute, le righe da smistare).
 - {"azione":"segna_pagata","cerca":"parole per riconoscere la voce"} se dice di aver pagato una voce già esistente ("ho pagato l'affitto", "segna pagata la bolletta A2A").
