@@ -300,7 +300,7 @@ sequenceDiagram
 - L'**output è controllato**: una categoria che non è tra le opzioni del modulo viene scartata, importi e date
   non validi diventano vuoti, una risposta che non è JSON viene rifiutata. All'accettazione la categoria è
   ricontrollata sul modulo.
-- **Chiave per tenant** (`lib/ai-key.js`, tabella `tenant_ai_keys`): inserita dal Builder, nella sezione "Potenziamenti AI" quando se ne accende uno; cifrata in Super Admin, mai restituita; `MISTRAL_API_KEY` è il ripiego.
+- **Chiavi, tre livelli** (`lib/ai-key.js`, tabella `tenant_ai_keys`, impostazione `ai_settings.tenant_fallback`): la chiave di ogni **tenant** (da Impostazioni → AI del tenant; cifrata in Super Admin, mai restituita); la chiave di **Super Admin**, solo sua (riga riservata `__super_admin__`; da Super Admin → Impostazioni → Chiavi AI; per costruire tenant e analizzare i processi; non la usa mai un tenant); la chiave **generale** (`MISTRAL_API_KEY`), ripiego dei tenant senza chiave propria se l'interruttore «ripiego» è acceso (di partenza sì) e di Super Admin se non ha una chiave sua. Con il ripiego spento un tenant senza chiave sua non ha AI. I consumi di Super Admin (senza tenant) sono già un conto a parte.
 - **Tetto di spesa mensile per tenant** (`lib/ai-budget.js`): si sommano i token del mese dal registro, convertiti in euro
   (di default mistral-small: 0,13 € in ingresso e 0,51 € in uscita per milione di token), e a tetto raggiunto
   nessuna chiamata parte. Avviso per email all'80% e al 100%. Tetto di default 10 €, regolabile con

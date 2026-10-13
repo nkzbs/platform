@@ -213,6 +213,13 @@ Nel Builder, modulo Documenti → «Come si vede l'elenco» → **Archivio**. Le
 - **Revocare**: «Scollega» accanto al telefono (il proprio; l'admin qualunque), o `/scollega` dalla chat. «Scollega il bot» toglie anche il webhook e tutti i telefoni. Se il codice segreto è finito in mani sbagliate: `/revoke` su BotFather e ricollegare con il nuovo.
 - **Se non arriva niente**: il tenant deve essere raggiungibile da fuori in https (il webhook è `…/api/telegram/webhook`); controllare che il bot sia collegato e che il telefono compaia nell'elenco.
 
+## Chiavi AI (Mistral)
+
+- **Finance:** Impostazioni → AI → incolla la chiave del progetto. Deve comparire «Chiave di questo progetto salvata». L'interruttore generale (stessa pagina) accende l'AI; i potenziamenti si scelgono per modulo (Builder → Potenziamenti AI).
+- **Super Admin:** Impostazioni → **Chiavi AI** → incolla la chiave di Super Admin (distinta da quelle dei tenant). L'interruttore «I tenant senza una chiave propria usano la chiave generale» si spegne solo quando ogni tenant ha la sua, altrimenti l'AI di quel tenant si ferma.
+- Le chiavi non si scrivono mai in chat né in file: si incollano nell'app, che le cifra.
+- Togliere la chiave di un tenant con il ripiego spento (o senza chiave generale) spegne la sua AI; i report, le ore e i comandi fissi del bot continuano.
+
 ## Segreti cifrati e la chiave del progetto
 - Le credenziali dei collegamenti (Google, WhatsApp, Telegram…) e i segreti del 2FA stanno nel database **cifrati** con `ENCRYPTION_KEY` del progetto (la stessa dei campi cifrati). Al primo avvio dopo l'aggiornamento il sistema cifra da solo ciò che era in chiaro e scrive nel log di avvio `Segreti cifrati a riposo: N collegamenti, N segreti 2FA`.
 - **Senza la chiave** quei valori non si leggono: Google, WhatsApp e Telegram risultano «non collegati» e il 2FA va riconfigurato (con i codici di recupero, o da admin). La chiave sta nel registro di Super Admin (`super-admin-01.db`): conservala **insieme ai backup**.
