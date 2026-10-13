@@ -483,3 +483,6 @@ Nessun verticale «curato» da Super Admin: chi costruisce il proprio gestionale
 
 ## 2026-10-13 — Verticali proposti come punti di partenza
 Un tenant vuoto vede in Libreria «Parti da un modello»: tessere di verticali (gruppi di moduli generici che funzionano insieme), da `super-admin/backend/src/seeds/verticali.json` (dati, non codice) risolti sui moduli che la Libreria ha davvero (`lib/verticali.js`, `GET /api/registry/public/verticals`). Si tolgono le spunte ai moduli che non servono e si installa col solito bulk-install; poi «Collega i moduli». Convive con la scelta libera di più moduli nello store. Corretto: l'installazione multipla non ricaricava il menu laterale.
+
+## 2026-10-13 — Distacco di un tenant su un server dell'utente
+Copia (non spostamento) via SSH, avviata dal tenant: `ssh2` in Super Admin, token firmato col segreto del tenant, impronta del server confermata e fissata, credenziali solo in memoria, destinazioni interne vietate. Il tenant copiato non ha più Super Admin (AI, Libreria e aggiornamenti non disponibili finché non esisterà una chiave AI propria del tenant). Super Admin non vede dati: copia un file di database che già custodisce nei backup.

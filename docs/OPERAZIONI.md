@@ -226,3 +226,12 @@ Nel Builder, modulo Documenti → «Come si vede l'elenco» → **Archivio**. Le
 - I backup fatti **prima** dell'aggiornamento (i 7 giornalieri, le copie sul Mac) contengono ancora i segreti **in chiaro**: scadono da soli in una settimana (quelli automatici); le copie manuali vanno cancellate quando non servono più.
 - Se dopo un ripristino i collegamenti risultano scollegati ma la chiave è giusta, guarda nel log di avvio se compare «NON riusciti».
 - **Librerie**: ogni tanto `npm audit --omit=dev` in `core/backend`, `super-admin/backend`, `super-admin/docker-provisioner`. Non usare `npm audit fix` negli ultimi due senza controllare che `dockerode` resti ≥ 4.0.5. Il **provisioner** non si aggiorna con `redeploy-nas.sh`: ha un'immagine sua (`docker-provisioner:0.1`).
+
+## Distaccare un tenant su un server dell'utente
+
+Impostazioni → Dati → «Distacca su un tuo server» (solo admin del tenant, con la password dell'account). Super Admin fa la **copia** (immagine, database, allegati, segreti, avvio) via SSH su un server Linux x86-64 con Docker; il tenant originale non si ferma e non si cancella.
+- **Due passi**: «Controlla il server» (sola lettura: architettura, Docker, spazio, porta, nome del container, cartella; mostra l'impronta del server, che chi esporta conferma e che da lì si FISSA) e poi la copia, con avanzamento.
+- **Sul server** nasce `~/platform-<slug>/` con `data/` (database e allegati) e `env` (segreti, permessi 0600), e un container `platform-<slug>` con riavvio automatico. Davanti serve un proxy con HTTPS (non lo fa la copia). I backup della cartella sono a carico di chi lo ospita.
+- **Distaccato = indipendente**: non ha Super Admin, quindi **AI, Libreria e aggiornamenti** da Super Admin non ci sono (`SUPER_ADMIN_URL` punta a una porta chiusa; `DETACHED=1`). L'AI con una chiave propria nel tenant non esiste ancora.
+- **Sicurezza**: il tenant prova chi è con un token firmato col SUO segreto (il segreto interno condiviso non basta, quindi un tenant non può esportarne un altro); le credenziali SSH restano in memoria per la durata del lavoro e non finiscono in log, stato o audit; destinazioni vietate: loopback, link-local (servizi cloud) e, **di partenza, gli indirizzi privati** (per un server in rete locale: `EXPORT_ALLOW_PRIVATE=1` sull'ambiente di Super Admin). Altre variabili: `EXPORT_MIN_FREE_MB` (spazio minimo, 3000), `EXPORT_IMAGE_ARCH` (x86_64).
+- **Non provato su un server vero** (solo con un server SSH di prova e un Docker finto): la prima volta farlo su un server di prova.

@@ -14,6 +14,7 @@ import UsersPage from './UsersPage'
 import AccountPage from './AccountPage'
 import SuggestionsTab from '../components/SuggestionsTab'
 import FeaturesTab from '../components/FeaturesTab'
+import ExportServerCard from '../components/ExportServerCard'
 import TelegramCard from '../components/TelegramCard'
 import SitoWebPage from './SitoWebPage'
 
@@ -360,6 +361,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-w-5xl">
           <ExportDatiPage token={token} modules={modules} user={user} />
           {isAdmin && <BackupPage token={token} />}
+          {isAdmin && <ExportServerCard token={token} />}
         </div>
       )}
     </div>

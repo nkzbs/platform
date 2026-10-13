@@ -37,6 +37,7 @@ const reportsRoutes = require('./routes/reports');
 const internalSetupRoutes = require('./routes/internal-setup');
 const suggestionsRoutes = require('./routes/suggestions');
 const setupWizardRoutes = require('./routes/setup-wizard');
+const exportServerRoutes = require('./routes/export-server');
 const { startSuggestions } = require('./suggestions');
 const { startReports } = require('./reports');
 const { startAvvisi } = require('./avvisi');
@@ -105,6 +106,7 @@ const routeMounts = [
   ['/internal-setup', internalSetupRoutes],
   ['/suggestions', suggestionsRoutes],
   ['/setup-wizard', setupWizardRoutes],
+  ['/export-server', exportServerRoutes],
   ['/site-pages', siteAdminRouter],
 ];
 app.use('/api', apiGlobalLimiter);
