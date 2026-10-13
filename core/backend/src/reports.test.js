@@ -219,6 +219,33 @@ global.fetch = async (url) => {
     R.removeDefinition(id); R.removeDefinition('ore_periodo_1'); db.prepare("DELETE FROM records WHERE module_slug = 'tmb'").run();
   });
 
+  await test('RIEPILOGO ORE E STRAORDINARI (domenica sera): settimana, mese finora, straordinario oltre la soglia; ogni persona vede il suo', async () => {
+    const SCHEMA = JSON.stringify({ version: 3, steps: [{ id: 'f1', block_type: 'field', key: 'data', label: 'Data', type: 'date' }, { id: 'f2', block_type: 'field', key: 'entrata', label: 'Entrata', type: 'time' }, { id: 'f3', block_type: 'field', key: 'uscita', label: 'Uscita', type: 'time' }, { id: 'p1', block_type: 'permissions', rules: [{ role: 'user', view: true, view_own_only: true, owner_field: '', create: true, edit: true, delete: true }] }] });
+    db.prepare("INSERT OR IGNORE INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('Timbrature', 'tmb', 'box', '#000', 1, 1, 60, ?)").run(SCHEMA);
+    require('./module-roles').set('tmb', { kind: 'presenze', uses: [], roles: { data: 'data', inizio: 'entrata', fine: 'uscita' } });
+    const fede = db.prepare("INSERT INTO users (username, password_hash, display_name, role) VALUES ('federica', 'x', 'Federica', 'user')").run().lastInsertRowid;
+    const altra = db.prepare("INSERT INTO users (username, password_hash, display_name, role) VALUES ('altra', 'x', 'Altra', 'user')").run().lastInsertRowid;
+    const riga = (u, g, e, f) => db.prepare("INSERT INTO records (module_slug, user_id, data) VALUES ('tmb', ?, ?)").run(u, JSON.stringify({ data: g, entrata: e, uscita: f }));
+    // settimana 5–11 ottobre 2026: 5 turni da 8h30 = 42h30 (straordinario 2h30 oltre le 40h); 1–2 ottobre (giovedì e venerdì della settimana precedente): 2 turni da 8h = 16h
+    for (const g of ['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09']) riga(fede, g, '07:00', '15:30');
+    riga(fede, '2026-10-01', '08:00', '16:00'); riga(fede, '2026-10-02', '08:00', '16:00'); riga(altra, '2026-10-06', '08:00', '12:00');
+    const id = R.addDefinition('ore_settimana', 'Ore di Federica').id;
+    const def = R.definizione(id); eq([def.freq, def.weekday, def.ora, def.soglia_ore], ['settimanale', 0, 20, 40]);
+    const DOM = rome('2026-10-11', 20, 0);
+    eq(R.dueKey(def, DOM), '2026-10-11'); eq(R.dueKey(def, rome('2026-10-11', 19, 59)), null, 'prima delle 20'); eq(R.dueKey(def, rome('2026-10-12', 20, 0)), null, 'lunedì no');
+    const mia = R.build(id, DOM, { user: { id: fede, role: 'user' }, slugs: new Set(['tmb']) }).text;
+    ok(mia.startsWith('🕒 *Ore lavorate* · settimana 05/10–11/10'), mia); ok(/Settimana 05\/10–11\/10: \*42h 30m\*/.test(mia), mia);
+    ok(/Straordinario della settimana: \*2h 30m\* \(oltre 40h\)/.test(mia), mia);
+    ok(/Mese di ottobre finora: \*58h 30m\* in 7 giorni/.test(mia), mia);   // 42h30 + 16h
+    ok(/Straordinario del mese: \*2h 30m\*/.test(mia), mia); ok(!/Altra/.test(mia), 'non vede le ore degli altri');
+    const tutte = R.build(id, DOM).text; ok(/\*Federica\*/.test(tutte) && /\*Altra\*/.test(tutte), 'senza limiti (WhatsApp) tutte le persone');
+    R.saveSettings(id, { soglia_ore: 45 }); ok(/Straordinario della settimana: nessuno \(soglia 45h\)/.test(R.build(id, DOM).text));
+    R.saveSettings(id, { mese: false }); ok(!/Mese di ottobre/.test(R.build(id, DOM).text), 'il recap mensile si può spegnere');
+    ok(R.saveSettings(id, { soglia_ore: 0 }).error);
+    eq(R.build(id, rome('2027-03-14', 20)), null, 'nessuna timbratura questa settimana → niente messaggio');
+    R.removeDefinition(id); db.prepare("DELETE FROM records WHERE module_slug = 'tmb'").run();
+  });
+
   console.log(`\n${'='.repeat(60)}\n${passed} passati, ${failed} falliti su ${passed + failed} test.`);
   try { fs.unlinkSync(process.env.DB_PATH); } catch (e) {}
   process.exit(failed > 0 ? 1 : 0);

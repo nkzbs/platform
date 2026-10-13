@@ -37,4 +37,18 @@ function somma(righe, R, { da, a }) {
   return { giorni, aperti, totale: [...giorni.values()].reduce((s, e) => s + e.min, 0) };
 }
 
-module.exports = { GIORNI, PERIODI, shiftDay, toMin, hhmm, durata, minuti, intervallo, somma };
+// Lunedì della settimana (ISO) di una data.
+const lunediDi = (iso) => shiftDay(iso, -((new Date(iso + 'T00:00:00Z').getUTCDay() + 6) % 7));
+
+// Ore del mese diviso per settimane ISO (lunedì–domenica) con lo straordinario: stessa regola del grafico «ore per settimana» (weekly-breakdown.js): contano solo i giorni
+// che cadono nel mese, raggruppati per settimana, e lo straordinario di ogni settimana è ciò che supera la soglia (minuti). Ritorna { settimane: [{ lunedi, min }], totale, straordinario, giorni }.
+function mensile(righe, R, anno, mese, sogliaMin) {
+  const mm = String(mese).padStart(2, '0'), da = anno + '-' + mm + '-01', a = anno + '-' + mm + '-' + String(new Date(Date.UTC(anno, mese, 0)).getUTCDate()).padStart(2, '0');
+  const { giorni } = somma(righe, R, { da, a });
+  const perSettimana = new Map();
+  for (const [g, e] of giorni) { const l = lunediDi(g); perSettimana.set(l, (perSettimana.get(l) || 0) + e.min); }
+  const settimane = [...perSettimana.entries()].sort((x, y) => x[0].localeCompare(y[0])).map(([lunedi, min]) => ({ lunedi, min }));
+  return { settimane, totale: settimane.reduce((t, w) => t + w.min, 0), straordinario: settimane.reduce((t, w) => t + Math.max(0, w.min - sogliaMin), 0), giorni: giorni.size };
+}
+
+module.exports = { lunediDi, mensile, GIORNI, PERIODI, shiftDay, toMin, hhmm, durata, minuti, intervallo, somma };

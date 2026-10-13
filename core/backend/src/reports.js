@@ -6,6 +6,7 @@
 //   coda               le righe in uno stato (di solito «nuovo»: da smistare): giornaliero o settimanale, solo se ce ne sono.
 //   in_ritardo         le righe nello stato scelto con la scadenza passata (da quanti giorni): giornaliero o settimanale, solo se ce ne sono.
 //   ore_periodo        le ore lavorate dai moduli di timbrature (ruoli data/inizio/fine) in un periodo, per persona. Mensile o settimanale.
+//   ore_settimana      il riepilogo ore di una persona: la settimana, il mese in corso e lo straordinario (oltre una soglia settimanale). Di solito la domenica sera.
 // Quali moduli contano, cosa significa «da fare» o «nuovo», come si chiamano le righe, e cosa sono le timbrature lo dichiara il modulo (Builder → Ruoli del modulo):
 // qui non ci sono nomi di moduli né di campi. Giorno e ora sono quelli italiani. I tre report storici (pagare, smistare, scadute) sono tre definizioni di partenza.
 const db = require('./db');
@@ -37,6 +38,12 @@ const TIPI = {
     descrizione: 'Le righe nello stato scelto con la scadenza passata, con da quanti giorni. Se le hai già chiuse non arrivano più.',
     vuoto: 'Niente in ritardo: il messaggio non partirebbe.',
     base: { stato: 'da_fare', freq: 'settimanale', weekday: 1, ora: 19, scadute_max_giorni: 45, max_righe: 8, titolo: 'Scadute', emoji: '⚠', piede: 'Già pagate? Spuntale nella Checklist.', invia_se_vuoto: false },
+  },
+  ore_settimana: {
+    nome: 'Riepilogo ore e straordinari', frequenze: ['settimanale'],
+    descrizione: 'Le ore lavorate nella settimana, il mese finora e lo straordinario (le ore oltre la soglia settimanale), per ogni persona. Ogni telefono Telegram riceve solo le sue.',
+    vuoto: 'Nessuna timbratura nella settimana: il messaggio non partirebbe.',
+    base: { freq: 'settimanale', weekday: 0, ora: 20, soglia_ore: 40, mese: true, titolo: 'Ore lavorate', emoji: '🕒', invia_se_vuoto: false },
   },
   ore_periodo: {
     nome: 'Ore lavorate', frequenze: ['mensile', 'settimanale'],
@@ -151,6 +158,8 @@ function saveSettings(id, patch) {
     d.utenti = ids;
   }
   if (p.tag != null) { const t = String(p.tag).trim(); if (!/^[A-Za-z0-9_-]{1,40}$/.test(t)) return { error: 'Il tag può avere lettere, numeri, - e _.' }; d.tag = t; }
+  if (p.soglia_ore != null) { const n = int(p.soglia_ore, 1, 100); if (n == null) return { error: 'La soglia va da 1 a 100 ore.' }; d.soglia_ore = n; }
+  if (p.mese != null) d.mese = !!p.mese;
   if (p.stipendio != null) d.stipendio = !!p.stipendio;
   if (p.include_scadute != null) d.include_scadute = !!p.include_scadute;
   if (p.invia_se_vuoto != null) d.invia_se_vuoto = !!p.invia_se_vuoto;
@@ -313,7 +322,38 @@ function buildOre(d, now = new Date(), scope = null) {
   return { text: intestazione(d, iv.titolo) + '\n\n' + lines.join('\n') + (persone.size > 1 ? '\n\nTotale: *' + oreCalc.durata(tot) + '*' : '') + (aperti ? '\n\n_' + aperti + (aperti === 1 ? ' turno è ancora aperto e non è contato.' : ' turni sono ancora aperti e non sono contati.') + '_' : ''), counts: { persone: persone.size, minuti: tot } };
 }
 
-const BUILDERS = { riepilogo_periodo: buildRiepilogo, coda: buildCoda, in_ritardo: buildInRitardo, ore_periodo: buildOre };
+// Riepilogo ore + straordinari per persona: la settimana che finisce oggi (o l'ultima conclusa), il mese in corso e lo straordinario di settimana e di mese.
+function buildOreSettimana(d, now = new Date(), scope = null) {
+  const oggi = romeParts(now).date, lun = oreCalc.lunediDi(oggi), dom = oreCalc.shiftDay(lun, 6), fine = dom > oggi ? oggi : dom;
+  const soglia = d.soglia_ore * 60, anno = Number(oggi.slice(0, 4)), mese = Number(oggi.slice(5, 7));
+  const MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+  const blocchi = []; let aperti = 0;
+  for (const m of require('./module-roles').list({ kind: 'presenze' })) {
+    if (scope && scope.slugs && !scope.slugs.has(m.module_slug)) continue;
+    const R = m.roles; if (!R.data || !R.inizio || !R.fine) continue;
+    const owner = new Map(db.prepare('SELECT r.id, COALESCE(u.display_name, u.username) AS nome FROM records r LEFT JOIN users u ON u.id = r.user_id WHERE r.module_slug = ?').all(m.module_slug).map((r) => [r.id, r.nome || '—']));
+    const perNome = new Map();
+    for (const r of rows(m.module_slug, scope)) { const n = owner.get(r.id) || '—'; (perNome.get(n) || perNome.set(n, []).get(n)).push({ d: r.data }); }
+    for (const [nome, righe] of perNome) {
+      const sett = oreCalc.somma(righe, R, { da: lun, a: fine }); aperti += sett.aperti;
+      if (!sett.giorni.size) continue; // nessuna timbratura questa settimana: niente per questa persona
+      const righeG = [...sett.giorni.keys()].sort().map((g) => oreCalc.GIORNI[new Date(g + 'T00:00:00Z').getUTCDay()] + ' ' + oreCalc.durata(sett.giorni.get(g).min));
+      const strSett = Math.max(0, sett.totale - soglia);
+      const l = ['*' + nome + '*', 'Settimana ' + shortDate(lun) + '–' + shortDate(fine) + ': *' + oreCalc.durata(sett.totale) + '*', righeG.join(' · '),
+        strSett ? 'Straordinario della settimana: *' + oreCalc.durata(strSett) + '* (oltre ' + d.soglia_ore + 'h)' : 'Straordinario della settimana: nessuno (soglia ' + d.soglia_ore + 'h)'];
+      if (d.mese) {
+        const mn = oreCalc.mensile(righe, R, anno, mese, soglia);
+        l.push('Mese di ' + MESI[mese - 1] + ' finora: *' + oreCalc.durata(mn.totale) + '* in ' + mn.giorni + (mn.giorni === 1 ? ' giorno' : ' giorni'), 'Straordinario del mese: *' + (mn.straordinario ? oreCalc.durata(mn.straordinario) : 'nessuno') + '*');
+      }
+      blocchi.push({ nome, min: sett.totale, testo: l.join('\n') });
+    }
+  }
+  if (!blocchi.length) return null;
+  blocchi.sort((a, b) => b.min - a.min);
+  return { text: intestazione(d, 'settimana ' + shortDate(lun) + '–' + shortDate(fine)) + '\n\n' + blocchi.map((b) => b.testo).join('\n\n') + (aperti ? '\n\n_' + aperti + (aperti === 1 ? ' turno è ancora aperto e non è contato.' : ' turni sono ancora aperti e non sono contati.') + '_' : ''), counts: { persone: blocchi.length } };
+}
+
+const BUILDERS = { riepilogo_periodo: buildRiepilogo, coda: buildCoda, in_ritardo: buildInRitardo, ore_periodo: buildOre, ore_settimana: buildOreSettimana };
 // Il messaggio di una definizione (un oggetto definizione o il suo id); null se non c'è niente da dire (o la definizione non esiste).
 function build(def, now, scope) {
   const d = typeof def === 'string' ? definizione(def) : def;
