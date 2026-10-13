@@ -3,6 +3,8 @@ import { API } from '../lib/api'
 import Icon from '../components/Icon'
 import ProcessoEditor, { applySuggestion, needsEnrichment } from '../components/analyses/ProcessoEditor'
 import Manuale from '../components/analyses/Manuale'
+import Guida from '../components/analyses/Guida'
+import { STAMPA_CSS } from '../components/analyses/stampa'
 
 // Analisi dei processi: racconti un'attività, l'AI propone i processi (mai salvati da soli), li rifinisci, vedi cosa copre la Libreria e cosa va costruito,
 // apri il manuale (stampabile) e, se vuoi, crei il tenant con i moduli, i ruoli e gli stati del flusso che ne derivano. Si salva da sola mentre scrivi.
@@ -32,6 +34,8 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
   const [busy, setBusy] = useState('')
   const [showProfilo, setShowProfilo] = useState(false)
   const [showManuale, setShowManuale] = useState(false)
+  const [guida, setGuida] = useState(null) // la guida all'uso, caricata quando si apre
+  const apriGuida = async () => { const r = await req('GET', '/' + a.id + '/guida'); if (r.ok) setGuida(r.data); else setMsg({ ok: false, text: (r.data && r.data.error) || 'Non riesco a preparare la guida.' }) }
   const [tf, setTf] = useState({ name: '', slug: '' })
   const [cr, setCr] = useState(null) // avanzamento della creazione del tenant: { fase, inizio, tempi, ... }
   const [credenziali, setCredenziali] = useState(null) // l'accesso admin: si vede una volta
@@ -48,7 +52,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
 
   const open = async (id) => {
     const r = await req('GET', '/' + id)
-    if (r.ok) { setA(r.data); setProposte([]); setShowManuale(false); setVista(r.data.auto ? 'riepilogo' : 'dettagli'); setCr(r.data.creazione || null); setCredenziali(null); setCompleta(null); setMsg(null); setTf({ name: r.data.name, slug: slugify(r.data.name) }) }
+    if (r.ok) { setA(r.data); setProposte([]); setShowManuale(false); setGuida(null); setVista(r.data.auto ? 'riepilogo' : 'dettagli'); setCr(r.data.creazione || null); setCredenziali(null); setCompleta(null); setMsg(null); setTf({ name: r.data.name, slug: slugify(r.data.name) }) }
   }
   const create = async () => {
     if (!newName.trim()) { setMsg({ ok: false, text: 'Dai un nome all\'analisi.' }); return }
@@ -262,7 +266,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
     const nomeMod = (id) => (modules.find((m) => m.id === id) || {}).name || ''
     return (
       <div className="max-w-3xl">
-        <style>{'@media print{body *{visibility:hidden}#manuale,#manuale *{visibility:visible}#manuale{position:absolute;left:0;top:0;width:100%;border:0!important}}'}</style>
+        <style>{STAMPA_CSS}</style>
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <button type="button" onClick={() => { setA(null); loadList() }} className="text-gray-500 hover:text-ink transition flex items-center gap-1 text-sm"><Icon name="chevron-left" size={14} />Analisi</button>
           <input className={input + ' flex-1 min-w-[180px] font-semibold'} value={a.name} onChange={(e) => change({ name: e.target.value })} aria-label="Nome dell'attività" />
@@ -294,7 +298,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
               <div>Togli quello che non ti serve dai dettagli.</div>
             </div>
           )}
-          <div className="flex gap-2 mt-4 flex-wrap"><button type="button" className={ghost} onClick={() => setVista('dettagli')}>Rivedi i dettagli</button><button type="button" className={ghost} onClick={() => { setVista('dettagli'); setShowManuale(true) }}>Apri il manuale</button></div>
+          <div className="flex gap-2 mt-4 flex-wrap"><button type="button" className={ghost} onClick={() => setVista('dettagli')}>Rivedi i dettagli</button><button type="button" className={ghost} onClick={() => { setVista('dettagli'); setShowManuale(true) }}>Apri il manuale</button><button type="button" className={ghost} onClick={() => { setVista('dettagli'); apriGuida() }}>Guida all'uso</button></div>
         </section>
         {a.processi.length > 0 && creaPanel('')}
       </div>
@@ -303,7 +307,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
 
   return (
     <div className="max-w-3xl">
-      <style>{'@media print{body *{visibility:hidden}#manuale,#manuale *{visibility:visible}#manuale{position:absolute;left:0;top:0;width:100%;border:0!important}}'}</style>
+      <style>{STAMPA_CSS}</style>
       <div className="flex items-center gap-2 mb-4 flex-wrap">
         <button type="button" onClick={() => { setA(null); loadList() }} className="text-gray-500 hover:text-ink transition flex items-center gap-1 text-sm"><Icon name="chevron-left" size={14} />Analisi</button>
         {a.auto && <button type="button" onClick={() => setVista('riepilogo')} className="text-xs text-cp-primary hover:opacity-80 transition">Riepilogo</button>}
@@ -313,9 +317,14 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
       </div>
       {msg && <div className={'text-sm mb-3 ' + (msg.ok ? 'text-green-400' : 'text-amber-400')}>{msg.text}</div>}
 
-      {showManuale ? (
+      {guida ? (
         <>
-          <div className="flex gap-2 mb-3 flex-wrap"><button type="button" className={ghost} onClick={() => setShowManuale(false)}>← Torna all'analisi</button><button type="button" className={btn} onClick={stampa}>Stampa o salva in PDF</button></div>
+          <div className="flex gap-2 mb-3 flex-wrap no-stampa"><button type="button" className={ghost} onClick={() => setGuida(null)}>← Torna all'analisi</button><button type="button" className={btn} onClick={stampa}>Stampa o salva in PDF</button></div>
+          <Guida guida={guida} />
+        </>
+      ) : showManuale ? (
+        <>
+          <div className="flex gap-2 mb-3 flex-wrap no-stampa"><button type="button" className={ghost} onClick={() => setShowManuale(false)}>← Torna all'analisi</button><button type="button" className={btn} onClick={stampa}>Stampa o salva in PDF</button></div>
           <Manuale analysis={a} modules={modules} />
         </>
       ) : (
@@ -388,7 +397,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
               </div>
               {b.moduli_collegati && b.moduli_collegati.length > 0 && <p className="text-xs text-gray-500 mb-3">Moduli collegati che servono ai tuoi moduli e vengono aggiunti: {b.moduli_collegati.join(', ')}.</p>}
               {b.da_costruire.length > 0 && <p className="text-xs text-gray-500 mb-3">Da costruire: {b.da_costruire.join(', ')}. Si costruiscono nel Super Builder.</p>}
-              <div className="flex gap-2 flex-wrap"><button type="button" className={btn} onClick={() => setShowManuale(true)}>Apri il manuale</button></div>
+              <div className="flex gap-2 flex-wrap"><button type="button" className={btn} onClick={() => setShowManuale(true)}>Apri il manuale</button><button type="button" className={ghost} onClick={apriGuida}>Guida all'uso</button></div>
             </section>
           )}
 

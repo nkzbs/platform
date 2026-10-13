@@ -115,6 +115,12 @@ router.get('/:id', requireAuth, (req, res) => {
   res.json(full(r));
 });
 
+// La guida all'uso del verticale (da leggere o salvare in PDF), costruita dai dati dell'analisi e dai moduli: nessuna AI.
+router.get('/:id/guida', requireAuth, (req, res) => {
+  const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
+  res.json(require('../lib/guida').build(full(r)));
+});
+
 router.patch('/:id', requireAuth, (req, res) => {
   const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
   const b = req.body || {}, sets = [], args = [];

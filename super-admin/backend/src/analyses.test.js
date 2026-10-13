@@ -152,6 +152,21 @@ async function main() {
     } finally { A.deps.callAI = precedente; }
   });
 
+  console.log('\n--- guida all\'uso ---');
+  await test('la guida nasce solo dai dati: moduli con campi e stati, ruoli con i loro passaggi, niente di inventato', async () => {
+    const schema = JSON.stringify({ version: 3, steps: [{ id: 'f1', block_type: 'field', key: 'nome', label: 'Nome lavoro', type: 'text' }, { id: 'f2', block_type: 'field', key: 'tipo', label: 'Tipo', type: 'select', options: [{ value: 'a', label: 'Tagliando' }] }, { id: 'w1', block_type: 'workflow_state', key: 'aperto', label: 'Aperto', initial: true }, { id: 'r1', block_type: 'relation', key: 'cliente', label: 'Cliente', type: 'many_to_one', target_module: 'prev' }] });
+    const m = db.prepare("INSERT INTO registry_modules (name, slug, description, schema_json, version, source_tenant_slug) VALUES ('Lavori', 'lavori', 'I lavori in corso', ?, 1, 't')").run(schema).lastInsertRowid;
+    const c = await (await api('POST', '', { name: 'Con guida', descrizione: 'x' })).json();
+    const processi = [{ nome: 'Lavorazione', reparto: 'Officina', scopo: 'Fare il lavoro', evento_innesco: 'Arriva un ordine', registry_module_id: Number(m), copertura: 'coperto', ruoli_coinvolti: [{ nome: 'Meccanico', tipo: 'utente' }, { nome: 'Gestionale', tipo: 'sistema' }], passaggi: [{ titolo: 'Apri il lavoro', ruolo: 'Meccanico', descrizione: 'Dal modulo Lavori', tipo: 'step' }], eccezioni: ['Ricambio mancante'] }, { nome: 'Fatturazione', copertura: 'da_costruire' }];
+    eq((await api('PATCH', '/' + c.id, { processi })).status, 200);
+    const g = await (await api('GET', '/' + c.id + '/guida')).json();
+    eq(g.moduli.map((x) => x.nome), ['Lavori', 'Preventivi'], 'entra anche il modulo da cui dipende'); eq(g.moduli[0].campi.map((f) => f.nome), ['Nome lavoro', 'Tipo']); eq(g.moduli[0].campi[1].scelte, ['Tagliando']);
+    eq(g.moduli[0].stati, ['Aperto']); eq(g.moduli[0].collegamenti, ['Preventivi']);
+    eq(g.ruoli.map((r) => r.nome), ['Meccanico'], 'i sistemi non sono ruoli di persone'); eq(g.ruoli[0].passaggi[0].titolo, 'Apri il lavoro');
+    eq(g.processi[0].modulo, 'Lavori'); eq(g.processi[1].da_costruire, true); eq(g.da_costruire, ['Fatturazione']);
+    eq((await api('GET', '/99999/guida')).status, 404);
+  });
+
   console.log(`\n${passed} passati, ${failed} falliti`);
   process.exit(failed ? 1 : 0);
 }

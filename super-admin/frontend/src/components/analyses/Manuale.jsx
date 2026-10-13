@@ -21,7 +21,8 @@ export default function Manuale({ analysis, modules }) {
   const p = analysis.processi, b = analysis.blueprint, pr = analysis.profilo || {}
   const oggi = new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })
   return (
-    <div id="manuale" style={{ background: '#fff', color: '#1c1917', fontFamily: 'system-ui,-apple-system,Segoe UI,sans-serif', lineHeight: 1.55, padding: 'clamp(14px, 4vw, 28px)', borderRadius: 12, border: '1px solid #d6d3d1', boxSizing: 'border-box', maxWidth: '100%', overflowWrap: 'anywhere', overflow: 'hidden' }}>
+    <div id="manuale" className="doc-stampa" style={{ background: '#fff', color: '#1c1917', fontFamily: 'system-ui,-apple-system,Segoe UI,sans-serif', lineHeight: 1.55, padding: 'clamp(14px, 4vw, 28px)', borderRadius: 12, border: '1px solid #d6d3d1', boxSizing: 'border-box', maxWidth: '100%', overflowWrap: 'anywhere', overflow: 'hidden' }}>
+      <div className="copertina">
       <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: '#78716c', fontWeight: 700 }}>Manuale dei processi · {oggi}</div>
       <h1 style={{ fontSize: 'clamp(20px, 6vw, 26px)', margin: '4px 0 6px', fontWeight: 600 }}>{analysis.name}</h1>
       {analysis.descrizione && <p style={{ fontSize: 14, color: '#44403c', margin: '0 0 16px' }}>{analysis.descrizione}</p>}
@@ -42,8 +43,9 @@ export default function Manuale({ analysis, modules }) {
           </div>
         ))}
       </div>
+      </div>
       {p.map((x, i) => (
-        <section key={i} style={{ pageBreakInside: 'avoid', marginBottom: 28 }}>
+        <section key={i} className="scheda" style={{ marginBottom: 28 }}>
           <h2 style={{ fontSize: 18, margin: '0 0 8px', fontWeight: 600 }}>{i + 1}. {x.nome}</h2>
           <Grid items={[{ label: 'Reparto', value: x.reparto }, { label: 'Modulo', value: modName(x.registry_module_id) }, { label: 'Scopo', value: x.scopo }, { label: 'Cosa lo fa partire', value: x.evento_innesco }, { label: 'Cosa serve già pronto', value: x.input }, { label: 'Cosa produce', value: x.output }]} />
           {x.ruoli_coinvolti.length > 0 && <p style={{ margin: '0 0 10px', fontSize: 13 }}><b>Ruoli: </b>{x.ruoli_coinvolti.map((r, k) => <span key={k} style={{ ...Object.fromEntries((BADGE[r.tipo] || BADGE.utente).split(';').map((kv) => kv.split(':'))), padding: '2px 8px', borderRadius: 6, marginRight: 6, display: 'inline-block', fontSize: 12 }}>{r.nome}</span>)}</p>}
@@ -51,7 +53,7 @@ export default function Manuale({ analysis, modules }) {
             <div style={{ marginBottom: 10 }}>
               <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.05em', color: '#78716c', fontWeight: 700, marginBottom: 4 }}>Passaggi</div>
               {x.passaggi.map((st, k) => (
-                <div key={k} style={{ display: 'flex', gap: 10, padding: '7px 0', borderTop: '1px solid #e7e5e4', background: st.tipo === 'decisione' ? '#fffbeb' : undefined }}>
+                <div key={k} className="riga" style={{ display: 'flex', gap: 10, padding: '7px 0', borderTop: '1px solid #e7e5e4', background: st.tipo === 'decisione' ? '#fffbeb' : undefined }}>
                   <div style={{ flex: '0 0 22px', height: 22, borderRadius: st.tipo === 'decisione' ? 4 : 11, background: st.tipo === 'decisione' ? '#fde68a' : '#e7e5e4', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', transform: st.tipo === 'decisione' ? 'rotate(45deg)' : undefined }}><span style={{ transform: st.tipo === 'decisione' ? 'rotate(-45deg)' : undefined }}>{k + 1}</span></div>
                   <div style={{ minWidth: 0, fontSize: 13 }}>
                     <div style={{ fontWeight: 600 }}>{st.tipo === 'decisione' ? 'Bivio: ' : ''}{st.titolo}{st.ruolo ? <span style={{ fontWeight: 400, color: '#57534e' }}> · {st.ruolo}</span> : null}</div>
