@@ -171,6 +171,11 @@ function findMissingDependencies(schemaJson) {
     .filter((slug, i, arr) => slug && !installedSlugs.has(slug) && arr.indexOf(slug) === i);
 }
 
+// ─── COLLEGA I MODULI ─────────────────────────────────────────────────────────────────────────────────────────────
+// Dopo aver installato più moduli: le relazioni che mancano (regole sui nomi, vedi module-links.js) da confermare una per una.
+router.get('/collegamenti/proposte', requireAuth, requireAdmin, (req, res) => res.json(require('../module-links').proposte()));
+router.post('/collegamenti/applica', requireAuth, requireAdmin, (req, res) => res.json(require('../module-links').applica(req.body && req.body.links, req.user)));
+
 // ─── INSTALLAZIONE MULTIPLA DALLO STORE ────────────────────────────────────────────────────────────────────────
 // Chi costruisce il proprio gestionale sceglie più moduli dallo store e li scarica in un colpo solo; le relazioni tra loro le crea poi
 // lui (Builder). Ogni modulo non ancora presente si installa come uno singolo (stesso percorso, dipendenze comprese); quelli già presenti

@@ -3,6 +3,7 @@ import { API } from '../lib/api'
 import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
 import RichText from '../components/RichText'
+import CollegaModuli from '../components/CollegaModuli'
 import ProponiAllaLibreriaModal from '../components/ProponiAllaLibreria'
 import { parseSchemaFrontend, getAutomationSteps, getRequiredConnectors } from '../lib/schema-v3-frontend'
 
@@ -67,6 +68,7 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
   }
 
   // Installazione multipla: si spuntano più moduli dello store e si scaricano insieme (le relazioni tra loro si creano poi nel Builder).
+  const [collega, setCollega] = useState(false)
   const [selezione, setSelezione] = useState([]) // id dei moduli della Libreria spuntati
   const [bulk, setBulk] = useState({ busy: false, esito: null, errore: '' })
   const spunta = (id) => setSelezione((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
@@ -329,7 +331,7 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
   return (
     <div>
       <h1 className="text-lg font-bold text-ink tracking-[-0.35px] mb-1">Libreria</h1>
-      <p className="text-gray-500 text-sm mb-6">I tuoi moduli e quelli salvati nella Libreria, in un unico posto.</p>
+      <p className="text-gray-500 text-sm mb-6">I tuoi moduli e quelli salvati nella Libreria, in un unico posto. <button onClick={() => setCollega(true)} className="text-accent hover:underline">Collega i moduli</button></p>
 
       {onCreateNewModule && (
         <div className="flex items-center justify-between gap-4 flex-wrap bg-surface-card border border-gray-800 rounded-xl p-4 mb-5">
@@ -380,10 +382,13 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
       {bulk.esito && (
         <div className="bg-surface-card border border-gray-800 rounded-xl p-3.5 mb-4 text-sm flex items-start justify-between gap-3">
           <div>
-            <div className="text-ink">{bulk.esito.installati.length} moduli installati{bulk.esito.saltati.length > 0 ? ', ' + bulk.esito.saltati.length + ' c\'erano già' : ''}. Ora puoi collegarli nel Builder (campo «relazione»).</div>
+            <div className="text-ink">{bulk.esito.installati.length} moduli installati{bulk.esito.saltati.length > 0 ? ', ' + bulk.esito.saltati.length + ' c\'erano già' : ''}. Ora puoi collegarli tra loro.</div>
             {bulk.esito.falliti.length > 0 && <div className="text-xs text-amber-400 mt-1">Non installati: {bulk.esito.falliti.join(', ')}.</div>}
           </div>
-          <button onClick={() => setBulk({ busy: false, esito: null, errore: '' })} className="text-xs text-gray-500 hover:text-ink flex-shrink-0">Chiudi</button>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <button onClick={() => setCollega(true)} className="text-xs px-3 py-1.5 rounded-lg bg-accent hover:opacity-90 text-white flex items-center gap-1.5"><Icon name="link" size={12} />Collega i moduli</button>
+            <button onClick={() => setBulk({ busy: false, esito: null, errore: '' })} className="text-xs text-gray-500 hover:text-ink">Chiudi</button>
+          </div>
         </div>
       )}
       {section('Disponibili', availableList, false, q ? 'Nessun modulo disponibile corrisponde alla ricerca.' : 'Hai già installato tutto quello che c\'è nella Libreria.')}
@@ -411,6 +416,7 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
         </div>
       )}
 
+      {collega && <CollegaModuli token={token} onClose={() => setCollega(false)} onDone={load} />}
       {proposta && <ProponiAllaLibreriaModal api={api} module={proposta.module} description={proposta.description} onClose={() => setProposta(null)} onSent={caricaProposte} />}
 
       {detailModule && (() => {
