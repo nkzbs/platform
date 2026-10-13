@@ -191,7 +191,7 @@ Cosa avvisare e con quali parole lo **dichiara il modulo** (Builder → Ruoli de
 
 ### Bot Telegram
 
-`telegram.js`, `routes/telegram.js`, scheda Impostazioni → **Report → Telegram** (collegare il bot, admin) e **Il mio account** (collegare il proprio telefono, ogni utente). È un secondo canale dei report e un bot a doppio senso, **senza scritture libere**: legge con comandi fissi (`/pagare`, `/scadute`, `/smistare`) e scrive solo con un tocco su un bottone.
+`telegram.js`, `routes/telegram.js`, scheda Impostazioni → **Connessioni → Telegram (bot)** (collegare il bot, admin; in Report restano solo le scelte) e **Il mio account** (collegare il proprio telefono, ogni utente). È un secondo canale dei report e un bot a doppio senso, **senza scritture libere**: legge con comandi fissi (`/pagare`, `/scadute`, `/smistare`) e scrive solo con un tocco su un bottone.
 
 - **Collegamento del bot**: l'admin incolla il codice segreto di BotFather; l'app lo controlla con `getMe`, registra il webhook (`/api/telegram/webhook`) con un **segreto** e lo salva **cifrato** (riga `telegram` di `connections`). Il token non esce mai dalle API.
 - **Il webhook** risponde solo se l'header `X-Telegram-Bot-Api-Secret-Token` è giusto (confronto a tempo costante), altrimenti 403; risponde sempre 200 a Telegram dopo l'elaborazione. Solo chat **private**, al massimo **20 messaggi al minuto** per chat.

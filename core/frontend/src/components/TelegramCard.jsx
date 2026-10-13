@@ -4,16 +4,17 @@ import Icon from './Icon'
 
 // Telegram: l'admin collega il bot (una volta); ogni utente collega il proprio telefono con un codice monouso generato qui, da loggato.
 // Il bot mostra e fa solo ciò che l'utente può vedere e fare nell'app; il bottone «Pagata» sui messaggi chiude la voce come l'app.
-export default function TelegramCard({ token, user, className = '' }) {
+// `mode`: 'admin' (in Impostazioni → Connessioni: collegare/scollegare il bot e vedere tutti i telefoni) oppure 'telefono' (in «Il mio account»: solo il proprio telefono, la scheda c'è solo se il bot è collegato).
+export default function TelegramCard({ token, user, className = '', mode = 'admin', bare = false, onChange }) {
   const api = useApi(token)
-  const isAdmin = user && user.role === 'admin'
+  const isAdmin = user && user.role === 'admin' && mode === 'admin'
   const [st, setSt] = useState(null)
   const [botToken, setBotToken] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState(null) // { ok, text }
   const [code, setCode] = useState(null) // { code, url, expires_in, at }
 
-  const load = async () => { const d = await api.get('/telegram/status'); if (d) setSt(d) }
+  const load = async () => { const d = await api.get('/telegram/status'); if (d) { setSt(d); if (onChange) onChange(d) } }
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!st) return null
@@ -44,11 +45,11 @@ export default function TelegramCard({ token, user, className = '' }) {
   const inp = 'w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent font-mono'
 
   return (
-    <section className={'bg-surface-card border border-gray-800 rounded-xl p-5 ' + className}>
+    <section className={bare ? className : 'bg-surface-card border border-gray-800 rounded-xl p-5 ' + className}>
       <div className="flex items-start gap-3 mb-3">
-        <div className="w-9 h-9 rounded-lg bg-surface-page border border-gray-800 flex items-center justify-center text-accent flex-shrink-0"><Icon name="bell" size={16} /></div>
+        {!bare && <div className="w-9 h-9 rounded-lg bg-surface-page border border-gray-800 flex items-center justify-center text-accent flex-shrink-0"><Icon name="bell" size={16} /></div>}
         <div>
-          <h2 className="text-sm font-semibold text-ink">Telegram</h2>
+          {!bare && <h2 className="text-sm font-semibold text-ink">Telegram</h2>}
           <p className="text-xs text-gray-500 mt-0.5 max-w-md">I report arrivano con i bottoni (<b className="text-gray-300">«✅ Pagata»</b> chiude la voce). Puoi anche <b className="text-gray-300">scrivere al bot come parli</b> («ho pagato l'affitto», «quanto ho speso di benzina a settembre?», «ho speso 20 euro di benzina», «smista la bolletta A2A in 3 rate») o mandargli il <b className="text-gray-300">PDF</b> di una bolletta. Ogni modifica ti viene mostrata con un bottone di conferma: senza il tuo tocco non cambia niente. Il bot vede e fa solo ciò che puoi vedere e fare nell'app. Le frasi libere richiedono l'AI accesa (Impostazioni → AI).</p>
         </div>
       </div>

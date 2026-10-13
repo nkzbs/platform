@@ -89,7 +89,7 @@ Vedi `docs/OPERAZIONI.md` → "Utenti, accessi e 2FA". Dopo averli creati, prova
 
 ## 6d. Bot Telegram
 
-- [ ] **Collegamento** (vedi `docs/OPERAZIONI.md` → Bot Telegram): bot creato con BotFather, codice incollato in Impostazioni → Report → Telegram, compare `@nome_del_bot`.
+- [ ] **Collegamento** (vedi `docs/OPERAZIONI.md` → Bot Telegram): bot creato con BotFather, codice incollato in Impostazioni → Connessioni → Telegram (bot), compare `@nome_del_bot`.
 - [ ] **Il mio telefono**: «Collega il mio Telegram» → tocchi il link → Avvia → il bot risponde «✅ Collegato a Finance come …» e il telefono compare in elenco.
 - [ ] **/scadute** mostra le voci scadute **con un bottone «✅ Pagata» per voce**. Tocca uno: la voce passa a «pagato» in Finance (controlla nella Checklist) e il bottone diventa «↩ Annulla». Annulla la riporta a «da pagare».
 - [ ] **/pagare** e **/smistare** rispondono con gli stessi dati dei report.

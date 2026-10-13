@@ -12,6 +12,7 @@ import Icon from '../components/Icon'
 import Tile from '../components/Tile'
 import UsersPage from './UsersPage'
 import AccountPage from './AccountPage'
+import TelegramCard from '../components/TelegramCard'
 import SitoWebPage from './SitoWebPage'
 
 // "Il mio account" unito qui (2026-08-29, richiesto esplicitamente dall'utente) —
@@ -28,7 +29,8 @@ import SitoWebPage from './SitoWebPage'
 // drive_scope_ok), spostata qui dove è sempre visibile — nessuna riscrittura
 // concettuale, solo un posto più naturale da controllare, anche quando non
 // stai guardando un modulo specifico in quel momento.
-function ConnessioniTab({ token, features = {} }) {
+function ConnessioniTab({ token, user, features = {} }) {
+  const [tgStatus, setTgStatus] = useState(null) // Telegram ha il suo stato e la sua scheda, ma compare qui come gli altri servizi
   const api = useApi(token)
   const [connections, setConnections] = useState([])
   const [googleStatus, setGoogleStatus] = useState(null)
@@ -39,7 +41,8 @@ function ConnessioniTab({ token, features = {} }) {
 
   const loadConnections = async () => { const data = await api.get('/connections'); if (data) setConnections(data) }
   const loadGoogleStatus = async () => { const data = await api.get('/integrazioni/google/status'); if (data) setGoogleStatus(data) }
-  useEffect(() => { loadConnections(); loadGoogleStatus() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const loadTelegramStatus = async () => { const data = await api.get('/telegram/status'); if (data) setTgStatus(data) }
+  useEffect(() => { loadConnections(); loadGoogleStatus(); loadTelegramStatus() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const credFieldsFor = (id) => { const intg = connections.find((c) => c.id === id); return (intg && intg.cred_fields) || [] }
   const initialCredForm = (id) => { const f = {}; credFieldsFor(id).forEach((x) => { f[x.key] = '' }); return f }
@@ -77,7 +80,8 @@ function ConnessioniTab({ token, features = {} }) {
   const googleConnected = !!(googleStatus && googleStatus.connected)
   const rows = [
     { id: 'google', name: 'Google (Gmail / Calendar / Drive)', connected: googleConnected },
-    ...connections.filter((c) => c.id !== 'google').map((c) => ({ id: c.id, name: c.name || c.id, connected: !!c.connected, intg: c })),
+    ...connections.filter((c) => c.id !== 'google' && c.id !== 'telegram').map((c) => ({ id: c.id, name: c.name || c.id, connected: !!c.connected, intg: c })),
+    { id: 'telegram', name: 'Telegram (bot)', connected: !!(tgStatus && tgStatus.configured) },
   ]
 
   return (
@@ -96,7 +100,9 @@ function ConnessioniTab({ token, features = {} }) {
             </button>
             {openFor === row.id && (
               <div className="mt-3 bg-surface-footer border border-gray-800 rounded-lg p-3">
-                {row.id === 'google' ? (
+                {row.id === 'telegram' ? (
+                  <TelegramCard token={token} user={user} mode="admin" bare onChange={setTgStatus} />
+                ) : row.id === 'google' ? (
                   <div>
                     {googleConnected ? (
                       <div className="flex items-center gap-2 flex-wrap">
@@ -337,7 +343,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
 
       {tab === 'sito_web' && <SitoWebPage token={token} />}
 
-      {tab === 'connessioni' && <ConnessioniTab token={token} features={features} />}
+      {tab === 'connessioni' && <ConnessioniTab token={token} user={user} features={features} />}
 
       {tab === 'notifiche' && <ReportsSettingsTab token={token} user={user} features={features} />}
 

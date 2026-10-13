@@ -170,7 +170,7 @@ function AccountPage({ token, user }) {
         )}
       </div>
 
-      <TelegramCard token={token} user={user} className="lg:col-span-2" />
+      <TelegramCard token={token} user={user} mode="telefono" className="lg:col-span-2" />
     </div>
   )
 }

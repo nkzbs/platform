@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from './Icon'
-import TelegramCard from './TelegramCard'
 
 // Report su WhatsApp: tre messaggi, ognuno risponde a una sola domanda e non parte se non c'è niente da dire.
 // Cosa conta come "da pagare" o "da smistare" lo dichiarano i moduli (Builder → Avvisi); qui si sceglie solo quando mandarli.
@@ -108,7 +107,7 @@ export default function ReportsSettingsTab({ token, user, features = {} }) {
         </div>
       </section>
 
-      <TelegramCard token={token} user={user} />
+      <p className="text-xs text-gray-500">Per collegare il bot Telegram: <b className="text-gray-300">Impostazioni → Connessioni → Telegram</b>.</p>
 
       {Object.keys(REPORT).map((kind) => {
         const s = data.settings[kind], R = REPORT[kind]
