@@ -2,7 +2,7 @@
 
 Il coltello multiuso personale di Nima per i suoi progetti: un motore unico che, installando
 moduli, diventa il gestionale di cui ho bisogno (oggi **Finance**, per le finanze personali).
-Non è un prodotto per altri e non ha clienti. Versione **0.1.1**.
+Non è un prodotto per altri e non ha clienti. Versione **0.2.0** (in preparazione: il tag arriva dopo le prove dal vivo).
 
 ```
 Tenant   un progetto (Finance, Timbrature, ...): un'istanza con i suoi dati e i suoi moduli
@@ -54,8 +54,8 @@ imposti, altrimenti ne genera una casuale e la stampa **una volta sola** nel log
 Ogni backend ha la sua suite, nessuna dipendenza esterna (i servizi esterni sono simulati):
 
 ```bash
-cd core/backend && npm test            # 52 suite
-cd super-admin/backend && npm test     # 25 suite
+cd core/backend && npm test            # 57 suite
+cd super-admin/backend && npm test     # 30 suite
 ```
 
 **Controllo completo** prima di mettere online: `bash scripts/verifica.sh` (lint, test dei due backend, compilazione dei due frontend: circa 2-3 minuti) oppure `bash scripts/verifica.sh veloce` (solo lint, pochi secondi). Il lint (`npm run lint`, ESLint) cerca solo errori veri: nomi che non esistono, chiavi doppie, codice irraggiungibile. Un hook (`.githooks/pre-push`, attivo con `git config core.hooksPath .githooks`) lo lancia a ogni push.

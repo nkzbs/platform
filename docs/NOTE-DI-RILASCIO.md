@@ -4,10 +4,18 @@ Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la 
 
 ## 0.2.0 (in preparazione: il tag arriva dopo le prove dal vivo)
 
-- **Un solo Builder** per tenant e Super Admin, con «Proponi alla Libreria» (tenant) e «Salva nella Libreria» (Super Admin).
-- **Store**: più moduli spuntati e installati insieme (dipendenze comprese, presenti saltati).
-- **Collega i moduli**: relazioni proposte dai nomi, confermate una per una.
-- **Primi passi** al primo avvio di un tenant vuoto.
+**Dalla sera del 13 ottobre in poi** (le voci più sotto, fino a «Formato dei report su WhatsApp compatto», sono precedenti):
+
+- **Un solo Builder** per tenant e Super Admin (`shared/frontend/builder/`), con «Proponi alla Libreria» (tenant) e «Salva nella Libreria» (Super Admin). Prima erano due copie sincronizzate a mano.
+- **Libreria del tenant**: spunti più moduli e li installi insieme (dipendenze comprese, presenti saltati; il menu si aggiorna da solo). **Parti da un modello**: tessere di verticali (gruppi di moduli pensati per funzionare insieme); ogni modello ha la sua **guida all'uso** («Come si usa»: da dove cominciare, modulo per modulo; stampabile in PDF).
+- **Collega i moduli**: relazioni proposte dai nomi (es. «Righe ordine» → «Ordini»), confermate una per una, create con storia e versione.
+- **Primi passi** al primo avvio di un tenant vuoto (scegli cosa gestire, collega, utenti, connessioni; pillola «Primi passi N/4») e **giro guidato** (evidenzia gli elementi sulla pagina; a richiesta da Primi passi e da Il mio account, mai da solo).
+- **Impostazioni → Funzioni**: gli interruttori delle funzioni facoltative (Suggerimenti, Report, Sito Web, WhatsApp…). Prima non esisteva nessuna schermata per accenderle.
+- **Analisi più profonda**: un processo ha un modulo principale più altri; il secondo passaggio **«Cosa manca?»** (da solo in «Fai tutto», o su richiesta) propone i moduli in più e segna ciò che nessun modulo copre. **Correggi a parole**: scrivi cosa cambiare, l'AI propone operazioni controllate, le vedi in italiano e le applichi tu. **PDF impaginato** (A4, copertina, schede non spezzate) e **Guida all'uso del verticale** nato dall'analisi (da dati, senza AI).
+- **Libreria di Super Admin**: filtri per gruppo e per ruoli dichiarati; scheda **«Dove è usato»** (tenant che hanno il modulo con la versione e chi ha un aggiornamento, moduli che si collegano); **Verticali** gestibili da interfaccia (crea, modifica, elimina, ripristina i predefiniti).
+- **Distacco su un tuo server** (Impostazioni → Dati): una **copia** del progetto su un server Linux via SSH (immagine, database, allegati, segreti), che funziona da sola. Controllo di sola lettura prima, impronta del server fissata, credenziali solo in memoria, token firmato col segreto del tenant. Senza Super Admin: niente AI, Libreria e aggiornamenti.
+- **Inviti**: link monouso (72 ore) con cui la persona sceglie da sé utente e password; dal tenant (Utenti & Ruoli → «Invita») e da Super Admin (Tenant → Credenziali, e dopo la creazione dall'Analisi). Consegna: copia, WhatsApp e Telegram con messaggio pronto, email dalla posta di Super Admin.
+- **Versione 0.2.0** su tutti i badge, `/health` e `package.json`.
 
 - **Report su WhatsApp ridisegnati** (11 ottobre): niente più riepilogo del mattino né report settimanali. Tre messaggi: **quanto devo pagare** (ogni 27, venerdì prima se è weekend, dal 27 al 26 con totale, scadute e «ti restano»), **da smistare** (ogni sera finché non smisti) e **voci scadute** (lunedì sera). Impostazioni → Report, con anteprima, «Invia ora» e pulsante per togliere i vecchi report dai moduli. Dopo l'aggiornamento di Finance: aprire Impostazioni → Report e premere «Toglili dai moduli».
 
@@ -28,8 +36,31 @@ Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la 
 - **Analisi: «Fai tutto»** (13 ottobre): un solo racconto e un pulsante. In background (circa un minuto) l'AI trova i processi e il nome dell'attività, li completa tutti (tre alla volta, solo i campi vuoti, un errore non ferma gli altri) e abbina moduli, report e AI; poi arrivi a **un riepilogo** (processi, moduli, ruoli, report spenti) con un solo tocco per creare il tenant. I dettagli a passi restano per chi vuole controllare («Rivedi i dettagli»). I dati personali vengono tolti prima di mandare il testo all'AI. Mai provato con Mistral vero.
 - **Analisi più completa** (13 ottobre): (1) i moduli generici ora portano la **dichiarazione dei ruoli** (quale campo è l'importo, la scadenza, lo stato…): i tenant nati dall'analisi hanno report, riepiloghi e bot già pronti, senza passare dal Builder; (2) la pagina propone i **report** e i **potenziamenti AI** adatti ai moduli scelti (spenti finché non li accendi, ognuno si può togliere); (3) un processo «da costruire» ha il pulsante **«Costruiscilo nel Super Builder»** con la descrizione già pronta; (4) tre moduli generici nuovi: **Spese, Entrate, Timbrature** (55 in tutto), e un nuovo tipo di modulo, la **pratica** (righe con stati e scadenza ma senza denaro: ticket, ordini, scadenzario, manutenzioni…), che entra negli avvisi e nei report senza inventare importi. Il tenant, alla creazione, completa senza sovrascrivere (`/api/internal-setup/apply`). Nel pulsante della Libreria, «Completa i moduli generici» aggiunge i ruoli a quelli già importati.
 - **Analisi: «Completa tutti i processi», creazione del tenant in background, eliminazione** (13 ottobre): un pulsante completa con l'AI tutti i processi incompleti (tre alla volta, solo i campi vuoti, un errore non ferma gli altri); la creazione del tenant parte in background e la pagina mostra le fasi e i secondi (container, database, dominio, moduli, ruoli) e, a fine corsa, **dove è andato il tempo** per ogni fase; non installa più i moduli di default (ha scelto l'analisi) e collega il dominio in parallelo all'avvio del database. L'accesso admin iniziale si vede una volta. Le analisi si eliminano dall'elenco e dall'analisi aperta (non durante la creazione).
-- **Moduli generici nella Libreria** (13 ottobre): **52 moduli senza settore** (anagrafiche, preventivi, ordini, fatture, scadenzario, presenze, ticket, impianti, soci, prenotazioni…) recuperati dal vecchio Platform e importabili con un tocco da Super Admin → Libreria → «Aggiungi i moduli generici». Sono dati (`seeds/moduli-generici.json`), non codice; si importano una volta, senza sovrascrivere. Hanno nome e descrizione, che l'analisi dei processi usa per abbinarli. Un modulo porta con sé quelli a cui è collegato (righe fattura → fattura, prodotti, clienti). Sono mattoncini di partenza (da 2 a 8 campi): si rifiniscono nel Builder.
+- **Moduli generici nella Libreria** (13 ottobre): **55 moduli senza settore** (anagrafiche, preventivi, ordini, fatture, scadenzario, presenze, ticket, impianti, soci, prenotazioni…) recuperati dal vecchio Platform e importabili con un tocco da Super Admin → Libreria → «Aggiungi i moduli generici». Sono dati (`seeds/moduli-generici.json`), non codice; si importano una volta, senza sovrascrivere. Hanno nome e descrizione, che l'analisi dei processi usa per abbinarli. Un modulo porta con sé quelli a cui è collegato (righe fattura → fattura, prodotti, clienti). Sono mattoncini di partenza (da 2 a 8 campi): si rifiniscono nel Builder.
 - **Formato dei report su WhatsApp compatto** (scadute non ripetute, importi puliti).
+
+### Da verificare dal vivo (non provato in produzione)
+
+Nessuna schermata nuova è stata provata in un browser da chi l'ha scritta: i test automatici passano, la verifica visiva è da fare.
+- **Libreria**: tessere dei modelli, installazione multipla (compare nel menu senza ricaricare?), «Collega i moduli» (le proposte hanno senso su moduli veri? si è visto un doppio «Clienti» su un tenant: da capire se si ripresenta), guida di un modello e stampa in PDF.
+- **Primi passi** su un tenant vuoto e **giro guidato** (anche su telefono: menu aperto, evidenziazione).
+- **Analisi**: «Cosa manca?», «Correggi a parole», PDF del manuale e della guida (anteprima di stampa), creazione di un tenant vero con Mistral vero.
+- **Inviti**: pagina `/invito/…` sul tenant, mail con la posta vera (mai provata), WhatsApp/Telegram.
+- **Distacco su un server**: provato solo con un server SSH di prova e un Docker finto; la prima volta farlo su un server di prova. Gli indirizzi privati sono vietati di partenza (`EXPORT_ALLOW_PRIVATE=1` per un server in rete locale).
+- **Suggerimenti** sui tenant reali (vanno accesi da Impostazioni → Funzioni); Gmail, bot, scontrini con Mistral vero; le prove di Federica.
+- **Aggiornamento di Finance** a 0.2.0: premere «Aggiorna» da Super Admin (serve il 2FA) e controllare che il badge dica 0.2.0.
+
+### Da sapere
+
+- Un tenant **distaccato** non ha Super Admin: AI, Libreria e aggiornamenti non ci sono (l'AI tornerebbe con una chiave propria nel tenant, che non esiste ancora).
+- Le **mail** (inviti) partono dalla posta di Super Admin (SMTP): se non è configurata, il messaggio lo dice e si usa il link. Tetto di 30 al giorno per tenant (contatore in memoria).
+- Il **link di un invito** si vede una volta sola; nel database resta solo l'impronta.
+- I **verticali** stanno in una tabella di Super Admin, riempita al primo avvio da `seeds/verticali.json`; «Ripristina i predefiniti» rimette solo quelli eliminati.
+- Idee rimaste fuori di proposito: federazione tra più Super Admin, bot Telegram per l'amministrazione, invio automatico su WhatsApp/Telegram.
+
+### Numeri
+
+57 suite di test per il tenant, 30 per Super Admin, 1 per il provisioner, tutte verdi; `bash scripts/verifica.sh` (lint, test, compilazioni) passa.
 
 ## 0.1.1 — 10 ottobre 2026
 

@@ -124,3 +124,30 @@ Il primo riepilogo e il messaggio mensile del 2 novembre dipendono da questi:
 - [ ] **Non cancellare i "doppioni" 18/04/2025** (7 "Spese Mese" da 200 €, 2 "Caldaia R.A.M." da 95 €): sono pagamenti reali con la data persa nell'import ("data incerta"), già esclusi dai conteggi. Cancellarli toglierebbe spese vere.
 - [ ] Settembre: affitto 550 €, "Spese Casa" 500 € e rata PayPal 50,17 € risultano ancora "da pagare": segnali "pagato" se lo sono.
 - [ ] Le righe scadute da verificare (assicurazione auto, hotel Sardegna, A2A Acqua) e la Quarta Cartella marzo–maggio.
+
+## 13. Novità della 0.2.0 (su Finance, dopo «Aggiorna»)
+
+**Prima:** da Super Admin premi «Aggiorna» su Finance (serve il 2FA) e ricarica la pagina (Cmd+Shift+R).
+
+- [ ] Il badge in alto a sinistra dice **Platform 0.2.0**.
+- [ ] **Impostazioni → Funzioni**: c'è l'elenco con gli interruttori (Suggerimenti, Report, Sito Web, WhatsApp, Gmail, Movimenti bancari, Come sta andando); quelle che usi già sono accese, non cambia niente nel menu.
+- [ ] **Suggerimenti**: accendili da Funzioni → compare la scheda «Suggerimenti» in Impostazioni; «Controlla adesso» non rompe niente (all'inizio può essere vuota). Poi **spegnili** se non li vuoi.
+- [ ] **Primi passi** NON compare (Finance ha già dati). Il **giro guidato** si avvia da Impostazioni → Il mio account → «Fai il giro guidato»: evidenzia menu, Libreria, Builder, Impostazioni, Guida; «Salta» lo chiude; funziona anche da telefono.
+- [ ] **Inviti**: Impostazioni → Utenti & Ruoli → «Invita» → nome di prova, ruolo Utente → il link compare **una volta**; apri il link in una **finestra privata**: scegli utente e password (almeno 10 caratteri) → «Vai all'accesso» e entri. Riaprendo lo stesso link dice «già stato usato». In «Inviti recenti» lo stato è «Usato». Poi **disabilita o elimina l'utente di prova**.
+- [ ] Un secondo invito: «Annulla» → il link dice «annullato».
+- [ ] **WhatsApp / Telegram** dall'invito: si aprono con il messaggio già scritto e il link (premi tu «invia»; non inviare davvero se è una prova).
+- [ ] **Libreria** (guarda, senza installare): in cima «Parti da un modello» con le tessere; aprine una → schede «Moduli» e «Come si usa» (da dove cominciare, modulo per modulo); «Stampa o salva in PDF» apre l'anteprima di stampa.
+- [ ] Spuntando due moduli compare la barra «N selezionati»; **non installare su Finance** (prova su un tenant di prova, vedi sotto).
+- [ ] **Impostazioni → Dati**: c'è la scheda «Distacca su un tuo server» (chiusa). **Non avviarla su Finance** se non per una prova voluta (vedi sotto).
+- [ ] Niente di ciò che c'era prima è cambiato: dashboard, Da smistare, Smista, Riepilogo, report, bot, Documenti.
+
+### 13b. Su un tenant di prova (non su Finance)
+
+Crea da Super Admin un tenant di prova vuoto.
+- [ ] **Primi passi**: al primo accesso dell'admin compare «Benvenuto: cominciamo» (4 passi, pillola in basso a destra se lo chiudi). «Non mostrare più» lo toglie per sempre.
+- [ ] **Modello**: Libreria → una tessera → togli la spunta a un modulo → «Installa N moduli»: compaiono nel **menu laterale subito**, senza ricaricare; il messaggio in alto offre «Collega i moduli» e «Guida del modello».
+- [ ] **Collega i moduli**: le proposte hanno senso (es. righe → ordine, ordine → cliente)? Togli la spunta a una e crea le altre: nel Builder il modulo ha il nuovo campo «relazione». Rilanciato, non propone di nuovo le stesse.
+- [ ] **Super Admin → Tenant → Credenziali → «Invita»**: crea il link per il primo admin; con una email e la posta di Super Admin configurata parte anche la mail (se non è configurata lo dice).
+- [ ] **Analisi**: un racconto → «Fai tutto» → riepilogo: i processi hanno più moduli e le mancanze segnate; «Cosa manca?» aggiunge senza togliere; «Correggi a parole» mostra le operazioni e cambia solo dopo «Applica»; «Apri il manuale» e «Guida all'uso» → «Stampa o salva in PDF»: copertina, schede non spezzate, bottoni assenti.
+- [ ] **Libreria di Super Admin**: filtri per gruppo, scheda «Dove è usato» (tenant e versione), «Verticali» (crea/modifica/elimina/ripristina).
+- [ ] **Distacco su un server di prova** (Linux x86-64 con Docker): Impostazioni → Dati → «Distacca su un tuo server» → dati del server e password dell'account → «Controlla il server» (se il server è in rete locale serve `EXPORT_ALLOW_PRIVATE=1` su Super Admin) → confronta l'**impronta** con `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` sul server → conferma → «Copia il progetto sul server». A fine corsa: indirizzo, cartella con `data/` ed `env` (permessi 0600), container `platform-<slug>` acceso; entri con le stesse credenziali. Il tenant originale è rimasto com'era. Sul distaccato AI e Libreria non rispondono (previsto).
