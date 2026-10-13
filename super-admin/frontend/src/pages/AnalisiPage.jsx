@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { API } from '../lib/api'
 import Icon from '../components/Icon'
-import ProcessoEditor from '../components/analyses/ProcessoEditor'
+import ProcessoEditor, { applySuggestion, needsEnrichment } from '../components/analyses/ProcessoEditor'
 import Manuale from '../components/analyses/Manuale'
 
 // Analisi dei processi: racconti un'attività, l'AI propone i processi (mai salvati da soli), li rifinisci, vedi cosa copre la Libreria e cosa va costruito,
@@ -12,6 +12,7 @@ const btn = 'bg-cp-primary hover:bg-cp-primary-hover disabled:opacity-50 text-wh
 const ghost = 'px-4 py-2 rounded-lg text-sm bg-surface-page hover:bg-gray-800 text-gray-300 transition border border-gray-800 disabled:opacity-50'
 const slugify = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30)
 const csv = (v) => String(v || '').split(',').map((x) => x.trim()).filter(Boolean)
+const FASI_UI = [['container', 'Avvio il container'], ['database', 'Preparo il database'], ['dominio', 'Collego il dominio'], ['moduli', 'Installo i moduli'], ['ruoli', 'Creo ruoli e stati del flusso']]
 const nuovoProcesso = (extra) => ({ nome: '', reparto: '', scopo: '', evento_innesco: '', input: '', output: '', ruoli_coinvolti: [], passaggi: [], eccezioni: [], documenti_collegati: [], sistemi_coinvolti: [], kpi: [], callout: [], registry_module_id: null, registry_module_reasoning: '', copertura: 'da_valutare', ...extra })
 
 export default function AnalisiPage({ token, onNavigate }) {
@@ -32,7 +33,11 @@ export default function AnalisiPage({ token, onNavigate }) {
   const [showProfilo, setShowProfilo] = useState(false)
   const [showManuale, setShowManuale] = useState(false)
   const [tf, setTf] = useState({ name: '', slug: '' })
-  const [created, setCreated] = useState(null)
+  const [cr, setCr] = useState(null) // avanzamento della creazione del tenant: { fase, inizio, tempi, ... }
+  const [credenziali, setCredenziali] = useState(null) // l'accesso admin: si vede una volta
+  const [completa, setCompleta] = useState(null) // { fatti, totale, errori } mentre «Completa tutti» lavora
+  const [now, setNow] = useState(Date.now())
+  const poll = useRef(null)
   const timer = useRef(null)
 
   const loadList = async () => { const r = await req('GET', ''); if (r.ok) setList(r.data) }
@@ -40,23 +45,25 @@ export default function AnalisiPage({ token, onNavigate }) {
 
   const open = async (id) => {
     const r = await req('GET', '/' + id)
-    if (r.ok) { setA(r.data); setProposte([]); setShowManuale(false); setCreated(null); setMsg(null); setTf({ name: r.data.name, slug: slugify(r.data.name) }) }
+    if (r.ok) { setA(r.data); setProposte([]); setShowManuale(false); setCr(r.data.creazione || null); setCredenziali(null); setCompleta(null); setMsg(null); setTf({ name: r.data.name, slug: slugify(r.data.name) }) }
   }
   const create = async () => {
     if (!newName.trim()) { setMsg({ ok: false, text: 'Dai un nome all\'analisi.' }); return }
     const r = await req('POST', '', { name: newName })
     if (r.ok) { setNewName(''); loadList(); open(r.data.id) } else setMsg({ ok: false, text: r.data.error || 'Non riuscito.' })
   }
-  const remove = async () => {
-    if (!window.confirm('Togliere l\'analisi «' + a.name + '»? Il tenant eventualmente creato resta.')) return
-    const r = await req('DELETE', '/' + a.id)
-    if (r.ok) { setA(null); loadList() }
+  // Si toglie dall'elenco o dall'analisi aperta; il tenant eventualmente creato resta.
+  const elimina = async (id, name, tenant) => {
+    if (!window.confirm('Eliminare l\'analisi «' + name + '»?' + (tenant ? ' Il tenant «' + tenant + '» resta.' : ''))) return
+    const r = await req('DELETE', '/' + id)
+    if (r.ok) { if (a && a.id === id) setA(null); loadList() } else setMsg({ ok: false, text: r.data.error || 'Non riuscito.' })
   }
+  const remove = () => elimina(a.id, a.name, a.tenant_slug)
 
   // Salvataggio automatico: dopo mezzo secondo senza modifiche si manda tutto; la risposta aggiorna solo il riepilogo, mai ciò che si sta scrivendo.
   const change = (patch) => {
     setA((cur) => {
-      const next = { ...cur, ...patch }
+      const next = { ...cur, ...(typeof patch === 'function' ? patch(cur) : patch) }
       clearTimeout(timer.current); setSaving('saving')
       timer.current = setTimeout(async () => {
         const r = await req('PATCH', '/' + next.id, { name: next.name, descrizione: next.descrizione, profilo: next.profilo, processi: next.processi })
@@ -80,13 +87,45 @@ export default function AnalisiPage({ token, onNavigate }) {
     setProposte((cur) => cur.filter((p) => !items.includes(p)))
   }
 
+  // La creazione parte in background: si segue l'avanzamento (fasi e tempi) finché non è finita.
+  const seguiCreazione = (id) => {
+    clearInterval(poll.current)
+    poll.current = setInterval(async () => {
+      const r = await req('GET', '/' + id + '/creazione')
+      if (!r.ok) return
+      setCr(r.data)
+      if (r.data.credenziali) setCredenziali(r.data.credenziali)
+      if (r.data.fase === 'finita' || r.data.fase === 'errore') { clearInterval(poll.current); if (r.data.tenant_slug) setA((c) => (c && c.id === id ? { ...c, tenant_slug: r.data.tenant_slug } : c)); loadList() }
+    }, 1500)
+  }
+  useEffect(() => { if (a && cr && cr.fase && cr.fase !== 'finita' && cr.fase !== 'errore') seguiCreazione(a.id); return () => clearInterval(poll.current) }, [a && a.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!cr || !cr.fase || cr.fase === 'finita' || cr.fase === 'errore') return undefined; const i = setInterval(() => setNow(Date.now()), 500); return () => clearInterval(i) }, [cr && cr.fase])
   const creaTenant = async () => {
     if (!tf.name.trim() || !tf.slug.trim()) { setMsg({ ok: false, text: 'Servono nome e indirizzo del tenant.' }); return }
     if (!window.confirm('Creare il tenant «' + tf.name + '» con ' + a.blueprint.moduli_ids.length + ' moduli e i ruoli dell\'analisi?')) return
-    setBusy('tenant'); setMsg(null)
+    setMsg(null); setCredenziali(null)
     const r = await req('POST', '/' + a.id + '/create-tenant', { name: tf.name, slug: tf.slug })
-    setBusy('')
-    if (r.ok) { setCreated(r.data); setA({ ...a, tenant_slug: r.data.slug }); loadList() } else setMsg({ ok: false, text: r.data.error || 'Non riuscito.' })
+    if (r.ok) { setCr({ fase: 'container', inizio: Date.now(), tempi: {} }); seguiCreazione(a.id) } else setMsg({ ok: false, text: r.data.error || 'Non riuscito.' })
+  }
+
+  // «Completa tutti»: per ogni processo ancora incompleto chiede all'AI una proposta e la applica SOLO ai campi vuoti. Tre alla volta; un errore non ferma gli altri.
+  const completaTutti = async () => {
+    const da = a.processi.map((p, i) => ({ p, i })).filter(({ p }) => p.nome && p.nome.trim() && needsEnrichment(p))
+    if (!da.length) { setMsg({ ok: true, text: 'Tutti i processi sono già completi.' }); return }
+    if (!window.confirm('Completare ' + da.length + (da.length === 1 ? ' processo' : ' processi') + ' con l\'AI? Compila solo i campi vuoti: quello che hai scritto non si tocca. Costa ' + da.length + ' richieste.')) return
+    setMsg(null); setCompleta({ fatti: 0, totale: da.length, errori: 0 })
+    let next = 0
+    const lavora = async () => {
+      while (next < da.length) {
+        const { p } = da[next++]
+        const r = await req('POST', '/suggest-processo', { nome: p.nome, reparto: p.reparto })
+        if (r.ok) change((cur) => ({ processi: cur.processi.map((x) => (x.nome === p.nome ? { ...x, ...applySuggestion(x, r.data) } : x)) }))
+        setCompleta((c) => ({ ...c, fatti: c.fatti + 1, errori: c.errori + (r.ok ? 0 : 1) }))
+        if (!r.ok && r.data && r.data.code === 'ai_not_configured') { next = da.length }
+      }
+    }
+    await Promise.all([lavora(), lavora(), lavora()])
+    setCompleta((c) => { setMsg({ ok: c.errori === 0, text: c.errori ? 'Completati ' + (c.totale - c.errori) + ' processi su ' + c.totale + '. Gli altri riprovali uno alla volta.' : 'Completati ' + c.totale + (c.totale === 1 ? ' processo.' : ' processi.') }); return null })
   }
 
   // ── elenco ──
@@ -105,13 +144,16 @@ export default function AnalisiPage({ token, onNavigate }) {
         {list && list.length === 0 && <div className="text-sm text-gray-500">Nessuna analisi ancora.</div>}
         <div className="space-y-2">
           {(list || []).map((x) => (
-            <button key={x.id} type="button" onClick={() => open(x.id)} className="w-full text-left bg-surface-card border border-gray-800 hover:border-gray-600 rounded-xl p-4 transition flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-ink truncate">{x.name}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{x.n_processi} processi{x.n_da_costruire ? ' · ' + x.n_da_costruire + ' da costruire' : ''}{x.tenant_slug ? ' · tenant ' + x.tenant_slug : ''}</div>
-              </div>
-              <Icon name="chevron-right" size={14} className="text-gray-600 flex-shrink-0" />
-            </button>
+            <div key={x.id} className="bg-surface-card border border-gray-800 hover:border-gray-600 rounded-xl transition flex items-center">
+              <button type="button" onClick={() => open(x.id)} className="flex-1 min-w-0 text-left p-4 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-ink truncate">{x.name}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">{x.n_processi} processi{x.n_da_costruire ? ' · ' + x.n_da_costruire + ' da costruire' : ''}{x.tenant_slug ? ' · tenant ' + x.tenant_slug : ''}</div>
+                </div>
+                <Icon name="chevron-right" size={14} className="text-gray-600 flex-shrink-0" />
+              </button>
+              <button type="button" onClick={() => elimina(x.id, x.name, x.tenant_slug)} aria-label={'Elimina ' + x.name} title="Elimina l'analisi" className="px-4 py-4 text-gray-600 hover:text-red-400 transition border-l border-gray-800 flex-shrink-0"><Icon name="trash" size={15} /></button>
+            </div>
           ))}
         </div>
       </div>
@@ -129,6 +171,7 @@ export default function AnalisiPage({ token, onNavigate }) {
         <button type="button" onClick={() => { setA(null); loadList() }} className="text-gray-500 hover:text-ink transition flex items-center gap-1 text-sm"><Icon name="chevron-left" size={14} />Analisi</button>
         <input className={input + ' flex-1 min-w-[180px] font-semibold'} value={a.name} onChange={(e) => change({ name: e.target.value })} aria-label="Nome dell'analisi" />
         <span className="text-xs text-gray-500 w-16 text-right">{saving === 'saving' ? 'Salvo…' : saving === 'saved' ? 'Salvato' : saving === 'error' ? 'Non salvato' : ''}</span>
+        <button type="button" onClick={remove} aria-label="Elimina l'analisi" title="Elimina l'analisi" className="p-2 text-gray-500 hover:text-red-400 transition"><Icon name="trash" size={16} /></button>
       </div>
       {msg && <div className={'text-sm mb-3 ' + (msg.ok ? 'text-green-400' : 'text-amber-400')}>{msg.text}</div>}
 
@@ -189,7 +232,12 @@ export default function AnalisiPage({ token, onNavigate }) {
               ))}
             </div>
             {a.processi.length === 0 && <div className="text-sm text-gray-500 mb-2">Nessun processo: proponili dal racconto o aggiungili a mano.</div>}
-            <button type="button" className={ghost + ' mt-3'} onClick={() => change({ processi: [...a.processi, nuovoProcesso({})] })}><Icon name="plus" size={12} className="inline mr-1 -mt-0.5" />Aggiungi un processo</button>
+            <div className="flex gap-2 flex-wrap mt-3">
+              <button type="button" className={ghost} onClick={() => change({ processi: [...a.processi, nuovoProcesso({})] })}><Icon name="plus" size={12} className="inline mr-1 -mt-0.5" />Aggiungi un processo</button>
+              {a.processi.some((p) => p.nome && p.nome.trim() && needsEnrichment(p)) && (
+                <button type="button" className={btn} onClick={completaTutti} disabled={!!completa}><Icon name="sparkles" size={13} className="inline mr-1.5 -mt-0.5" />{completa ? 'Completo ' + completa.fatti + ' di ' + completa.totale + '…' : 'Completa tutti i processi (' + a.processi.filter((p) => p.nome && p.nome.trim() && needsEnrichment(p)).length + ')'}</button>
+              )}
+            </div>
           </section>
 
           {a.processi.length > 0 && (
@@ -209,28 +257,44 @@ export default function AnalisiPage({ token, onNavigate }) {
           {a.processi.length > 0 && (
             <section className={card}>
               <h2 className="text-sm font-semibold text-ink mb-1">4. Crea il tenant</h2>
-              {a.tenant_slug ? (
-                <p className="text-sm text-gray-400">Da questa analisi è nato il tenant <b className="text-ink">{a.tenant_slug}</b>. <button type="button" className="text-cp-primary underline" onClick={() => onNavigate && onNavigate('tenants')}>Vai ai tenant</button></p>
+              {cr && cr.fase && cr.fase !== 'finita' && cr.fase !== 'errore' ? (
+                <div>
+                  <p className="text-sm text-ink mb-2">Creo il tenant <b>{cr.nome || tf.name}</b>… {Math.max(0, Math.round((now - cr.inizio) / 1000))} secondi</p>
+                  <div className="space-y-1.5">
+                    {FASI_UI.map(([k, l]) => {
+                      const idx = FASI_UI.findIndex(([x]) => x === (cr.fase === 'moduli_default' ? 'database' : cr.fase)), mio = FASI_UI.findIndex(([x]) => x === k)
+                      const fatto = mio < idx, corrente = mio === idx
+                      return <div key={k} className={'text-sm flex items-center gap-2 ' + (fatto ? 'text-green-400' : corrente ? 'text-ink' : 'text-gray-600')}><span className="w-4 text-center">{fatto ? '✓' : corrente ? '…' : '·'}</span>{l}</div>
+                    })}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-3">Puoi lasciare la pagina: la creazione continua e la ritrovi qui.</p>
+                </div>
+              ) : a.tenant_slug ? (
+                <div>
+                  <p className="text-sm text-gray-400">Da questa analisi è nato il tenant <b className="text-ink">{a.tenant_slug}</b>. <button type="button" className="text-cp-primary underline" onClick={() => onNavigate && onNavigate('tenants')}>Vai ai tenant</button></p>
+                  {cr && cr.fase === 'finita' && (
+                    <div className="mt-3 bg-green-900/20 border border-green-900/40 rounded-lg p-3 text-sm text-green-300">
+                      <div className="font-medium mb-1">Tenant creato in {cr.secondi} secondi</div>
+                      <div className="text-xs text-green-400/80">Moduli installati: {cr.moduli_installati} · ruoli creati: {cr.ruoli_creati} · moduli configurati: {cr.moduli_configurati}</div>
+                      {cr.tempi && <div className="text-xs text-green-400/60 mt-1">Dove è andato il tempo: {FASI_UI.filter(([k]) => cr.tempi[k] != null).map(([k, l]) => l + ' ' + cr.tempi[k] + ' s').join(' · ')}</div>}
+                      {(cr.avvisi || []).map((v, i) => <div key={i} className="text-xs text-amber-300 mt-1">{v}</div>)}
+                      {credenziali && <div className="text-xs mt-2">Accesso admin (si vede una volta sola): <span className="font-mono">{credenziali.username}</span> / <span className="font-mono">{credenziali.password}</span></div>}
+                    </div>
+                  )}
+                </div>
               ) : (
                 <>
+                  {cr && cr.fase === 'errore' && <div className="mb-3 bg-red-900/20 border border-red-900/40 rounded-lg p-3 text-xs text-red-300">Creazione non riuscita: {cr.errore}</div>}
                   <p className="text-xs text-gray-500 mb-3">Installa i {b.moduli_ids.length} moduli{b.moduli_collegati && b.moduli_collegati.length ? ' (compresi quelli collegati: ' + b.moduli_collegati.join(', ') + ')' : ' scelti'} e crea i {b.ruoli_utente} ruoli degli utenti; i passaggi diventano gli stati del flusso dei moduli. Non tocca un modulo che ha già i suoi. Fino a questo tocco non è stato scritto niente.</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
                     <input className={input} placeholder="Nome del tenant" value={tf.name} onChange={(e) => setTf({ name: e.target.value, slug: slugify(e.target.value) })} />
                     <input className={input + ' font-mono'} placeholder="indirizzo (solo minuscole e trattini)" value={tf.slug} onChange={(e) => setTf({ ...tf, slug: slugify(e.target.value) })} />
                   </div>
-                  <button type="button" className={btn} onClick={creaTenant} disabled={busy === 'tenant'}>{busy === 'tenant' ? 'Creo il tenant… (può volerci un minuto)' : 'Crea il tenant'}</button>
+                  <button type="button" className={btn} onClick={creaTenant}>Crea il tenant</button>
                 </>
-              )}
-              {created && (
-                <div className="mt-4 bg-green-900/20 border border-green-900/40 rounded-lg p-3 text-sm text-green-300">
-                  <div className="font-medium mb-1">Tenant creato: {created.name}</div>
-                  <div className="text-xs text-green-400/80">Moduli installati: {created.modules_installed}{created.config_summary ? ' · ruoli creati: ' + created.config_summary.roles_created.length + ' · moduli configurati: ' + created.config_summary.modules_configured.length : ''}</div>
-                  <div className="text-xs mt-2">Accesso admin (si vede una volta sola): <span className="font-mono">{created.initial_credentials.username}</span> / <span className="font-mono">{created.initial_credentials.password}</span></div>
-                </div>
               )}
             </section>
           )}
-          <div className="text-right"><button type="button" onClick={remove} className="text-xs text-gray-600 hover:text-red-400 transition">Togli questa analisi</button></div>
         </>
       )}
     </div>

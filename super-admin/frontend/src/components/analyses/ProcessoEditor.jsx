@@ -125,7 +125,17 @@ function CalloutField({ value, onChange, disabled }) {
 }
 
 // Un processo ha ancora da compilare qualcosa di importante?
-const needsEnrichment = (p) => !p.scopo || !p.evento_innesco || !p.input || !p.output || !(p.passaggi && p.passaggi.length)
+export const needsEnrichment = (p) => !p.scopo || !p.evento_innesco || !p.input || !p.output || !(p.passaggi && p.passaggi.length)
+
+// Cosa applicare di un suggerimento a un processo: SOLO i campi ancora vuoti, mai ciò che è già scritto. Usata dal bottone del singolo processo e da «Completa tutti».
+export function applySuggestion(p, s) {
+  const patch = {}
+  for (const k of ['scopo', 'evento_innesco', 'output', 'input']) if (!p[k] && s[k]) patch[k] = s[k]
+  for (const k of ['ruoli_coinvolti', 'passaggi', 'sistemi_coinvolti', 'kpi']) if ((!p[k] || p[k].length === 0) && s[k] && s[k].length) patch[k] = s[k]
+  if (!p.registry_module_id && s.registry_module_id) { patch.registry_module_id = s.registry_module_id; patch.copertura = 'coperto' }
+  if (!s.registry_module_id && s.registry_module_reasoning) { patch.registry_module_reasoning = s.registry_module_reasoning; if (!p.registry_module_id && (!p.copertura || p.copertura === 'da_valutare')) patch.copertura = 'da_costruire' }
+  return patch
+}
 
 function SuggestAI({ p, onChange, token, modules }) {
   const [state, setState] = useState('idle') // idle | loading | error | ready
@@ -141,14 +151,7 @@ function SuggestAI({ p, onChange, token, modules }) {
     } catch (e) { setError('Errore di rete'); setState('error') }
   }
   // «Applica» riempie SOLO ciò che è ancora vuoto
-  const apply = () => {
-    const patch = {}
-    for (const k of ['scopo', 'evento_innesco', 'output', 'input']) if (!p[k] && s[k]) patch[k] = s[k]
-    for (const k of ['ruoli_coinvolti', 'passaggi', 'sistemi_coinvolti', 'kpi']) if ((!p[k] || p[k].length === 0) && s[k] && s[k].length) patch[k] = s[k]
-    if (!p.registry_module_id && s.registry_module_id) { patch.registry_module_id = s.registry_module_id; patch.copertura = 'coperto' }
-    if (!s.registry_module_id && s.registry_module_reasoning) { patch.registry_module_reasoning = s.registry_module_reasoning; if (!p.registry_module_id && (!p.copertura || p.copertura === 'da_valutare')) patch.copertura = 'da_costruire' }
-    onChange(patch); setState('idle'); setS(null)
-  }
+  const apply = () => { onChange(applySuggestion(p, s)); setState('idle'); setS(null) }
   if (state === 'idle') {
     const ok = p.nome && p.nome.trim()
     return (

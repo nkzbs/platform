@@ -192,6 +192,7 @@ for (const col of ['backup_mail_weekly INTEGER DEFAULT 0', 'backup_mail_last_sen
   if (!db.prepare("SELECT 1 FROM pragma_table_info('tenants') WHERE name = ?").get(col.split(' ')[0])) db.exec('ALTER TABLE tenants ADD COLUMN ' + col);
 }
 db.prepare('INSERT OR IGNORE INTO update_manager (id) VALUES (1)').run();
+if (!db.prepare('PRAGMA table_info(process_analyses)').all().some((c) => c.name === 'creazione')) db.exec('ALTER TABLE process_analyses ADD COLUMN creazione TEXT'); // avanzamento della creazione del tenant dall\'analisi
 
 // Seed del registro moduli — solo se completamente vuoto (prima installazione).
 // Mai sovrascrive: se l'operatore ha già pubblicato moduli propri, non tocca nulla.

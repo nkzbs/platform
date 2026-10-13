@@ -94,6 +94,35 @@ async function main() {
     eq((await api('DELETE', '/' + id)).status, 200); eq((await api('GET', '/' + id)).status, 404);
   });
 
+  console.log('\n--- creazione del tenant in background ---');
+  await test('la rotta risponde subito (202), la pagina segue le fasi e i tempi; l\'accesso admin si consegna UNA volta; il tenant si crea senza moduli di default', async () => {
+    const T = require('./routes/tenants'); const real = { c: T.createTenant, i: T.installModulesByIds, e: T.enqueueHostedCreation };
+    let optsRicevute = null, installati = null;
+    T.createTenant = async (o) => { optsRicevute = o; o.onStep('container'); await new Promise((r) => setTimeout(r, 60)); o.onStep('database'); await new Promise((r) => setTimeout(r, 60)); o.onStep('dominio'); return { tenant: { slug: o.slug }, initialPassword: 'pw-di-prova' }; };
+    T.installModulesByIds = async (slug, ids) => { installati = ids; return { modules: ids.length }; };
+    T.enqueueHostedCreation = (fn) => fn();
+    A.deps.applyConfig = async () => ({ roles_created: ['ricezione'], modules_configured: [{}] });
+    try {
+      const c = await (await api('POST', '', { name: 'Per creare', descrizione: 'x' })).json();
+      await api('PATCH', '/' + c.id, { processi: [{ nome: 'Righe', registry_module_id: idA }, { nome: 'Altro', registry_module_id: idB }] });
+      const t0 = Date.now(); const r = await api('POST', '/' + c.id + '/create-tenant', { name: 'Nuovo', slug: 'nuovo-test' });
+      eq(r.status, 202); ok(Date.now() - t0 < 500, 'risponde subito'); eq((await api('POST', '/' + c.id + '/create-tenant', { name: 'N', slug: 'nuovo-test-2' })).status, 409, 'una creazione alla volta');
+      eq((await api('DELETE', '/' + c.id)).status, 409, 'non si toglie un\'analisi mentre il tenant nasce');
+      let st; for (let i = 0; i < 100; i++) { st = await (await api('GET', '/' + c.id + '/creazione')).json(); if (st.fase === 'finita' || st.fase === 'errore') break; await new Promise((r) => setTimeout(r, 50)); }
+      eq(st.fase, 'finita', JSON.stringify(st)); eq(st.tenant_slug, 'nuovo-test'); eq([st.moduli_installati, st.ruoli_creati], [2, 1]);
+      ok(st.tempi.container >= 0 && st.tempi.database >= 0 && 'moduli' in st.tempi && 'ruoli' in st.tempi, JSON.stringify(st.tempi)); ok(st.secondi >= 0);
+      eq(st.credenziali, { username: 'admin', password: 'pw-di-prova' }, 'l\'accesso si vede una volta');
+      eq((await (await api('GET', '/' + c.id + '/creazione')).json()).credenziali, undefined, 'e poi non c\'è più');
+      eq(optsRicevute.skipDefaults, true, 'niente moduli di default: ha scelto lui'); eq(installati.length >= 2, true);
+      eq((await (await api('GET', '/' + c.id)).json()).tenant_slug, 'nuovo-test');
+      T.createTenant = async () => { throw new Error('Docker non risponde'); };
+      const c2 = await (await api('POST', '', { name: 'Che fallisce' })).json(); await api('PATCH', '/' + c2.id, { processi: [{ nome: 'X' }] });
+      eq((await api('POST', '/' + c2.id + '/create-tenant', { name: 'F', slug: 'fallisce' })).status, 202);
+      for (let i = 0; i < 100; i++) { st = await (await api('GET', '/' + c2.id + '/creazione')).json(); if (st.fase === 'errore') break; await new Promise((r) => setTimeout(r, 50)); }
+      eq([st.fase, st.errore], ['errore', 'Docker non risponde']); eq((await api('DELETE', '/' + c2.id)).status, 200, 'un\'analisi con la creazione fallita si può togliere');
+    } finally { T.createTenant = real.c; T.installModulesByIds = real.i; T.enqueueHostedCreation = real.e; }
+  });
+
   console.log(`\n${passed} passati, ${failed} falliti`);
   process.exit(failed ? 1 : 0);
 }

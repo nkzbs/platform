@@ -212,7 +212,9 @@ router.get('/cloudflare/status', requireAuth, (req, res) => {
 // interno (es. super-builder.js, che crea al volo un tenant sandbox) può creare un
 // tenant senza duplicare la logica Docker/clonazione, ed è sempre l'unico punto che
 // decide come nasce un tenant.
-async function createTenant({ name, slug, domain, actor, isSandbox }) {
+// `skipDefaults`: non installare i moduli di default (chi crea da un'analisi sceglie lui i moduli). `onStep(fase)`: avviso a ogni fase (per mostrare l'avanzamento e misurare i tempi).
+async function createTenant({ name, slug, domain, actor, isSandbox, skipDefaults, onStep }) {
+  const step = (f) => { try { if (onStep) onStep(f); } catch (e) { /* mai bloccare la creazione per un avviso */ } };
   // Stesso formato richiesto dal docker-provisioner per il nome container
   // (SLUG_RE, super-admin/docker-provisioner/src/docker.js) — validato QUI,
   // PRIMA di inserire la riga 'creating', non più solo là (2026-09-11, bug
@@ -274,6 +276,7 @@ async function createTenant({ name, slug, domain, actor, isSandbox }) {
     // generati) esattamente come prima — il docker-provisioner lo riceve come
     // dato opaco, non lo interpreta: image/network/volume/restart-policy restano
     // fissati lato provisioner, non passabili da qui (vedi G2).
+    step('container');
     await provisionerRequest('POST', '/tenants', {
       slug,
       port,
@@ -304,8 +307,21 @@ async function createTenant({ name, slug, domain, actor, isSandbox }) {
     // ha configurato un set di moduli di default (vedi registry.js PUT
     // /default-modules), installarli ora. Se non è configurato nulla, restano
     // i placeholder seminati da core stesso (comportamento identico a prima).
+    // Il dominio non dipende dal database del tenant: si parte subito, in parallelo, e si aspetta alla fine (prima erano due attese una dopo l'altra).
+    let cloudflareResult = null;
+    let finalDomain = cleanDomain;
+    const autoDomain = slug + '.' + cloudflare.zoneName();
+    if (!finalDomain && cloudflare.isConfigured()) {
+      finalDomain = autoDomain;
+      db.prepare('UPDATE tenants SET domain = ? WHERE slug = ?').run(finalDomain, slug);
+    }
+    const cloudflarePromise = cloudflare.isConfigured() && finalDomain === autoDomain
+      ? cloudflare.upsertSubdomain(slug).catch((e) => ({ error: e.message }))
+      : Promise.resolve(null);
+    step('database');
     await waitForTenantDb(dbPath);
-    const cloneResult = await installDefaultModules(slug);
+    step('moduli_default');
+    const cloneResult = skipDefaults ? null : await installDefaultModules(slug);
 
     // Se non è stato indicato un dominio esplicito e Cloudflare è configurato,
     // il tenant riceve subito un sottodominio automatico "<slug>.platform-core.it"
@@ -320,20 +336,8 @@ async function createTenant({ name, slug, domain, actor, isSandbox }) {
     // associazione creati così: nessun errore, ma il sottodominio non risolveva
     // finché qualcuno non se ne accorgeva provando ad aprirlo.
     db.prepare('UPDATE tenants SET provisioning_step = ? WHERE slug = ?').run('configuring_domain', slug);
-    let cloudflareResult = null;
-    let finalDomain = cleanDomain;
-    const autoDomain = slug + '.' + cloudflare.zoneName();
-    if (!finalDomain && cloudflare.isConfigured()) {
-      finalDomain = autoDomain;
-      db.prepare('UPDATE tenants SET domain = ? WHERE slug = ?').run(finalDomain, slug);
-    }
-    if (cloudflare.isConfigured() && finalDomain === autoDomain) {
-      try {
-        cloudflareResult = await cloudflare.upsertSubdomain(slug);
-      } catch (e) {
-        cloudflareResult = { error: e.message };
-      }
-    }
+    step('dominio');
+    cloudflareResult = await cloudflarePromise;
 
     db.prepare('UPDATE tenants SET status = ?, provisioning_step = ? WHERE slug = ?').run('active', 'active', slug);
     const tenant = db.prepare('SELECT * FROM tenants WHERE slug = ?').get(slug);

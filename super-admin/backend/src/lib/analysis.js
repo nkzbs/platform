@@ -17,7 +17,10 @@ const COPERTURE = ['da_valutare', 'coperto', 'da_costruire'];
 const MAX_PROCESSI = 40;
 
 // Chi chiama l'AI si può sostituire nei test (nessuna chiamata di rete vera).
-const deps = { callAI: (...a) => providers.callAI(...a), isConfigured: () => providers.isProviderConfigured(AI_PROVIDER) };
+const deps = {
+  callAI: (...a) => providers.callAI(...a), isConfigured: () => providers.isProviderConfigured(AI_PROVIDER),
+  applyConfig: (...a) => require('./tenant-config-from-analysis').applyAnalysisConfigToTenant(...a), // ruoli e stati nel tenant appena creato
+};
 
 const t = (v, n) => String(v == null ? '' : v).replace(/[\r\n]+/g, ' ').trim().slice(0, n);
 const list = (v, n, len) => (Array.isArray(v) ? v : []).map((x) => t(x, len)).filter(Boolean).slice(0, n);
