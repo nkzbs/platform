@@ -47,6 +47,9 @@ function LibreriaPage({ token }) {
   const [tenants, setTenants] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [gruppo, setGruppo] = useState('') // filtro per gruppo ('' = tutti)
+  const [soloRuoli, setSoloRuoli] = useState(false) // solo i moduli che dichiarano i ruoli (lavorano con report, bot e riepiloghi)
+  const [uso, setUso] = useState(null) // «Dove è usato» del modulo aperto
   const [notice, setNotice] = useState(null) // { ok, text }
 
   const [detail, setDetail] = useState(null)
@@ -102,7 +105,7 @@ function LibreriaPage({ token }) {
   }
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const openDetail = (m) => { setDetail(m); setTab('panoramica'); setVersions(null); setEdit(null); setInstallSlug(''); setNotice(null) }
+  const openDetail = (m) => { setUso(null); setDetail(m); setTab('panoramica'); setVersions(null); setEdit(null); setInstallSlug(''); setNotice(null) }
   const closeDetail = () => setDetail(null)
 
   useEffect(() => {
@@ -181,7 +184,13 @@ function LibreriaPage({ token }) {
   }
 
   const q = search.trim().toLowerCase()
-  const shown = modules.filter((m) => !q || m.name.toLowerCase().includes(q) || (m.description || '').toLowerCase().includes(q) || (m.group_name || '').toLowerCase().includes(q))
+  const gruppi = [...new Set(modules.map((m) => m.group_name).filter(Boolean))].sort()
+  const shown = modules.filter((m) => (!gruppo || m.group_name === gruppo) && (!soloRuoli || m.ruoli) && (!q || m.name.toLowerCase().includes(q) || (m.description || '').toLowerCase().includes(q) || (m.group_name || '').toLowerCase().includes(q)))
+  useEffect(() => {
+    if (!detail || tab !== 'uso' || uso) return
+    fetch(API + '/registry/modules/' + detail.id + '/usage', { headers }).then((r) => r.ok ? r.json() : { tenants: [], usato_da: [], errore: true }).then(setUso)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail && detail.id, tab])
   const spec = detail ? techSpec(detail) : null
 
   return (
@@ -238,6 +247,12 @@ function LibreriaPage({ token }) {
         <Icon name="search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cerca un modulo..." className={inputCls + ' pl-9'} />
       </div>
+      {(gruppi.length > 1 || modules.some((m) => m.ruoli)) && (
+        <div className="flex items-center gap-1.5 flex-wrap mb-4">
+          {gruppi.length > 1 && ['', ...gruppi].map((g) => <button key={g || 'tutti'} type="button" onClick={() => setGruppo(g)} className={'text-xs px-2.5 py-1 rounded-full border transition ' + (gruppo === g ? 'border-cp-primary bg-cp-primary/15 text-ink' : 'border-gray-800 text-gray-500 hover:text-gray-300')}>{g || 'Tutti i gruppi'}</button>)}
+          {modules.some((m) => m.ruoli) && <button type="button" onClick={() => setSoloRuoli(!soloRuoli)} className={'text-xs px-2.5 py-1 rounded-full border transition ' + (soloRuoli ? 'border-cp-primary bg-cp-primary/15 text-ink' : 'border-gray-800 text-gray-500 hover:text-gray-300')} title="Moduli che dichiarano a cosa servono: lavorano con report, bot e riepiloghi">Con ruoli dichiarati</button>}
+        </div>
+      )}
 
       {loading ? (
         <div className="text-sm text-gray-600">Caricamento...</div>
@@ -285,7 +300,7 @@ function LibreriaPage({ token }) {
           </div>
 
           <div className="flex gap-1 px-5 border-b border-gray-800">
-            {[['panoramica', 'Panoramica'], ['struttura', 'Struttura'], ['versioni', 'Versioni']].map(([id, label]) => (
+            {[['panoramica', 'Panoramica'], ['struttura', 'Struttura'], ['versioni', 'Versioni'], ['uso', 'Dove è usato']].map(([id, label]) => (
               <button key={id} onClick={() => setTab(id)} className={'text-sm px-3 py-2.5 -mb-px border-b-2 transition ' + (tab === id ? 'border-cp-primary text-ink font-medium' : 'border-transparent text-gray-500 hover:text-gray-300')}>{label}</button>
             ))}
           </div>
@@ -368,6 +383,33 @@ function LibreriaPage({ token }) {
                   </div>
                 </div>
                 <div className="sm:col-span-2 text-xs text-gray-600">Per modificare la struttura apri il modulo nel Builder del tenant, poi salvalo di nuovo qui: nasce la versione successiva.</div>
+              </div>
+            )}
+
+            {tab === 'uso' && (
+              <div className="space-y-4">
+                {!uso ? <div className="text-sm text-gray-600">Controllo…</div> : (
+                  <>
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1.5">Tenant che lo hanno installato (ultima versione: v{uso.versione_ultima})</div>
+                      {uso.tenants.length === 0 ? <div className="text-sm text-gray-600">Nessun tenant.</div> : (
+                        <div className="divide-y divide-gray-800 border border-gray-800 rounded-lg">
+                          {uso.tenants.map((t) => (
+                            <div key={t.slug} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                              <span className="text-ink truncate">{t.name}</span>
+                              <span className={'text-xs flex-shrink-0 ' + (t.aggiornabile ? 'text-amber-400' : 'text-gray-500')}>{t.aggiornabile ? 'v' + t.version + ' → v' + uso.versione_ultima + ' disponibile' : 'v' + t.version + ' aggiornato'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-600 mt-1.5">Da qui non si aggiorna niente: l'aggiornamento lo decide ogni tenant, dalla sua Libreria.</p>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1.5">Moduli della Libreria che si collegano a questo</div>
+                      {uso.usato_da.length === 0 ? <div className="text-sm text-gray-600">Nessuno.</div> : <div className="flex flex-wrap gap-1.5">{uso.usato_da.map((m) => <span key={m.id} className="text-xs bg-gray-800 text-gray-200 rounded-md px-2 py-1">{m.name}</span>)}</div>}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

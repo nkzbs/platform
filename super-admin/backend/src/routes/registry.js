@@ -71,6 +71,28 @@ router.get('/modules', requireAuth, (req, res) => {
   })));
 });
 
+// Dove è usato un modulo: i tenant che lo hanno installato (con la versione) e i moduli della Libreria che si collegano a lui. Dal database del tenant si legge SOLO
+// la tabella dei moduli (da dove vengono e a che versione sono), mai le righe; chi aggiorna è sempre il tenant, da qui non si cambia niente.
+router.get('/modules/:id/usage', requireAuth, (req, res) => {
+  const m = db.prepare('SELECT * FROM registry_modules WHERE id = ?').get(req.params.id);
+  if (!m) return res.status(404).json({ error: 'Modulo non trovato' });
+  const ultima = db.prepare('SELECT MAX(version) v FROM registry_modules WHERE slug = ? AND source_tenant_slug IS ?').get(m.slug, m.source_tenant_slug).v;
+  const tenants = [];
+  for (const t of db.prepare("SELECT slug, name FROM tenants WHERE status != 'deleted' AND COALESCE(is_sandbox, 0) = 0 ORDER BY name").all()) {
+    const tdb = openTenantDbReadOnly(t.slug); if (!tdb) continue;
+    try {
+      const r = tdb.prepare('SELECT registry_version AS v FROM modules WHERE registry_slug = ? AND registry_source_tenant_slug IS ? AND installed = 1').get(m.slug, m.source_tenant_slug);
+      if (r) tenants.push({ slug: t.slug, name: t.name, version: r.v, aggiornabile: r.v != null && r.v < ultima });
+    } catch (e) { /* tenant con un database più vecchio, senza queste colonne: non conta */ } finally { tdb.close(); }
+  }
+  const usatoDa = [];
+  for (const o of db.prepare(LATEST_VERSIONS_SQL).all()) {
+    if (o.slug === m.slug) continue;
+    try { if ((parseSchemaNormalized(o.schema_json).relations || []).some((r) => r.target_module === m.slug)) usatoDa.push({ id: o.id, name: o.name }); } catch (e) { /* schema illeggibile: nessun collegamento */ }
+  }
+  res.json({ versione_ultima: ultima, tenants, usato_da: usatoDa });
+});
+
 // I moduli generici di partenza (lib/moduli-generici.js): quanti ce ne sono già nella Libreria e importa quelli che mancano (mai sovrascrive).
 router.get('/generici', requireAuth, (req, res) => res.json(require('../lib/moduli-generici').stato()));
 router.post('/import-generici', requireAuth, (req, res) => {
