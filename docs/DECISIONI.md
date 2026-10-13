@@ -36,6 +36,8 @@ servire a un tenant futuro" non è un motivo.
 
 - **Update Manager** (13 ottobre): tolti la pagina, la coda per la propagazione notturna e il rollback/import/export dell'immagine. Con un solo tenant il pulsante **Aggiorna** sulla scheda del tenant basta. Restano `redeploy-all` e la tabella `update_manager` (inerte, non toccata).
 
+- **Privacy dell'Attività di Super Admin** (13 ottobre): Super Admin non legge più cosa fanno gli utenti dentro un tenant. Dal tenant esce solo l'elenco degli **errori tecnici** (`/api/audit-log/internal/monitoring-feed` risponde solo con `error_logs`); le azioni degli utenti e i movimenti dei record restano nel tenant, nel suo registro e nello storico di ogni riga. Nell'Attività di Super Admin restano le azioni di Super Admin stesso e gli errori dei tenant.
+
 ### Tenuto, anche se "non serve oggi"
 
 | Cosa | Perché |

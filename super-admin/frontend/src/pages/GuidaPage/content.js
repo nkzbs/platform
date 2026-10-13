@@ -89,7 +89,7 @@ const GUIDA_SECTIONS = [
     topics: [
       {
         title: 'Un\'unica cronologia', body: [
-          'Ogni azione amministrativa (creazione tenant, redeploy, pubblicazione modulo, certificazione...) ed ogni errore non gestito da nessun try/catch — Super Admin e tutti i tenant insieme, in un solo elenco cronologico con una descrizione leggibile per ciascun evento, filtrabile per tipo (azioni/errori) e per tenant.',
+          'Le azioni fatte da Super Admin (creazione tenant, aggiornamenti, backup...) e gli errori tecnici non gestiti dei tenant, in un solo elenco cronologico con una descrizione leggibile, filtrabile per tipo e per tenant. Per privacy qui NON compare cosa fanno gli utenti dentro un tenant: quello sta nel registro del tenant stesso.',
           'Gli errori qui mostrati non sostituiscono i messaggi già mostrati agli utenti per un\'azione fallita (quelli restano chiari a sé) — qui compare solo ciò che nessun try/catch aveva già intercettato.',
         ]
       },

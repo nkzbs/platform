@@ -1,6 +1,6 @@
 'use strict';
 // F9 (PLATFORM-MASTER-ROADMAP.md) — Observability Foundation: GET /api/audit-log/internal/
-// monitoring-feed (routes/audit.js) ora espone anche business_events, letti da record_history
+// monitoring-feed (routes/audit.js) espone SOLO error_logs (privacy, 13 ottobre 2026): le azioni degli utenti e i movimenti dei record restano nel tenant
 // (già esistente, popolato da records.js su create/update/delete/transition) — prima Super
 // Admin vedeva solo audit_log/error_logs in questo feed, mai cosa succedeva ai record dei
 // moduli (l'equivalente di "ordine/pagamento/fattura/stock" della roadmap, dato che questo
@@ -75,43 +75,23 @@ async function main() {
   const auth = { Authorization: 'Bearer ' + (await loginRes.json()).token, 'Content-Type': 'application/json' };
   const internalHeaders = { 'x-internal-secret': process.env.INTERNAL_API_SECRET, 'Content-Type': 'application/json' };
 
-  console.log('\n--- routes/audit.js — internal/monitoring-feed espone business_events (F9) ---');
+  console.log('\n--- routes/audit.js — internal/monitoring-feed espone SOLO gli errori (privacy) ---');
 
   await test('GET /internal/monitoring-feed senza secret -> 401', async () => {
     const res = await fetch(BASE + '/api/audit-log/internal/monitoring-feed');
     assertEq(res.status, 401);
   });
 
-  let createdId = null;
-  await test('creazione di un record produce un business_event con action="create"', async () => {
-    const createRes = await fetch(BASE + '/api/records/' + SLUG, { method: 'POST', headers: auth, body: JSON.stringify({ nome: 'Prova' }) });
-    createdId = (await createRes.json()).id;
-
+  await test('con il secret risponde con i soli errori: niente azioni degli utenti, niente movimenti dei record', async () => {
+    const createRes = await fetch(BASE + '/api/records/' + SLUG, { method: 'POST', headers: auth, body: JSON.stringify({ nome: 'Prova riservata' }) });
+    const createdId = (await createRes.json()).id;
+    await fetch(BASE + '/api/records/' + SLUG + '/' + createdId, { method: 'PUT', headers: auth, body: JSON.stringify({ nome: 'Prova modificata' }) });
     const feedRes = await fetch(BASE + '/api/audit-log/internal/monitoring-feed?limit=50', { headers: internalHeaders });
     const feed = await feedRes.json();
     assertEq(feedRes.status, 200);
-    assertTrue(Array.isArray(feed.business_events), 'business_events deve essere un array');
-    const ev = feed.business_events.find((e) => e.record_id === createdId && e.action === 'create');
-    assertTrue(!!ev, 'deve esistere un evento create per il record appena creato');
-    assertEq(ev.module_slug, SLUG);
-    assertEq(ev.actor, 'admin');
-  });
-
-  await test('aggiornamento dello stesso record produce un SECONDO business_event, action="update"', async () => {
-    await fetch(BASE + '/api/records/' + SLUG + '/' + createdId, { method: 'PUT', headers: auth, body: JSON.stringify({ nome: 'Prova modificata' }) });
-
-    const feedRes = await fetch(BASE + '/api/audit-log/internal/monitoring-feed?limit=50', { headers: internalHeaders });
-    const feed = await feedRes.json();
-    const events = feed.business_events.filter((e) => e.record_id === createdId);
-    assertTrue(events.some((e) => e.action === 'create'), 'l\'evento create originale deve restare');
-    assertTrue(events.some((e) => e.action === 'update'), 'deve comparire anche l\'evento update');
-  });
-
-  await test('business_events non contiene before_data/after_data (solo cosa è successo, non i valori)', async () => {
-    const feedRes = await fetch(BASE + '/api/audit-log/internal/monitoring-feed?limit=50', { headers: internalHeaders });
-    const feed = await feedRes.json();
-    const ev = feed.business_events.find((e) => e.record_id === createdId);
-    assertTrue(ev.before_data === undefined && ev.after_data === undefined, 'i valori dei campi non devono uscire da questo feed aggregato');
+    assertEq(Object.keys(feed).join(','), 'error_logs');
+    assertTrue(Array.isArray(feed.error_logs), 'error_logs deve essere un array');
+    assertTrue(!JSON.stringify(feed).includes('Prova'), 'nessun contenuto dei record deve uscire');
   });
 
   console.log(`\n${'='.repeat(60)}`);

@@ -673,7 +673,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                   <div className="text-xs text-gray-600 mt-3">Aggiornato ogni 3 secondi mentre questo pannello è aperto.</div>
                   {onViewActivity && (
                     <button onClick={() => onViewActivity(t.name)} className="text-xs text-cp-primary hover:opacity-80 mt-2">
-                      Vedi log attività di questo tenant →
+                      Vedi errori di questo tenant →
                     </button>
                   )}
                   </>

@@ -73,11 +73,11 @@ function ActivityPage({ token, initialTenantFilter }) {
   return (
     <div>
       <h1 className="text-lg font-bold text-ink tracking-[-0.35px] mb-1">Attività</h1>
-      <p className="text-gray-500 text-sm mb-6">Ogni azione amministrativa e ogni errore non gestito — Super Admin e tutti i tenant, in un'unica cronologia.</p>
+      <p className="text-gray-500 text-sm mb-6">Le azioni fatte da Super Admin e gli errori tecnici dei tenant. Cosa fanno gli utenti dentro un tenant non si vede da qui: sta nel registro del tenant.</p>
 
       <div className="flex items-center gap-3 flex-wrap mb-4">
         <Select value={kindFilter} onChange={setKindFilter} placeholder="Tutti i tipi" className="w-44"
-          options={[{ value: '', label: 'Tutti i tipi' }, { value: 'audit', label: 'Solo azioni' }, { value: 'business', label: 'Solo record (moduli)' }, { value: 'error', label: 'Solo errori' }]} />
+          options={[{ value: '', label: 'Tutti i tipi' }, { value: 'audit', label: 'Solo azioni' }, { value: 'error', label: 'Solo errori' }]} />
         <Select value={tenantFilter} onChange={setTenantFilter} placeholder="Tutti i tenant" className="w-52"
           options={[{ value: '', label: 'Tutti i tenant' }, ...tenantOptions.map((n) => ({ value: n, label: n }))]} />
         <Select value={limit} onChange={(v) => setLimit(Number(v))} className="w-36"
@@ -91,12 +91,12 @@ function ActivityPage({ token, initialTenantFilter }) {
             <div className={'flex items-start justify-between flex-wrap gap-x-3 gap-y-1 ' + (e.kind === 'error' ? 'cursor-pointer' : '')}
               onClick={() => e.kind === 'error' && setExpandedId(expandedId === e.id ? null : e.id)}>
               <div className="min-w-0 flex items-start gap-2">
-                <Icon name={e.kind === 'error' ? 'alert-triangle' : e.kind === 'business' ? 'box' : 'check'} size={13}
-                  className={'mt-0.5 flex-shrink-0 ' + (e.kind === 'error' ? 'text-red-400' : e.kind === 'business' ? 'text-indigo-400/80' : 'text-green-400/70')} />
+                <Icon name={e.kind === 'error' ? 'alert-triangle' : 'check'} size={13}
+                  className={'mt-0.5 flex-shrink-0 ' + (e.kind === 'error' ? 'text-red-400' : 'text-green-400/70')} />
                 <div>
                   <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 mr-2">{e.tenant_name}</span>
                   <span className={e.kind === 'error' ? 'text-red-400/90' : 'text-ink font-medium'}>{e.description}</span>
-                  {(e.kind === 'audit' || e.kind === 'business') && <div className="text-xs text-gray-600 mt-0.5">da <span className="font-mono">{e.actor}</span></div>}
+                  {e.kind === 'audit' && <div className="text-xs text-gray-600 mt-0.5">da <span className="font-mono">{e.actor}</span></div>}
                 </div>
               </div>
               <div className="text-xs text-gray-600 flex-shrink-0">{new Date(e.created_at).toLocaleString('it-IT')}</div>
