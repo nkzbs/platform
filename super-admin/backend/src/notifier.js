@@ -193,4 +193,22 @@ async function sendWeeklyBackupMail({ tenantName, tenantSlug, attachmentName, at
   }
 }
 
-module.exports = { notifyBackupResult, notifyBackupVerifyFailure, notifyAIBudget, sendWeeklyBackupMail };
+// L'invito a un tenant: un messaggio fisso con il link monouso. Il testo non è modificabile da chi chiama (solo nome e link, ripuliti), così la posta di Super Admin non diventa un modo di spedire messaggi a piacere.
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+async function sendInviteMail({ to, nome, tenantName, link, ore }) {
+  const t = getTransporter();
+  if (!t) { console.log('[notifier] invito non inviato (SMTP non configurato)'); return { sent: false, reason: 'La posta di Super Admin non è configurata (SMTP): usa il link.' }; }
+  const saluto = nome ? 'Ciao ' + esc(nome) + ',' : 'Ciao,';
+  const html = wrapMailHtml({
+    accentColor: '#2563eb', title: 'Sei stato invitato',
+    lines: [saluto, 'ti hanno invitato su <b>' + esc(tenantName) + '</b>.', 'Apri questo link per scegliere il tuo nome utente e la tua password: <a href="' + esc(link) + '">' + esc(link) + '</a>', 'Il link vale ' + esc(ore) + ' ore e si può usare una volta sola. Se non te lo aspettavi, ignora questa mail.'],
+    footer: 'Platform — messaggio automatico',
+  });
+  const text = (nome ? 'Ciao ' + nome + ',\n' : 'Ciao,\n') + 'ti hanno invitato su ' + tenantName + '.\nApri questo link per scegliere il tuo nome utente e la tua password:\n' + link + '\nIl link vale ' + ore + ' ore e si può usare una volta sola. Se non te lo aspettavi, ignora questa mail.';
+  try {
+    await t.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to, subject: 'Invito a ' + tenantName, text, html });
+    return { sent: true };
+  } catch (e) { console.error('[notifier] invio invito fallito:', e.message); return { sent: false, reason: 'La mail non è partita: ' + e.message }; }
+}
+
+module.exports = { sendInviteMail, notifyBackupResult, notifyBackupVerifyFailure, notifyAIBudget, sendWeeklyBackupMail };

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { API } from '../lib/api'
+import InviteTenantModal from '../components/InviteTenantModal'
 import Icon from '../components/Icon'
 import Select from '../components/Select'
 import Tile from '../components/Tile'
@@ -95,6 +96,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
   const [restoringId, setRestoringId] = useState(null)
   const [backupMsg, setBackupMsg] = useState({})
   const [resettingSlug, setResettingSlug] = useState(null)
+  const [inviteTenant, setInviteTenant] = useState(null) // il tenant per cui si sta creando un invito
   // PLATFORM-UI-REDESIGN-CATALOG.md #21 — moduli a licenza per tenant, dentro la tab "Moduli".
   const [registryModules, setRegistryModules] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -703,12 +705,15 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                   <div>
                     <div className="flex items-center justify-between">
                       <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Credenziali accesso</div>
+                      <div className="flex gap-2">
+                      <button onClick={() => setInviteTenant(t)} className="text-xs bg-cp-primary/20 hover:bg-cp-primary/30 text-cp-primary px-3 py-1.5 rounded-lg transition">Invita</button>
                       <button onClick={() => resetCredentials(t)} disabled={resettingSlug === t.slug}
                         className="text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-3 py-1.5 rounded-lg transition">
                         {resettingSlug === t.slug ? 'Generazione...' : 'Reset credenziali'}
                       </button>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-600 mt-1.5">Genera una nuova password per l'utente admin di questo tenant — la precedente smette subito di funzionare.</div>
+                    <div className="text-xs text-gray-600 mt-1.5">«Invita» manda un link con cui la persona sceglie da sé utente e password (consigliato). «Reset credenziali» genera una nuova password per l'utente admin di questo tenant — la precedente smette subito di funzionare.</div>
                   </div>
                   )}
 
@@ -1082,6 +1087,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
           </div>
         </div>
       )}
+      {inviteTenant && <InviteTenantModal token={token} tenant={inviteTenant} onClose={() => setInviteTenant(null)} />}
     </div>
   )
 }

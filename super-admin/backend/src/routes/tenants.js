@@ -1046,6 +1046,27 @@ router.patch('/:slug/categoria', requireAuth, requireTenantScope, (req, res) => 
   res.json({ ok: true, categoria });
 });
 
+// Invito per il PRIMO admin di un tenant (o per chiunque, con il ruolo che serve): crea un link monouso nel tenant (rotta interna) e, se richiesto e se c'è un dominio, lo spedisce per mail.
+// Il link porta al tenant, dove la persona sceglie da sé utente e password: nessuna password gira. Resta valido 72 ore.
+router.post('/:slug/invite', requireAuth, requireTenantScope, async (req, res) => {
+  const tenant = db.prepare("SELECT * FROM tenants WHERE slug = ? AND status != 'deleted'").get(req.params.slug);
+  if (!tenant) return res.status(404).json({ error: 'Tenant non trovato' });
+  const { nome, email, invia_email: inviaEmail } = req.body || {};
+  const role = ['admin', 'user'].includes(req.body && req.body.role) ? req.body.role : 'admin';
+  let inv;
+  try { inv = await require('../lib/tenant-api-client').callTenantAPI(tenant.slug, 'POST', '/api/internal-invite', { nome, email, role }); }
+  catch (e) { return res.status(e.status || 502).json({ error: e.status === 400 ? e.message : 'Il tenant non risponde: è acceso?' }); }
+  const link = tenant.domain ? 'https://' + tenant.domain + '/invito/' + inv.token : null;
+  let mail = null;
+  if (inviaEmail) {
+    if (!email) mail = { sent: false, reason: 'Manca l\'indirizzo email.' };
+    else if (!link) mail = { sent: false, reason: 'Questo tenant non ha un dominio: usa il link o i pulsanti WhatsApp/Telegram.' };
+    else mail = await require('../notifier').sendInviteMail({ to: String(email), nome: String(nome || '').slice(0, 80), tenantName: tenant.name, link, ore: inv.ore });
+  }
+  logAudit(req.user.username, 'tenant.invite', tenant.slug, { role, email: !!email, mail: mail ? mail.sent : null });
+  res.json({ token: inv.token, scade: inv.scade, ore: inv.ore, link, porta: tenant.port, mail });
+});
+
 // --- Credenziali ------------------------------------------------------------
 // Genera una nuova password per l'utente 'admin' del tenant e la scrive
 // direttamente nel suo .db — funziona anche se il tenant è fermo (manutenzione,

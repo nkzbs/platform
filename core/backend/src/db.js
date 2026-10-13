@@ -466,6 +466,22 @@ try {
 ensureColumn('tenant_settings', 'accent_color', 'TEXT DEFAULT NULL');
 // Proprietario predefinito delle righe automatiche (Gmail, estratto conto): vedi record-owner.js.
 ensureColumn('tenant_settings', 'default_owner_user_id', 'INTEGER DEFAULT NULL');
+// Inviti: un link monouso per scegliersi utente e password. Si conserva solo l'impronta (SHA-256) del token, mai il token; scade, si può revocare, si usa una volta.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS invites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token_hash TEXT NOT NULL UNIQUE,
+    nome TEXT,
+    email TEXT,
+    role TEXT NOT NULL DEFAULT 'user',
+    created_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME,
+    used_username TEXT,
+    revoked_at DATETIME
+  );
+`);
 ensureColumn('tenant_settings', 'setup_wizard', 'TEXT DEFAULT NULL'); // 'done' = il percorso dei primi passi è chiuso (o non serve)
 // White-label completo (2026-08-15): un tenant che ha già logo/nome propri può
 // nascondere anche il nome "Platform" davanti al proprio (login e sidebar

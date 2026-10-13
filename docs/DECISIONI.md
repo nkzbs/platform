@@ -486,3 +486,6 @@ Un tenant vuoto vede in Libreria «Parti da un modello»: tessere di verticali (
 
 ## 2026-10-13 — Distacco di un tenant su un server dell'utente
 Copia (non spostamento) via SSH, avviata dal tenant: `ssh2` in Super Admin, token firmato col segreto del tenant, impronta del server confermata e fissata, credenziali solo in memoria, destinazioni interne vietate. Il tenant copiato non ha più Super Admin (AI, Libreria e aggiornamenti non disponibili finché non esisterà una chiave AI propria del tenant). Super Admin non vede dati: copia un file di database che già custodisce nei backup.
+
+## 2026-10-13 — Inviti con link monouso
+Un invito è un link che porta a scegliere utente e password, non una password spedita. Consegna a scelta (copia, WhatsApp/Telegram con messaggio pronto, email da Super Admin): nessun invio automatico su WhatsApp/Telegram perché le piattaforme non permettono di scrivere per primi a persone nuove. Vale per il primo admin (da Super Admin) e per gli utenti (dall'admin del tenant).

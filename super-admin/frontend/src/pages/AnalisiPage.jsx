@@ -4,6 +4,7 @@ import Icon from '../components/Icon'
 import ProcessoEditor, { applySuggestion, needsEnrichment } from '../components/analyses/ProcessoEditor'
 import Manuale from '../components/analyses/Manuale'
 import Guida from '../components/analyses/Guida'
+import InviteTenantModal from '../components/InviteTenantModal'
 import CorreggiAParole from '../components/analyses/CorreggiAParole'
 import { STAMPA_CSS } from '../components/analyses/stampa'
 
@@ -42,6 +43,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
     setApprofondendo(false)
     if (r.ok) { setA(r.data); setMsg({ ok: true, text: 'Fatto: ho aggiunto i moduli in più e segnato cosa manca. Controlla e togli ciò che non serve.' }) } else setMsg({ ok: false, text: (r.data && r.data.error) || 'Non riuscito.' })
   }
+  const [invito, setInvito] = useState(null) // { slug, name } per invitare il cliente nel tenant creato
   const [guida, setGuida] = useState(null) // la guida all'uso, caricata quando si apre
   const apriGuida = async () => { const r = await req('GET', '/' + a.id + '/guida'); if (r.ok) setGuida(r.data); else setMsg({ ok: false, text: (r.data && r.data.error) || 'Non riesco a preparare la guida.' }) }
   const [tf, setTf] = useState({ name: '', slug: '' })
@@ -229,6 +231,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
                       {cr.tempi && <div className="text-xs text-green-400/60 mt-1">Dove è andato il tempo: {FASI_UI.filter(([k]) => cr.tempi[k] != null).map(([k, l]) => l + ' ' + cr.tempi[k] + ' s').join(' · ')}</div>}
                       {(cr.avvisi || []).map((v, i) => <div key={i} className="text-xs text-amber-300 mt-1">{v}</div>)}
                       {credenziali && <div className="text-xs mt-2">Accesso admin (si vede una volta sola): <span className="font-mono">{credenziali.username}</span> / <span className="font-mono">{credenziali.password}</span></div>}
+                      {a.tenant_slug && <button type="button" className={ghost + ' mt-2'} onClick={() => setInvito({ slug: a.tenant_slug, name: a.name })}>Invita il cliente (consigliato: sceglie lui la password)</button>}
                     </div>
                   )}
                 </div>
@@ -243,6 +246,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
                   <button type="button" className={btn} onClick={creaTenant}>Crea il tenant</button>
                 </>
               )}
+              {invito && <InviteTenantModal token={token} tenant={invito} onClose={() => setInvito(null)} />}
             </section>
   )
 

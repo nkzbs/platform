@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
+import InviteModal from '../components/InviteModal'
 import Icon from '../components/Icon'
 import RecordOwnerCard from '../components/RecordOwnerCard'
 
@@ -7,6 +8,7 @@ function UsersPage({ token }) {
   const api = useApi(token)
   const [users, setUsers] = useState([])
   const [roles, setRoles] = useState([])
+  const [showInvite, setShowInvite] = useState(false)
   const [modules, setModules] = useState([])
   const [showNew, setShowNew] = useState(false)
   const [form, setForm] = useState({ username: '', password: '', display_name: '', role: 'user', linked_module_slug: '', linked_record_id: '' })
@@ -141,7 +143,10 @@ function UsersPage({ token }) {
 
   return (
     <div>
-      <div className="flex items-center justify-end mb-6">
+      <div className="flex items-center justify-end gap-2 mb-6">
+        <button onClick={() => setShowInvite(true)} className="bg-gray-800 hover:bg-gray-700 text-gray-200 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+          <Icon name="link" size={14} />Invita
+        </button>
         <button onClick={() => setShowNew(true)} className="bg-accent hover:opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
           <Icon name="plus" size={14} />Nuovo Utente
         </button>
@@ -331,6 +336,7 @@ function UsersPage({ token }) {
           </div>
         </div>
       )}
+      {showInvite && <InviteModal token={token} onClose={() => setShowInvite(false)} />}
     </div>
   )
 }
