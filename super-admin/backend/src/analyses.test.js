@@ -167,6 +167,29 @@ async function main() {
     eq((await api('GET', '/99999/guida')).status, 404);
   });
 
+  console.log('\n--- approfondimento ---');
+  await test('più moduli per processo: id inventati scartati, il principale non si ripete, tetti rispettati', () => {
+    const valid = new Set([idA, idB]);
+    const p = A.sanitizeProcesso({ nome: 'X', registry_module_id: idA, moduli_extra: [idA, idB, 9999, 'x', idB], manca: ['a', '', 'b'] }, valid);
+    eq(p.moduli_extra, [idB]); eq(p.manca, ['a', 'b']);
+    eq(A.sanitizeProcesso({ nome: 'X', moduli_extra: Array.from({ length: 30 }, (_, i) => i + 1) }).moduli_extra.length, 8);
+  });
+  await test('applica: aggiunge senza togliere (le scelte di chi ha l\'analisi restano)', () => {
+    const p = { registry_module_id: idA, moduli_extra: [idB], manca: ['uno'] };
+    const r = A.applicaApprofondimento(p, { moduli_extra: [idB, 77, idA], manca: ['uno', 'due'] });
+    eq(r.moduli_extra, [idB, 77]); eq(r.manca, ['uno', 'due']); eq(r.registry_module_id, idA);
+  });
+  await test('il passaggio AI: solo id veri, numeri di processo veri, i dati personali non partono; l\'analisi si salva e il blueprint conta i moduli in più', async () => {
+    const c = await (await api('POST', '', { name: 'Da approfondire', descrizione: 'x' })).json();
+    eq((await api('POST', '/' + c.id + '/approfondisci')).status, 400, 'senza processi');
+    await api('PATCH', '/' + c.id, { processi: [{ nome: 'Preventivare mario@rossi.it', registry_module_id: idA, copertura: 'coperto', scopo: 'tel 333 1234567' }, { nome: 'Chiudere' }] });
+    prompts = []; risposta = { processi: [{ n: 1, moduli_extra: [idB, 424242], manca: ['Firma digitale'] }, { n: 9, moduli_extra: [idA] }, { n: 2, moduli_extra: [idA], manca: [] }] };
+    const r = await (await api('POST', '/' + c.id + '/approfondisci')).json();
+    eq(r.processi[0].moduli_extra, [idB]); eq(r.processi[0].manca, ['Firma digitale']); eq(r.processi[1].moduli_extra, [idA]);
+    ok(!prompts.join('').includes('mario@rossi.it') && !prompts.join('').includes('1234567'), 'nessun dato personale al modello');
+    eq(r.blueprint.moduli_ids.sort(), [idA, idB].sort()); eq(r.blueprint.manca, [{ processo: 'Preventivare mario@rossi.it', voci: ['Firma digitale'] }]);
+  });
+
   console.log(`\n${passed} passati, ${failed} falliti`);
   process.exit(failed ? 1 : 0);
 }

@@ -47,9 +47,10 @@ export default function Guida({ guida: g }) {
         <section key={i} className="scheda" style={{ borderTop: '1px solid #e7e5e4', padding: '10px 0' }}>
           <h3 style={{ fontSize: 15, margin: '0 0 4px', fontWeight: 600 }}>{p.nome}{p.reparto ? <span style={{ fontWeight: 400, color: '#78716c' }}> · {p.reparto}</span> : null}</h3>
           {p.scopo && <p style={{ margin: '0 0 4px', fontSize: 13 }}>{p.scopo}</p>}
-          <p style={{ margin: '0 0 4px', fontSize: 13 }}>{p.modulo ? <>Si lavora nel modulo <b>{p.modulo}</b>.</> : <b style={{ color: '#991b1b' }}>Nessun modulo ancora: da costruire.</b>}</p>
+          <p style={{ margin: '0 0 4px', fontSize: 13 }}>{p.modulo ? <>Si lavora {p.moduli && p.moduli.length > 1 ? 'nei moduli' : 'nel modulo'} <b>{(p.moduli || [p.modulo]).join(', ')}</b>.</> : <b style={{ color: '#991b1b' }}>Nessun modulo ancora: da costruire.</b>}</p>
           {p.quando && <p style={{ margin: '0 0 4px', fontSize: 13 }}><b>Parte quando: </b>{p.quando}</p>}
           {p.passaggi.length > 0 && <ol style={{ margin: '4px 0', paddingLeft: 20, fontSize: 13 }}>{p.passaggi.map((s, k) => <li key={k} className="riga">{s.tipo === 'decisione' ? <i>Bivio: </i> : null}<b>{s.titolo}</b>{s.ruolo ? <span style={{ color: '#57534e' }}> ({s.ruolo})</span> : null}{s.descrizione ? ' — ' + s.descrizione : ''}</li>)}</ol>}
+          <Elenco titolo="Non coperto da nessun modulo" voci={p.manca} />
           <Elenco titolo="Se qualcosa va storto" voci={p.eccezioni} />
           <Elenco titolo="Come capisci che va bene" voci={p.kpi} />
         </section>

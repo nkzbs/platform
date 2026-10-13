@@ -34,6 +34,13 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
   const [busy, setBusy] = useState('')
   const [showProfilo, setShowProfilo] = useState(false)
   const [showManuale, setShowManuale] = useState(false)
+  const [approfondendo, setApprofondendo] = useState(false)
+  const approfondisci = async () => {
+    setApprofondendo(true); setMsg(null)
+    const r = await req('POST', '/' + a.id + '/approfondisci')
+    setApprofondendo(false)
+    if (r.ok) { setA(r.data); setMsg({ ok: true, text: 'Fatto: ho aggiunto i moduli in più e segnato cosa manca. Controlla e togli ciò che non serve.' }) } else setMsg({ ok: false, text: (r.data && r.data.error) || 'Non riuscito.' })
+  }
   const [guida, setGuida] = useState(null) // la guida all'uso, caricata quando si apre
   const apriGuida = async () => { const r = await req('GET', '/' + a.id + '/guida'); if (r.ok) setGuida(r.data); else setMsg({ ok: false, text: (r.data && r.data.error) || 'Non riesco a preparare la guida.' }) }
   const [tf, setTf] = useState({ name: '', slug: '' })
@@ -114,10 +121,11 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
     setAvvio(false)
     if (r.ok) { setAutoText(''); await open(r.data.id); loadList() } else setMsg({ ok: false, text: r.data.error || 'Non riuscito.' })
   }
-  const autoAttivo = a && a.auto && (a.auto.fase === 'processi' || a.auto.fase === 'completamento')
+  const FASI_AUTO = ['processi', 'completamento', 'approfondimento']
+  const autoAttivo = a && a.auto && FASI_AUTO.includes(a.auto.fase)
   useEffect(() => {
     if (!autoAttivo) return undefined
-    const i = setInterval(async () => { const r = await req('GET', '/' + a.id); if (r.ok) { setA((c) => (c && c.id === r.data.id ? { ...c, ...r.data } : c)); if (!(r.data.auto && (r.data.auto.fase === 'processi' || r.data.auto.fase === 'completamento'))) loadList() } }, 1500)
+    const i = setInterval(async () => { const r = await req('GET', '/' + a.id); if (r.ok) { setA((c) => (c && c.id === r.data.id ? { ...c, ...r.data } : c)); if (!(r.data.auto && FASI_AUTO.includes(r.data.auto.fase))) loadList() } }, 1500)
     const t = setInterval(() => setNow(Date.now()), 500)
     return () => { clearInterval(i); clearInterval(t) }
   }, [a && a.id, autoAttivo]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -250,7 +258,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
           <div className="space-y-1.5 text-sm">
             <div className={au.fase === 'processi' ? 'text-ink' : 'text-green-400'}>{au.fase === 'processi' ? '… Cerco i processi dell\'attività' : '✓ Ho trovato ' + a.processi.length + ' processi'}</div>
             <div className={au.fase === 'completamento' ? 'text-ink' : 'text-gray-600'}>{au.fase === 'completamento' ? '… Completo i processi: ' + au.fatti + ' di ' + au.totale : '· Completo i processi'}</div>
-            <div className="text-gray-600">· Scelgo moduli, report e AI</div>
+            <div className={au.fase === 'approfondimento' ? 'text-ink' : 'text-gray-600'}>{au.fase === 'approfondimento' ? '… Controllo cosa serve davvero a ogni processo' : '· Controllo cosa serve davvero a ogni processo'}</div>
           </div>
           {a.processi.length > 0 && <div className="mt-4 flex flex-wrap gap-1.5">{a.processi.map((p, i) => <span key={i} className={'text-xs px-2.5 py-1 rounded-lg border ' + (needsEnrichment(p) ? 'border-gray-800 text-gray-500' : 'border-green-900/50 text-green-400')}>{p.nome}</span>)}</div>}
         </div>
@@ -396,8 +404,9 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
                 ))}
               </div>
               {b.moduli_collegati && b.moduli_collegati.length > 0 && <p className="text-xs text-gray-500 mb-3">Moduli collegati che servono ai tuoi moduli e vengono aggiunti: {b.moduli_collegati.join(', ')}.</p>}
+              {b.manca && b.manca.length > 0 && <p className="text-xs text-gray-500 mb-3">Non coperto da nessun modulo: {b.manca.map((m) => m.processo + ' (' + m.voci.join(', ') + ')').join('; ')}.</p>}
               {b.da_costruire.length > 0 && <p className="text-xs text-gray-500 mb-3">Da costruire: {b.da_costruire.join(', ')}. Si costruiscono nel Super Builder.</p>}
-              <div className="flex gap-2 flex-wrap"><button type="button" className={btn} onClick={() => setShowManuale(true)}>Apri il manuale</button><button type="button" className={ghost} onClick={apriGuida}>Guida all'uso</button></div>
+              <div className="flex gap-2 flex-wrap"><button type="button" className={btn} onClick={() => setShowManuale(true)}>Apri il manuale</button><button type="button" className={ghost} onClick={apriGuida}>Guida all'uso</button><button type="button" className={ghost} onClick={approfondisci} disabled={approfondendo}>{approfondendo ? 'Controllo…' : 'Cosa manca?'}</button></div>
             </section>
           )}
 

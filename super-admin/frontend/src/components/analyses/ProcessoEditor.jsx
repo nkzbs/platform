@@ -218,6 +218,17 @@ export default function ProcessoEditor({ processo, onChange, onRemove, modules, 
                 onChange={(val) => { const id = val ? parseInt(val, 10) : null; onChange({ registry_module_id: id, copertura: id ? 'coperto' : (copertura === 'da_costruire' ? 'da_costruire' : 'da_valutare') }) }} />
               <Select className="w-40" value={copertura} options={COPERTURA} onChange={(val) => onChange({ copertura: val })} />
             </div>
+            <div>
+              <div className="text-[11px] text-gray-500 mb-1">Altri moduli che usa</div>
+              <div className="flex gap-1.5 flex-wrap items-center">
+                {(p.moduli_extra || []).map((id) => { const m = modules.find((x) => x.id === id); return m ? <span key={id} className="text-xs bg-gray-800 text-gray-200 rounded-md pl-2 pr-1 py-1 flex items-center gap-1">{m.name}<button type="button" aria-label={'Togli ' + m.name} onClick={() => onChange({ moduli_extra: p.moduli_extra.filter((x) => x !== id) })} className="text-gray-500 hover:text-red-400 px-1">×</button></span> : null })}
+                <Select className="w-44" placeholder="+ Aggiungi modulo…" value="" options={modules.filter((m) => m.id !== p.registry_module_id && !(p.moduli_extra || []).includes(m.id)).map((m) => ({ value: m.id, label: m.name }))}
+                  onChange={(val) => val && onChange({ moduli_extra: [...(p.moduli_extra || []), parseInt(val, 10)] })} />
+              </div>
+            </div>
+            {(p.manca || []).length > 0 && (
+              <div className="text-xs text-amber-400 flex items-start gap-1.5"><Icon name="alert-triangle" size={12} className="mt-0.5 flex-shrink-0" /><span>Nessun modulo copre: {p.manca.join('; ')}.</span></div>
+            )}
             {copertura === 'da_costruire' && !p.registry_module_id && (
               <div className="text-xs text-gray-500 flex items-start gap-1.5"><Icon name="alert-triangle" size={12} className="text-red-400 mt-0.5 flex-shrink-0" /><span>Nessun modulo copre questo processo.{p.registry_module_reasoning ? ' ' + p.registry_module_reasoning : ''}</span></div>
             )}

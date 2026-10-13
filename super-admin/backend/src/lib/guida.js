@@ -31,7 +31,7 @@ function build(a) {
   const tutti = db.prepare('SELECT slug, name FROM registry_modules').all();
   const byslug = new Map(tutti.map((r) => [r.slug, r]));
   const moduli = rows.map((r) => scheda(r, byslug));
-  const modDi = (p) => moduli.find((m) => m.id === p.registry_module_id) || null;
+  const moduliDi = (p) => [p.registry_module_id, ...(p.moduli_extra || [])].map((id) => moduli.find((m) => m.id === id)).filter(Boolean);
   const escludi = new Set((a.scelte && a.scelte.escludi) || []);
   const prop = analysis.proposte(ids);
 
@@ -51,7 +51,7 @@ function build(a) {
   return {
     nome: a.name, descrizione: a.descrizione || '', profilo: a.profilo || {},
     moduli,
-    processi: processi.map((p) => { const m = modDi(p); return { nome: p.nome, reparto: p.reparto, scopo: p.scopo, quando: p.evento_innesco, serve: p.input, produce: p.output, modulo: m && m.nome, passaggi: p.passaggi || [], eccezioni: p.eccezioni || [], kpi: p.kpi || [], da_costruire: p.copertura === 'da_costruire' }; }),
+    processi: processi.map((p) => { const mm = moduliDi(p); return { nome: p.nome, reparto: p.reparto, scopo: p.scopo, quando: p.evento_innesco, serve: p.input, produce: p.output, modulo: mm[0] ? mm[0].nome : null, moduli: mm.map((m) => m.nome), manca: p.manca || [], passaggi: p.passaggi || [], eccezioni: p.eccezioni || [], kpi: p.kpi || [], da_costruire: p.copertura === 'da_costruire' }; }),
     ruoli: [...ruoli.values()].map((r) => ({ ...r, processi: uniq(r.processi) })),
     report: prop.report.filter((x) => !escludi.has(x.key)).map((x) => ({ nome: x.nome, tipo: REPORT[x.tipo] || x.tipo, perche: x.perche })),
     ai: prop.ai.filter((x) => !escludi.has(x.key)).map((x) => ({ modulo: x.modulo, cosa: AI[x.feature] || x.feature })),

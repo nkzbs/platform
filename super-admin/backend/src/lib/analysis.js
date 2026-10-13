@@ -44,6 +44,8 @@ function sanitizeProcesso(p, validIds) {
   const ids = validIds instanceof Set ? validIds : null;
   const modId = Number.isInteger(Number(p.registry_module_id)) && Number(p.registry_module_id) > 0 ? Number(p.registry_module_id) : null;
   const registry_module_id = modId && (!ids || ids.has(modId)) ? modId : null;
+  // altri moduli che il processo usa oltre al principale (solo id che esistono davvero, senza doppioni, al massimo 8) e cosa gli manca ancora
+  const extra = [...new Set((Array.isArray(p.moduli_extra) ? p.moduli_extra : []).map(Number).filter((n) => Number.isInteger(n) && n > 0 && n !== registry_module_id && (!ids || ids.has(n))))].slice(0, 8);
   let copertura = COPERTURE.includes(p.copertura) ? p.copertura : 'da_valutare';
   if (registry_module_id && copertura === 'da_valutare') copertura = 'coperto';
   return {
@@ -53,7 +55,7 @@ function sanitizeProcesso(p, validIds) {
     passaggi: (Array.isArray(p.passaggi) ? p.passaggi : []).slice(0, 20).map((s) => ({ titolo: t(s && s.titolo, 100), ruolo: t(s && s.ruolo, 60), descrizione: t(s && s.descrizione, 300), tipo: TIPI_PASSAGGIO.includes(s && s.tipo) ? s.tipo : 'step' })).filter((s) => s.titolo || s.descrizione),
     eccezioni: list(p.eccezioni, 12, 200), documenti_collegati: list(p.documenti_collegati, 12, 120), sistemi_coinvolti: list(p.sistemi_coinvolti, 12, 80), kpi: list(p.kpi, 12, 160),
     callout: (Array.isArray(p.callout) ? p.callout : []).slice(0, 12).map((c) => ({ tipo: TIPI_CALLOUT.includes(c && c.tipo) ? c.tipo : 'nota', testo: t(c && c.testo, 300) })).filter((c) => c.testo),
-    registry_module_id, registry_module_reasoning: t(p.registry_module_reasoning, 300), copertura,
+    registry_module_id, moduli_extra: extra, manca: list(p.manca, 8, 160), registry_module_reasoning: t(p.registry_module_reasoning, 300), copertura,
   };
 }
 function sanitizeProcessi(arr, validIds) { return (Array.isArray(arr) ? arr : []).slice(0, MAX_PROCESSI).map((p) => sanitizeProcesso(p, validIds)).filter((p) => p.nome); }
@@ -134,6 +136,48 @@ async function suggestProcessi({ descrizione }) {
   return sanitizeProcessi(out && out.processi, new Set(mods.map((m) => m.id)));
 }
 
+
+// ── approfondimento: cosa serve DAVVERO per gestire ogni processo ──────────────────────────────────────────────────────────────────
+// Un processo vero di solito usa più moduli (un ordine ha clienti, righe, fatture…): un secondo passaggio guarda tutti i processi insieme ai moduli della Libreria e propone,
+// per ognuno, i moduli IN PIÙ che servirebbero e le cose che nessun modulo copre. L'AI propone, il codice valida (solo id veri); chi ha già scelto non viene toccato.
+const APPROFONDISCI_SPEC = `Sei un consulente software. Ti do i processi di un'attività e l'elenco dei moduli disponibili. Per ogni processo, indica quali ALTRI moduli dell'elenco servirebbero per gestirlo davvero oltre a quello già indicato, e cosa manca che nessun modulo copre.
+
+Rispondi SOLO con un oggetto JSON in questa forma esatta, senza testo prima o dopo e senza blocchi markdown:
+{"processi": [{"n": numero del processo, "moduli_extra": [id, id], "manca": ["una frase breve su ciò che nessun modulo copre"]}]}
+
+Regole:
+- Gli id in "moduli_extra" DEVONO essere dell'elenco dei moduli forniti: non inventare mai un id. Al massimo 5 per processo, solo se servono davvero.
+- Non ripetere il modulo già indicato per quel processo.
+- "manca" può essere vuoto: non inventare mancanze generiche.
+- Un oggetto per ogni processo, con lo stesso numero n che ti è stato dato.`;
+
+const riassuntoProcesso = (p, i, mods) => {
+  const m = mods.find((x) => x.id === p.registry_module_id);
+  return (i + 1) + '. ' + redact(t(p.nome, 80)) + (p.scopo ? ' — ' + redact(t(p.scopo, 160)) : '') + (p.passaggi && p.passaggi.length ? ' | passi: ' + p.passaggi.slice(0, 6).map((s) => redact(t(s.titolo, 60))).join('; ') : '') + ' | modulo: ' + (m ? m.name : 'nessuno');
+};
+
+// Ritorna, per ogni processo (stesso ordine), { moduli_extra, manca } già validati. Va a gruppi di 8 processi per restare in poche chiamate piccole.
+async function approfondisci(processi) {
+  const mods = libraryModules(), valid = new Set(mods.map((m) => m.id));
+  const out = processi.map(() => ({ moduli_extra: [], manca: [] }));
+  for (let da = 0; da < processi.length; da += 8) {
+    const gruppo = processi.slice(da, da + 8);
+    const r = await ask(APPROFONDISCI_SPEC, 'Processi:\n' + gruppo.map((p, i) => riassuntoProcesso(p, i, mods)).join('\n') + '\n\nModuli disponibili:\n' + (moduleList(mods) || '(nessun modulo disponibile)'), 1500);
+    for (const x of (Array.isArray(r && r.processi) ? r.processi : [])) {
+      const i = Number(x && x.n) - 1; if (!Number.isInteger(i) || i < 0 || i >= gruppo.length) continue;
+      const s = sanitizeProcesso({ nome: 'x', registry_module_id: gruppo[i].registry_module_id, moduli_extra: x.moduli_extra, manca: x.manca }, valid);
+      out[da + i] = { moduli_extra: s.moduli_extra, manca: s.manca };
+    }
+  }
+  return out;
+}
+
+// Applica una proposta di approfondimento senza togliere nulla: i moduli scelti da chi ha l'analisi restano, si aggiungono i nuovi; le mancanze si uniscono.
+function applicaApprofondimento(p, s) {
+  const extra = [...new Set([...(p.moduli_extra || []), ...(s.moduli_extra || [])])].filter((id) => id !== p.registry_module_id).slice(0, 8);
+  return { ...p, moduli_extra: extra, manca: [...new Set([...(p.manca || []), ...(s.manca || [])])].slice(0, 8) };
+}
+
 // ── dipendenze: un modulo con una relazione verso un altro ha bisogno anche di quello (righe → fattura → cliente) ──────────────────────
 // Dato un elenco di id di moduli della Libreria, ritorna l'elenco completo con quelli richiesti dalle loro relazioni (a catena), nello stesso ordine + i collegati in coda.
 function withDependencies(ids) {
@@ -197,11 +241,11 @@ function pacchettoTenant(ids, escludi) {
 function blueprint(processi) {
   const c = { coperto: 0, da_valutare: 0, da_costruire: 0 };
   processi.forEach((p) => { c[p.copertura] = (c[p.copertura] || 0) + 1; });
-  const diretti = [...new Set(processi.map((p) => p.registry_module_id).filter(Boolean))];
+  const diretti = [...new Set(processi.flatMap((p) => [p.registry_module_id, ...(p.moduli_extra || [])]).filter(Boolean))];
   const moduliIds = withDependencies(diretti); // più i moduli che quelli richiedono
   const nomi = (ids) => ids.map((id) => (db.prepare('SELECT name FROM registry_modules WHERE id = ?').get(id) || {}).name).filter(Boolean);
   const ruoli = new Set(); processi.forEach((p) => (p.ruoli_coinvolti || []).forEach((r) => { if (r.tipo === 'utente') ruoli.add(r.nome.toLowerCase()); }));
-  return { processi: processi.length, ...c, proposte: proposte(moduliIds), moduli_ids: moduliIds, moduli_collegati: nomi(moduliIds.filter((id) => !diretti.includes(id))), ruoli_utente: ruoli.size, da_costruire: processi.filter((p) => p.copertura === 'da_costruire').map((p) => p.nome) };
+  return { processi: processi.length, ...c, proposte: proposte(moduliIds), moduli_ids: moduliIds, moduli_collegati: nomi(moduliIds.filter((id) => !diretti.includes(id))), ruoli_utente: ruoli.size, da_costruire: processi.filter((p) => p.copertura === 'da_costruire').map((p) => p.nome), manca: processi.filter((p) => (p.manca || []).length).map((p) => ({ processo: p.nome, voci: p.manca })) };
 }
 
-module.exports = { deps, applicaSuggerimento, analizzaAttivita, withDependencies, proposte, pacchettoTenant, libraryModules, sanitizeProcesso, sanitizeProcessi, sanitizeProfilo, suggestProcesso, suggestProcessi, blueprint, COPERTURE };
+module.exports = { deps, applicaSuggerimento, approfondisci, applicaApprofondimento, analizzaAttivita, withDependencies, proposte, pacchettoTenant, libraryModules, sanitizeProcesso, sanitizeProcessi, sanitizeProfilo, suggestProcesso, suggestProcessi, blueprint, COPERTURE };

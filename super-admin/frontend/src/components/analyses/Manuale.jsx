@@ -47,7 +47,7 @@ export default function Manuale({ analysis, modules }) {
       {p.map((x, i) => (
         <section key={i} className="scheda" style={{ marginBottom: 28 }}>
           <h2 style={{ fontSize: 18, margin: '0 0 8px', fontWeight: 600 }}>{i + 1}. {x.nome}</h2>
-          <Grid items={[{ label: 'Reparto', value: x.reparto }, { label: 'Modulo', value: modName(x.registry_module_id) }, { label: 'Scopo', value: x.scopo }, { label: 'Cosa lo fa partire', value: x.evento_innesco }, { label: 'Cosa serve già pronto', value: x.input }, { label: 'Cosa produce', value: x.output }]} />
+          <Grid items={[{ label: 'Reparto', value: x.reparto }, { label: 'Moduli', value: [x.registry_module_id, ...(x.moduli_extra || [])].map(modName).filter(Boolean).join(', ') }, { label: 'Scopo', value: x.scopo }, { label: 'Cosa lo fa partire', value: x.evento_innesco }, { label: 'Cosa serve già pronto', value: x.input }, { label: 'Cosa produce', value: x.output }]} />
           {x.ruoli_coinvolti.length > 0 && <p style={{ margin: '0 0 10px', fontSize: 13 }}><b>Ruoli: </b>{x.ruoli_coinvolti.map((r, k) => <span key={k} style={{ ...Object.fromEntries((BADGE[r.tipo] || BADGE.utente).split(';').map((kv) => kv.split(':'))), padding: '2px 8px', borderRadius: 6, marginRight: 6, display: 'inline-block', fontSize: 12 }}>{r.nome}</span>)}</p>}
           {x.passaggi.length > 0 && (
             <div style={{ marginBottom: 10 }}>
@@ -64,6 +64,7 @@ export default function Manuale({ analysis, modules }) {
             </div>
           )}
           {[['Eccezioni', x.eccezioni], ['Documenti collegati', x.documenti_collegati], ['Sistemi coinvolti', x.sistemi_coinvolti], ['KPI', x.kpi]].filter(([, v]) => v.length).map(([l, v]) => <p key={l} style={{ margin: '0 0 6px', fontSize: 13 }}><b>{l}: </b>{v.join(' · ')}</p>)}
+          {(x.manca || []).length > 0 && <div style={{ borderLeft: '3px solid #d97706', background: '#fffbeb', padding: '8px 12px', margin: '8px 0', fontSize: 13 }}><b>Non coperto da nessun modulo: </b>{x.manca.join('; ')}</div>}
           {x.callout.map((c, k) => <div key={k} style={{ borderLeft: '3px solid #a8a29e', background: '#fafaf9', padding: '8px 12px', margin: '8px 0', fontSize: 13 }}><b>{CALLOUT[c.tipo]}: </b>{c.testo}</div>)}
         </section>
       ))}

@@ -58,7 +58,7 @@ router.post('/suggest-processo', requireAuth, async (req, res) => {
 // Una sola richiesta: crea l'analisi, fa proporre i processi (e il nome dell'attività), poi li completa tutti (tre alla volta, solo i campi vuoti). L'avanzamento sta in `auto`
 // (fase, fatti/totale) e i processi compaiono man mano. Non crea il tenant: quello resta un tocco, dal riepilogo.
 const setAuto = (id, patch) => { const r = row(id); const cur = (r && json(r.auto, null)) || {}; db.prepare('UPDATE process_analyses SET auto = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify({ ...cur, ...patch }), id); };
-const autoInCorso = (a) => !!a && (a.fase === 'processi' || a.fase === 'completamento') && Date.now() - a.inizio < 10 * 60 * 1000;
+const autoInCorso = (a) => !!a && (a.fase === 'processi' || a.fase === 'completamento' || a.fase === 'approfondimento') && Date.now() - a.inizio < 10 * 60 * 1000;
 
 async function faiTuttoInBackground(id, descrizione, nomeDato) {
   try {
@@ -81,6 +81,12 @@ async function faiTuttoInBackground(id, descrizione, nomeDato) {
       }
     };
     await Promise.all([lavora(), lavora(), lavora()]);
+    // secondo passaggio: i moduli in più che servono davvero a ogni processo e cosa manca. Se non riesce, l'analisi resta com'è (non è un errore dell'intera analisi).
+    setAuto(id, { fase: 'approfondimento' });
+    try {
+      const cur = json(row(id).processi, []), prop = await analysis.approfondisci(cur);
+      db.prepare('UPDATE process_analyses SET processi = ? WHERE id = ?').run(JSON.stringify(cur.map((p, i) => analysis.sanitizeProcesso(analysis.applicaApprofondimento(p, prop[i]), valid))), id);
+    } catch (e) { errori++; console.error('[analyses] approfondimento non riuscito:', e.message); }
     setAuto(id, { fase: 'finita', fine: Date.now(), errori });
     logAudit('analisi', 'analysis.fai_tutto', String(id), { processi: processi.length, errori });
   } catch (e) {
@@ -99,6 +105,21 @@ router.post('/auto', requireAuth, (req, res) => {
   logAudit(req.user.username, 'analysis.create', String(id), { auto: true });
   faiTuttoInBackground(id, descrizione, !!nomeDato); // senza await: la pagina segue l'avanzamento
   res.status(202).json({ id });
+});
+
+// «Cosa manca»: il secondo passaggio su richiesta, per l'analisi già scritta. Aggiunge soltanto (moduli in più e mancanze), non toglie né cambia ciò che c'è.
+router.post('/:id/approfondisci', requireAuth, async (req, res) => {
+  const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
+  const processi = json(r.processi, []);
+  if (!processi.length) return res.status(400).json({ error: 'Non ci sono ancora processi da approfondire.' });
+  if (!analysis.deps.isConfigured()) return res.status(503).json({ error: 'Nessuna chiave AI di Super Admin: inseriscila in Impostazioni → Chiavi AI.', code: 'ai_not_configured' });
+  try {
+    const valid = new Set(analysis.libraryModules().map((m) => m.id)), prop = await analysis.approfondisci(processi);
+    const nuovi = processi.map((p, i) => analysis.sanitizeProcesso(analysis.applicaApprofondimento(p, prop[i]), valid));
+    db.prepare('UPDATE process_analyses SET processi = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify(nuovi), r.id);
+    logAudit(req.user.username, 'analysis.approfondisci', String(r.id), { processi: nuovi.length });
+    res.json(full(row(r.id)));
+  } catch (e) { aiError(res, e); }
 });
 
 router.post('/', requireAuth, (req, res) => {
@@ -163,7 +184,7 @@ async function creaTenantInBackground({ id, name, slug, domain, actor, processi,
   const segna = (fase) => { segni.push({ fase, t: Date.now() }); setCreazione(id, { fase }); };
   const tempi = () => { const out = {}; segni.forEach((s, i) => { const fine = (segni[i + 1] ? segni[i + 1].t : Date.now()); out[s.fase] = Math.round((fine - s.t) / 100) / 10; }); return out; };
   const { createTenant, enqueueHostedCreation, installModulesByIds } = require('./tenants');
-  const moduleIds = analysis.withDependencies([...new Set(processi.map((p) => p.registry_module_id).filter(Boolean))]); // con i moduli richiesti dalle loro relazioni
+  const moduleIds = analysis.withDependencies([...new Set(processi.flatMap((p) => [p.registry_module_id, ...(p.moduli_extra || [])]).filter(Boolean))]); // con i moduli richiesti dalle loro relazioni
   const avvisi = [];
   try {
     segna('container');
