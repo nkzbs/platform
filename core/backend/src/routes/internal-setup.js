@@ -18,6 +18,7 @@ router.use((req, res, next) => {
 });
 
 router.post('/apply', (req, res) => {
+  require('./setup-wizard').chiudi(); // un tenant nato dall'analisi arriva già con i suoi moduli: niente primi passi
   const b = req.body || {}, out = { module_roles: [], ai: [], reports: [], features: [], saltati: [] };
   const installed = (slug) => !!db.prepare('SELECT 1 FROM modules WHERE slug = ? AND installed = 1').get(slug);
 

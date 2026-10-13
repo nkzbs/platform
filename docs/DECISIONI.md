@@ -476,3 +476,7 @@ I due Builder (tenant e Super Admin) erano copie sincronizzate a mano. Ora c'è 
 
 ## 2026-10-13 — Il verticale lo costruisce l'utente del tenant
 Nessun verticale «curato» da Super Admin: chi costruisce il proprio gestionale spunta più moduli nello store e li installa insieme (`POST /api/modules/registry/bulk-install`: salta i presenti, installa le dipendenze, segnala i falliti), poi crea le relazioni nel Builder. Un primo tentativo con verticali gestiti da Super Admin è stato scartato.
+
+## 2026-10-13 — Collega i moduli e primi passi
+- **Collega i moduli** (`core/backend/src/module-links.js`): relazioni proposte da regole sui nomi (nome contenuto, campo che si chiama come un altro modulo), mai verso moduli di sistema; chi applica ricalcola tutto (chiave, etichetta, campo da mostrare), non duplica, scrive storia e versione come una pubblicazione.
+- **Primi passi** (`routes/setup-wizard.js`, `SetupWizard.jsx`): compare solo a un admin, se il tenant non ha nessuna riga e il percorso non è mai stato chiuso; quindi un tenant già in uso (Finance) non lo vede e uno creato dall'analisi lo chiude da solo. Lo stato dei passi si legge dai dati. Nel vecchio Platform esisteva un tour guidato con spotlight (ProductTour, sul Sito Web), non un percorso di configurazione: non è stato riportato.

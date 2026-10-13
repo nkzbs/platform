@@ -9,6 +9,7 @@ import DashboardPage from './pages/DashboardPage'
 import LibreriaPage from './pages/LibreriaPage'
 import MovimentiPage from './pages/MovimentiPage'
 import BuilderPage from './pages/BuilderPage'
+import SetupWizard from './components/SetupWizard'
 import GuidaPage from './pages/GuidaPage'
 import AuditPage from './pages/AuditPage'
 import ImpostazioniPage from './pages/ImpostazioniPage'
@@ -274,12 +275,13 @@ export default function App() {
             nuovo esplicitamente dall'utente, stavolta come scelta definitiva.
             'sito_web' qui sotto instrada sullo stesso meccanismo di 'account'
             sopra, solo con un tab diverso. */}
-        {(currentPage === 'impostazioni' || currentPage === 'account' || currentPage === 'sito_web' || currentPage === 'export_dati') && user &&
+        {(currentPage === 'impostazioni' || currentPage === 'account' || currentPage === 'sito_web' || currentPage === 'export_dati' || currentPage === 'connessioni') && user &&
           <ImpostazioniPage token={token} user={user} features={features} modules={installedModules} onOpenInBuilder={openInBuilder} onFeaturesChanged={loadTenantName} initialTab={currentPage === 'impostazioni' ? undefined : currentPage} />}
         {currentModule && !['dashboard', 'utenti', 'report'].includes(currentPage) && <ModulePage module={currentModule} token={token} user={user} onNavigate={setCurrentPage} />}
         </div>
       </main>
       <ToastContainer />
+      {token && user && <SetupWizard token={token} user={user} onNavigate={setCurrentPage} onOpenBuilderNewModule={openBuilderNewModule} />}
     </div>
   )
 }
