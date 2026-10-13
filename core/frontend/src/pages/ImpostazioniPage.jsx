@@ -13,6 +13,7 @@ import Tile from '../components/Tile'
 import UsersPage from './UsersPage'
 import AccountPage from './AccountPage'
 import SuggestionsTab from '../components/SuggestionsTab'
+import FeaturesTab from '../components/FeaturesTab'
 import TelegramCard from '../components/TelegramCard'
 import SitoWebPage from './SitoWebPage'
 
@@ -306,6 +307,7 @@ const SETTINGS_TABS = [
   { key: 'notifiche', icon: 'bell', label: 'Report' },
   { key: 'assistente', icon: 'wand', label: 'AI' },
   { key: 'suggerimenti', icon: 'sparkles', label: 'Suggerimenti' },
+  { key: 'funzioni', icon: 'grid', label: 'Funzioni' },
   { key: 'export_dati', icon: 'download', label: 'Dati' },
   { key: 'account', icon: 'user', label: 'Il mio account' },
 ]
@@ -347,6 +349,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
 
       {tab === 'connessioni' && <ConnessioniTab token={token} user={user} features={features} />}
 
+      {tab === 'funzioni' && <FeaturesTab token={token} onChanged={onFeaturesChanged} />}
       {tab === 'suggerimenti' && features.suggerimenti && <SuggestionsTab token={token} onOpenInBuilder={onOpenInBuilder} />}
       {tab === 'notifiche' && <ReportsSettingsTab token={token} user={user} features={features} />}
 
