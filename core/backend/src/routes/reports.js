@@ -1,9 +1,11 @@
 'use strict';
 // Report su WhatsApp: impostazioni, anteprima, invio manuale, e pulizia dei vecchi report dentro i moduli. Solo admin; la funzione deve essere attiva.
-//   GET  /api/reports/settings                  impostazioni dei tre report + ultimo invio
-//   PUT  /api/reports/settings                  { kind, ...patch }
-//   GET  /api/reports/preview/:kind             il messaggio che partirebbe adesso, senza inviare nulla
-//   POST /api/reports/send-now/:kind            invia adesso (anche se spento): richiesta esplicita
+//   GET  /api/reports/settings                  canali, definizioni dei report (con i tipi disponibili) + ultimo invio
+//   PUT  /api/reports/settings                  { kind: id della definizione | 'canali', ...patch }
+//   POST /api/reports/definitions               { tipo, nome? } aggiunge un report (spento)
+//   DELETE /api/reports/definitions/:id         toglie un report
+//   GET  /api/reports/preview/:id               il messaggio che partirebbe adesso, senza inviare nulla
+//   POST /api/reports/send-now/:id              invia adesso (anche se spento): richiesta esplicita
 //   GET  /api/reports/legacy                    le automazioni vecchie (report periodico, avviso «scadenza» giornaliero) ancora nei moduli
 //   POST /api/reports/legacy/remove             le toglie dagli schemi pubblicati (con cronologia, come una pubblicazione dal Builder)
 const express = require('express');
@@ -17,24 +19,39 @@ const router = express.Router();
 router.use(requireAuth, requireFeature('riepilogo_mattino')); // prima l'accesso (401), poi la funzione (403)
 const guard = [requireAdmin];
 
-router.get('/settings', ...guard, (req, res) => res.json({ settings: reports.settings(), last_sent: reports.lastSent() }));
+const tipi = () => Object.fromEntries(Object.entries(reports.TIPI).map(([k, t]) => [k, { nome: t.nome, frequenze: t.frequenze, descrizione: t.descrizione, vuoto: t.vuoto, parametri: Object.keys(t.base) }]));
+router.get('/settings', ...guard, (req, res) => res.json({ settings: reports.settings(), last_sent: reports.lastSent(), tipi: tipi() }));
+
+router.post('/definitions', ...guard, (req, res) => {
+  const out = reports.addDefinition(req.body && req.body.tipo, req.body && req.body.nome);
+  if (out.error) return res.status(400).json({ error: out.error });
+  logAudit(req.user.username, 'report.add', out.id, { tipo: req.body.tipo });
+  res.json({ id: out.id, settings: out.settings, last_sent: reports.lastSent(), tipi: tipi() });
+});
+
+router.delete('/definitions/:id', ...guard, (req, res) => {
+  const out = reports.removeDefinition(req.params.id);
+  if (out.error) return res.status(404).json({ error: out.error });
+  logAudit(req.user.username, 'report.remove', req.params.id, null);
+  res.json({ settings: out.settings, last_sent: reports.lastSent(), tipi: tipi() });
+});
 
 router.put('/settings', ...guard, (req, res) => {
   const { kind, ...patch } = req.body || {};
   const out = reports.saveSettings(kind, patch);
   if (out.error) return res.status(400).json({ error: out.error });
   logAudit(req.user.username, 'report.settings', kind, patch);
-  res.json({ settings: out.settings, last_sent: reports.lastSent() });
+  res.json({ settings: out.settings, last_sent: reports.lastSent(), tipi: tipi() });
 });
 
 router.get('/preview/:kind', ...guard, (req, res) => {
-  if (!reports.KINDS.includes(req.params.kind)) return res.status(404).json({ error: 'Report sconosciuto' });
+  if (!reports.definizione(req.params.kind)) return res.status(404).json({ error: 'Report sconosciuto' });
   const r = reports.build(req.params.kind, new Date());
   res.json(r ? { text: r.text, counts: r.counts } : { text: null, counts: null });
 });
 
 router.post('/send-now/:kind', ...guard, async (req, res) => {
-  if (!reports.KINDS.includes(req.params.kind)) return res.status(404).json({ error: 'Report sconosciuto' });
+  if (!reports.definizione(req.params.kind)) return res.status(404).json({ error: 'Report sconosciuto' });
   res.json(await reports.sendReport(req.params.kind, { actor: req.user.username }));
 });
 

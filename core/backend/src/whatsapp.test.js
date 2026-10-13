@@ -43,7 +43,7 @@ const BAD_KEY = { status: 200, body: 'ERROR: APIKey is invalid or phone number i
 (async () => {
   const wa = require('./whatsapp');
   const db = require('./db');
-  { const rep = require('./reports'); for (const k of rep.KINDS) rep.saveSettings(k, { enabled: false }); } // con i report accesi gli avvisi «scadenza» per riga restano muti: qui si provano gli avvisi
+  { const rep = require('./reports'); for (const d of rep.settings().definizioni) rep.saveSettings(d.id, { enabled: false }); } // con i report accesi gli avvisi «scadenza» per riga restano muti: qui si provano gli avvisi
 
   console.log('\n--- come si legge la risposta di CallMeBot ---');
 

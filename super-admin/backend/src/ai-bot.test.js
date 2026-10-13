@@ -20,7 +20,7 @@ console.log('\n--- cosa esce verso il modello ---');
 test('la frase è ripulita dai dati personali; niente record, solo i moduli', () => {
   const s = bot.sanitizeBot({ frase: 'ho pagato mario.rossi@x.it con IBAN IT60X0542811101000000123456', moduli: MODULI, oggi: '2026-10-11' });
   ok(!s.payload.frase.includes('mario.rossi') && !s.payload.frase.includes('IT60X05'), s.payload.frase);
-  eq(Object.keys(s.payload).sort(), ['frase', 'moduli', 'oggi', 'timbrature']);
+  eq(Object.keys(s.payload).sort(), ['frase', 'moduli', 'oggi', 'report', 'timbrature']);
 });
 test('frase vuota o senza moduli: errore; frase lunghissima: tagliata', () => {
   ok(!!bot.sanitizeBot({ frase: ' ', moduli: MODULI }).error); ok(!!bot.sanitizeBot({ frase: 'ciao', moduli: [] }).error);
@@ -75,6 +75,12 @@ test('timbra: solo entrata/uscita, ora HH:MM valida, data recente e non futura; 
 test('senza moduli di spesa ma con le timbrature la frase è accettata', () => {
   ok(!bot.sanitizeBot({ frase: 'sono entrata', oggi: '2026-10-12', timbrature: true, moduli: [] }).error);
   ok(!!bot.sanitizeBot({ frase: 'sono entrata', oggi: '2026-10-12', moduli: [] }).error);
+});
+test('elenco: «cosa» deve essere uno dei report del tenant (altrimenti, l\'elenco di partenza)', () => {
+  eq(bot.validateIntent({ azione: 'elenco', cosa: 'ore_periodo_1' }, mod, '2026-10-12', ['pagare', 'ore_periodo_1']).intent, { azione: 'elenco', cosa: 'ore_periodo_1' });
+  ok(!!bot.validateIntent({ azione: 'elenco', cosa: 'rm_rf' }, mod, '2026-10-12', ['pagare']).error);
+  eq(bot.validateIntent({ azione: 'elenco', cosa: 'scadute' }, mod).intent, { azione: 'elenco', cosa: 'scadute' });
+  eq(bot.sanitizeBot({ frase: 'cosa devo pagare', oggi: '2026-10-12', moduli: [{ slug: 'a', name: 'A' }], report: [{ id: 'pagare', nome: 'Quanto devo pagare' }, { id: 'NO!', nome: 'x' }] }).payload.report, [{ id: 'pagare', nome: 'Quanto devo pagare' }]);
 });
 test('risposta non oggetto: errore', () => { ok(!!bot.validateIntent('boh', mod).error); ok(!!bot.validateIntent(null, mod).error); });
 

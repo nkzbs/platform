@@ -12,17 +12,7 @@ const { esc } = require('./bot-ai');
 
 const oggiRoma = (now = new Date()) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(now);
 const oraRoma = (now = new Date()) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now);
-const GIORNI = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
-const shiftDay = (iso, n) => new Date(new Date(iso + 'T00:00:00Z').getTime() + n * 86400000).toISOString().slice(0, 10);
-const toMin = (t) => { const m = /^(\d{1,2}):(\d{2})/.exec(String(t == null ? '' : t)); return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null; };
-const hhmm = (t) => { const m = toMin(t); return m == null ? '' : String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
-const durata = (min) => Math.floor(min / 60) + 'h' + (min % 60 ? ' ' + String(min % 60).padStart(2, '0') + 'm' : '');
-// Stessa regola del calcolo dei moduli: tempo trascorso tra entrata e uscita (a cavallo della mezzanotte → +24h); aperta (manca un orario) = niente.
-function minuti(inizio, fine) {
-  const a = toMin(inizio), b = toMin(fine);
-  if (a == null || b == null) return null;
-  const d = b - a; return d < 0 ? d + 1440 : d;
-}
+const { GIORNI, shiftDay, toMin, hhmm, durata, minuti, intervallo, somma } = require('./ore-calc');
 
 // Il modulo delle presenze che questo utente vede (e i nomi dei suoi campi). Se ce n'è più d'uno, il primo.
 function modulo(user) {
@@ -93,31 +83,11 @@ async function annulla(user, chatId, pid) {
   return { html: '↩ Uscita annullata: il turno è di nuovo aperto.' };
 }
 
-function intervallo(periodo, oggi) {
-  if (periodo === 'oggi') return { da: oggi, a: oggi, titolo: 'Oggi' };
-  if (periodo === 'mese') return { da: oggi.slice(0, 8) + '01', a: oggi, titolo: 'Questo mese' };
-  if (periodo === 'mese_scorso') {
-    const ultimo = shiftDay(oggi.slice(0, 8) + '01', -1);
-    return { da: ultimo.slice(0, 8) + '01', a: ultimo, titolo: 'Mese scorso' };
-  }
-  const dow = new Date(oggi + 'T00:00:00Z').getUTCDay(); // 0 = domenica
-  return { da: shiftDay(oggi, -((dow + 6) % 7)), a: oggi, titolo: 'Questa settimana' };
-}
-
 function ore(user, periodo, now = new Date()) {
   const m = modulo(user);
   if (!m) return { html: 'Non hai un modulo di timbrature a cui il bot possa lavorare.' };
-  const oggi = oggiRoma(now), { da, a, titolo } = intervallo(periodo, oggi);
-  const giorni = new Map(); let aperti = 0;
-  for (const r of righe(user, m)) {
-    const g = String(r.d[m.R.data] || '').slice(0, 10);
-    if (!g || g < da || g > a) continue;
-    const t = minuti(r.d[m.R.inizio], r.d[m.R.fine]);
-    if (t == null) { if (toMin(r.d[m.R.inizio]) != null) aperti++; continue; }
-    const e = giorni.get(g) || { min: 0, turni: [] };
-    e.min += t; e.turni.push(hhmm(r.d[m.R.inizio]) + '–' + hhmm(r.d[m.R.fine])); giorni.set(g, e);
-  }
-  const tot = [...giorni.values()].reduce((s, e) => s + e.min, 0);
+  const oggi = oggiRoma(now), iv = intervallo(periodo, oggi), { titolo } = iv;
+  const { giorni, aperti, totale: tot } = somma(righe(user, m), m.R, iv);
   if (!giorni.size && !aperti) return { html: '<b>' + titolo + '</b>\nNessuna timbratura in questo periodo.' };
   const righeTxt = [...giorni.keys()].sort().map((g) => '• ' + GIORNI[new Date(g + 'T00:00:00Z').getUTCDay()] + ' ' + g.slice(8, 10) + '/' + g.slice(5, 7) + ' — <b>' + durata(giorni.get(g).min) + '</b> (' + giorni.get(g).turni.join(', ') + ')');
   return { html: '<b>' + titolo + '</b>: <b>' + durata(tot) + '</b> in ' + giorni.size + (giorni.size === 1 ? ' giorno' : ' giorni') + '\n\n' + righeTxt.slice(-31).join('\n') + (aperti ? '\n\n<i>' + aperti + (aperti === 1 ? ' turno è ancora aperto (manca l\'uscita) e non è contato.' : ' turni sono ancora aperti (manca l\'uscita) e non sono contati.') + '</i>' : '') };

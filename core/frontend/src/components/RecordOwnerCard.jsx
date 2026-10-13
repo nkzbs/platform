@@ -37,7 +37,7 @@ export default function RecordOwnerCard({ token }) {
   return (
     <div className="bg-surface-card rounded-md border border-gray-800 p-5 mb-8">
       <h2 className="text-base font-semibold text-ink mb-1">Proprietario delle righe automatiche</h2>
-      <p className="text-xs text-gray-500 mb-4">Le righe create senza una persona (automazioni, importazioni, mail) prendono questo proprietario, se non derivano da una riga che ne ha già uno. Conta nei moduli dove ognuno vede solo le proprie righe: una riga di un altro utente, o senza proprietario, non si vede a meno di essere admin.</p>
+      <p className="text-xs text-gray-500 mb-4">Le righe create senza una persona (automazioni, importazioni, mail) prendono questo proprietario, se non derivano da una riga che ne ha già uno e il modulo non ne ha scelto uno suo (Builder → Ruoli del modulo). Conta nei moduli dove ognuno vede solo le proprie righe: una riga di un altro utente, o senza proprietario, non si vede a meno di essere admin.</p>
       <div className="flex items-center gap-3 flex-wrap mb-5">
         <label className="text-sm text-gray-400">Proprietario predefinito</label>
         <select className={sel} value={owner || ''} onChange={(e) => salva(e.target.value)}>

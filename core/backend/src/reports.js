@@ -1,30 +1,63 @@
 'use strict';
-// Report su WhatsApp. Tre messaggi, ognuno risponde a una sola domanda e non parte se non c'è niente da dire:
-//   pagare    «quanto devo pagare»: ogni 27 (se cade nel fine settimana, il venerdì prima) tutto ciò che è "da pagare" dal giorno del report al 26 del
-//             mese dopo, più le voci scadute, con il totale per modulo e, se il progetto lo dichiara, «ultimo stipendio → ti restano».
-//   smistare  le righe ancora nello stato "nuovo" (es. bollette da Gmail): ogni sera, finché la coda non è vuota.
-//   scadute   le voci "da pagare" con la scadenza passata: una volta a settimana.
-// Quali moduli contano, cosa significa "da pagare" o "nuovo", e come si chiamano le righe lo dichiara il modulo (Builder → Avvisi, vedi module-roles.js):
-// qui non ci sono nomi di moduli né di campi. Giorno e ora sono quelli italiani. Sostituisce il vecchio «Riepilogo del mattino».
+// Report su WhatsApp e Telegram: DEFINIZIONI configurabili, non tre messaggi fissi. Ogni definizione sceglie un TIPO (una primitiva generica) e i suoi parametri;
+// se ne possono avere quante se ne vuole, anche dello stesso tipo, dalle impostazioni. I tipi:
+//   riepilogo_periodo  «quanto devo pagare»: le righe nello stato scelto (di solito «da fare») con scadenza dal giorno del report al giorno prima del mese dopo, più
+//                      le scadute, con il totale per modulo e, se si vuole, «ultimo stipendio → ti restano». Mensile (se il giorno cade nel weekend, il venerdì prima).
+//   coda               le righe in uno stato (di solito «nuovo»: da smistare): giornaliero o settimanale, solo se ce ne sono.
+//   in_ritardo         le righe nello stato scelto con la scadenza passata (da quanti giorni): giornaliero o settimanale, solo se ce ne sono.
+//   ore_periodo        le ore lavorate dai moduli di timbrature (ruoli data/inizio/fine) in un periodo, per persona. Mensile o settimanale.
+// Quali moduli contano, cosa significa «da fare» o «nuovo», come si chiamano le righe, e cosa sono le timbrature lo dichiara il modulo (Builder → Ruoli del modulo):
+// qui non ci sono nomi di moduli né di campi. Giorno e ora sono quelli italiani. I tre report storici (pagare, smistare, scadute) sono tre definizioni di partenza.
 const db = require('./db');
 const whatsapp = require('./whatsapp');
 const { logAudit } = require('./audit-log');
+const oreCalc = require('./ore-calc');
 
 const TAG = 'scadenza'; // i destinatari con questo tag ricevono i report (lo stesso degli avvisi per riga)
 const TZ = 'Europe/Rome';
-const LATE_DAYS = 45; // oltre questa soglia una riga "da pagare" è un residuo vecchio, non una scadenza
-const KINDS = ['pagare', 'smistare', 'scadute'];
 const FINESTRA_ORE = 5; // dopo l'ora scelta il report può ancora partire per 5 ore (utile se il NAS era spento all'ora esatta)
-const MAX_PAGARE = 8, MAX_SMISTARE = 6, MAX_SCADUTE = 8; // messaggi corti: il resto è «+ altre N»
+const STATI = ['nuovo', 'da_fare', 'fatto']; // i tre stati che un modulo dichiara (Builder → Avvisi)
 
+// I tipi di report: nome, frequenze ammesse, descrizione e valori di partenza dei parametri.
+const TIPI = {
+  riepilogo_periodo: {
+    nome: 'Totale in un periodo', frequenze: ['mensile'],
+    descrizione: 'Tutto ciò che è nello stato scelto dal giorno del report al giorno prima del mese dopo, più le voci scadute: totale, divisione per modulo ed elenco per data.',
+    vuoto: 'Niente da pagare in questo periodo.',
+    base: { stato: 'da_fare', freq: 'mensile', giorno: 27, ora: 18, weekend: 'venerdi_prima', stipendio: true, include_scadute: true, scadute_max_giorni: 45, max_righe: 8, titolo: 'Da pagare', emoji: '💳', invia_se_vuoto: true },
+  },
+  coda: {
+    nome: 'Righe da trattare', frequenze: ['giornaliera', 'settimanale'],
+    descrizione: 'Le righe che sono nello stato scelto (di solito «nuovo», da smistare), finché ce ne sono.',
+    vuoto: 'Niente da segnalare: il messaggio non partirebbe.',
+    base: { stato: 'nuovo', freq: 'giornaliera', weekday: 1, ora: 19, max_righe: 6, titolo: 'Da smistare', emoji: '📥', piede: 'Ti ricordo ogni sera finché non le smisti.', invia_se_vuoto: false },
+  },
+  in_ritardo: {
+    nome: 'Voci in ritardo', frequenze: ['settimanale', 'giornaliera'],
+    descrizione: 'Le righe nello stato scelto con la scadenza passata, con da quanti giorni. Se le hai già chiuse non arrivano più.',
+    vuoto: 'Niente in ritardo: il messaggio non partirebbe.',
+    base: { stato: 'da_fare', freq: 'settimanale', weekday: 1, ora: 19, scadute_max_giorni: 45, max_righe: 8, titolo: 'Scadute', emoji: '⚠', piede: 'Già pagate? Spuntale nella Checklist.', invia_se_vuoto: false },
+  },
+  ore_periodo: {
+    nome: 'Ore lavorate', frequenze: ['mensile', 'settimanale'],
+    descrizione: 'Le ore lavorate (dai moduli di timbrature) in un periodo, per persona. Ogni telefono Telegram riceve solo le sue.',
+    vuoto: 'Nessuna timbratura nel periodo: il messaggio non partirebbe.',
+    base: { freq: 'mensile', giorno: 1, weekday: 1, ora: 9, weekend: 'nessuno', periodo: 'mese_scorso', titolo: 'Ore lavorate', emoji: '🕒', invia_se_vuoto: false },
+  },
+};
+const FREQUENZE = ['mensile', 'giornaliera', 'settimanale'];
+
+// Le definizioni di partenza: i tre report storici (stessi id, così un messaggio già mandato non si ripete dopo l'aggiornamento).
 const DEFAULTS = {
   canali: { whatsapp: true, telegram: true }, // dove arrivano i report; Telegram parte solo se il bot è collegato e ci sono telefoni collegati
-  pagare: { enabled: true, day: 27, hour: 18, stipendio: true },
-  smistare: { enabled: true, hour: 19 },
-  scadute: { enabled: true, weekday: 1, hour: 19 }, // 1 = lunedì
+  definizioni: [
+    { id: 'pagare', tipo: 'riepilogo_periodo', nome: 'Quanto devo pagare', enabled: true },
+    { id: 'smistare', tipo: 'coda', nome: 'Da smistare', enabled: true },
+    { id: 'scadute', tipo: 'in_ritardo', nome: 'Voci scadute', enabled: true },
+  ],
 };
 
-// la tabella report_sent (un report già mandato = una riga kind+key) è creata in db.js
+// la tabella report_sent (un report già mandato = una riga kind+key; kind = id della definizione) è creata in db.js
 
 const NUM = { useGrouping: 'always' };
 const fmtEur = (n) => Number(n || 0).toLocaleString('it-IT', { ...NUM, minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
@@ -56,37 +89,84 @@ function endOfWindow(iso, day) {
   return ny + '-' + pad(nm) + '-' + pad(day - 1);
 }
 
-// ── impostazioni (JSON in tenant_settings.report_settings, con i valori di partenza) ────────────────────────────────────
+// ── impostazioni (JSON in tenant_settings.report_settings: { canali, definizioni: [...] }) ─────────────────────────────────
+const completa = (d) => ({ ...TIPI[d.tipo].base, ...d }); // una definizione con tutti i parametri (quelli non salvati prendono il valore di partenza del tipo)
+const ID = /^[a-z][a-z0-9_]{1,30}$/; // l'id è anche il comando del bot (/id)
+function leggi() { try { const r = db.prepare('SELECT report_settings s FROM tenant_settings WHERE id = 1').get(); return r && r.s ? JSON.parse(r.s) : {}; } catch (e) { return {}; } }
+function scrivi(obj) { db.prepare('UPDATE tenant_settings SET report_settings = ? WHERE id = 1').run(JSON.stringify(obj)); }
+// Impostazioni salvate nella forma vecchia (una chiave per report: { pagare: { day, hour, … } }) → definizioni.
+function dalleVecchie(saved) {
+  return DEFAULTS.definizioni.map((d) => {
+    const v = saved[d.id] || {}, o = { ...d };
+    if (v.enabled != null) o.enabled = !!v.enabled;
+    if (v.hour != null) o.ora = v.hour;
+    if (v.day != null) o.giorno = v.day;
+    if (v.weekday != null) o.weekday = v.weekday;
+    if (v.stipendio != null) o.stipendio = !!v.stipendio;
+    return o;
+  });
+}
 function settings() {
-  let saved = {};
-  try { const r = db.prepare('SELECT report_settings s FROM tenant_settings WHERE id = 1').get(); saved = r && r.s ? JSON.parse(r.s) : {}; } catch (e) { saved = {}; }
-  const out = {};
-  for (const k of [...KINDS, 'canali']) out[k] = { ...DEFAULTS[k], ...(saved[k] || {}) };
+  const saved = leggi();
+  const grezze = Array.isArray(saved.definizioni) ? saved.definizioni : dalleVecchie(saved);
+  const definizioni = grezze.filter((d) => d && ID.test(String(d.id)) && TIPI[d.tipo]).map(completa);
+  const out = { canali: { ...DEFAULTS.canali, ...(saved.canali || {}) }, definizioni };
+  definizioni.forEach((d) => { out[d.id] = d; }); // accesso comodo per id (settings().pagare)
   return out;
 }
-function saveSettings(kind, patch) {
-  if (![...KINDS, 'canali'].includes(kind)) return { error: 'Report sconosciuto' };
-  const cur = settings(), next = { ...cur[kind] };
-  const p = patch || {};
-  if (kind === 'canali') {
-    if (p.whatsapp != null) next.whatsapp = !!p.whatsapp;
-    if (p.telegram != null) next.telegram = !!p.telegram;
-    cur.canali = next;
-    db.prepare('UPDATE tenant_settings SET report_settings = ? WHERE id = 1').run(JSON.stringify(cur));
-    return { settings: cur };
+const definizione = (id) => settings().definizioni.find((d) => d.id === id) || null;
+const salva = (s) => scrivi({ canali: s.canali, definizioni: s.definizioni.map(({ ...d }) => d) });
+
+const word = (v, n) => String(v == null ? '' : v).replace(/[\r\n*_]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
+function saveSettings(id, patch) {
+  const cur = settings(), p = patch || {};
+  if (id === 'canali') {
+    if (p.whatsapp != null) cur.canali.whatsapp = !!p.whatsapp;
+    if (p.telegram != null) cur.canali.telegram = !!p.telegram;
+    salva(cur);
+    return { settings: settings() };
   }
+  const d = cur.definizioni.find((x) => x.id === id);
+  if (!d) return { error: 'Report sconosciuto' };
+  const T = TIPI[d.tipo];
   const int = (v, lo, hi) => { const n = parseInt(v, 10); return Number.isInteger(n) && n >= lo && n <= hi ? n : null; };
-  if (p.enabled != null) next.enabled = !!p.enabled;
-  if (p.hour != null) { const h = int(p.hour, 6, 22); if (h == null) return { error: "L'ora deve essere tra le 6 e le 22." }; next.hour = h; }
-  if (kind === 'pagare' && p.day != null) { const d = int(p.day, 2, 28); if (d == null) return { error: 'Il giorno deve essere tra 2 e 28.' }; next.day = d; }
-  if (kind === 'pagare' && p.stipendio != null) next.stipendio = !!p.stipendio;
-  if (kind === 'scadute' && p.weekday != null) { const w = int(p.weekday, 0, 6); if (w == null) return { error: 'Giorno della settimana non valido.' }; next.weekday = w; }
-  cur[kind] = next;
-  db.prepare('UPDATE tenant_settings SET report_settings = ? WHERE id = 1').run(JSON.stringify(cur));
-  return { settings: cur };
+  if (p.enabled != null) d.enabled = !!p.enabled;
+  const ora = p.ora != null ? p.ora : p.hour; // `hour`, `day`: i nomi della forma vecchia
+  if (ora != null) { const h = int(ora, 6, 22); if (h == null) return { error: "L'ora deve essere tra le 6 e le 22." }; d.ora = h; }
+  const giorno = p.giorno != null ? p.giorno : p.day;
+  if (giorno != null) { const g = int(giorno, d.tipo === 'riepilogo_periodo' ? 2 : 1, 28); if (g == null) return { error: 'Il giorno deve essere tra ' + (d.tipo === 'riepilogo_periodo' ? 2 : 1) + ' e 28.' }; d.giorno = g; }
+  if (p.weekday != null) { const w = int(p.weekday, 0, 6); if (w == null) return { error: 'Giorno della settimana non valido.' }; d.weekday = w; }
+  if (p.freq != null) { if (!T.frequenze.includes(p.freq)) return { error: 'Questo tipo di report non può essere «' + p.freq + '».' }; d.freq = p.freq; }
+  if (p.weekend != null) { if (!['venerdi_prima', 'nessuno'].includes(p.weekend)) return { error: 'Scelta non valida.' }; d.weekend = p.weekend; }
+  if (p.stato != null && 'stato' in T.base) { if (!STATI.includes(p.stato)) return { error: 'Stato non valido.' }; d.stato = p.stato; }
+  if (p.periodo != null && 'periodo' in T.base) { if (!oreCalc.PERIODI[p.periodo]) return { error: 'Periodo non valido.' }; d.periodo = p.periodo; }
+  if (p.max_righe != null) { const n = int(p.max_righe, 1, 30); if (n == null) return { error: 'Le righe mostrate vanno da 1 a 30.' }; d.max_righe = n; }
+  if (p.scadute_max_giorni != null) { const n = int(p.scadute_max_giorni, 1, 365); if (n == null) return { error: 'I giorni vanno da 1 a 365.' }; d.scadute_max_giorni = n; }
+  if (p.stipendio != null) d.stipendio = !!p.stipendio;
+  if (p.include_scadute != null) d.include_scadute = !!p.include_scadute;
+  if (p.invia_se_vuoto != null) d.invia_se_vuoto = !!p.invia_se_vuoto;
+  for (const [k, n] of [['nome', 40], ['titolo', 40], ['piede', 120], ['emoji', 8]]) if (p[k] != null) d[k] = word(p[k], n);
+  if (!d.nome) d.nome = T.nome;
+  salva(cur);
+  return { settings: settings() };
+}
+// Un report nuovo di un tipo, spento finché non lo si accende (non deve partire un messaggio a sorpresa).
+function addDefinition(tipo, nome) {
+  if (!TIPI[tipo]) return { error: 'Tipo di report sconosciuto' };
+  const cur = settings();
+  let n = 1; while (cur.definizioni.some((d) => d.id === tipo + '_' + n)) n++;
+  const d = { id: tipo + '_' + n, tipo, nome: word(nome, 40) || TIPI[tipo].nome, enabled: false };
+  cur.definizioni.push(d); salva(cur);
+  return { id: d.id, settings: settings() };
+}
+function removeDefinition(id) {
+  const cur = settings();
+  if (!cur.definizioni.some((d) => d.id === id)) return { error: 'Report sconosciuto' };
+  cur.definizioni = cur.definizioni.filter((d) => d.id !== id); salva(cur);
+  return { settings: settings() };
 }
 // I vecchi avvisi «scadenza» per singola riga (e il report periodico) non devono sommarsi ai report: con almeno un report acceso restano muti.
-function isEnabled() { const s = settings(); return KINDS.some((k) => s[k].enabled); }
+function isEnabled() { return settings().definizioni.some((d) => d.enabled); }
 
 // ── lettura dei dati, sempre attraverso ciò che i moduli dichiarano ───────────────────────────────────────────────────
 function avvisiModules(scope) {
@@ -108,17 +188,20 @@ function rows(slug, scope) {
   }
   return recs.map((r) => ({ id: r.id, data: r.data }));
 }
-// Le righe "da pagare" dei moduli che hanno acceso le scadenze, con la loro scadenza (`scadenza` se c'è, altrimenti `data`).
-function daPagare(scope) {
+// Le righe nello stato dichiarato (nuovo / da fare / fatto) dei moduli che hanno acceso gli avvisi giusti (le scadenze per «da fare», la coda per «nuovo»),
+// con la loro scadenza (`scadenza` se c'è, altrimenti `data`). Chi chiede `conData` non vuole le righe senza scadenza.
+function righeInStato(scope, stato, conData = true) {
   const items = [];
   for (const m of avvisiModules(scope)) {
-    if (!m.scadenze || !m.states.da_fare) continue;
+    if (!m.states[stato]) continue;
+    if (stato === 'da_fare' && !m.scadenze) continue;
+    if (stato === 'nuovo' && !m.nuovo) continue;
     const R = m.roles;
     for (const { id, data: d } of rows(m.slug, scope)) {
-      if (d[R.stato || '_stato'] !== m.states.da_fare) continue;
+      if (d[R.stato || '_stato'] !== m.states[stato]) continue;
       const due = d[R.scadenza] || d[R.data];
-      if (!due) continue;
-      items.push({ slug: m.slug, id, descrizione: String(d[R.descrizione] || '(senza descrizione)').trim(), label: m.label, importo: Number(d[R.importo]) || 0, due: String(due).slice(0, 10) });
+      if (conData && !due) continue;
+      items.push({ slug: m.slug, id, descrizione: String(d[R.descrizione] || '(senza descrizione)').trim(), label: m.label, noun_s: m.noun_s, noun_p: m.noun_p, importo: Number(d[R.importo]) || 0, due: due ? String(due).slice(0, 10) : '' });
     }
   }
   return items;
@@ -141,78 +224,102 @@ function ultimoStipendio(scope) {
   return best;
 }
 
-// ── i tre messaggi ────────────────────────────────────────────────────────────────────────────────────────────────────
-function buildPagare(now = new Date(), scope = null) {
-  const cfg = settings(), s = cfg.pagare, today = romeParts(now).date;
-  const fine = endOfWindow(today, s.day), lateFrom = addDays(today, -LATE_DAYS);
-  const tutti = daPagare(scope);
-  const scadute = tutti.filter((x) => x.due < today && x.due >= lateFrom).sort((a, b) => a.due.localeCompare(b.due));
+// ── i messaggi, uno per tipo ───────────────────────────────────────────────────────────────────────────────────────
+const intestazione = (d, resto) => d.emoji + ' *' + d.titolo + '*' + (resto ? ' · ' + resto : '');
+
+function buildRiepilogo(d, now = new Date(), scope = null) {
+  const cfg = settings(), today = romeParts(now).date;
+  const fine = endOfWindow(today, d.giorno), lateFrom = addDays(today, -d.scadute_max_giorni);
+  const tutti = righeInStato(scope, d.stato);
+  const scadute = d.include_scadute ? tutti.filter((x) => x.due < today && x.due >= lateFrom).sort((a, b) => a.due.localeCompare(b.due)) : [];
   const nel = tutti.filter((x) => x.due >= today && x.due <= fine).sort((a, b) => a.due.localeCompare(b.due) || b.importo - a.importo);
   const tot = (a) => a.reduce((t, x) => t + x.importo, 0);
   const totale = tot(nel) + tot(scadute);
-  const intest = '💳 *Da pagare* · fino al ' + shortDate(fine);
-  if (!nel.length && !scadute.length) return { text: intest + '\n\nNiente da pagare in questo periodo.', counts: { voci: 0, scadute: 0, totale: 0 } };
+  const intest = intestazione(d, 'fino al ' + shortDate(fine));
+  if (!nel.length && !scadute.length) return { text: intest + '\n\n' + TIPI.riepilogo_periodo.vuoto, counts: { voci: 0, scadute: 0, totale: 0 } };
   const perModulo = {};
   [...nel, ...scadute].forEach((x) => { perModulo[x.label] = (perModulo[x.label] || 0) + x.importo; });
   const parts = [intest, '*' + fmtEur(totale) + '*' + (Object.keys(perModulo).length > 1 ? '  (' + Object.entries(perModulo).map(([l, v]) => l + ' ' + fmtCompact(v)).join(' · ') + ')' : '')];
   if (scadute.length) {
-    // le scadute le elenca il loro messaggio, se è acceso: qui basta il totale (non si ripetono due volte)
+    // le scadute le elenca il report «in ritardo», se ce n'è uno acceso: qui basta il totale (non si ripetono due volte)
+    const altro = cfg.definizioni.find((x) => x.tipo === 'in_ritardo' && x.enabled && x.stato === d.stato);
     parts.push('⚠ *Scadute ' + fmtCompact(tot(scadute)) + '* — ' + scadute.length + (scadute.length === 1 ? ' voce' : ' voci') + ' dal ' + shortDate(scadute[0].due)
-      + (cfg.scadute.enabled ? '\n→ l\'elenco è nel messaggio «Voci scadute»' : ''));
-    if (!cfg.scadute.enabled) parts.push(scadute.slice(0, MAX_PAGARE).map((x) => shortDate(x.due) + '  ' + x.descrizione + ' — ' + fmtCompact(x.importo)).join('\n'));
+      + (altro ? '\n→ l\'elenco è nel messaggio «' + altro.nome + '»' : ''));
+    if (!altro) parts.push(scadute.slice(0, d.max_righe).map((x) => shortDate(x.due) + '  ' + x.descrizione + ' — ' + fmtCompact(x.importo)).join('\n'));
   }
   if (nel.length) {
-    const lines = nel.slice(0, MAX_PAGARE).map((x) => shortDate(x.due) + '  ' + x.descrizione + ' — ' + fmtCompact(x.importo));
-    if (nel.length > MAX_PAGARE) lines.push('+ altre ' + (nel.length - MAX_PAGARE));
+    const lines = nel.slice(0, d.max_righe).map((x) => shortDate(x.due) + '  ' + x.descrizione + ' — ' + fmtCompact(x.importo));
+    if (nel.length > d.max_righe) lines.push('+ altre ' + (nel.length - d.max_righe));
     parts.push('*In arrivo*\n' + lines.join('\n'));
   }
-  if (s.stipendio) {
+  if (d.stipendio) {
     const st = ultimoStipendio(scope);
     if (st) { const resto = st.importo - totale; parts.push('💰 Stipendio ' + fmtCompact(st.importo) + ' → ' + (resto >= 0 ? 'restano *' + fmtCompact(resto) + '*' : 'mancano *' + fmtCompact(-resto) + '*')); }
   }
   return { text: parts.join('\n\n'), counts: { voci: nel.length, scadute: scadute.length, totale } };
 }
 
-function buildSmistare(now = new Date(), scope = null) {
+function buildCoda(d, now = new Date(), scope = null) {
   const righe = []; let nome = null;
-  for (const m of avvisiModules(scope)) {
-    if (!m.nuovo || !m.states.nuovo) continue;
-    const R = m.roles;
-    for (const { data: d } of rows(m.slug, scope)) {
-      if (d[R.stato || '_stato'] !== m.states.nuovo) continue;
-      nome = nome || { s: m.noun_s || 'riga', p: m.noun_p || 'righe' };
-      const imp = Number(d[R.importo]) || 0, scad = d[R.scadenza] || d[R.data];
-      righe.push(String(d[R.descrizione] || '(senza descrizione)').trim() + ' — ' + (imp > 0 ? fmtCompact(imp) : 'importo da verificare') + (scad ? ' · ' + shortDate(String(scad).slice(0, 10)) : ''));
-    }
+  for (const x of righeInStato(scope, d.stato, false)) {
+    nome = nome || { s: x.noun_s || 'riga', p: x.noun_p || 'righe' };
+    righe.push(x.descrizione + ' — ' + (x.importo > 0 ? fmtCompact(x.importo) : 'importo da verificare') + (x.due ? ' · ' + shortDate(x.due) : ''));
   }
   if (!righe.length) return null;
   const n = righe.length;
-  const lines = righe.slice(0, MAX_SMISTARE).map((x) => '• ' + x);
-  if (n > MAX_SMISTARE) lines.push('+ altre ' + (n - MAX_SMISTARE));
-  return { text: '📥 *Da smistare* · ' + n + ' ' + (n === 1 ? nome.s : nome.p) + '\n\n' + lines.join('\n') + '\n\nTi ricordo ogni sera finché non le smisti.', counts: { voci: n } };
+  const lines = righe.slice(0, d.max_righe).map((x) => '• ' + x);
+  if (n > d.max_righe) lines.push('+ altre ' + (n - d.max_righe));
+  return { text: intestazione(d, n + ' ' + (n === 1 ? nome.s : nome.p)) + '\n\n' + lines.join('\n') + (d.piede ? '\n\n' + d.piede : ''), counts: { voci: n } };
 }
 
-function buildScadute(now = new Date(), scope = null) {
-  const today = romeParts(now).date, lateFrom = addDays(today, -LATE_DAYS);
-  const s = daPagare(scope).filter((x) => x.due < today && x.due >= lateFrom).sort((a, b) => a.due.localeCompare(b.due));
+function buildInRitardo(d, now = new Date(), scope = null) {
+  const today = romeParts(now).date, lateFrom = addDays(today, -d.scadute_max_giorni);
+  const s = righeInStato(scope, d.stato).filter((x) => x.due < today && x.due >= lateFrom).sort((a, b) => a.due.localeCompare(b.due));
   if (!s.length) return null;
   const totale = s.reduce((t, x) => t + x.importo, 0);
-  const lines = s.slice(0, MAX_SCADUTE).map((x) => '• ' + x.descrizione + ' — ' + fmtCompact(x.importo) + ' · da ' + daysBetween(x.due, today) + ' gg');
-  if (s.length > MAX_SCADUTE) lines.push('+ altre ' + (s.length - MAX_SCADUTE));
-  return { text: '⚠ *Scadute* · ' + fmtEur(totale) + ' (' + s.length + (s.length === 1 ? ' voce' : ' voci') + ')\n\n' + lines.join('\n') + '\n\nGià pagate? Spuntale nella Checklist.', counts: { voci: s.length, totale }, items: s.slice(0, MAX_SCADUTE) };
+  const lines = s.slice(0, d.max_righe).map((x) => '• ' + x.descrizione + ' — ' + fmtCompact(x.importo) + ' · da ' + daysBetween(x.due, today) + ' gg');
+  if (s.length > d.max_righe) lines.push('+ altre ' + (s.length - d.max_righe));
+  return { text: intestazione(d, fmtEur(totale) + ' (' + s.length + (s.length === 1 ? ' voce' : ' voci') + ')') + '\n\n' + lines.join('\n') + (d.piede ? '\n\n' + d.piede : ''), counts: { voci: s.length, totale }, items: s.slice(0, d.max_righe) };
 }
 
-const build = (kind, now, scope) => (kind === 'pagare' ? buildPagare(now, scope) : kind === 'smistare' ? buildSmistare(now, scope) : kind === 'scadute' ? buildScadute(now, scope) : null);
-const LABEL = { pagare: 'Report: da pagare', smistare: 'Report: da smistare', scadute: 'Report: voci scadute' };
+// Ore lavorate per persona. Con `scope.user` (non admin) solo le righe che quell'utente vede; senza scope (WhatsApp) tutte, divise per chi le ha create.
+function buildOre(d, now = new Date(), scope = null) {
+  const iv = oreCalc.intervallo(d.periodo, romeParts(now).date);
+  const persone = new Map(); let aperti = 0;
+  for (const m of require('./module-roles').list({ kind: 'presenze' })) {
+    if (scope && scope.slugs && !scope.slugs.has(m.module_slug)) continue;
+    const R = m.roles; if (!R.data || !R.inizio || !R.fine) continue;
+    const owner = new Map(db.prepare('SELECT r.id, COALESCE(u.display_name, u.username) AS nome FROM records r LEFT JOIN users u ON u.id = r.user_id WHERE r.module_slug = ?').all(m.module_slug).map((r) => [r.id, r.nome || '—']));
+    const perNome = new Map();
+    for (const r of rows(m.module_slug, scope)) { const n = owner.get(r.id) || '—'; (perNome.get(n) || perNome.set(n, []).get(n)).push({ d: r.data }); }
+    for (const [n, righe] of perNome) {
+      const s = oreCalc.somma(righe, R, iv); aperti += s.aperti;
+      if (!s.giorni.size) continue;
+      const e = persone.get(n) || { min: 0, giorni: 0 }; e.min += s.totale; e.giorni += s.giorni.size; persone.set(n, e);
+    }
+  }
+  if (!persone.size) return null;
+  const lines = [...persone.entries()].sort((a, b) => b[1].min - a[1].min).map(([n, e]) => '• ' + n + ' — *' + oreCalc.durata(e.min) + '* (' + e.giorni + (e.giorni === 1 ? ' giorno' : ' giorni') + ')');
+  const tot = [...persone.values()].reduce((t, e) => t + e.min, 0);
+  return { text: intestazione(d, iv.titolo) + '\n\n' + lines.join('\n') + (persone.size > 1 ? '\n\nTotale: *' + oreCalc.durata(tot) + '*' : '') + (aperti ? '\n\n_' + aperti + (aperti === 1 ? ' turno è ancora aperto e non è contato.' : ' turni sono ancora aperti e non sono contati.') + '_' : ''), counts: { persone: persone.size, minuti: tot } };
+}
 
-function writeLog(kind, esito, descrizione) {
-  try { db.prepare("INSERT INTO automation_logs (module_slug, automation_label, trigger_desc, action_desc, esito) VALUES ('sistema', ?, ?, ?, ?)").run(LABEL[kind], 'pianificato', String(descrizione).slice(0, 400), esito); } catch (e) { /* mai bloccare */ }
+const BUILDERS = { riepilogo_periodo: buildRiepilogo, coda: buildCoda, in_ritardo: buildInRitardo, ore_periodo: buildOre };
+// Il messaggio di una definizione (un oggetto definizione o il suo id); null se non c'è niente da dire (o la definizione non esiste).
+function build(def, now, scope) {
+  const d = typeof def === 'string' ? definizione(def) : def;
+  return d && BUILDERS[d.tipo] ? BUILDERS[d.tipo](d, now, scope) : null;
+}
+
+function writeLog(d, esito, descrizione) {
+  try { db.prepare("INSERT INTO automation_logs (module_slug, automation_label, trigger_desc, action_desc, esito) VALUES ('sistema', ?, ?, ?, ?)").run('Report: ' + d.nome, 'pianificato', String(descrizione).slice(0, 400), esito); } catch (e) { /* mai bloccare */ }
 }
 
 // Invia un report ora, su tutti i canali accesi (WhatsApp e/o Telegram). Ritorna { esito }: 'inviato' | 'parziale' | 'FALLITO' | 'nulla da segnalare' | 'non configurato'.
 // WhatsApp riceve il messaggio completo; ogni telefono Telegram riceve la SUA versione (solo i moduli e le righe che quell'utente può vedere), con i bottoni.
-async function sendReport(kind, { now = new Date(), actor = 'sistema' } = {}) {
-  if (!KINDS.includes(kind)) return { esito: 'FALLITO', motivo: 'Report sconosciuto' };
+async function sendReport(id, { now = new Date(), actor = 'sistema' } = {}) {
+  const d = definizione(id);
+  if (!d) return { esito: 'FALLITO', motivo: 'Report sconosciuto' };
   const canali = settings().canali;
   const tg = require('./telegram');
 
@@ -232,8 +339,8 @@ async function sendReport(kind, { now = new Date(), actor = 'sistema' } = {}) {
       : canali.whatsapp && !dest.length ? 'Nessun destinatario attivo con il tag "' + TAG + '"' : 'Nessun telefono collegato a Telegram';
     return { esito: 'non configurato', motivo };
   }
-  const r = build(kind, now);
-  if (!r) { writeLog(kind, 'nulla da segnalare', 'Niente da segnalare'); return { esito: 'nulla da segnalare' }; }
+  const r = build(d, now);
+  if (!r) { writeLog(d, 'nulla da segnalare', 'Niente da segnalare'); return { esito: 'nulla da segnalare' }; }
 
   const parti = []; // { canale, ok, dettaglio }
   if (waOk) {
@@ -244,31 +351,32 @@ async function sendReport(kind, { now = new Date(), actor = 'sistema' } = {}) {
     for (const l of links) {
       const user = tg.linkedUser(l.chat_id);
       if (!user) continue;
-      const mio = build(kind, now, tg.scopeFor(user)); // la versione di questo utente
+      const mio = build(d, now, tg.scopeFor(user)); // la versione di questo utente
       if (!mio) continue;                               // niente da dire per lui: nessun messaggio
-      const o = await tg.sendReportTo(l.chat_id, kind, mio);
+      const o = await tg.sendReportTo(l.chat_id, d.id, mio);
       parti.push({ canale: 'Telegram', ok: o.ok ? 1 : 0, dettaglio: (user.display_name || user.username) + (o.ok ? ' ✓' : ' ✗ ' + o.reason) });
     }
   }
   const tot = parti.length, somma = parti.reduce((t, p) => t + p.ok, 0);
   const esito = !tot ? 'nulla da segnalare' : somma === tot ? 'inviato' : somma === 0 ? 'FALLITO' : 'parziale';
   const dettaglio = parti.map((p) => p.canale + ': ' + p.dettaglio).join(' | ');
-  writeLog(kind, esito, JSON.stringify(r.counts) + ' — ' + dettaglio);
-  logAudit(actor, 'report.send.' + kind, null, { esito });
+  writeLog(d, esito, JSON.stringify(r.counts) + ' — ' + dettaglio);
+  logAudit(actor, 'report.send.' + d.id, null, { esito });
   return { esito, dettaglio, counts: r.counts };
 }
 
 // Il report è «dovuto» adesso? Ritorna la chiave che lo identifica (per non mandarlo due volte) oppure null.
-function dueKey(kind, s, now) {
+function dueKey(d, now) {
   const { date, hour } = romeParts(now);
-  const inFinestra = hour >= s.hour && hour < s.hour + FINESTRA_ORE;
-  if (kind === 'pagare') {
-    const sd = sendDateFor(date, s.day), payday = date.slice(0, 7) + '-' + pad(s.day);
-    if (date === sd) return hour >= s.hour ? sd : null;
-    return date > sd && date <= payday ? sd : null; // il NAS era spento il giorno stabilito: parte appena torna, fino al giorno-paga
+  const inFinestra = hour >= d.ora && hour < d.ora + FINESTRA_ORE;
+  if (d.freq === 'mensile') {
+    const giornoPaga = date.slice(0, 7) + '-' + pad(d.giorno);
+    const sd = d.weekend === 'venerdi_prima' ? sendDateFor(date, d.giorno) : giornoPaga;
+    if (date === sd) return hour >= d.ora ? sd : null;
+    return date > sd && date <= giornoPaga ? sd : null; // il NAS era spento il giorno stabilito: parte appena torna, fino al giorno-paga
   }
-  if (kind === 'smistare') return inFinestra ? date : null;
-  if (kind === 'scadute') return weekdayOf(date) === s.weekday && inFinestra ? date : null;
+  if (d.freq === 'giornaliera') return inFinestra ? date : null;
+  if (d.freq === 'settimanale') return weekdayOf(date) === d.weekday && inFinestra ? date : null;
   return null;
 }
 
@@ -280,16 +388,14 @@ async function tick(now = new Date()) {
   running = true;
   const fatti = [];
   try {
-    const all = settings();
-    for (const kind of KINDS) {
-      const s = all[kind];
-      if (!s.enabled) continue;
-      const key = dueKey(kind, s, now);
+    for (const d of settings().definizioni) {
+      if (!d.enabled) continue;
+      const key = dueKey(d, now);
       if (!key) continue;
-      if (db.prepare('SELECT 1 FROM report_sent WHERE kind = ? AND key = ?').get(kind, key)) continue;
-      if (kind !== 'pagare' && !build(kind, now)) continue; // niente da dire: non si segna, può ancora arrivare qualcosa entro la finestra
-      db.prepare('INSERT OR IGNORE INTO report_sent (kind, key) VALUES (?, ?)').run(kind, key);
-      fatti.push({ kind, key, ...(await sendReport(kind, { now })) });
+      if (db.prepare('SELECT 1 FROM report_sent WHERE kind = ? AND key = ?').get(d.id, key)) continue;
+      if (!d.invia_se_vuoto && !build(d, now)) continue; // niente da dire: non si segna, può ancora arrivare qualcosa entro la finestra
+      db.prepare('INSERT OR IGNORE INTO report_sent (kind, key) VALUES (?, ?)').run(d.id, key);
+      fatti.push({ kind: d.id, key, ...(await sendReport(d.id, { now })) });
     }
   } finally { running = false; }
   return { inviati: fatti };
@@ -297,7 +403,7 @@ async function tick(now = new Date()) {
 
 function lastSent() {
   const out = {};
-  for (const k of KINDS) { const r = db.prepare('SELECT key, sent_at FROM report_sent WHERE kind = ? ORDER BY sent_at DESC, rowid DESC LIMIT 1').get(k); out[k] = r ? r.sent_at : null; }
+  for (const d of settings().definizioni) { const r = db.prepare('SELECT key, sent_at FROM report_sent WHERE kind = ? ORDER BY sent_at DESC, rowid DESC LIMIT 1').get(d.id); out[d.id] = r ? r.sent_at : null; }
   return out;
 }
 
@@ -305,7 +411,7 @@ function startReports() {
   const { withLock } = require('./scheduler-lock');
   const guarded = withLock('reports', 55000, tick);
   setInterval(() => { Promise.resolve().then(() => guarded()).catch((e) => console.error('[report]', e.message)); }, 60 * 1000);
-  console.log('Report su WhatsApp: controllo ogni minuto (da pagare il 27, da smistare ogni sera, scadute il lunedì)');
+  console.log('Report: controllo ogni minuto (le definizioni si scelgono in Impostazioni → Report)');
 }
 
-module.exports = { rows, avvisiModules, KINDS, TAG, DEFAULTS, settings, saveSettings, isEnabled, build, buildPagare, buildSmistare, buildScadute, sendReport, tick, dueKey, lastSent, startReports, romeParts, sendDateFor, endOfWindow, addDays, weekdayOf };
+module.exports = { rows, avvisiModules, TIPI, STATI, FREQUENZE, TAG, DEFAULTS, settings, definizione, saveSettings, addDefinition, removeDefinition, isEnabled, build, sendReport, tick, dueKey, lastSent, startReports, romeParts, sendDateFor, endOfWindow, addDays, weekdayOf };

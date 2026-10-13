@@ -19,12 +19,14 @@ export default function ModuleRolesSection({ token, baseUrl, slug, fields, state
   const api = useApi(token, baseUrl)
   const [cfg, setCfg] = useState(null)
   const [saved, setSaved] = useState(false)
+  const [utenti, setUtenti] = useState([])
+  useEffect(() => { api.get('/record-owner').then((d) => d && Array.isArray(d.utenti) && setUtenti(d.utenti)) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { setCfg(null); api.get('/module-roles/' + slug).then((d) => setCfg(d && d.module_slug ? { ...d, riepiloghi: { ...RP0, ...(d.riepiloghi || {}) }, estratto: { ...ES0, ...(d.estratto || {}) }, avvisi: { ...AV0, ...(d.avvisi || {}), states: { ...AV0.states, ...((d.avvisi || {}).states || {}) }, piano: { ...PIANO0, ...((d.avvisi || {}).piano || {}), campi: { ...PIANO0.campi, ...(((d.avvisi || {}).piano || {}).campi || {}) } } } } : { kind: null, uses: [], roles: {}, avvisi: AV0, riepiloghi: RP0, estratto: ES0 })) }, [slug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async (next) => {
     setCfg(next); setSaved(false)
-    const res = await api.put('/module-roles/' + slug, { kind: next.kind || null, uses: next.uses, roles: next.roles, avvisi: next.avvisi, riepiloghi: next.riepiloghi, estratto: next.estratto })
+    const res = await api.put('/module-roles/' + slug, { kind: next.kind || null, uses: next.uses, roles: next.roles, avvisi: next.avvisi, riepiloghi: next.riepiloghi, estratto: next.estratto, owner_user_id: next.owner_user_id || null })
     if (res.ok) setSaved(true)
   }
   if (!cfg) return null
@@ -91,6 +93,14 @@ export default function ModuleRolesSection({ token, baseUrl, slug, fields, state
               <input className={txt} placeholder="es. Rata" defaultValue={(cfg.riepiloghi.rate_categories || []).join(', ')} key={slug + 'rc'} onBlur={(e) => setRp({ rate_categories: e.target.value })} />
             </div>
           )}
+          <div className="mt-3 pt-2 border-t border-gray-800">
+            <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Proprietario delle righe automatiche</div>
+            <div className="text-[10.5px] text-gray-600 mb-1">Le righe create senza una persona (mail, estratto conto, rate, importazioni) in questo modulo sono di:</div>
+            <select className={sel} value={cfg.owner_user_id || ''} onChange={(e) => save({ ...cfg, owner_user_id: e.target.value ? parseInt(e.target.value, 10) : null })}>
+              <option value="">Il proprietario del progetto (Impostazioni → Utenti)</option>
+              {utenti.map((u) => <option key={u.id} value={u.id}>{u.display_name || u.username}</option>)}
+            </select>
+          </div>
           {cfg.uses.includes('estratto') && cfg.kind === 'spesa' && (
             <div className="mt-3 pt-2 border-t border-gray-800">
               <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Estratto conto</div>

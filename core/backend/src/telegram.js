@@ -17,7 +17,6 @@ const { logAudit } = require('./audit-log');
 const API = 'https://api.telegram.org';
 const CODE_TTL_MS = 10 * 60 * 1000;
 const RATE_PER_MIN = 20;
-const KINDS = ['pagare', 'smistare', 'scadute'];
 
 // ── configurazione (riga 'telegram' di connections: token cifrato, segreto del webhook, nome del bot) ───────────────────
 function creds() {
@@ -114,10 +113,10 @@ function scopeFor(user) {
 }
 const shorten = (t, n) => (String(t).length > n ? String(t).slice(0, n - 1) + '…' : String(t));
 function payButton(item) { return { text: '✅ Pagata · ' + shorten(item.descrizione, 22) + ' ' + String(item.importo).replace('.', ','), callback_data: 'pay:' + item.slug + ':' + item.id }; }
-function renderReport(kind, result) {
+function renderReport(kind, result) { // `kind` = id della definizione; i report che elencano righe da chiudere (result.items) hanno il bottone «Pagata» per ognuna
   const c = creds();
   const rows = [];
-  if (kind === 'scadute' && Array.isArray(result.items)) result.items.forEach((it) => rows.push([payButton(it)]));
+  if (Array.isArray(result.items)) result.items.forEach((it) => rows.push([payButton(it)]));
   if (c && c.app_url) rows.push([{ text: 'Apri l\'app', url: c.app_url }]);
   return { html: waToHtml(result.text), keyboard: rows };
 }
@@ -127,7 +126,11 @@ async function sendReportTo(chatId, kind, result) {
 }
 
 // ── cosa fa il bot quando riceve qualcosa ───────────────────────────────────────────────────────────────────────────────
-const AIUTO = '<b>Cosa so fare</b>\n/pagare — quanto devi pagare\n/scadute — le voci scadute, con il bottone «Pagata»\n/smistare — le righe da smistare\n/timbra — entrata e uscita (se hai le timbrature)\n/ore — le ore della settimana\n\n<b>Oppure scrivimi come parli</b>, per esempio:\n• «quanto ho speso di benzina a settembre?»\n• «ho pagato l\'affitto»\n• «smista la bolletta A2A in 3 rate»\n• «ho speso 20 euro di benzina»\n• «sono entrata», «uscita alle 12:30», «quante ore ho fatto questa settimana?»\n• mandami la <b>foto di uno scontrino</b> o il <b>PDF</b> di una bolletta e li leggo\n\nOgni modifica ti viene mostrata con un bottone di conferma: senza il tuo tocco non cambio niente (le timbrature si registrano subito, con il bottone «Annulla»).\n/scollega — scollega questo telefono';
+// I comandi dei report sono quelli delle definizioni accese (/id): cambiano con le impostazioni, non sono scritti qui.
+function aiuto() {
+  const rep = require('./reports').settings().definizioni.filter((d) => d.enabled).map((d) => '/' + d.id + ' — ' + esc(d.nome)).join('\n');
+  return '<b>Cosa so fare</b>\n' + (rep ? rep + '\n' : '') + '/report — tutti i report\n/timbra — entrata e uscita (se hai le timbrature)\n/ore — le ore della settimana\n\n<b>Oppure scrivimi come parli</b>, per esempio:\n• «quanto ho speso di benzina a settembre?»\n• «ho pagato l\'affitto»\n• «smista la bolletta A2A in 3 rate»\n• «ho speso 20 euro di benzina»\n• «sono entrata», «uscita alle 12:30», «quante ore ho fatto questa settimana?»\n• mandami la <b>foto di uno scontrino</b> o il <b>PDF</b> di una bolletta e li leggo\n\nOgni modifica ti viene mostrata con un bottone di conferma: senza il tuo tocco non cambio niente (le timbrature si registrano subito, con il bottone «Annulla»).\n/scollega — scollega questo telefono';
+}
 const NON_COLLEGATO = 'Questo telefono non è collegato all\'app.\nNell\'app: <b>Impostazioni → Il mio account → Telegram → Collega il mio Telegram</b>, poi tocca il link che ti viene mostrato.';
 const hits = new Map(); // chat → istanti degli ultimi messaggi
 function tooMany(chatId, now) {
@@ -178,11 +181,24 @@ async function handleFree(chatId, user, text, now) {
   return sendMessage(chatId, p.html, p.keyboard);
 }
 
-async function runCommand(chatId, user, kind, now) {
-  const result = require('./reports').build(kind, new Date(now), scopeFor(user));
-  if (!result) return sendMessage(chatId, kind === 'smistare' ? 'Niente da smistare: la coda è vuota. 👍' : 'Nessuna voce scaduta. 👍');
-  const r = renderReport(kind, result);
+// Un report (definizione per id) per questo utente, adesso. Ritorna { html, keyboard? }.
+function reportFor(user, id, now) {
+  const reports = require('./reports'), d = reports.definizione(id);
+  if (!d) return { html: 'Questo report non esiste (più).' };
+  const result = reports.build(d, new Date(now), scopeFor(user));
+  if (!result) return { html: 'Niente da segnalare per «' + esc(d.nome) + '». 👍' };
+  const r = renderReport(d.id, result);
+  return { html: r.html, keyboard: r.keyboard };
+}
+async function runCommand(chatId, user, id, now) {
+  const r = reportFor(user, id, now);
   return sendMessage(chatId, r.html, r.keyboard);
+}
+// /report: un bottone per ogni report acceso
+async function reportMenu(chatId) {
+  const defs = require('./reports').settings().definizioni.filter((d) => d.enabled);
+  if (!defs.length) return sendMessage(chatId, 'Nessun report è acceso (Impostazioni → Report).');
+  return sendMessage(chatId, 'Quale report vuoi vedere?', defs.map((d) => [{ text: d.emoji + ' ' + d.nome, callback_data: 'rp:' + d.id }]));
 }
 
 async function handleMessage(msg, now) {
@@ -196,11 +212,11 @@ async function handleMessage(msg, now) {
   if (cmd === '/start' && args[0]) {
     const user = consumeLinkCode(args[0], chatId, [msg.from && msg.from.first_name, msg.from && msg.from.username && '@' + msg.from.username].filter(Boolean).join(' '));
     if (!user) return sendMessage(chatId, 'Il codice non è valido o è scaduto. Generane uno nuovo dall\'app (dura 10 minuti, si usa una volta sola).');
-    return sendMessage(chatId, '✅ Collegato come <b>' + esc(user.display_name || user.username) + '</b>.\n\n' + AIUTO);
+    return sendMessage(chatId, '✅ Collegato come <b>' + esc(user.display_name || user.username) + '</b>.\n\n' + aiuto());
   }
   const user = linkedUser(chatId);
   if (!user) return sendMessage(chatId, NON_COLLEGATO);
-  if (cmd === '/start' || cmd === '/aiuto' || cmd === '/help') return sendMessage(chatId, 'Ciao ' + esc(user.display_name || user.username) + '!\n\n' + AIUTO);
+  if (cmd === '/start' || cmd === '/aiuto' || cmd === '/help') return sendMessage(chatId, 'Ciao ' + esc(user.display_name || user.username) + '!\n\n' + aiuto());
   if (cmd === '/scollega') { db.prepare('DELETE FROM telegram_links WHERE chat_id = ?').run(chatId); logAudit(user.username, 'telegram.unlink', chatId, null); return sendMessage(chatId, 'Scollegato. Per ricollegarti genera un nuovo codice dall\'app.'); }
   if (cmd === '/timbra' || cmd === '/ore') {
     const tb = require('./bot-timbrature');
@@ -208,8 +224,9 @@ async function handleMessage(msg, now) {
     const out = cmd === '/ore' ? tb.ore(user, 'settimana', new Date(now)) : tb.menu();
     return sendMessage(chatId, out.html, out.keyboard);
   }
-  const kind = { '/pagare': 'pagare', '/scadute': 'scadute', '/smistare': 'smistare' }[cmd];
-  if (kind) return runCommand(chatId, user, kind, now);
+  if (cmd === '/report') return reportMenu(chatId);
+  const def = require('./reports').settings().definizioni.find((d) => '/' + d.id === cmd); // i comandi dei report sono gli id delle definizioni
+  if (def) return runCommand(chatId, user, def.id, now);
   // una foto (scontrino) o un file: la foto di uno scontrino e un PDF di bolletta si leggono con l'AI; poi tu confermi
   if (msg.photo && msg.photo.length) {
     if (aiTooMany(chatId, now)) return sendMessage(chatId, 'Un momento, sto ricevendo troppe richieste: riprova tra un minuto.');
@@ -222,7 +239,7 @@ async function handleMessage(msg, now) {
     const out = /^image\//.test(d.mime_type || '') ? await act.importaFoto(user, chatId, d.file_size && d.file_size > 3 * 1024 * 1024 ? null : d, downloadFile) : await act.importaDocumento(user, chatId, d, downloadFile);
     return sendMessage(chatId, out.html, out.keyboard);
   }
-  if (!text || text.startsWith('/')) return sendMessage(chatId, 'Non ho capito. Prova con /pagare, /scadute o /smistare (o /aiuto).');
+  if (!text || text.startsWith('/')) return sendMessage(chatId, 'Non ho capito. Prova con /report (o /aiuto).');
   return handleFree(chatId, user, text, now);
 }
 
@@ -236,6 +253,8 @@ async function handleCallback(cb, now) {
   const user = linkedUser(chatId);
   if (!user) return answer('Questo telefono non è collegato all\'app.');
   const act = require('./bot-actions');
+  const rpm = /^rp:([a-z][a-z0-9_]*)$/.exec(String(cb.data || ''));
+  if (rpm) { const r = reportFor(user, rpm[1], now); await answer('Fatto.'); return sendMessage(chatId, r.html, r.keyboard); }
   const tbm = /^(tb|tu):([a-z0-9]+)$/.exec(String(cb.data || ''));
   if (tbm) {
     const tb = require('./bot-timbrature');
@@ -278,4 +297,4 @@ async function handleUpdate(update, now = Date.now()) {
   } catch (e) { console.error('[telegram]', e.message); }
 }
 
-module.exports = { downloadFile, KINDS, isConfigured, status, connect, disconnect, secretMatches, createLinkCode, consumeLinkCode, linkedUser, listLinks, revokeLink, scopeFor, renderReport, sendReportTo, sendMessage, handleUpdate, waToHtml, esc, _resetRate: () => { hits.clear(); aiHits.clear(); } };
+module.exports = { downloadFile, reportFor, isConfigured, status, connect, disconnect, secretMatches, createLinkCode, consumeLinkCode, linkedUser, listLinks, revokeLink, scopeFor, renderReport, sendReportTo, sendMessage, handleUpdate, waToHtml, esc, _resetRate: () => { hits.clear(); aiHits.clear(); } };

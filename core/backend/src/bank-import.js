@@ -274,7 +274,7 @@ function registerAsExpense(id, { categoria, descrizione } = {}) {
   put('fisso', false);
   put('note', 'Da estratto conto (' + m.date + ')');
   if (decl.avvisi.states.fatto) data[R.stato || '_stato'] = decl.avvisi.states.fatto;
-  const rid = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(slug, require('./record-owner').defaultOwnerId(), JSON.stringify(data)).lastInsertRowid;
+  const rid = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(slug, require('./record-owner').ownerFor(null, slug), JSON.stringify(data)).lastInsertRowid;
   db.prepare('UPDATE bank_movements SET match_module = ?, match_id = ? WHERE id = ?').run(slug, rid, id);
   return { record_id: rid, data };
 }

@@ -40,6 +40,8 @@ servire a un tenant futuro" non è un motivo.
 
 - **Accesso di Super Admin ai tenant, da ridurre** (13 ottobre): «Apri →» **chiede le credenziali admin del tenant** (non entra da solo) e resta. Decisione di Nima: **in futuro Super Admin non dovrà avere ponti verso i dati dei tenant**. Oggi i ponti reali sono: «Reset credenziali» (imposta una nuova password admin del tenant), le chiavi del tenant (`jwt_secret`, `encryption_key`) conservate nel database di Super Admin e il controllo dei container. Niente di nuovo in Super Admin deve dipendere da questi: così toglierli sarà solo una cancellazione.
 
+- **Report come definizioni, proprietario per modulo** (13 ottobre): i tre report non sono più tre messaggi scritti a mano ma definizioni (tipo + parametri) con quattro tipi generici; il proprietario delle righe automatiche si sceglie per modulo (con ripiego sul predefinito del progetto). Motivo: «Platform sempre generico e configurabile» (vedi `PLATFORM-VISIONE.md`). Un tipo nuovo di report richiede ancora codice (una primitiva), un report nuovo di un tipo esistente no.
+
 ### Tenuto, anche se "non serve oggi"
 
 | Cosa | Perché |

@@ -52,9 +52,10 @@ async function interpret(frase, user, now = new Date()) {
   const timbrature = require('./bot-timbrature').haPresenze(user);
   if (!moduli.length && !timbrature) return { error: 'Non hai moduli a cui il bot possa lavorare.', code: 'no_modules' };
   const oggi = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(now);
-  const r = await viaSuperAdmin('bot-intent', { frase, oggi, timbrature, moduli });
+  const report = require('./reports').settings().definizioni.filter((d) => d.enabled).map((d) => ({ id: d.id, nome: d.nome }));
+  const r = await viaSuperAdmin('bot-intent', { frase, oggi, timbrature, report, moduli });
   if (r.error) return r;
-  const v = validateIntent(r.body && r.body.intent, moduli, oggi); // rivalidato qui, con le stesse regole
+  const v = validateIntent(r.body && r.body.intent, moduli, oggi, report.map((x) => x.id)); // rivalidato qui, con le stesse regole
   if (v.intent && (v.intent.azione === 'timbra' || v.intent.azione === 'ore') && !timbrature) return { error: 'Non hai timbrature.', code: 'ai_unanswerable' };
   if (v.error) return { error: v.error, code: 'ai_unanswerable' };
   return { intent: v.intent };

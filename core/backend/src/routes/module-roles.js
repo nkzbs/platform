@@ -29,7 +29,10 @@ router.get('/:slug', requireAuth, requireAdmin, (req, res) => {
 
 router.put('/:slug', requireAuth, requireAdmin, (req, res) => {
   if (!db.prepare('SELECT 1 FROM modules WHERE slug = ?').get(req.params.slug)) return res.status(404).json({ error: 'Modulo non trovato' });
+  const ow = req.body && req.body.owner_user_id;
+  if (ow !== undefined && ow !== null && ow !== '' && !db.prepare('SELECT 1 FROM users WHERE id = ?').get(parseInt(ow, 10))) return res.status(400).json({ error: 'Utente non trovato.' });
   const out = roles.set(req.params.slug, req.body || {});
+  if (out.owner_user_id) require('../record-owner').adoptOrphans(); // le righe senza proprietario di questo modulo passano a lui
   logAudit(req.user.username, 'module.roles', req.params.slug, { kind: out.kind, uses: out.uses });
   res.json(out);
 });

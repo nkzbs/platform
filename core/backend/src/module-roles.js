@@ -34,7 +34,7 @@ function parse(row) {
   try { roles = JSON.parse(row.roles || '{}'); } catch (e) { /* vuoto */ }
   try { extra = JSON.parse(row.extra || '{}'); } catch (e) { /* vuoto */ }
   const av = extra.avvisi || (extra.states ? extra : {}); // forma vecchia: extra era direttamente gli avvisi
-  return { module_slug: row.module_slug, kind: row.kind || null, uses, roles,
+  return { module_slug: row.module_slug, kind: row.kind || null, uses, roles, owner_user_id: Number.isInteger(extra.owner_user_id) && extra.owner_user_id > 0 ? extra.owner_user_id : null,
     avvisi: { ...DEFAULT_AVVISI, ...av, states: { ...DEFAULT_AVVISI.states, ...(av.states || {}) }, piano: { ...DEFAULT_PIANO, ...(av.piano || {}), campi: { ...DEFAULT_PIANO.campi, ...((av.piano || {}).campi || {}) } } },
     riepiloghi: { ...DEFAULT_RIEPILOGHI, ...(extra.riepiloghi || {}) },
     estratto: { ...DEFAULT_ESTRATTO, ...(extra.estratto || {}) } };
@@ -75,13 +75,16 @@ function clean(input) {
   };
   const es = (input && input.estratto) || {};
   const estratto = { giro_categories: list(es.giro_categories), registra: !!es.registra, categoria_default: word(es.categoria_default, '', 60) };
-  return { kind, uses, roles, avvisi, riepiloghi, estratto };
+  const ow = input && input.owner_user_id;
+  const owner_user_id = ow === undefined ? undefined : (Number.isInteger(Number(ow)) && Number(ow) > 0 ? Number(ow) : null); // undefined = non indicato: si conserva quello che c'è
+  return { kind, uses, roles, avvisi, riepiloghi, estratto, owner_user_id };
 }
 
 function set(slug, input) {
   const c = clean(input);
+  if (c.owner_user_id === undefined) { const cur = get(slug); c.owner_user_id = cur ? cur.owner_user_id : null; }
   db.prepare('INSERT INTO module_roles (module_slug, kind, uses, roles, extra) VALUES (?, ?, ?, ?, ?) ON CONFLICT(module_slug) DO UPDATE SET kind = excluded.kind, uses = excluded.uses, roles = excluded.roles, extra = excluded.extra')
-    .run(slug, c.kind, JSON.stringify(c.uses), JSON.stringify(c.roles), JSON.stringify({ v: SCHEMA_V, avvisi: c.avvisi, riepiloghi: c.riepiloghi, estratto: c.estratto }));
+    .run(slug, c.kind, JSON.stringify(c.uses), JSON.stringify(c.roles), JSON.stringify({ v: SCHEMA_V, owner_user_id: c.owner_user_id, avvisi: c.avvisi, riepiloghi: c.riepiloghi, estratto: c.estratto }));
   return get(slug);
 }
 

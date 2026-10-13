@@ -14,11 +14,12 @@ const clean = (v, n) => String(v == null ? '' : v).replace(/[\r\n]+/g, ' ').trim
 const validDate = (s) => { if (!ISO.test(String(s))) return false; const d = new Date(s + 'T00:00:00Z'); return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s; };
 
 // Valida la risposta del modello contro i moduli disponibili. Ritorna { intent } oppure { error }.
-function validateIntent(raw, moduli, oggi) {
+// `report`: gli id dei report disponibili (le definizioni del tenant); senza, vale l'elenco di partenza.
+function validateIntent(raw, moduli, oggi, report) {
   if (!raw || typeof raw !== 'object') return { error: 'Risposta non valida' };
   const azione = AZIONI.includes(raw.azione) ? raw.azione : 'altro';
   if (azione === 'domanda' || azione === 'altro') return { intent: { azione } };
-  if (azione === 'elenco') return COSE.includes(raw.cosa) ? { intent: { azione, cosa: raw.cosa } } : { error: 'Elenco non riconosciuto' };
+  if (azione === 'elenco') return (Array.isArray(report) && report.length ? report : COSE).includes(raw.cosa) ? { intent: { azione, cosa: raw.cosa } } : { error: 'Elenco non riconosciuto' };
 
   if (azione === 'segna_pagata' || azione === 'riapri' || azione === 'smista') {
     const cerca = clean(raw.cerca, 60);

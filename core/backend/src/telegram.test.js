@@ -139,9 +139,22 @@ async function main() {
   });
   await test('/pagare e /smistare funzionano; senza righe da smistare lo dice', async () => {
     tg._resetRate(); calls.length = 0; await post(upd(555, '/pagare')); ok(/Da pagare/.test(ultimi('sendMessage')[0].body.text));
-    calls.length = 0; await post(upd(555, '/smistare')); ok(/Niente da smistare/.test(ultimi('sendMessage')[0].body.text));
+    calls.length = 0; await post(upd(555, '/smistare')); ok(/Niente da segnalare per «Da smistare»/.test(ultimi('sendMessage')[0].body.text));
     calls.length = 0; await post(upd(555, 'ciao')); ok(/AI non è accesa/.test(ultimi('sendMessage')[0].body.text), ultimi('sendMessage')[0].body.text); // le frasi libere passano dall'AI, spenta qui
     calls.length = 0; await post(upd(555, '/boh')); ok(/Non ho capito/.test(ultimi('sendMessage')[0].body.text));
+  });
+  await test('i comandi dei report sono le definizioni accese: /report mostra un bottone per ognuna, un report nuovo ha il suo comando (nell\'aiuto solo se acceso)', async () => {
+    const reports = require('./reports');
+    tg._resetRate(); calls.length = 0; await post(upd(555, '/report'));
+    const kb = ultimi('sendMessage')[0].body.reply_markup.inline_keyboard.flat(); ok(kb.some((b) => b.callback_data === 'rp:pagare') && kb.some((b) => b.callback_data === 'rp:smistare'), JSON.stringify(kb));
+    calls.length = 0; await post({ update_id: 5, callback_query: { id: 'cbr', data: 'rp:smistare', message: { message_id: 9, chat: { id: 555, type: 'private' }, reply_markup: { inline_keyboard: [] } } } });
+    ok(/Niente da segnalare per «Da smistare»/.test(ultimi('sendMessage')[0].body.text), 'il bottone esegue il report');
+    const id = reports.addDefinition('coda', 'Altra coda').id; // nasce spenta: non è nell'aiuto, ma si può chiedere
+    calls.length = 0; await post(upd(555, '/aiuto')); ok(!new RegExp('/' + id).test(ultimi('sendMessage')[0].body.text), 'spento: non nell\'aiuto');
+    reports.saveSettings(id, { enabled: true });
+    calls.length = 0; await post(upd(555, '/' + id)); ok(/Niente da segnalare per «Altra coda»/.test(ultimi('sendMessage')[0].body.text));
+    calls.length = 0; await post(upd(555, '/aiuto')); ok(new RegExp('/' + id + ' — Altra coda').test(ultimi('sendMessage')[0].body.text), 'l\'aiuto elenca i comandi dalle definizioni');
+    reports.removeDefinition(id);
   });
 
   console.log('\n--- il bottone «Pagata» ---');

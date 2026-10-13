@@ -38,7 +38,7 @@ Spunta man mano; se qualcosa non torna, annota cosa hai visto (schermata e passo
 - [ ] **Messaggio di prova:** Impostazioni → Connessioni → WhatsApp → "Invia messaggio di prova". Arriva sul telefono; in "Ultimi invii" compare la riga con esito "inviato".
 - [ ] **Riga nuova da smistare:** crea in Spese casa una riga di prova con stato "Da smistare". Entro circa un minuto arriva "Bolletta da smistare: …". Se ne crei più di una insieme, ne arriva uno solo con l'elenco. Poi smistala o eliminala.
 - [ ] **Bolletta vera da Gmail:** alla prossima mail di un mittente con regola, la riga compare in coda entro 15 minuti e arriva l'avviso.
-- [ ] **Report su WhatsApp** (Impostazioni → **Report**): tre schede (Quanto devo pagare, Da smistare, Voci scadute) con interruttore, giorno e ora. «Mostra anteprima» mostra il messaggio che partirebbe adesso; «Invia ora» lo manda davvero.
+- [ ] **Report** (Impostazioni → **Report**): tre schede di partenza (Quanto devo pagare, Da smistare, Voci scadute) con interruttore, frequenza, giorno e ora; «Cosa guarda e come appare» apre titolo, simbolo, stato, righe mostrate. In fondo «Aggiungi un report» (prova «Ore lavorate»: nasce spento, anteprima, poi accendilo). «Mostra anteprima» mostra il messaggio che partirebbe adesso; «Invia ora» lo manda davvero.
 - [ ] **Quanto devo pagare:** l'anteprima mostra le voci «da pagare» dal giorno di oggi al 26 del mese dopo, più le scadute, con il totale diviso Casa / Personali e la riga «ultimo stipendio → ti restano». Il 27 (o il venerdì prima, se cade nel weekend) alle 18:00 arriva da solo.
 - [ ] **Da smistare:** con righe in coda, ogni sera alle 19:00 arriva l'elenco; smistale tutte e la sera dopo non arriva niente.
 - [ ] **Voci scadute:** il lunedì alle 19:00, solo se ce ne sono; spuntando le voci nella Checklist spariscono dal messaggio.
@@ -91,7 +91,7 @@ Vedi `docs/OPERAZIONI.md` → "Utenti, accessi e 2FA". Dopo averli creati, prova
 
 - [ ] **Collegamento** (vedi `docs/OPERAZIONI.md` → Bot Telegram): bot creato con BotFather, codice incollato in Impostazioni → Connessioni → Telegram (bot), compare `@nome_del_bot`.
 - [ ] **Il mio telefono**: «Collega il mio Telegram» → tocchi il link → Avvia → il bot risponde «✅ Collegato a Finance come …» e il telefono compare in elenco.
-- [ ] **/scadute** mostra le voci scadute **con un bottone «✅ Pagata» per voce**. Tocca uno: la voce passa a «pagato» in Finance (controlla nella Checklist) e il bottone diventa «↩ Annulla». Annulla la riporta a «da pagare».
+- [ ] **/report** mostra un bottone per ogni report acceso. **/scadute** mostra le voci scadute **con un bottone «✅ Pagata» per voce**. Tocca uno: la voce passa a «pagato» in Finance (controlla nella Checklist) e il bottone diventa «↩ Annulla». Annulla la riporta a «da pagare».
 - [ ] **/pagare** e **/smistare** rispondono con gli stessi dati dei report.
 - [ ] **Report**: «Invia ora» su una scheda manda il messaggio anche su Telegram, con i bottoni e «Apri l'app».
 - [ ] **Federica** (dopo averla collegata): il bot le mostra **solo Casa**; non può chiudere voci di Spese Personali, nemmeno con il bottone di un messaggio inoltrato.
