@@ -10,7 +10,7 @@ function withOpacity(variableName) {
 }
 
 export default {
-  content: ['./index.html', './src/**/*.{js,jsx}'],
+  content: ['./index.html', './src/**/*.{js,jsx}', '../../shared/frontend/**/*.{js,jsx}'],
   theme: {
     extend: {
       colors: {
@@ -36,6 +36,8 @@ export default {
         // ecc. restano finché non si passa alle Fasi 2/3) — disponibili da qui
         // in poi per il lavoro pagina-per-pagina, non retrofittati ora.
         'cp-primary': withOpacity('--cp-primary'),
+        // Alias: il Builder condiviso (shared/frontend/builder) usa il token 'accent' dell'app tenant.
+        accent: withOpacity('--cp-primary'),
         'cp-primary-hover': withOpacity('--cp-primary-hover'),
         'cp-success': withOpacity('--cp-success'),
         'cp-success-bg': withOpacity('--cp-success-bg'),

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import Icon from '../../components/Icon'
+import Icon from '@app/components/Icon'
 import { AGG_SIMPLE_FUNCS, AGG_IF_FUNCS, CHILD_FUNCS, CONTROL_FUNCS, FORMULA_EXAMPLES, FORMULA_EXAMPLES_CHILDREN } from './constants'
 
 // Capisce, dato il testo e la posizione del cursore, se l'utente sta scrivendo un nome

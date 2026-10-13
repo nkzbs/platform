@@ -105,7 +105,7 @@ interpreta; non c'è codice specifico per un tenant.
 mostrano le righe collegate (per esempio i piani a rate dentro Spese). Non c'è più il "modulo di supporto" nascosto: la colonna `modules.support_module` resta solo per i database esistenti, viene azzerata
 all'avvio e da un trigger a ogni scrittura (import, installazione, ripristino), e nessuna schermata la mostra.
 
-Il **Builder** modifica gli schemi. La **Libreria** (tabella `registry_modules` di Super Admin) conserva i
+Il **Builder** modifica gli schemi. È **uno solo**, in `shared/frontend/builder/`: tenant e Super Admin lo importano con gli alias Vite `@shared` (la cartella condivisa) e `@app` (Icon, Select, useApi di ciascuna app). Ogni app lo avvolge in `pages/BuilderPage/index.jsx` e gli passa `moduleActions` per i bottoni di promozione: sul tenant «Proponi alla Libreria» (coda con approvazione), su Super Admin «Salva nella Libreria». La **Libreria** (tabella `registry_modules` di Super Admin) conserva i
 moduli con una versione: salvare di nuovo lo stesso modulo crea la versione successiva. **Installare = copiare**:
 il tenant riceve una copia sua, ricorda da quale versione viene e mostra "Aggiorna" quando ne esiste una più
 nuova (l'aggiornamento sovrascrive la copia locale, ed è avvisato prima).

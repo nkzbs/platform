@@ -1,5 +1,5 @@
 import React, { useState, useRef, useLayoutEffect, useCallback } from 'react'
-import Icon from '../../components/Icon'
+import Icon from '@app/components/Icon'
 
 // ─── MODEL CANVAS (Builder 2.0 fase 2) ──────────────────────────────────────
 // Vista grafica dei moduli e delle loro relazioni — "il tecnico deve poter

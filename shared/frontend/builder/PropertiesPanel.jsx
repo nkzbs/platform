@@ -1,6 +1,8 @@
 import React from 'react'
-import Icon from '../../components/Icon'
+import Icon from '@app/components/Icon'
 import { MODULE_ICON_CHOICES, MODULE_COLOR_CHOICES } from './constants'
+import ModuleRolesSection from './ModuleRolesSection'
+import ModuleAiSection from './ModuleAiSection'
 
 // Builder 2.0 — pannello destro "Proprietà"/"Cronologia" (dal mockup mostrato
 // dall'utente). Prima questi stessi controlli erano tutti ammassati in una
@@ -8,7 +10,7 @@ import { MODULE_ICON_CHOICES, MODULE_COLOR_CHOICES } from './constants'
 // fisso, nessun campo nuovo inventato: ogni toggle scrive una colonna reale
 // già esistente su modules (vedi PATCH /modules/:slug). "Moduli correlati" è
 // calcolato da fieldCache (stessa fonte di ModelCanvas), zero nuove chiamate.
-function PropertiesPanel({ mod, schema, fieldCache, allModules, onUpdate, onSelectModule, showIconPicker, setShowIconPicker, history, restoreVersion, tab, setTab }) {
+function PropertiesPanel({ token, baseUrl, mod, schema, fieldCache, allModules, onUpdate, onSelectModule, showIconPicker, setShowIconPicker, history, restoreVersion, tab, setTab }) {
   if (!mod) return null
 
   const related = []
@@ -30,7 +32,7 @@ function PropertiesPanel({ mod, schema, fieldCache, allModules, onUpdate, onSele
   const Toggle = ({ checked, onChange, label, hint }) => (
     <label className="flex items-start gap-2.5 cursor-pointer py-1.5">
       <button type="button" onClick={() => onChange(!checked)}
-        className={'w-8 h-[18px] rounded-full flex-shrink-0 transition relative mt-0.5 ' + (checked ? 'bg-cp-primary' : 'bg-gray-700')}>
+        className={'w-8 h-[18px] rounded-full flex-shrink-0 transition relative mt-0.5 ' + (checked ? 'bg-accent' : 'bg-gray-700')}>
         <span className={'absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition ' + (checked ? 'left-[18px]' : 'left-[2px]')} />
       </button>
       <span className="text-xs text-gray-300 leading-tight">
@@ -44,8 +46,8 @@ function PropertiesPanel({ mod, schema, fieldCache, allModules, onUpdate, onSele
     <div className="w-64 flex-shrink-0">
       <div className="sticky top-4 bg-surface-card border border-gray-800 rounded-xl overflow-hidden">
         <div className="flex border-b border-gray-800">
-          <button onClick={() => setTab('proprieta')} className={'flex-1 text-xs font-semibold py-2.5 transition ' + (tab === 'proprieta' ? 'text-ink border-b-2 border-cp-primary -mb-px' : 'text-gray-500 hover:text-gray-300')}>PROPRIETÀ</button>
-          <button onClick={() => setTab('cronologia')} className={'flex-1 text-xs font-semibold py-2.5 transition ' + (tab === 'cronologia' ? 'text-ink border-b-2 border-cp-primary -mb-px' : 'text-gray-500 hover:text-gray-300')}>CRONOLOGIA</button>
+          <button onClick={() => setTab('proprieta')} className={'flex-1 text-xs font-semibold py-2.5 transition ' + (tab === 'proprieta' ? 'text-ink border-b-2 border-accent -mb-px' : 'text-gray-500 hover:text-gray-300')}>PROPRIETÀ</button>
+          <button onClick={() => setTab('cronologia')} className={'flex-1 text-xs font-semibold py-2.5 transition ' + (tab === 'cronologia' ? 'text-ink border-b-2 border-accent -mb-px' : 'text-gray-500 hover:text-gray-300')}>CRONOLOGIA</button>
         </div>
 
         {tab === 'proprieta' ? (
@@ -62,7 +64,7 @@ function PropertiesPanel({ mod, schema, fieldCache, allModules, onUpdate, onSele
                   <div className="grid grid-cols-6 gap-1.5 mb-3">
                     {MODULE_ICON_CHOICES.map((ic) => (
                       <button key={ic} type="button" onClick={() => onUpdate({ icon: ic })}
-                        className={'w-7 h-7 rounded-lg flex items-center justify-center transition border ' + (mod.icon === ic ? 'border-cp-primary bg-cp-primary/20 text-cp-primary' : 'border-gray-800 bg-gray-800/50 text-gray-500 hover:text-gray-300')}>
+                        className={'w-7 h-7 rounded-lg flex items-center justify-center transition border ' + (mod.icon === ic ? 'border-accent bg-accent/20 text-accent' : 'border-gray-800 bg-gray-800/50 text-gray-500 hover:text-gray-300')}>
                         <Icon name={ic} size={13} />
                       </button>
                     ))}
@@ -80,7 +82,7 @@ function PropertiesPanel({ mod, schema, fieldCache, allModules, onUpdate, onSele
 
             <div>
               <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 block">Sezione menu</label>
-              <input className="w-full bg-surface-page text-ink px-2.5 py-1.5 rounded-lg text-xs outline-none border border-gray-800 focus:border-cp-primary transition"
+              <input className="w-full bg-surface-page text-ink px-2.5 py-1.5 rounded-lg text-xs outline-none border border-gray-800 focus:border-accent transition"
                 placeholder="es. CRM & Vendite" defaultValue={mod.group_name || ''} key={'group_' + mod.slug}
                 onBlur={(e) => { if (e.target.value !== (mod.group_name || '')) onUpdate({ group_name: e.target.value }) }} />
             </div>
@@ -104,19 +106,22 @@ function PropertiesPanel({ mod, schema, fieldCache, allModules, onUpdate, onSele
               <div className="border-t border-gray-800 pt-3">
                 <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 block">Upload batch</label>
                 <select value={mod.batch_upload_field || ''} onChange={(e) => onUpdate({ batch_upload_field: e.target.value || null })}
-                  className="w-full bg-surface-page text-ink px-2.5 py-1.5 rounded-lg text-xs outline-none border border-gray-800 focus:border-cp-primary transition mb-2">
+                  className="w-full bg-surface-page text-ink px-2.5 py-1.5 rounded-lg text-xs outline-none border border-gray-800 focus:border-accent transition mb-2">
                   <option value="">Disattivo</option>
                   {fileFields.map((f) => <option key={f.key} value={f.key}>Su "{f.label}"</option>)}
                 </select>
                 {mod.batch_upload_field && selectFields.length > 0 && (
                   <select value={mod.batch_upload_category_field || ''} onChange={(e) => onUpdate({ batch_upload_category_field: e.target.value || null })}
-                    className="w-full bg-surface-page text-ink px-2.5 py-1.5 rounded-lg text-xs outline-none border border-gray-800 focus:border-cp-primary transition">
+                    className="w-full bg-surface-page text-ink px-2.5 py-1.5 rounded-lg text-xs outline-none border border-gray-800 focus:border-accent transition">
                     <option value="">Nessuna categoria richiesta</option>
                     {selectFields.map((f) => <option key={f.key} value={f.key}>Chiedi "{f.label}"</option>)}
                   </select>
                 )}
               </div>
             )}
+
+            <ModuleRolesSection token={token} baseUrl={baseUrl} slug={mod.slug} fields={(schema?.steps || []).filter((s) => s.block_type === 'field')} states={(schema?.steps || []).filter((s) => s.block_type === 'workflow_state')} allModules={allModules} fieldCache={fieldCache} />
+            <ModuleAiSection token={token} baseUrl={baseUrl} slug={mod.slug} />
 
             <div className="border-t border-gray-800 pt-3">
               <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Moduli correlati ({relatedUnique.length})</div>
@@ -150,7 +155,7 @@ function PropertiesPanel({ mod, schema, fieldCache, allModules, onUpdate, onSele
                   <div key={h.id} className="bg-surface-page rounded-lg p-2.5 border border-gray-800">
                     <div className="text-ink text-xs font-mono">v{h.version}</div>
                     <div className="text-[10.5px] text-gray-500 mt-0.5 mb-1.5">{new Date(h.published_at).toLocaleString('it-IT')}</div>
-                    <button onClick={() => restoreVersion(h.id)} className="text-[11px] text-cp-primary hover:opacity-80 transition">Ripristina</button>
+                    <button onClick={() => restoreVersion(h.id)} className="text-[11px] text-accent hover:opacity-80 transition">Ripristina</button>
                   </div>
                 ))}
               </div>

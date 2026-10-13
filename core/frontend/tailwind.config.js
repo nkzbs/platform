@@ -11,7 +11,7 @@ function withOpacity(variableName) {
 }
 
 export default {
-  content: ['./index.html', './src/**/*.{js,jsx}'],
+  content: ['./index.html', './src/**/*.{js,jsx}', '../../shared/frontend/**/*.{js,jsx}'],
   theme: {
     extend: {
       // Superfici e scala dei grigi come variabili CSS: stessi valori di sempre come

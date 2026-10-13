@@ -20,8 +20,8 @@ import CategoryPivotView from './CategoryPivotView'
 import WeeklyBreakdownView from './WeeklyBreakdownView'
 import ViewTabs from './ViewTabs'
 import ArchiveView from './ArchiveView'
-import FormulaEditor from '../BuilderPage/FormulaEditor'
-import { StepChainEditor } from '../BuilderPage/StepChainEditor'
+import FormulaEditor from '@shared/builder/FormulaEditor.jsx'
+import { StepChainEditor } from '@shared/builder/StepChainEditor.jsx'
 
 function ModulePage({ module: mod, token, user, onNavigate }) {
   const api = useApi(token)

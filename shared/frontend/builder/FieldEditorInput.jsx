@@ -1,13 +1,12 @@
 import React, { useState } from 'react'
-import Icon from '../../components/Icon'
-import Select from '../../components/Select'
+import Icon from '@app/components/Icon'
+import Select from '@app/components/Select'
 
-// Copia sincronizzata a mano (2026-08-16) di core/frontend/src/pages/ModulePage/
-// FieldEditorInput.jsx — usata solo da BuilderPreviewPanel.jsx per l'anteprima
-// live di Super Builder. Super Admin non ha ModulePage (l'app tenant vera), quindi
-// non può importare l'originale: stessa duplicazione già accettata per l'intero
-// file BuilderPage/index.jsx (sincronizzato a mano, non condiviso via shared/). Se
-// l'originale cambia, aggiornare anche questa copia.
+// ─── MODULE GENERIC PAGE ──────────────────────────────────────────────────────
+// Mostra il dettaglio di un record: campi propri (inclusi i computed, sempre freschi),
+// relazioni risolte al valore leggibile, e — per ogni modulo che ha una relazione verso
+// questo modulo (children-modules, derivato automaticamente) — l'elenco dei record figli
+// filtrati server-side. Generico: funziona per qualsiasi coppia di moduli in ogni fork.
 // Renderer condiviso per l'input di un campo — usato sia dal form "Nuovo record" sia
 // dalla modifica inline nel modale dettaglio, così i due punti non divergono nel
 // tempo (prima solo il form "Nuovo record" sapeva disegnare i vari tipi di campo, il
@@ -38,18 +37,18 @@ function FieldEditorInput({ f, value, onChange, uploading, onUploadFile, placeho
           <div key={i} className="flex items-center gap-2">
             <div className="flex-1">
               <label className="text-[10px] text-gray-600 block mb-0.5">{i === righe.length - 1 ? 'Oltre (€)' : 'Fino a (€)'}</label>
-              <input type="number" className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-800 focus:border-cp-primary transition"
+              <input type="number" className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition"
                 value={r.soglia ?? ''} onChange={(e) => updateRiga(i, { soglia: e.target.value === '' ? 0 : Number(e.target.value) })} />
             </div>
             <div className="flex-1">
               <label className="text-[10px] text-gray-600 block mb-0.5">Percentuale %</label>
-              <input type="number" step="0.1" className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-800 focus:border-cp-primary transition"
+              <input type="number" step="0.1" className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition"
                 value={r.perc ?? ''} onChange={(e) => updateRiga(i, { perc: e.target.value === '' ? 0 : Number(e.target.value) })} />
             </div>
             <button type="button" onClick={() => removeRiga(i)} className="text-red-400/50 hover:text-red-400 transition mt-4"><Icon name="trash" size={14} /></button>
           </div>
         ))}
-        <button type="button" onClick={addRiga} className="text-cp-primary hover:opacity-80 text-xs transition flex items-center gap-1">
+        <button type="button" onClick={addRiga} className="text-accent hover:opacity-80 text-xs transition flex items-center gap-1">
           <Icon name="plus" size={12} />Aggiungi scaglione
         </button>
         {righe.length === 0 && <div className="text-[10px] text-gray-600">Nessuno scaglione — "Aggiungi scaglione" per iniziare.</div>}
@@ -69,7 +68,7 @@ function FieldEditorInput({ f, value, onChange, uploading, onUploadFile, placeho
     }
     return (
       <div className="relative">
-        <input className="w-full bg-surface-page text-ink px-4 py-3 rounded-lg text-sm outline-none border border-gray-800 focus:border-cp-primary transition placeholder-gray-600 pr-16"
+        <input className="w-full bg-surface-page text-ink px-4 py-3 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition placeholder-gray-600 pr-16"
           type={showSecret ? 'text' : 'password'} value={value || ''} onChange={(e) => onChange(e.target.value)}
           placeholder="Valore cifrato" autoComplete="new-password" />
         <button type="button" onClick={generatePassword} title="Genera password" className="absolute right-9 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition">
@@ -82,7 +81,7 @@ function FieldEditorInput({ f, value, onChange, uploading, onUploadFile, placeho
     )
   }
   if (f.type === 'textarea') {
-    return <textarea className="w-full bg-surface-page text-ink px-4 py-3 rounded-lg text-sm outline-none border border-gray-800 focus:border-cp-primary transition placeholder-gray-600 resize-none" rows={3} placeholder={f.placeholder || ''} value={value || ''} onChange={(e) => onChange(e.target.value)} />
+    return <textarea className="w-full bg-surface-page text-ink px-4 py-3 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition placeholder-gray-600 resize-none" rows={3} placeholder={f.placeholder || ''} value={value || ''} onChange={(e) => onChange(e.target.value)} />
   }
   if ((f.type === 'select' || f.type === 'multiselect') && f.options) {
     return <Select value={value || ''} onChange={onChange} options={f.options.map((o) => ({ value: o, label: o }))} />
@@ -95,7 +94,7 @@ function FieldEditorInput({ f, value, onChange, uploading, onUploadFile, placeho
   // 11 campi su 10 moduli). Non serve normalizzare i dati esistenti, basta accettare
   // entrambi i nomi qui.
   if (f.type === 'checkbox' || f.type === 'boolean') {
-    return <input type="checkbox" checked={value || false} onChange={(e) => onChange(e.target.checked)} className="accent-cp-primary" />
+    return <input type="checkbox" checked={value || false} onChange={(e) => onChange(e.target.checked)} className="accent-accent" />
   }
   if (f.type === 'file') {
     return (
@@ -122,7 +121,7 @@ function FieldEditorInput({ f, value, onChange, uploading, onUploadFile, placeho
           <div key={loc.key} className="flex items-center gap-2">
             <span className="text-xs text-gray-500 w-28 truncate">{loc.label}</span>
             <input type="number" min="0" step="1"
-              className="w-24 bg-surface-page text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-800 focus:border-cp-primary transition"
+              className="w-24 bg-surface-page text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-800 focus:border-accent transition"
               value={val[loc.key] !== undefined ? val[loc.key] : ''}
               onChange={(e) => onChange({ ...val, [loc.key]: e.target.value === '' ? 0 : Number(e.target.value) })} />
           </div>
@@ -134,11 +133,11 @@ function FieldEditorInput({ f, value, onChange, uploading, onUploadFile, placeho
   if (f.type === 'mappa') {
     return (
       <div className="flex items-center gap-2">
-        <input className="flex-1 bg-surface-page text-ink px-4 py-3 rounded-lg text-sm outline-none border border-gray-800 focus:border-cp-primary transition placeholder-gray-600"
+        <input className="flex-1 bg-surface-page text-ink px-4 py-3 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition placeholder-gray-600"
           placeholder="Indirizzo o luogo" value={value || ''} onChange={(e) => onChange(e.target.value)} />
         {value && (
           <a href={'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(value)} target="_blank" rel="noreferrer"
-            className="flex-shrink-0 text-cp-primary hover:opacity-80 transition p-2" title="Apri in Google Maps">
+            className="flex-shrink-0 text-accent hover:opacity-80 transition p-2" title="Apri in Google Maps">
             <Icon name="link" size={16} />
           </a>
         )}
@@ -147,7 +146,7 @@ function FieldEditorInput({ f, value, onChange, uploading, onUploadFile, placeho
   }
   const ph = placeholderProp || f.placeholder || ''
   return (
-    <input className="w-full bg-surface-page text-ink px-4 py-3 rounded-lg text-sm outline-none border border-gray-800 focus:border-cp-primary transition placeholder-gray-600"
+    <input className="w-full bg-surface-page text-ink px-4 py-3 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition placeholder-gray-600"
       type={f.type === 'date' ? 'date' : f.type === 'datetime' ? 'datetime-local' : f.type === 'time' ? 'time' : (f.type === 'number' || f.type === 'currency') ? 'number' : f.type === 'email' ? 'email' : f.type === 'phone' ? 'tel' : f.type === 'url' ? 'url' : 'text'}
       placeholder={ph} value={value || ''} onChange={(e) => onChange(e.target.value)} />
   )

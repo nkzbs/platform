@@ -470,3 +470,6 @@ Il Builder resta completo (quello di Super Admin serve per gli altri tenant), ma
 - **Perché la conferma è obbligatoria anche qui**: un modello di visione sbaglia più di uno che legge testo (cifre simili, scontrini sgualciti): un totale sbagliato scritto in silenzio vale più di un tocco in più.
 - **Limiti dichiarati**: solo euro; foto JPEG/PNG/WebP (le HEIC vanno mandate come «foto» dal telefono, che le converte); non legge le singole voci dello scontrino (solo il totale); l'immagine arriva a Mistral e non si può oscurare; **mai provato con Mistral vero** (solo risposte simulate nei test): il primo scontrino reale dirà se il modello e la chiave in uso la leggono.
 - Test: `telegram-bot.test.js` (+10), `ai-receipt.test.js` in Super Admin (8).
+
+## 2026-10-13 — Un solo Builder
+I due Builder (tenant e Super Admin) erano copie sincronizzate a mano. Ora c'è un'unica implementazione in `shared/frontend/builder/`, con alias Vite `@shared`/`@app` e una render-prop `moduleActions` per le azioni di promozione del modulo (tenant: Proponi alla Libreria; Super Admin: Salva nella Libreria). Super Admin ha l'alias Tailwind `accent`.

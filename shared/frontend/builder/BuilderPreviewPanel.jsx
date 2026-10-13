@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import FieldEditorInput from '../ModulePage/FieldEditorInput'
+import FieldEditorInput from './FieldEditorInput'
 
 // Anteprima vera del modulo mentre lo si costruisce (2026-08-16) — sostituisce il
 // vecchio dump JSON grezzo (schema_json v3 in un <pre>). Riusa FieldEditorInput,

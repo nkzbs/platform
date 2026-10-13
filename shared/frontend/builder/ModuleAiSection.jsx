@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import useApi from '../../lib/useApi'
+import useApi from '@app/lib/useApi'
 
 // Potenziamenti AI del modulo (Builder): ogni modulo accende da solo quelli che vuole. Senza i ruoli che servono (Ruoli del modulo)
 // il potenziamento resta fermo e qui si legge cosa manca. Collegato: "Smistare". Gli altri si collegano uno alla volta.

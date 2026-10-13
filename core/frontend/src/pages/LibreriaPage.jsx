@@ -3,6 +3,7 @@ import { API } from '../lib/api'
 import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
 import RichText from '../components/RichText'
+import ProponiAllaLibreriaModal from '../components/ProponiAllaLibreria'
 import { parseSchemaFrontend, getAutomationSteps, getRequiredConnectors } from '../lib/schema-v3-frontend'
 
 // La Libreria del tenant: i moduli che ho già (installati) e quelli salvati nella Libreria di
@@ -24,15 +25,10 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
   const [detailModule, setDetailModule] = useState(null)
   const [uninstalled, setUninstalled] = useState(null) // { name } — conferma dopo una disinstallazione riuscita
   const [search, setSearch] = useState('')
-  const [proposta, setProposta] = useState(null) // { module, description, note, busy, errore, fatto } — «Proponi alla Libreria»
+  const [proposta, setProposta] = useState(null) // { module, description } — «Proponi alla Libreria» (modale in components/ProponiAllaLibreria.jsx)
   const [proposte, setProposte] = useState([]) // lo stato delle proposte già inviate
   const caricaProposte = () => api.get('/modules/registry-proposals').then((d) => Array.isArray(d) && setProposte(d))
   useEffect(() => { caricaProposte() }, []) // eslint-disable-line react-hooks/exhaustive-deps
-  const inviaProposta = async () => {
-    setProposta((p) => ({ ...p, busy: true, errore: '' }))
-    const r = await api.post('/modules/' + proposta.module.slug + '/propose-to-registry', { description: proposta.description, note: proposta.note })
-    if (r.ok) { setProposta((p) => ({ ...p, busy: false, fatto: true })); caricaProposte() } else setProposta((p) => ({ ...p, busy: false, errore: (r.data && r.data.error) || 'Non riuscito.' }))
-  }
 
   const [connections, setConnections] = useState([])
   const [googleStatus, setGoogleStatus] = useState(null)
@@ -385,32 +381,7 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
         </div>
       )}
 
-      {proposta && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => !proposta.busy && setProposta(null)}>
-          <div className="bg-surface-card rounded-xl w-full max-w-md border border-gray-800 p-5" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg font-bold text-ink mb-1">Proponi «{proposta.module.name}» alla Libreria</h2>
-            {proposta.fatto ? (
-              <>
-                <p className="text-sm text-gray-400 mt-2">Proposta inviata. Parte solo la <b className="text-ink">struttura</b> del modulo (campi, stati, relazioni), mai le righe. Super Admin la approva o la rifiuta con un motivo: lo vedi qui sotto, in «Proposte inviate».</p>
-                <button onClick={() => setProposta(null)} className="mt-4 text-sm px-4 py-2 rounded-lg bg-accent hover:opacity-90 text-white">Chiudi</button>
-              </>
-            ) : (
-              <>
-                <p className="text-xs text-gray-500 mb-3">Parte solo lo schema (campi, stati, relazioni), mai i dati. Controlla che nei nomi delle scelte non ci siano nomi di persone o aziende. Non entra nella Libreria da solo: la approva Super Admin.</p>
-                <label className="text-xs text-gray-500 block mb-1">A cosa serve (la vedranno gli altri progetti)</label>
-                <textarea className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent min-h-[70px]" value={proposta.description} onChange={(e) => setProposta((p) => ({ ...p, description: e.target.value }))} />
-                <label className="text-xs text-gray-500 block mb-1 mt-3">Nota per Super Admin (facoltativa)</label>
-                <input className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent" placeholder="Es. lo usiamo ogni giorno da un anno" value={proposta.note} onChange={(e) => setProposta((p) => ({ ...p, note: e.target.value }))} />
-                {proposta.errore && <div className="text-xs text-amber-400 mt-2">{proposta.errore}</div>}
-                <div className="flex gap-2 mt-4 justify-end">
-                  <button onClick={() => setProposta(null)} disabled={proposta.busy} className="text-sm px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300">Annulla</button>
-                  <button onClick={inviaProposta} disabled={proposta.busy} className="text-sm px-4 py-2 rounded-lg bg-accent hover:opacity-90 disabled:opacity-50 text-white">{proposta.busy ? 'Invio…' : 'Invia la proposta'}</button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      {proposta && <ProponiAllaLibreriaModal api={api} module={proposta.module} description={proposta.description} onClose={() => setProposta(null)} onSent={caricaProposte} />}
 
       {detailModule && (() => {
         const installedMatch = modules.find((m) => m.slug === detailModule.slug)
@@ -437,7 +408,7 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
                 {isInstalled ? (
                   <>
                     {installedMatch && !installedMatch.is_system && (
-                      <button onClick={() => { setProposta({ module: installedMatch, description: detailModule.description || '', note: '', busy: false, errore: '', fatto: false }); setDetailModule(null) }} className="text-sm px-3.5 py-2 rounded-lg transition bg-gray-800 hover:bg-gray-700 text-gray-200 flex items-center gap-1.5"><Icon name="upload" size={13} />Proponi alla Libreria</button>
+                      <button onClick={() => { setProposta({ module: installedMatch, description: detailModule.description || '' }); setDetailModule(null) }} className="text-sm px-3.5 py-2 rounded-lg transition bg-gray-800 hover:bg-gray-700 text-gray-200 flex items-center gap-1.5"><Icon name="upload" size={13} />Proponi alla Libreria</button>
                     )}
                     {onOpenInBuilder && (
                       <button onClick={() => onOpenInBuilder(detailModule.slug)} className="text-sm px-3.5 py-2 rounded-lg transition bg-gray-800 hover:bg-gray-700 text-gray-300 flex items-center gap-1.5">

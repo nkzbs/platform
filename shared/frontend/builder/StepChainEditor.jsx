@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import Icon from '../../components/Icon'
-import Select from '../../components/Select'
+import Icon from '@app/components/Icon'
 import { STEP_KINDS } from './constants'
 
 function newStep(type) {
@@ -22,15 +21,15 @@ function RefPicker({ value, onChange, steps, idx, wantType }) {
   const isLiteral = value && typeof value === 'object' && 'literal' in value
   return (
     <div className="flex items-center gap-1.5">
-      <Select
+      <select className="bg-surface-page text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-700 focus:border-accent transition"
         value={isLiteral ? '__literal__' : (value || '')}
-        onChange={(val) => onChange(val === '__literal__' ? { literal: 0 } : val)} placeholder="Seleziona..."
-        options={[
-          ...priorSteps.map((s) => ({ value: s.id, label: s.label || STEP_KINDS[s.type].label })),
-          ...(wantType === 'number' ? [{ value: '__literal__', label: 'Valore fisso...' }] : []),
-        ]} />
+        onChange={(e) => onChange(e.target.value === '__literal__' ? { literal: 0 } : e.target.value)}>
+        <option value="">Seleziona...</option>
+        {priorSteps.map((s) => <option key={s.id} value={s.id}>{s.label || STEP_KINDS[s.type].label}</option>)}
+        {wantType === 'number' && <option value="__literal__">Valore fisso...</option>}
+      </select>
       {isLiteral && (
-        <input type="number" className="w-16 bg-surface-page text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-700 focus:border-cp-primary transition"
+        <input type="number" className="w-16 bg-surface-page text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-700 focus:border-accent transition"
           value={value.literal} onChange={(e) => onChange({ literal: parseFloat(e.target.value) || 0 })} />
       )}
     </div>
@@ -113,21 +112,27 @@ function StepChainEditor({ steps, onChange, fieldCache, api, context }) {
               </div>
 
               {s.type === 'own_field' && (
-                <Select className="w-full"
-                  value={s.field} onChange={(val) => updateStep(idx, { field: val })} placeholder="Seleziona campo..."
-                  options={ownFieldOptions.map((f) => ({ value: f.key, label: f.label + ' (' + f.key + ')' }))} />
+                <select className="w-full bg-surface-card text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-700 focus:border-accent transition"
+                  value={s.field} onChange={(e) => updateStep(idx, { field: e.target.value })}>
+                  <option value="">Seleziona campo...</option>
+                  {ownFieldOptions.map((f) => <option key={f.key} value={f.key}>{f.label} ({f.key})</option>)}
+                </select>
               )}
 
               {s.type === 'get_related' && (
                 <div>
                   <div className="flex items-center gap-2">
-                    <Select className="flex-1"
-                      value={s.child_module} onChange={(val) => updateStep(idx, { child_module: val, via: null })} placeholder="Seleziona modulo..."
-                      options={childCandidates.map((m) => ({ value: m.slug, label: m.name }))} />
+                    <select className="flex-1 bg-surface-card text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-700 focus:border-accent transition"
+                      value={s.child_module} onChange={(e) => updateStep(idx, { child_module: e.target.value, via: null })}>
+                      <option value="">Seleziona modulo...</option>
+                      {childCandidates.map((m) => <option key={m.slug} value={m.slug}>{m.name}</option>)}
+                    </select>
                     {s.child_module && relationsToCurrent(s.child_module).length > 1 && (
-                      <Select className="flex-1"
-                        value={s.via || ''} onChange={(val) => updateStep(idx, { via: val })} placeholder="quale relazione?"
-                        options={relationsToCurrent(s.child_module).map((r) => ({ value: r.key, label: r.label }))} />
+                      <select className="flex-1 bg-surface-card text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-700 focus:border-accent transition"
+                        value={s.via || ''} onChange={(e) => updateStep(idx, { via: e.target.value })}>
+                        <option value="">quale relazione?</option>
+                        {relationsToCurrent(s.child_module).map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
+                      </select>
                     )}
                   </div>
                   {s.child_module && (() => {
@@ -139,16 +144,18 @@ function StepChainEditor({ steps, onChange, fieldCache, api, context }) {
                         <div className="text-[10px] text-gray-600">Filtro opzionale (tutte le condizioni, es. escludi bozze/annullati)</div>
                         {filtro.map((f, fi) => (
                           <div key={fi} className="flex items-center gap-1.5">
-                            <Select className="flex-1" value={f.campo || ''}
-                              onChange={(val) => setFiltro(filtro.map((x, xi) => xi === fi ? { ...x, campo: val } : x))} placeholder="Campo..."
-                              options={[{ value: '_stato', label: '_stato' }, ...childFields.map((cf) => ({ value: cf.key, label: cf.label }))]} />
-                            <Select className="w-24" value={f.op || '=='}
-                              onChange={(val) => setFiltro(filtro.map((x, xi) => xi === fi ? { ...x, op: val } : x))}
-                              options={[
-                                { value: '==', label: '=' }, { value: '!=', label: '≠' },
-                                { value: '<', label: '<' }, { value: '>', label: '>' },
-                                { value: '<=', label: '≤' }, { value: '>=', label: '≥' },
-                              ]} />
+                            <select className="flex-1 bg-surface-card text-ink px-2 py-1 rounded-md text-[11px] outline-none border border-gray-700" value={f.campo || ''}
+                              onChange={(e) => setFiltro(filtro.map((x, xi) => xi === fi ? { ...x, campo: e.target.value } : x))}>
+                              <option value="">Campo...</option>
+                              <option value="_stato">_stato</option>
+                              {childFields.map((cf) => <option key={cf.key} value={cf.key}>{cf.label}</option>)}
+                            </select>
+                            <select className="bg-surface-card text-ink px-2 py-1 rounded-md text-[11px] outline-none border border-gray-700 w-14" value={f.op || '=='}
+                              onChange={(e) => setFiltro(filtro.map((x, xi) => xi === fi ? { ...x, op: e.target.value } : x))}>
+                              <option value="==">=</option><option value="!=">&ne;</option>
+                              <option value="<">&lt;</option><option value=">">&gt;</option>
+                              <option value="<=">&le;</option><option value=">=">&ge;</option>
+                            </select>
                             <input className="flex-1 bg-surface-card text-ink px-2 py-1 rounded-md text-[11px] outline-none border border-gray-700 placeholder-gray-600"
                               placeholder="valore" value={f.valore ?? ''} onChange={(e) => setFiltro(filtro.map((x, xi) => xi === fi ? { ...x, valore: e.target.value } : x))} />
                             <button onClick={() => setFiltro(filtro.filter((_, xi) => xi !== fi))} className="text-red-400/60 hover:text-red-400 transition"><Icon name="trash" size={11} /></button>
@@ -164,13 +171,17 @@ function StepChainEditor({ steps, onChange, fieldCache, api, context }) {
 
               {s.type === 'related_field' && (
                 <div className="flex items-center gap-2">
-                  <Select className="flex-1"
-                    value={s.relation} onChange={(val) => updateStep(idx, { relation: val, field: '' })} placeholder="Seleziona relazione..."
-                    options={ownRelations.map((r) => ({ value: r.key, label: r.label }))} />
+                  <select className="flex-1 bg-surface-card text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-700 focus:border-accent transition"
+                    value={s.relation} onChange={(e) => updateStep(idx, { relation: e.target.value, field: '' })}>
+                    <option value="">Seleziona relazione...</option>
+                    {ownRelations.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
+                  </select>
                   {s.relation && (
-                    <Select className="flex-1"
-                      value={s.field} onChange={(val) => updateStep(idx, { field: val })} placeholder="Seleziona campo..."
-                      options={relatedFieldOptions(s.relation).map((f) => ({ value: f.key, label: f.label + (f.type === 'computed' ? ' (calcolato)' : '') }))} />
+                    <select className="flex-1 bg-surface-card text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-700 focus:border-accent transition"
+                      value={s.field} onChange={(e) => updateStep(idx, { field: e.target.value })}>
+                      <option value="">Seleziona campo...</option>
+                      {relatedFieldOptions(s.relation).map((f) => <option key={f.key} value={f.key}>{f.label}{f.type === 'computed' ? ' (calcolato)' : ''}</option>)}
+                    </select>
                   )}
                 </div>
               )}
@@ -178,19 +189,23 @@ function StepChainEditor({ steps, onChange, fieldCache, api, context }) {
               {s.type === 'aggregate' && (
                 <div className="flex items-center gap-2 flex-wrap">
                   <RefPicker value={s.input} onChange={(v) => updateStep(idx, { input: v })} steps={list} idx={idx} wantType="record_list" />
-                  <Select
-                    value={s.func} onChange={(val) => updateStep(idx, { func: val })}
-                    options={[
-                      { value: 'sum', label: 'Somma' }, { value: 'avg', label: 'Media' }, { value: 'count', label: 'Conta' },
-                      { value: 'min', label: 'Minimo' }, { value: 'max', label: 'Massimo' },
-                    ]} />
+                  <select className="bg-surface-card text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-700 focus:border-accent transition"
+                    value={s.func} onChange={(e) => updateStep(idx, { func: e.target.value })}>
+                    <option value="sum">Somma</option>
+                    <option value="avg">Media</option>
+                    <option value="count">Conta</option>
+                    <option value="min">Minimo</option>
+                    <option value="max">Massimo</option>
+                  </select>
                   {s.func !== 'count' && (() => {
                     const inputStep = list.find((x) => x.id === s.input)
                     const childFields = inputStep ? (fieldCache.find((m) => m.slug === inputStep.child_module)?.fields || []) : []
                     return (
-                      <Select
-                        value={s.field} onChange={(val) => updateStep(idx, { field: val })} placeholder="campo..."
-                        options={childFields.filter((f) => ['number', 'currency', 'time', 'computed'].includes(f.type)).map((f) => ({ value: f.key, label: f.label + (f.type === 'computed' ? ' (calcolato)' : '') }))} />
+                      <select className="bg-surface-card text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-700 focus:border-accent transition"
+                        value={s.field} onChange={(e) => updateStep(idx, { field: e.target.value })}>
+                        <option value="">campo...</option>
+                        {childFields.filter((f) => ['number', 'currency', 'time', 'computed'].includes(f.type)).map((f) => <option key={f.key} value={f.key}>{f.label}{f.type === 'computed' ? ' (calcolato)' : ''}</option>)}
+                      </select>
                     )
                   })()}
                 </div>
@@ -199,9 +214,10 @@ function StepChainEditor({ steps, onChange, fieldCache, api, context }) {
               {s.type === 'arithmetic' && (
                 <div className="flex items-center gap-2 flex-wrap">
                   <RefPicker value={s.a} onChange={(v) => updateStep(idx, { a: v })} steps={list} idx={idx} wantType="number" />
-                  <Select className="w-24"
-                    value={s.op} onChange={(val) => updateStep(idx, { op: val })}
-                    options={[{ value: '+', label: '+' }, { value: '-', label: '−' }, { value: '*', label: '×' }, { value: '/', label: '÷' }]} />
+                  <select className="bg-surface-card text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-700 focus:border-accent transition w-14"
+                    value={s.op} onChange={(e) => updateStep(idx, { op: e.target.value })}>
+                    <option value="+">+</option><option value="-">−</option><option value="*">×</option><option value="/">÷</option>
+                  </select>
                   <RefPicker value={s.b} onChange={(v) => updateStep(idx, { b: v })} steps={list} idx={idx} wantType="number" />
                 </div>
               )}
@@ -213,13 +229,12 @@ function StepChainEditor({ steps, onChange, fieldCache, api, context }) {
               {s.type === 'compare' && (
                 <div className="flex items-center gap-2 flex-wrap">
                   <RefPicker value={s.a} onChange={(v) => updateStep(idx, { a: v })} steps={list} idx={idx} wantType="number" />
-                  <Select className="w-24"
-                    value={s.op} onChange={(val) => updateStep(idx, { op: val })}
-                    options={[
-                      { value: '>', label: '>' }, { value: '<', label: '<' },
-                      { value: '>=', label: '≥' }, { value: '<=', label: '≤' },
-                      { value: '==', label: '=' }, { value: '!=', label: '≠' },
-                    ]} />
+                  <select className="bg-surface-card text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-700 focus:border-accent transition w-16"
+                    value={s.op} onChange={(e) => updateStep(idx, { op: e.target.value })}>
+                    <option value=">">&gt;</option><option value="<">&lt;</option>
+                    <option value=">=">&ge;</option><option value="<=">&le;</option>
+                    <option value="==">=</option><option value="!=">&ne;</option>
+                  </select>
                   <RefPicker value={s.b} onChange={(v) => updateStep(idx, { b: v })} steps={list} idx={idx} wantType="number" />
                 </div>
               )}

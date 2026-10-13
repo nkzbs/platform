@@ -1,5 +1,5 @@
 import React from 'react'
-import Icon from '../../components/Icon'
+import Icon from '@app/components/Icon'
 import { computeValidations } from './validation'
 
 const TRIGGER_LABEL = {

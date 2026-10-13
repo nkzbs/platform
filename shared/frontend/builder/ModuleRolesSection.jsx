@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import useApi from '../../lib/useApi'
+import useApi from '@app/lib/useApi'
 
 // Ruoli del modulo (Builder): a cosa serve il modulo e quali suoi campi sono importo, data, scadenza...
 // Le funzioni (Come sta andando, riepilogo del mattino, regole Gmail) leggono questa dichiarazione invece di nomi scritti nel codice.
