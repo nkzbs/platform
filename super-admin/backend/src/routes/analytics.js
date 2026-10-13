@@ -70,8 +70,6 @@ function computePlatformOverview() {
   `).all();
   const moduleDistribution = libraryRows.map((r) => ({ category: r.category, count: r.count }));
 
-  const updateState = db.prepare('SELECT * FROM update_manager WHERE id = 1').get();
-  const tenantsUpToDate = tenants.filter((t) => t.auto_update_enabled).length;
 
   const totalStorageMb = tenants.reduce((sum, t) => {
     try { return sum + (require('fs').statSync(t.db_path).size / 1024 / 1024); } catch (e) { return sum; }
@@ -80,8 +78,6 @@ function computePlatformOverview() {
   return {
     tenant_status: tenantStatus,
     module_distribution: moduleDistribution,
-    update_manager: { queued: !!(updateState && updateState.queued), last_run_at: updateState ? updateState.last_run_at : null },
-    tenants_auto_update_enabled: tenantsUpToDate,
     tenants_total: tenants.length,
     total_storage_mb: Math.round(totalStorageMb * 10) / 10,
   };

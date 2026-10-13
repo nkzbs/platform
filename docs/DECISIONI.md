@@ -34,6 +34,8 @@ servire a un tenant futuro" non è un motivo.
 | Password admin fissa scritta nel codice | Sostituita da una password casuale (o da variabile d'ambiente) |
 | ~25 colonne commerciali di `tenants`, ~20 tabelle inerti, la storia di migrazioni di `db.js` | Il database di Super Admin riparte da uno schema pulito di 12 tabelle |
 
+- **Update Manager** (13 ottobre): tolti la pagina, la coda per la propagazione notturna e il rollback/import/export dell'immagine. Con un solo tenant il pulsante **Aggiorna** sulla scheda del tenant basta. Restano `redeploy-all` e la tabella `update_manager` (inerte, non toccata).
+
 ### Tenuto, anche se "non serve oggi"
 
 | Cosa | Perché |
@@ -42,7 +44,6 @@ servire a un tenant futuro" non è un motivo.
 | **Super Builder / Builder** | È il pezzo di maggior valore: dove nascono i moduli |
 | **Dominio pubblico automatico** (Cloudflare + nginx) | Un tenant nuovo deve essere raggiungibile subito |
 | **Statistiche tra tenant** e **API interna tra Super Admin e tenant** | Base per far "interrogare" più tenant tra loro |
-| **Update Manager** (stato, aggiornamento, rollback dell'immagine core) | Serve a distribuire una nuova versione del codice ai tenant |
 | **Backup, export, ripristino, 2FA** | Dati finanziari reali |
 
 ### Cambiato

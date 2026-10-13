@@ -15,7 +15,7 @@ export const MENU_HIDDEN = new Set(['guida'])
 
 // Icone allineate a CLAUDE_CODE_UI_BRIEF.md, tabella ruolo→icona (Fase 2 del
 // reskin, 2026-08-23) per le voci che il brief nomina esplicitamente
-// (dashboard/tenant/libreria/super-builder/update-manager/audit/analytics/
+// (dashboard/tenant/libreria/super-builder/audit/analytics/
 // impostazioni). Le voci non presenti nel brief (clienti, licenze, fatture,
 // partner, utenti, supporto, guida) mantengono l'icona già scelta in
 // precedenza — nessun cambio senza un riferimento reale nel brief.
@@ -33,7 +33,6 @@ export const NAV_ITEMS = [
   { id: 'tenants', label: 'Tenant', icon: 'building', color: '#F59E0B' },
   { id: 'libreria', label: 'Libreria', icon: 'store', color: '#EC4899' },
   { id: 'super-builder', label: 'Super Builder', icon: 'wand', color: '#A855F7' },
-  { id: 'update-manager', label: 'Update Manager', icon: 'refresh', color: '#22C55E' },
   { id: 'attivita', label: 'Attività', icon: 'clipboard', color: '#64748B' },
   { id: 'analytics', label: 'Analytics', icon: 'bar-chart', color: '#0EA5E9' },
   { id: 'users', label: 'Utenti', icon: 'users', color: '#EC4899' },

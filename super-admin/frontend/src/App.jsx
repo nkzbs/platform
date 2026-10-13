@@ -10,7 +10,6 @@ import LibreriaPage from './pages/LibreriaPage'
 import ActivityPage from './pages/ActivityPage'
 import UsersPage from './pages/UsersPage'
 import TenantBuilderPage from './pages/TenantBuilderPage'
-import UpdateManagerPage from './pages/UpdateManagerPage'
 import SettingsPage from './pages/SettingsPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import GuidaPage from './pages/GuidaPage'
@@ -139,7 +138,6 @@ export default function App() {
           {page === 'tenants' && <TenantsPage token={token} onViewActivity={viewTenantActivity} onNavigate={setPage} />}
           {page === 'libreria' && <LibreriaPage token={token} />}
           {page === 'super-builder' && <TenantBuilderPage token={token} initialPrompt={builderPrefill?.prompt} initialModuleName={builderPrefill?.moduleName} />}
-          {page === 'update-manager' && <UpdateManagerPage token={token} />}
           {page === 'attivita' && <ActivityPage token={token} initialTenantFilter={activityTenantFilter} />}
           {page === 'analytics' && <AnalyticsPage token={token} />}
           {page === 'impostazioni' && <SettingsPage token={token} />}

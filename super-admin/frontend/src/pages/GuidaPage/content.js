@@ -85,21 +85,6 @@ const GUIDA_SECTIONS = [
     ]
   },
   {
-    title: 'Update Manager', icon: 'activity', color: '#10B981',
-    topics: [
-      {
-        title: 'Immagine corrente e badge per tenant', body: [
-          'Mostra l\'immagine `platform-core` più recente caricata e, per ciascun tenant, se sta girando davvero con quella (badge verde) o con una precedente (ambra) — letto dal vivo via `docker inspect`, non da uno stato salvato che potrebbe disallinearsi.',
-        ]
-      },
-      {
-        title: 'Coda, rollback, import/export', body: [
-          'Un aggiornamento può essere accodato per essere eseguito automaticamente a un orario configurato (utile per non interrompere nessuno durante il giorno), oppure lanciato subito su un singolo tenant o su tutti. Il rollback ritagga l\'immagine precedente come quella "corrente" — non riavvia da solo nessun container: i tenant restano sulla loro immagine attuale finché non lanci un redeploy (singolo o su tutti) dopo il rollback. Import/export permette di spostare un\'immagine `.tar` senza passare da un registro Docker esterno.',
-        ]
-      },
-    ]
-  },
-  {
     title: 'Attività', icon: 'list', color: '#EF4444',
     topics: [
       {

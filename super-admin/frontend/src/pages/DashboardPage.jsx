@@ -152,18 +152,6 @@ function DashboardPage({ token, onNavigate }) {
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="bg-surface-card rounded-md border border-gray-800 p-5 flex items-center justify-between">
-              <div>
-                <div className="text-xs font-semibold text-ink mb-1">Stato aggiornamenti</div>
-                <div className="text-xs text-gray-500">
-                  {overview && overview.update_manager.queued ? 'Un aggiornamento è in coda per stanotte.' : 'Nessun aggiornamento in coda.'}
-                </div>
-              </div>
-              <div className="text-2xl font-bold text-ink">{overview ? overview.tenants_auto_update_enabled + '/' + overview.tenants_total : '—'}</div>
-            </div>
-          </div>
-
           {/* Consumi API AI (2026-09-07) — token reali da ai_usage_log, mai un
               costo fabbricato: senza tariffe configurate (AI_COST_PER_MTOK_*)
               dice onestamente che il costo non è stimabile, invece di un 0€
