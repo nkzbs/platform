@@ -12,7 +12,7 @@ import Select from '../components/Select'
 const ROLE_COLOR = { admin: '#2563EB', partner: '#8b5cf6', partner_viewer: '#6B7280' }
 const ROLE_LABEL = { admin: 'Admin', partner: 'Partner', partner_viewer: 'Partner (sola lettura)' }
 
-function UsersPage({ token }) {
+function UsersPage({ token, embedded }) {
   const [users, setUsers] = useState([])
   const [showNew, setShowNew] = useState(false)
   const [form, setForm] = useState({ username: '', password: '', role: 'admin' })
@@ -44,16 +44,26 @@ function UsersPage({ token }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <div>
-          <h1 className="text-lg font-bold text-ink tracking-[-0.35px]">Utenti Super Admin</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Gestisci gli accessi a questo pannello</p>
+      {!embedded && (
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <div>
+            <h1 className="text-lg font-bold text-ink tracking-[-0.35px]">Utenti Super Admin</h1>
+            <p className="text-gray-500 text-sm mt-0.5">Gestisci gli accessi a questo pannello</p>
+          </div>
+          <button onClick={() => setShowNew(true)} className="bg-cp-primary hover:bg-cp-primary-hover text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+            <Icon name="plus" size={14} />
+            Nuovo Utente
+          </button>
         </div>
-        <button onClick={() => setShowNew(true)} className="bg-cp-primary hover:bg-cp-primary-hover text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
-          <Icon name="plus" size={14} />
-          Nuovo Utente
-        </button>
-      </div>
+      )}
+      {embedded && (
+        <div className="flex justify-end mb-4">
+          <button onClick={() => setShowNew(true)} className="bg-cp-primary hover:bg-cp-primary-hover text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+            <Icon name="plus" size={14} />
+            Nuovo Utente
+          </button>
+        </div>
+      )}
 
       <div className="space-y-2">
         {users.map((u) => (

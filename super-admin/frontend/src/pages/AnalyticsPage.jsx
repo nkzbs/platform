@@ -13,7 +13,7 @@ import { Kpi, LineTrend } from '../components/DashboardCharts'
 // side project a uso personale, l'utente non vuole vederle in dashboard —
 // il dato resta comunque calcolato/salvato lato server in metrics_snapshots,
 // solo non più mostrato qui).
-function AnalyticsPage({ token }) {
+function AnalyticsPage({ token, embedded }) {
   const [points, setPoints] = useState(null)
   const [days, setDays] = useState(30)
   const [capturing, setCapturing] = useState(false)
@@ -40,14 +40,26 @@ function AnalyticsPage({ token }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-1">
-        <h1 className="text-lg font-bold text-ink tracking-[-0.35px]">Analytics</h1>
-        <button onClick={captureNow} disabled={capturing}
-          className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg disabled:opacity-50">
-          {capturing ? 'Cattura…' : 'Cattura foto adesso'}
-        </button>
-      </div>
-      <p className="text-gray-500 text-sm mb-6">Andamento della piattaforma nel tempo — una foto al giorno, non un numero live.</p>
+      {!embedded && (
+        <>
+          <div className="flex items-center justify-between mb-1">
+            <h1 className="text-lg font-bold text-ink tracking-[-0.35px]">Analytics</h1>
+            <button onClick={captureNow} disabled={capturing}
+              className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg disabled:opacity-50">
+              {capturing ? 'Cattura…' : 'Cattura foto adesso'}
+            </button>
+          </div>
+          <p className="text-gray-500 text-sm mb-6">Andamento della piattaforma nel tempo — una foto al giorno, non un numero live.</p>
+        </>
+      )}
+      {embedded && (
+        <div className="flex items-center justify-end mb-4">
+          <button onClick={captureNow} disabled={capturing}
+            className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg disabled:opacity-50">
+            {capturing ? 'Cattura…' : 'Cattura foto adesso'}
+          </button>
+        </div>
+      )}
 
       {!latest && (
         <div className="bg-surface-card rounded-md border border-gray-800 p-6 text-sm text-gray-500 text-center">

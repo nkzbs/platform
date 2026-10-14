@@ -13,6 +13,12 @@
 // come tab interna (SupportSectionPage.jsx), richiesto dall'utente.
 export const MENU_HIDDEN = new Set(['guida'])
 
+// 'analytics' e 'users' (2026-10-14, richiesto dall'utente dopo aver visto
+// il menu da telefono): non più voci a sé. 'analytics' è ora la scheda
+// "Metriche" dentro 'attivita' (ActivityPage.jsx); 'users' è la sezione
+// "Utenti Super Admin" dentro 'impostazioni' (SettingsPage.jsx). Nessuna
+// rotta App.jsx punta più a questi due id: tolti, non solo nascosti.
+
 // Icone allineate a CLAUDE_CODE_UI_BRIEF.md, tabella ruolo→icona (Fase 2 del
 // reskin, 2026-08-23) per le voci che il brief nomina esplicitamente
 // (dashboard/tenant/libreria/super-builder/audit/analytics/
@@ -35,8 +41,6 @@ export const NAV_ITEMS = [
   { id: 'analisi', label: 'Analisi', icon: 'git-branch', color: '#22C55E' },
   { id: 'super-builder', label: 'Super Builder', icon: 'wand', color: '#A855F7' },
   { id: 'attivita', label: 'Attività', icon: 'clipboard', color: '#64748B' },
-  { id: 'analytics', label: 'Analytics', icon: 'bar-chart', color: '#0EA5E9' },
-  { id: 'users', label: 'Utenti', icon: 'users', color: '#EC4899' },
   { id: 'impostazioni', label: 'Impostazioni', icon: 'settings', color: '#94A3B8' },
   { id: 'guida', label: 'Guida', icon: 'info', color: '#64748B' },
 ]

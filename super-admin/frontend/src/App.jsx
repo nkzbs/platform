@@ -8,10 +8,8 @@ import DashboardPage from './pages/DashboardPage'
 import TenantsPage from './pages/TenantsPage'
 import LibreriaPage from './pages/LibreriaPage'
 import ActivityPage from './pages/ActivityPage'
-import UsersPage from './pages/UsersPage'
 import TenantBuilderPage from './pages/TenantBuilderPage'
 import SettingsPage from './pages/SettingsPage'
-import AnalyticsPage from './pages/AnalyticsPage'
 import GuidaPage from './pages/GuidaPage'
 import AnalisiPage from './pages/AnalisiPage'
 
@@ -141,10 +139,8 @@ export default function App() {
           {page === 'analisi' && <AnalisiPage token={token} onNavigate={setPage} onBuild={openBuilderWithPrefill} />}
           {page === 'super-builder' && <TenantBuilderPage token={token} initialPrompt={builderPrefill?.prompt} initialModuleName={builderPrefill?.moduleName} />}
           {page === 'attivita' && <ActivityPage token={token} initialTenantFilter={activityTenantFilter} />}
-          {page === 'analytics' && <AnalyticsPage token={token} />}
           {page === 'impostazioni' && <SettingsPage token={token} />}
           {page === 'guida' && <GuidaPage token={token} />}
-          {page === 'users' && <UsersPage token={token} />}
         </div>
       </main>
     </div>

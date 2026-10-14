@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { API } from '../lib/api'
 import Icon from '../components/Icon'
 import Select from '../components/Select'
+import AnalyticsPage from './AnalyticsPage'
 
 // Log + Monitoring unificati in un solo feed — prima erano due pagine separate
 // (azioni amministrative da una parte, errori dall'altra) con descrizioni deboli
@@ -11,6 +12,10 @@ import Select from '../components/Select'
 // descrizione leggibile pre-calcolata lato server (vedi describe-event.js).
 function ActivityPage({ token, initialTenantFilter }) {
   const headers = { Authorization: 'Bearer ' + token }
+  // Attività + Analytics unificate in una sola voce di menu (richiesto
+  // dall'utente 2026-10-14: due voci separate per dati che si guardano
+  // insieme, log eventi e metriche nel tempo). Due schede, non due pagine.
+  const [tab, setTab] = useState('eventi')
   const [events, setEvents] = useState([])
   const [kindFilter, setKindFilter] = useState('')
   // PLATFORM-UI-REDESIGN-CATALOG.md #27 — pre-filtrato quando si arriva da
@@ -70,49 +75,63 @@ function ActivityPage({ token, initialTenantFilter }) {
     .filter((e) => !kindFilter || e.kind === kindFilter)
     .filter((e) => !tenantFilter || e.tenant_name === tenantFilter)
 
+  const tabCls = (active) => 'px-3 py-2 text-sm border-b-2 -mb-px transition ' +
+    (active ? 'border-cp-primary text-ink font-medium' : 'border-transparent text-gray-500 hover:text-ink')
+
   return (
     <div>
       <h1 className="text-lg font-bold text-ink tracking-[-0.35px] mb-1">Attività</h1>
-      <p className="text-gray-500 text-sm mb-6">Le azioni fatte da Super Admin e gli errori tecnici dei tenant. Cosa fanno gli utenti dentro un tenant non si vede da qui: sta nel registro del tenant.</p>
+      <p className="text-gray-500 text-sm mb-4">Eventi: azioni di Super Admin ed errori tecnici dei tenant. Metriche: come cresce la piattaforma nel tempo. Cosa fanno gli utenti dentro un tenant non si vede da qui: sta nel registro del tenant.</p>
 
-      <div className="flex items-center gap-3 flex-wrap mb-4">
-        <Select value={kindFilter} onChange={setKindFilter} placeholder="Tutti i tipi" className="w-44"
-          options={[{ value: '', label: 'Tutti i tipi' }, { value: 'audit', label: 'Solo azioni' }, { value: 'error', label: 'Solo errori' }]} />
-        <Select value={tenantFilter} onChange={setTenantFilter} placeholder="Tutti i tenant" className="w-52"
-          options={[{ value: '', label: 'Tutti i tenant' }, ...tenantOptions.map((n) => ({ value: n, label: n }))]} />
-        <Select value={limit} onChange={(v) => setLimit(Number(v))} className="w-36"
-          options={LIMIT_OPTIONS.map((n) => ({ value: n, label: n + ' per pagina' }))} />
+      <div className="flex items-center gap-1 mb-5 border-b border-gray-800">
+        <button onClick={() => setTab('eventi')} className={tabCls(tab === 'eventi')}>Eventi</button>
+        <button onClick={() => setTab('metriche')} className={tabCls(tab === 'metriche')}>Metriche</button>
       </div>
 
-      <div className="bg-surface-card rounded-md border border-gray-800 divide-y divide-gray-800/70">
-        {filtered.length === 0 && <div className="text-gray-600 text-sm p-6">Nessuna attività registrata ancora.</div>}
-        {filtered.map((e) => (
-          <div key={e.id} className="p-3.5 text-sm">
-            <div className={'flex items-start justify-between flex-wrap gap-x-3 gap-y-1 ' + (e.kind === 'error' ? 'cursor-pointer' : '')}
-              onClick={() => e.kind === 'error' && setExpandedId(expandedId === e.id ? null : e.id)}>
-              <div className="min-w-0 flex items-start gap-2">
-                <Icon name={e.kind === 'error' ? 'alert-triangle' : 'check'} size={13}
-                  className={'mt-0.5 flex-shrink-0 ' + (e.kind === 'error' ? 'text-red-400' : 'text-green-400/70')} />
-                <div>
-                  <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 mr-2">{e.tenant_name}</span>
-                  <span className={e.kind === 'error' ? 'text-red-400/90' : 'text-ink font-medium'}>{e.description}</span>
-                  {e.kind === 'audit' && <div className="text-xs text-gray-600 mt-0.5">da <span className="font-mono">{e.actor}</span></div>}
-                </div>
-              </div>
-              <div className="text-xs text-gray-600 flex-shrink-0">{new Date(e.created_at).toLocaleString('it-IT')}</div>
-            </div>
-            {expandedId === e.id && e.stack && (
-              <pre className="mt-2 ml-5 text-[10px] text-gray-500 bg-black/30 rounded-lg p-2.5 overflow-x-auto whitespace-pre-wrap">{e.stack}</pre>
-            )}
+      {tab === 'eventi' && (
+        <>
+          <div className="flex items-center gap-3 flex-wrap mb-4">
+            <Select value={kindFilter} onChange={setKindFilter} placeholder="Tutti i tipi" className="w-44"
+              options={[{ value: '', label: 'Tutti i tipi' }, { value: 'audit', label: 'Solo azioni' }, { value: 'error', label: 'Solo errori' }]} />
+            <Select value={tenantFilter} onChange={setTenantFilter} placeholder="Tutti i tenant" className="w-52"
+              options={[{ value: '', label: 'Tutti i tenant' }, ...tenantOptions.map((n) => ({ value: n, label: n }))]} />
+            <Select value={limit} onChange={(v) => setLimit(Number(v))} className="w-36"
+              options={LIMIT_OPTIONS.map((n) => ({ value: n, label: n + ' per pagina' }))} />
           </div>
-        ))}
-      </div>
-      {hasMore && (
-        <button onClick={loadMore} disabled={loadingMore}
-          className="mt-3 text-xs text-cp-primary hover:opacity-80 transition disabled:opacity-50">
-          {loadingMore ? 'Carico...' : 'Carica altri →'}
-        </button>
+
+          <div className="bg-surface-card rounded-md border border-gray-800 divide-y divide-gray-800/70">
+            {filtered.length === 0 && <div className="text-gray-600 text-sm p-6">Nessuna attività registrata ancora.</div>}
+            {filtered.map((e) => (
+              <div key={e.id} className="p-3.5 text-sm">
+                <div className={'flex items-start justify-between flex-wrap gap-x-3 gap-y-1 ' + (e.kind === 'error' ? 'cursor-pointer' : '')}
+                  onClick={() => e.kind === 'error' && setExpandedId(expandedId === e.id ? null : e.id)}>
+                  <div className="min-w-0 flex items-start gap-2">
+                    <Icon name={e.kind === 'error' ? 'alert-triangle' : 'check'} size={13}
+                      className={'mt-0.5 flex-shrink-0 ' + (e.kind === 'error' ? 'text-red-400' : 'text-green-400/70')} />
+                    <div>
+                      <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 mr-2">{e.tenant_name}</span>
+                      <span className={e.kind === 'error' ? 'text-red-400/90' : 'text-ink font-medium'}>{e.description}</span>
+                      {e.kind === 'audit' && <div className="text-xs text-gray-600 mt-0.5">da <span className="font-mono">{e.actor}</span></div>}
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-600 flex-shrink-0">{new Date(e.created_at).toLocaleString('it-IT')}</div>
+                </div>
+                {expandedId === e.id && e.stack && (
+                  <pre className="mt-2 ml-5 text-[10px] text-gray-500 bg-black/30 rounded-lg p-2.5 overflow-x-auto whitespace-pre-wrap">{e.stack}</pre>
+                )}
+              </div>
+            ))}
+          </div>
+          {hasMore && (
+            <button onClick={loadMore} disabled={loadingMore}
+              className="mt-3 text-xs text-cp-primary hover:opacity-80 transition disabled:opacity-50">
+              {loadingMore ? 'Carico...' : 'Carica altri →'}
+            </button>
+          )}
+        </>
       )}
+
+      {tab === 'metriche' && <AnalyticsPage token={token} embedded />}
     </div>
   )
 }

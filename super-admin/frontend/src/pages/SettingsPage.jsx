@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { API } from '../lib/api'
 import Icon from '../components/Icon'
 import StatusBadge from '../components/StatusBadge'
+import UsersPage from './UsersPage'
 
 // PLATFORM-UI-REDESIGN-CATALOG.md #8 — unico pezzo mancante di questa pagina
 // (la navigazione a tile per sotto-sezioni esiste già): un indicatore di
@@ -142,7 +143,17 @@ function SettingsPage({ token }) {
   return (
     <div className="max-w-2xl">
       <h1 className="text-lg font-bold text-ink tracking-[-0.35px] mb-1">Impostazioni</h1>
-      <p className="text-gray-500 text-sm mb-6">Il tuo accesso a questo pannello.</p>
+      <p className="text-gray-500 text-sm mb-6">Chi ha accesso a questo pannello, e il tuo accesso.</p>
+
+      {/* UTENTI SUPER ADMIN — prima era una voce di menu a sé (2026-10-14,
+          richiesto dall'utente: stava vicino a Impostazioni ma senza reset
+          password/2FA, che restano qui sotto come self-service). Reset
+          password/2FA di un ALTRO admin non esistono: ognuno gestisce solo
+          il proprio (vedi sezione Due fattori più sotto). */}
+      <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mb-4">
+        <SectionHead icon="users" title="Utenti Super Admin" sub="Chi ha accesso a questo pannello. Password e 2FA restano a chi accede, qui sotto — nessun admin può resettarli per un altro." />
+        <UsersPage token={token} embedded />
+      </section>
 
       {/* CHIAVI AI */}
       <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mb-4">
