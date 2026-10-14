@@ -136,11 +136,15 @@ router.post('/login/2fa-verify', loginLimiter, (req, res) => {
 
 router.get('/me', requireAuth, (req, res) => res.json(req.user));
 
-// ─── 2FA — self-service, ogni utente attiva/disattiva SOLO il proprio ──────────
+// ─── 2FA — self-service, ogni utente ATTIVA solo il proprio ────────────────────
 // Stesso identico meccanismo di core/backend/src/routes/auth.js — nessun
-// endpoint admin per attivarlo su un altro utente, si accende dal pannello,
-// lo fa la persona stessa. Reso POSSIBILE qui (2026-08-10), mai attivato di
-// default su nessun utente reale.
+// endpoint admin per ATTIVARE il 2FA su un altro utente, si accende dal
+// pannello, lo fa la persona stessa. Reso POSSIBILE qui (2026-08-10), mai
+// attivato di default su nessun utente reale. La DISATTIVAZIONE forzata da
+// parte di un altro admin esiste invece (2026-10-14, recupero di un admin
+// bloccato) — vedi routes/users.js POST /:id/disable-2fa, richiede comunque
+// la password di chi esegue l'azione e resta tracciata con un'azione audit
+// distinta da questa self-service.
 router.post('/2fa/setup', requireAuth, async (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
   const secret = authenticator.generateSecret();

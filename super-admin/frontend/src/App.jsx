@@ -139,7 +139,7 @@ export default function App() {
           {page === 'analisi' && <AnalisiPage token={token} onNavigate={setPage} onBuild={openBuilderWithPrefill} />}
           {page === 'super-builder' && <TenantBuilderPage token={token} initialPrompt={builderPrefill?.prompt} initialModuleName={builderPrefill?.moduleName} />}
           {page === 'attivita' && <ActivityPage token={token} initialTenantFilter={activityTenantFilter} />}
-          {page === 'impostazioni' && <SettingsPage token={token} />}
+          {page === 'impostazioni' && <SettingsPage token={token} myId={payload && payload.id} />}
           {page === 'guida' && <GuidaPage token={token} />}
         </div>
       </main>

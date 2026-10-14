@@ -24,7 +24,7 @@ function passwordStrength(pw) {
 }
 
 // ─── IMPOSTAZIONI ───────────────────────────────────────────────────────────────
-function SettingsPage({ token }) {
+function SettingsPage({ token, myId }) {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -152,7 +152,7 @@ function SettingsPage({ token }) {
           il proprio (vedi sezione Due fattori più sotto). */}
       <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mb-4">
         <SectionHead icon="users" title="Utenti Super Admin" sub="Chi ha accesso a questo pannello. Password e 2FA restano a chi accede, qui sotto — nessun admin può resettarli per un altro." />
-        <UsersPage token={token} embedded />
+        <UsersPage token={token} embedded myId={myId} />
       </section>
 
       {/* CHIAVI AI */}
