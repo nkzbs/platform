@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { API } from '../../lib/api'
 import Icon from '../Icon'
 import PlatformLogo from '../PlatformLogo'
+import { startAuthentication, browserSupportsWebAuthn } from '@simplewebauthn/browser'
 
 // Stessa logica di autenticazione di sempre (POST /auth/login, token in
 // localStorage) — cambia solo la presentazione: un overlay richiamabile dalla
@@ -21,6 +22,31 @@ function LoginModal({ onLogin, onClose, mode }) {
   const [loading, setLoading] = useState(false)
   const [pendingToken, setPendingToken] = useState(null)
   const [code, setCode] = useState('')
+  // Passkey (2026-10-14, richiesto dall'utente: "oltre alle 2FA voglio
+  // passkey ovunque") — stesso identico meccanismo del login dei tenant
+  // (core/frontend/src/components/Login.jsx, vedi lì il commento esteso).
+  const [passkeyBusy, setPasskeyBusy] = useState(false)
+  const loginWithPasskey = async () => {
+    setError(''); setPasskeyBusy(true)
+    try {
+      const optRes = await fetch(API + '/webauthn/login-options', { method: 'POST' })
+      const opt = await optRes.json()
+      if (!optRes.ok) { setError(opt.error || 'Errore'); return }
+      const assertion = await startAuthentication({ optionsJSON: opt.options })
+      const res = await fetch(API + '/webauthn/login-verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pending_token: opt.pending_token, response: assertion }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Accesso con passkey non riuscito'); return }
+      localStorage.setItem('sa_token', data.token)
+      onLogin(data.token)
+    } catch (e) {
+      if (e.name !== 'NotAllowedError') setError('Accesso con passkey non riuscito')
+    } finally {
+      setPasskeyBusy(false)
+    }
+  }
 
   const submit = async () => {
     setLoading(true)
@@ -79,6 +105,17 @@ function LoginModal({ onLogin, onClose, mode }) {
         )}
         {!pendingToken ? (
           <div className="space-y-3">
+            {browserSupportsWebAuthn() && (
+              <>
+                <button onClick={loginWithPasskey} disabled={passkeyBusy} className="w-full flex items-center justify-center gap-2 bg-surface-page hover:bg-gray-800 disabled:opacity-50 text-ink font-medium py-3 rounded-lg transition border border-gray-800">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="5" /><path d="M20 21a8 8 0 0 0-16 0" /></svg>
+                  {passkeyBusy ? 'Verifica...' : 'Accedi con passkey'}
+                </button>
+                <div className="flex items-center gap-3 py-1">
+                  <div className="h-px bg-gray-800 flex-1" /><span className="text-xs text-gray-600">oppure</span><div className="h-px bg-gray-800 flex-1" />
+                </div>
+              </>
+            )}
             <input
               autoFocus
               className="w-full bg-surface-page text-ink px-4 py-3 rounded-lg outline-none border border-gray-800 focus:border-cp-primary transition placeholder-gray-600"

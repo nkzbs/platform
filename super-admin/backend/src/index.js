@@ -11,6 +11,7 @@ const express = require('express');
 const cors = require('cors');
 const db = require('./db');
 const authRoutes = require('./routes/auth');
+const webauthnRoutes = require('./routes/webauthn');
 const tenantsRoutes = require('./routes/tenants');
 const tenantImportRoutes = require('./routes/tenant-import');
 const usersRoutes = require('./routes/users');
@@ -50,6 +51,7 @@ app.use(express.json());
 app.use('/api', rateLimit({ windowMs: 60 * 1000, max: 600, message: 'Troppe richieste da questo indirizzo, rallenta', name: 'api-global' }));
 
 app.use('/api/auth', authRoutes);
+app.use('/api/webauthn', webauthnRoutes);
 app.use('/api/tenants', tenantImportRoutes);
 app.use('/api/tenants', tenantsRoutes);
 app.use('/api/analyses', analysesRoutes);

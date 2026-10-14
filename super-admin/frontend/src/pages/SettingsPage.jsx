@@ -3,6 +3,7 @@ import { API } from '../lib/api'
 import Icon from '../components/Icon'
 import StatusBadge from '../components/StatusBadge'
 import UsersPage from './UsersPage'
+import { startRegistration, browserSupportsWebAuthn } from '@simplewebauthn/browser'
 
 // PLATFORM-UI-REDESIGN-CATALOG.md #8 — unico pezzo mancante di questa pagina
 // (la navigazione a tile per sotto-sezioni esiste già): un indicatore di
@@ -60,9 +61,38 @@ function SettingsPage({ token, myId }) {
   const loadTwofaStatus = () => fetch(API + '/auth/2fa/status', { headers }).then((r) => r.json()).then((d) => setTwofaEnabled(d.enabled))
 
   const loadKeys = () => fetch(API + '/ai-usage/keys', { headers }).then((r) => r.json()).then((d) => d && d.admin && setKeys(d))
+
+  // Passkey (2026-10-14, richiesto dall'utente: "oltre alle 2FA voglio
+  // passkey ovunque") — self-service come il 2FA sopra.
+  const [passkeys, setPasskeys] = useState(null)
+  const [pkNickname, setPkNickname] = useState('')
+  const [pkBusy, setPkBusy] = useState(false)
+  const [pkError, setPkError] = useState('')
+  const loadPasskeys = () => fetch(API + '/webauthn/list', { headers }).then((r) => r.json()).then((d) => Array.isArray(d) && setPasskeys(d))
+  const addPasskey = async () => {
+    setPkError(''); setPkBusy(true)
+    try {
+      const optRes = await fetch(API + '/webauthn/register-options', { method: 'POST', headers })
+      const opt = await optRes.json()
+      if (!optRes.ok) { setPkError(opt.error || 'Errore'); return }
+      const attestation = await startRegistration({ optionsJSON: opt.options })
+      const verRes = await fetch(API + '/webauthn/register-verify', { method: 'POST', headers, body: JSON.stringify({ pending_token: opt.pending_token, response: attestation, nickname: pkNickname }) })
+      const verBody = await verRes.json()
+      if (!verRes.ok) { setPkError(verBody.error || 'Errore'); return }
+      setPkNickname('')
+      loadPasskeys()
+    } catch (e) {
+      if (e.name !== 'NotAllowedError') setPkError('Creazione della passkey non riuscita')
+    } finally {
+      setPkBusy(false)
+    }
+  }
+  const removePasskey = async (id) => { await fetch(API + '/webauthn/' + id, { method: 'DELETE', headers }); loadPasskeys() }
+
   useEffect(() => {
     loadTwofaStatus()
     loadKeys()
+    loadPasskeys()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const keyCall = async (method, path, body) => {
@@ -290,6 +320,37 @@ function SettingsPage({ token, myId }) {
           </div>
         )}
       </section>
+
+      {/* PASSKEY */}
+      {browserSupportsWebAuthn() && (
+        <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mt-4">
+          <SectionHead icon="key" title="Passkey" sub="Entra con l'impronta, il volto o il PIN del dispositivo, senza username né password. Puoi averne più di una." />
+
+          {pkError && <div className="bg-red-900/30 text-red-400 text-sm p-3 rounded-lg mb-4 border border-red-900/50">{pkError}</div>}
+
+          <div className="space-y-2 mb-4">
+            {passkeys === null && <div className="text-sm text-gray-600">Caricamento...</div>}
+            {passkeys && passkeys.length === 0 && <div className="text-sm text-gray-600">Nessuna passkey ancora.</div>}
+            {passkeys && passkeys.map((p) => (
+              <div key={p.id} className="flex items-center justify-between gap-3 bg-surface-page rounded-lg px-4 py-3 border border-gray-800">
+                <div className="min-w-0">
+                  <div className="text-sm text-ink truncate">{p.nickname || 'Passkey senza nome'}</div>
+                  <div className="text-xs text-gray-600 mt-0.5">
+                    Aggiunta il {new Date(p.created_at).toLocaleDateString('it-IT')}
+                    {p.last_used_at && ' · usata l\'ultima volta il ' + new Date(p.last_used_at).toLocaleDateString('it-IT')}
+                  </div>
+                </div>
+                <button onClick={() => removePasskey(p.id)} className="text-xs text-red-400 hover:text-red-300 transition flex-shrink-0">Rimuovi</button>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
+            <input className={inputCls + ' flex-1 min-w-[180px]'} placeholder="Nome (facoltativo, es. Il mio iPhone)" value={pkNickname} onChange={(e) => setPkNickname(e.target.value)} />
+            <button onClick={addPasskey} disabled={pkBusy} className={primaryBtn}>{pkBusy ? 'Creazione...' : 'Aggiungi una passkey'}</button>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

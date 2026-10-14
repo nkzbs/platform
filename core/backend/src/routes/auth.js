@@ -248,3 +248,7 @@ router.get('/me', requireAuth, (req, res) => {
 module.exports = router;
 module.exports.requireAuth = requireAuth;
 module.exports.requireAdmin = requireAdmin;
+// Riusate da routes/webauthn.js — stessa identica sessione di un login con
+// password, una passkey verificata non deve crearne una "diversa".
+module.exports.signSessionToken = signSessionToken;
+module.exports.serializeUser = serializeUser;

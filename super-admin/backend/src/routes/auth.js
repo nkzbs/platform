@@ -208,3 +208,5 @@ router.post('/change-password', requireAuth, (req, res) => {
 module.exports = router;
 module.exports.requireAuth = requireAuth;
 module.exports.signSessionToken = signSessionToken;
+// Riusata da routes/webauthn.js — stessa forma di "user" di ogni altra risposta di login.
+module.exports.userPublicShape = userPublicShape;
