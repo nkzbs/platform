@@ -1,6 +1,16 @@
 require('../../../shared/require-strong-secrets').requireStrongSecrets([
   { name: 'JWT_SECRET', value: process.env.JWT_SECRET, badDefault: 'changeme' },
   { name: 'INTERNAL_API_SECRET', value: process.env.INTERNAL_API_SECRET, badDefault: 'changeme_internal' },
+  // Trovato mancante qui il 2026-10-14 (segnalato dall'utente): JWT_SECRET e
+  // INTERNAL_API_SECRET erano già protetti da questo gate, ma non la chiave
+  // che crypto-fields.js usa per cifrare i campi 'encrypted' e, tramite
+  // secrets-at-rest.js, le credenziali dei collegamenti e i segreti del 2FA —
+  // un avvio in produzione senza ENCRYPTION_KEY cifrava tutto con un valore
+  // di default noto (chiunque legga il sorgente lo conosce), apparendo
+  // comunque "avviato correttamente". Il default resta in crypto-fields.js
+  // (stesso pattern di JWT_SECRET/INTERNAL_API_SECRET sopra: comodo in
+  // sviluppo, qui diventa fatale in produzione).
+  { name: 'ENCRYPTION_KEY', value: process.env.ENCRYPTION_KEY, badDefault: 'platform-default-key-change-in-prod' },
 ]);
 
 const express = require('express');
