@@ -5,9 +5,10 @@
 const db = require('./db');
 
 // presenze = timbrature: un modulo con una data, un'ora di inizio (entrata) e una di fine (uscita); ruoli `inizio` e `fine`.
-const ROLE_KEYS = ['importo', 'data', 'scadenza', 'categoria', 'descrizione', 'stato', 'gruppo', 'fisso', 'data_pagamento', 'note', 'data_incerta', 'debito', 'inizio', 'fine'];
+// bustapaga = una riga al mese con quanto scritto in busta (lordo, netto, ore pagate, trattenute); ruoli `lordo`, `netto`, `ore_pagate`, `trattenute` (`data` = il mese).
+const ROLE_KEYS = ['importo', 'data', 'scadenza', 'categoria', 'descrizione', 'stato', 'gruppo', 'fisso', 'data_pagamento', 'note', 'data_incerta', 'debito', 'inizio', 'fine', 'lordo', 'netto', 'ore_pagate', 'trattenute'];
 // pratica = una riga con stati e (se serve) una scadenza, senza essere denaro (ticket, ordini, scadenzario, manutenzioni…): entra negli avvisi e nei report, non nei riepiloghi di spese ed entrate.
-const KINDS = ['spesa', 'entrata', 'presenze', 'pratica'];
+const KINDS = ['spesa', 'entrata', 'presenze', 'pratica', 'bustapaga'];
 const USES = ['riepiloghi', 'avvisi', 'mail', 'estratto'];
 
 db.exec('CREATE TABLE IF NOT EXISTS module_roles (module_slug TEXT PRIMARY KEY, kind TEXT, uses TEXT NOT NULL DEFAULT \'[]\', roles TEXT NOT NULL DEFAULT \'{}\')');

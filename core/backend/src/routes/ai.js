@@ -198,4 +198,45 @@ router.post('/import/:slug/crea', requireAuth, async (req, res) => {
   res.json({ ok: true, id, stato: data[R.stato], message: 'Riga creata' + (decl.avvisi.states.nuovo ? ' in «' + decl.avvisi.states.nuovo.replace(/_/g, ' ') + '»' : '') + ', con il PDF allegato.' });
 });
 
+// ── Leggere una busta paga ───────────────────────────────────────────────────────
+// 1) /proposta: legge il PDF e propone periodo, lordo, netto, ore pagate e trattenute (non scrive niente). 2) /crea: registra la riga con il PDF
+// allegato. Solo con "Leggi busta paga" acceso sul modulo (Builder → Potenziamenti AI); serve il permesso di creare righe.
+const payslipAi = require('../payslip-ai');
+
+router.post('/payslip/:slug/proposta', requireAuth, async (req, res) => {
+  const slug = req.params.slug;
+  if (!moduleAi.can(slug, 'payslip')) return res.status(403).json({ error: 'La lettura della busta paga non è accesa su questo modulo.', code: 'ai_off' });
+  if (!canCreate(slug, req.user)) return res.status(403).json({ error: 'Non hai il permesso di creare righe in questo modulo.' });
+  const f = pdfFrom(req.body); if (f.error) return res.status(400).json({ error: f.error });
+  const out = await payslipAi.proposeFromPayslip({ moduleSlug: slug, filename: f.filename, bytes: f.bytes });
+  if (out.error) return res.status(out.status === 429 ? 429 : out.status === 422 ? 422 : out.status === 403 ? 403 : 502).json({ error: out.error, code: out.code });
+  res.json({ proposta: out.proposta });
+});
+
+router.post('/payslip/:slug/crea', requireAuth, async (req, res) => {
+  const slug = req.params.slug;
+  if (!moduleAi.can(slug, 'payslip')) return res.status(403).json({ error: 'La lettura della busta paga non è accesa su questo modulo.', code: 'ai_off' });
+  if (!canCreate(slug, req.user)) return res.status(403).json({ error: 'Non hai il permesso di creare righe in questo modulo.' });
+  const f = pdfFrom(req.body); if (f.error) return res.status(400).json({ error: f.error });
+  const decl = moduleRoles.get(slug), R = decl.roles, c = (req.body && req.body.campi) || {};
+  const ISO = /^\d{4}-\d{2}-\d{2}$/;
+  if (!R.data || !R.netto || !R.ore_pagate) return res.status(400).json({ error: 'Il modulo non ha dichiarato periodo, netto e ore pagate (Builder → Ruoli del modulo).' });
+  if (!c.data || !ISO.test(c.data)) return res.status(400).json({ error: 'Periodo non valido.' });
+  const netto = Number(c.netto), ore = Number(c.ore_pagate);
+  if (!(netto >= 0)) return res.status(400).json({ error: 'Netto non valido.' });
+  if (!(ore >= 0)) return res.status(400).json({ error: 'Ore pagate non valide.' });
+  const data = { note: 'Importato da PDF: ' + f.filename, [R.data]: c.data, [R.netto]: Math.round(netto * 100) / 100, [R.ore_pagate]: Math.round(ore * 100) / 100 };
+  if (R.lordo && c.lordo != null && c.lordo !== '') { const l = Number(c.lordo); if (l >= 0) data[R.lordo] = Math.round(l * 100) / 100; }
+  if (R.trattenute && c.trattenute != null && c.trattenute !== '') { const t = Number(c.trattenute); if (t >= 0) data[R.trattenute] = Math.round(t * 100) / 100; }
+  const id = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(slug, req.user.id, JSON.stringify(data)).lastInsertRowid;
+  try {
+    const stored = await saveUploadBuffer(f.bytes, f.filename, 'application/pdf');
+    const up = db.prepare('INSERT INTO uploads (original_name, stored_name, mime_type, size, uploaded_by) VALUES (?, ?, ?, ?, ?)').run(f.filename, stored, 'application/pdf', f.bytes.length, req.user.id).lastInsertRowid;
+    db.prepare('INSERT INTO record_attachments (module_slug, record_id, upload_id, tipo) VALUES (?, ?, ?, ?)').run(slug, id, up, 'import_ai');
+  } catch (e) { console.error('[ai/payslip] allegato non salvato:', e.message); }
+  try { fireTrigger(slug, 'nuovo_record', data, id, {}); } catch (e) { console.error('[ai/payslip] trigger:', e.message); }
+  logAudit(req.user.username, 'ai.payslip', slug + '#' + id, { file: f.filename });
+  res.json({ ok: true, id, message: 'Busta paga registrata, con il PDF allegato.' });
+});
+
 module.exports = router;

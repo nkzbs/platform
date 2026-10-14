@@ -136,6 +136,45 @@ router.post('/classify-bill', requireInternalSecret, async (req, res) => {
   }
 });
 
+// ─── Lettura busta paga ───────────────────────────────────────────────────────
+// Il tenant manda solo l'estratto testuale del PDF (dati identificativi già tolti da redact());
+// l'AI PROPONE periodo, lordo, netto, ore pagate e trattenute. Chi l'ha caricata confronta le ore
+// pagate con quelle timbrate nello stesso mese: qui non si scrive niente, solo si legge un documento.
+const PAYSLIP_SYSTEM_PROMPT = `Sei un assistente che legge buste paga italiane. Ricevi un JSON con "testo" (l'estratto testuale del PDF della busta paga, con i dati più identificativi come IBAN, codice fiscale e numeri lunghi già tolti). Rispondi SOLO con un oggetto JSON, senza altro testo, con questi campi: "periodo" (il mese di competenza della busta, nel formato AAAA-MM-GG usando il primo giorno del mese, oppure null se non lo trovi), "lordo" (la retribuzione lorda del mese, numero con il punto decimale, oppure null), "netto" (il netto in busta, l'importo effettivamente pagato al lavoratore, numero con il punto decimale, oppure null), "ore_pagate" (il totale delle ore pagate nel periodo, ordinarie più straordinarie, come numero decimale, es. 168.5, oppure null se non lo trovi scritto chiaramente), "trattenute" (il totale di contributi e imposte trattenuti, numero con il punto decimale, oppure null), "confidenza" ("alta", "media" o "bassa"). Non inventare: se un dato non è scritto chiaramente nel testo scrivi null.`;
+
+function sanitizePayslip(raw) {
+  const num = (v, max) => { const n = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.')); return Number.isFinite(n) && n >= 0 && n < max ? Math.round(n * 100) / 100 : null; };
+  let periodo = validDate(raw.periodo);
+  if (periodo) periodo = periodo.slice(0, 7) + '-01';
+  return {
+    periodo,
+    lordo: num(raw.lordo, 100000),
+    netto: num(raw.netto, 100000),
+    ore_pagate: num(raw.ore_pagate, 800),
+    trattenute: num(raw.trattenute, 100000),
+    confidenza: ['alta', 'media', 'bassa'].includes(raw.confidenza) ? raw.confidenza : 'bassa',
+  };
+}
+
+router.post('/payslip', requireInternalSecret, async (req, res) => {
+  const { tenant_slug, data } = req.body || {};
+  if (!tenant_slug || !data || typeof data.testo !== 'string' || !data.testo.trim()) {
+    return res.status(400).json({ error: 'tenant_slug e data.testo sono obbligatori' });
+  }
+  if (!isProviderConfigured('mistral', tenant_slug)) {
+    return res.status(503).json({ error: 'Nessuna chiave Mistral: inseriscila in Impostazioni → Assistente AI.', code: 'ai_not_configured' });
+  }
+  const testo = redact(String(data.testo)).slice(0, 4000);
+  try {
+    const text = await callAI('mistral', { system: PAYSLIP_SYSTEM_PROMPT, user: JSON.stringify({ testo }), maxTokens: 200, tenantSlug: tenant_slug });
+    const raw = parseJsonObject(text);
+    if (!raw) return res.status(502).json({ error: 'Risposta dell\'AI non valida' });
+    res.json({ suggestion: sanitizePayslip(raw) });
+  } catch (e) {
+    res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
+  }
+});
+
 // ─── Commento / spiegazione dei report ────────────────────────────────────────
 // Il tenant manda solo totali per gruppo. 'commento' = una frase breve per il messaggio
 // WhatsApp mensile; 'spiegazione' = qualche riga per chi guarda il report. Il testo torna al

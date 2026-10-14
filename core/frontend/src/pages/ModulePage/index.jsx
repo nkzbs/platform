@@ -11,6 +11,7 @@ import RecordDetailModal from './RecordDetailModal'
 import ReportPanel from './ReportPanel'
 import AiSuggestionsPanel from '../../components/AiSuggestionsPanel'
 import ImportPdf from '../../components/ImportPdf'
+import ImportPayslip from '../../components/ImportPayslip'
 import SchemaReports from './SchemaReports'
 import BranchCreateModal from './BranchCreateModal'
 import PeriodView from './PeriodView'
@@ -586,6 +587,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
         {editableFields.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
             {canCreate && <ImportPdf token={token} mod={mod} onCreated={loadRecords} />}
+            {canCreate && <ImportPayslip token={token} mod={mod} user={user} onCreated={loadRecords} />}
             <button onClick={exportCsv} className="bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2" title="Esporta CSV">
               <Icon name="download" size={14} />CSV
             </button>
