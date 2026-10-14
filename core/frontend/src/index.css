@@ -127,12 +127,6 @@
 :root[data-theme="light"] .border-red-900\/50 { border-color: rgb(252 165 165); }
 :root[data-theme="light"] .border-yellow-900\/40 { border-color: rgb(252 211 77); }
 
-/* Illustrazioni di login (2026-10-14) — tracciato bianco su trasparente,
-   pensato per il tema scuro; in chiaro si inverte (bianco->nero, alpha
-   invariato) per restare visibile su una card chiara invece di sparire. */
-.login-illustration { opacity: .85; }
-:root[data-theme="light"] .login-illustration { filter: invert(1); opacity: .7; }
-
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', ui-sans-serif, sans-serif;
   /* Prima trasparente: il colore vero veniva solo da un div wrapper interno,

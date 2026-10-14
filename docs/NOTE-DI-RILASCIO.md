@@ -2,7 +2,7 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
-## 0.2.0 — 13-14 ottobre 2026
+## 0.2.0 (in preparazione: il tag arriva dopo le prove dal vivo)
 
 **Dalla sera del 13 ottobre in poi** (le voci più sotto, fino a «Formato dei report su WhatsApp compatto», sono precedenti):
 
@@ -40,7 +40,6 @@ Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la 
 - **Menu di Super Admin alleggerito** (14 ottobre): «Utenti» non è più una voce a sé — è ora la prima scheda di Impostazioni (gestione degli account resta lì, password e 2FA restano self-service, invariati). «Analytics» non è più una voce a sé — è ora la scheda «Metriche» dentro Attività, accanto a «Eventi». Nessun dato o funzione tolta, solo due voci in meno nel menu (9 → 7).
 
 - **Gestione utenti di Super Admin più completa** (14 ottobre): ogni riga ora mostra se il 2FA è attivo; si può **rinominare** un utente (clic sul nome), **resettare la password** di un altro admin e **disattivare il suo 2FA** (recupero per chi resta bloccato — entrambe richiedono la TUA password, mai quella del bersaglio, e restano in Attività), **eliminare** un utente per sempre (non più solo disabilitarlo). La propria password e il proprio 2FA restano SOLO self-service (qui sotto, in Impostazioni), nessuna di queste azioni si può fare su se stessi.
-- **Illustrazioni in login** (14 ottobre): ogni accesso (tenant e Super Admin) mostra un disegno a tratto unico diverso, scelto a caso tra 16 — a sinistra del modulo di accesso, al posto del vecchio titolo "benvenuto" configurabile. Si inverte da sola in tema chiaro.
 
 - **Formato dei report su WhatsApp compatto** (scadute non ripetute, importi puliti).
 

@@ -135,12 +135,6 @@
 :root[data-theme="light"] .border-red-900\/50 { border-color: rgb(252 165 165); }
 :root[data-theme="light"] .border-yellow-900\/40 { border-color: rgb(252 211 77); }
 
-/* Illustrazioni di login (2026-10-14) — tracciato bianco su trasparente,
-   pensato per il tema scuro; in chiaro si inverte (bianco->nero, alpha
-   invariato) per restare visibile su una card chiara invece di sparire. */
-.login-illustration { opacity: .85; }
-:root[data-theme="light"] .login-illustration { filter: invert(1); opacity: .7; }
-
 /* PLATFORM-UI-RESKIN-PLAN.md, Fase 1 (2026-08-23) — Inter ovunque, come da
    CLAUDE_CODE_UI_BRIEF.md (era IBM Plex Sans/Space Grotesk/IBM Plex Mono).
    Un solo font per tutto (corpo e titoli) per la densità tecnica voluta dal
