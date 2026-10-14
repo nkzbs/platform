@@ -129,11 +129,10 @@ export default function TimbratureWidget({ token, user }) {
       )}
       {edit && (
         <div className="mt-3 pt-3 border-t border-gray-800 space-y-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <input type="date" value={edit.data} onChange={(e) => setEdit({ ...edit, data: e.target.value })} className="bg-gray-900 border border-gray-800 rounded-lg px-2 py-1.5 text-sm text-ink" />
-            <input type="time" value={edit.inizio} onChange={(e) => setEdit({ ...edit, inizio: e.target.value })} className="bg-gray-900 border border-gray-800 rounded-lg px-2 py-1.5 text-sm text-ink w-24" />
-            <span className="text-gray-500 text-sm">–</span>
-            <input type="time" value={edit.fine} onChange={(e) => setEdit({ ...edit, fine: e.target.value })} className="bg-gray-900 border border-gray-800 rounded-lg px-2 py-1.5 text-sm text-ink w-24" />
+          <div className="grid grid-cols-3 gap-2">
+            <div><label className="text-[10px] text-gray-500 block mb-1">Data</label><input type="date" value={edit.data} onChange={(e) => setEdit({ ...edit, data: e.target.value })} className="w-full bg-gray-900 border border-gray-800 rounded-lg px-2 py-1.5 text-sm text-ink" /></div>
+            <div><label className="text-[10px] text-gray-500 block mb-1">Entrata</label><input type="time" value={edit.inizio} onChange={(e) => setEdit({ ...edit, inizio: e.target.value })} className="w-full bg-gray-900 border border-gray-800 rounded-lg px-2 py-1.5 text-sm text-ink" /></div>
+            <div><label className="text-[10px] text-gray-500 block mb-1">Uscita</label><input type="time" value={edit.fine} onChange={(e) => setEdit({ ...edit, fine: e.target.value })} className="w-full bg-gray-900 border border-gray-800 rounded-lg px-2 py-1.5 text-sm text-ink" /></div>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={salva} disabled={busy} className="px-3 py-1.5 rounded-lg text-sm font-medium bg-accent hover:opacity-90 text-white transition disabled:opacity-50">Salva</button>
