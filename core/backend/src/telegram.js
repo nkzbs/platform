@@ -129,7 +129,7 @@ async function sendReportTo(chatId, kind, result) {
 // I comandi dei report sono quelli delle definizioni accese (/id): cambiano con le impostazioni, non sono scritti qui.
 function aiuto() {
   const rep = require('./reports').settings().definizioni.filter((d) => d.enabled).map((d) => '/' + d.id + ' — ' + esc(d.nome)).join('\n');
-  return '<b>Cosa so fare</b>\n' + (rep ? rep + '\n' : '') + '/report — tutti i report\n/timbra — entrata e uscita (se hai le timbrature)\n/ore — le ore della settimana\n\n<b>Oppure scrivimi come parli</b>, per esempio:\n• «quanto ho speso di benzina a settembre?»\n• «ho pagato l\'affitto»\n• «smista la bolletta A2A in 3 rate»\n• «ho speso 20 euro di benzina»\n• «sono entrata», «uscita alle 12:30», «quante ore ho fatto questa settimana?»\n• mandami la <b>foto di uno scontrino</b> o il <b>PDF</b> di una bolletta e li leggo\n\nOgni modifica ti viene mostrata con un bottone di conferma: senza il tuo tocco non cambio niente (le timbrature si registrano subito, con il bottone «Annulla»).\n/scollega — scollega questo telefono';
+  return '<b>Cosa so fare</b>\n/menu — bottoni per tutto, a sottomenu\n' + (rep ? rep + '\n' : '') + '/report — tutti i report\n/timbra — entrata e uscita (se hai le timbrature)\n/ore — le ore della settimana\n\n<b>Oppure scrivimi come parli</b>, per esempio:\n• «quanto ho speso di benzina a settembre?»\n• «ho pagato l\'affitto»\n• «smista la bolletta A2A in 3 rate»\n• «ho speso 20 euro di benzina»\n• «sono entrata», «uscita alle 12:30», «quante ore ho fatto questa settimana?»\n• mandami la <b>foto di uno scontrino</b> o il <b>PDF</b> di una bolletta e li leggo\n\nOgni modifica ti viene mostrata con un bottone di conferma: senza il tuo tocco non cambio niente (le timbrature si registrano subito, con il bottone «Annulla»).\n/scollega — scollega questo telefono';
 }
 const NON_COLLEGATO = 'Questo telefono non è collegato all\'app.\nNell\'app: <b>Impostazioni → Il mio account → Telegram → Collega il mio Telegram</b>, poi tocca il link che ti viene mostrato.';
 const hits = new Map(); // chat → istanti degli ultimi messaggi
@@ -224,6 +224,7 @@ async function handleMessage(msg, now) {
     const out = cmd === '/ore' ? tb.ore(user, 'settimana', new Date(now)) : tb.menu();
     return sendMessage(chatId, out.html, out.keyboard);
   }
+  if (cmd === '/menu') { const n = require('./bot-menu').node('root', user); return sendMessage(chatId, n.html, n.keyboard); }
   if (cmd === '/report') return reportMenu(chatId);
   const def = require('./reports').settings().definizioni.find((d) => '/' + d.id === cmd); // i comandi dei report sono gli id delle definizioni
   if (def) return runCommand(chatId, user, def.id, now);
@@ -263,6 +264,12 @@ async function handleCallback(cb, now) {
     const out = tbm[2] === 'o' ? tb.ore(user, 'settimana', new Date(now)) : await tb.timbra(user, chatId, { tipo: tbm[2] === 'e' ? 'entrata' : 'uscita', ora: null, data: null }, new Date(now));
     await answer('Fatto.');
     return sendMessage(chatId, out.html, out.keyboard);
+  }
+  const mnm = /^mn:([a-z_]+)$/.exec(String(cb.data || ''));
+  if (mnm) {
+    const n = require('./bot-menu').node(mnm[1], user);
+    await answer('');
+    return editText(chatId, cb.message.message_id, n.html, n.keyboard);
   }
   const conf = /^(ok|dp|no|pk|im):([a-z0-9]+)(?::(\d+))?$/.exec(String(cb.data || ''));
   if (conf) {

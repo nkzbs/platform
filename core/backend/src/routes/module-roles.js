@@ -19,6 +19,17 @@ router.get('/queues', requireAuth, (req, res) => {
   })));
 });
 
+// Il modulo di timbrature (se c'è) — stessa dichiarazione già usata dal bot
+// Telegram (bot-timbrature.js): kind 'presenze' con i tre ruoli data/inizio/
+// fine. Nessun dato di righe qui: le legge il widget dall'elenco normale del
+// modulo, che rispetta già i permessi di chi guarda (2026-10-14, richiesto
+// dall'utente: widget dashboard per registrare gli orari).
+router.get('/presenze', requireAuth, (req, res) => {
+  res.json(roles.list({ kind: 'presenze' }).filter((m) => m.roles.data && m.roles.inizio && m.roles.fine).map((m) => ({
+    module_slug: m.module_slug, name: m.name, data: m.roles.data, inizio: m.roles.inizio, fine: m.roles.fine,
+  })));
+});
+
 router.get('/', requireAuth, requireAdmin, (req, res) => {
   res.json(roles.list());
 });

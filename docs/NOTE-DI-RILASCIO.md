@@ -2,7 +2,7 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
-## 0.2.0 (in preparazione: il tag arriva dopo le prove dal vivo)
+## 0.2.0 — 13 ottobre 2026
 
 **Dalla sera del 13 ottobre in poi** (le voci più sotto, fino a «Formato dei report su WhatsApp compatto», sono precedenti):
 
@@ -40,6 +40,8 @@ Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la 
 - **Menu di Super Admin alleggerito** (14 ottobre): «Utenti» non è più una voce a sé — è ora la prima scheda di Impostazioni (gestione degli account resta lì, password e 2FA restano self-service, invariati). «Analytics» non è più una voce a sé — è ora la scheda «Metriche» dentro Attività, accanto a «Eventi». Nessun dato o funzione tolta, solo due voci in meno nel menu (9 → 7).
 
 - **Gestione utenti di Super Admin più completa** (14 ottobre): ogni riga ora mostra se il 2FA è attivo; si può **rinominare** un utente (clic sul nome), **resettare la password** di un altro admin e **disattivare il suo 2FA** (recupero per chi resta bloccato — entrambe richiedono la TUA password, mai quella del bersaglio, e restano in Attività), **eliminare** un utente per sempre (non più solo disabilitarlo). La propria password e il proprio 2FA restano SOLO self-service (qui sotto, in Impostazioni), nessuna di queste azioni si può fare su se stessi.
+- **Bot Telegram: menu a bottoni** (14 ottobre, `/menu`): sottomenu a tocco per tutto quello che si fa più spesso — Spese & Entrate (nuova spesa, scontrino/bolletta, chiedi ai dati), Timbrature (se dichiarate), Report. **Si affianca a tutto il resto, non lo sostituisce**: frase libera e comandi funzionano esattamente come prima, il menu è solo un altro modo di arrivarci.
+- **Widget dashboard «Timbrature rapide»** (14 ottobre): entrata/uscita con un tocco e il totale di oggi, direttamente dalla dashboard. Generico come gli altri widget — legge QUALE modulo è dichiarato Timbrature (Builder → Ruoli del modulo), nessun nome di modulo scritto nel codice; visibile a chi vuoi (Impostazioni → Utenti → «Widget · N»), utile per esempio per Federica.
 
 - **Formato dei report su WhatsApp compatto** (scadute non ripetute, importi puliti).
 

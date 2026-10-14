@@ -340,6 +340,41 @@ async function main() {
     ok(/Questa settimana/.test((await say(666, '/ore')).text));
   });
 
+  console.log('\n--- /menu: bottoni a sottomenu (2026-10-14) ---');
+  await test('/menu mostra la radice: Spese & Entrate, Timbrature (Federica le ha), Report', async () => {
+    const m = await say(666, '/menu');
+    ok(cb(m, 'mn:soldi'), 'manca Spese & Entrate'); ok(cb(m, 'mn:timbrature'), 'manca Timbrature'); ok(cb(m, 'mn:report'), 'manca Report');
+  });
+  await test('tocco su "Spese & Entrate" -> sottomenu coi 3 percorsi e un Indietro verso la radice (stesso messaggio, modificato)', async () => {
+    const m = await say(666, '/menu');
+    const t = await tap(666, cb(m, 'mn:soldi'));
+    ok(cb(t.modifica, 'mn:nuova_spesa'), 'manca Nuova spesa'); ok(cb(t.modifica, 'mn:scontrino'), 'manca Scontrino'); ok(cb(t.modifica, 'mn:domanda'), 'manca Chiedi ai dati');
+    eq(cb(t.modifica, 'mn:root'), 'mn:root');
+  });
+  await test('tocco su "Nuova spesa" -> solo un invito a scrivere, NESSUNO stato: una frase libera dopo passa comunque dall\'AI come sempre', async () => {
+    const m = await say(666, '/menu');
+    const soldi = await tap(666, cb(m, 'mn:soldi'));
+    const leaf = await tap(666, cb(soldi.modifica, 'mn:nuova_spesa'));
+    ok(/Scrivimi la spesa/.test(leaf.modifica.text), leaf.modifica.text);
+    const risposta = await say(666, 'frase a caso mai configurata nei finti intenti');
+    ok(/Non ho capito/.test(risposta.text), 'la frase libera deve arrivare comunque a bot-ai, non restare bloccata nel menu: ' + risposta.text);
+  });
+  await test('tocco su "Timbrature" -> gli stessi bottoni di /timbra, più Indietro; poi Indietro torna alla radice', async () => {
+    const m = await say(666, '/menu');
+    const t = await tap(666, cb(m, 'mn:timbrature'));
+    ok(cb(t.modifica, 'tb:e') && cb(t.modifica, 'tb:u') && cb(t.modifica, 'tb:o'), JSON.stringify(t.modifica));
+    ok(cb(t.modifica, 'mn:root'), 'manca Indietro');
+    const back = await tap(666, cb(t.modifica, 'mn:root'));
+    ok(cb(back.modifica, 'mn:soldi'), 'Indietro non è tornato alla radice: ' + JSON.stringify(back.modifica));
+  });
+  await test('un callback_data mn: con una chiave sconosciuta (es. un vecchio bottone) non va in errore, torna alla radice', async () => {
+    tg._resetRate(); calls.length = 0;
+    await post({ update_id: 9, callback_query: { id: 'cbmn', data: 'mn:chiave_vecchia_non_esiste', message: { message_id: 79, chat: { id: 666, type: 'private' }, reply_markup: { inline_keyboard: [] } } } });
+    const edit = ultimi('editMessageText').slice(-1)[0];
+    ok(edit && cb(edit.body, 'mn:soldi'), 'doveva ricadere sulla radice: ' + JSON.stringify(edit));
+  });
+  await test('/aiuto nomina /menu', async () => { ok(/\/menu/.test((await say(666, '/aiuto')).text)); });
+
   console.log('\n--- limiti ---');
   await test('dalla nona frase al minuto che passa dall\'AI, il bot chiede di aspettare (le prime otto passano)', async () => {
     tg._resetRate(); const testi = [];

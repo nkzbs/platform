@@ -6,6 +6,7 @@ import { parseSchemaFrontend } from '../lib/schema-v3-frontend'
 import ChecklistWidget from './ChecklistWidget'
 import InsightsCard from '../components/InsightsCard'
 import QueueWidget from '../components/QueueWidget'
+import TimbratureWidget from '../components/TimbratureWidget'
 import YearlyBreakdownView from './ModulePage/YearlyBreakdownView'
 import CategoryPivotView from './ModulePage/CategoryPivotView'
 import WeeklyBreakdownView from './ModulePage/WeeklyBreakdownView'
@@ -263,6 +264,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
     table: 'Le ultime righe di un modulo, in una piccola tabella.',
     checklist: 'Righe da spuntare, prese da uno o più moduli (es. cosa è già pagato e cosa no).',
     coda: 'Le righe rimaste nello stato «nuovo» dei moduli che lo hanno dichiarato (Builder → Avvisi), con il pulsante per smistarle.',
+    timbrature_rapide: 'Entrata/uscita con un tocco e il totale di oggi, per il modulo dichiarato come Timbrature (Builder → Ruoli del modulo).',
     yearly_breakdown: 'Un campo sommato mese per mese, con il confronto con l\'anno prima.',
     category_pivot: 'Un campo sommato per categoria, anno su anno.',
     weekly_breakdown: 'Un campo sommato per settimana, con una soglia (es. straordinari oltre un limite).',
@@ -273,7 +275,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
 
   const saveWidget = async () => {
     const w = { ...newWidget, page }
-    if (!w.label) w.label = w.module_slug || (w.type === 'checklist' ? 'Checklist' : w.type === 'come_sta_andando' ? 'Come sta andando' : w.type === 'coda' ? 'Coda' : 'Widget')
+    if (!w.label) w.label = w.module_slug || (w.type === 'checklist' ? 'Checklist' : w.type === 'come_sta_andando' ? 'Come sta andando' : w.type === 'coda' ? 'Coda' : w.type === 'timbrature_rapide' ? 'Timbrature' : 'Widget')
     if (w.type === 'checklist') w.config = checklistConfig
     if (w.type === 'periodo') w.config = periodoConfig
     if (w.type === 'riepilogo_mensile') w.config = riepilogoConfig
@@ -457,6 +459,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                 return <RiepilogoMensile data={data} label={w.label} nomeMese={new Date(anno, mese, 1).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })} />
               })()}
               {w.type === 'coda' && <QueueWidget token={token} onNavigate={onNavigate} modules={modules} />}
+              {w.type === 'timbrature_rapide' && <TimbratureWidget token={token} user={user} />}
               {w.type === 'come_sta_andando' && <InsightsCard token={token} widgetId={w.id} title={w.label} onNavigate={features.movimenti ? onNavigate : undefined} />}
               {w.type === 'checklist' && (
                 <ChecklistWidget config={w.config} token={token} label={w.label} color={w.color} modules={modules} user={user} onMese={setMeseSel} />
@@ -522,6 +525,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                     <option value="table">Tabella — ultime righe di un modulo</option>
                     <option value="checklist">Checklist — righe da spuntare, da più moduli</option>
                     <option value="coda">Coda — righe nello stato «nuovo» dei moduli</option>
+                    <option value="timbrature_rapide">Timbrature rapide — entrata/uscita e il totale di oggi</option>
                   </optgroup>
                   <optgroup label="Andamenti">
                     <option value="yearly_breakdown">Mesi dell'anno — 12 mesi, con l'anno prima</option>
@@ -575,7 +579,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                   )
                 })()}
               </div>
-              {!['checklist', 'riepilogo_mensile', 'come_sta_andando', 'coda', ...REPORT_WIDGET_TYPES].includes(newWidget.type) && (
+              {!['checklist', 'riepilogo_mensile', 'come_sta_andando', 'coda', 'timbrature_rapide', ...REPORT_WIDGET_TYPES].includes(newWidget.type) && (
                 <div>
                   <label className="text-xs text-gray-400 block mb-1">Modulo</label>
                   <select className="w-full bg-surface-page text-ink px-4 py-3 rounded-lg outline-none border border-gray-800 focus:border-accent transition" value={newWidget.module_slug} onChange={(e) => setNewWidget({ ...newWidget, module_slug: e.target.value, field: '' })}>
@@ -909,7 +913,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                 newWidget.type === 'checklist' ? checklistConfig.sources.filter((s) => s.module_slug && s.amount_field && s.status_field).length === 0
                 : newWidget.type === 'riepilogo_mensile' ? !(riepilogoConfig.entrate.modulo && riepilogoConfig.gruppi.some((g) => g.modulo && g.campo_importo))
                 : REPORT_WIDGET_TYPES.includes(newWidget.type) ? !(reportBlockConfig.source_module && reportBlockConfig.block_key)
-                : newWidget.type === 'come_sta_andando' || newWidget.type === 'coda' ? false
+                : newWidget.type === 'come_sta_andando' || newWidget.type === 'coda' || newWidget.type === 'timbrature_rapide' ? false
                 : !newWidget.module_slug
               } className="flex-1 bg-accent hover:opacity-90 disabled:opacity-50 text-white py-3 rounded-lg transition font-medium">{editingWidgetId ? 'Salva modifiche' : 'Aggiungi'}</button>
             </div>
