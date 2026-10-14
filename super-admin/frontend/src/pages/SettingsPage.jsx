@@ -215,9 +215,16 @@ function SettingsPage({ token, myId }) {
         )}
       </section>
 
-      {/* PASSWORD */}
+      {/* IL TUO ACCESSO — Password, 2FA e Passkey nidificati in UNA sezione
+          (2026-10-14, segnalato dall'utente guardandola dal vivo: stavano
+          allo stesso livello di "Utenti Super Admin" e "Chiavi AI", senza
+          dire che queste tre sono le TUE, mai quelle di un altro admin —
+          vedi "Utenti Super Admin" sopra per il motivo). */}
       <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mb-4">
-        <SectionHead icon="key" title="Password" sub="Cambia la password con cui accedi a Super Admin." />
+        <SectionHead icon="user" title="Il tuo accesso" sub="Password, due fattori e passkey — solo tu li cambi, mai un altro admin al posto tuo." />
+
+        {/* PASSWORD */}
+        <div className="text-sm font-semibold text-ink mb-3">Password</div>
         <div className="space-y-2.5 max-w-sm">
           <input type="password" placeholder="Password attuale" className={inputCls} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
           <input type="password" placeholder="Nuova password (min. 8 caratteri)" className={inputCls} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
@@ -242,13 +249,14 @@ function SettingsPage({ token, myId }) {
         <button onClick={changePassword} disabled={saving || !currentPassword || !newPassword} className={'mt-4 ' + primaryBtn}>
           {saving ? 'Salvo...' : 'Cambia password'}
         </button>
-      </section>
 
-      {/* DUE FATTORI */}
-      <section className="bg-surface-card border border-gray-800 rounded-xl p-5">
-        <SectionHead icon="shield" title="Autenticazione a due fattori"
-          sub="Oltre alla password, serve un codice che cambia ogni 30 secondi, generato dal telefono."
-          right={twofaEnabled === null ? null : <StatusBadge tone={twofaEnabled ? 'green' : 'gray'}>{twofaEnabled ? 'Attiva' : 'Non attiva'}</StatusBadge>} />
+        {/* DUE FATTORI */}
+        <div className="border-t border-gray-800 mt-6 pt-5">
+          <div className="flex items-center justify-between gap-3 mb-1">
+            <div className="text-sm font-semibold text-ink">Autenticazione a due fattori</div>
+            {twofaEnabled !== null && <StatusBadge tone={twofaEnabled ? 'green' : 'gray'}>{twofaEnabled ? 'Attiva' : 'Non attiva'}</StatusBadge>}
+          </div>
+          <p className="text-xs text-gray-500 mb-4">Oltre alla password, serve un codice che cambia ogni 30 secondi, generato dal telefono.</p>
 
         {twofaError && <div className="bg-red-900/30 text-red-400 text-sm p-3 rounded-lg mb-4 border border-red-900/50">{twofaError}</div>}
 
@@ -319,38 +327,40 @@ function SettingsPage({ token, myId }) {
             </div>
           </div>
         )}
-      </section>
+        </div>
 
-      {/* PASSKEY */}
-      {browserSupportsWebAuthn() && (
-        <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mt-4">
-          <SectionHead icon="key" title="Passkey" sub="Entra con l'impronta, il volto o il PIN del dispositivo, senza username né password. Puoi averne più di una." />
+        {/* PASSKEY */}
+        {browserSupportsWebAuthn() && (
+          <div className="border-t border-gray-800 mt-6 pt-5">
+            <div className="text-sm font-semibold text-ink mb-1">Passkey</div>
+            <p className="text-xs text-gray-500 mb-4">Entra con l'impronta, il volto o il PIN del dispositivo, senza username né password. Puoi averne più di una.</p>
 
-          {pkError && <div className="bg-red-900/30 text-red-400 text-sm p-3 rounded-lg mb-4 border border-red-900/50">{pkError}</div>}
+            {pkError && <div className="bg-red-900/30 text-red-400 text-sm p-3 rounded-lg mb-4 border border-red-900/50">{pkError}</div>}
 
-          <div className="space-y-2 mb-4">
-            {passkeys === null && <div className="text-sm text-gray-600">Caricamento...</div>}
-            {passkeys && passkeys.length === 0 && <div className="text-sm text-gray-600">Nessuna passkey ancora.</div>}
-            {passkeys && passkeys.map((p) => (
-              <div key={p.id} className="flex items-center justify-between gap-3 bg-surface-page rounded-lg px-4 py-3 border border-gray-800">
-                <div className="min-w-0">
-                  <div className="text-sm text-ink truncate">{p.nickname || 'Passkey senza nome'}</div>
-                  <div className="text-xs text-gray-600 mt-0.5">
-                    Aggiunta il {new Date(p.created_at).toLocaleDateString('it-IT')}
-                    {p.last_used_at && ' · usata l\'ultima volta il ' + new Date(p.last_used_at).toLocaleDateString('it-IT')}
+            <div className="space-y-2 mb-4">
+              {passkeys === null && <div className="text-sm text-gray-600">Caricamento...</div>}
+              {passkeys && passkeys.length === 0 && <div className="text-sm text-gray-600">Nessuna passkey ancora.</div>}
+              {passkeys && passkeys.map((p) => (
+                <div key={p.id} className="flex items-center justify-between gap-3 bg-surface-page rounded-lg px-4 py-3 border border-gray-800">
+                  <div className="min-w-0">
+                    <div className="text-sm text-ink truncate">{p.nickname || 'Passkey senza nome'}</div>
+                    <div className="text-xs text-gray-600 mt-0.5">
+                      Aggiunta il {new Date(p.created_at).toLocaleDateString('it-IT')}
+                      {p.last_used_at && ' · usata l\'ultima volta il ' + new Date(p.last_used_at).toLocaleDateString('it-IT')}
+                    </div>
                   </div>
+                  <button onClick={() => removePasskey(p.id)} className="text-xs text-red-400 hover:text-red-300 transition flex-shrink-0">Rimuovi</button>
                 </div>
-                <button onClick={() => removePasskey(p.id)} className="text-xs text-red-400 hover:text-red-300 transition flex-shrink-0">Rimuovi</button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          <div className="flex gap-2 flex-wrap">
-            <input className={inputCls + ' flex-1 min-w-[180px]'} placeholder="Nome (facoltativo, es. Il mio iPhone)" value={pkNickname} onChange={(e) => setPkNickname(e.target.value)} />
-            <button onClick={addPasskey} disabled={pkBusy} className={primaryBtn}>{pkBusy ? 'Creazione...' : 'Aggiungi una passkey'}</button>
+            <div className="flex gap-2 flex-wrap">
+              <input className={inputCls + ' flex-1 min-w-[180px]'} placeholder="Nome (facoltativo, es. Il mio iPhone)" value={pkNickname} onChange={(e) => setPkNickname(e.target.value)} />
+              <button onClick={addPasskey} disabled={pkBusy} className={primaryBtn}>{pkBusy ? 'Creazione...' : 'Aggiungi una passkey'}</button>
+            </div>
           </div>
-        </section>
-      )}
+        )}
+      </section>
     </div>
   )
 }
