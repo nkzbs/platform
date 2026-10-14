@@ -459,7 +459,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                 return <RiepilogoMensile data={data} label={w.label} nomeMese={new Date(anno, mese, 1).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })} />
               })()}
               {w.type === 'coda' && <QueueWidget token={token} onNavigate={onNavigate} modules={modules} />}
-              {w.type === 'timbrature_rapide' && <TimbratureWidget token={token} user={user} />}
+              {w.type === 'timbrature_rapide' && <TimbratureWidget token={token} user={user} onNavigate={onNavigate} />}
               {w.type === 'come_sta_andando' && <InsightsCard token={token} widgetId={w.id} title={w.label} onNavigate={features.movimenti ? onNavigate : undefined} />}
               {w.type === 'checklist' && (
                 <ChecklistWidget config={w.config} token={token} label={w.label} color={w.color} modules={modules} user={user} onMese={setMeseSel} />

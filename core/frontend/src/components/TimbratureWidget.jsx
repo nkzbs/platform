@@ -9,6 +9,10 @@ import Icon from './Icon'
 // da bot-timbrature.js), nessun nome di modulo scritto qui. Scrive con la
 // stessa API /records di sempre — stessi permessi di chiunque altro,
 // "solo propri" per chi non è admin compreso.
+// Volutamente SENZA un editor delle righe qui dentro (prima versione: aveva
+// data/entrata/uscita a mano, era troppo — feedback dell'utente 14/10/2026):
+// per correggere un orario si apre il modulo vero, che ha già la modifica
+// di una riga fatta bene (RecordDetailModal), senza una seconda copia.
 const pad2 = (n) => String(n).padStart(2, '0')
 const oggiLocale = () => { const d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) }
 const oraLocale = () => { const d = new Date(); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()) }
@@ -17,13 +21,12 @@ const toMin = (hhmm) => { if (!hhmm) return null; const [h, m] = String(hhmm).sl
 const hhmm = (v) => (v ? String(v).slice(0, 5) : '')
 const durata = (min) => { if (min == null || min < 0) return '—'; const h = Math.floor(min / 60), m = Math.round(min % 60); return (h ? h + 'h ' : '') + (m || !h ? m + 'm' : '') }
 
-export default function TimbratureWidget({ token, user }) {
+export default function TimbratureWidget({ token, user, onNavigate }) {
   const api = useApi(token)
   const [mod, setMod] = useState(undefined) // undefined = in caricamento, null = nessun modulo dichiarato
   const [rows, setRows] = useState([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [edit, setEdit] = useState(null) // null | { id: null|number, data, inizio, fine }
   const [, setTick] = useState(0) // forza il ricalcolo del minutaggio in corso ogni minuto
 
   const load = async () => {
@@ -72,29 +75,6 @@ export default function TimbratureWidget({ token, user }) {
     load()
   }
 
-  const apriNuovo = () => setEdit({ id: null, data: oggi, inizio: oraLocale(), fine: '' })
-  const apriRiga = (r) => setEdit({ id: r.id, data: String(r.data[mod.data]).slice(0, 10), inizio: hhmm(r.data[mod.inizio]), fine: hhmm(r.data[mod.fine]) })
-  const salva = async () => {
-    if (!edit.data || !edit.inizio) { setError('Data e orario di entrata obbligatori'); return }
-    setBusy(true); setError('')
-    const payload = { [mod.data]: edit.data, [mod.inizio]: edit.inizio, [mod.fine]: edit.fine || null }
-    const base = edit.id ? (rows.find((r) => r.id === edit.id) || {}).data || {} : {}
-    const res = edit.id
-      ? await api.put('/records/' + mod.module_slug + '/' + edit.id, { ...base, ...payload })
-      : await api.post('/records/' + mod.module_slug, payload)
-    setBusy(false)
-    if (!res.ok) { setError((res.data && res.data.error) || 'Non riuscito'); return }
-    setEdit(null); load()
-  }
-  const elimina = async () => {
-    if (!edit.id) return
-    setBusy(true); setError('')
-    const res = await api.del('/records/' + mod.module_slug + '/' + edit.id)
-    setBusy(false)
-    if (!res.ok) { setError('Non riuscito'); return }
-    setEdit(null); load()
-  }
-
   return (
     <div className="p-5">
       <div className="flex items-center gap-2 mb-3">
@@ -109,37 +89,19 @@ export default function TimbratureWidget({ token, user }) {
           </div>
           <div className="text-xs text-gray-500 mt-0.5">Oggi: <span className="text-ink font-medium">{durata(totaleMin)}</span></div>
         </div>
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          <button onClick={aperta ? esce : entra} disabled={busy} className={'px-4 py-2.5 rounded-lg text-sm font-medium transition disabled:opacity-50 ' + (aperta ? 'bg-red-700 hover:bg-red-600 text-white' : 'bg-accent hover:opacity-90 text-white')}>
-            {busy ? '...' : aperta ? 'Esci' : 'Entra'}
-          </button>
-          <button onClick={aperta ? () => apriRiga(aperta) : apriNuovo} disabled={busy} title="Inserisci data e orario a mano" className="p-2.5 rounded-lg text-gray-400 hover:text-ink hover:bg-gray-800 transition disabled:opacity-50">
-            <Icon name="edit" size={15} />
-          </button>
-        </div>
+        <button onClick={aperta ? esce : entra} disabled={busy} className={'px-4 py-2.5 rounded-lg text-sm font-medium transition disabled:opacity-50 flex-shrink-0 ' + (aperta ? 'bg-red-700 hover:bg-red-600 text-white' : 'bg-accent hover:opacity-90 text-white')}>
+          {busy ? '...' : aperta ? 'Esci' : 'Entra'}
+        </button>
       </div>
       {turniOggi.length > 0 && (
         <div className="text-xs text-gray-500 mt-3 pt-3 border-t border-gray-800 space-y-0.5">
-          {turniOggi.map((r) => (
-            <button key={r.id} onClick={() => apriRiga(r)} className="block w-full text-left hover:text-ink transition">
-              {hhmm(r.data[mod.inizio])} – {hhmm(r.data[mod.fine]) || 'in corso'}
-            </button>
-          ))}
+          {turniOggi.map((r) => <div key={r.id}>{hhmm(r.data[mod.inizio])} – {hhmm(r.data[mod.fine]) || 'in corso'}</div>)}
         </div>
       )}
-      {edit && (
-        <div className="mt-3 pt-3 border-t border-gray-800 space-y-2">
-          <div className="grid grid-cols-3 gap-2">
-            <div><label className="text-[10px] text-gray-500 block mb-1">Data</label><input type="date" value={edit.data} onChange={(e) => setEdit({ ...edit, data: e.target.value })} className="w-full bg-gray-900 border border-gray-800 rounded-lg px-2 py-1.5 text-sm text-ink" /></div>
-            <div><label className="text-[10px] text-gray-500 block mb-1">Entrata</label><input type="time" value={edit.inizio} onChange={(e) => setEdit({ ...edit, inizio: e.target.value })} className="w-full bg-gray-900 border border-gray-800 rounded-lg px-2 py-1.5 text-sm text-ink" /></div>
-            <div><label className="text-[10px] text-gray-500 block mb-1">Uscita</label><input type="time" value={edit.fine} onChange={(e) => setEdit({ ...edit, fine: e.target.value })} className="w-full bg-gray-900 border border-gray-800 rounded-lg px-2 py-1.5 text-sm text-ink" /></div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={salva} disabled={busy} className="px-3 py-1.5 rounded-lg text-sm font-medium bg-accent hover:opacity-90 text-white transition disabled:opacity-50">Salva</button>
-            {edit.id != null && <button onClick={elimina} disabled={busy} className="px-3 py-1.5 rounded-lg text-sm font-medium text-red-400 hover:bg-red-900/20 transition disabled:opacity-50">Elimina</button>}
-            <button onClick={() => setEdit(null)} disabled={busy} className="px-3 py-1.5 rounded-lg text-sm text-gray-400 hover:text-ink transition disabled:opacity-50">Annulla</button>
-          </div>
-        </div>
+      {onNavigate && (
+        <button type="button" onClick={() => onNavigate(mod.module_slug)} className="text-xs text-gray-500 hover:text-accent transition mt-3 underline">
+          Orario sbagliato o dimenticato? Correggilo qui →
+        </button>
       )}
     </div>
   )
