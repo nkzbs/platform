@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { API } from '../../lib/api'
 import Icon from '../Icon'
 import PlatformLogo from '../PlatformLogo'
+import { randomLoginIllustration } from '@shared/login-illustrations'
 
 // Stessa logica di autenticazione di sempre (POST /auth/login, token in
 // localStorage) — cambia solo la presentazione: un overlay richiamabile dalla
@@ -15,6 +16,11 @@ import PlatformLogo from '../PlatformLogo'
 // veniva chiesto. `mode` resta come prop (App.jsx lo passa comunque) ma non
 // è più usato qui dentro.
 function LoginModal({ onLogin, onClose, mode }) {
+  // Un'illustrazione diversa a ogni accesso (2026-10-14, richiesto
+  // dall'utente, "compreso Super Admin") — stesso meccanismo del login dei
+  // tenant (core/frontend/src/components/Login.jsx), scelta una sola volta
+  // al montaggio.
+  const [illustration] = useState(randomLoginIllustration)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -64,10 +70,14 @@ function LoginModal({ onLogin, onClose, mode }) {
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-surface-card p-8 rounded-xl w-full max-w-sm border border-gray-800 relative" onClick={(e) => e.stopPropagation()}>
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-ink transition">
+      <div className="bg-surface-card rounded-xl w-full max-w-2xl border border-gray-800 relative flex overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-ink transition z-10">
           <Icon name="x" size={18} />
         </button>
+        <div className="hidden sm:flex w-1/2 items-center justify-center p-8 bg-surface-page border-r border-gray-800">
+          <img src={illustration} alt="" className="login-illustration w-full object-contain" />
+        </div>
+        <div className="w-full sm:w-1/2 p-8">
         <div className="mb-6 flex items-center gap-3">
           <PlatformLogo size={32} />
           <div className="font-display text-xl text-ink tracking-tight">Accedi</div>
@@ -126,6 +136,7 @@ function LoginModal({ onLogin, onClose, mode }) {
             </button>
           </div>
         )}
+        </div>
       </div>
     </div>
   )

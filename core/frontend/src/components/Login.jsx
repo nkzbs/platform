@@ -1,8 +1,13 @@
 import React, { useState } from 'react'
 import { API, setAuth } from '../lib/api'
 import PlatformLogo from './PlatformLogo'
+import { randomLoginIllustration } from '@shared/login-illustrations'
 
 function Login({ onLogin, tenantName, logoUrl, hidePlatformName, cms }) {
+  // Un'illustrazione diversa a ogni accesso (2026-10-14, richiesto
+  // dall'utente) — scelta una sola volta al montaggio di questo componente,
+  // non ad ogni render (altrimenti cambierebbe da sola mentre si digita).
+  const [illustration] = useState(randomLoginIllustration)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -90,33 +95,24 @@ function Login({ onLogin, tenantName, logoUrl, hidePlatformName, cms }) {
     </>
   )
 
-  // CMS pagina di accesso: attiva solo se il tenant ha configurato un titolo
-  // in Impostazioni → Azienda (login_headline) — altrimenti resta la card
-  // centrata di sempre, invariata per chi non la usa.
-  if (cms) {
-    return (
-      <div className="min-h-screen bg-surface-page flex flex-col md:flex-row">
-        <div className="md:w-1/2 flex flex-col justify-center px-8 py-16 md:px-16 bg-surface-card border-b md:border-b-0 md:border-r border-gray-800">
-          {cms.heroImageUrl && <img src={cms.heroImageUrl} alt="" className="w-full max-w-md rounded-xl object-cover mb-8" />}
-          <h1 className="text-3xl md:text-4xl font-bold text-ink tracking-tight mb-3">{cms.headline}</h1>
-          {cms.subheadline && <p className="text-lg text-gray-400 mb-4">{cms.subheadline}</p>}
-          {cms.body && <p className="text-sm text-gray-500 whitespace-pre-line leading-relaxed max-w-md">{cms.body}</p>}
-        </div>
-        <div className="md:w-1/2 flex items-center justify-center px-8 py-16">
-          <div className="w-full max-w-sm">
-            {brandHeader}
-            {formBlock}
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // Pannello sinistro: SEMPRE un'illustrazione, non più il testo "benvenuto"
+  // configurabile (2026-10-14, richiesto dall'utente — "al posto del
+  // benvenuto"). Un tenant che ha comunque caricato una propria immagine
+  // (Impostazioni → Azienda, login_hero_image_url) la vede al posto del
+  // disegno casuale — unica personalizzazione rispettata, il resto del CMS
+  // login (titolo/sottotitolo/testo) non si mostra più qui.
+  const heroImage = (cms && cms.heroImageUrl) || illustration
 
   return (
-    <div className="min-h-screen bg-surface-page flex items-center justify-center">
-      <div className="bg-surface-card p-8 rounded-xl w-full max-w-sm border border-gray-800">
-        {brandHeader}
-        {formBlock}
+    <div className="min-h-screen bg-surface-page flex flex-col md:flex-row">
+      <div className="md:w-1/2 flex items-center justify-center px-8 py-16 md:px-16 bg-surface-card border-b md:border-b-0 md:border-r border-gray-800">
+        <img src={heroImage} alt="" className="login-illustration w-full max-w-sm object-contain" />
+      </div>
+      <div className="md:w-1/2 flex items-center justify-center px-8 py-16">
+        <div className="w-full max-w-sm">
+          {brandHeader}
+          {formBlock}
+        </div>
       </div>
     </div>
   )
