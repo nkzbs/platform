@@ -10,6 +10,7 @@ const FEATURES = {
   triage: { label: 'Smistare', description: 'Propone categoria, importo e scadenza per le righe da smistare.', needs: ['importo', 'categoria', 'stato'] },
   explain: { label: 'Spiegare', description: 'Racconta i numeri del modulo (totali, confronti, anomalie).', needs: ['importo', 'data'] },
   import: { label: 'Importare', description: 'Da un PDF caricato (bolletta, fattura) o dalla foto di uno scontrino (dal bot Telegram) propone la riga da creare.', needs: ['importo', 'data'] },
+  payslip: { label: 'Leggi busta paga', description: 'Da un PDF di busta paga caricato propone periodo, lordo, netto e ore pagate, confrontandole con le timbrature dello stesso mese.', needs: ['data', 'netto', 'ore_pagate'] },
 };
 const KEYS = Object.keys(FEATURES);
 
@@ -68,7 +69,7 @@ function overviewModules() {
 }
 
 // "Potenzia": accende, su ogni modulo, i potenziamenti collegati che i suoi ruoli permettono. Ritorna cosa è stato acceso.
-const CONNECTED = ['triage', 'explain', 'import'];
+const CONNECTED = ['triage', 'explain', 'import', 'payslip'];
 function powerUp() {
   const out = [];
   for (const m of moduleRoles.list({})) {

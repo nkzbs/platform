@@ -30,6 +30,15 @@ router.get('/presenze', requireAuth, (req, res) => {
   })));
 });
 
+// Il modulo delle buste paga (se c'è) — kind 'bustapaga', per confrontare le
+// ore pagate con le timbrature dello stesso mese (2026-10-14, richiesto
+// dall'utente: "ogni mese carico la busta paga e verifico le ore segnate").
+router.get('/bustapaga', requireAuth, (req, res) => {
+  res.json(roles.list({ kind: 'bustapaga' }).filter((m) => m.roles.data && m.roles.netto && m.roles.ore_pagate).map((m) => ({
+    module_slug: m.module_slug, name: m.name, data: m.roles.data, lordo: m.roles.lordo || '', netto: m.roles.netto, ore_pagate: m.roles.ore_pagate, trattenute: m.roles.trattenute || '',
+  })));
+});
+
 router.get('/', requireAuth, requireAdmin, (req, res) => {
   res.json(roles.list());
 });
