@@ -131,7 +131,6 @@ export default function App() {
   const [features, setFeatures] = useState({}) // funzioni facoltative accese su questo progetto (da /api/tenant-info)
   const [tenantLogoUrl, setTenantLogoUrl] = useState('')
   const [hidePlatformName, setHidePlatformName] = useState(false)
-  const [loginCms, setLoginCms] = useState(null)
   // Sidebar come drawer off-canvas sotto md — chiusa di default, aperta
   // dall'hamburger nella barra in alto (nascosto sopra md, dove la sidebar è
   // sempre visibile come prima).
@@ -176,12 +175,6 @@ export default function App() {
     setAiOn(!!data.ai)
     setTenantLogoUrl((data.logo_url || ''))
     setHidePlatformName(!!data.hide_platform_name)
-    setLoginCms(data.login_headline ? {
-      headline: data.login_headline,
-      subheadline: data.login_subheadline || '',
-      body: data.login_body || '',
-      heroImageUrl: (data.login_hero_image_url || ''),
-    } : null)
     const triplet = hex2rgbTriplet(data.accent_color)
     if (triplet) document.documentElement.style.setProperty('--accent', triplet)
     document.title = data.name ? data.name + ' — Platform' : 'Platform'
@@ -238,7 +231,7 @@ export default function App() {
   const onLogin = (t, u) => { setToken(t); setUser(u) }
 
 
-  if (!token) return <Login onLogin={onLogin} tenantName={tenantName} logoUrl={tenantLogoUrl} hidePlatformName={hidePlatformName} cms={loginCms} />
+  if (!token) return <Login onLogin={onLogin} tenantName={tenantName} logoUrl={tenantLogoUrl} hidePlatformName={hidePlatformName} />
 
   const currentModule = installedModules.find((m) => m.slug === currentPage)
   const allModulesForBuilder = installedModules

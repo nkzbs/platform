@@ -3,7 +3,7 @@ import { API, setAuth } from '../lib/api'
 import PlatformLogo from './PlatformLogo'
 import { startAuthentication, browserSupportsWebAuthn } from '@simplewebauthn/browser'
 
-function Login({ onLogin, tenantName, logoUrl, hidePlatformName, cms }) {
+function Login({ onLogin, tenantName, logoUrl, hidePlatformName }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -130,28 +130,14 @@ function Login({ onLogin, tenantName, logoUrl, hidePlatformName, cms }) {
     </>
   )
 
-  // CMS pagina di accesso: attiva solo se il tenant ha configurato un titolo
-  // in Impostazioni → Azienda (login_headline) — altrimenti resta la card
-  // centrata di sempre, invariata per chi non la usa.
-  if (cms) {
-    return (
-      <div className="min-h-screen bg-surface-page flex flex-col md:flex-row">
-        <div className="md:w-1/2 flex flex-col justify-center px-8 py-16 md:px-16 bg-surface-card border-b md:border-b-0 md:border-r border-gray-800">
-          {cms.heroImageUrl && <img src={cms.heroImageUrl} alt="" className="w-full max-w-md rounded-xl object-cover mb-8" />}
-          <h1 className="text-3xl md:text-4xl font-bold text-ink tracking-tight mb-3">{cms.headline}</h1>
-          {cms.subheadline && <p className="text-lg text-gray-400 mb-4">{cms.subheadline}</p>}
-          {cms.body && <p className="text-sm text-gray-500 whitespace-pre-line leading-relaxed max-w-md">{cms.body}</p>}
-        </div>
-        <div className="md:w-1/2 flex items-center justify-center px-8 py-16">
-          <div className="w-full max-w-sm">
-            {brandHeader}
-            {formBlock}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
+  // Card centrata unica, sempre uguale — c'era anche una variante "CMS" a due
+  // colonne con titolo/sottotitolo configurabili (login_headline e affini,
+  // Impostazioni → Azienda) ma quel tab non esiste più in questo frontend da
+  // tempo (rimosso per Finance, vedi ImpostazioniPage.jsx): restava solo un
+  // valore vecchio ancora in un database, irraggiungibile da qualunque
+  // schermata, a dettare un login diverso dal resto dell'app. Tolto il ramo
+  // di codice invece di cancellare quel valore a mano sul database (2026-10-14,
+  // segnalato dall'utente dal vivo — "questo login non mi piace").
   return (
     <div className="min-h-screen bg-surface-page flex items-center justify-center">
       <div className="bg-surface-card p-8 rounded-xl w-full max-w-sm border border-gray-800">
