@@ -41,6 +41,8 @@ Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la 
 
 - **Gestione utenti di Super Admin più completa** (14 ottobre): ogni riga ora mostra se il 2FA è attivo; si può **rinominare** un utente (clic sul nome), **resettare la password** di un altro admin e **disattivare il suo 2FA** (recupero per chi resta bloccato — entrambe richiedono la TUA password, mai quella del bersaglio, e restano in Attività), **eliminare** un utente per sempre (non più solo disabilitarlo). La propria password e il proprio 2FA restano SOLO self-service (qui sotto, in Impostazioni), nessuna di queste azioni si può fare su se stessi.
 - **Passkey** (14 ottobre): in aggiunta al 2FA, non al posto — entri con l'impronta, il volto o il PIN del dispositivo, senza scrivere username né password (tenant e Super Admin). Si aggiungono e si tolgono da Impostazioni/Il mio account → Passkey, quante se ne vuole. Nella schermata di accesso compare solo se il browser le supporta.
+- **Login dei tenant semplificato** (14 ottobre): tolta la variante a due colonne con titolo configurabile (un dato vecchio, irraggiungibile da nessuna schermata di questo frontend, dettava un login diverso dal resto dell'app) — ora è sempre la stessa card centrata, come Super Admin.
+- **Recupero dell'ultimo admin di Super Admin bloccato** (14 ottobre): se non c'è un altro admin da cui farsi resettare password/2FA, uno script sul NAS lo fa in modo pulito (`docker exec super-admin-backend node src/scripts/break-glass-reset.js <username> <nuova-password> [--disable-2fa]`) — tracciato in Attività, mai una rotta di rete. Vedi `docs/OPERAZIONI.md`.
 
 - **Formato dei report su WhatsApp compatto** (scadute non ripetute, importi puliti).
 
