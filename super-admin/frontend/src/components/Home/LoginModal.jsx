@@ -70,12 +70,12 @@ function LoginModal({ onLogin, onClose, mode }) {
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-surface-card rounded-xl w-full max-w-2xl border border-gray-800 relative flex flex-col sm:flex-row max-h-[92vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-surface-card rounded-xl w-full max-w-2xl border border-gray-800 relative flex overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-ink transition z-10">
           <Icon name="x" size={18} />
         </button>
-        <div className="flex w-full sm:w-1/2 items-center justify-center p-6 sm:p-8 bg-surface-page border-b sm:border-b-0 sm:border-r border-gray-800 flex-shrink-0">
-          <img src={illustration} alt="" className="login-illustration w-full max-h-40 sm:max-h-none object-contain" />
+        <div className="hidden sm:flex w-1/2 items-center justify-center p-8 bg-surface-page border-r border-gray-800">
+          <img src={illustration} alt="" className="login-illustration w-full object-contain" />
         </div>
         <div className="w-full sm:w-1/2 p-8">
         <div className="mb-6 flex items-center gap-3">
