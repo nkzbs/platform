@@ -309,6 +309,19 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
         validazione_creazione: draft.validazione_creazione || null,
         allegati: draft.allegati || null,
         aggregati: draft.aggregati || [],
+        // Blocchi "vista" v3-only (period_view, weekly_breakdown...) — stesso bug già
+        // preso per le automazioni (vedi commento sotto su _v3_unsupported): mancando
+        // qui, riaprire il Builder su un modulo che li aveva (es. Timbrature: "Ore
+        // totali"/"Ore per settimana") li toglieva dall'editor, e una pubblicazione
+        // successiva li cancellava per davvero (2026-10-15, scoperto dal vivo).
+        branch_creates: draft.branch_creates || [],
+        period_views: draft.period_views || [],
+        parent_children_views: draft.parent_children_views || [],
+        yearly_breakdowns: draft.yearly_breakdowns || [],
+        category_pivots: draft.category_pivots || [],
+        weekly_breakdowns: draft.weekly_breakdowns || [],
+        view_tabs: draft.view_tabs || null,
+        requires_connection: draft.requires_connection || null,
         // Automazioni/condizioni: il backend le mette da parte qui quando appiattisce
         // a v2 (vedi toV2Lenient) — senza riportarle dentro, si perdevano silenziosamente
         // ogni volta che si riapriva un modulo esistente nel Builder (e una pubblicazione
