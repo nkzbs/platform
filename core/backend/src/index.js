@@ -28,6 +28,7 @@ const connectionsRoutes = require('./routes/connections');
 const automationsRoutes = require('./routes/automations');
 const dashboardRoutes = require('./routes/dashboard');
 const auditRoutes = require('./routes/audit');
+const securityStatusRoutes = require('./routes/security-status');
 const rolesRoutes = require('./routes/roles');
 const { startScheduler } = require('./scheduler');
 const { startGmailPoller } = require('./gmail-poller');
@@ -97,6 +98,7 @@ const routeMounts = [
   ['/automations', automationsRoutes],
   ['/dashboard', dashboardRoutes],
   ['/audit-log', auditRoutes],
+  ['/security-status', securityStatusRoutes],
   ['/roles', rolesRoutes],
   ['/m2m', m2mRoutes],
   ['/notifications', notificationsRoutes],

@@ -25,6 +25,7 @@ const analyticsRoutes = require('./routes/analytics');
 const guidaRoutes = require('./routes/guida');
 const aiUsageRoutes = require('./routes/ai-usage');
 const tenantAiRoutes = require('./routes/tenant-ai');
+const securityStatusRoutes = require('./routes/security-status');
 const { startBackupScheduler } = require('./backup-scheduler');
 const { startWeeklyBackupMail } = require('./weekly-backup-mail');
 const { startBackupVerifyScheduler } = require('./backup-verify');
@@ -65,6 +66,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/guida', guidaRoutes);
 app.use('/api/ai-usage', aiUsageRoutes);
 app.use('/api/tenant-ai', tenantAiRoutes);
+app.use('/api/security-status', securityStatusRoutes);
 
 app.get('/health', (req, res) => res.json({ status: 'ok', version: '0.2.0' }));
 

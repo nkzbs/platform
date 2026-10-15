@@ -17,6 +17,7 @@ import FeaturesTab from '../components/FeaturesTab'
 import ExportServerCard from '../components/ExportServerCard'
 import TelegramCard from '../components/TelegramCard'
 import SitoWebPage from './SitoWebPage'
+import SicurezzaTab from '../components/SicurezzaTab'
 
 // "Il mio account" unito qui (2026-08-29, richiesto esplicitamente dall'utente) —
 // prima era una pagina a sé raggiunta dal proprio nome in fondo alla Sidebar.
@@ -310,6 +311,7 @@ const SETTINGS_TABS = [
   { key: 'suggerimenti', icon: 'sparkles', label: 'Suggerimenti' },
   { key: 'funzioni', icon: 'grid', label: 'Funzioni' },
   { key: 'export_dati', icon: 'download', label: 'Dati' },
+  { key: 'sicurezza', icon: 'shield', label: 'Sicurezza' },
   { key: 'account', icon: 'user', label: 'Il mio account' },
 ]
 
@@ -356,6 +358,8 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
 
 
       {tab === 'assistente' && <AiSettingsPage token={token} onChanged={onFeaturesChanged} />}
+
+      {tab === 'sicurezza' && <SicurezzaTab token={token} />}
 
       {tab === 'export_dati' && canExport && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-w-5xl">

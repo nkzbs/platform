@@ -51,6 +51,14 @@ function SettingsPage({ token, myId }) {
   const [keyMsg, setKeyMsg] = useState(null)
   const [keyBusy, setKeyBusy] = useState(false)
 
+  // Sicurezza della piattaforma (2026-10-15, richiesto dall'utente: "lato
+  // sicurezza la struttura regge? un pannello dove controllo lo stato della
+  // piattaforma", scelto esplicitamente "stato attuale + log di eventi
+  // sospetti"). Legge solo /security-status, che a sua volta legge solo dati
+  // di Super Admin su se stesso — vedi commento nella route.
+  const [secStatus, setSecStatus] = useState(null)
+  const loadSecStatus = () => fetch(API + '/security-status', { headers }).then((r) => r.json()).then((d) => d && setSecStatus(d))
+
   const [copied, setCopied] = useState(false)
   const copySecret = () => {
     navigator.clipboard.writeText(twofaSetup.secret).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500) })
@@ -93,6 +101,7 @@ function SettingsPage({ token, myId }) {
     loadTwofaStatus()
     loadKeys()
     loadPasskeys()
+    loadSecStatus()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const keyCall = async (method, path, body) => {
@@ -363,6 +372,90 @@ function SettingsPage({ token, myId }) {
             <div className="text-xs text-gray-600">Le chiavi sono controllate con Mistral e conservate cifrate. Non vengono mostrate di nuovo.</div>
           </div>
         )}
+      </section>
+
+      {/* SICUREZZA DELLA PIATTAFORMA */}
+      <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mt-4">
+        <SectionHead icon="shield" title="Sicurezza della piattaforma" sub="Stato attuale e ultimi eventi sospetti — solo i dati di Super Admin, mai quelli dentro un tenant." />
+        {!secStatus && <div className="text-sm text-gray-600">Caricamento...</div>}
+        {secStatus && (() => {
+          const u = secStatus.users
+          const tfaAll = u.total > 0 && u.with_2fa === u.total
+          const tfaNone = u.with_2fa === 0
+          const pkAll = u.total > 0 && u.with_passkey === u.total
+          const ssl = secStatus.cloudflare.ssl_mode
+          const sslTone = !secStatus.cloudflare.configured ? 'gray' : (ssl === 'strict' || ssl === 'full' ? 'green' : (ssl === 'flexible' ? 'amber' : 'red'))
+          const sslLabel = !secStatus.cloudflare.configured ? 'Non verificabile' : ssl === 'strict' ? 'Full (strict)' : ssl === 'full' ? 'Full' : ssl === 'flexible' ? 'Flexible (in chiaro verso il NAS)' : ssl === 'off' ? 'Spenta (nessuna cifratura)' : (ssl || 'Sconosciuta')
+          const actionLabels = {
+            'auth.login_failed': 'Accesso con password non riuscito',
+            'auth.2fa_verify_failed': 'Codice 2FA errato',
+            'auth.login_blocked_disabled': 'Accesso bloccato (utente disattivato)',
+            'auth.webauthn_login_failed': 'Accesso con passkey non riuscito',
+          }
+          return (
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="bg-surface-page border border-gray-800 rounded-lg p-3">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-xs text-gray-500">Due fattori</span>
+                    <StatusBadge tone={tfaAll ? 'green' : tfaNone ? 'red' : 'amber'}>{u.with_2fa}/{u.total}</StatusBadge>
+                  </div>
+                  <div className="text-[11px] text-gray-600">Admin con 2FA attiva</div>
+                </div>
+                <div className="bg-surface-page border border-gray-800 rounded-lg p-3">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-xs text-gray-500">Passkey</span>
+                    <StatusBadge tone={pkAll ? 'green' : 'gray'}>{u.with_passkey}/{u.total}</StatusBadge>
+                  </div>
+                  <div className="text-[11px] text-gray-600">Admin con almeno una passkey</div>
+                </div>
+                <div className="bg-surface-page border border-gray-800 rounded-lg p-3">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-xs text-gray-500">Cifratura in transito</span>
+                    <StatusBadge tone={sslTone}>{ssl ? sslLabel.split(' (')[0] : '—'}</StatusBadge>
+                  </div>
+                  <div className="text-[11px] text-gray-600">{sslLabel}</div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold text-gray-400 mb-2">Limiti ai tentativi (anti brute-force)</div>
+                <div className="space-y-1">
+                  {secStatus.rate_limits.map((rl) => (
+                    <div key={rl.name} className="flex items-center justify-between text-xs text-gray-500 bg-surface-page border border-gray-800 rounded-lg px-3 py-2">
+                      <span>{rl.name}</span>
+                      <span className="text-gray-400">max {rl.max} ogni {rl.window} · {rl.fail_mode === 'closed' ? 'blocca se il contatore non risponde' : 'passa se il contatore non risponde'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {secStatus.known_gaps.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-gray-400 mb-2">Da sapere</div>
+                  <div className="space-y-1.5">
+                    {secStatus.known_gaps.map((g, i) => (
+                      <div key={i} className="text-xs text-amber-400 bg-amber-900/20 border border-amber-900/40 rounded-lg px-3 py-2">{g}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <div className="text-xs font-semibold text-gray-400 mb-2">Ultimi eventi sospetti</div>
+                {secStatus.recent_suspicious_events.length === 0 && <div className="text-xs text-gray-600">Nessuno negli ultimi eventi registrati.</div>}
+                <div className="space-y-1">
+                  {secStatus.recent_suspicious_events.map((e, i) => (
+                    <div key={i} className="flex items-center justify-between gap-3 text-xs bg-surface-page border border-gray-800 rounded-lg px-3 py-2">
+                      <span className="text-gray-300 truncate">{actionLabels[e.action] || e.action}{e.target ? ' — ' + e.target : ''}</span>
+                      <span className="text-gray-600 flex-shrink-0">{new Date(e.created_at).toLocaleString('it-IT')}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )
+        })()}
       </section>
     </div>
   )

@@ -50,6 +50,7 @@ Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la 
 - **Bug reale nel Builder: «Vista periodo» e «Ore per settimana» sparivano riaprendo un modulo** (15 ottobre): aprendo nel Builder un modulo che aveva già un blocco `period_view`, `weekly_breakdown`, `yearly_breakdown`, `category_pivot`, `parent_children_view`, `view_tabs` o «Crea in filiale» (es. Timbrature: «Ore totali», «Ore per settimana»), quel blocco non compariva più nell'editor — e una pubblicazione da lì lo cancellava per davvero, non solo dalla vista. Stesso tipo di bug già preso una volta per le automazioni (stessa riga di codice, un pezzo dimenticato): il Builder, riaprendo un modulo, ricostruiva l'elenco dei blocchi senza includerli. Scoperto dal vivo tentando di sistemare il formato di «Ore totali» su Timbrature — nessun modulo risulta averlo perso finora (si corregge solo riaprendo e pubblicando), ma è stato vicino.
 - **Super Admin, «Tenant attivi» allineato al grafico a fianco** (15 ottobre): il numero nel riquadro KPI ora viene dallo stesso conteggio live della «Distribuzione tenant per stato» (`/analytics/platform-overview`, solo stato Attivo), non più da una foto storica (`metrics_snapshots`) che poteva restare indietro rispetto ai dati veri — da qui il disallineamento visto (3 contro 2).
 - **Libreria: le 55 categorie dei moduli generici, vere** (15 ottobre): finora erano **tutti** etichettati «Generico» (una sola, non divideva niente). Ora nove categorie vere (Finanza, Vendite, Acquisti, Magazzino, Progetti, Risorse umane, Assistenza clienti, Organizzazione, Servizi alla persona), scelte dal nome/descrizione di ciascun modulo. I moduli già importati in Super Admin si ricategorizzano da soli all'avvio (solo quelli ancora con l'etichetta «Generico»: una categoria già cambiata a mano non si tocca).
+- **Pannello «Sicurezza della piattaforma»** (15 ottobre): in Impostazioni (Super Admin e, in versione ridotta, ogni tenant) — quanti admin hanno 2FA/passkey attivi, i limiti anti-forza-bruta già in vigore, e gli **ultimi eventi sospetti** (accessi falliti, codici 2FA/passkey sbagliati) dal registro attività. Su Super Admin anche la **cifratura in transito di Cloudflare**, letta davvero dall'API (oggi è «Flexible»: il traffico tra Cloudflare e il NAS viaggia in chiaro — nessuna correzione fatta qui, solo mostrata com'è) e due note ferme (password trovate in chiaro nella cronologia Git prima della pulizia del 21 agosto non sono state ruotate; nessuna verifica di sicurezza esterna è mai stata condotta). Ogni pannello legge SOLO i propri dati: Super Admin non entra in un tenant, un tenant non vede Super Admin né altri tenant.
 
 - **Formato dei report su WhatsApp compatto** (scadute non ripetute, importi puliti).
 
@@ -75,7 +76,7 @@ Nessuna schermata nuova è stata provata in un browser da chi l'ha scritta: i te
 
 ### Numeri
 
-57 suite di test per il tenant, 30 per Super Admin, 1 per il provisioner, tutte verdi; `bash scripts/verifica.sh` (lint, test, compilazioni) passa.
+62 suite di test per il tenant, 34 per Super Admin, 1 per il provisioner, tutte verdi; `bash scripts/verifica.sh` (lint, test, compilazioni) passa.
 
 ## 0.1.1 — 10 ottobre 2026
 
