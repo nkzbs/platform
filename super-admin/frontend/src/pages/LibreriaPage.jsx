@@ -235,7 +235,7 @@ function LibreriaPage({ token }) {
                 {p.relazioni.length > 0 && <div className="text-xs text-gray-500 mt-0.5">Collegato a: {p.relazioni.join(', ')}</div>}
                 {decisione && decisione.p.id === p.id && (
                   <div className="mt-3 bg-surface-page border border-gray-800 rounded-lg p-3 space-y-2">
-                    <input className={inputCls} placeholder="Gruppo (es. Generico)" value={decisione.group_name} onChange={(e) => setDecisione({ ...decisione, group_name: e.target.value })} />
+                    <input className={inputCls} placeholder="Gruppo (es. Finanza, Vendite, Magazzino...)" value={decisione.group_name} onChange={(e) => setDecisione({ ...decisione, group_name: e.target.value })} />
                     <textarea className={inputCls + ' min-h-[60px]'} placeholder="Descrizione per la Libreria" value={decisione.description} onChange={(e) => setDecisione({ ...decisione, description: e.target.value })} />
                     <div className="flex gap-2"><button type="button" onClick={approva} disabled={busy} className={primaryBtn + ' text-xs !py-1.5'}>{busy ? 'Pubblico…' : 'Metti nella Libreria'}</button><button type="button" onClick={() => setDecisione(null)} className={ghostBtn + ' text-xs !py-1.5'}>Annulla</button></div>
                   </div>

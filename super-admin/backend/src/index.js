@@ -96,6 +96,7 @@ app.use((err, req, res, next) => {
 });
 
 { const m = require('./secrets-at-rest').migrate(); if (m.totp || m.falliti) console.log('Segreti 2FA cifrati a riposo: ' + m.totp + (m.falliti ? ' (' + m.falliti + ' NON riusciti)' : '')); }
+{ const n = require('./lib/moduli-generici').recategorizza(); if (n) console.log('Libreria: ' + n + ' moduli generici ricategorizzati (da "Generico" unico a una categoria vera)'); }
 
 app.listen(PORT, () => {
   console.log('Super Admin backend running on port ' + PORT);

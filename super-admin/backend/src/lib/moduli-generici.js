@@ -32,4 +32,21 @@ function importa() {
   return { aggiunti, completati };
 }
 
-module.exports = { stato, importa, ORIGINE, SEED };
+// Ricategorizza i moduli già importati che hanno ancora l'etichetta unica "Generico" (prima
+// del 15 ottobre erano tutti così) secondo la categoria vera del seed (Finanza, Vendite,
+// Acquisti, Magazzino, Progetti, Risorse umane, Assistenza clienti, Organizzazione, Servizi
+// alla persona) — SOLO dove il gruppo non è già stato cambiato a mano da Super Admin
+// (group_name diverso da "Generico" è una scelta fatta, non si tocca).
+function recategorizza() {
+  const upd = db.prepare("UPDATE registry_modules SET group_name = ? WHERE slug = ? AND source_tenant_slug = ? AND group_name = 'Generico'");
+  let n = 0;
+  db.transaction(() => {
+    for (const m of SEED) {
+      if (!m.group_name || m.group_name === 'Generico') continue;
+      n += upd.run(m.group_name, m.slug, ORIGINE).changes;
+    }
+  })();
+  return n;
+}
+
+module.exports = { stato, importa, recategorizza, ORIGINE, SEED };

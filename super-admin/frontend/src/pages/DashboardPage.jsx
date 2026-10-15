@@ -102,9 +102,9 @@ function DashboardPage({ token, onNavigate }) {
       {latest && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-            <Kpi label="Tenant attivi" value={latest.total_tenants} icon="grid" tone="blue"
-              delta={before ? pctDelta(latest.total_tenants, before.total_tenants) : null}
-              hint="Istanze cliente (tenant) attualmente in esecuzione." />
+            <Kpi label="Tenant attivi" value={overview ? (overview.tenant_status.active || 0) : latest.total_tenants} icon="grid" tone="blue"
+              delta={before ? pctDelta(overview ? (overview.tenant_status.active || 0) : latest.total_tenants, before.total_tenants) : null}
+              hint="Tenant in stato Attivo in questo momento — stesso numero della fetta «Attivo» del grafico a fianco." />
             <Kpi label="Salute piattaforma" value={healthPct != null ? healthPct + '%' : '—'} icon="activity" tone="purple"
               hint="Percentuale di tenant in stato Attivo sul totale — più è alta, meno tenant sono fermi o in errore." />
           </div>
