@@ -1800,7 +1800,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                         <div className="text-[11px] text-gray-400 font-semibold mb-2">Metriche (KPI mostrati per il periodo attivo)</div>
                         {metrics.map((m, i) => (
                           <div key={i} className="mb-2 pb-2 border-b border-gray-800/60 last:border-0">
-                            <div className="grid grid-cols-[1fr_1fr_70px_28px] gap-2 mb-1.5 items-center">
+                            <div className="grid grid-cols-[1fr_1fr_70px_70px_28px] gap-2 mb-1.5 items-center">
                               <input className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" placeholder="etichetta" value={m.label || ''} onChange={(e) => updateMetric(i, { label: e.target.value })} />
                               <select className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" value={m.field || ''} onChange={(e) => updateMetric(i, { field: e.target.value })} disabled={m.func === 'count'}>
                                 <option value="">campo...</option>
@@ -1810,6 +1810,11 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                                 <option value="sum">somma</option>
                                 <option value="count">conteggio</option>
                                 <option value="avg">media</option>
+                              </select>
+                              <select className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" value={m.format || 'currency'} onChange={(e) => updateMetric(i, { format: e.target.value })}>
+                                <option value="currency">valuta</option>
+                                <option value="number">numero</option>
+                                <option value="ore">ore (min)</option>
                               </select>
                               <button onClick={() => removeMetric(i)} className="text-red-400/60 hover:text-red-400 transition"><Icon name="trash" size={12} /></button>
                             </div>
@@ -2060,6 +2065,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                         <select className="bg-surface-page text-ink px-2 py-2 rounded-lg text-xs outline-none border border-gray-700" value={step.metric_format || 'number'} onChange={(e) => updateStep(idx, 'metric_format', e.target.value)}>
                           <option value="number">numero</option>
                           <option value="currency">valuta</option>
+                          <option value="ore">ore (da minuti)</option>
                         </select>
                         <input type="number" className="bg-surface-page text-ink px-2 py-2 rounded-lg text-xs outline-none border border-gray-700" placeholder="Soglia (opz.)" value={step.threshold ?? ''} onChange={(e) => updateStep(idx, 'threshold', e.target.value === '' ? undefined : parseFloat(e.target.value))} />
                       </div>
@@ -2155,6 +2161,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                         <option value="number">Numero</option>
                         <option value="currency">Valuta (EUR)</option>
                         <option value="percent">Percentuale</option>
+                        <option value="ore">Ore (da un campo in minuti)</option>
                       </select>
                     </div>
                     <div className="flex gap-1.5 mb-3">
