@@ -18,6 +18,7 @@ const cors = require('cors');
 const db = require('./db');
 
 const authRoutes = require('./routes/auth');
+const webauthnRoutes = require('./routes/webauthn');
 const usersRoutes = require('./routes/users');
 const modulesRoutes = require('./routes/modules');
 const recordsRoutes = require('./routes/records');
@@ -86,6 +87,7 @@ const apiGlobalLimiter = rateLimit({ windowMs: 60 * 1000, max: 600, message: 'Tr
 
 const routeMounts = [
   ['/auth', authRoutes],
+  ['/webauthn', webauthnRoutes],
   ['/users', usersRoutes],
   ['/modules', modulesRoutes],
   ['/records', recordsRoutes],

@@ -3,6 +3,7 @@ import { API } from '../lib/api'
 import Icon from '../components/Icon'
 import StatusBadge from '../components/StatusBadge'
 import UsersPage from './UsersPage'
+import { startRegistration, browserSupportsWebAuthn } from '@simplewebauthn/browser'
 
 // PLATFORM-UI-REDESIGN-CATALOG.md #8 — unico pezzo mancante di questa pagina
 // (la navigazione a tile per sotto-sezioni esiste già): un indicatore di
@@ -60,9 +61,38 @@ function SettingsPage({ token, myId }) {
   const loadTwofaStatus = () => fetch(API + '/auth/2fa/status', { headers }).then((r) => r.json()).then((d) => setTwofaEnabled(d.enabled))
 
   const loadKeys = () => fetch(API + '/ai-usage/keys', { headers }).then((r) => r.json()).then((d) => d && d.admin && setKeys(d))
+
+  // Passkey (2026-10-14, richiesto dall'utente: "oltre alle 2FA voglio
+  // passkey ovunque") — self-service come il 2FA sopra.
+  const [passkeys, setPasskeys] = useState(null)
+  const [pkNickname, setPkNickname] = useState('')
+  const [pkBusy, setPkBusy] = useState(false)
+  const [pkError, setPkError] = useState('')
+  const loadPasskeys = () => fetch(API + '/webauthn/list', { headers }).then((r) => r.json()).then((d) => Array.isArray(d) && setPasskeys(d))
+  const addPasskey = async () => {
+    setPkError(''); setPkBusy(true)
+    try {
+      const optRes = await fetch(API + '/webauthn/register-options', { method: 'POST', headers })
+      const opt = await optRes.json()
+      if (!optRes.ok) { setPkError(opt.error || 'Errore'); return }
+      const attestation = await startRegistration({ optionsJSON: opt.options })
+      const verRes = await fetch(API + '/webauthn/register-verify', { method: 'POST', headers, body: JSON.stringify({ pending_token: opt.pending_token, response: attestation, nickname: pkNickname }) })
+      const verBody = await verRes.json()
+      if (!verRes.ok) { setPkError(verBody.error || 'Errore'); return }
+      setPkNickname('')
+      loadPasskeys()
+    } catch (e) {
+      if (e.name !== 'NotAllowedError') setPkError('Creazione della passkey non riuscita')
+    } finally {
+      setPkBusy(false)
+    }
+  }
+  const removePasskey = async (id) => { await fetch(API + '/webauthn/' + id, { method: 'DELETE', headers }); loadPasskeys() }
+
   useEffect(() => {
     loadTwofaStatus()
     loadKeys()
+    loadPasskeys()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const keyCall = async (method, path, body) => {
@@ -155,39 +185,19 @@ function SettingsPage({ token, myId }) {
         <UsersPage token={token} embedded myId={myId} />
       </section>
 
-      {/* CHIAVI AI */}
+      {/* IL TUO ACCESSO — Password, 2FA e Passkey nidificati in UNA sezione
+          (2026-10-14, segnalato dall'utente guardandola dal vivo: stavano
+          allo stesso livello di "Utenti Super Admin" e "Chiavi AI", senza
+          dire che queste tre sono le TUE, mai quelle di un altro admin —
+          vedi "Utenti Super Admin" sopra per il motivo). Subito sotto
+          "Utenti Super Admin" (non dopo "Chiavi AI", segnalato dall'utente
+          il giorno stesso): sono entrambe questioni di accesso/identità,
+          "Chiavi AI" è un'altra categoria (configurazione di sistema). */}
       <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mb-4">
-        <SectionHead icon="key" title="Chiavi AI" sub="La chiave di Super Admin è solo sua: serve a costruire i tenant e ad analizzare i processi. Non la usa mai un tenant." />
-        {keys && (
-          <div className="space-y-4">
-            <div className="text-xs">
-              {keys.admin.source === 'admin' && <div className="text-green-400">Chiave di Super Admin salvata ({keys.admin.hint})</div>}
-              {keys.admin.source === 'generale' && <div className="text-gray-400">Super Admin usa la chiave generale (variabile d'ambiente del backend). Inserisci qui una chiave sua per separare la spesa.</div>}
-              {!keys.admin.configured && <div className="text-amber-400">Nessuna chiave: l'AI di Super Admin non funziona finché non ne inserisci una.</div>}
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              <input type="password" autoComplete="off" spellCheck="false" value={keyInput} onChange={(e) => setKeyInput(e.target.value)} placeholder="Incolla la chiave Mistral di Super Admin" className={inputCls + ' flex-1 min-w-[220px]'} />
-              <button type="button" onClick={() => keyCall('PUT', '/admin', { key: keyInput })} disabled={keyBusy || !keyInput.trim()} className={primaryBtn}>Salva</button>
-              {keys.admin.source === 'admin' && <button type="button" onClick={() => keyCall('DELETE', '/admin')} disabled={keyBusy} className={ghostBtn}>Togli</button>}
-            </div>
-            <div className="border-t border-gray-800 pt-4">
-              <label className="flex items-start gap-2.5 cursor-pointer text-sm text-gray-300">
-                <input type="checkbox" className="mt-1" checked={keys.ripiego_tenant} onChange={(e) => keyCall('PUT', '/fallback', { on: e.target.checked })} disabled={keyBusy} />
-                <span>I tenant senza una chiave propria usano la chiave generale
-                  <span className="block text-xs text-gray-500 mt-0.5">{keys.generale_presente ? 'La chiave generale è presente.' : 'Non c\'è nessuna chiave generale: con o senza questa opzione, un tenant senza chiave sua non ha AI.'} Spenta questa opzione, ogni tenant deve inserire la sua (Impostazioni → AI del tenant).</span>
-                </span>
-              </label>
-              <div className="text-xs text-gray-500 mt-3">Tenant con chiave propria: {keys.tenant_con_chiave_propria.length ? keys.tenant_con_chiave_propria.join(', ') : 'nessuno'}</div>
-            </div>
-            {keyMsg && <div className={'text-xs ' + (keyMsg.ok ? 'text-green-400' : 'text-amber-400')}>{keyMsg.text}</div>}
-            <div className="text-xs text-gray-600">Le chiavi sono controllate con Mistral e conservate cifrate. Non vengono mostrate di nuovo.</div>
-          </div>
-        )}
-      </section>
+        <SectionHead icon="user" title="Il tuo accesso" sub="Password, due fattori e passkey — solo tu li cambi, mai un altro admin al posto tuo." />
 
-      {/* PASSWORD */}
-      <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mb-4">
-        <SectionHead icon="key" title="Password" sub="Cambia la password con cui accedi a Super Admin." />
+        {/* PASSWORD */}
+        <div className="text-sm font-semibold text-ink mb-3">Password</div>
         <div className="space-y-2.5 max-w-sm">
           <input type="password" placeholder="Password attuale" className={inputCls} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
           <input type="password" placeholder="Nuova password (min. 8 caratteri)" className={inputCls} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
@@ -212,13 +222,14 @@ function SettingsPage({ token, myId }) {
         <button onClick={changePassword} disabled={saving || !currentPassword || !newPassword} className={'mt-4 ' + primaryBtn}>
           {saving ? 'Salvo...' : 'Cambia password'}
         </button>
-      </section>
 
-      {/* DUE FATTORI */}
-      <section className="bg-surface-card border border-gray-800 rounded-xl p-5">
-        <SectionHead icon="shield" title="Autenticazione a due fattori"
-          sub="Oltre alla password, serve un codice che cambia ogni 30 secondi, generato dal telefono."
-          right={twofaEnabled === null ? null : <StatusBadge tone={twofaEnabled ? 'green' : 'gray'}>{twofaEnabled ? 'Attiva' : 'Non attiva'}</StatusBadge>} />
+        {/* DUE FATTORI */}
+        <div className="border-t border-gray-800 mt-6 pt-5">
+          <div className="flex items-center justify-between gap-3 mb-1">
+            <div className="text-sm font-semibold text-ink">Autenticazione a due fattori</div>
+            {twofaEnabled !== null && <StatusBadge tone={twofaEnabled ? 'green' : 'gray'}>{twofaEnabled ? 'Attiva' : 'Non attiva'}</StatusBadge>}
+          </div>
+          <p className="text-xs text-gray-500 mb-4">Oltre alla password, serve un codice che cambia ogni 30 secondi, generato dal telefono.</p>
 
         {twofaError && <div className="bg-red-900/30 text-red-400 text-sm p-3 rounded-lg mb-4 border border-red-900/50">{twofaError}</div>}
 
@@ -287,6 +298,69 @@ function SettingsPage({ token, myId }) {
               </button>
               <button onClick={() => { setShowDisable(false); setDisablePassword(''); setTwofaError('') }} className={ghostBtn}>Annulla</button>
             </div>
+          </div>
+        )}
+        </div>
+
+        {/* PASSKEY */}
+        {browserSupportsWebAuthn() && (
+          <div className="border-t border-gray-800 mt-6 pt-5">
+            <div className="text-sm font-semibold text-ink mb-1">Passkey</div>
+            <p className="text-xs text-gray-500 mb-4">Entra con l'impronta, il volto o il PIN del dispositivo, senza username né password. Puoi averne più di una.</p>
+
+            {pkError && <div className="bg-red-900/30 text-red-400 text-sm p-3 rounded-lg mb-4 border border-red-900/50">{pkError}</div>}
+
+            <div className="space-y-2 mb-4">
+              {passkeys === null && <div className="text-sm text-gray-600">Caricamento...</div>}
+              {passkeys && passkeys.length === 0 && <div className="text-sm text-gray-600">Nessuna passkey ancora.</div>}
+              {passkeys && passkeys.map((p) => (
+                <div key={p.id} className="flex items-center justify-between gap-3 bg-surface-page rounded-lg px-4 py-3 border border-gray-800">
+                  <div className="min-w-0">
+                    <div className="text-sm text-ink truncate">{p.nickname || 'Passkey senza nome'}</div>
+                    <div className="text-xs text-gray-600 mt-0.5">
+                      Aggiunta il {new Date(p.created_at).toLocaleDateString('it-IT')}
+                      {p.last_used_at && ' · usata l\'ultima volta il ' + new Date(p.last_used_at).toLocaleDateString('it-IT')}
+                    </div>
+                  </div>
+                  <button onClick={() => removePasskey(p.id)} className="text-xs text-red-400 hover:text-red-300 transition flex-shrink-0">Rimuovi</button>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-2 flex-wrap">
+              <input className={inputCls + ' flex-1 min-w-[180px]'} placeholder="Nome (facoltativo, es. Il mio iPhone)" value={pkNickname} onChange={(e) => setPkNickname(e.target.value)} />
+              <button onClick={addPasskey} disabled={pkBusy} className={primaryBtn}>{pkBusy ? 'Creazione...' : 'Aggiungi una passkey'}</button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* CHIAVI AI */}
+      <section className="bg-surface-card border border-gray-800 rounded-xl p-5">
+        <SectionHead icon="key" title="Chiavi AI" sub="La chiave di Super Admin è solo sua: serve a costruire i tenant e ad analizzare i processi. Non la usa mai un tenant." />
+        {keys && (
+          <div className="space-y-4">
+            <div className="text-xs">
+              {keys.admin.source === 'admin' && <div className="text-green-400">Chiave di Super Admin salvata ({keys.admin.hint})</div>}
+              {keys.admin.source === 'generale' && <div className="text-gray-400">Super Admin usa la chiave generale (variabile d'ambiente del backend). Inserisci qui una chiave sua per separare la spesa.</div>}
+              {!keys.admin.configured && <div className="text-amber-400">Nessuna chiave: l'AI di Super Admin non funziona finché non ne inserisci una.</div>}
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <input type="password" autoComplete="off" spellCheck="false" value={keyInput} onChange={(e) => setKeyInput(e.target.value)} placeholder="Incolla la chiave Mistral di Super Admin" className={inputCls + ' flex-1 min-w-[220px]'} />
+              <button type="button" onClick={() => keyCall('PUT', '/admin', { key: keyInput })} disabled={keyBusy || !keyInput.trim()} className={primaryBtn}>Salva</button>
+              {keys.admin.source === 'admin' && <button type="button" onClick={() => keyCall('DELETE', '/admin')} disabled={keyBusy} className={ghostBtn}>Togli</button>}
+            </div>
+            <div className="border-t border-gray-800 pt-4">
+              <label className="flex items-start gap-2.5 cursor-pointer text-sm text-gray-300">
+                <input type="checkbox" className="mt-1" checked={keys.ripiego_tenant} onChange={(e) => keyCall('PUT', '/fallback', { on: e.target.checked })} disabled={keyBusy} />
+                <span>I tenant senza una chiave propria usano la chiave generale
+                  <span className="block text-xs text-gray-500 mt-0.5">{keys.generale_presente ? 'La chiave generale è presente.' : 'Non c\'è nessuna chiave generale: con o senza questa opzione, un tenant senza chiave sua non ha AI.'} Spenta questa opzione, ogni tenant deve inserire la sua (Impostazioni → AI del tenant).</span>
+                </span>
+              </label>
+              <div className="text-xs text-gray-500 mt-3">Tenant con chiave propria: {keys.tenant_con_chiave_propria.length ? keys.tenant_con_chiave_propria.join(', ') : 'nessuno'}</div>
+            </div>
+            {keyMsg && <div className={'text-xs ' + (keyMsg.ok ? 'text-green-400' : 'text-amber-400')}>{keyMsg.text}</div>}
+            <div className="text-xs text-gray-600">Le chiavi sono controllate con Mistral e conservate cifrate. Non vengono mostrate di nuovo.</div>
           </div>
         )}
       </section>

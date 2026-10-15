@@ -130,6 +130,16 @@ uno a una persona diventa "solo admin più gli utenti scelti". Dalla dashboard, 
 a 6 cifre e **salva subito i codici di recupero**: si vedono una sola volta e ognuno vale una volta. Per disattivarlo serve la password. Se un utente perde l'authenticator e i codici, l'admin non può
 sbloccarlo dall'app: va ripristinato dal database del tenant. Il Super Admin (admin.platform-core.it) ha lo stesso 2FA sul proprio account.
 
+**Passkey** (impronta, volto o PIN del dispositivo, aggiuntiva al 2FA — mai lo sostituisce): si registra da sé, stesso posto del 2FA (Impostazioni → Il mio account, o Impostazioni di Super Admin). Chi ne ha una entra senza scrivere username né password. Si può rimuovere dalla stessa schermata.
+
+**Se l'unico admin di Super Admin resta bloccato** (password dimenticata, nessun altro admin da cui farsi resettare — vedi "Gestione utenti" sotto — e magari anche il 2FA perso): **`INITIAL_ADMIN_PASSWORD` non serve a questo**, agisce solo alla primissima creazione del database, mai su un admin già esistente. La via pulita è lo script dentro il container, da eseguire via SSH sul NAS:
+```
+docker exec super-admin-backend node src/scripts/break-glass-reset.js <username> <nuova-password> [--disable-2fa]
+```
+Reimposta la password (e, con `--disable-2fa`, disattiva anche il 2FA) di quell'admin — mai un endpoint di rete, serve già avere accesso alla shell del container. Resta tracciato in Attività (`break-glass-script` come attore), non è un passaggio silenzioso.
+
+**Gestione utenti di Super Admin** (Impostazioni → Utenti Super Admin): un admin può rinominare, resettare la password e disattivare il 2FA di un ALTRO admin (mai il proprio — quello resta sopra, self-service), confermando con la PROPRIA password. Pensato per il caso più comune: un collega bloccato, con te ancora dentro.
+
 ## Variabili d'ambiente di Super Admin
 
 Elenco in [`.env.example`](../.env.example). Le obbligatorie sono `JWT_SECRET`, `INTERNAL_API_SECRET` e
