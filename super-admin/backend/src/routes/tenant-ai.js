@@ -9,6 +9,7 @@ const reportAi = require('../lib/ai-report');
 const askAi = require('../lib/ai-ask');
 const botAi = require('../lib/ai-bot');
 const receiptAi = require('../lib/ai-receipt');
+const payslipImageAi = require('../lib/ai-payslip-image');
 
 const suggestionAi = require('../lib/ai-suggestion');
 const router = express.Router();
@@ -158,17 +159,27 @@ function sanitizePayslip(raw) {
 
 router.post('/payslip', requireInternalSecret, async (req, res) => {
   const { tenant_slug, data } = req.body || {};
-  if (!tenant_slug || !data || typeof data.testo !== 'string' || !data.testo.trim()) {
-    return res.status(400).json({ error: 'tenant_slug e data.testo sono obbligatori' });
+  if (!tenant_slug || !data || typeof data !== 'object') return res.status(400).json({ error: 'tenant_slug e data sono obbligatori' });
+  const daFoto = typeof data.image_base64 === 'string' && data.image_base64;
+  if (!daFoto && (typeof data.testo !== 'string' || !data.testo.trim())) {
+    return res.status(400).json({ error: 'data.testo (dal PDF) o data.image_base64 (dalla foto) sono obbligatori' });
   }
   if (!isProviderConfigured('mistral', tenant_slug)) {
     return res.status(503).json({ error: 'Nessuna chiave Mistral: inseriscila in Impostazioni → Assistente AI.', code: 'ai_not_configured' });
   }
-  const testo = redact(String(data.testo)).slice(0, 4000);
   try {
-    const text = await callAI('mistral', { system: PAYSLIP_SYSTEM_PROMPT, user: JSON.stringify({ testo }), maxTokens: 200, tenantSlug: tenant_slug });
+    let text;
+    if (daFoto) {
+      const s = payslipImageAi.sanitizePayslipImage(data);
+      if (s.error) return res.status(400).json({ error: s.error });
+      text = await callAI('mistral', { system: payslipImageAi.PAYSLIP_IMAGE_PROMPT, user: 'Leggi la busta paga nella foto.', images: [{ mime: s.payload.mime, base64: s.payload.base64 }], maxTokens: 250, timeoutMs: 40000, tenantSlug: tenant_slug });
+    } else {
+      const testo = redact(String(data.testo)).slice(0, 4000);
+      text = await callAI('mistral', { system: PAYSLIP_SYSTEM_PROMPT, user: JSON.stringify({ testo }), maxTokens: 200, tenantSlug: tenant_slug });
+    }
     const raw = parseJsonObject(text);
     if (!raw) return res.status(502).json({ error: 'Risposta dell\'AI non valida' });
+    if (raw.leggibile === false) return res.status(422).json({ error: 'Non sembra una busta paga leggibile.', code: 'ai_unreadable' });
     res.json({ suggestion: sanitizePayslip(raw) });
   } catch (e) {
     res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });

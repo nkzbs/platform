@@ -81,6 +81,34 @@ async function main() {
     assertEq((await api({ tenant_slug: 'finance', data: { testo: TESTO } })).status, 502);
   });
 
+  console.log('\n--- lettura busta paga da foto (rullino, non solo PDF) ---');
+  const JPEG_BASE64 = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(100)]).toString('base64');
+
+  await test('una foto propone gli stessi campi, passando dalla visione del modello (non dal prompt testuale)', async () => {
+    mistralChat = [];
+    mistralReply = JSON.stringify({ periodo: '2026-10-15', lordo: 2200, netto: 1700, ore_pagate: 168, trattenute: 500, confidenza: 'alta' });
+    const r = await api({ tenant_slug: 'finance', data: { image_base64: JPEG_BASE64 } });
+    const j = await r.json();
+    assertEq(r.status, 200, JSON.stringify(j));
+    assertEq(j.suggestion.netto, 1700); assertEq(j.suggestion.periodo, '2026-10-01');
+    const sentUser = mistralChat[0].messages.find((m) => m.role === 'user');
+    assertTrue(Array.isArray(sentUser.content), 'con un\'immagine il messaggio è multimodale (array), non testo semplice');
+    assertTrue(sentUser.content.some((c) => c.type === 'image_url'), 'l\'immagine arriva davvero al modello');
+  });
+
+  await test('un file che non è una JPEG/PNG/WebP valida si rifiuta prima di chiamare Mistral', async () => {
+    mistralChat = [];
+    const r = await api({ tenant_slug: 'finance', data: { image_base64: Buffer.from('non è un\'immagine').toString('base64') } });
+    assertEq(r.status, 400);
+    assertEq(mistralChat.length, 0);
+  });
+
+  await test('"leggibile: false" (il modello non riconosce una busta paga nella foto) -> 422', async () => {
+    mistralReply = JSON.stringify({ leggibile: false });
+    const r = await api({ tenant_slug: 'finance', data: { image_base64: JPEG_BASE64 } });
+    assertEq(r.status, 422); assertEq((await r.json()).code, 'ai_unreadable');
+  });
+
   await test('senza chiave Mistral configurata per il tenant -> 503 "ai_not_configured"', async () => {
     delete process.env.MISTRAL_API_KEY;
     const r = await api({ tenant_slug: 'finance', data: { testo: TESTO } });
