@@ -19,14 +19,16 @@ const A = require('./lib/analysis');
 const { parseSchemaNormalized } = require('../../../shared/schema-v3-core.js');
 const KNOWN = new Set(['field', 'relation', 'workflow_state', 'workflow_transition', 'scope', 'permissions', 'validazione_creazione', 'computed', 'report_aggregate', 'condition', 'automation', 'connection_required', 'branch_create', 'period_view', 'parent_children_view', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'view_tabs']);
 
-test('55 moduli, tutti con nome, descrizione, gruppo «Generico» e uno schema che si legge con soli blocchi che esistono ancora', () => {
+const CATEGORIE = new Set(['Finanza', 'Vendite', 'Acquisti', 'Magazzino', 'Progetti', 'Risorse umane', 'Assistenza clienti', 'Organizzazione', 'Servizi alla persona']);
+test('55 moduli, tutti con nome, descrizione, una categoria vera (non più "Generico" unico, 15 ottobre) e uno schema che si legge con soli blocchi che esistono ancora', () => {
   eq(g.SEED.length, 55); eq(new Set(g.SEED.map((m) => m.slug)).size, 55, 'slug unici');
   for (const m of g.SEED) {
-    ok(m.name && m.description.length > 20 && m.group_name === 'Generico', m.slug);
+    ok(m.name && m.description.length > 20 && CATEGORIE.has(m.group_name), m.slug + ': gruppo «' + m.group_name + '»');
     const j = JSON.parse(m.schema_json); parseSchemaNormalized(m.schema_json);
     ok(!Array.isArray(j.steps) || j.steps.every((s) => KNOWN.has(s.block_type)), m.slug + ' ha un blocco tolto');
     ok((parseSchemaNormalized(m.schema_json).fields || []).length >= 2, m.slug + ' senza campi');
   }
+  ok(new Set(g.SEED.map((m) => m.group_name)).size >= 8, 'le categorie sono davvero diverse tra loro, non un\'unica etichetta');
 });
 test('nessun nome di persone o aziende vere nei moduli (sono mattoncini senza settore)', () => {
   const txt = g.SEED.map((m) => m.name + ' ' + m.description + ' ' + m.schema_json).join(' ');
@@ -40,6 +42,17 @@ test('si importano nella Libreria con un tocco, una volta sola, senza sovrascriv
   db.prepare("UPDATE registry_modules SET description = 'MODIFICATA' WHERE slug = 'clienti_generico' AND source_tenant_slug = 'generici'").run();
   g.importa(); eq(db.prepare("SELECT description d FROM registry_modules WHERE slug = 'clienti_generico' AND source_tenant_slug = 'generici'").get().d, 'MODIFICATA', 'una scelta già fatta non si tocca');
   db.prepare("DELETE FROM registry_modules WHERE slug = 'note_generico' AND source_tenant_slug = 'generici'").run(); eq(g.stato().mancanti, ['Note']); eq(g.importa().aggiunti, 1, 'rimette solo quello che manca');
+});
+test('ricategorizzazione: i moduli ancora con l\'etichetta "Generico" (importati prima del 15 ottobre) prendono la categoria vera del seed; una ricategorizzazione fatta a mano non si tocca', () => {
+  db.prepare("UPDATE registry_modules SET group_name = 'Generico' WHERE slug IN ('clienti_generico', 'fatture_generico', 'dipendenti_generico') AND source_tenant_slug = 'generici'").run();
+  db.prepare("UPDATE registry_modules SET group_name = 'Scelta a mano' WHERE slug = 'ordini_generico' AND source_tenant_slug = 'generici'").run();
+  const n = g.recategorizza();
+  eq(n, 3, 'solo le tre rimesse a "Generico"');
+  eq(db.prepare("SELECT group_name FROM registry_modules WHERE slug = 'clienti_generico' AND source_tenant_slug = 'generici'").get().group_name, 'Vendite');
+  eq(db.prepare("SELECT group_name FROM registry_modules WHERE slug = 'fatture_generico' AND source_tenant_slug = 'generici'").get().group_name, 'Finanza');
+  eq(db.prepare("SELECT group_name FROM registry_modules WHERE slug = 'dipendenti_generico' AND source_tenant_slug = 'generici'").get().group_name, 'Risorse umane');
+  eq(db.prepare("SELECT group_name FROM registry_modules WHERE slug = 'ordini_generico' AND source_tenant_slug = 'generici'").get().group_name, 'Scelta a mano', 'una scelta già fatta non si tocca');
+  eq(g.recategorizza(), 0, 'secondo giro: niente da fare');
 });
 test('un modulo richiede quelli a cui è collegato, a catena: Righe Fattura porta Fatture, Prodotti e Clienti', () => {
   const id = (slug) => db.prepare("SELECT id FROM registry_modules WHERE slug = ? AND source_tenant_slug = 'generici'").get(slug + '_generico').id;
