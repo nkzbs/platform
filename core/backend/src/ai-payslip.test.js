@@ -107,6 +107,26 @@ const fakeSA = http.createServer((req, res) => {
     assertEq((await post('/payslip/buste/crea', { ...base, campi: { data: '2026-10-01', netto: 1700, ore_pagate: 'tante' } })).status, 400);
   });
 
+  console.log('\n--- leggi busta paga da foto (rullino) ---');
+  const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(100)]).toString('base64');
+  await test('una foto (JPEG) propone gli stessi campi; a Super Admin arriva come immagine, non come testo', async () => {
+    sa.payslip = PROPOSTA; sa.calls = [];
+    const r = await post('/payslip/buste/proposta', { filename: 'foto.jpg', base64: JPEG });
+    assertEq(r.status, 200); const j = await r.json();
+    assertEq(j.proposta.netto, 1700); assertEq(j.proposta.ore_pagate, 168);
+    const sent = sa.calls[0].body.data;
+    assertTrue(typeof sent.image_base64 === 'string' && sent.image_base64.length > 0 && !sent.testo, 'va come image_base64, non come testo del PDF');
+  });
+  await test('un file che non è né PDF né un\'immagine riconosciuta si rifiuta', async () => {
+    assertEq((await post('/payslip/buste/proposta', { filename: 'b.txt', base64: Buffer.from('non è un file valido').toString('base64') })).status, 400);
+  });
+  await test('"crea" da foto salva l\'allegato col tipo immagine corretto (non forzato a PDF)', async () => {
+    const r = await post('/payslip/buste/crea', { filename: 'foto.jpg', base64: JPEG, campi: { data: '2026-11-01', netto: 1750, ore_pagate: 170 } });
+    const j = await r.json(); assertEq(r.status, 200, JSON.stringify(j));
+    const up = db.prepare("SELECT u.mime_type FROM uploads u JOIN record_attachments ra ON ra.upload_id = u.id WHERE ra.module_slug = 'buste' AND ra.record_id = ?").get(j.id);
+    assertEq(up.mime_type, 'image/jpeg');
+  });
+
   console.log('\n--- module-roles /bustapaga (confronto con le timbrature) ---');
   await test('GET /module-roles/bustapaga restituisce il modulo dichiarato', async () => {
     const r = await fetch(BASE + '/api/module-roles/bustapaga', { headers: H });

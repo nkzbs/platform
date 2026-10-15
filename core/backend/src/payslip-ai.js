@@ -27,4 +27,23 @@ async function proposeFromPayslip({ moduleSlug, filename, bytes }) {
   }
 }
 
-module.exports = { proposeFromPayslip };
+// Foto della busta paga (dal rullino, non solo il PDF caricato): stesso principio, l'immagine va a Super Admin per la lettura con la visione del
+// modello (nessun testo da estrarre qui, a differenza del PDF).
+async function proposeFromPayslipPhoto({ moduleSlug, bytes, mime }) {
+  if (!moduleAi.can(moduleSlug, 'payslip')) return { error: 'La lettura della busta paga non è accesa su questo modulo.', status: 403 };
+  try {
+    const res = await fetch(SUPER_ADMIN_URL + '/api/tenant-ai/payslip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET },
+      body: JSON.stringify({ tenant_slug: process.env.TENANT_SLUG, data: { image_base64: 'data:' + mime + ';base64,' + bytes.toString('base64') } }),
+      signal: AbortSignal.timeout(40000),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: body.error || 'Assistente non disponibile', status: res.status, code: body.code };
+    return { proposta: body.suggestion };
+  } catch (e) {
+    return { error: 'Assistente non raggiungibile', status: 502 };
+  }
+}
+
+module.exports = { proposeFromPayslip, proposeFromPayslipPhoto };

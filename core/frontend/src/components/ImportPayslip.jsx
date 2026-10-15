@@ -2,9 +2,10 @@ import React, { useState, useRef, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from './Icon'
 
-// «Carica busta paga» (potenziamento "payslip" del modulo): carichi il PDF della busta paga,
-// l'AI legge periodo/lordo/netto/ore pagate/trattenute e li confronta con le ore già timbrate
-// in quel mese (modulo di tipo presenze, se c'è). L'AI propone, non scrive: confermi tu.
+// «Carica busta paga» (potenziamento "payslip" del modulo): carichi il PDF o una foto della
+// busta paga (anche dal rullino: sul PDF l'AI legge il testo, sulla foto usa la visione del
+// modello), propone periodo/lordo/netto/ore pagate/trattenute e li confronta con le ore già
+// timbrate in quel mese (modulo di tipo presenze, se c'è). L'AI propone, non scrive: confermi tu.
 const MAX = 3 * 1024 * 1024
 const toBase64 = (file) => new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(String(r.result).split(',')[1] || ''); r.onerror = reject; r.readAsDataURL(file) })
 const toMin = (hhmm) => { if (!hhmm) return null; const [h, m] = String(hhmm).slice(0, 5).split(':').map(Number); return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : null }
@@ -44,7 +45,7 @@ export default function ImportPayslip({ token, mod, user, onCreated }) {
     const file0 = e.target.files && e.target.files[0]
     if (!file0) return
     setErr(''); setF(null); setOreTimbrate(undefined)
-    if (file0.size > MAX) { setErr('Il PDF è troppo grande (massimo 3 MB).'); return }
+    if (file0.size > MAX) { setErr('Il file è troppo grande (massimo 3 MB).'); return }
     setFile(file0); setBusy(true)
     const base64 = await toBase64(file0); setB64(base64)
     const r = await api.post('/ai/payslip/' + mod.slug + '/proposta', { filename: file0.name, base64 })
@@ -77,12 +78,12 @@ export default function ImportPayslip({ token, mod, user, onCreated }) {
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-surface-card rounded-md p-6 w-full max-w-lg border border-gray-800 max-h-[90vh] overflow-y-auto">
             <h2 className="text-base font-bold text-ink">Carica busta paga</h2>
-            <div className="text-sm text-gray-400 mb-4">Carica il PDF della busta paga: l'AI legge periodo, lordo, netto e ore pagate e le confronta con le timbrature di quel mese. Controlli e confermi.</div>
-            <input ref={input} type="file" accept="application/pdf" onChange={scegli} className="block w-full text-sm text-gray-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-gray-800 file:text-ink hover:file:bg-gray-700 mb-4" />
-            {busy && !f && <div className="text-xs text-gray-400 mb-3">✨ L'AI sta leggendo il PDF…</div>}
+            <div className="text-sm text-gray-400 mb-4">Carica il PDF o una foto della busta paga (anche dal rullino): l'AI legge periodo, lordo, netto e ore pagate e le confronta con le timbrature di quel mese. Controlli e confermi.</div>
+            <input ref={input} type="file" accept="application/pdf,image/jpeg,image/png,image/webp" onChange={scegli} className="block w-full text-sm text-gray-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-gray-800 file:text-ink hover:file:bg-gray-700 mb-4" />
+            {busy && !f && <div className="text-xs text-gray-400 mb-3">✨ L'AI sta leggendo il documento…</div>}
             {f && (
               <div className="space-y-3 mb-4">
-                <div className="text-xs text-gray-400"><span className="text-accent font-medium">✨ L'AI ha letto il PDF</span>{f.confidenza ? ' (sicurezza: ' + f.confidenza + ')' : ''}. Controlla i campi.</div>
+                <div className="text-xs text-gray-400"><span className="text-accent font-medium">✨ L'AI ha letto il documento</span>{f.confidenza ? ' (sicurezza: ' + f.confidenza + ')' : ''}. Controlla i campi.</div>
                 <div><label className="text-xs text-gray-400 block mb-1">Periodo (mese)</label><input type="month" className={inp} value={f.periodo} onChange={(e) => { setF({ ...f, periodo: e.target.value }); confrontaOre(e.target.value) }} /></div>
                 <div className="grid grid-cols-3 gap-3">
                   <div><label className="text-xs text-gray-400 block mb-1">Lordo (€)</label><input className={inp} inputMode="decimal" value={f.lordo} onChange={(e) => setF({ ...f, lordo: e.target.value })} /></div>
