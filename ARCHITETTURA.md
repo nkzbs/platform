@@ -322,6 +322,12 @@ il tipo "semplice" (solo oggetto, data e allegati) per mail che non sono bollett
 
 - Nessuna password fissa nel codice: la password admin iniziale è casuale o arriva da variabile d'ambiente.
 - I segreti dei tenant non escono dalle API (test `tenant-import`).
-- Gli endpoint interni richiedono il segreto condiviso e non sono esposti all'esterno (nginx risponde solo
-  ai domini noti, il resto è chiuso con 444).
+- Gli endpoint interni richiedono il segreto condiviso (`shared/internal-secret.js`: nessun valore di riserva,
+  confronto a tempo costante) e non sono esposti all'esterno (nginx risponde solo ai domini noti, il resto è
+  chiuso con 444).
+- Un token è valido solo se l'utente è ancora attivo; il ruolo si rilegge dal database a ogni richiesta. Il token
+  "in attesa della 2FA" vale solo per completare il login, anche per i download con `?token=` di Super Admin.
+- Gli allegati si aprono nel browser solo se sono PDF, immagini (non SVG) o testo; ogni altro tipo si scarica.
+  SVG non si può caricare.
+- Le immagini Docker si costruiscono con `npm ci` dal lockfile.
 - I file `.env` e i database non entrano mai nel repository (`.gitignore`).

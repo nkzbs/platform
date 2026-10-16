@@ -404,3 +404,37 @@ Il Builder resta completo (quello di Super Admin serve per gli altri tenant), ma
 - Azioni automazione: applica_prezzo_listino, aggiorna_figli, aggiorna_figli_via_router, libera_altri_con_stesso_valore, trova_o_crea_e_aggiorna, aggrega_in_record, crea_record_da_padre, storna_riferimento, registra_provvigione.
 - Restano: crea_record, crea_record_n_volte, notifica_interna, invia_notifica, invia_report_periodico, aggiorna_record.
 - Un blocco sconosciuto nei vecchi schemi viene ignorato (lenient), non rompe il modulo.
+
+## 2026-10-16 — Controllo di sicurezza e pulizia
+
+**Corretto** (con test dove si può provare):
+- **2FA aggirabile in Super Admin**: i download con `?token=` (backup dei tenant, export dei moduli e dell'immagine) accettavano
+  il token "in attesa della 2FA" e gli utenti disabilitati. Con la sola password si scaricava il database di un tenant. Ora
+  passano dallo stesso controllo di `requireAuth`.
+- **Segreti con valore di riserva**: `INTERNAL_API_SECRET` (18 file) e `JWT_SECRET` ricadevano su `changeme_internal` /
+  `changeme`, valori scritti nel repository. Super Admin e provisioner non bloccano l'avvio senza segreti (non hanno
+  `NODE_ENV=production`), quindi una variabile mancante apriva le API interne e il provisioner (che ha `docker.sock`). Ora
+  nessun valore di riserva: senza variabile tutto viene rifiutato. Un solo modulo, `shared/internal-secret.js`.
+- **Utenti disabilitati nei tenant**: restavano dentro fino alla scadenza del token (24 ore), e un admin declassato restava
+  admin. Ora stato e ruolo si rileggono a ogni richiesta.
+- **Allegati**: gli allegati Gmail si salvano con il tipo dichiarato dal mittente (anche HTML) e si poteva caricare SVG. Aperti
+  dall'app eseguivano script con la sua origine. Ora si aprono nel browser solo PDF, immagini non SVG e testo; il resto si
+  scarica. Un nome con accenti o € faceva fallire il download.
+- **Dipendenze**: aggiornate `proxy-addr`, `qs`, `uuid`, `@grpc/grpc-js`, `nodemailer` (v10). Le immagini Docker ora usano il
+  lockfile (`npm ci`): prima `npm install` sceglieva versioni nuove a ogni build.
+- Super Admin non si può più aprire dentro un iframe di un altro sito.
+
+**Tolto perché non usato**: sei rotte interne dei tenant senza chiamanti (export, apply-workflow-config e batch,
+resolve-module, module-cycle-time, roles/sync), gli script `export-schema`/`import-schema` (istanze standalone), tre Dockerfile
+e un nginx.conf mai usati, la vecchia pagina di login di Super Admin senza 2FA, qualche funzione morta. La Guida dell'app
+descriveva funzioni tolte (verticali, moduli di supporto, stampa, Store): riscritta sul codice di oggi.
+
+**Restano aperti** (decisioni da prendere, non corretti):
+- Ogni tenant riceve lo **stesso** `INTERNAL_API_SECRET` di Super Admin e del provisioner, e monta **tutto** il volume `/data`
+  (compreso il registro di Super Admin con le chiavi di tutti i tenant). Un tenant compromesso, per esempio dal Sito Web
+  pubblico o da un allegato, arriva a tutto: altri tenant, chiavi, `docker.sock`.
+- La scelta moduli per utente nasconde i moduli dal menu ma non blocca l'API, e ogni utente collegato può aprire qualunque
+  allegato per numero.
+- Le porte dei tenant sono pubblicate sull'host: dalla rete di casa si raggiungono senza passare da nginx.
+- Il limite ai tentativi di accesso conta l'IP del proxy, non quello vero: tutti condividono lo stesso contatore.
+- Le pagine dei tenant non hanno protezione anti-iframe, perché Super Admin le apre in un iframe (Builder integrato).

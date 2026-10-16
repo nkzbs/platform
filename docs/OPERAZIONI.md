@@ -136,6 +136,16 @@ Elenco in [`.env.example`](../.env.example). Le obbligatorie sono `JWT_SECRET`, 
 `ENCRYPTION_KEY`. In produzione stanno in `deploy-secrets/super-admin-backend.env`; lo script di messa online
 imposta in più solo `DB_PATH=/data/super-admin-01.db`.
 
+`JWT_SECRET` e `INTERNAL_API_SECRET` **non hanno valori di riserva** nel codice (dal 2026-10-16): se mancano,
+nessun accesso e nessuna chiamata interna funziona. Il provisioner deve avere lo **stesso** `INTERNAL_API_SECRET`
+di Super Admin. Prima di mettere online una versione nuova, controlla che sia impostato in tutti e due:
+
+```bash
+for c in $(docker ps --format '{{.Names}}' | grep -E 'super-admin-backend|provisioner'); do
+  echo "$c: $(docker inspect $c --format '{{range .Config.Env}}{{println .}}{{end}}' | grep '^INTERNAL_API_SECRET=' | sha256sum | cut -c1-12)"
+done   # le due impronte devono coincidere (non stampa il segreto); e3b0c44298fc = variabile mancante
+```
+
 Per l'assistente AI: la chiave Mistral si inserisce **per tenant** da Impostazioni → Assistente AI (`MISTRAL_API_KEY` è solo il
 ripiego per i tenant che non ne hanno una), `AI_MONTHLY_BUDGET_EUR` (tetto mensile **per tenant**, di
 default 10) e, se cambiano i prezzi, `AI_COST_PER_MTOK_INPUT_MISTRAL` / `AI_COST_PER_MTOK_OUTPUT_MISTRAL`
