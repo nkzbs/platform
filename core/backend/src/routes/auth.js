@@ -10,7 +10,8 @@ const { logAudit } = require('../audit-log');
 const { requireInternalSecret } = require('../../../../shared/internal-secret.js');
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
+// Nessun valore di riserva: senza JWT_SECRET la firma fallisce e nessun token è valido.
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // Protezione brute-force su login e verifica 2FA — per IP, non per username:
 // un attacco reale prova molti username dallo stesso posto, non lo stesso
@@ -40,6 +41,11 @@ function requireAuth(req, res, next) {
     // mai una sessione vera — difesa esplicita anche se di fatto non avrebbe i
     // campi (sid, role) che il resto dell'app si aspetta comunque.
     if (req.user.pending_2fa) return res.status(401).json({ error: 'Verifica del codice 2FA non completata' });
+    // Stato e ruolo si rileggono a ogni richiesta: disabilitare un utente o togliergli
+    // il ruolo admin vale subito, non alla scadenza del token (24 ore).
+    const current = db.prepare('SELECT active, role FROM users WHERE id = ?').get(req.user.id);
+    if (!current || !current.active) return res.status(401).json({ error: 'Utente disabilitato' });
+    req.user.role = current.role;
     // Token emessi prima dell'introduzione del log accessi non hanno 'sid' — si
     // riallineano da soli al prossimo login, nessuna migrazione necessaria.
     if (req.user.sid) {

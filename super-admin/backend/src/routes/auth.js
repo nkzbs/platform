@@ -10,7 +10,8 @@ const { genBackupCodes, matchBackupCode } = require('../totp-backup-codes');
 const { logAudit } = require('../audit-log');
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
+// Nessun valore di riserva: senza JWT_SECRET la firma fallisce e nessun token è valido.
+const JWT_SECRET = process.env.JWT_SECRET;
 
 function userPublicShape(user) {
   return { id: user.id, username: user.username, role: user.role };
