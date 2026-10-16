@@ -126,18 +126,6 @@ function OperazioneSelect({ value, onChange }) {
 
 // Textarea JSON generica per le parti di config troppo annidate per una form dedicata
 // (oggetti/array dinamici) — stesso pattern già usato per 'dati' in Crea Record.
-function JsonField({ label, placeholder, value, onChange, rows }) {
-  return (
-    <div>
-      <div className="text-[10px] text-gray-500 mb-1">{label}</div>
-      <textarea className="w-full bg-surface-page text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-700 resize-none font-mono" rows={rows || 3}
-        placeholder={placeholder}
-        value={typeof value === 'object' ? JSON.stringify(value, null, 2) : (value || '')}
-        onChange={(e) => { try { onChange(JSON.parse(e.target.value)) } catch { onChange(e.target.value) } }} />
-    </div>
-  )
-}
-
 function AggiornaRecordConfig({ config, onChange }) {
   const cfg = config && typeof config === 'object' ? config : {}
   return (

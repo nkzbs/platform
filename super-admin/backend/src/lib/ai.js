@@ -4,10 +4,6 @@
 // estratta qui perché ora ci sono DUE chiamanti con lo stesso identico
 // pattern (auth, endpoint, parsing JSON con tolleranza ai fence markdown).
 // Nessun SDK, fetch diretto — stessa scelta di prima, niente da cambiare.
-function isAIConfigured() {
-  return !!process.env.ANTHROPIC_API_KEY;
-}
-
 // Ritorna { text, usage } dal 2026-09-07 (prima solo `text`) — l'UNICO
 // chiamante rimasto è ai-providers.js (super-builder.js/client-analyses.js
 // sono già passati per callAI in una sessione precedente), quindi cambiare
@@ -46,4 +42,4 @@ function parseJsonResponse(text) {
   return JSON.parse(cleaned);
 }
 
-module.exports = { isAIConfigured, callClaude, parseJsonResponse };
+module.exports = { callClaude, parseJsonResponse };
