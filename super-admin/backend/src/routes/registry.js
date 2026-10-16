@@ -4,6 +4,7 @@ const db = require('../db');
 const { requireAuth, requireQueryToken } = require('./auth');
 const { logAudit } = require('../audit-log');
 const { mintTenantAdminToken, installModulesByIds } = require('./tenants');
+const { requireInternalSecret } = require('../../../../shared/internal-secret.js');
 
 // La Libreria: i moduli che costruisco, salvati con una versione, da installare in
 // qualunque tenant. Installare = copiare: il tenant ne riceve una copia sua, che può
@@ -15,16 +16,6 @@ const { mintTenantAdminToken, installModulesByIds } = require('./tenants');
 // la perde sotto i piedi.
 
 const router = express.Router();
-
-// Protegge gli endpoint /public/*: chiamati dai backend dei singoli tenant (rete
-// Docker interna, mai esposti fuori), non da un utente Super Admin loggato.
-function requireInternalSecret(req, res, next) {
-  const secret = req.headers['x-internal-secret'];
-  if (!secret || secret !== (process.env.INTERNAL_API_SECRET || 'changeme_internal')) {
-    return res.status(401).json({ error: 'Secret interno non valido' });
-  }
-  next();
-}
 
 // Apre il .db di UN tenant in sola lettura: Super Admin monta lo stesso volume dati
 // di tutti i tenant.

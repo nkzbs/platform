@@ -1,6 +1,7 @@
 const db = require('./db');
 const { logAudit } = require('./audit-log');
 const { withLock } = require('./scheduler-lock');
+const { internalSecret } = require('../../../shared/internal-secret.js');
 
 // P0 trovato in un collaudo operativo dal vivo (2026-09-03): tenants.status non si
 // riallinea mai da solo se un container Docker si ferma FUORI dall'app (crash, OOM,
@@ -10,7 +11,7 @@ const { withLock } = require('./scheduler-lock');
 // license-scheduler) copre questo caso: scrivono tutte 'status' solo quando è L'APP a
 // fermare/avviare il container, mai quando succede altrove.
 const PROVISIONER_URL = process.env.PROVISIONER_URL || 'http://docker-provisioner:4000';
-const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'changeme_internal';
+const INTERNAL_SECRET = internalSecret();
 
 // Il tenant in 'creating' è transitorio: il container potrebbe non esistere
 // ancora o essere a metà provisioning, mai da riconciliare qui (competerebbe con

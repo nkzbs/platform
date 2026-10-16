@@ -7,6 +7,7 @@ const { Readable } = require('stream');
 const db = require('../db');
 const { requireAuth, requireQueryToken } = require('./auth');
 const { logAudit } = require('../audit-log');
+const { internalSecret } = require('../../../../shared/internal-secret.js');
 
 const router = express.Router();
 const IMAGE_REPO = 'platform-core';
@@ -17,7 +18,7 @@ const IMAGE_REPO = 'platform-core';
 // (export/import) sono l'unico punto davvero diverso dagli altri call site di
 // questo refactor — vedi i commenti puntuali sotto.
 const PROVISIONER_URL = process.env.PROVISIONER_URL || 'http://docker-provisioner:4000';
-const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'changeme_internal';
+const INTERNAL_SECRET = internalSecret();
 const provisionerHeaders = { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET };
 
 async function provisionerRequest(method, path, body) {

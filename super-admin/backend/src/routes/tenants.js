@@ -26,6 +26,7 @@ const cloudflare = require('../cloudflare');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { encrypt: encryptSecret } = require('../crypto-secrets');
+const { internalSecret } = require('../../../../shared/internal-secret.js');
 
 const router = express.Router();
 
@@ -34,7 +35,7 @@ const router = express.Router();
 // servizio con /var/run/docker.sock montato. Stesso principio già in uso per
 // le chiamate interne tenant→Super Admin (x-internal-secret).
 const PROVISIONER_URL = process.env.PROVISIONER_URL || 'http://docker-provisioner:4000';
-const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'changeme_internal';
+const INTERNAL_SECRET = internalSecret();
 const provisionerHeaders = { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET };
 // Stesso principio di SUPPORT_UPLOAD_DIR (support.js)/UPLOAD_DIR (core/backend) — invocato
 // solo a runtime da questa route (mai al boot), quindi non blocca l'avvio fuori da un
@@ -286,7 +287,7 @@ async function createTenant({ name, slug, domain, actor, isSandbox }) {
         // Usato solo dal tenant per chiamare gli endpoint /api/registry/public/* del
         // Super Admin (registro moduli) — non è mai esposto fuori dalla rete Docker
         // interna, quindi un secret condiviso semplice è sufficiente qui.
-        'INTERNAL_API_SECRET=' + (process.env.INTERNAL_API_SECRET || 'changeme_internal'),
+        'INTERNAL_API_SECRET=' + internalSecret(),
         'SUPER_ADMIN_URL=' + (process.env.SUPER_ADMIN_INTERNAL_URL || 'http://super-admin-backend:3000'),
         // Stesso Redis di Super Admin, se configurato — TENANT_SLUG (già passato
         // sopra) isola i contatori di questo tenant dagli altri che condividono
@@ -460,7 +461,7 @@ async function redeployTenant(tenant, { force, actor }) {
       'TENANT_SLUG=' + tenant.slug,
       'TENANT_NAME=' + tenant.name,
       'ENCRYPTION_KEY=' + tenant.encryption_key,
-      'INTERNAL_API_SECRET=' + (process.env.INTERNAL_API_SECRET || 'changeme_internal'),
+      'INTERNAL_API_SECRET=' + internalSecret(),
       'SUPER_ADMIN_URL=' + (process.env.SUPER_ADMIN_INTERNAL_URL || 'http://super-admin-backend:3000'),
       ...(process.env.REDIS_URL ? ['REDIS_URL=' + process.env.REDIS_URL] : []),
     ],
@@ -770,7 +771,7 @@ async function mintTenantAdminToken(slug, credentials) {
   const r = await fetch('http://platform-' + slug + ':80' + path, {
     method: 'POST',
     headers: {
-      'x-internal-secret': process.env.INTERNAL_API_SECRET || 'changeme_internal',
+      'x-internal-secret': internalSecret(),
       'Content-Type': 'application/json',
     },
     body: credentials ? JSON.stringify(credentials) : undefined,

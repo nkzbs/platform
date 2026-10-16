@@ -1,4 +1,5 @@
-const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'changeme_internal';
+const { internalSecret } = require('../../../../shared/internal-secret.js');
+const INTERNAL_SECRET = internalSecret();
 
 // Moduli REALI installati su un tenant, per categoria — "reali" nello stesso
 // senso dello Store: esclusi i moduli di supporto (righe fattura, giunzioni tra

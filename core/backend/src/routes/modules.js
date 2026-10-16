@@ -4,10 +4,11 @@ const { requireAuth, requireAdmin } = require('./auth');
 const { parseSchemaNormalized, getRequiredConnectors, isV3, toV3 } = require('../schema-v3');
 const { logAudit } = require('../audit-log');
 const { ruleFor } = require('../permissions');
+const { requireInternalSecret, internalSecret } = require('../../../../shared/internal-secret.js');
 
 const router = express.Router();
 const SUPER_ADMIN_URL = process.env.SUPER_ADMIN_URL || 'http://super-admin-backend:3000';
-const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'changeme_internal';
+const INTERNAL_SECRET = internalSecret();
 const TENANT_SLUG = process.env.TENANT_SLUG || 'default';
 
 // ─── REGISTRO MODULI (Super Admin) ─────────────────────────────────────────────
@@ -542,11 +543,7 @@ router.post('/internal/upsert', (req, res) => {
 // query di lib/module-stats.js su Super Admin (moduli installati non-di-supporto, per
 // categoria) ma calcolata DENTRO il processo del tenant — sostituisce l'apertura diretta
 // del .db per questo caso d'uso.
-router.get('/internal/stats', (req, res) => {
-  const secret = req.headers['x-internal-secret'];
-  if (!secret || secret !== (process.env.INTERNAL_API_SECRET || 'changeme_internal')) {
-    return res.status(401).json({ error: 'Secret interno non valido' });
-  }
+router.get('/internal/stats', requireInternalSecret, (req, res) => {
   const rows = db.prepare(
     "SELECT group_name, COUNT(*) as c FROM modules WHERE installed = 1 AND (support_module IS NULL OR support_module = 0) GROUP BY group_name"
   ).all();

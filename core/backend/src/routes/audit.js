@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { requireAuth, requireAdmin } = require('./auth');
+const { requireInternalSecret } = require('../../../../shared/internal-secret.js');
 
 const router = express.Router();
 
@@ -26,11 +27,7 @@ router.get('/', requireAuth, requireAdmin, (req, res) => {
 // lib/module-stats.js non devono più aprire il .db grezzo del tenant dall'esterno per
 // leggere questi due dati — sostituisce quell'accesso diretto con una chiamata di rete,
 // stesso identico dato restituito.
-router.get('/internal/monitoring-feed', (req, res) => {
-  const secret = req.headers['x-internal-secret'];
-  if (!secret || secret !== (process.env.INTERNAL_API_SECRET || 'changeme_internal')) {
-    return res.status(401).json({ error: 'Secret interno non valido' });
-  }
+router.get('/internal/monitoring-feed', requireInternalSecret, (req, res) => {
   const limit = Math.min(parseInt(req.query.limit, 10) || 150, 500);
   // P2 (collaudo operativo 2026-09-03) — /timeline di Super Admin era limitato a un
   // tetto fisso (500), oltre il quale gli eventi più vecchi diventavano irraggiungibili
@@ -76,11 +73,7 @@ router.get('/internal/monitoring-feed', (req, res) => {
 // modulo del Registro, non lo slug locale del tenant che lo ha installato (di norma uguale
 // ma non garantito). Nessuno slug trovato = il modulo non è (ancora) installato qui, un
 // precondizione onesta da segnalare, non un errore silenzioso.
-router.get('/internal/resolve-module', (req, res) => {
-  const secret = req.headers['x-internal-secret'];
-  if (!secret || secret !== (process.env.INTERNAL_API_SECRET || 'changeme_internal')) {
-    return res.status(401).json({ error: 'Secret interno non valido' });
-  }
+router.get('/internal/resolve-module', requireInternalSecret, (req, res) => {
   const registryModuleId = parseInt(req.query.registry_module_id, 10);
   if (!registryModuleId) return res.status(400).json({ error: 'registry_module_id obbligatorio' });
   const mod = db.prepare('SELECT slug FROM modules WHERE registry_module_id = ? AND installed = 1').get(registryModuleId);
@@ -92,11 +85,7 @@ router.get('/internal/resolve-module', (req, res) => {
 // [since, until). Un record MAI più toccato dopo la creazione è escluso dalla media (non c'è
 // un "tempo di completamento" da misurare) — sampleSize riflette quanti record contribuiscono
 // davvero, mai un numero gonfiato includendo record senza un secondo evento.
-router.get('/internal/module-cycle-time', (req, res) => {
-  const secret = req.headers['x-internal-secret'];
-  if (!secret || secret !== (process.env.INTERNAL_API_SECRET || 'changeme_internal')) {
-    return res.status(401).json({ error: 'Secret interno non valido' });
-  }
+router.get('/internal/module-cycle-time', requireInternalSecret, (req, res) => {
   const { module_slug, since, until } = req.query;
   if (!module_slug || !since || !until) return res.status(400).json({ error: 'module_slug, since, until obbligatori' });
 

@@ -1,9 +1,10 @@
 'use strict';
+const { internalSecret } = require('../../../shared/internal-secret.js');
 // La chiave Mistral di questo tenant. Si inserisce da Impostazioni → Assistente AI e viene
 // conservata da Super Admin (cifrata): il tenant non la tiene e non la rilegge mai, ne vede
 // solo lo stato ("configurata", ultime 4 cifre).
 const SUPER_ADMIN_URL = process.env.SUPER_ADMIN_URL || 'http://super-admin-backend:3000';
-const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'changeme_internal';
+const INTERNAL_SECRET = internalSecret();
 
 async function call(method, pathAndQuery, body) {
   try {

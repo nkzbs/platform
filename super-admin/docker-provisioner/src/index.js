@@ -5,15 +5,20 @@
 // auth inventata, solo riusata. Raggiungibile SOLO sulla rete Docker interna
 // (mai esposto con una porta pubblica in docker-compose.yml), stesso principio
 // già vero oggi per le chiamate tenant→Super Admin via x-internal-secret.
+const crypto = require('crypto');
 const express = require('express');
 const docker = require('./docker');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Stessa regola di shared/internal-secret.js (qui copiata: l'immagine del provisioner
+// non include shared/): nessun valore di riserva, confronto a tempo costante.
+const EXPECTED_SECRET = Buffer.from(process.env.INTERNAL_API_SECRET || '');
+if (EXPECTED_SECRET.length === 0) console.error('docker-provisioner: INTERNAL_API_SECRET non impostato, ogni richiesta sarà rifiutata');
 function requireInternalSecret(req, res, next) {
-  const secret = req.headers['x-internal-secret'];
-  if (!secret || secret !== (process.env.INTERNAL_API_SECRET || 'changeme_internal')) {
+  const given = Buffer.from(req.headers['x-internal-secret'] || '');
+  if (EXPECTED_SECRET.length === 0 || given.length !== EXPECTED_SECRET.length || !crypto.timingSafeEqual(given, EXPECTED_SECRET)) {
     return res.status(401).json({ error: 'Secret interno non valido' });
   }
   next();

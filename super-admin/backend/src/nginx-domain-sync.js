@@ -1,12 +1,13 @@
 const fs = require('fs');
 const db = require('./db');
+const { internalSecret } = require('../../../shared/internal-secret.js');
 
 // G2 (PLATFORM-0.6-GAP-ANALYSIS.md, 2026-08-22) — non più accesso diretto a
 // Docker: il reload nginx passa dal docker-provisioner, unico servizio che
 // tiene /var/run/docker.sock. Stesso principio già in uso per le chiamate
 // interne tenant→Super Admin (x-internal-secret).
 const PROVISIONER_URL = process.env.PROVISIONER_URL || 'http://docker-provisioner:4000';
-const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'changeme_internal';
+const INTERNAL_SECRET = internalSecret();
 
 // Percorso condiviso con il container nginx: entrambi montano la stessa cartella
 // dell'host (./infra/nginx), vedi docker-compose.yml. Qui scriviamo il file,

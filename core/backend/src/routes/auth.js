@@ -7,6 +7,7 @@ const db = require('../db');
 const { rateLimit } = require('../rate-limit');
 const { genBackupCodes, matchBackupCode } = require('../totp-backup-codes');
 const { logAudit } = require('../audit-log');
+const { requireInternalSecret } = require('../../../../shared/internal-secret.js');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
@@ -205,11 +206,7 @@ router.get('/2fa/status', requireAuth, (req, res) => {
 // il 2FA: non passa mai dal form di login (non verifica nemmeno la password), è
 // già un canale più privilegiato e tracciato (audit log lato Super Admin) — un
 // secondo fattore pensato per il login umano via form non aggiunge nulla qui.
-router.post('/internal-token', (req, res) => {
-  const secret = req.headers['x-internal-secret'];
-  if (!secret || secret !== (process.env.INTERNAL_API_SECRET || 'changeme_internal')) {
-    return res.status(401).json({ error: 'Secret interno non valido' });
-  }
+router.post('/internal-token', requireInternalSecret, (req, res) => {
   const user = db.prepare("SELECT * FROM users WHERE role = 'admin' AND active = 1 ORDER BY id LIMIT 1").get();
   if (!user) return res.status(404).json({ error: 'Nessun utente admin su questo tenant' });
   res.json({ token: signSessionToken(user) });
@@ -226,11 +223,7 @@ router.post('/internal-token', (req, res) => {
 // come /login sopra (stessa comparazione, non duplicata come logica). Se il
 // Partner non conosce la password del tenant (es. il cliente l'ha cambiata),
 // non entra — nessuna scorciatoia.
-router.post('/internal-login', (req, res) => {
-  const secret = req.headers['x-internal-secret'];
-  if (!secret || secret !== (process.env.INTERNAL_API_SECRET || 'changeme_internal')) {
-    return res.status(401).json({ error: 'Secret interno non valido' });
-  }
+router.post('/internal-login', requireInternalSecret, (req, res) => {
   const { username, password } = req.body || {};
   const user = db.prepare("SELECT * FROM users WHERE username = ? AND role = 'admin' AND active = 1").get(username);
   if (!user || !bcrypt.compareSync(password || '', user.password_hash)) {

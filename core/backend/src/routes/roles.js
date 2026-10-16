@@ -3,6 +3,7 @@ const express = require('express');
 const db = require('../db');
 const { requireAuth, requireAdmin } = require('./auth');
 const { logAudit } = require('../audit-log');
+const { requireInternalSecret } = require('../../../../shared/internal-secret.js');
 
 const router = express.Router();
 
@@ -38,11 +39,7 @@ router.post('/', requireAuth, requireAdmin, (req, res) => {
 // ProcessoEditor.jsx) scrivendo direttamente nella tabella roles del tenant. Questa
 // rotta la sostituisce — stesso principio di autenticazione di /modules/internal/*.
 // Idempotente: un nome già esistente (o built-in) viene saltato, mai un duplicato/errore.
-router.post('/internal/sync', (req, res) => {
-  const secret = req.headers['x-internal-secret'];
-  if (!secret || secret !== (process.env.INTERNAL_API_SECRET || 'changeme_internal')) {
-    return res.status(401).json({ error: 'Secret interno non valido' });
-  }
+router.post('/internal/sync', requireInternalSecret, (req, res) => {
   const { roles } = req.body || {};
   if (!Array.isArray(roles)) return res.status(400).json({ error: 'roles deve essere un array' });
   const existing = new Set(db.prepare('SELECT name FROM roles').all().map((r) => r.name));
