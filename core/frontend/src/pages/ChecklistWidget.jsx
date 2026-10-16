@@ -75,7 +75,7 @@ function formatAmount(n) {
   return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
 }
 
-function ChecklistWidget({ config, token, label, color, modules, user }) {
+function ChecklistWidget({ config, token, label, color, modules, user, onMese }) {
   const api = useApi(token)
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -180,6 +180,9 @@ function ChecklistWidget({ config, token, label, color, modules, user }) {
   }
 
   const monthNav = period === 'questo_mese' ? currentMonthRange(config?.giorno_cutoff, monthOffset) : null
+  // Dice alla dashboard quale mese stai guardando con le frecce (sempre, anche quello di partenza), così il Riepilogo mostra lo stesso mese e il giorno del cambio mese si decide in un posto solo (il widget Checklist).
+  const meseVisto = monthNav ? monthNav.from.slice(0, 7) : null
+  useEffect(() => { if (onMese) onMese(meseVisto) }, [meseVisto]) // eslint-disable-line react-hooks/exhaustive-deps
   const moduleLabel = (slug) => (modules.find((m) => m.slug === slug) || {}).name || slug
 
   const totale = rows.reduce((s, r) => s + (parseFloat(r.data[r._source.amount_field]) || 0), 0)
@@ -206,7 +209,7 @@ function ChecklistWidget({ config, token, label, color, modules, user }) {
           <div className="text-gray-500">Da pagare <span className="font-semibold" style={{ color }}>{formatAmount(daPagare)}</span></div>
         </div>
       </div>
-      <div className="divide-y divide-gray-800 max-h-96 overflow-y-auto">
+      <div className="divide-y divide-gray-800 max-h-72 overflow-y-auto">
         {loading && <div className="px-5 py-6 text-sm text-gray-600">Caricamento…</div>}
         {!loading && rows.length === 0 && <div className="px-5 py-6 text-sm text-gray-600">Nessuna spesa nel periodo selezionato.</div>}
         {!loading && rows.map((r) => {

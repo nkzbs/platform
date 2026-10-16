@@ -211,7 +211,9 @@ router.get('/cloudflare/status', requireAuth, (req, res) => {
 // interno (es. super-builder.js, che crea al volo un tenant sandbox) può creare un
 // tenant senza duplicare la logica Docker/clonazione, ed è sempre l'unico punto che
 // decide come nasce un tenant.
-async function createTenant({ name, slug, domain, actor, isSandbox }) {
+// `skipDefaults`: non installare i moduli di default (chi crea da un'analisi sceglie lui i moduli). `onStep(fase)`: avviso a ogni fase (per mostrare l'avanzamento e misurare i tempi).
+async function createTenant({ name, slug, domain, actor, isSandbox, skipDefaults, onStep }) {
+  const step = (f) => { try { if (onStep) onStep(f); } catch (e) { /* mai bloccare la creazione per un avviso */ } };
   // Stesso formato richiesto dal docker-provisioner per il nome container
   // (SLUG_RE, super-admin/docker-provisioner/src/docker.js) — validato QUI,
   // PRIMA di inserire la riga 'creating', non più solo là (2026-09-11, bug
@@ -273,6 +275,7 @@ async function createTenant({ name, slug, domain, actor, isSandbox }) {
     // generati) esattamente come prima — il docker-provisioner lo riceve come
     // dato opaco, non lo interpreta: image/network/volume/restart-policy restano
     // fissati lato provisioner, non passabili da qui (vedi G2).
+    step('container');
     await provisionerRequest('POST', '/tenants', {
       slug,
       port,
@@ -303,8 +306,21 @@ async function createTenant({ name, slug, domain, actor, isSandbox }) {
     // ha configurato un set di moduli di default (vedi registry.js PUT
     // /default-modules), installarli ora. Se non è configurato nulla, restano
     // i placeholder seminati da core stesso (comportamento identico a prima).
+    // Il dominio non dipende dal database del tenant: si parte subito, in parallelo, e si aspetta alla fine (prima erano due attese una dopo l'altra).
+    let cloudflareResult = null;
+    let finalDomain = cleanDomain;
+    const autoDomain = slug + '.' + cloudflare.zoneName();
+    if (!finalDomain && cloudflare.isConfigured()) {
+      finalDomain = autoDomain;
+      db.prepare('UPDATE tenants SET domain = ? WHERE slug = ?').run(finalDomain, slug);
+    }
+    const cloudflarePromise = cloudflare.isConfigured() && finalDomain === autoDomain
+      ? cloudflare.upsertSubdomain(slug).catch((e) => ({ error: e.message }))
+      : Promise.resolve(null);
+    step('database');
     await waitForTenantDb(dbPath);
-    const cloneResult = await installDefaultModules(slug);
+    step('moduli_default');
+    const cloneResult = skipDefaults ? null : await installDefaultModules(slug);
 
     // Se non è stato indicato un dominio esplicito e Cloudflare è configurato,
     // il tenant riceve subito un sottodominio automatico "<slug>.platform-core.it"
@@ -319,20 +335,8 @@ async function createTenant({ name, slug, domain, actor, isSandbox }) {
     // associazione creati così: nessun errore, ma il sottodominio non risolveva
     // finché qualcuno non se ne accorgeva provando ad aprirlo.
     db.prepare('UPDATE tenants SET provisioning_step = ? WHERE slug = ?').run('configuring_domain', slug);
-    let cloudflareResult = null;
-    let finalDomain = cleanDomain;
-    const autoDomain = slug + '.' + cloudflare.zoneName();
-    if (!finalDomain && cloudflare.isConfigured()) {
-      finalDomain = autoDomain;
-      db.prepare('UPDATE tenants SET domain = ? WHERE slug = ?').run(finalDomain, slug);
-    }
-    if (cloudflare.isConfigured() && finalDomain === autoDomain) {
-      try {
-        cloudflareResult = await cloudflare.upsertSubdomain(slug);
-      } catch (e) {
-        cloudflareResult = { error: e.message };
-      }
-    }
+    step('dominio');
+    cloudflareResult = await cloudflarePromise;
 
     db.prepare('UPDATE tenants SET status = ?, provisioning_step = ? WHERE slug = ?').run('active', 'active', slug);
     const tenant = db.prepare('SELECT * FROM tenants WHERE slug = ?').get(slug);
@@ -428,7 +432,9 @@ router.post('/:slug/start', requireAuth, requireTenantScope, async (req, res) =>
 // in quel momento. Blocca a meno di force:true. Ritorna un risultato tipizzato
 // invece di scrivere su `res` — così sia la route singola sia quella bulk (sotto)
 // possono riusarla senza duplicare la logica di ricreazione container.
-async function redeployTenant(tenant, { force, actor }) {
+async function redeployTenant(tenant, { force, actor, log }) {
+  const say = (m) => { try { if (log) log(m) } catch (e) { /* un log non deve mai fermare l'aggiornamento */ } }
+  say('Controllo se qualcuno sta usando "' + tenant.name + '"…')
   if (!force && fs.existsSync(tenant.db_path)) {
     let tdb;
     try {
@@ -438,8 +444,10 @@ async function redeployTenant(tenant, { force, actor }) {
       // sembrerebbe sempre "attiva ora" altrimenti. Vedi core/backend/src/routes/auth.js.
       const recent = tdb.prepare("SELECT username, last_active_at FROM sessions WHERE last_active_at >= datetime('now', '-3 minutes') ORDER BY last_active_at DESC LIMIT 1").get();
       if (recent) {
+        say('Sessione attiva: ' + recent.username + ' (ultima azione ' + recent.last_active_at + ' UTC). Mi fermo.')
         return { ok: false, skipped: 'active_session', active_session: recent };
       }
+      say('Nessuna sessione attiva negli ultimi 3 minuti.')
     } catch (e) {
       // Tabella 'sessions' non ancora presente (tenant mai riavviato dopo
       // l'introduzione del log accessi) — nessun blocco, nulla da rilevare.
@@ -452,6 +460,8 @@ async function redeployTenant(tenant, { force, actor }) {
   // avvengono ATOMICAMENTE dentro il docker-provisioner (un solo endpoint), non
   // più come due passi separati da qui — stesso comportamento (container già
   // assente/non trovato non blocca la ricreazione), solo spostato.
+  say(force ? 'Aggiornamento forzato: eventuali utenti collegati vengono scollegati.' : 'Via libera.')
+  say('Fermo il vecchio container, lo rimuovo e ne creo uno nuovo con l\'ultima immagine (stessi dati)…')
   await provisionerRequest('POST', '/tenants/' + tenant.slug + '/redeploy', {
     port: tenant.port,
     env: [
@@ -467,14 +477,42 @@ async function redeployTenant(tenant, { force, actor }) {
     ],
   });
 
+  say('Nuovo container creato.')
   db.prepare('UPDATE tenants SET status = ? WHERE slug = ?').run('active', tenant.slug);
   logAudit(actor || 'system', 'tenant.redeploy', tenant.slug, { forced: !!force });
-  return { ok: true };
+  // Con un log attivo (popup di Super Admin) aspetto che il tenant risponda davvero, così "AGGIORNATO" vuol dire che è su e non solo che il container è partito.
+  if (log) {
+    say('Attendo che il tenant risponda…')
+    let up = false
+    for (let i = 0; i < 40 && !up; i++) {
+      await new Promise((r) => setTimeout(r, 1500))
+      try { const r = await fetch('http://platform-' + tenant.slug + ':80/api/tenant-info', { signal: AbortSignal.timeout(3000) }); up = r.ok } catch (e) { /* ancora in avvio */ }
+    }
+    if (!up) { say('Il tenant non risponde entro 60 secondi: controlla nei Dettagli.'); return { ok: true, healthy: false } }
+    say('Il tenant risponde correttamente.')
+  }
+  return { ok: true, healthy: true };
 }
 
 router.post('/:slug/redeploy', requireAuth, requireTenantScope, async (req, res) => {
   const { slug } = req.params;
   const force = !!(req.body && req.body.force);
+  // ?stream=1: una riga JSON per ogni passo (popup di avanzamento in Super Admin), poi una riga finale {done:true,...}.
+  if (req.query.stream === '1') {
+    res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('X-Accel-Buffering', 'no');
+    const send = (o) => { try { res.write(JSON.stringify(o) + '\n') } catch (e) { /* client chiuso */ } };
+    try {
+      const result = await redeployTenant(req.tenant, { force, actor: req.user.username, log: (msg) => send({ msg, at: new Date().toISOString() }) });
+      if (result.ok) syncNginxDomains().catch(() => {});
+      send({ done: true, ok: !!result.ok, healthy: result.healthy, skipped: result.skipped, active_session: result.active_session });
+    } catch (err) {
+      send({ msg: 'Errore: ' + err.message, at: new Date().toISOString() });
+      send({ done: true, ok: false, error: err.message });
+    }
+    return res.end();
+  }
   try {
     const tenant = req.tenant;
     const result = await redeployTenant(tenant, { force, actor: req.user.username });
@@ -711,7 +749,30 @@ router.get('/:slug/backup-settings', requireAuth, requireTenantScope, (req, res)
     // principio di mascheramento già in uso altrove nel progetto per i segreti.
     backup_offsite_url: tenant.backup_offsite_url || null,
     backup_offsite_credentials_configured: !!tenant.backup_offsite_credentials,
+    // Backup settimanale via mail: acceso, ultimo invio e se la posta di Super Admin è configurata (la passphrase non si restituisce qui)
+    backup_mail_weekly: !!tenant.backup_mail_weekly,
+    backup_mail_last_sent: tenant.backup_mail_last_sent || null,
+    backup_mail_smtp_ready: !!(process.env.SMTP_HOST && process.env.NOTIFY_EMAIL_TO),
   });
+});
+
+// Backup settimanale via mail: accendi/spegni, invio di prova, e la passphrase che cifra l'allegato (la lettura è registrata nel log attività).
+const weeklyMail = require('../weekly-backup-mail');
+router.put('/:slug/backup-mail', requireAuth, requireTenantScope, (req, res) => {
+  const t = weeklyMail.setEnabled(req.params.slug, !!(req.body && req.body.enabled));
+  if (!t) return res.status(404).json({ error: 'Tenant non trovato' });
+  logAudit(req.user.username, 'tenant.backup_mail.' + (t.backup_mail_weekly ? 'on' : 'off'), req.params.slug, null);
+  res.json({ backup_mail_weekly: !!t.backup_mail_weekly, backup_mail_last_sent: t.backup_mail_last_sent || null });
+});
+router.post('/:slug/backup-mail/send-now', requireAuth, requireTenantScope, async (req, res) => {
+  const r = await weeklyMail.sendNow(req.params.slug, { actor: req.user.username });
+  res.status(r.ok ? 200 : 502).json(r);
+});
+router.post('/:slug/backup-mail/passphrase', requireAuth, requireTenantScope, (req, res) => {
+  const p = weeklyMail.getPassphrase(req.tenant);
+  if (!p) return res.status(404).json({ error: 'Backup via mail non ancora attivo.' });
+  logAudit(req.user.username, 'tenant.backup_mail.passphrase_view', req.params.slug, null);
+  res.json({ passphrase: p });
 });
 
 router.patch('/:slug/backup-settings', requireAuth, requireTenantScope, (req, res) => {
@@ -976,6 +1037,27 @@ router.patch('/:slug/categoria', requireAuth, requireTenantScope, (req, res) => 
   db.prepare('UPDATE tenants SET categoria = ? WHERE slug = ?').run(categoria, req.params.slug);
   logAudit(req.user.username, 'tenant.categoria.update', req.params.slug, { categoria });
   res.json({ ok: true, categoria });
+});
+
+// Invito per il PRIMO admin di un tenant (o per chiunque, con il ruolo che serve): crea un link monouso nel tenant (rotta interna) e, se richiesto e se c'è un dominio, lo spedisce per mail.
+// Il link porta al tenant, dove la persona sceglie da sé utente e password: nessuna password gira. Resta valido 72 ore.
+router.post('/:slug/invite', requireAuth, requireTenantScope, async (req, res) => {
+  const tenant = db.prepare("SELECT * FROM tenants WHERE slug = ? AND status != 'deleted'").get(req.params.slug);
+  if (!tenant) return res.status(404).json({ error: 'Tenant non trovato' });
+  const { nome, email, invia_email: inviaEmail } = req.body || {};
+  const role = ['admin', 'user'].includes(req.body && req.body.role) ? req.body.role : 'admin';
+  let inv;
+  try { inv = await require('../lib/tenant-api-client').callTenantAPI(tenant.slug, 'POST', '/api/internal-invite', { nome, email, role }); }
+  catch (e) { return res.status(e.status || 502).json({ error: e.status === 400 ? e.message : 'Il tenant non risponde: è acceso?' }); }
+  const link = tenant.domain ? 'https://' + tenant.domain + '/invito/' + inv.token : null;
+  let mail = null;
+  if (inviaEmail) {
+    if (!email) mail = { sent: false, reason: 'Manca l\'indirizzo email.' };
+    else if (!link) mail = { sent: false, reason: 'Questo tenant non ha un dominio: usa il link o i pulsanti WhatsApp/Telegram.' };
+    else mail = await require('../notifier').sendInviteMail({ to: String(email), nome: String(nome || '').slice(0, 80), tenantName: tenant.name, link, ore: inv.ore });
+  }
+  logAudit(req.user.username, 'tenant.invite', tenant.slug, { role, email: !!email, mail: mail ? mail.sent : null });
+  res.json({ token: inv.token, scade: inv.scade, ore: inv.ore, link, porta: tenant.port, mail });
 });
 
 // --- Credenziali ------------------------------------------------------------

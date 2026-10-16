@@ -1,6 +1,16 @@
 require('../../../shared/require-strong-secrets').requireStrongSecrets([
   { name: 'JWT_SECRET', value: process.env.JWT_SECRET, badDefault: 'changeme' },
   { name: 'INTERNAL_API_SECRET', value: process.env.INTERNAL_API_SECRET, badDefault: 'changeme_internal' },
+  // Trovato mancante qui il 2026-10-14 (segnalato dall'utente): JWT_SECRET e
+  // INTERNAL_API_SECRET erano già protetti da questo gate, ma non la chiave
+  // che crypto-fields.js usa per cifrare i campi 'encrypted' e, tramite
+  // secrets-at-rest.js, le credenziali dei collegamenti e i segreti del 2FA —
+  // un avvio in produzione senza ENCRYPTION_KEY cifrava tutto con un valore
+  // di default noto (chiunque legga il sorgente lo conosce), apparendo
+  // comunque "avviato correttamente". Il default resta in crypto-fields.js
+  // (stesso pattern di JWT_SECRET/INTERNAL_API_SECRET sopra: comodo in
+  // sviluppo, qui diventa fatale in produzione).
+  { name: 'ENCRYPTION_KEY', value: process.env.ENCRYPTION_KEY, badDefault: 'platform-default-key-change-in-prod' },
 ]);
 
 const express = require('express');
@@ -8,6 +18,7 @@ const cors = require('cors');
 const db = require('./db');
 
 const authRoutes = require('./routes/auth');
+const webauthnRoutes = require('./routes/webauthn');
 const usersRoutes = require('./routes/users');
 const modulesRoutes = require('./routes/modules');
 const recordsRoutes = require('./routes/records');
@@ -17,11 +28,15 @@ const connectionsRoutes = require('./routes/connections');
 const automationsRoutes = require('./routes/automations');
 const dashboardRoutes = require('./routes/dashboard');
 const auditRoutes = require('./routes/audit');
+const securityStatusRoutes = require('./routes/security-status');
 const rolesRoutes = require('./routes/roles');
 const { startScheduler } = require('./scheduler');
 const { startGmailPoller } = require('./gmail-poller');
 const aiRoutes = require('./routes/ai');
 const notificationSettingsRoutes = require('./routes/notification-settings');
+const recordOwnerRoutes = require('./routes/record-owner');
+const fieldOptionsRoutes = require('./routes/field-options');
+const telegramRoutes = require('./routes/telegram');
 const insightsRoutes = require('./routes/insights');
 const bankRoutes = require('./routes/bank');
 const featuresRoutes = require('./routes/features');
@@ -30,8 +45,14 @@ const moduleRolesRoutes = require('./routes/module-roles');
 const moduleAiRoutes = require('./routes/module-ai');
 const smistaRoutes = require('./routes/smista');
 const moduleRoles = require('./module-roles');
-const digestRoutes = require('./routes/digest');
-const { startDailyDigest } = require('./daily-digest');
+const reportsRoutes = require('./routes/reports');
+const internalSetupRoutes = require('./routes/internal-setup');
+const suggestionsRoutes = require('./routes/suggestions');
+const setupWizardRoutes = require('./routes/setup-wizard');
+const exportServerRoutes = require('./routes/export-server');
+const inviteRoutes = require('./routes/invites');
+const { startSuggestions } = require('./suggestions');
+const { startReports } = require('./reports');
 const { startAvvisi } = require('./avvisi');
 const { startMonitor } = require('./monitor');
 const { startAuditRetentionScheduler } = require('./audit-retention-scheduler');
@@ -67,6 +88,7 @@ const apiGlobalLimiter = rateLimit({ windowMs: 60 * 1000, max: 600, message: 'Tr
 
 const routeMounts = [
   ['/auth', authRoutes],
+  ['/webauthn', webauthnRoutes],
   ['/users', usersRoutes],
   ['/modules', modulesRoutes],
   ['/records', recordsRoutes],
@@ -76,6 +98,7 @@ const routeMounts = [
   ['/automations', automationsRoutes],
   ['/dashboard', dashboardRoutes],
   ['/audit-log', auditRoutes],
+  ['/security-status', securityStatusRoutes],
   ['/roles', rolesRoutes],
   ['/m2m', m2mRoutes],
   ['/notifications', notificationsRoutes],
@@ -90,8 +113,18 @@ const routeMounts = [
   ['/module-roles', moduleRolesRoutes],
   ['/module-ai', moduleAiRoutes],
   ['/smista', smistaRoutes],
+  ['/record-owner', recordOwnerRoutes],
+  ['/field-options', fieldOptionsRoutes],
+  ['/telegram', telegramRoutes],
   ['/', notificationSettingsRoutes],
-  ['/digest', digestRoutes],
+  ['/reports', reportsRoutes],
+  ['/internal-setup', internalSetupRoutes],
+  ['/suggestions', suggestionsRoutes],
+  ['/setup-wizard', setupWizardRoutes],
+  ['/export-server', exportServerRoutes],
+  ['/invites', inviteRoutes.admin],
+  ['/internal-invite', inviteRoutes.interno],
+  ['/public-invite', inviteRoutes.pubblico],
   ['/site-pages', siteAdminRouter],
 ];
 app.use('/api', apiGlobalLimiter);
@@ -111,7 +144,7 @@ app.use('/__root_public', rootPublicRouter);
 
 app.get('/health', (req, res) => res.json({
   status: 'ok',
-  version: '0.1.0',
+  version: '0.2.0',
   tenant: process.env.TENANT_SLUG || 'unknown',
   name: process.env.TENANT_NAME || 'Platform Core'
 }));
@@ -168,6 +201,8 @@ app.use((err, req, res, next) => {
 
 // Destinatari WhatsApp e regole Gmail non sono più moduli: porta nelle tabelle nuove le righe rimaste.
 require('./notification-settings').migrateLegacy();
+require('./record-owner').adoptOrphans();
+{ const m = require('./secrets-at-rest').migrate(); if (m.connessioni || m.totp || m.falliti) console.log('Segreti cifrati a riposo: ' + m.connessioni + ' collegamenti, ' + m.totp + ' segreti 2FA' + (m.falliti ? ' (' + m.falliti + ' NON riusciti)' : '')); }
 require('./legacy-cleanup').removeStubModules();
 if (moduleRoles.seedIfEmpty()) console.log('Ruoli dei moduli: dichiarati per i moduli di finanza già presenti');
 if (features.seedIfEmpty()) console.log('Funzioni: tenant con moduli di finanza, funzioni accese; le altre restano spente');
@@ -175,9 +210,10 @@ if (features.seedIfEmpty()) console.log('Funzioni: tenant con moduli di finanza,
 app.listen(PORT, () => {
   console.log('Platform Core [' + (process.env.TENANT_SLUG || 'default') + '] running on port ' + PORT);
   startScheduler();
-  startDailyDigest(); // il controllo ogni minuto parte sempre; se la funzione è spenta non fa niente
+  startReports(); // il controllo ogni minuto parte sempre; se la funzione è spenta non fa niente
   startMonitor(); // il giorno 2 alle 9: "come sta andando" su WhatsApp, per i widget che lo hanno acceso
   startAvvisi(); // ogni minuto: righe nuove in "da smistare" (da qualunque via) -> un messaggio WhatsApp
   startGmailPoller();
   startAuditRetentionScheduler();
+  startSuggestions(); // una volta al giorno, solo se la funzione «suggerimenti» è accesa
 });

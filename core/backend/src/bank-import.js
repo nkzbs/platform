@@ -166,43 +166,51 @@ function settings() {
   return { internal_patterns: [], match_days: 75 };
 }
 
-// ─── Abbinamento con Finance ─────────────────────────────────────────────────
+// ─── Abbinamento con le righe registrate ─────────────────────────────────────
+// Quali moduli contano e come si chiamano i loro campi lo dichiara il modulo (Builder → Ruoli del modulo → «Estratto conto», module-roles.js):
+// qui non ci sono nomi di moduli, di campi, di categorie né di stati.
+const moduleRoles = require('./module-roles');
 const days = (a, b) => Math.abs((new Date(a) - new Date(b)) / 86400000);
-const SPESE_MODULES = ['spese_personali', 'spese_casa'];
 
-function financeRecords(modules) {
+// I moduli che partecipano (uso «estratto»), con le loro righe: { module, id, d, R: ruoli, decl }.
+function estrattoModules() { return moduleRoles.list({ use: 'estratto' }).filter((m) => m.roles.importo); }
+function recordsOf(decls) {
   const out = [];
-  for (const slug of modules) {
-    const row = db.prepare('SELECT 1 FROM modules WHERE slug = ? AND installed = 1').get(slug);
-    if (!row) continue;
-    for (const r of db.prepare('SELECT id, data FROM records WHERE module_slug = ?').all(slug)) { try { out.push({ module: slug, id: r.id, d: JSON.parse(r.data) }); } catch (e) { /* riga illeggibile */ } }
+  for (const m of decls) {
+    for (const r of db.prepare('SELECT id, data FROM records WHERE module_slug = ?').all(m.module_slug)) { try { out.push({ module: m.module_slug, id: r.id, d: JSON.parse(r.data), R: m.roles, decl: m }); } catch (e) { /* riga illeggibile */ } }
   }
   return out;
 }
 
-// Abbina i movimenti non ancora abbinati a una riga di Finance con lo stesso importo e una data vicina. Una riga di Finance
-// si abbina a un solo movimento. Ritorna quanti nuovi abbinamenti.
+// Abbina i movimenti non ancora abbinati a una riga registrata con lo stesso importo e una data vicina. Una riga si abbina a un solo movimento.
+// Ritorna quanti nuovi abbinamenti.
 function rematch() {
   const win = settings().match_days;
   const taken = new Set(db.prepare('SELECT match_module m, match_id i FROM bank_movements WHERE match_id IS NOT NULL').all().map((r) => r.m + ':' + r.i));
-  const spese = financeRecords(SPESE_MODULES), entrate = financeRecords(['entrate']);
+  const decls = estrattoModules();
+  const spese = recordsOf(decls.filter((m) => m.kind === 'spesa')), entrate = recordsOf(decls.filter((m) => m.kind === 'entrata'));
+  const giro = new Set(decls.flatMap((m) => m.estratto.giro_categories)); // categorie che sono un giro tra conti propri
+  const catOf = (r) => r.d[r.R.categoria];
   const upd = db.prepare('UPDATE bank_movements SET match_module = ?, match_id = ? WHERE id = ?');
   let n = 0;
-  const pick = (pool, filterFn, mov, dateField) => {
+  // `dateRole`: quale data della riga confrontare (la data di pagamento per le spese, se il modulo la dichiara; altrimenti la data della riga)
+  const pick = (pool, filterFn, mov, dateRole) => {
     let best = null;
     for (const r of pool) {
-      if (taken.has(r.module + ':' + r.id) || !filterFn(r.d)) continue;
-      const a = parseFloat(r.d.importo); if (!Number.isFinite(a) || Math.abs(Math.abs(mov.amount) - a) > 0.005) continue;
-      const dd = days(mov.date, r.d[dateField] || r.d.data); if (dd > win) continue;
+      if (taken.has(r.module + ':' + r.id) || !filterFn(r)) continue;
+      const a = parseFloat(r.d[r.R.importo]); if (!Number.isFinite(a) || Math.abs(Math.abs(mov.amount) - a) > 0.005) continue;
+      const dd = days(mov.date, r.d[r.R[dateRole]] || r.d[r.R.data]); if (dd > win) continue;
       if (!best || dd < best.dd) best = { r, dd };
     }
     return best && best.r;
   };
+  const stipendio = (r) => (r.decl.riepiloghi.salary_categories || []).includes(catOf(r)); // le entrate che il modulo dichiara «stipendio»
+  const daSmistare = (r) => !!r.decl.avvisi.states.nuovo && r.d[r.R.stato || '_stato'] === r.decl.avvisi.states.nuovo;
   for (const mov of db.prepare('SELECT * FROM bank_movements WHERE match_id IS NULL AND ignored = 0 ORDER BY date').all()) {
     let r = null;
-    if (mov.kind === 'stipendio' || (mov.amount > 0 && mov.kind !== 'giro_interno')) r = mov.kind === 'stipendio' ? pick(entrate, (d) => d.categoria === 'Stipendio', mov, 'data') : null;
-    else if (mov.kind === 'giro_interno' && mov.amount < 0) r = pick(spese, (d) => d.categoria === 'Contributo Casa', mov, 'data');
-    else if (['carta', 'utenza', 'bonifico_out', 'altro'].includes(mov.kind)) r = pick(spese, (d) => d.categoria !== 'Contributo Casa' && d._stato !== 'da_smistare', mov, 'data_pagamento');
+    if (mov.kind === 'stipendio' || (mov.amount > 0 && mov.kind !== 'giro_interno')) r = mov.kind === 'stipendio' ? pick(entrate, stipendio, mov, 'data') : null;
+    else if (mov.kind === 'giro_interno' && mov.amount < 0) r = pick(spese, (x) => giro.has(catOf(x)), mov, 'data');
+    else if (['carta', 'utenza', 'bonifico_out', 'altro'].includes(mov.kind)) r = pick(spese, (x) => !giro.has(catOf(x)) && !daSmistare(x), mov, 'data_pagamento');
     if (r) { upd.run(r.module, r.id, mov.id); taken.add(r.module + ':' + r.id); n++; }
   }
   return n;
@@ -237,25 +245,40 @@ function listMovements({ month, filter = 'tutti', limit = 400 } = {}) {
   return db.prepare(sql).all(...p).map((r) => ({ ...r, ignored: !!r.ignored }));
 }
 
-// Registra un movimento come spesa personale (già pagata) e lo abbina.
+// Il modulo dove si registrano le uscite dell'estratto: quello che lo ha dichiarato («registra»), con le categorie ammesse.
+function registraIn() { return estrattoModules().find((m) => m.kind === 'spesa' && m.estratto.registra) || null; }
+function registraInfo() {
+  const m = registraIn(); if (!m) return null;
+  let categorie = [];
+  try {
+    const f = (require('./schema-v3').parseSchemaNormalized(db.prepare('SELECT schema_json FROM modules WHERE slug = ?').get(m.module_slug).schema_json).fields || []).find((x) => x.key === m.roles.categoria);
+    categorie = f && Array.isArray(f.options) ? f.options.map((o) => (typeof o === 'string' ? o : o.value)).filter(Boolean) : [];
+  } catch (e) { categorie = []; }
+  return { modulo: m.module_slug, nome: m.name || m.module_slug, categorie };
+}
+
+// Registra un movimento come spesa già pagata (nel modulo dichiarato per questo) e lo abbina.
 function registerAsExpense(id, { categoria, descrizione } = {}) {
   const m = db.prepare('SELECT * FROM bank_movements WHERE id = ?').get(id);
   if (!m) return { notFound: true };
   if (m.match_id) return { error: 'Questo movimento è già abbinato a una spesa.' };
   if (m.amount >= 0) return { error: 'Solo le uscite si registrano come spese.' };
-  const slug = 'spese_personali';
-  if (!db.prepare('SELECT 1 FROM modules WHERE slug = ? AND installed = 1').get(slug)) return { error: 'Il modulo Spese Personali non è installato.' };
-  const data = {
-    descrizione: String(descrizione || m.merchant || m.description.slice(0, 60)).slice(0, 80),
-    importo: Math.abs(m.amount), data: m.date, data_pagamento: m.date,
-    categoria: categoria || m.category_hint || 'Altro', fisso: false, _stato: 'pagato',
-    note: 'Da estratto conto (' + m.date + ')',
-  };
-  const rid = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, NULL, ?)').run(slug, JSON.stringify(data)).lastInsertRowid;
+  const decl = registraIn();
+  if (!decl) return { error: 'Nessun modulo è dichiarato per registrare le spese dall\'estratto conto (Builder → Ruoli del modulo → Estratto conto).' };
+  const R = decl.roles, slug = decl.module_slug;
+  const data = {};
+  const put = (role, value) => { if (R[role] && value !== undefined) data[R[role]] = value; }; // un campo senza ruolo non si scrive
+  put('descrizione', String(descrizione || m.merchant || m.description.slice(0, 60)).slice(0, 80));
+  put('importo', Math.abs(m.amount)); put('data', m.date); put('data_pagamento', m.date);
+  put('categoria', categoria || m.category_hint || decl.estratto.categoria_default || undefined);
+  put('fisso', false);
+  put('note', 'Da estratto conto (' + m.date + ')');
+  if (decl.avvisi.states.fatto) data[R.stato || '_stato'] = decl.avvisi.states.fatto;
+  const rid = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(slug, require('./record-owner').ownerFor(null, slug), JSON.stringify(data)).lastInsertRowid;
   db.prepare('UPDATE bank_movements SET match_module = ?, match_id = ? WHERE id = ?').run(slug, rid, id);
   return { record_id: rid, data };
 }
 
 const setIgnored = (id, v) => db.prepare('UPDATE bank_movements SET ignored = ? WHERE id = ?').run(v ? 1 : 0, id).changes > 0;
 
-module.exports = { extractText, parseStatement, classify, categoryHint, maskIban, importParsed, importPdf, rematch, monthSummary, listMovements, registerAsExpense, setIgnored, settings };
+module.exports = { registraInfo, extractText, parseStatement, classify, categoryHint, maskIban, importParsed, importPdf, rematch, monthSummary, listMovements, registerAsExpense, setIgnored, settings };

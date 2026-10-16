@@ -26,7 +26,7 @@ const ask = require('./ask-data');
 const schema = { version: 3, steps: [{ id: 'c', block_type: 'field', key: 'categoria', label: 'Categoria', type: 'select', options: ['Elettricità', 'Gas', 'Altro'] }] };
 db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('Costi', 'costi', 'box', '#000', 1, 1, 70, ?)").run(JSON.stringify(schema));
 db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('Ore', 'ore', 'box', '#000', 1, 1, 71, '{}')").run();
-roles.set('costi', { kind: 'spesa', uses: [], roles: { importo: 'importo', data: 'data', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato' }, avvisi: { states: { nuovo: 'da_smistare' } } });
+roles.set('costi', { kind: 'spesa', uses: [], roles: { importo: 'importo', data: 'data', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', data_incerta: 'data_incerta' }, avvisi: { states: { nuovo: 'da_smistare' } } });
 roles.set('ore', { kind: null, uses: [], roles: { data: 'data' } });
 const rec = (d) => db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, NULL, ?)').run('costi', JSON.stringify({ _stato: 'pagato', ...d }));
 rec({ descrizione: 'A2A', data: '2025-01-10', importo: 60, categoria: 'Elettricità' });

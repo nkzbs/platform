@@ -14,11 +14,13 @@ const moduleAi = require('./module-ai');
 const moduleRoles = require('./module-roles');
 
 // Dove l'AI lavora lo decide ogni modulo (Builder → Potenziamenti AI → "Smistare"); i campi li dichiara il modulo (Ruoli del modulo).
-// Qui non ci sono nomi di moduli né di campi scritti nel codice, se non i valori di partenza di un modulo senza ruoli.
+// Qui non ci sono nomi di moduli né di campi scritti nel codice (solo `_stato`, il campo di sistema del flusso).
 function fieldMap(slug) {
   const r = moduleRoles.get(slug);
-  return { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', ...((r && r.roles) || {}) };
+  return { stato: '_stato', ...((r && r.roles) || {}) };
 }
+// lo stato «nuovo» (da smistare) lo dichiara il modulo
+function nuovoDi(slug) { const r = moduleRoles.get(slug); return (r && r.avvisi && r.avvisi.states.nuovo) || ''; }
 function triageModules() {
   return moduleRoles.list({}).map((m) => m.module_slug).filter((slug) => moduleAi.can(slug, 'triage'));
 }
@@ -140,7 +142,7 @@ async function suggestForRecord({ moduleSlug, recordId, mittente, subject, text,
   // Propongo solo ciò che cambia qualcosa: niente suggerimenti identici allo stato attuale.
   const cambia = (p.categoria && p.categoria !== cur[F.categoria])
     || (p.importo != null && Number(cur[F.importo] || 0) !== p.importo)
-    || (p.scadenza && p.scadenza !== cur[F.scadenza])
+    || (p.scadenza && F.scadenza && p.scadenza !== cur[F.scadenza])
     || (p.modulo && p.modulo !== moduleSlug)
     || (!!p.fornitore && haPdf); // il solo fornitore, senza un documento da cui leggerlo, non basta per proporre
   if (!cambia) return { skipped: 'nessuna differenza' };
@@ -179,7 +181,7 @@ function accept(id, actor) {
   const applied = [];
   if (p.categoria && allowedCategories(sug.module_slug).includes(p.categoria) && p.categoria !== before[F.categoria]) { after[F.categoria] = p.categoria; applied.push('categoria'); }
   if (p.importo != null && p.importo !== Number(before[F.importo] || 0)) { after[F.importo] = p.importo; applied.push('importo'); }
-  if (p.scadenza && p.scadenza !== before[F.scadenza]) { after[F.scadenza] = p.scadenza; applied.push('scadenza'); }
+  if (p.scadenza && F.scadenza && p.scadenza !== before[F.scadenza]) { after[F.scadenza] = p.scadenza; applied.push('scadenza'); }
   if (p.fornitore && !String(before.note || '').includes('Fornitore: ' + p.fornitore)) {
     after.note = (before.note ? before.note + '\n' : '') + 'Fornitore: ' + p.fornitore;
     applied.push('fornitore');
@@ -217,7 +219,7 @@ function overview() {
   const have = new Set(items.map((i) => i.module_slug + ':' + i.record_id));
   const toAsk = [];
   for (const slug of triageModules()) {
-    for (const r of db.prepare("SELECT id FROM records WHERE module_slug = ? AND json_extract(data, ?) = 'da_smistare' ORDER BY id DESC").all(slug, '$.' + fieldMap(slug).stato)) {
+    for (const r of db.prepare("SELECT id FROM records WHERE module_slug = ? AND json_extract(data, ?) = ? ORDER BY id DESC").all(slug, '$.' + fieldMap(slug).stato, nuovoDi(slug))) {
       if (!have.has(slug + ':' + r.id) && !hasPending(slug, r.id)) toAsk.push({ module_slug: slug, record_id: r.id });
     }
   }

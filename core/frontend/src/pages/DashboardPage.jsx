@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react'
+import RiepilogoMensile from '../components/RiepilogoMensile'
 import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
 import { parseSchemaFrontend } from '../lib/schema-v3-frontend'
 import ChecklistWidget from './ChecklistWidget'
 import InsightsCard from '../components/InsightsCard'
 import QueueWidget from '../components/QueueWidget'
+import TimbratureWidget from '../components/TimbratureWidget'
 import YearlyBreakdownView from './ModulePage/YearlyBreakdownView'
 import CategoryPivotView from './ModulePage/CategoryPivotView'
 import WeeklyBreakdownView from './ModulePage/WeeklyBreakdownView'
@@ -19,6 +21,13 @@ import WeeklyBreakdownView from './ModulePage/WeeklyBreakdownView'
 function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, features = {} }) {
   const api = useApi(token)
   const [editMode, setEditMode] = useState(false)
+  // Mese scelto con le frecce della Checklist ('AAAA-MM', null = quello di partenza): il Riepilogo mensile lo segue.
+  const [meseSel, setMeseSel] = useState(null)
+  const meseScelto = (cutoff) => (meseSel ? { anno: Number(meseSel.slice(0, 4)), mese: Number(meseSel.slice(5, 7)) - 1 } : meseTarget(cutoff))
+  // Su telefono i widget lunghi si chiudono con un tocco (su PC sono sempre aperti): di default chiusi "come sta andando" e checklist.
+  const [aperti, setAperti] = useState(() => { try { return JSON.parse(localStorage.getItem('dash_aperti') || '{}') } catch (e) { return {} } })
+  const isAperto = (w) => (w.id in aperti ? aperti[w.id] : !['come_sta_andando', 'checklist'].includes(w.type))
+  const toggleAperto = (w) => setAperti((a) => { const n = { ...a, [w.id]: !isAperto(w) }; try { localStorage.setItem('dash_aperti', JSON.stringify(n)) } catch (e) { /* storage non disponibile */ } return n })
   // Prima i widget vivevano in localStorage (per browser, non per tenant — due persone
   // sulla stessa istanza vedevano dashboard diverse, e sparivano cambiando browser).
   // Ora sono dati reali del tenant (tabella dashboard_widgets), condivisi da chiunque
@@ -150,7 +159,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
     widgets.forEach(async (w) => {
       if (w.type === 'riepilogo_mensile') {
         const cfg = w.config || {}
-        const { anno, mese } = meseTarget(cfg.giorno_cutoff)
+        const { anno, mese } = meseScelto(cfg.giorno_cutoff)
         const [entrateRec, contiRec, ...gruppiRec] = await Promise.all([
           cfg.entrate?.modulo ? api.get('/records/' + cfg.entrate.modulo) : Promise.resolve([]),
           cfg.conti?.modulo ? api.get('/records/' + cfg.conti.modulo) : Promise.resolve([]),
@@ -159,7 +168,14 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
         const contiTipoById = {}
         ;(contiRec || []).forEach((c) => { contiTipoById[c.id] = c.data[cfg.conti?.campo_tipo] })
 
-        const entrateMese = (entrateRec || []).filter((r) => inMeseTarget(r.data[cfg.entrate?.campo_data], anno, mese))
+        // Lo stipendio di fine mese (di solito il 27, ma anche prima se cade nel weekend) paga il mese DOPO: le entrate di un mese vanno da 5 giorni
+        // prima del cutoff del mese prima a 6 giorni prima del cutoff del mese; le uscite restano il mese di calendario.
+        const cutoff = Math.max(2, (cfg.giorno_cutoff || 27) - 5)
+        const p2 = (n) => String(n).padStart(2, '0')
+        const prev = new Date(anno, mese - 1, 1)
+        const daData = prev.getFullYear() + '-' + p2(prev.getMonth() + 1) + '-' + p2(cutoff)
+        const aData = anno + '-' + p2(mese + 1) + '-' + p2(cutoff - 1)
+        const entrateMese = (entrateRec || []).filter((r) => { const d = String(r.data[cfg.entrate?.campo_data] || '').slice(0, 10); return d >= daData && d <= aData })
         const entrateTotale = entrateMese.reduce((s, r) => s + (parseFloat(r.data[cfg.entrate?.campo_importo]) || 0), 0)
 
         let uscite = 0, fissa = 0, pagato = 0, prevCarta = 0, prevConto = 0
@@ -224,7 +240,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
         }
       }
     })
-  }, [widgets])
+  }, [widgets, meseSel])
 
   const REPORT_WIDGET_TYPES = ['yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'aggregate_value']
   const resetWidgetForm = () => {
@@ -248,6 +264,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
     table: 'Le ultime righe di un modulo, in una piccola tabella.',
     checklist: 'Righe da spuntare, prese da uno o più moduli (es. cosa è già pagato e cosa no).',
     coda: 'Le righe rimaste nello stato «nuovo» dei moduli che lo hanno dichiarato (Builder → Avvisi), con il pulsante per smistarle.',
+    timbrature_rapide: 'Entrata/uscita con un tocco e il totale di oggi, per il modulo dichiarato come Timbrature (Builder → Ruoli del modulo).',
     yearly_breakdown: 'Un campo sommato mese per mese, con il confronto con l\'anno prima.',
     category_pivot: 'Un campo sommato per categoria, anno su anno.',
     weekly_breakdown: 'Un campo sommato per settimana, con una soglia (es. straordinari oltre un limite).',
@@ -258,7 +275,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
 
   const saveWidget = async () => {
     const w = { ...newWidget, page }
-    if (!w.label) w.label = w.module_slug || (w.type === 'checklist' ? 'Checklist' : w.type === 'come_sta_andando' ? 'Come sta andando' : w.type === 'coda' ? 'Coda' : 'Widget')
+    if (!w.label) w.label = w.module_slug || (w.type === 'checklist' ? 'Checklist' : w.type === 'come_sta_andando' ? 'Come sta andando' : w.type === 'coda' ? 'Coda' : w.type === 'timbrature_rapide' ? 'Timbrature' : 'Widget')
     if (w.type === 'checklist') w.config = checklistConfig
     if (w.type === 'periodo') w.config = periodoConfig
     if (w.type === 'riepilogo_mensile') w.config = riepilogoConfig
@@ -382,7 +399,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
         {widgets.map((w) => {
           const data = widgetData[w.id] || {}
           // yearly_breakdown/category_pivot/weekly_breakdown riusano YearlyBreakdownView/
@@ -391,7 +408,13 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
           // rounded-xl border p-5), niente doppia cornice qui, solo 'relative' per
           // ancorare i controlli di editMode.
           return (
-            <div key={w.id} className={(['yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'come_sta_andando'].includes(w.type) ? 'relative' : 'bg-surface-card rounded-md border border-gray-800 overflow-hidden relative') + (['checklist', 'riepilogo_mensile', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'come_sta_andando', 'coda'].includes(w.type) ? ' col-span-full' : '')}>
+            <div key={w.id} className={(!isAperto(w) ? 'max-lg:[&>*:not(.wbar)]:hidden ' : '') + (['yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'come_sta_andando'].includes(w.type) ? 'relative' : 'bg-surface-card rounded-md border border-gray-800 overflow-hidden relative') + (['checklist', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? ' col-span-full' : ['riepilogo_mensile', 'coda'].includes(w.type) ? ' col-span-full' : ['come_sta_andando'].includes(w.type) ? ' col-span-full lg:col-span-3' : ' lg:col-span-2')}>
+              {['come_sta_andando', 'checklist', 'coda', 'riepilogo_mensile'].includes(w.type) && !editMode && (
+                <button type="button" onClick={() => toggleAperto(w)} className={'wbar lg:hidden w-full flex items-center justify-between text-sm ' + (isAperto(w) ? 'justify-end px-1 py-1 text-xs text-gray-500' : 'px-4 py-3 font-medium text-ink bg-surface-card rounded-md border border-gray-800')}>
+                  {isAperto(w) ? null : <span>{w.label}</span>}
+                  <span className="flex items-center gap-1">{isAperto(w) ? 'Riduci' : ''}<Icon name={isAperto(w) ? 'chevron-up' : 'chevron-down'} size={14} /></span>
+                </button>
+              )}
               {editMode && (() => {
                 const r = w.roles || [], ids = w.user_ids || []
                 const nomi = ids.map((id) => { const x = allUsers.find((u) => u.id === id); return x ? (x.display_name || x.username) : null }).filter(Boolean)
@@ -432,32 +455,14 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                 </div>
               )}
               {w.type === 'riepilogo_mensile' && (() => {
-                const d = data
-                const riga = (lbl, val, bold, colore) => (
-                  <div className={'flex items-center justify-between text-sm py-1.5 border-b border-gray-800/50 last:border-0' + (bold ? ' font-semibold' : '')}>
-                    <span className={bold ? 'text-ink' : 'text-gray-400'}>{lbl}</span>
-                    <span className={'font-mono ' + (bold ? 'text-ink' : 'text-gray-300')} style={colore ? { color: colore } : undefined}>{(val || 0).toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 })}</span>
-                  </div>
-                )
-                return (
-                  <div className="p-5">
-                    <div className="text-sm font-medium text-ink mb-2">{w.label}</div>
-                    {riga('Entrate', d.entrateTotale)}
-                    {riga('Uscite', d.uscite)}
-                    {riga('Fissa', d.fissa)}
-                    {riga('Variabile', d.variabile)}
-                    {riga('Previsto Carta', d.prevCarta)}
-                    {riga('Previsto Conto', d.prevConto)}
-                    {riga('Pagato', d.pagato, false, '#10B981')}
-                    {riga('Da Pagare', d.daPagare, false, '#F59E0B')}
-                    {riga('Spendibile', d.spendibile, true, d.spendibile >= 0 ? '#10B981' : '#F87171')}
-                  </div>
-                )
+                const { anno, mese } = meseScelto((w.config || {}).giorno_cutoff)
+                return <RiepilogoMensile data={data} label={w.label} nomeMese={new Date(anno, mese, 1).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })} />
               })()}
               {w.type === 'coda' && <QueueWidget token={token} onNavigate={onNavigate} modules={modules} />}
+              {w.type === 'timbrature_rapide' && <TimbratureWidget token={token} user={user} onNavigate={onNavigate} />}
               {w.type === 'come_sta_andando' && <InsightsCard token={token} widgetId={w.id} title={w.label} onNavigate={features.movimenti ? onNavigate : undefined} />}
               {w.type === 'checklist' && (
-                <ChecklistWidget config={w.config} token={token} label={w.label} color={w.color} modules={modules} user={user} />
+                <ChecklistWidget config={w.config} token={token} label={w.label} color={w.color} modules={modules} user={user} onMese={setMeseSel} />
               )}
               {w.type === 'periodo' && (() => {
                 const cfg = w.config || {}
@@ -520,6 +525,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                     <option value="table">Tabella — ultime righe di un modulo</option>
                     <option value="checklist">Checklist — righe da spuntare, da più moduli</option>
                     <option value="coda">Coda — righe nello stato «nuovo» dei moduli</option>
+                    <option value="timbrature_rapide">Timbrature rapide — entrata/uscita e il totale di oggi</option>
                   </optgroup>
                   <optgroup label="Andamenti">
                     <option value="yearly_breakdown">Mesi dell'anno — 12 mesi, con l'anno prima</option>
@@ -573,7 +579,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                   )
                 })()}
               </div>
-              {!['checklist', 'riepilogo_mensile', 'come_sta_andando', 'coda', ...REPORT_WIDGET_TYPES].includes(newWidget.type) && (
+              {!['checklist', 'riepilogo_mensile', 'come_sta_andando', 'coda', 'timbrature_rapide', ...REPORT_WIDGET_TYPES].includes(newWidget.type) && (
                 <div>
                   <label className="text-xs text-gray-400 block mb-1">Modulo</label>
                   <select className="w-full bg-surface-page text-ink px-4 py-3 rounded-lg outline-none border border-gray-800 focus:border-accent transition" value={newWidget.module_slug} onChange={(e) => setNewWidget({ ...newWidget, module_slug: e.target.value, field: '' })}>
@@ -907,7 +913,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                 newWidget.type === 'checklist' ? checklistConfig.sources.filter((s) => s.module_slug && s.amount_field && s.status_field).length === 0
                 : newWidget.type === 'riepilogo_mensile' ? !(riepilogoConfig.entrate.modulo && riepilogoConfig.gruppi.some((g) => g.modulo && g.campo_importo))
                 : REPORT_WIDGET_TYPES.includes(newWidget.type) ? !(reportBlockConfig.source_module && reportBlockConfig.block_key)
-                : newWidget.type === 'come_sta_andando' || newWidget.type === 'coda' ? false
+                : newWidget.type === 'come_sta_andando' || newWidget.type === 'coda' || newWidget.type === 'timbrature_rapide' ? false
                 : !newWidget.module_slug
               } className="flex-1 bg-accent hover:opacity-90 disabled:opacity-50 text-white py-3 rounded-lg transition font-medium">{editingWidgetId ? 'Salva modifiche' : 'Aggiungi'}</button>
             </div>

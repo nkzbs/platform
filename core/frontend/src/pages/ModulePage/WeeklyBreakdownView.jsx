@@ -11,6 +11,7 @@ const MESI = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 
 function formatValue(value, format) {
   const n = Number(value) || 0
   if (format === 'currency') return n.toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
+  if (format === 'ore') return (n / 60).toLocaleString('it-IT', { maximumFractionDigits: 1 }) + ' h'
   return n.toLocaleString('it-IT', { maximumFractionDigits: 1 })
 }
 

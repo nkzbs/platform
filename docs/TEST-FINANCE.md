@@ -1,6 +1,6 @@
 # Test di Finance
 
-Lista di prove per verificare a mano che Finance funzioni, dopo gli ultimi cambiamenti (ruoli dei moduli, avvisi, coda "Da smistare", "Smista", AI, monitoraggio).
+Lista di prove per verificare a mano che Finance funzioni, dopo gli ultimi cambiamenti (ruoli dei moduli, avvisi, coda "Da smistare", "Smista", AI, monitoraggio, riepilogo mensile, archivio Documenti, backup via mail). Versione 0.1.1.
 Ogni prova dice **cosa fare** e **cosa deve succedere**. I test automatici (`npm test`) coprono il codice con servizi simulati: qui si prova con i dati veri.
 Spunta man mano; se qualcosa non torna, annota cosa hai visto (schermata e passo) e riportalo.
 
@@ -9,7 +9,7 @@ Spunta man mano; se qualcosa non torna, annota cosa hai visto (schermata e passo
 ## 1. Accesso e dashboard
 
 - [ ] Il menu ha 8 moduli: Entrate, Spese personali, Spese casa, Documenti, Conti, Debiti casa, Debiti personali, Timbrature (nessun modulo nascosto: Pagamenti e Ricorrenti sono stati ritirati).
-- [ ] Accedi come admin. La dashboard ha, nell'ordine: **Da smistare**, **Come sta andando — Personale**, **Come sta andando — Casa**, Riepilogo mensile, Checklist.
+- [ ] Accedi come admin. La dashboard ha, nell'ordine che preferisci (frecce in «Modifica layout»): **Da smistare**, **Riepilogo mensile**, **Come sta andando — Personale** e **Casa** su due colonne, Checklist. Su telefono «Come sta andando» e Checklist sono chiusi e si aprono con un tocco.
 - [ ] **Personale** mostra per settembre entrate 1.799,58 € e spese 1.321,45 €. Il pulsante Mese / Da inizio anno cambia la vista.
 - [ ] **Casa** mostra solo spese (niente entrate, saldo, risparmio), con "già pagate" e "ancora da pagare".
 - [ ] "Modifica layout" → "Aggiungi widget": l'elenco è in gruppi (Numeri, Elenchi, Andamenti, Finanza) e ogni tipo ha una riga che spiega cosa fa.
@@ -24,12 +24,25 @@ Spunta man mano; se qualcosa non torna, annota cosa hai visto (schermata e passo
 - [ ] *Già pagata*: la riga finisce "pagato" con la data scelta.
 - [ ] Smistare due volte la stessa riga non è possibile (la riga non è più nella coda).
 
+- [ ] **Smista → «Sposta in un altro modulo»**: su una riga in coda scegli la destinazione (Casa ↔ Personale): il pannello elenca ciò che non passerebbe; dopo la conferma la riga è nell'altra coda, ancora «da smistare».
+
+## 2b. Riepilogo mensile
+
+- [ ] Mostra **tutte** le voci: Spendibile, Entrate, Uscite, Pagato, Da pagare, Fissa, Variabile, **Previsto Carta e Previsto Conto anche a 0,00 €**.
+- [ ] Le Entrate del mese sono lo stipendio del mese prima (per ottobre: 1.799,58 €); le Uscite coincidono con la Checklist (ottobre: Casa 1.208,16 € + Personali 1.000,50 € = 2.208,66 €, come utente che vede entrambi i moduli).
+- [ ] Cambiando mese con le frecce della **Checklist**, il Riepilogo cambia insieme. Il giorno del cambio mese è quello impostato nel widget Checklist (27).
+- [ ] Come **nima** (non admin) le righe personali si vedono: se mancano, controllare il proprietario delle righe (Utenti).
+
 ## 3. Avvisi WhatsApp
 
 - [ ] **Messaggio di prova:** Impostazioni → Connessioni → WhatsApp → "Invia messaggio di prova". Arriva sul telefono; in "Ultimi invii" compare la riga con esito "inviato".
 - [ ] **Riga nuova da smistare:** crea in Spese casa una riga di prova con stato "Da smistare". Entro circa un minuto arriva "Bolletta da smistare: …". Se ne crei più di una insieme, ne arriva uno solo con l'elenco. Poi smistala o eliminala.
 - [ ] **Bolletta vera da Gmail:** alla prossima mail di un mittente con regola, la riga compare in coda entro 15 minuti e arriva l'avviso.
-- [ ] **Riepilogo del mattino:** alle 8:00 arriva con scadenze di oggi, domani, in ritardo e le righe "da smistare". *Dopo la pulizia dei dati* (vedi sotto) deve essere breve.
+- [ ] **Report** (Impostazioni → **Report**): tre schede di partenza (Quanto devo pagare, Da smistare, Voci scadute) con interruttore, frequenza, giorno e ora; «Cosa guarda e come appare» apre titolo, simbolo, stato, righe mostrate. In fondo «Aggiungi un report» (prova «Riepilogo ore e straordinari»: nasce spento, scegli a chi arriva, anteprima, poi accendilo; per Federica: domenica 20:00). «Mostra anteprima» mostra il messaggio che partirebbe adesso; «Invia ora» lo manda davvero.
+- [ ] **Quanto devo pagare:** l'anteprima mostra le voci «da pagare» dal giorno di oggi al 26 del mese dopo, più le scadute, con il totale diviso Casa / Personali e la riga «ultimo stipendio → ti restano». Il 27 (o il venerdì prima, se cade nel weekend) alle 18:00 arriva da solo.
+- [ ] **Da smistare:** con righe in coda, ogni sera alle 19:00 arriva l'elenco; smistale tutte e la sera dopo non arriva niente.
+- [ ] **Voci scadute:** il lunedì alle 19:00, solo se ce ne sono; spuntando le voci nella Checklist spariscono dal messaggio.
+- [ ] **Vecchi report:** nella scheda Report compare «Vecchi report ancora nei moduli» (report settimanale e mensile, «scadenza oggi»): «Toglili dai moduli» e il riquadro sparisce; da quel momento non arrivano più i messaggi del sabato e del giorno 1.
 - [ ] **Mail non riconosciute:** una mail con "bolletta" o "fattura" da un mittente senza regola compare in Impostazioni → Connessioni → Google → "Mail non riconosciute" e arriva un messaggio. "Crea regola" precompila il mittente; "Ignora" la toglie.
 
 ## 4. AI (Impostazioni → AI)
@@ -61,6 +74,41 @@ Vedi `docs/OPERAZIONI.md` → "Utenti, accessi e 2FA". Dopo averli creati, prova
 
 - [ ] **Widget per utente:** sulla riga dell'utente non admin, "Widget · N" mostra i widget della dashboard; spuntane uno (es. "Come sta andando — Casa" per Federica). Accedendo come lei, vede solo quello. In "Modifica layout" ogni widget indica a chi è visibile.
 
+## 6b. Archivio Documenti e Google
+
+- [ ] **Google collegato** (Impostazioni → Google) e «Salva su Drive» acceso; un documento si apre in anteprima (se dice che Google non risponde, ricollega).
+- [ ] Documenti in vista **Archivio**: la radice mostra solo cartelle (le vuote sbiadite); Estratto conto si divide in sottocartelle per anno.
+- [ ] **Cartelle**: matita → rinomina (il nome cambia anche nei documenti); «Nuova cartella» la crea; il cestino compare solo sulle vuote. Un nome già usato viene rifiutato.
+- [ ] **Nuovo documento** dentro una cartella: il Tipo è già quello, il file è il primo campo, il titolo si compila dal nome del file, i «Collegamenti» sono chiusi in fondo.
+- [ ] La ricerca in alto cerca in tutto l'archivio, non solo nella cartella aperta.
+
+## 6c. Backup via mail e Gmail
+
+- [ ] Super Admin → Finance → Backup → **Backup settimanale via mail**: acceso; «Invia ora una prova» → arriva una mail con un allegato `.db.gz.enc`. Salva la **passphrase** in un gestore di password e prova a riaprire l'allegato con il comando scritto nella mail.
+- [ ] **Gmail**: inoltrati una bolletta a te stesso; entro pochi minuti deve comparire in «Da smistare» (e arrivare l'avviso WhatsApp). L'ultima riga da Gmail risale al 2 ottobre: se non compare, il controllo non gira.
+
+## 6d. Bot Telegram
+
+- [ ] **Collegamento** (vedi `docs/OPERAZIONI.md` → Bot Telegram): bot creato con BotFather, codice incollato in Impostazioni → Connessioni → Telegram (bot), compare `@nome_del_bot`.
+- [ ] **Il mio telefono**: «Collega il mio Telegram» → tocchi il link → Avvia → il bot risponde «✅ Collegato a Finance come …» e il telefono compare in elenco.
+- [ ] **/report** mostra un bottone per ogni report acceso. **/scadute** mostra le voci scadute **con un bottone «✅ Pagata» per voce**. Tocca uno: la voce passa a «pagato» in Finance (controlla nella Checklist) e il bottone diventa «↩ Annulla». Annulla la riporta a «da pagare».
+- [ ] **/pagare** e **/smistare** rispondono con gli stessi dati dei report.
+- [ ] **Report**: «Invia ora» su una scheda manda il messaggio anche su Telegram, con i bottoni e «Apri l'app».
+- [ ] **Federica** (dopo averla collegata): il bot le mostra **solo Casa**; non può chiudere voci di Spese Personali, nemmeno con il bottone di un messaggio inoltrato.
+- [ ] **Frasi libere** (serve l'AI accesa): scrivi «ho pagato l'affitto» → il bot mostra la voce e «✅ Sì, pagata»: **finché non tocchi, in Finance non cambia niente**. Dopo il tocco la voce è «pagato».
+- [ ] **Più voci simili** («spese mese»): il bot chiede quale e il tocco su una la chiude, le altre restano.
+- [ ] **Domanda:** «quanto ho speso di benzina a settembre?» → risposta con totale e «Ho capito: …» (controlla che corrisponda).
+- [ ] **Nuova spesa:** «ho speso 20 euro di benzina» → riepilogo con modulo, importo e «già pagata»; «✅ Aggiungi» la crea (guarda in Spese). Con due moduli chiede «Dove la aggiungo?».
+- [ ] **Smista:** «smista la bolletta A2A come un pagamento» e «… in 3 rate» (se il modulo ha il piano a rate).
+- [ ] **PDF:** mandagli il PDF di una bolletta (modulo con «Importare» acceso) → mostra i campi letti; «✅ Aggiungi» crea la riga «da smistare» con il PDF allegato. Una **foto** risponde che per ora si leggono solo PDF.
+- [ ] **Foto di uno scontrino** (modulo con «Importare» acceso): mandala come foto; il bot mostra esercente, data, totale e categoria, e «Controlla il totale sullo scontrino». Confronta il **totale** con lo scontrino: se è giusto «✅ Aggiungi (pagata)», la spesa compare in Spese con la **foto allegata**; «🕓 Da pagare» la crea da pagare.
+- [ ] **Scontrino difficile:** una foto storta, sfocata o con il totale tagliato → il bot dice di rifarla; non scrive niente. Una foto che non è uno scontrino idem.
+- [ ] **Doppione:** manda due volte lo stesso scontrino (dopo aver aggiunto il primo) → il secondo mostra «Esiste già una spesa simile».
+- [ ] Se compare un errore del tipo «il modello non legge le immagini», serve impostare `MISTRAL_VISION_MODEL` (per esempio un modello Pixtral) su Super Admin.
+- [ ] **Cose che NON deve fare:** «elimina tutte le spese» o «cancella l'affitto» → risponde che non lo fa. Una proposta già usata o vecchia di oltre 15 minuti dice «scaduta».
+- [ ] **Federica:** dalle sue frasi non vede né tocca le spese personali; una spesa nuova finisce in Casa.
+- [ ] **Sicurezza**: da un altro telefono non collegato scrivi al bot: risponde solo con le istruzioni, nessun dato. «Scollega» il tuo telefono: il bot non risponde più ai comandi.
+
 ## 7. 2FA
 
 - [ ] Attiva il 2FA dal proprio account (Impostazioni → Il mio account): scansiona il QR con un'app authenticator e **salva i codici di recupero** (si vedono una volta sola).
@@ -76,3 +124,30 @@ Il primo riepilogo e il messaggio mensile del 2 novembre dipendono da questi:
 - [ ] **Non cancellare i "doppioni" 18/04/2025** (7 "Spese Mese" da 200 €, 2 "Caldaia R.A.M." da 95 €): sono pagamenti reali con la data persa nell'import ("data incerta"), già esclusi dai conteggi. Cancellarli toglierebbe spese vere.
 - [ ] Settembre: affitto 550 €, "Spese Casa" 500 € e rata PayPal 50,17 € risultano ancora "da pagare": segnali "pagato" se lo sono.
 - [ ] Le righe scadute da verificare (assicurazione auto, hotel Sardegna, A2A Acqua) e la Quarta Cartella marzo–maggio.
+
+## 13. Novità della 0.2.0 (su Finance, dopo «Aggiorna»)
+
+**Prima:** da Super Admin premi «Aggiorna» su Finance (serve il 2FA) e ricarica la pagina (Cmd+Shift+R).
+
+- [ ] Il badge in alto a sinistra dice **Platform 0.2.0**.
+- [ ] **Impostazioni → Funzioni**: c'è l'elenco con gli interruttori (Suggerimenti, Report, Sito Web, WhatsApp, Gmail, Movimenti bancari, Come sta andando); quelle che usi già sono accese, non cambia niente nel menu.
+- [ ] **Suggerimenti**: accendili da Funzioni → compare la scheda «Suggerimenti» in Impostazioni; «Controlla adesso» non rompe niente (all'inizio può essere vuota). Poi **spegnili** se non li vuoi.
+- [ ] **Primi passi** NON compare (Finance ha già dati). Il **giro guidato** si avvia da Impostazioni → Il mio account → «Fai il giro guidato»: evidenzia menu, Libreria, Builder, Impostazioni, Guida; «Salta» lo chiude; funziona anche da telefono.
+- [ ] **Inviti**: Impostazioni → Utenti & Ruoli → «Invita» → nome di prova, ruolo Utente → il link compare **una volta**; apri il link in una **finestra privata**: scegli utente e password (almeno 10 caratteri) → «Vai all'accesso» e entri. Riaprendo lo stesso link dice «già stato usato». In «Inviti recenti» lo stato è «Usato». Poi **disabilita o elimina l'utente di prova**.
+- [ ] Un secondo invito: «Annulla» → il link dice «annullato».
+- [ ] **WhatsApp / Telegram** dall'invito: si aprono con il messaggio già scritto e il link (premi tu «invia»; non inviare davvero se è una prova).
+- [ ] **Libreria** (guarda, senza installare): in cima «Parti da un modello» con le tessere; aprine una → schede «Moduli» e «Come si usa» (da dove cominciare, modulo per modulo); «Stampa o salva in PDF» apre l'anteprima di stampa.
+- [ ] Spuntando due moduli compare la barra «N selezionati»; **non installare su Finance** (prova su un tenant di prova, vedi sotto).
+- [ ] **Impostazioni → Dati**: c'è la scheda «Distacca su un tuo server» (chiusa). **Non avviarla su Finance** se non per una prova voluta (vedi sotto).
+- [ ] Niente di ciò che c'era prima è cambiato: dashboard, Da smistare, Smista, Riepilogo, report, bot, Documenti.
+
+### 13b. Su un tenant di prova (non su Finance)
+
+Crea da Super Admin un tenant di prova vuoto.
+- [ ] **Primi passi**: al primo accesso dell'admin compare «Benvenuto: cominciamo» (4 passi, pillola in basso a destra se lo chiudi). «Non mostrare più» lo toglie per sempre.
+- [ ] **Modello**: Libreria → una tessera → togli la spunta a un modulo → «Installa N moduli»: compaiono nel **menu laterale subito**, senza ricaricare; il messaggio in alto offre «Collega i moduli» e «Guida del modello».
+- [ ] **Collega i moduli**: le proposte hanno senso (es. righe → ordine, ordine → cliente)? Togli la spunta a una e crea le altre: nel Builder il modulo ha il nuovo campo «relazione». Rilanciato, non propone di nuovo le stesse.
+- [ ] **Super Admin → Tenant → Credenziali → «Invita»**: crea il link per il primo admin; con una email e la posta di Super Admin configurata parte anche la mail (se non è configurata lo dice).
+- [ ] **Analisi**: un racconto → «Fai tutto» → riepilogo: i processi hanno più moduli e le mancanze segnate; «Cosa manca?» aggiunge senza togliere; «Correggi a parole» mostra le operazioni e cambia solo dopo «Applica»; «Apri il manuale» e «Guida all'uso» → «Stampa o salva in PDF»: copertina, schede non spezzate, bottoni assenti.
+- [ ] **Libreria di Super Admin**: filtri per gruppo, scheda «Dove è usato» (tenant e versione), «Verticali» (crea/modifica/elimina/ripristina).
+- [ ] **Distacco su un server di prova** (Linux x86-64 con Docker): Impostazioni → Dati → «Distacca su un tuo server» → dati del server e password dell'account → «Controlla il server» (se il server è in rete locale serve `EXPORT_ALLOW_PRIVATE=1` su Super Admin) → confronta l'**impronta** con `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` sul server → conferma → «Copia il progetto sul server». A fine corsa: indirizzo, cartella con `data/` ed `env` (permessi 0600), container `platform-<slug>` acceso; entri con le stesse credenziali. Il tenant originale è rimasto com'era. Sul distaccato AI e Libreria non rispondono (previsto).

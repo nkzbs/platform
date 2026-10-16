@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { API } from '../lib/api'
 import Icon from '../components/Icon'
 import Select from '../components/Select'
+import VerticaliAdmin from '../components/VerticaliAdmin'
 import { parseSchemaFrontend, getAutomationSteps, getRequiredConnectors } from '../lib/schema-v3-frontend'
 
 // La Libreria: i miei moduli, salvati con una versione, da installare in qualunque
@@ -47,6 +48,9 @@ function LibreriaPage({ token }) {
   const [tenants, setTenants] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [gruppo, setGruppo] = useState('') // filtro per gruppo ('' = tutti)
+  const [soloRuoli, setSoloRuoli] = useState(false) // solo i moduli che dichiarano i ruoli (lavorano con report, bot e riepiloghi)
+  const [uso, setUso] = useState(null) // «Dove è usato» del modulo aperto
   const [notice, setNotice] = useState(null) // { ok, text }
 
   const [detail, setDetail] = useState(null)
@@ -60,9 +64,37 @@ function LibreriaPage({ token }) {
   const [pub, setPub] = useState({ tenant: '', module: '', description: '', release_notes: '' })
   const [pubModules, setPubModules] = useState([])
 
+  const [proposteT, setProposteT] = useState([]) // proposte dei tenant (in coda e già decise)
+  const [decisione, setDecisione] = useState(null) // { p, group_name, description } mentre si approva
+  const caricaProposte = () => fetch(API + '/registry/proposals', { headers }).then((r) => r.json()).then((d) => Array.isArray(d) && setProposteT(d)).catch(() => {})
+  useEffect(() => { caricaProposte() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const approva = async () => {
+    setBusy(true)
+    const res = await fetch(API + '/registry/proposals/' + decisione.p.id + '/approve', { method: 'POST', headers, body: JSON.stringify({ description: decisione.description, group_name: decisione.group_name }) })
+    const d = await res.json().catch(() => ({})); setBusy(false)
+    if (res.ok) { flash(true, '«' + decisione.p.name + '» è nella Libreria (v' + d.version + ').'); setDecisione(null); caricaProposte(); load() } else flash(false, d.error || 'Non riuscito.')
+  }
+  const rifiuta = async (p) => {
+    const reason = window.prompt('Perché la rifiuti? Lo vede chi ha proposto «' + p.name + '».')
+    if (reason == null) return
+    const res = await fetch(API + '/registry/proposals/' + p.id + '/reject', { method: 'POST', headers, body: JSON.stringify({ reason }) })
+    const d = await res.json().catch(() => ({}))
+    if (res.ok) { flash(true, 'Proposta rifiutata.'); caricaProposte() } else flash(false, d.error || 'Non riuscito.')
+  }
+  const [generici, setGenerici] = useState(null) // { totale, presenti, mancanti }: i moduli generici di partenza
   const [defaultsOpen, setDefaultsOpen] = useState(false)
   const [defaultIds, setDefaultIds] = useState({})
 
+  const loadGenerici = () => fetch(API + '/registry/generici', { headers }).then((r) => r.json()).then((d) => d && d.totale != null && setGenerici(d)).catch(() => {})
+  useEffect(() => { loadGenerici() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const importaGenerici = async () => {
+    if (!window.confirm((generici.mancanti.length ? 'Aggiungere alla Libreria i ' + generici.mancanti.length + ' moduli generici che mancano' : 'Completare con i ruoli i ' + generici.da_completare.length + ' moduli generici già importati') + '? Quello che c\'è già non si tocca.')) return
+    setBusy(true)
+    const res = await fetch(API + '/registry/import-generici', { method: 'POST', headers })
+    const d = await res.json().catch(() => ({}))
+    setBusy(false)
+    if (res.ok) { setNotice({ ok: true, text: d.aggiunti + ' moduli generici aggiunti' + (d.completati ? ', ' + d.completati + ' completati con i ruoli' : '') + '.' }); loadGenerici(); load() } else setNotice({ ok: false, text: d.error || 'Non riuscito.' })
+  }
   const load = async () => {
     const [m, t] = await Promise.all([
       fetch(API + '/registry/modules', { headers }).then((r) => (r.ok ? r.json() : [])),
@@ -74,7 +106,7 @@ function LibreriaPage({ token }) {
   }
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const openDetail = (m) => { setDetail(m); setTab('panoramica'); setVersions(null); setEdit(null); setInstallSlug(''); setNotice(null) }
+  const openDetail = (m) => { setUso(null); setDetail(m); setTab('panoramica'); setVersions(null); setEdit(null); setInstallSlug(''); setNotice(null) }
   const closeDetail = () => setDetail(null)
 
   useEffect(() => {
@@ -153,7 +185,13 @@ function LibreriaPage({ token }) {
   }
 
   const q = search.trim().toLowerCase()
-  const shown = modules.filter((m) => !q || m.name.toLowerCase().includes(q) || (m.description || '').toLowerCase().includes(q) || (m.group_name || '').toLowerCase().includes(q))
+  const gruppi = [...new Set(modules.map((m) => m.group_name).filter(Boolean))].sort()
+  const shown = modules.filter((m) => (!gruppo || m.group_name === gruppo) && (!soloRuoli || m.ruoli) && (!q || m.name.toLowerCase().includes(q) || (m.description || '').toLowerCase().includes(q) || (m.group_name || '').toLowerCase().includes(q)))
+  useEffect(() => {
+    if (!detail || tab !== 'uso' || uso) return
+    fetch(API + '/registry/modules/' + detail.id + '/usage', { headers }).then((r) => r.ok ? r.json() : { tenants: [], usato_da: [], errore: true }).then(setUso)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail && detail.id, tab])
   const spec = detail ? techSpec(detail) : null
 
   return (
@@ -163,7 +201,8 @@ function LibreriaPage({ token }) {
           <h1 className="text-lg font-bold text-ink tracking-[-0.35px]">Libreria</h1>
           <p className="text-gray-500 text-sm mt-0.5">I tuoi moduli, con le loro versioni, pronti da installare in qualunque tenant.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {generici && (generici.mancanti.length + (generici.da_completare || []).length) > 0 && <button onClick={importaGenerici} disabled={busy} className={ghostBtn + ' text-xs !py-2'}>{generici.mancanti.length ? 'Aggiungi i moduli generici (' + generici.mancanti.length + ')' : 'Completa i moduli generici (' + generici.da_completare.length + ')'}</button>}
           <button onClick={openDefaults} className={ghostBtn + ' text-xs !py-2'}>Moduli di default</button>
           <button onClick={openPublish} className={primaryBtn + ' text-xs !py-2 flex items-center gap-1.5'}><Icon name="plus" size={13} />Salva un modulo</button>
         </div>
@@ -173,10 +212,50 @@ function LibreriaPage({ token }) {
         <div className={'text-sm p-3 rounded-lg mb-4 border ' + (notice.ok ? 'bg-green-900/20 text-green-400 border-green-900/40' : 'bg-red-900/30 text-red-400 border-red-900/50')}>{notice.text}</div>
       )}
 
+      <VerticaliAdmin token={token} modules={modules} />
+
+      {proposteT.some((p) => p.status === 'pending') && (
+        <section className="bg-surface-card border border-cp-primary/40 rounded-xl p-4 mb-5">
+          <h2 className="text-sm font-semibold text-ink mb-1">Proposte dai tenant ({proposteT.filter((p) => p.status === 'pending').length})</h2>
+          <p className="text-xs text-gray-500 mb-3">Un tenant propone un suo modulo (solo lo schema, mai i dati). Controlla campi e stati: se i nomi delle scelte contengono nomi di persone o aziende, rifiuta.</p>
+          <div className="divide-y divide-gray-800">
+            {proposteT.filter((p) => p.status === 'pending').map((p) => (
+              <div key={p.id} className="py-3">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="min-w-0"><div className="text-sm text-ink font-medium">{p.name} <span className="text-gray-500 font-normal">· da {p.tenant_slug} · sarà v{p.versione_prossima}</span></div>
+                    {p.description && <div className="text-xs text-gray-400 mt-0.5">{p.description}</div>}
+                    {p.note && <div className="text-xs text-gray-500 mt-0.5 italic">Nota: {p.note}</div>}</div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button type="button" onClick={() => setDecisione({ p, description: p.description, group_name: p.group_name || '' })} className={primaryBtn + ' text-xs !py-1.5'}>Approva</button>
+                    <button type="button" onClick={() => rifiuta(p)} className={ghostBtn + ' text-xs !py-1.5'}>Rifiuta</button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-2">{p.campi.map((f) => <span key={f.key} className="text-[11px] px-2 py-0.5 rounded bg-surface-page border border-gray-800 text-gray-400">{f.label}</span>)}</div>
+                {p.stati.length > 0 && <div className="text-xs text-gray-500 mt-1.5">Stati: {p.stati.join(' → ')}</div>}
+                {p.relazioni.length > 0 && <div className="text-xs text-gray-500 mt-0.5">Collegato a: {p.relazioni.join(', ')}</div>}
+                {decisione && decisione.p.id === p.id && (
+                  <div className="mt-3 bg-surface-page border border-gray-800 rounded-lg p-3 space-y-2">
+                    <input className={inputCls} placeholder="Gruppo (es. Finanza, Vendite, Magazzino...)" value={decisione.group_name} onChange={(e) => setDecisione({ ...decisione, group_name: e.target.value })} />
+                    <textarea className={inputCls + ' min-h-[60px]'} placeholder="Descrizione per la Libreria" value={decisione.description} onChange={(e) => setDecisione({ ...decisione, description: e.target.value })} />
+                    <div className="flex gap-2"><button type="button" onClick={approva} disabled={busy} className={primaryBtn + ' text-xs !py-1.5'}>{busy ? 'Pubblico…' : 'Metti nella Libreria'}</button><button type="button" onClick={() => setDecisione(null)} className={ghostBtn + ' text-xs !py-1.5'}>Annulla</button></div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <div className="relative mb-5 max-w-md">
         <Icon name="search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cerca un modulo..." className={inputCls + ' pl-9'} />
       </div>
+      {(gruppi.length > 1 || modules.some((m) => m.ruoli)) && (
+        <div className="flex items-center gap-1.5 flex-wrap mb-4">
+          {gruppi.length > 1 && ['', ...gruppi].map((g) => <button key={g || 'tutti'} type="button" onClick={() => setGruppo(g)} className={'text-xs px-2.5 py-1 rounded-full border transition ' + (gruppo === g ? 'border-cp-primary bg-cp-primary/15 text-ink' : 'border-gray-800 text-gray-500 hover:text-gray-300')}>{g || 'Tutti i gruppi'}</button>)}
+          {modules.some((m) => m.ruoli) && <button type="button" onClick={() => setSoloRuoli(!soloRuoli)} className={'text-xs px-2.5 py-1 rounded-full border transition ' + (soloRuoli ? 'border-cp-primary bg-cp-primary/15 text-ink' : 'border-gray-800 text-gray-500 hover:text-gray-300')} title="Moduli che dichiarano a cosa servono: lavorano con report, bot e riepiloghi">Con ruoli dichiarati</button>}
+        </div>
+      )}
 
       {loading ? (
         <div className="text-sm text-gray-600">Caricamento...</div>
@@ -224,7 +303,7 @@ function LibreriaPage({ token }) {
           </div>
 
           <div className="flex gap-1 px-5 border-b border-gray-800">
-            {[['panoramica', 'Panoramica'], ['struttura', 'Struttura'], ['versioni', 'Versioni']].map(([id, label]) => (
+            {[['panoramica', 'Panoramica'], ['struttura', 'Struttura'], ['versioni', 'Versioni'], ['uso', 'Dove è usato']].map(([id, label]) => (
               <button key={id} onClick={() => setTab(id)} className={'text-sm px-3 py-2.5 -mb-px border-b-2 transition ' + (tab === id ? 'border-cp-primary text-ink font-medium' : 'border-transparent text-gray-500 hover:text-gray-300')}>{label}</button>
             ))}
           </div>
@@ -307,6 +386,33 @@ function LibreriaPage({ token }) {
                   </div>
                 </div>
                 <div className="sm:col-span-2 text-xs text-gray-600">Per modificare la struttura apri il modulo nel Builder del tenant, poi salvalo di nuovo qui: nasce la versione successiva.</div>
+              </div>
+            )}
+
+            {tab === 'uso' && (
+              <div className="space-y-4">
+                {!uso ? <div className="text-sm text-gray-600">Controllo…</div> : (
+                  <>
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1.5">Tenant che lo hanno installato (ultima versione: v{uso.versione_ultima})</div>
+                      {uso.tenants.length === 0 ? <div className="text-sm text-gray-600">Nessun tenant.</div> : (
+                        <div className="divide-y divide-gray-800 border border-gray-800 rounded-lg">
+                          {uso.tenants.map((t) => (
+                            <div key={t.slug} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                              <span className="text-ink truncate">{t.name}</span>
+                              <span className={'text-xs flex-shrink-0 ' + (t.aggiornabile ? 'text-amber-400' : 'text-gray-500')}>{t.aggiornabile ? 'v' + t.version + ' → v' + uso.versione_ultima + ' disponibile' : 'v' + t.version + ' aggiornato'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-600 mt-1.5">Da qui non si aggiorna niente: l'aggiornamento lo decide ogni tenant, dalla sua Libreria.</p>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1.5">Moduli della Libreria che si collegano a questo</div>
+                      {uso.usato_da.length === 0 ? <div className="text-sm text-gray-600">Nessuno.</div> : <div className="flex flex-wrap gap-1.5">{uso.usato_da.map((m) => <span key={m.id} className="text-xs bg-gray-800 text-gray-200 rounded-md px-2 py-1">{m.name}</span>)}</div>}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

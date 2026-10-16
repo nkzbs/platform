@@ -62,7 +62,7 @@ function run(q, user) {
   const righe = recs.filter((r) => {
     const d = r.data;
     if (nuovo && d[R.stato || '_stato'] === nuovo) { esclusi++; return false; }
-    if (d.data_incerta) return false;
+    if (R.data_incerta && d[R.data_incerta]) return false; // data persa: fuori dai conti
     if (q.periodo) { const dt = String(d[R.data] || '').slice(0, 10); if (!(dt >= q.periodo.da && dt <= q.periodo.a)) return false; }
     return q.filtri.every((f) => {
       const v = d[R[f.ruolo]];

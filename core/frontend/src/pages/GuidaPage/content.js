@@ -6,13 +6,31 @@ const GUIDA_SECTIONS = [
         title: 'Moduli e record', body: [
           'Un modulo è un contenitore di record, definito da uno schema che costruisci nel Builder — l\'equivalente di una tabella. Platform Core arriva con alcuni moduli di base (Spese, Contatti, Documenti, Report); ne puoi creare quanti ne servono per il tuo settore.',
           'Un record è ogni singola voce salvata dentro un modulo — un cliente dentro Contatti, una spesa dentro Spese, un ordine dentro Ordini.',
-          'Ogni progetto (tenant) ha i suoi moduli e i suoi dati. I moduli migliori si riusano da un progetto all\'altro con la Libreria.',
+          'Non esistono app separate: ogni progetto è questa stessa piattaforma con i moduli che installi e modifichi. I «modelli» della Libreria sono solo gruppi di moduli pronti da installare insieme.',
         ]
       },
       {
         title: 'Moduli collegati', body: [
-          'Tutti i moduli sono uguali: compaiono nel menu e nel Builder e si parlano con le relazioni. Le righe di un ordine, per esempio, sono un modulo collegato agli ordini.',
-          'Se installi dalla Libreria un modulo con una relazione verso un modulo che non hai, e quel modulo è anch\'esso in Libreria, viene installato insieme.',
+          'Non ci sono moduli nascosti: ogni modulo si vede nel menu, nella Libreria e nel Builder. I moduli si parlano con le relazioni (un campo che punta a righe di un altro modulo).',
+          'Se installi dalla Libreria un modulo che ha una relazione verso un modulo che non hai, quello mancante viene installato in automatico. Con «Collega i moduli» (Libreria) il sistema propone i collegamenti che mancano tra i moduli già installati: scegli tu quali creare.',
+        ]
+      },
+      {
+        title: 'Partire da un modello', body: [
+          'In Libreria, in cima, «Parti da un modello» mostra gruppi di moduli pensati per funzionare insieme (vendite, contabilità, magazzino, personale…). Apri una tessera: nella scheda «Moduli» togli la spunta a quelli che non ti servono, nella scheda «Come si usa» leggi da dove cominciare e a cosa serve ogni modulo (si stampa in PDF). Poi «Installa»: compaiono subito nel menu.',
+          'Puoi anche spuntare più moduli qualsiasi dalla Libreria e installarli insieme. I «Primi passi» (la pillola in basso a destra su un progetto nuovo) e il giro guidato (Impostazioni → Il mio account) ti accompagnano la prima volta.',
+        ]
+      },
+      {
+        title: 'Invitare le persone', body: [
+          'Impostazioni → Utenti & Ruoli → «Invita»: scrivi nome, ruolo ed eventuale email. Nasce un link che vale 72 ore e si usa una volta sola: chi lo apre sceglie da sé nome utente e password (almeno 10 caratteri). Il link si vede una volta sola: copialo, mandalo su WhatsApp o Telegram (si apre il messaggio già scritto, premi tu «invia») oppure fai partire la mail, se la posta è configurata.',
+          'Sotto trovi gli inviti recenti: in attesa, usato, scaduto, annullato (gli aperti si possono annullare).',
+        ]
+      },
+      {
+        title: 'Funzioni facoltative e distacco', body: [
+          'Impostazioni → Funzioni: gli interruttori di Suggerimenti, Report, Sito Web, WhatsApp, Gmail e altro. Spente non compaiono; spegnerle non cancella i dati.',
+          'Impostazioni → Dati → «Distacca su un tuo server» copia il progetto su un server Linux tuo (con Docker) via SSH, dove funziona da solo. Prima controlla il server (sola lettura) e ti fa confermare l\'impronta; il progetto originale non viene toccato. Il distaccato non ha AI, Libreria e aggiornamenti.',
         ]
       },
       {

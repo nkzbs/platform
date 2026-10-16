@@ -1199,6 +1199,7 @@ function evaluateSteps(steps, db, context) {
   const modMap = loadModuleMap(db);
   const values = {}; // id -> valore grezzo (numero o array di record)
   const types = {};  // id -> tipo, serve solo per capire come mostrare il breakdown
+  const timeInfo = {}; // id -> { vuoto } per i campi orario letti: due orari si sottraggono come orari (vedi 'arithmetic')
   const breakdown = [];
 
   const resolveVal = (ref) => (stepRefIsLiteral(ref) ? ref.literal : values[ref]);
@@ -1207,7 +1208,10 @@ function evaluateSteps(steps, db, context) {
     let value, label;
     if (s.type === 'own_field') {
       const raw = context.currentRecordData ? context.currentRecordData[s.field] : undefined;
-      value = parseFieldNumeric(raw, fieldTypeOf(modMap, context.currentModule, s.field));
+      const ft = fieldTypeOf(modMap, context.currentModule, s.field);
+      value = parseFieldNumeric(raw, ft);
+      // un campo orario ricorda se è vuoto: serve alla differenza tra due orari qui sotto
+      if (ft === 'time') timeInfo[s.id] = { vuoto: timeToMinutes(raw) === null };
       label = s.label || s.field;
       types[s.id] = 'number';
 
@@ -1258,9 +1262,13 @@ function evaluateSteps(steps, db, context) {
 
     } else if (s.type === 'arithmetic') {
       const a = resolveVal(s.a), b = resolveVal(s.b);
+      // La differenza tra DUE ORARI è un tempo trascorso: se uno dei due manca (una timbratura ancora aperta) fa 0 invece di un numero negativo, e se il
+      // secondo è prima del primo il turno è passato per la mezzanotte (22:00 → 01:00 = 3 ore, non −21). Per i numeri normali la sottrazione resta quella di sempre.
+      const ta = timeInfo[s.a], tb = timeInfo[s.b];
+      const traOrari = s.op === '-' && ta && tb;
       switch (s.op) {
         case '+': value = a + b; break;
-        case '-': value = a - b; break;
+        case '-': value = traOrari ? ((ta.vuoto || tb.vuoto) ? 0 : (a - b < 0 ? a - b + 1440 : a - b)) : a - b; break;
         case '*': value = a * b; break;
         // Divisione per zero -> 0, non Infinity/NaN: coerente con aggregateValues, che
         // già ritorna 0 su insiemi vuoti invece di propagare un valore non numerico in

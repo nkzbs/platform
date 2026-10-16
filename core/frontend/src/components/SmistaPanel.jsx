@@ -25,6 +25,10 @@ export default function SmistaPanel({ token, q, row, modules, onClose, onDone })
   const [prima, setPrima] = useState(d[q.scadenza] || d[q.data] || today())
   const [pagataIl, setPagataIl] = useState(today())
   const [busy, setBusy] = useState(false)
+  // Moduli di spesa in cui si può spostare questa riga (es. da Casa a Personale) e cosa non passerebbe
+  const [dest, setDest] = useState([])
+  const [verso, setVerso] = useState('')
+  useEffect(() => { api.get('/smista/' + q.module_slug + '/' + row.id + '/destinazioni').then((r) => { if (Array.isArray(r)) { setDest(r); if (r.length) setVerso(r[0].slug) } }) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [err, setErr] = useState('')
   // Proposta dell'AI (se il modulo ha "Smistare" acceso): precompila i campi che non hai ancora toccato
   const [ai, setAi] = useState(q.ai ? { loading: true } : null)
@@ -51,6 +55,7 @@ export default function SmistaPanel({ token, q, row, modules, onClose, onDone })
   const rata = imp > 0 ? Math.round((imp / n) * 100) / 100 : 0
   const scelte = [['uno', 'Un pagamento', 'Resta una sola riga, passa a «' + q.da_fare.replace(/_/g, ' ') + '».']]
   if (q.rate) scelte.push(['rate', 'Dividi in rate', 'Crea un piano a rate: le rate sostituiscono questa riga.'])
+  if (dest.length) scelte.push(['sposta', 'Sposta in un altro modulo', 'La riga cambia modulo e resta «da smistare» lì.'])
   if (q.fatto) scelte.push(['pagata', 'Già pagata', 'La riga passa direttamente a «' + q.fatto.replace(/_/g, ' ') + '».'])
   const manca = modo === 'rate' && !(imp > 0)
 
@@ -59,6 +64,7 @@ export default function SmistaPanel({ token, q, row, modules, onClose, onDone })
     const body = { suggestion_id: ai && ai.suggestion_id, modo, importo: importo === '' ? undefined : imp, scadenza: scadenza || undefined, categoria: categoria || undefined }
     if (modo === 'rate') { body.n_rate = n; body.data_prima_rata = prima }
     if (modo === 'pagata') body.data_pagamento = pagataIl
+    if (modo === 'sposta') body.verso = verso
     const res = await api.post('/smista/' + q.module_slug + '/' + row.id, body)
     setBusy(false)
     if (!res.ok) { setErr((res.data && res.data.error) || 'Non sono riuscito a smistare questa riga.'); return }
@@ -115,12 +121,22 @@ export default function SmistaPanel({ token, q, row, modules, onClose, onDone })
                 {modo === k && k === 'pagata' && (
                   <span className="mt-2 block"><span className="text-xs text-gray-400 block mb-1">Pagata il</span><input type="date" className={inp + ' max-w-[180px]'} value={pagataIl} onChange={(e) => setPagataIl(e.target.value)} /></span>
                 )}
+                {modo === k && k === 'sposta' && (() => {
+                  const d = dest.find((x) => x.slug === verso)
+                  return (
+                    <span className="mt-2 block">
+                      <span className="text-xs text-gray-400 block mb-1">Sposta in</span>
+                      <select className={inp} value={verso} onChange={(e) => setVerso(e.target.value)}>{dest.map((x) => <option key={x.slug} value={x.slug}>{x.name}</option>)}</select>
+                      {d && d.persi && d.persi.length > 0 && <span className="block mt-2 text-xs text-amber-500">Non passerebbero: {d.persi.map((p) => p.label + ' (' + p.motivo + ')').join('; ')}.</span>}
+                    </span>
+                  )
+                })()}
               </span>
             </label>
           ))}
         </div>
 
-        {!(imp > 0) && modo !== 'rate' && <div className="text-xs text-amber-400 mb-3">L'importo è 0 o mancante: controllalo nella bolletta prima di confermare.</div>}
+        {!(imp > 0) && modo !== 'rate' && modo !== 'sposta' && <div className="text-xs text-amber-400 mb-3">L'importo è 0 o mancante: controllalo nella bolletta prima di confermare.</div>}
         {err && <div className="text-sm text-red-400 bg-red-900/20 border border-red-900/40 rounded-lg p-3 mb-3">{err}</div>}
         <div className="flex gap-3">
           <button type="button" onClick={onClose} className="flex-1 bg-gray-800 hover:bg-gray-700 text-ink py-2.5 rounded-lg text-sm transition">Annulla</button>

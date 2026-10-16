@@ -69,7 +69,7 @@ router.get('/status', requireAuth, (req, res) => {
 router.post('/generate', requireAuth, async (req, res) => {
   if (!isProviderConfigured(AI_PROVIDER)) {
     const envVar = AI_PROVIDER === 'mistral' ? 'MISTRAL_API_KEY' : 'ANTHROPIC_API_KEY';
-    return res.status(501).json({ error: 'ai_not_configured', message: 'Imposta ' + envVar + ' come variabile d\'ambiente sul backend di Super Admin per generare bozze via AI (provider attivo: ' + AI_PROVIDER + ').' });
+    return res.status(501).json({ error: 'ai_not_configured', message: (AI_PROVIDER === 'mistral' ? 'Inserisci la chiave Mistral di Super Admin in Impostazioni → Chiavi AI' : 'Imposta ' + envVar + ' come variabile d\'ambiente sul backend di Super Admin') + ' per generare bozze via AI (provider attivo: ' + AI_PROVIDER + ').' });
   }
   const { prompt, module_name } = req.body;
   if (!prompt || !String(prompt).trim()) return res.status(400).json({ error: 'Descrivi il modulo da generare' });

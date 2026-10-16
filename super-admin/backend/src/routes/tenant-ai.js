@@ -8,7 +8,11 @@ const { redact } = require('../lib/ai-redact');
 const reportAi = require('../lib/ai-report');
 const askAi = require('../lib/ai-ask');
 const { requireInternalSecret } = require('../../../../shared/internal-secret.js');
+const botAi = require('../lib/ai-bot');
+const receiptAi = require('../lib/ai-receipt');
+const payslipImageAi = require('../lib/ai-payslip-image');
 
+const suggestionAi = require('../lib/ai-suggestion');
 const router = express.Router();
 
 // Stato del tetto di spesa del mese (lo mostra la pagina delle impostazioni del tenant).
@@ -123,6 +127,55 @@ router.post('/classify-bill', requireInternalSecret, async (req, res) => {
   }
 });
 
+// ─── Lettura busta paga ───────────────────────────────────────────────────────
+// Il tenant manda solo l'estratto testuale del PDF (dati identificativi già tolti da redact());
+// l'AI PROPONE periodo, lordo, netto, ore pagate e trattenute. Chi l'ha caricata confronta le ore
+// pagate con quelle timbrate nello stesso mese: qui non si scrive niente, solo si legge un documento.
+const PAYSLIP_SYSTEM_PROMPT = `Sei un assistente che legge buste paga italiane. Ricevi un JSON con "testo" (l'estratto testuale del PDF della busta paga, con i dati più identificativi come IBAN, codice fiscale e numeri lunghi già tolti). Rispondi SOLO con un oggetto JSON, senza altro testo, con questi campi: "periodo" (il mese di competenza della busta, nel formato AAAA-MM-GG usando il primo giorno del mese, oppure null se non lo trovi), "lordo" (la retribuzione lorda del mese, numero con il punto decimale, oppure null), "netto" (il netto in busta, l'importo effettivamente pagato al lavoratore, numero con il punto decimale, oppure null), "ore_pagate" (il totale delle ore pagate nel periodo, ordinarie più straordinarie, come numero decimale, es. 168.5, oppure null se non lo trovi scritto chiaramente), "trattenute" (il totale di contributi e imposte trattenuti, numero con il punto decimale, oppure null), "confidenza" ("alta", "media" o "bassa"). Non inventare: se un dato non è scritto chiaramente nel testo scrivi null.`;
+
+function sanitizePayslip(raw) {
+  const num = (v, max) => { const n = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.')); return Number.isFinite(n) && n >= 0 && n < max ? Math.round(n * 100) / 100 : null; };
+  let periodo = validDate(raw.periodo);
+  if (periodo) periodo = periodo.slice(0, 7) + '-01';
+  return {
+    periodo,
+    lordo: num(raw.lordo, 100000),
+    netto: num(raw.netto, 100000),
+    ore_pagate: num(raw.ore_pagate, 800),
+    trattenute: num(raw.trattenute, 100000),
+    confidenza: ['alta', 'media', 'bassa'].includes(raw.confidenza) ? raw.confidenza : 'bassa',
+  };
+}
+
+router.post('/payslip', requireInternalSecret, async (req, res) => {
+  const { tenant_slug, data } = req.body || {};
+  if (!tenant_slug || !data || typeof data !== 'object') return res.status(400).json({ error: 'tenant_slug e data sono obbligatori' });
+  const daFoto = typeof data.image_base64 === 'string' && data.image_base64;
+  if (!daFoto && (typeof data.testo !== 'string' || !data.testo.trim())) {
+    return res.status(400).json({ error: 'data.testo (dal PDF) o data.image_base64 (dalla foto) sono obbligatori' });
+  }
+  if (!isProviderConfigured('mistral', tenant_slug)) {
+    return res.status(503).json({ error: 'Nessuna chiave Mistral: inseriscila in Impostazioni → Assistente AI.', code: 'ai_not_configured' });
+  }
+  try {
+    let text;
+    if (daFoto) {
+      const s = payslipImageAi.sanitizePayslipImage(data);
+      if (s.error) return res.status(400).json({ error: s.error });
+      text = await callAI('mistral', { system: payslipImageAi.PAYSLIP_IMAGE_PROMPT, user: 'Leggi la busta paga nella foto.', images: [{ mime: s.payload.mime, base64: s.payload.base64 }], maxTokens: 250, timeoutMs: 40000, tenantSlug: tenant_slug });
+    } else {
+      const testo = redact(String(data.testo)).slice(0, 4000);
+      text = await callAI('mistral', { system: PAYSLIP_SYSTEM_PROMPT, user: JSON.stringify({ testo }), maxTokens: 200, tenantSlug: tenant_slug });
+    }
+    const raw = parseJsonObject(text);
+    if (!raw) return res.status(502).json({ error: 'Risposta dell\'AI non valida' });
+    if (raw.leggibile === false) return res.status(422).json({ error: 'Non sembra una busta paga leggibile.', code: 'ai_unreadable' });
+    res.json({ suggestion: sanitizePayslip(raw) });
+  } catch (e) {
+    res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
+  }
+});
+
 // ─── Commento / spiegazione dei report ────────────────────────────────────────
 // Il tenant manda solo totali per gruppo. 'commento' = una frase breve per il messaggio
 // WhatsApp mensile; 'spiegazione' = qualche riga per chi guarda il report. Il testo torna al
@@ -183,6 +236,64 @@ router.post('/ask-data', requireInternalSecret, async (req, res) => {
     const v = askAi.validateQuery(raw, s.payload.catalogo);
     if (v.error) return res.status(422).json({ error: v.error, code: 'ai_unanswerable' });
     res.json({ query: v.query });
+  } catch (e) {
+    res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
+  }
+});
+
+// ─── Suggerimenti di miglioramento del tenant: «spiega e proponi» su una singola osservazione ──────────────────────────────
+router.post('/suggestion', requireInternalSecret, async (req, res) => {
+  const { tenant_slug, data } = req.body || {};
+  if (!tenant_slug) return res.status(400).json({ error: 'tenant_slug obbligatorio' });
+  const s = suggestionAi.sanitizeSuggestion(data);
+  if (s.error) return res.status(400).json({ error: s.error });
+  if (!isProviderConfigured('mistral', tenant_slug)) return res.status(503).json({ error: 'Nessuna chiave Mistral: inseriscila in Impostazioni → AI.', code: 'ai_not_configured' });
+  try {
+    const text = await callAI('mistral', { system: suggestionAi.SUGGESTION_PROMPT, user: JSON.stringify(s.payload), maxTokens: 500, tenantSlug: tenant_slug });
+    const raw = parseJsonObject(text);
+    const v = suggestionAi.validateSuggestion(raw);
+    if (v.error) return res.status(502).json({ error: v.error });
+    res.json({ proposta: v.proposta });
+  } catch (e) {
+    res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
+  }
+});
+
+// ─── Bot Telegram: da una frase a UNA azione scelta da un elenco chiuso ────────────────────────────────────────────────
+// Il tenant manda la frase e i moduli di spesa (mai record). Torna l'intento validato; il tenant lo rivalida, risolve la riga e chiede conferma per ogni scrittura.
+router.post('/bot-intent', requireInternalSecret, async (req, res) => {
+  const { tenant_slug, data } = req.body || {};
+  if (!tenant_slug) return res.status(400).json({ error: 'tenant_slug obbligatorio' });
+  const s = botAi.sanitizeBot(data);
+  if (s.error) return res.status(400).json({ error: s.error });
+  if (!isProviderConfigured('mistral', tenant_slug)) return res.status(503).json({ error: 'Nessuna chiave Mistral: inseriscila in Impostazioni → AI.', code: 'ai_not_configured' });
+  try {
+    const text = await callAI('mistral', { system: botAi.BOT_PROMPT, user: JSON.stringify(s.payload), maxTokens: 250, tenantSlug: tenant_slug });
+    const raw = parseJsonObject(text);
+    if (!raw) return res.status(502).json({ error: 'Risposta dell\'AI non valida' });
+    const v = botAi.validateIntent(raw, s.payload.moduli, s.payload.oggi, s.payload.report.map((r) => r.id));
+    if (v.error) return res.status(422).json({ error: v.error, code: 'ai_unanswerable' });
+    res.json({ intent: v.intent });
+  } catch (e) {
+    res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
+  }
+});
+
+// ─── Bot Telegram: foto di uno scontrino → pochi campi validati ──────────────────────────────────────────────────────────
+// Il tenant manda l'immagine (max 3 MB) e le categorie ammesse. Torna la ricevuta validata; il tenant la rivalida e chiede conferma. L'immagine non si salva qui.
+router.post('/receipt', requireInternalSecret, async (req, res) => {
+  const { tenant_slug, data } = req.body || {};
+  if (!tenant_slug) return res.status(400).json({ error: 'tenant_slug obbligatorio' });
+  const s = receiptAi.sanitizeReceipt(data);
+  if (s.error) return res.status(400).json({ error: s.error });
+  if (!isProviderConfigured('mistral', tenant_slug)) return res.status(503).json({ error: 'Nessuna chiave Mistral: inseriscila in Impostazioni → AI.', code: 'ai_not_configured' });
+  try {
+    const text = await callAI('mistral', { system: receiptAi.RECEIPT_PROMPT, user: receiptAi.promptFor(s.payload.categorie), images: [{ mime: s.payload.mime, base64: s.payload.base64 }], maxTokens: 300, timeoutMs: 40000, tenantSlug: tenant_slug });
+    const raw = parseJsonObject(text);
+    if (!raw) return res.status(502).json({ error: 'Risposta dell\'AI non valida' });
+    const v = receiptAi.validateReceipt(raw, s.payload.categorie);
+    if (v.error) return res.status(422).json({ error: v.error, code: v.error === 'illeggibile' ? 'ai_unreadable' : 'ai_unanswerable' });
+    res.json({ ricevuta: v.ricevuta });
   } catch (e) {
     res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
   }

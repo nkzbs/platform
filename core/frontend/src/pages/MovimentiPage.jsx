@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react'
 import useApi from '../lib/useApi'
 import { API } from '../lib/api'
 import Icon from '../components/Icon'
-import { parseSchemaFrontend } from '../lib/schema-v3-frontend'
 
 const eur = (n) => (n == null ? '—' : Math.abs(n).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €')
 const monthLabel = (ym) => { const [y, m] = ym.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' }) }
@@ -30,11 +29,8 @@ export default function MovimentiPage({ token }) {
   }
   useEffect(() => { load() }, [month, filter]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    api.get('/modules/installed').then((mods) => {
-      const m = (mods || []).find((x) => x.slug === 'spese_personali')
-      if (!m) return
-      try { const f = (parseSchemaFrontend(m.schema_json).fields || []).find((x) => x.key === 'categoria'); setCats((f && f.options || []).map((o) => (typeof o === 'string' ? o : o.value))) } catch (e) { /* senza elenco: testo libero */ }
-    })
+    // le categorie vengono dal modulo che ha dichiarato di ricevere le spese dall'estratto conto (Builder → Ruoli del modulo)
+    api.get('/bank/target').then((t) => { if (t && Array.isArray(t.categorie)) setCats(t.categorie) })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const upload = async (files) => {

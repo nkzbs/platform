@@ -38,8 +38,18 @@ test('con i moduli di finanza dichiara i tre moduli con i nomi di prima', () => 
   assertEq(roles.field('spese_casa', 'importo'), 'importo');
   assertEq(roles.field('spese_personali', 'stato'), '_stato');
 });
-test('le regole Gmail già esistenti si agganciano al loro modulo', () => {
-  assertEq(db.prepare('SELECT modulo FROM gmail_rules ORDER BY id').all().map((r) => r.modulo), ['spese_casa', 'spese_personali']);
+test('una dichiarazione vecchia (prima dell\'estratto conto) si completa UNA volta sola, senza toccare le scelte', () => {
+  // come Finance prima dell'aggiornamento: ruoli senza note/data incerta/debito, senza «estratto», senza versione
+  db.prepare("UPDATE module_roles SET uses = ?, roles = ?, extra = ? WHERE module_slug = 'spese_personali'").run(JSON.stringify(['riepiloghi', 'avvisi', 'mail']), JSON.stringify({ importo: 'importo', data: 'data' }), JSON.stringify({ avvisi: { states: { nuovo: 'x', da_fare: 'y', fatto: 'z' } }, riepiloghi: { exclude_categories: [] } }));
+  assertEq(roles.seedIfEmpty() >= 1, true);
+  const m = roles.get('spese_personali');
+  assertEq(m.uses.includes('estratto'), true); assertEq(m.roles.note, 'note'); assertEq(m.roles.debito, 'debito'); assertEq(m.roles.data_incerta, 'data_incerta');
+  assertEq(m.estratto.registra, true); assertEq(m.estratto.giro_categories, ['Contributo Casa']); assertEq(m.riepiloghi.rate_categories, ['Rata']);
+  assertEq(m.avvisi.states.nuovo, 'x', 'gli stati già scelti restano');
+  // l'utente toglie il ruolo «note»: al riavvio NON torna
+  roles.set('spese_personali', { ...m, roles: { ...m.roles, note: undefined } });
+  roles.seedIfEmpty();
+  assertEq(roles.get('spese_personali').roles.note, undefined);
 });
 test('rilanciare non cambia una scelta già fatta', () => {
   roles.set('spese_casa', { kind: 'spesa', uses: ['avvisi'], roles: { importo: 'valore' } });

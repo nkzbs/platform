@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analisi dei processi — mockup</title>
+<style>
+:root{--bg:#f7f6f2;--card:#fff;--s1:#f1efe8;--t1:#1f1e1c;--t2:#5f5e5a;--t3:#888780;--bd:#e3e1d8;--bds:#c9c6bb;--acc:#185fa5;--accbg:#e6f1fb;--ok:#3b6d11;--okbg:#eaf3de;--okbd:#97c459;--wa:#854f0b;--wabg:#faeeda;--wabd:#ef9f27;--r:8px}
+@media (prefers-color-scheme:dark){:root{--bg:#161514;--card:#201f1d;--s1:#2a2926;--t1:#f1efe8;--t2:#b4b2a9;--t3:#888780;--bd:#3a3935;--bds:#55534d;--acc:#85b7eb;--accbg:#0c447c;--ok:#c0dd97;--okbg:#27500a;--okbd:#639922;--wa:#fac775;--wabg:#633806;--wabd:#ba7517}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--t1);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:720px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{color:var(--t2);font-size:14px;margin:0 0 18px}
+.steps{display:flex;gap:6px;margin:0 0 16px}
+.st{flex:1;border:.5px solid var(--bd);border-radius:var(--r);padding:8px 10px;cursor:pointer;background:var(--card);text-align:left;font:inherit;font-size:12.5px;color:var(--t2);line-height:1.35}
+.st b{display:block;font-weight:500;font-size:13px;color:var(--t1)}
+.st.on{border-color:var(--acc);background:var(--accbg)}.st.on b{color:var(--acc)}
+.st.done{border-color:var(--okbd)}
+.card{background:var(--card);border:.5px solid var(--bd);border-radius:12px;padding:16px 18px;margin:0 0 10px}
+.lab{font-size:12px;color:var(--t2);margin:0 0 6px}
+.chip{display:inline-block;font-size:12px;padding:3px 9px;border-radius:var(--r);background:var(--s1);border:.5px solid var(--bd);margin:0 4px 4px 0;color:var(--t2)}
+.chip.s{background:var(--okbg);color:var(--ok);border-color:var(--okbd)}
+.chip.a{background:var(--accbg);color:var(--acc);border-color:var(--acc)}
+.row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.t{font-size:15px;font-weight:500;margin:0}
+.m{font-size:13px;color:var(--t2);margin:2px 0 0}
+.flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0 2px}
+.flow .n{font-size:12px;padding:4px 10px;border-radius:var(--r);border:.5px solid var(--bds)}
+.flow i{color:var(--t3);font-style:normal}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.mini{background:var(--s1);border-radius:var(--r);padding:10px 12px;font-size:13px}
+.mini b{font-weight:500;display:block;margin-bottom:2px}
+.ck{display:flex;gap:8px;align-items:flex-start;font-size:13px;padding:7px 0;border-top:.5px solid var(--bd);cursor:pointer}
+.ck:first-of-type{border-top:0}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px}
+button.b{font:inherit;font-size:14px;padding:7px 14px;border-radius:var(--r);border:.5px solid var(--bds);background:var(--card);color:var(--t1);cursor:pointer}
+button.b:hover{background:var(--s1)}
+textarea,input[type=text]{width:100%;font:inherit;font-size:14px;line-height:1.6;color:var(--t1);background:var(--card);border:.5px solid var(--bds);border-radius:var(--r);padding:8px 10px}
+textarea{min-height:100px}
+.warn{border-color:var(--wabd)}
+.okb{border-color:var(--okbd)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Nuovo tenant da analisi dei processi</h1>
+  <p class="sub">Mockup di un secondo percorso accanto a «a mano libera». L'esempio è un'officina inventata.</p>
+  <div class="steps" id="steps"></div>
+  <div id="body"></div>
+  <div class="foot"><button class="b" id="prev">← Indietro</button><span style="font-size:12px;color:var(--t3)" id="hint"></span><button class="b" id="next">Avanti →</button></div>
+</div>
+<script>
+var S=0;
+var names=[['Racconta',"l'attività"],['Processi','da rivedere'],['Report',"dell'analisi"],['Crea','il tenant']];
+var mod=[['Clienti e veicoli','relazioni, ruoli: anagrafica',true],['Ordini di lavoro','stati: accettato, in lavorazione, pronto, consegnato',true],['Preventivi','stati: bozza, inviato, approvato; scadenza',true],['Timbrature','ruoli: data, entrata, uscita',true]];
+var rep=[['Lavori fermi','tipo «in ritardo» — ogni lunedì 09:00, ordini in lavorazione da oltre 5 giorni',true],['Da consegnare','tipo «coda» — ogni sera 18:00, ordini pronti non consegnati',true],['Ore e straordinari','tipo «ore e straordinari» — domenica 20:00, per ogni meccanico, soglia 40 ore',true],['Preventivi in attesa','tipo «coda» — ogni mattina 08:00, inviati senza risposta',false]];
+function chk(arr,k){return arr.map(function(m,i){return '<label class="ck"><input type="checkbox" data-k="'+k+'" data-i="'+i+'" '+(m[m.length-1]?'checked':'')+'><span><b style="font-weight:500">'+m[0]+'</b><br><span style="color:var(--t2)">'+m[1]+'</span></span></label>'}).join('')}
+function render(){
+ document.getElementById('steps').innerHTML=names.map(function(n,i){return '<button class="st '+(i===S?'on':(i<S?'done':''))+'" data-s="'+i+'"><b>'+(i+1)+'. '+n[0]+'</b>'+n[1]+'</button>'}).join('');
+ var h='';
+ if(S===0){
+  h='<div class="card"><p class="lab">Descrivi come funziona, come lo racconteresti a un collega</p><textarea id="tx">Siamo un\'officina con 6 meccanici. Il cliente porta l\'auto, la accettiamo e facciamo un preventivo. Se lo approva lavoriamo, a volte servono ricambi che ordiniamo. Quando è pronta avvisiamo il cliente e fatturiamo alla consegna. Il problema sono i preventivi che restano fermi e non so mai chi ha fatto quante ore.</textarea><div style="margin-top:8px"><span class="chip">listino-ricambi.pdf</span><span class="chip">modulo-accettazione.jpg</span><span class="chip a">+ Allega</span></div></div><p class="m">Si può anche dettare a voce. L\'analisi usa solo ciò che racconti qui: Super Admin non legge dati di altri tenant.</p>';
+ } else if(S===1){
+  h='<div class="card"><div class="row"><div><p class="t">Accettazione e preventivo</p><p class="m">Attori: ricezione, meccanico capo, cliente</p></div><span class="chip">modifica</span></div><div class="flow"><span class="n">Arriva l\'auto</span><i>→</i><span class="n">Accettazione</span><i>→</i><span class="n">Preventivo</span><i>→</i><span class="n">Approvato</span></div><p class="m" style="margin-top:6px">Dati: cliente, targa, difetti, importo. Scadenza: risposta del cliente.</p></div>'
+   +'<div class="card"><div class="row"><div><p class="t">Lavorazione e ricambi</p><p class="m">Attori: meccanici, magazzino</p></div><span class="chip">modifica</span></div><div class="flow"><span class="n">In lavorazione</span><i>→</i><span class="n">Ricambi ordinati</span><i>→</i><span class="n">Pronta</span></div><p class="m" style="margin-top:6px">Dati: ore per meccanico, ricambi. Evento: ordine fermo.</p></div>'
+   +'<div class="card"><div class="row"><div><p class="t">Consegna e fatturazione</p><p class="m">Attori: ricezione, amministrazione</p></div><span class="chip">unisci con altro</span></div><div class="flow"><span class="n">Cliente avvisato</span><i>→</i><span class="n">Consegnata</span><i>→</i><span class="n">Fatturata</span></div></div>'
+   +'<div class="card warn"><p class="lab">Due domande prima di proseguire</p><p style="font-size:14px;margin:0 0 6px">1. Il preventivo ha una scadenza oltre la quale decade?</p><input type="text" placeholder="es. 15 giorni"><p style="font-size:14px;margin:10px 0 6px">2. Le ore le segnano i meccanici o la ricezione?</p><input type="text" placeholder="es. i meccanici, con entrata e uscita"></div>';
+ } else if(S===2){
+  h='<div class="g2" style="margin-bottom:10px"><div class="mini"><b>3 processi</b>9 passaggi, 4 attori</div><div class="mini"><b>Collo di bottiglia</b>il preventivo: nessuno ha il compito di sollecitarlo</div><div class="mini"><b>Dato mancante</b>le ore non sono registrate da nessuna parte</div></div>'
+   +'<div class="card"><p class="lab">Moduli proposti (ognuno si apre nel Builder per rifinirlo)</p>'+chk(mod,'m')+'</div>'
+   +'<div class="card"><p class="lab">Report di partenza (spenti finché non li accendi)</p>'+chk(rep,'r')+'</div>'
+   +'<div class="card"><p class="lab">Potenziamenti AI suggeriti</p><span class="chip s">Importare: legge il modulo di accettazione</span><span class="chip">Spiegare: ordini di lavoro</span><span class="chip">Smistare: nessuno</span></div>'
+   +'<p class="m">Il report resta salvato col tenant: cosa hai raccontato, cosa è stato proposto, cosa hai scelto.</p>';
+ } else {
+  var nm=document.querySelectorAll('[data-k="m"]:checked').length, nr=document.querySelectorAll('[data-k="r"]:checked').length;
+  h='<div class="card"><p class="t">Officina Rossi</p><p class="m">Nome e indirizzo del tenant si scelgono qui, come oggi</p><div class="g2" style="margin-top:10px"><div class="mini"><b>'+mod.filter(function(x){return x[2]}).length+' moduli</b>con ruoli e permessi</div><div class="mini"><b>'+rep.filter(function(x){return x[2]}).length+' report</b>spenti all\'inizio</div><div class="mini"><b>Documento dei processi</b>salvato nel tenant</div></div></div>'
+   +'<div class="card okb"><p style="margin:0;font-size:14px">Fino a questo tocco non è stato scritto niente. Dopo, il tenant esiste e si modifica come qualunque altro: Builder, Ruoli del modulo, Report.</p><div style="margin-top:10px"><button class="b">Crea il tenant</button></div></div>';
+ }
+ document.getElementById('body').innerHTML=h;
+ document.getElementById('hint').textContent='Passo '+(S+1)+' di 4';
+ document.getElementById('prev').style.visibility=S?'visible':'hidden';
+ var nx=document.getElementById('next');nx.style.visibility=S<3?'visible':'hidden';
+ nx.textContent=['Analizza i processi','Genera il report','Rivedi e crea'][S]+' →';
+}
+document.getElementById('next').addEventListener('click',function(){if(S<3){S++;render()}});
+document.getElementById('prev').addEventListener('click',function(){if(S>0){S--;render()}});
+document.getElementById('steps').addEventListener('click',function(e){var t=e.target.closest('[data-s]');if(t){S=parseInt(t.getAttribute('data-s'),10);render()}});
+document.getElementById('body').addEventListener('change',function(e){var t=e.target,k=t.getAttribute('data-k');if(k){var a=k==='m'?mod:rep;a[parseInt(t.getAttribute('data-i'),10)][2]=t.checked}});
+render();
+</script>
+</body>
+</html>

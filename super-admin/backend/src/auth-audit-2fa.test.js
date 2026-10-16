@@ -127,7 +127,7 @@ async function main() {
   await test('token in attesa della 2FA -> 401 su API e su tutti i download con ?token=', async () => {
     const api = await fetch(BASE + '/api/registry/modules', { headers: { Authorization: 'Bearer ' + pendingToken } });
     assertEq(api.status, 401, 'API con header');
-    for (const url of ['/api/registry/modules/1/export', '/api/registry/tenants/x/modules/y/export', '/api/tenants/x/backups/1/download', '/api/update-manager/export']) {
+    for (const url of ['/api/registry/modules/1/export', '/api/registry/tenants/x/modules/y/export', '/api/tenants/x/backups/1/download']) {
       const res = await fetch(BASE + url + '?token=' + encodeURIComponent(pendingToken));
       assertEq(res.status, 401, url);
     }

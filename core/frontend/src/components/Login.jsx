@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import { API, setAuth } from '../lib/api'
 import PlatformLogo from './PlatformLogo'
+import { startAuthentication, browserSupportsWebAuthn } from '@simplewebauthn/browser'
 
-function Login({ onLogin, tenantName, logoUrl, hidePlatformName, cms }) {
+function Login({ onLogin, tenantName, logoUrl, hidePlatformName }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -10,6 +11,34 @@ function Login({ onLogin, tenantName, logoUrl, hidePlatformName, cms }) {
   // risponde needs_2fa invece del token diretto quando succede).
   const [pendingToken, setPendingToken] = useState(null)
   const [code, setCode] = useState('')
+  // Passkey (2026-10-14, richiesto dall'utente: "oltre alle 2FA voglio
+  // passkey ovunque") — AGGIUNTIVA, mai sostituisce password+2FA: un accesso
+  // completo a sé, senza scrivere username (discoverable, vedi
+  // routes/webauthn.js). "NotAllowedError" è anche quello che il browser dà
+  // quando l'utente chiude lui stesso il pannello di sistema — non è un
+  // errore da mostrare, solo un annullamento.
+  const [passkeyBusy, setPasskeyBusy] = useState(false)
+  const loginWithPasskey = async () => {
+    setError(''); setPasskeyBusy(true)
+    try {
+      const optRes = await fetch(API + '/webauthn/login-options', { method: 'POST' })
+      const opt = await optRes.json()
+      if (!optRes.ok) { setError(opt.error || 'Errore'); return }
+      const assertion = await startAuthentication({ optionsJSON: opt.options })
+      const res = await fetch(API + '/webauthn/login-verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pending_token: opt.pending_token, response: assertion }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Accesso con passkey non riuscito'); return }
+      await setAuth(data.token, data.user)
+      onLogin(data.token, data.user)
+    } catch (e) {
+      if (e.name !== 'NotAllowedError') setError('Accesso con passkey non riuscito')
+    } finally {
+      setPasskeyBusy(false)
+    }
+  }
 
   const submit = async () => {
     try {
@@ -75,6 +104,17 @@ function Login({ onLogin, tenantName, logoUrl, hidePlatformName, cms }) {
       {error && <div className="bg-red-900/30 text-red-400 text-sm p-3 rounded-lg mb-4 border border-red-900/50">{error}</div>}
       {!pendingToken ? (
         <div className="space-y-3">
+          {browserSupportsWebAuthn() && (
+            <>
+              <button onClick={loginWithPasskey} disabled={passkeyBusy} className="w-full flex items-center justify-center gap-2 bg-surface-page hover:bg-gray-800 disabled:opacity-50 text-ink font-medium py-3 rounded-lg transition border border-gray-800">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="5" /><path d="M20 21a8 8 0 0 0-16 0" /></svg>
+                {passkeyBusy ? 'Verifica...' : 'Accedi con passkey'}
+              </button>
+              <div className="flex items-center gap-3 py-1">
+                <div className="h-px bg-gray-800 flex-1" /><span className="text-xs text-gray-600">oppure</span><div className="h-px bg-gray-800 flex-1" />
+              </div>
+            </>
+          )}
           <input className="w-full bg-surface-page text-ink px-4 py-3 rounded-lg outline-none border border-gray-800 focus:border-accent transition placeholder-gray-600" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} />
           <input className="w-full bg-surface-page text-ink px-4 py-3 rounded-lg outline-none border border-gray-800 focus:border-accent transition placeholder-gray-600" placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} />
           <button onClick={submit} className="w-full bg-accent hover:opacity-90 text-white font-medium py-3 rounded-lg transition">Accedi</button>
@@ -90,28 +130,14 @@ function Login({ onLogin, tenantName, logoUrl, hidePlatformName, cms }) {
     </>
   )
 
-  // CMS pagina di accesso: attiva solo se il tenant ha configurato un titolo
-  // in Impostazioni → Azienda (login_headline) — altrimenti resta la card
-  // centrata di sempre, invariata per chi non la usa.
-  if (cms) {
-    return (
-      <div className="min-h-screen bg-surface-page flex flex-col md:flex-row">
-        <div className="md:w-1/2 flex flex-col justify-center px-8 py-16 md:px-16 bg-surface-card border-b md:border-b-0 md:border-r border-gray-800">
-          {cms.heroImageUrl && <img src={cms.heroImageUrl} alt="" className="w-full max-w-md rounded-xl object-cover mb-8" />}
-          <h1 className="text-3xl md:text-4xl font-bold text-ink tracking-tight mb-3">{cms.headline}</h1>
-          {cms.subheadline && <p className="text-lg text-gray-400 mb-4">{cms.subheadline}</p>}
-          {cms.body && <p className="text-sm text-gray-500 whitespace-pre-line leading-relaxed max-w-md">{cms.body}</p>}
-        </div>
-        <div className="md:w-1/2 flex items-center justify-center px-8 py-16">
-          <div className="w-full max-w-sm">
-            {brandHeader}
-            {formBlock}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
+  // Card centrata unica, sempre uguale — c'era anche una variante "CMS" a due
+  // colonne con titolo/sottotitolo configurabili (login_headline e affini,
+  // Impostazioni → Azienda) ma quel tab non esiste più in questo frontend da
+  // tempo (rimosso per Finance, vedi ImpostazioniPage.jsx): restava solo un
+  // valore vecchio ancora in un database, irraggiungibile da qualunque
+  // schermata, a dettare un login diverso dal resto dell'app. Tolto il ramo
+  // di codice invece di cancellare quel valore a mano sul database (2026-10-14,
+  // segnalato dall'utente dal vivo — "questo login non mi piace").
   return (
     <div className="min-h-screen bg-surface-page flex items-center justify-center">
       <div className="bg-surface-card p-8 rounded-xl w-full max-w-sm border border-gray-800">

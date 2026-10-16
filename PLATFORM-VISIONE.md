@@ -34,6 +34,14 @@ ipotetici.
 Le eccezioni si scrivono, con il motivo, in [`docs/DECISIONI.md`](docs/DECISIONI.md) (oggi: il Sito Web, già
 fatto e testato, tenuto spento di default).
 
+## Sempre generico e configurabile
+
+Platform resta un motore generico: **nel codice non ci sono nomi di moduli, di campi, di stati o di categorie di nessun progetto**. Ciò che un progetto è e come si comporta lo dichiara il progetto, dal Builder (Ruoli del modulo, Avvisi, Estratto conto, formule, automazioni, permessi). Valori di partenza di un progetto esistente stanno solo in file di dati (`core/backend/src/seeds/`), mai nel codice.
+
+- Prima di scrivere una funzione che «serve a Finance», si chiede: quale **primitiva** manca? Si costruisce quella, configurabile, e Finance la usa.
+- Il test `no-hardcoded-names.test.js` fallisce se un nome di progetto entra nel codice del nucleo.
+- Se una scelta non si può configurare dal Builder o dalle impostazioni, è un difetto da correggere, non una scorciatoia accettata.
+
 ## Documentazione
 
 La documentazione è parte del prodotto, non un extra:

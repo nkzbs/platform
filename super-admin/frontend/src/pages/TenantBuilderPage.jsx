@@ -345,6 +345,11 @@ function TenantBuilderPage({ token, initialPrompt, initialModuleName }) {
           token={tenantToken}
           baseUrl={tenantBaseUrl(selectedTenant) + '/api'}
           allModules={installedModules}
+          moduleActions={(mod) => mod && (
+            <button onClick={() => { setPublishForm((f) => ({ ...f, module_slug: mod.slug })); setShowPublish(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+              title="Apre il pannello «Salva nella Libreria» già puntato su questo modulo"
+              className="text-xs text-gray-500 hover:text-ink transition flex items-center gap-1"><Icon name="upload" size={12} />Salva nella Libreria</button>
+          )}
           onModulesChanged={() => openTenant(selectedSlug)}
           openNewModule={openNewModuleFlag}
           onNewModuleHandled={() => setOpenNewModuleFlag(false)}

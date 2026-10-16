@@ -176,21 +176,20 @@ function raffinaCategoria(subject, categoriaRegola) {
 }
 
 // La riga da creare per una mail. Funzione pura: i campi da scrivere sono quelli che il modulo ha dichiarato (module-roles.js), e un
-// campo senza ruolo non si scrive. Un modulo non dichiarato usa i nomi più comuni. Lo stato "nuovo" è quello dichiarato dal modulo.
+// campo senza ruolo non si scrive. Un modulo non dichiarato non riceve righe (ritorna null: nessun nome di campo è scritto nel codice). Lo stato "nuovo" è quello dichiarato dal modulo.
 // Ritorna { data: i dati della riga, campi: la mappa ruolo → campo }.
 function costruisciRiga({ rule, declared, subject, importo, scadenza, dataSpesa }) {
   const semplice = rule.tipo === 'semplice';
-  const F = declared
-    ? { stato: '_stato', ...declared.roles }
-    : { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', fisso: 'fisso' };
-  const nuovo = (declared && declared.avvisi && declared.avvisi.states.nuovo) || 'da_smistare';
+  if (!declared || !declared.roles) return null;
+  const F = { stato: '_stato', ...declared.roles };
+  const nuovo = declared.avvisi && declared.avvisi.states.nuovo;
   const d = {};
   if (F.descrizione) d[F.descrizione] = rule.descrizione || subject;
   if (F.importo && !semplice) d[F.importo] = importo || 0;
   if (F.data) d[F.data] = dataSpesa;
   if (F.categoria) d[F.categoria] = raffinaCategoria(subject, rule.categoria || 'Altro');
-  d.note = 'Importato da Gmail (' + rule.mittente + '): ' + subject + (semplice || importo ? '' : ' — importo non rilevato automaticamente, verificare');
-  d[F.stato] = nuovo;
+  if (F.note) d[F.note] = 'Importato da Gmail (' + rule.mittente + '): ' + subject + (semplice || importo ? '' : ' — importo non rilevato automaticamente, verificare');
+  if (nuovo) d[F.stato] = nuovo;
   if (F.fisso) d[F.fisso] = false;
   if (F.scadenza && scadenza && !semplice) d[F.scadenza] = scadenza;
   return { data: d, campi: F };
@@ -247,9 +246,11 @@ async function processaMessaggio(accessToken, msgId, rule) {
   let moduleSlug = rule.modulo && db.prepare('SELECT 1 FROM modules WHERE slug = ? AND installed = 1').get(rule.modulo) ? rule.modulo : null;
   if (!moduleSlug) { const first = mr.list({ use: 'mail' })[0]; moduleSlug = first ? first.module_slug : null; }
   if (!moduleSlug) { console.error('[gmail-poller] regola', rule.mittente, ': nessun modulo può ricevere righe dalle mail (Builder → Ruoli del modulo)'); return; }
-  const { data: dataRecord, campi: F } = costruisciRiga({ rule, declared: mr.get(moduleSlug), subject, importo, scadenza, dataSpesa });
+  const riga = costruisciRiga({ rule, declared: mr.get(moduleSlug), subject, importo, scadenza, dataSpesa });
+  if (!riga) { console.error('[gmail-poller] regola', rule.mittente, ': il modulo', moduleSlug, 'non ha dichiarato i suoi campi (Builder → Ruoli del modulo)'); return; }
+  const { data: dataRecord, campi: F } = riga;
 
-  const result = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(moduleSlug, null, JSON.stringify(dataRecord));
+  const result = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(moduleSlug, require('./record-owner').ownerFor(null, moduleSlug), JSON.stringify(dataRecord));
   const recordId = result.lastInsertRowid;
   // La riga resta in "da smistare" finché non la smisti tu; 
   // Se il modulo ha "Smistare" acceso (Builder → Potenziamenti AI), l'AI prepara una proposta: non scrive nulla da sola.

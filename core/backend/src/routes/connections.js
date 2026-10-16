@@ -83,7 +83,7 @@ router.get('/', requireAuth, (req, res) => {
   res.json(visible.map((c) => {
     const row = byId[c.id] || {};
     let creds = null;
-    if (row.credentials) { try { creds = JSON.parse(row.credentials); } catch {} }
+    if (row.credentials) creds = require('../secrets-at-rest').unseal(row.credentials)
     // Maschera i valori delle credenziali — il frontend sa solo SE sono impostate, non il valore reale
     const credsMasked = creds ? Object.fromEntries(Object.entries(creds).map(([k, v]) => [k, v ? '••••' : ''])) : null;
     return { ...c, connected: !!(row.connected), connected_at: row.connected_at, credentials_set: !!creds, credentials_masked: credsMasked };
@@ -98,7 +98,7 @@ router.put('/:id/credentials', requireAuth, requireAdmin, (req, res) => {
   db.prepare(`
     INSERT INTO connections (integration_id, connected, credentials, connected_at) VALUES (?, 1, ?, CURRENT_TIMESTAMP)
     ON CONFLICT(integration_id) DO UPDATE SET credentials = excluded.credentials, connected = 1, connected_at = excluded.connected_at
-  `).run(req.params.id, JSON.stringify(req.body));
+  `).run(req.params.id, require('../secrets-at-rest').seal(req.body || {}));
   logAudit(req.user.username, 'connection.credentials_saved', req.params.id, null);
   res.json({ ok: true });
 });
@@ -111,8 +111,7 @@ router.put('/:id/credentials', requireAuth, requireAdmin, (req, res) => {
 // partito davvero (CallMeBot risponde 200 anche quando rifiuta, vedi whatsapp.js).
 router.post('/whatsapp_callmebot/test', requireAuth, requireAdmin, async (req, res) => {
   const row = db.prepare("SELECT credentials FROM connections WHERE integration_id = 'whatsapp_callmebot'").get();
-  let creds = null;
-  try { creds = row && row.credentials ? JSON.parse(row.credentials) : null; } catch (e) { /* credenziali illeggibili */ }
+  const creds = row ? require('../secrets-at-rest').unseal(row.credentials) : null;
   if (!creds || !creds.api_key) return res.status(400).json({ error: 'Collega prima WhatsApp (CallMeBot) con la sua chiave' });
   const destinatari = require('../notification-settings').recipientsForTag(null);
   if (!destinatari.length) return res.status(400).json({ error: 'Nessun destinatario attivo: aggiungine uno in "Destinatari WhatsApp"' });

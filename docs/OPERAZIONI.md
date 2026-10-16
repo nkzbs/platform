@@ -130,6 +130,16 @@ uno a una persona diventa "solo admin più gli utenti scelti". Dalla dashboard, 
 a 6 cifre e **salva subito i codici di recupero**: si vedono una sola volta e ognuno vale una volta. Per disattivarlo serve la password. Se un utente perde l'authenticator e i codici, l'admin non può
 sbloccarlo dall'app: va ripristinato dal database del tenant. Il Super Admin (admin.platform-core.it) ha lo stesso 2FA sul proprio account.
 
+**Passkey** (impronta, volto o PIN del dispositivo, aggiuntiva al 2FA — mai lo sostituisce): si registra da sé, stesso posto del 2FA (Impostazioni → Il mio account, o Impostazioni di Super Admin). Chi ne ha una entra senza scrivere username né password. Si può rimuovere dalla stessa schermata.
+
+**Se l'unico admin di Super Admin resta bloccato** (password dimenticata, nessun altro admin da cui farsi resettare — vedi "Gestione utenti" sotto — e magari anche il 2FA perso): **`INITIAL_ADMIN_PASSWORD` non serve a questo**, agisce solo alla primissima creazione del database, mai su un admin già esistente. La via pulita è lo script dentro il container, da eseguire via SSH sul NAS:
+```
+docker exec super-admin-backend node src/scripts/break-glass-reset.js <username> <nuova-password> [--disable-2fa]
+```
+Reimposta la password (e, con `--disable-2fa`, disattiva anche il 2FA) di quell'admin — mai un endpoint di rete, serve già avere accesso alla shell del container. Resta tracciato in Attività (`break-glass-script` come attore), non è un passaggio silenzioso.
+
+**Gestione utenti di Super Admin** (Impostazioni → Utenti Super Admin): un admin può rinominare, resettare la password e disattivare il 2FA di un ALTRO admin (mai il proprio — quello resta sopra, self-service), confermando con la PROPRIA password. Pensato per il caso più comune: un collega bloccato, con te ancora dentro.
+
 ## Variabili d'ambiente di Super Admin
 
 Elenco in [`.env.example`](../.env.example). Le obbligatorie sono `JWT_SECRET`, `INTERNAL_API_SECRET` e
@@ -185,3 +195,70 @@ docker logs --tail 50 super-admin-backend
 - Il Mac non è affidabile per costruire le immagini (Docker Desktop può bloccarsi scaricando le immagini base
   e produce arm64): si costruisce sul NAS, come fa `redeploy-nas.sh`.
 - Un tenant si può tenere sul solo volume dati anche con il container fermo: i dati non dipendono dal container.
+
+## Aggiornare un tenant (Super Admin → Tenant → Aggiorna)
+- Il pulsante **Aggiorna** sulla riga del tenant ricrea il container con l'ultima immagine, sullo stesso volume dati (i dati non si toccano). Si apre un popup con i passi veri e, a fine corsa, **AGGIORNATO** solo dopo che il tenant risponde. Se c'è una sessione attiva (ultimi 3 minuti) avvisa e offre "Aggiorna comunque".
+- Da script: `bash scripts/redeploy-nas.sh core` costruisce l'immagine, poi chiede il login a Super Admin per ricreare i tenant. Con il 2FA attivo il login dello script fallisce: l'immagine resta pronta e si preme **Aggiorna** a mano. Lo script non ritenta più il login se viene rifiutato (ogni tentativo conta nel limite di 10 ogni 5 minuti).
+
+## Se Finance o Super Admin danno 521 da Cloudflare
+Cloudflare punta alla porta 4000, cioè al container `platform-nginx`. Se è fermo (`docker ps -a`), si riavvia con `docker start platform-nginx`. Capitato dopo un riavvio notturno del NAS (2026-10-06 → 10-10): il container aveva il riavvio automatico ma non è ripartito, causa non accertata.
+
+## Backup settimanale via mail
+- Super Admin → Tenant → Dettagli → **Backup** → blocco **Backup settimanale via mail** (spento di default, per tenant). Ogni lunedì dalle 08:00 ora italiana (o al primo controllo utile della settimana, se il NAS era spento) arriva a `NOTIFY_EMAIL_TO` la copia del database, **compressa e cifrata**.
+- La passphrase si crea alla prima accensione e non cambia più (cambiarla renderebbe illeggibili le mail vecchie): si legge con **Mostra passphrase** (l'azione resta nel log attività). Va conservata in un gestore di password.
+- Per riaprire un allegato: `openssl enc -d -aes-256-cbc -pbkdf2 -in finance-AAAA-MM-GG.db.gz.enc -out finance.db.gz && gunzip finance.db.gz` (il comando è anche nel testo della mail).
+- **Non contiene i file caricati** (documenti, PDF, foto): quelli stanno nel volume di upload del tenant e vanno copiati a parte.
+- Un invio fallito manda una mail di errore e non si ripete ogni 15 minuti; "Invia ora una prova" prova subito. Limite: allegato fino a 18 MB.
+- Codice: `super-admin/backend/src/weekly-backup-mail.js`, test `weekly-backup-mail.test.js`.
+
+## Google: collegare, ricollegare, scadenza
+- Impostazioni → Connessioni → Google. Con l'app Google in modalità **«Test»** il collegamento **scade dopo 7 giorni** (errore `invalid_grant`): in Google Cloud Console → Google Auth Platform → Pubblico, mettere l'app **«In produzione»** (per uso personale va bene anche senza la verifica Google: compare «app non verificata», si prosegue da **Avanzate**). Nella schermata dei permessi vanno spuntate **tutte** le caselle (Gmail, Calendario, Drive).
+- Senza il collegamento **non si aprono i documenti** (stanno su Google Drive) e **non entrano le bollette da Gmail**. L'anteprima dell'archivio lo dice.
+- Scollegare cancella i token ma conserva Client ID/Secret, «Salva su Drive» e la cartella. Se dopo il ricollegamento il pulsante «Salva su Drive» (Impostazioni → Google) è spento, riaccenderlo.
+- Controllo dal server: la connessione sta in `connections` (`integration_id = 'google'`); un `getValidAccessToken()` che risponde «Refresh fallito: invalid_grant» vuol dire collegamento da rifare.
+
+## Proprietario delle righe e permessi
+- **Utenti → «Proprietario delle righe automatiche»**: sceglie chi diventa proprietario di ciò che arriva da Gmail, dall'estratto conto e dalle rate. Sotto, «Righe già presenti» riassegna per modulo (anteprima del numero, poi «Assegna»; cambia solo l'intestatario).
+- Serve nei moduli con la regola «vede solo i propri» (oggi Spese Personali per il ruolo `user`): una riga di un altro utente, o senza proprietario, non la vede nessuno tranne l'admin. Le Spese Casa non hanno la restrizione.
+- Per cambiare la regola di un modulo: Builder → modulo → blocco **Permessi** → riga del ruolo.
+
+## Archivio Documenti: cartelle
+Nel Builder, modulo Documenti → «Come si vede l'elenco» → **Archivio**. Le cartelle si rinominano, si creano e si eliminano (se vuote) dalla vista stessa (matita, «Nuova cartella», cestino). Se non si riesce a rinominare perché il nome è usato in una regola del modulo, cambiarlo dal Builder.
+
+## Bot Telegram: attivarlo
+1. **Crea il bot** (una volta, lo fa chi amministra): in Telegram cerca **@BotFather**, scrivi `/newbot`, scegli un nome e un nome utente che finisce con «bot». BotFather ti dà un **codice segreto** (`123456789:AA…`): non va dato a nessuno né scritto in chat.
+2. **Collegalo a Finance**: Impostazioni → **Connessioni → Telegram (bot)**, incolla il codice, «Collega il bot». L'app lo controlla, registra il webhook e mostra `@nome_del_bot`. Il codice resta cifrato nel database.
+3. **Collega ogni telefono**: ognuno, da loggato, in **Il mio account** (o nella stessa scheda) preme «Collega il mio Telegram», tocca il link dal telefono e preme **Avvia**. Il codice vale 10 minuti e una volta sola.
+4. **Scegli dove arrivano i report**: Impostazioni → Report → «Dove arrivano i report» (WhatsApp e/o Telegram).
+- **Revocare**: «Scollega» accanto al telefono (il proprio; l'admin qualunque), o `/scollega` dalla chat. «Scollega il bot» toglie anche il webhook e tutti i telefoni. Se il codice segreto è finito in mani sbagliate: `/revoke` su BotFather e ricollegare con il nuovo.
+- **Se non arriva niente**: il tenant deve essere raggiungibile da fuori in https (il webhook è `…/api/telegram/webhook`); controllare che il bot sia collegato e che il telefono compaia nell'elenco.
+
+## Chiavi AI (Mistral)
+
+- **Finance:** Impostazioni → AI → incolla la chiave del progetto. Deve comparire «Chiave di questo progetto salvata». L'interruttore generale (stessa pagina) accende l'AI; i potenziamenti si scelgono per modulo (Builder → Potenziamenti AI).
+- **Super Admin:** Impostazioni → **Chiavi AI** → incolla la chiave di Super Admin (distinta da quelle dei tenant). L'interruttore «I tenant senza una chiave propria usano la chiave generale» si spegne solo quando ogni tenant ha la sua, altrimenti l'AI di quel tenant si ferma.
+- Le chiavi non si scrivono mai in chat né in file: si incollano nell'app, che le cifra.
+- Togliere la chiave di un tenant con il ripiego spento (o senza chiave generale) spegne la sua AI; i report, le ore e i comandi fissi del bot continuano.
+
+## Segreti cifrati e la chiave del progetto
+- Le credenziali dei collegamenti (Google, WhatsApp, Telegram…) e i segreti del 2FA stanno nel database **cifrati** con `ENCRYPTION_KEY` del progetto (la stessa dei campi cifrati). Al primo avvio dopo l'aggiornamento il sistema cifra da solo ciò che era in chiaro e scrive nel log di avvio `Segreti cifrati a riposo: N collegamenti, N segreti 2FA`.
+- **Senza la chiave** quei valori non si leggono: Google, WhatsApp e Telegram risultano «non collegati» e il 2FA va riconfigurato (con i codici di recupero, o da admin). La chiave sta nel registro di Super Admin (`super-admin-01.db`): conservala **insieme ai backup**.
+- I backup fatti **prima** dell'aggiornamento (i 7 giornalieri, le copie sul Mac) contengono ancora i segreti **in chiaro**: scadono da soli in una settimana (quelli automatici); le copie manuali vanno cancellate quando non servono più.
+- Se dopo un ripristino i collegamenti risultano scollegati ma la chiave è giusta, guarda nel log di avvio se compare «NON riusciti».
+- **Librerie**: ogni tanto `npm audit --omit=dev` in `core/backend`, `super-admin/backend`, `super-admin/docker-provisioner`. Non usare `npm audit fix` negli ultimi due senza controllare che `dockerode` resti ≥ 4.0.5. Il **provisioner** non si aggiorna con `redeploy-nas.sh`: ha un'immagine sua (`docker-provisioner:0.1`).
+
+## Distaccare un tenant su un server dell'utente
+
+Impostazioni → Dati → «Distacca su un tuo server» (solo admin del tenant, con la password dell'account). Super Admin fa la **copia** (immagine, database, allegati, segreti, avvio) via SSH su un server Linux x86-64 con Docker; il tenant originale non si ferma e non si cancella.
+- **Due passi**: «Controlla il server» (sola lettura: architettura, Docker, spazio, porta, nome del container, cartella; mostra l'impronta del server, che chi esporta conferma e che da lì si FISSA) e poi la copia, con avanzamento.
+- **Sul server** nasce `~/platform-<slug>/` con `data/` (database e allegati) e `env` (segreti, permessi 0600), e un container `platform-<slug>` con riavvio automatico. Davanti serve un proxy con HTTPS (non lo fa la copia). I backup della cartella sono a carico di chi lo ospita.
+- **Distaccato = indipendente**: non ha Super Admin, quindi **AI, Libreria e aggiornamenti** da Super Admin non ci sono (`SUPER_ADMIN_URL` punta a una porta chiusa; `DETACHED=1`). L'AI con una chiave propria nel tenant non esiste ancora.
+- **Sicurezza**: il tenant prova chi è con un token firmato col SUO segreto (il segreto interno condiviso non basta, quindi un tenant non può esportarne un altro); le credenziali SSH restano in memoria per la durata del lavoro e non finiscono in log, stato o audit; destinazioni vietate: loopback, link-local (servizi cloud) e, **di partenza, gli indirizzi privati** (per un server in rete locale: `EXPORT_ALLOW_PRIVATE=1` sull'ambiente di Super Admin). Altre variabili: `EXPORT_MIN_FREE_MB` (spazio minimo, 3000), `EXPORT_IMAGE_ARCH` (x86_64).
+- **Non provato su un server vero** (solo con un server SSH di prova e un Docker finto): la prima volta farlo su un server di prova.
+
+## Inviti
+
+Invece di girare una password, si manda un **link monouso**: la persona sceglie da sé nome utente e password (almeno 10 caratteri) alla pagina pubblica `/invito/<token>` del tenant. Vale 72 ore, si usa una volta sola (anche se due persone aprono lo stesso link insieme ne passa una), si può annullare. Nel database resta solo l'impronta SHA-256 del token; il link si vede una volta sola, alla creazione.
+- **Dal tenant** (Impostazioni → Utenti & Ruoli → «Invita»): nome, ruolo (anche personalizzati), email facoltativa. **Da Super Admin** (Tenant → scheda Credenziali → «Invita», e dopo «Crea il tenant» dell'Analisi): per il primo admin; Super Admin crea l'invito nel tenant con il secret interno.
+- **Consegna**: copia il link; «Apri WhatsApp» (`wa.me` con il messaggio già scritto) e «Condividi su Telegram» (`t.me/share`) — nessun invio automatico, perché né WhatsApp (CallMeBot scrive solo al proprietario; la Business API vuole modelli approvati) né i bot Telegram possono scrivere per primi a una persona nuova; **email** dalla posta di Super Admin (SMTP, vedi sopra), solo se configurata.
+- **Difese della mail**: il tenant la chiede a Super Admin con un token firmato col SUO segreto (il segreto condiviso non basta); il testo è fisso; il link deve essere `https://<dominio di quel tenant>/invito/<token>`; al massimo 30 al giorno per tenant (contatore in memoria: si azzera al riavvio di Super Admin).

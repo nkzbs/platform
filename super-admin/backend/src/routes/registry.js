@@ -60,6 +60,106 @@ router.get('/modules', requireAuth, (req, res) => {
   })));
 });
 
+// Dove è usato un modulo: i tenant che lo hanno installato (con la versione) e i moduli della Libreria che si collegano a lui. Dal database del tenant si legge SOLO
+// la tabella dei moduli (da dove vengono e a che versione sono), mai le righe; chi aggiorna è sempre il tenant, da qui non si cambia niente.
+router.get('/modules/:id/usage', requireAuth, (req, res) => {
+  const m = db.prepare('SELECT * FROM registry_modules WHERE id = ?').get(req.params.id);
+  if (!m) return res.status(404).json({ error: 'Modulo non trovato' });
+  const ultima = db.prepare('SELECT MAX(version) v FROM registry_modules WHERE slug = ? AND source_tenant_slug IS ?').get(m.slug, m.source_tenant_slug).v;
+  const tenants = [];
+  for (const t of db.prepare("SELECT slug, name FROM tenants WHERE status != 'deleted' AND COALESCE(is_sandbox, 0) = 0 ORDER BY name").all()) {
+    const tdb = openTenantDbReadOnly(t.slug); if (!tdb) continue;
+    try {
+      const r = tdb.prepare('SELECT registry_version AS v FROM modules WHERE registry_slug = ? AND registry_source_tenant_slug IS ? AND installed = 1').get(m.slug, m.source_tenant_slug);
+      if (r) tenants.push({ slug: t.slug, name: t.name, version: r.v, aggiornabile: r.v != null && r.v < ultima });
+    } catch (e) { /* tenant con un database più vecchio, senza queste colonne: non conta */ } finally { tdb.close(); }
+  }
+  const usatoDa = [];
+  for (const o of db.prepare(LATEST_VERSIONS_SQL).all()) {
+    if (o.slug === m.slug) continue;
+    try { if ((parseSchemaNormalized(o.schema_json).relations || []).some((r) => r.target_module === m.slug)) usatoDa.push({ id: o.id, name: o.name }); } catch (e) { /* schema illeggibile: nessun collegamento */ }
+  }
+  res.json({ versione_ultima: ultima, tenants, usato_da: usatoDa });
+});
+
+// I moduli generici di partenza (lib/moduli-generici.js): quanti ce ne sono già nella Libreria e importa quelli che mancano (mai sovrascrive).
+router.get('/generici', requireAuth, (req, res) => res.json(require('../lib/moduli-generici').stato()));
+router.post('/import-generici', requireAuth, (req, res) => {
+  const g = require('../lib/moduli-generici');
+  const r = g.importa();
+  logAudit(req.user.username, 'registry.import_generici', null, r);
+  res.json({ ...r, ...g.stato() });
+});
+
+// ── Proposte dei tenant ───────────────────────────────────────────────────────────────────────────────────────────
+// Un tenant propone un suo modulo (solo lo schema): finisce in coda, e Super Admin lo approva (diventa una nuova versione nella Libreria, con l'origine di quel tenant) o lo rifiuta con
+// un motivo. Niente entra nella Libreria da solo: la Libreria alimenta l'analisi dei processi e gli altri tenant. Un tenant ha una sola proposta in attesa per modulo (una nuova la sostituisce).
+const { parseSchemaNormalized } = require('../../../../shared/schema-v3-core.js');
+const MAX_SCHEMA = 90 * 1024; // sotto il limite di 100 KB del corpo delle richieste: uno schema più grande di così è comunque fuori misura
+const riassunto = (schemaJson) => {
+  try { const s = parseSchemaNormalized(schemaJson); return { campi: (s.fields || []).map((f) => ({ key: f.key, label: f.label || f.key, type: f.type })), stati: ((s.workflow && s.workflow.states) || []).map((x) => x.label || x.key), relazioni: (s.relations || []).map((r) => r.target_module).filter(Boolean) }; }
+  catch (e) { return { campi: [], stati: [], relazioni: [] }; }
+};
+
+router.post('/public/proposals', requireInternalSecret, (req, res) => {
+  const b = req.body || {}, m = b.module || {};
+  const tenant = String(b.tenant_slug || '');
+  if (!db.prepare("SELECT 1 FROM tenants WHERE slug = ? AND status != 'deleted'").get(tenant)) return res.status(404).json({ error: 'Tenant sconosciuto' });
+  if (!/^[a-z0-9][a-z0-9_-]{0,60}$/i.test(String(m.slug || '')) || !String(m.name || '').trim()) return res.status(400).json({ error: 'Modulo non valido' });
+  const schemaJson = typeof m.schema_json === 'string' ? m.schema_json : JSON.stringify(m.schema_json || {});
+  if (schemaJson.length > MAX_SCHEMA) return res.status(400).json({ error: 'Lo schema è troppo grande per la Libreria.' });
+  let parsed; try { parsed = parseSchemaNormalized(schemaJson); } catch (e) { return res.status(400).json({ error: 'Lo schema del modulo non si legge.' }); }
+  if (!(parsed.fields || []).length) return res.status(400).json({ error: 'Un modulo senza campi non serve alla Libreria.' });
+  const clean = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
+  const vals = [clean(m.name, 80), clean(m.icon, 40) || 'box', clean(m.color, 20) || '#2563EB', clean(m.group_name, 60) || null, schemaJson, clean(b.description, 600), clean(b.note, 600)];
+  const pending = db.prepare("SELECT id FROM registry_proposals WHERE tenant_slug = ? AND slug = ? AND status = 'pending'").get(tenant, m.slug);
+  let id;
+  if (pending) { db.prepare('UPDATE registry_proposals SET name = ?, icon = ?, color = ?, group_name = ?, schema_json = ?, description = ?, note = ?, created_at = CURRENT_TIMESTAMP WHERE id = ?').run(...vals, pending.id); id = pending.id; }
+  else id = db.prepare('INSERT INTO registry_proposals (tenant_slug, slug, name, icon, color, group_name, schema_json, description, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(tenant, m.slug, ...vals).lastInsertRowid;
+  logAudit('tenant:' + tenant, 'registry.proposal', m.slug, { id, sostituisce: !!pending });
+  res.json({ id, status: 'pending', sostituita: !!pending });
+});
+
+router.get('/public/proposals', requireInternalSecret, (req, res) => {
+  res.json(db.prepare('SELECT id, slug, name, status, reason, created_at, decided_at, registry_module_id FROM registry_proposals WHERE tenant_slug = ? ORDER BY id DESC LIMIT 100').all(String(req.query.tenant_slug || '')));
+});
+
+router.get('/proposals', requireAuth, (req, res) => {
+  const rows = db.prepare("SELECT * FROM registry_proposals ORDER BY (status = 'pending') DESC, id DESC LIMIT 200").all();
+  res.json(rows.map((r) => {
+    const prev = db.prepare('SELECT MAX(version) AS v FROM registry_modules WHERE source_tenant_slug = ? AND slug = ?').get(r.tenant_slug, r.slug).v || 0;
+    const { schema_json, ...rest } = r;
+    return { ...rest, ...riassunto(schema_json), versione_prossima: prev + 1 };
+  }));
+});
+
+router.post('/proposals/:id/approve', requireAuth, (req, res) => {
+  const p = db.prepare('SELECT * FROM registry_proposals WHERE id = ?').get(req.params.id);
+  if (!p) return res.status(404).json({ error: 'Proposta non trovata' });
+  if (p.status !== 'pending') return res.status(400).json({ error: 'Questa proposta è già stata decisa.' });
+  const b = req.body || {};
+  const prev = db.prepare('SELECT MAX(version) AS v FROM registry_modules WHERE source_tenant_slug = ? AND slug = ?').get(p.tenant_slug, p.slug).v || 0;
+  const rid = db.transaction(() => {
+    const id = db.prepare(`INSERT INTO registry_modules (name, slug, description, icon, color, schema_json, version, source_tenant_slug, release_notes, group_name, support_module)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`).run(p.name, p.slug, String(b.description != null ? b.description : p.description).slice(0, 600), p.icon, p.color, p.schema_json, prev + 1, p.tenant_slug, String(b.release_notes != null ? b.release_notes : p.note).slice(0, 600), b.group_name != null ? (String(b.group_name).trim().slice(0, 60) || null) : p.group_name).lastInsertRowid;
+    db.prepare("UPDATE registry_proposals SET status = 'approved', registry_module_id = ?, decided_at = CURRENT_TIMESTAMP, decided_by = ? WHERE id = ?").run(id, req.user.username, p.id);
+    return id;
+  })();
+  logAudit(req.user.username, 'registry.proposal_approved', p.slug, { id: p.id, tenant_slug: p.tenant_slug, version: prev + 1 });
+  res.json({ ok: true, registry_module_id: rid, version: prev + 1 });
+});
+
+router.post('/proposals/:id/reject', requireAuth, (req, res) => {
+  const p = db.prepare('SELECT * FROM registry_proposals WHERE id = ?').get(req.params.id);
+  if (!p) return res.status(404).json({ error: 'Proposta non trovata' });
+  if (p.status !== 'pending') return res.status(400).json({ error: 'Questa proposta è già stata decisa.' });
+  const reason = String((req.body && req.body.reason) || '').trim().slice(0, 300);
+  if (!reason) return res.status(400).json({ error: 'Scrivi il motivo: lo vede chi ha proposto il modulo.' });
+  db.prepare("UPDATE registry_proposals SET status = 'rejected', reason = ?, decided_at = CURRENT_TIMESTAMP, decided_by = ? WHERE id = ?").run(reason, req.user.username, p.id);
+  logAudit(req.user.username, 'registry.proposal_rejected', p.slug, { id: p.id, tenant_slug: p.tenant_slug });
+  res.json({ ok: true });
+});
+
 // Moduli di UN tenant, per il selettore "salva nella Libreria".
 router.get('/tenants/:slug/modules', requireAuth, (req, res) => {
   const tdb = openTenantDbReadOnly(req.params.slug);
@@ -226,6 +326,41 @@ router.put('/default-modules', requireAuth, (req, res) => {
 });
 
 // ─── Uso da un backend tenant (secret interno) ─────────────────────────────────
+
+// I verticali proposti (punti di partenza: gruppi di moduli, vedi lib/verticali.js). Mai gli schemi: il tenant installa i moduli uno per uno col solito percorso.
+router.get('/public/verticals', requireInternalSecret, (req, res) => res.json(require('../lib/verticali').elenco()));
+
+// Gestione dei verticali da Libreria (Super Admin): elenco completo, crea, modifica, elimina, ripristina i predefiniti. Sono solo dati: i moduli restano dove sono.
+router.get('/verticals', requireAuth, (req, res) => res.json(require('../lib/verticali').perGestione()));
+router.post('/verticals', requireAuth, (req, res) => {
+  const V = require('../lib/verticali'), v = V.leggi(req.body);
+  if (!v.name) return res.status(400).json({ error: 'Il verticale ha bisogno di un nome' });
+  if (!v.slugs.length) return res.status(400).json({ error: 'Scegli almeno un modulo' });
+  const ordine = (db.prepare('SELECT COALESCE(MAX(sort_order), 0) + 1 n FROM registry_verticals').get() || {}).n;
+  const id = db.prepare('INSERT INTO registry_verticals (name, icon, description, module_slugs, sort_order) VALUES (?, ?, ?, ?, ?)').run(v.name, v.icon, v.description, JSON.stringify(v.slugs), ordine).lastInsertRowid;
+  logAudit(req.user.username, 'registry.vertical_create', v.name, { id: Number(id), moduli: v.slugs.length });
+  res.json(V.perGestione().find((x) => x.id === Number(id)));
+});
+router.patch('/verticals/:id', requireAuth, (req, res) => {
+  const V = require('../lib/verticali'), cur = db.prepare('SELECT * FROM registry_verticals WHERE id = ?').get(req.params.id);
+  if (!cur) return res.status(404).json({ error: 'Verticale non trovato' });
+  const v = V.leggi(req.body, cur);
+  if (!v.name || !v.slugs.length) return res.status(400).json({ error: 'Servono un nome e almeno un modulo' });
+  db.prepare('UPDATE registry_verticals SET name = ?, icon = ?, description = ?, module_slugs = ? WHERE id = ?').run(v.name, v.icon, v.description, JSON.stringify(v.slugs), cur.id);
+  logAudit(req.user.username, 'registry.vertical_update', v.name, { id: cur.id });
+  res.json(V.perGestione().find((x) => x.id === cur.id));
+});
+router.delete('/verticals/:id', requireAuth, (req, res) => {
+  const r = db.prepare('DELETE FROM registry_verticals WHERE id = ?').run(req.params.id);
+  if (!r.changes) return res.status(404).json({ error: 'Verticale non trovato' });
+  logAudit(req.user.username, 'registry.vertical_delete', String(req.params.id), null);
+  res.json({ ok: true });
+});
+router.post('/verticals-ripristina', requireAuth, (req, res) => {
+  const aggiunti = require('../lib/verticali').ripristinaPredefiniti();
+  logAudit(req.user.username, 'registry.vertical_restore', null, { aggiunti });
+  res.json({ aggiunti, verticali: require('../lib/verticali').perGestione() });
+});
 
 // Elenco per la pagina Libreria del tenant. Mai schema_json: quello arriva solo
 // installando.

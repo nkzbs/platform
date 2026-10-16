@@ -39,8 +39,20 @@ const GUIDA_SECTIONS = [
       },
       {
         title: 'Accesso come admin, reset credenziali, dominio', body: [
-          'Il pulsante "Apri →" nella scheda di un tenant apre quel tenant con una sessione admin reale, senza dover conoscere la password — utile per verificare un problema segnalato da un cliente. Ogni chiamata di questo tipo resta comunque nella cronologia Attività.',
+          'Il pulsante "Apri →" nella scheda di un tenant chiede le credenziali admin di quel tenant (non quelle di Super Admin) e poi lo apre: senza la password non si entra.',
           'Il reset credenziali genera nuove credenziali admin per un tenant che le ha perse o compromesse. Il dominio pubblico di un tenant (es. `nome.platform-core.it`) è modificabile dalla stessa scheda.',
+        ]
+      },
+      {
+        title: 'Invitare una persona', body: [
+          'Nella scheda Credenziali di un tenant (e dopo la creazione dall\'Analisi) il pulsante «Invita» crea un link monouso: la persona sceglie da sé nome utente e password, nessuna password gira. Vale 72 ore e si usa una volta sola; si vede una volta sola.',
+          'Il link si copia, si manda su WhatsApp o Telegram (si apre il messaggio già scritto, premi tu «invia») oppure parte per mail dalla posta di Super Admin, se è configurata e il tenant ha un dominio. L\'admin di un tenant invita i suoi utenti da Utenti & Ruoli, con lo stesso meccanismo.',
+        ]
+      },
+      {
+        title: 'Distacco su un server', body: [
+          'Un tenant può farsi una copia su un server Linux dell\'utente, via SSH (Impostazioni → Dati del tenant). Lo avvia l\'admin del tenant; Super Admin esegue la copia (immagine, database, allegati, segreti) senza fermare né cancellare l\'originale. Il tenant copiato funziona da solo: senza Super Admin non ha AI, Libreria e aggiornamenti.',
+          'Gli indirizzi privati sono vietati di partenza: per un server in rete locale si imposta `EXPORT_ALLOW_PRIVATE=1` su Super Admin. Le credenziali SSH restano in memoria per il tempo della copia.',
         ]
       },
     ]
@@ -52,6 +64,12 @@ const GUIDA_SECTIONS = [
         title: 'Pubblicare un modulo nello Store', body: [
           'Non esiste un "carica file" — pubblicare parte sempre da un modulo che vive già, per davvero, in un tenant reale (costruito nel Builder o via Super Builder). Da "Store moduli" scegli il tenant sorgente e il modulo, e la pubblicazione ne legge lo schema reale in quel momento: da lì diventa una fotografia versionata e indipendente, sicura da distribuire anche se il tenant sorgente viene poi cancellato.',
           'Ogni pubblicazione compila descrizione, categorie (usate anche per il filtro "settore" nello Store lato tenant — Retail, Servizi & Consulenza, Associazione, Coffee, Finance, o "Generico" per moduli utili a chiunque), e una guida opzionale mostrata a chi lo installa.',
+        ]
+      },
+      {
+        title: 'Filtri, «Dove è usato» e verticali', body: [
+          'La Libreria si filtra per gruppo e per «ruoli dichiarati» (i moduli che dicono a cosa servono e quindi lavorano con report, bot e riepiloghi). Nel dettaglio di un modulo la scheda «Dove è usato» elenca i tenant che lo hanno installato, con la versione e chi può aggiornare, e i moduli che si collegano a lui. Da qui non si aggiorna niente: decide ogni tenant.',
+          'I verticali (sezione «Verticali» della Libreria) sono i modelli che i tenant vedono come tessere in «Parti da un modello»: un nome, un\'icona e un gruppo di moduli. Si creano, si modificano, si eliminano e si ripristinano i predefiniti da qui. Il tenant sceglie quali moduli tenere e li installa insieme.',
         ]
       },
       {
@@ -85,16 +103,16 @@ const GUIDA_SECTIONS = [
     ]
   },
   {
-    title: 'Update Manager', icon: 'activity', color: '#10B981',
+    title: 'Analisi', icon: 'git-branch', color: '#22C55E',
     topics: [
       {
-        title: 'Immagine corrente e badge per tenant', body: [
-          'Mostra l\'immagine `platform-core` più recente caricata e, per ciascun tenant, se sta girando davvero con quella (badge verde) o con una precedente (ambra) — letto dal vivo via `docker inspect`, non da uno stato salvato che potrebbe disallinearsi.',
-        ]
-      },
-      {
-        title: 'Coda, rollback, import/export', body: [
-          'Un aggiornamento può essere accodato per essere eseguito automaticamente a un orario configurato (utile per non interrompere nessuno durante il giorno), oppure lanciato subito su un singolo tenant o su tutti. Il rollback ritagga l\'immagine precedente come quella "corrente" — non riavvia da solo nessun container: i tenant restano sulla loro immagine attuale finché non lanci un redeploy (singolo o su tutti) dopo il rollback. Import/export permette di spostare un\'immagine `.tar` senza passare da un registro Docker esterno.',
+        title: 'Dai processi al tenant', body: [
+          'Il modo più veloce: «Fai tutto». Scrivi come funziona l\'attività e premi il pulsante: in circa un minuto l\'AI trova i processi, li completa e sceglie moduli, report e AI; poi vedi un riepilogo e crei il tenant con un tocco. I dettagli a passi restano disponibili.',
+          'A passi: racconti come funziona un\'attività; l\'AI propone i processi (mai salvati da soli) e tu li rifinisci: scopo, ruoli, passaggi in ordine (anche i bivi), eccezioni, documenti, KPI. Per ogni processo scegli il modulo della Libreria che lo copre, oppure lo segni «da costruire».',
+          'Dall\'analisi si apre il manuale dei processi (si stampa o si salva in PDF) e, se vuoi, si crea il tenant: installa i moduli scelti, crea i ruoli degli utenti e trasforma i passaggi negli stati del flusso. Non tocca un modulo che ha già i suoi. Fino alla conferma non si scrive niente.',
+          'Un processo di solito usa più moduli: «Cosa manca?» (da solo in «Fai tutto») propone i moduli in più e segna ciò che nessun modulo copre, senza toccare le tue scelte. «Correggi a parole» traduce una frase («togli la fatturazione, aggiungi i turni») in operazioni che vedi in italiano e applichi tu.',
+          'Oltre al manuale c\'è la «Guida all\'uso» del verticale (ruolo per ruolo, processo per processo, modulo per modulo, da dati e senza AI): entrambi si stampano o si salvano in PDF.',
+          'Il testo che racconti passa dall\'AI con i dati personali tolti, e costa sulla chiave di Super Admin (Impostazioni → Chiavi AI). Super Admin non legge dati dai tenant: l\'analisi riguarda solo ciò che scrivi qui.',
         ]
       },
     ]
@@ -104,7 +122,7 @@ const GUIDA_SECTIONS = [
     topics: [
       {
         title: 'Un\'unica cronologia', body: [
-          'Ogni azione amministrativa (creazione tenant, redeploy, pubblicazione modulo, certificazione...) ed ogni errore non gestito da nessun try/catch — Super Admin e tutti i tenant insieme, in un solo elenco cronologico con una descrizione leggibile per ciascun evento, filtrabile per tipo (azioni/errori) e per tenant.',
+          'Le azioni fatte da Super Admin (creazione tenant, aggiornamenti, backup...) e gli errori tecnici non gestiti dei tenant, in un solo elenco cronologico con una descrizione leggibile, filtrabile per tipo e per tenant. Per privacy qui NON compare cosa fanno gli utenti dentro un tenant: quello sta nel registro del tenant stesso.',
           'Gli errori qui mostrati non sostituiscono i messaggi già mostrati agli utenti per un\'azione fallita (quelli restano chiari a sé) — qui compare solo ciò che nessun try/catch aveva già intercettato.',
         ]
       },

@@ -1,0 +1,256 @@
+'use strict';
+// Analisi dei processi (Super Admin → Analisi): racconti un'attività, l'AI propone i processi, li rifinisci, vedi cosa copre la Libreria,
+// salvi il manuale e — se vuoi — crei il tenant con i moduli e i ruoli che ne derivano.
+//   GET    /api/analyses                  elenco
+//   POST   /api/analyses                  { name, descrizione }
+//   GET    /api/analyses/:id              l'analisi con i processi e il blueprint
+//   PATCH  /api/analyses/:id              { name?, descrizione?, profilo?, processi? }
+//   DELETE /api/analyses/:id
+//   POST   /api/analyses/suggest-processi { descrizione }       proposte (mai salvate da sole)
+//   POST   /api/analyses/suggest-processo { nome, reparto? }    un processo completo proposto
+//   GET    /api/analyses/library          i moduli della Libreria (per scegliere a mano il modulo di un processo)
+//   POST   /api/analyses/:id/create-tenant { name, slug, domain? }   crea il tenant, installa i moduli, genera ruoli e stati
+const express = require('express');
+const db = require('../db');
+const { requireAuth } = require('./auth');
+const { logAudit } = require('../audit-log');
+const analysis = require('../lib/analysis');
+
+const router = express.Router();
+const row = (id) => db.prepare('SELECT * FROM process_analyses WHERE id = ?').get(id);
+const json = (s, d) => { try { return JSON.parse(s); } catch (e) { return d; } };
+function full(r) {
+  const processi = json(r.processi, []);
+  return { id: r.id, name: r.name, descrizione: r.descrizione, profilo: json(r.profilo, {}), processi, tenant_slug: r.tenant_slug, auto: json(r.auto, null), scelte: json(r.scelte, {}), creazione: (json(r.creazione, null) || null), created_at: r.created_at, updated_at: r.updated_at, blueprint: analysis.blueprint(processi) };
+}
+const aiError = (res, e) => res.status(e.status || 500).json({ error: e.message, code: e.code });
+
+router.get('/', requireAuth, (req, res) => {
+  res.json(db.prepare('SELECT * FROM process_analyses ORDER BY updated_at DESC').all().map((r) => {
+    const processi = json(r.processi, []);
+    return { id: r.id, name: r.name, tenant_slug: r.tenant_slug, n_processi: processi.length, n_da_costruire: processi.filter((p) => p.copertura === 'da_costruire').length, updated_at: r.updated_at };
+  }));
+});
+
+router.get('/library', requireAuth, (req, res) => res.json(analysis.libraryModules()));
+
+router.post('/suggest-processi', requireAuth, async (req, res) => {
+  const descrizione = String((req.body && req.body.descrizione) || '').trim();
+  if (descrizione.length < 10) return res.status(400).json({ error: 'Racconta l\'attività in qualche riga.' });
+  try {
+    const processi = await analysis.suggestProcessi({ descrizione });
+    logAudit(req.user.username, 'analysis.suggest_processi', null, { n: processi.length });
+    res.json({ processi });
+  } catch (e) { aiError(res, e); }
+});
+
+router.post('/suggest-processo', requireAuth, async (req, res) => {
+  const nome = String((req.body && req.body.nome) || '').trim();
+  if (!nome) return res.status(400).json({ error: 'Scrivi il nome del processo.' });
+  try {
+    const suggestion = await analysis.suggestProcesso({ nome, reparto: req.body.reparto });
+    logAudit(req.user.username, 'analysis.suggest_processo', nome.slice(0, 60), { registry_module_id: suggestion.registry_module_id });
+    res.json(suggestion);
+  } catch (e) { aiError(res, e); }
+});
+
+// ── «Fai tutto»: dal racconto all'analisi completa, in background ─────────────────────────────────────────────────────
+// Una sola richiesta: crea l'analisi, fa proporre i processi (e il nome dell'attività), poi li completa tutti (tre alla volta, solo i campi vuoti). L'avanzamento sta in `auto`
+// (fase, fatti/totale) e i processi compaiono man mano. Non crea il tenant: quello resta un tocco, dal riepilogo.
+const setAuto = (id, patch) => { const r = row(id); const cur = (r && json(r.auto, null)) || {}; db.prepare('UPDATE process_analyses SET auto = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify({ ...cur, ...patch }), id); };
+const autoInCorso = (a) => !!a && (a.fase === 'processi' || a.fase === 'completamento' || a.fase === 'approfondimento') && Date.now() - a.inizio < 10 * 60 * 1000;
+
+async function faiTuttoInBackground(id, descrizione, nomeDato) {
+  try {
+    const { nome, processi } = await analysis.analizzaAttivita({ descrizione });
+    if (!processi.length) throw new Error('L\'AI non ha trovato processi: racconta qualcosa di più sull\'attività.');
+    db.prepare('UPDATE process_analyses SET processi = ?' + (nomeDato ? '' : ', name = ?') + ' WHERE id = ?').run(...[JSON.stringify(processi), ...(nomeDato ? [] : [nome || 'Nuova attività']), id]);
+    setAuto(id, { fase: 'completamento', fatti: 0, totale: processi.length, errori: 0 });
+    let next = 0, errori = 0, fatti = 0;
+    const valid = new Set(analysis.libraryModules().map((m) => m.id));
+    const lavora = async () => {
+      while (next < processi.length) {
+        const nomeProc = processi[next++].nome;
+        try {
+          const s = await analysis.suggestProcesso({ nome: nomeProc, reparto: (processi.find((x) => x.nome === nomeProc) || {}).reparto });
+          const cur = json(row(id).processi, []);
+          const merged = cur.map((p) => (p.nome === nomeProc ? analysis.sanitizeProcesso(analysis.applicaSuggerimento(p, s), valid) : p));
+          db.prepare('UPDATE process_analyses SET processi = ? WHERE id = ?').run(JSON.stringify(merged), id);
+        } catch (e) { errori++; console.error('[analyses] completamento di «' + nomeProc + '» non riuscito:', e.message); }
+        fatti++; setAuto(id, { fatti, errori });
+      }
+    };
+    await Promise.all([lavora(), lavora(), lavora()]);
+    // secondo passaggio: i moduli in più che servono davvero a ogni processo e cosa manca. Se non riesce, l'analisi resta com'è (non è un errore dell'intera analisi).
+    setAuto(id, { fase: 'approfondimento' });
+    try {
+      const cur = json(row(id).processi, []), prop = await analysis.approfondisci(cur);
+      db.prepare('UPDATE process_analyses SET processi = ? WHERE id = ?').run(JSON.stringify(cur.map((p, i) => analysis.sanitizeProcesso(analysis.applicaApprofondimento(p, prop[i]), valid))), id);
+    } catch (e) { errori++; console.error('[analyses] approfondimento non riuscito:', e.message); }
+    setAuto(id, { fase: 'finita', fine: Date.now(), errori });
+    logAudit('analisi', 'analysis.fai_tutto', String(id), { processi: processi.length, errori });
+  } catch (e) {
+    console.error('[analyses] fai tutto non riuscito:', e.message);
+    setAuto(id, { fase: 'errore', errore: e.message });
+  }
+}
+
+router.post('/auto', requireAuth, (req, res) => {
+  const descrizione = String((req.body && req.body.descrizione) || '').trim().slice(0, 4000);
+  if (descrizione.length < 20) return res.status(400).json({ error: 'Racconta l\'attività in qualche riga.' });
+  if (!analysis.deps.isConfigured()) return res.status(503).json({ error: 'Nessuna chiave AI di Super Admin: inseriscila in Impostazioni → Chiavi AI.', code: 'ai_not_configured' });
+  const nomeDato = String((req.body && req.body.name) || '').trim().slice(0, 80);
+  const id = db.prepare('INSERT INTO process_analyses (name, descrizione, created_by) VALUES (?, ?, ?)').run(nomeDato || 'Nuova analisi', descrizione, req.user.username).lastInsertRowid;
+  setAuto(id, { fase: 'processi', inizio: Date.now(), fatti: 0, totale: 0, errori: 0 });
+  logAudit(req.user.username, 'analysis.create', String(id), { auto: true });
+  faiTuttoInBackground(id, descrizione, !!nomeDato); // senza await: la pagina segue l'avanzamento
+  res.status(202).json({ id });
+});
+
+// «Cosa manca»: il secondo passaggio su richiesta, per l'analisi già scritta. Aggiunge soltanto (moduli in più e mancanze), non toglie né cambia ciò che c'è.
+router.post('/:id/approfondisci', requireAuth, async (req, res) => {
+  const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
+  const processi = json(r.processi, []);
+  if (!processi.length) return res.status(400).json({ error: 'Non ci sono ancora processi da approfondire.' });
+  if (!analysis.deps.isConfigured()) return res.status(503).json({ error: 'Nessuna chiave AI di Super Admin: inseriscila in Impostazioni → Chiavi AI.', code: 'ai_not_configured' });
+  try {
+    const valid = new Set(analysis.libraryModules().map((m) => m.id)), prop = await analysis.approfondisci(processi);
+    const nuovi = processi.map((p, i) => analysis.sanitizeProcesso(analysis.applicaApprofondimento(p, prop[i]), valid));
+    db.prepare('UPDATE process_analyses SET processi = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify(nuovi), r.id);
+    logAudit(req.user.username, 'analysis.approfondisci', String(r.id), { processi: nuovi.length });
+    res.json(full(row(r.id)));
+  } catch (e) { aiError(res, e); }
+});
+
+// «Correggi a parole»: l'AI traduce la frase in operazioni controllate, SENZA scrivere; poi chi ha l'analisi conferma e solo allora si applicano (ricontrollate dal codice).
+router.post('/:id/correggi', requireAuth, async (req, res) => {
+  const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
+  const istruzione = String((req.body && req.body.istruzione) || '').trim().slice(0, 600);
+  if (istruzione.length < 5) return res.status(400).json({ error: 'Scrivi cosa vuoi cambiare.' });
+  if (!analysis.deps.isConfigured()) return res.status(503).json({ error: 'Nessuna chiave AI di Super Admin: inseriscila in Impostazioni → Chiavi AI.', code: 'ai_not_configured' });
+  try { res.json(await analysis.proponiCorrezioni(json(r.processi, []), istruzione)); } catch (e) { aiError(res, e); }
+});
+router.post('/:id/correggi/applica', requireAuth, (req, res) => {
+  const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
+  const nuovi = analysis.applicaCorrezioni(json(r.processi, []), req.body && req.body.operazioni);
+  db.prepare('UPDATE process_analyses SET processi = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify(nuovi), r.id);
+  logAudit(req.user.username, 'analysis.correggi', String(r.id), { operazioni: ((req.body && req.body.operazioni) || []).length });
+  res.json(full(row(r.id)));
+});
+
+router.post('/', requireAuth, (req, res) => {
+  const name = String((req.body && req.body.name) || '').trim().slice(0, 80);
+  if (!name) return res.status(400).json({ error: 'Dai un nome all\'analisi.' });
+  const descrizione = String((req.body && req.body.descrizione) || '').slice(0, 4000);
+  const id = db.prepare('INSERT INTO process_analyses (name, descrizione, created_by) VALUES (?, ?, ?)').run(name, descrizione, req.user.username).lastInsertRowid;
+  logAudit(req.user.username, 'analysis.create', String(id), { name });
+  res.json(full(row(id)));
+});
+
+router.get('/:id', requireAuth, (req, res) => {
+  const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
+  res.json(full(r));
+});
+
+// La guida all'uso del verticale (da leggere o salvare in PDF), costruita dai dati dell'analisi e dai moduli: nessuna AI.
+router.get('/:id/guida', requireAuth, (req, res) => {
+  const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
+  res.json(require('../lib/guida').build(full(r)));
+});
+
+router.patch('/:id', requireAuth, (req, res) => {
+  const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
+  const b = req.body || {}, sets = [], args = [];
+  if (b.name != null) { const n = String(b.name).trim().slice(0, 80); if (!n) return res.status(400).json({ error: 'Il nome non può essere vuoto.' }); sets.push('name = ?'); args.push(n); }
+  if (b.descrizione != null) { sets.push('descrizione = ?'); args.push(String(b.descrizione).slice(0, 4000)); }
+  if (b.scelte != null) { const esc = Array.isArray(b.scelte && b.scelte.escludi) ? b.scelte.escludi.map((x) => String(x).slice(0, 120)).slice(0, 200) : []; sets.push('scelte = ?'); args.push(JSON.stringify({ escludi: esc })); }
+  if (b.profilo != null) { sets.push('profilo = ?'); args.push(JSON.stringify(analysis.sanitizeProfilo(b.profilo))); }
+  if (b.processi != null) {
+    const valid = new Set(analysis.libraryModules().map((m) => m.id));
+    sets.push('processi = ?'); args.push(JSON.stringify(analysis.sanitizeProcessi(b.processi, valid)));
+  }
+  if (sets.length) db.prepare('UPDATE process_analyses SET ' + sets.join(', ') + ', updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(...args, r.id);
+  res.json(full(row(r.id)));
+});
+
+router.delete('/:id', requireAuth, (req, res) => {
+  const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
+  if (inCorso(creazioneDi(r))) return res.status(409).json({ error: 'Il tenant è in creazione: aspetta che finisca.' });
+  if (autoInCorso(json(r.auto, null))) return res.status(409).json({ error: 'L\'analisi si sta compilando: aspetta che finisca.' });
+  db.prepare('DELETE FROM process_analyses WHERE id = ?').run(r.id);
+  logAudit(req.user.username, 'analysis.delete', String(r.id), { name: r.name });
+  res.json({ ok: true });
+});
+
+// ── Crea il tenant dall'analisi, IN BACKGROUND ────────────────────────────────────────────────────────────────────
+// La creazione di un tenant richiede da qualche decina di secondi a più di un minuto (container, avvio del database, dominio, moduli). Non si resta appesi a una chiamata:
+// la rotta parte e risponde subito (202); l'avanzamento sta in `creazione` (fase, inizio, tempi per fase) e la pagina lo legge con GET /:id/creazione. L'accesso admin iniziale
+// si tiene SOLO in memoria e si consegna una volta sola (come alla creazione di un tenant normale: non è salvato da nessuna parte).
+const FASI = ['container', 'database', 'moduli_default', 'dominio', 'moduli', 'ruoli'];
+const credenziali = new Map(); // analysis id -> { username, password }
+const creazioneDi = (r) => json(r.creazione, null);
+const inCorso = (c) => !!c && c.fase !== 'finita' && c.fase !== 'errore' && Date.now() - c.inizio < 20 * 60 * 1000;
+function setCreazione(id, patch) {
+  const r = row(id); const cur = (r && creazioneDi(r)) || {};
+  db.prepare('UPDATE process_analyses SET creazione = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify({ ...cur, ...patch }), id);
+}
+
+async function creaTenantInBackground({ id, name, slug, domain, actor, processi, escludi }) {
+  const t0 = Date.now(), segni = []; // [{ fase, t }]
+  const segna = (fase) => { segni.push({ fase, t: Date.now() }); setCreazione(id, { fase }); };
+  const tempi = () => { const out = {}; segni.forEach((s, i) => { const fine = (segni[i + 1] ? segni[i + 1].t : Date.now()); out[s.fase] = Math.round((fine - s.t) / 100) / 10; }); return out; };
+  const { createTenant, enqueueHostedCreation, installModulesByIds } = require('./tenants');
+  const moduleIds = analysis.withDependencies([...new Set(processi.flatMap((p) => [p.registry_module_id, ...(p.moduli_extra || [])]).filter(Boolean))]); // con i moduli richiesti dalle loro relazioni
+  const avvisi = [];
+  try {
+    segna('container');
+    const { tenant, initialPassword } = await enqueueHostedCreation(() => createTenant({ name, slug, domain, actor, skipDefaults: true, onStep: (f) => { if (FASI.includes(f) && (!segni.length || segni[segni.length - 1].fase !== f)) segna(f); } }));
+    db.prepare('UPDATE process_analyses SET tenant_slug = ? WHERE id = ?').run(tenant.slug, id); // da qui il tenant esiste
+    credenziali.set(id, { username: 'admin', password: initialPassword });
+    segna('moduli');
+    let installed = await installModulesByIds(tenant.slug, moduleIds);
+    if (moduleIds.length && (!installed || installed.modules !== moduleIds.length)) installed = await installModulesByIds(tenant.slug, moduleIds); // il tenant a volte non è ancora in ascolto: un secondo giro
+    if (moduleIds.length && (!installed || installed.modules !== moduleIds.length)) avvisi.push('Installati ' + (installed ? installed.modules : 0) + ' moduli su ' + moduleIds.length + ': i mancanti si aggiungono dalla Libreria.');
+    segna('ruoli');
+    let config = null;
+    try { config = await analysis.deps.applyConfig({ tenantSlug: tenant.slug, processi, installedRegistryModuleIds: moduleIds, actor }); }
+    catch (e) { console.error('[analyses] ruoli e stati non applicati (non bloccante):', e.message); avvisi.push('Ruoli e stati del flusso non applicati: si impostano dal Builder.'); }
+    // ruoli dei moduli, report (spenti) e potenziamenti AI proposti, tranne quelli tolti: il tenant li completa senza sovrascrivere nulla
+    let setup = null;
+    try { setup = await analysis.deps.setupTenant(tenant.slug, analysis.pacchettoTenant(moduleIds, escludi)); }
+    catch (e) { console.error('[analyses] ruoli dei moduli, report e AI non applicati (non bloccante):', e.message); avvisi.push('Ruoli dei moduli, report e AI non applicati: si impostano dal Builder e da Impostazioni → Report.'); }
+    segni.push({ fase: 'fine', t: Date.now() });
+    const t = tempi(); delete t.fine;
+    setCreazione(id, { fase: 'finita', fine: Date.now(), secondi: Math.round((Date.now() - t0) / 100) / 10, tempi: t, moduli_installati: installed ? installed.modules : 0, report_creati: setup ? setup.reports.length : 0, moduli_dichiarati: setup ? setup.module_roles.length : 0, ruoli_creati: config ? config.roles_created.length : 0, moduli_configurati: config ? config.modules_configured.length : 0, avvisi });
+    logAudit(actor, 'analysis.create_tenant', tenant.slug, { analysis_id: id, modules: installed ? installed.modules : 0, roles: config ? config.roles_created.length : 0, secondi: Math.round((Date.now() - t0) / 1000) });
+  } catch (e) {
+    console.error('[analyses] creazione tenant fallita:', e.message);
+    setCreazione(id, { fase: 'errore', errore: e.message, tempi: tempi() });
+  }
+}
+
+router.post('/:id/create-tenant', requireAuth, (req, res) => {
+  const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
+  if (r.tenant_slug) return res.status(400).json({ error: 'Da questa analisi è già nato il tenant «' + r.tenant_slug + '».' });
+  if (inCorso(creazioneDi(r))) return res.status(409).json({ error: 'La creazione è già in corso.' });
+  const { name, slug, domain } = req.body || {};
+  if (!name || !slug) return res.status(400).json({ error: 'Nome e slug obbligatori' });
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(String(slug))) return res.status(400).json({ error: 'Indirizzo non valido: solo lettere minuscole, numeri e trattini.' });
+  if (db.prepare('SELECT 1 FROM tenants WHERE slug = ?').get(slug)) return res.status(400).json({ error: 'L\'indirizzo «' + slug + '» è già usato da un altro tenant.' });
+  const valid = new Set(analysis.libraryModules().map((m) => m.id));
+  const processi = analysis.sanitizeProcessi(json(r.processi, []), valid);
+  setCreazione(r.id, { fase: 'container', inizio: Date.now(), nome: name, slug, tempi: {}, errore: null, avvisi: [] });
+  creaTenantInBackground({ id: r.id, name, slug, domain, actor: req.user.username, processi, escludi: (json(r.scelte, {}).escludi) || [] }); // senza await: la pagina segue l'avanzamento
+  res.status(202).json({ avviata: true });
+});
+
+// L'avanzamento. Chi legge a creazione finita riceve UNA volta l'accesso admin iniziale (poi non c'è più: serve «Reset credenziali»).
+router.get('/:id/creazione', requireAuth, (req, res) => {
+  const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
+  const c = creazioneDi(r); if (!c) return res.json({ fase: null });
+  const out = { ...c, in_corso: inCorso(c), tenant_slug: r.tenant_slug };
+  if (c.fase === 'finita' && credenziali.has(r.id)) { out.credenziali = credenziali.get(r.id); credenziali.delete(r.id); }
+  res.json(out);
+});
+
+module.exports = router;

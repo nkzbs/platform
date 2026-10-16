@@ -77,4 +77,17 @@ async function deleteSubdomain(slug) {
   return { deleted: true, name };
 }
 
-module.exports = { isConfigured, zoneName, upsertSubdomain, deleteSubdomain };
+// Modalità SSL/TLS reale della zona, letta dalla stessa API — non assunta
+// "flexible" da un commento. Usata dal pannello "Sicurezza della
+// piattaforma" (2026-10-15): la zona OGGI è in Flexible (vedi commento in
+// cima al file), quindi il traffico tra Cloudflare e il NAS viaggia in
+// chiaro — il pannello deve mostrarlo com'è davvero, non quello che
+// vorremmo fosse.
+async function sslMode() {
+  if (!isConfigured()) return null;
+  const zoneId = process.env.CLOUDFLARE_ZONE_ID;
+  const result = await cf('/zones/' + zoneId + '/settings/ssl');
+  return result.value;
+}
+
+module.exports = { isConfigured, zoneName, upsertSubdomain, deleteSubdomain, sslMode };

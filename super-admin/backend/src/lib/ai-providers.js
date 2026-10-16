@@ -20,7 +20,7 @@ function isProviderConfigured(providerName, tenantSlug = null) {
   return false;
 }
 
-async function callMistral({ system, user, maxTokens = 2048, timeoutMs = 20000, apiKey }) {
+async function callMistral({ system, user, images, maxTokens = 2048, timeoutMs = 20000, apiKey }) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -36,11 +36,12 @@ async function callMistral({ system, user, maxTokens = 2048, timeoutMs = 20000, 
         // 403 "not available in your subscription tier" sul piano free —
         // small è il modello confermato raggiungibile. Resta sovrascrivibile
         // via MISTRAL_MODEL per chi ha un piano superiore.
-        model: process.env.MISTRAL_MODEL || 'mistral-small-latest',
+        // con immagini si usa il modello per la visione (MISTRAL_VISION_MODEL; di partenza lo stesso del testo, che oggi legge anche le immagini)
+        model: images && images.length ? (process.env.MISTRAL_VISION_MODEL || process.env.MISTRAL_MODEL || 'mistral-small-latest') : (process.env.MISTRAL_MODEL || 'mistral-small-latest'),
         max_tokens: maxTokens,
         messages: [
           { role: 'system', content: system },
-          { role: 'user', content: user },
+          { role: 'user', content: images && images.length ? [{ type: 'text', text: user }, ...images.map((im) => ({ type: 'image_url', image_url: 'data:' + im.mime + ';base64,' + im.base64 }))] : user },
         ],
       }),
       signal: controller.signal,
@@ -102,7 +103,7 @@ function logAIUsage(providerName, usage, tenantSlug = null) {
 // effetto collaterale trasparente, nessuno dei chiamanti esistenti
 // (super-builder.js, client-analyses.js, ai-enabler.js) deve cambiare.
 // tenantSlug: di chi è la chiamata (usa la chiave di quel tenant, se ce l'ha, e conta nel suo tetto).
-async function callAI(providerName, { system, user, maxTokens = 2048, timeoutMs = 20000, tenantSlug = null } = {}) {
+async function callAI(providerName, { system, user, images = null, maxTokens = 2048, timeoutMs = 20000, tenantSlug = null } = {}) {
   assertWithinBudget(tenantSlug); // a tetto mensile raggiunto non parte nessuna chiamata
   if (!isProviderConfigured(providerName, tenantSlug)) {
     const err = new Error('Provider AI "' + providerName + '" non configurato');
@@ -110,11 +111,12 @@ async function callAI(providerName, { system, user, maxTokens = 2048, timeoutMs 
     throw err;
   }
   if (providerName === 'mistral') {
-    const { text, usage } = await callMistral({ system, user, maxTokens, timeoutMs, apiKey: keyFor(tenantSlug) });
+    const { text, usage } = await callMistral({ system, user, images, maxTokens, timeoutMs, apiKey: keyFor(tenantSlug) });
     logAIUsage(providerName, usage, tenantSlug);
     maybeAlert(tenantSlug);
     return text;
   }
+  if (images && images.length) { const err = new Error('La lettura delle immagini è prevista solo con Mistral'); err.status = 400; throw err; }
   if (providerName === 'anthropic') {
     let timer;
     const timeout = new Promise((_, reject) => {

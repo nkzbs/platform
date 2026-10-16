@@ -29,42 +29,17 @@ router.get('/', requireAuth, requireAdmin, (req, res) => {
 // stesso identico dato restituito.
 router.get('/internal/monitoring-feed', requireInternalSecret, (req, res) => {
   const limit = Math.min(parseInt(req.query.limit, 10) || 150, 500);
-  // P2 (collaudo operativo 2026-09-03) — /timeline di Super Admin era limitato a un
-  // tetto fisso (500), oltre il quale gli eventi più vecchi diventavano irraggiungibili
-  // per sempre, non solo "non ancora caricati". `before` (timestamp ISO) è un cursore
-  // opzionale — "carica altri" ripete la stessa chiamata con l'evento più vecchio già
-  // mostrato, non un vero OFFSET (qui il feed è un merge cross-tenant via HTTP, un
-  // OFFSET reale non avrebbe senso senza materializzare tutto prima).
+  // PRIVACY (13 ottobre 2026): da qui esce SOLO l'elenco degli errori tecnici (serve a sapere se il tenant è rotto). Le azioni degli utenti
+  // (audit_log) e cosa succede ai record (record_history) restano dentro il tenant, visibili solo a chi ha accesso al tenant: Super Admin non le legge.
+  // `before` (timestamp ISO) è un cursore opzionale per «Carica altri».
   const before = req.query.before || null;
-  let audit_log = [];
   let error_logs = [];
-  let business_events = [];
-  try {
-    audit_log = (before
-      ? db.prepare('SELECT * FROM audit_log WHERE created_at < ? ORDER BY created_at DESC LIMIT ?').all(before, limit)
-      : db.prepare('SELECT * FROM audit_log ORDER BY created_at DESC LIMIT ?').all(limit))
-      .map((r) => ({ ...r, details: r.details ? JSON.parse(r.details) : null }));
-  } catch (e) { /* tabella non ancora presente su un'immagine precedente — non un errore */ }
   try {
     error_logs = before
       ? db.prepare('SELECT * FROM error_logs WHERE created_at < ? ORDER BY created_at DESC LIMIT ?').all(before, limit)
       : db.prepare('SELECT * FROM error_logs ORDER BY created_at DESC LIMIT ?').all(limit);
-  } catch (e) { /* idem */ }
-  // F9 (PLATFORM-MASTER-ROADMAP.md) — Observability Foundation: record_history già
-  // esiste (create/update/delete/transition su ogni record, di ogni modulo — cioè
-  // "ordine/pagamento/fattura/stock" nei termini della roadmap, dato che questo
-  // sistema non ha entità business hardcoded) ma prima era visibile SOLO aprendo lo
-  // storico del singolo record dentro il tenant, mai nella vista aggregata di Super
-  // Admin (/timeline) — qui esposto allo stesso modo di audit_log/error_logs sopra.
-  // before_data/after_data non incluse (potrebbero contenere campi cifrati/PII di
-  // un record intero) — solo cosa è successo, non i valori, coerente con l'uso
-  // previsto ("ricostruire cosa è successo", non un export dati).
-  try {
-    business_events = before
-      ? db.prepare('SELECT id, record_id, module_slug, actor, action, created_at FROM record_history WHERE created_at < ? ORDER BY created_at DESC LIMIT ?').all(before, limit)
-      : db.prepare('SELECT id, record_id, module_slug, actor, action, created_at FROM record_history ORDER BY created_at DESC LIMIT ?').all(limit);
-  } catch (e) { /* idem */ }
-  res.json({ audit_log, error_logs, business_events });
+  } catch (e) { /* tabella non ancora presente su un'immagine precedente — non un errore */ }
+  res.json({ error_logs });
 });
 
 module.exports = router;

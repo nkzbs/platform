@@ -12,7 +12,9 @@ const FEATURES = {
   sito_web: { label: 'Sito Web', description: 'Pagine pubbliche del progetto, con il loro editor. Resta spento al pubblico finché non lo attivi dalla scheda Sito Web.' },
   movimenti: { label: 'Movimenti bancari', description: 'Carica gli estratti conto in PDF, vedi i movimenti reali e completa le spese che mancano.' },
   analisi: { label: 'Come sta andando', description: 'Scheda in dashboard con entrate, spese, risparmio, confronti e anomalie, spiegata dall\'assistente.' },
-  riepilogo_mattino: { label: 'Riepilogo del mattino', description: 'Un messaggio WhatsApp al giorno con le spese di oggi, domani e in ritardo.' },
+  // la chiave tecnica resta «riepilogo_mattino» (è salvata nei tenant esistenti); oggi accende i report su WhatsApp
+  riepilogo_mattino: { label: 'Report', description: 'Report pianificati su WhatsApp e Telegram, configurabili: quanto pagare, righe da trattare, voci in ritardo, ore lavorate e straordinari.' },
+  suggerimenti: { label: 'Suggerimenti', description: 'Ogni giorno osserva come usi i moduli (campi mai compilati, righe ferme, passaggi mai usati) e ti suggerisce come migliorarli; l\'AI spiega e propone su richiesta. Spento di partenza.' },
 };
 const KEYS = Object.keys(FEATURES);
 
@@ -22,7 +24,7 @@ db.exec('CREATE TABLE IF NOT EXISTS tenant_features (key TEXT PRIMARY KEY, enabl
 // parte da zero e uno che funziona già non perde niente.
 function defaultFor(key) {
   const has = (sql) => { try { return !!db.prepare(sql).get(); } catch (e) { return false; } };
-  if (['movimenti', 'analisi', 'riepilogo_mattino'].includes(key)) return has('SELECT 1 FROM module_roles r JOIN modules m ON m.slug = r.module_slug WHERE m.installed = 1 AND r.kind IS NOT NULL'); // almeno un modulo ha dichiarato di essere una spesa o un'entrata
+  if (['movimenti', 'analisi', 'riepilogo_mattino'].includes(key)) return has('SELECT 1 FROM module_roles r JOIN modules m ON m.slug = r.module_slug WHERE m.installed = 1 AND r.kind IN (\'spesa\', \'entrata\')'); // almeno un modulo ha dichiarato di essere una spesa o un'entrata
   if (key === 'whatsapp') return has('SELECT 1 FROM whatsapp_recipients LIMIT 1') || has("SELECT 1 FROM connections WHERE integration_id = 'whatsapp_callmebot' AND connected = 1");
   if (key === 'gmail') return has('SELECT 1 FROM gmail_rules LIMIT 1');
   if (key === 'sito_web') return has('SELECT 1 FROM tenant_settings WHERE site_enabled = 1') || has('SELECT 1 FROM site_pages LIMIT 1');

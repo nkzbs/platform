@@ -464,6 +464,25 @@ try {
 // oggi (fallback ai colori/logo di default nel frontend), mai un colore/logo
 // a sorpresa scelto per lui.
 ensureColumn('tenant_settings', 'accent_color', 'TEXT DEFAULT NULL');
+// Proprietario predefinito delle righe automatiche (Gmail, estratto conto): vedi record-owner.js.
+ensureColumn('tenant_settings', 'default_owner_user_id', 'INTEGER DEFAULT NULL');
+// Inviti: un link monouso per scegliersi utente e password. Si conserva solo l'impronta (SHA-256) del token, mai il token; scade, si può revocare, si usa una volta.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS invites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token_hash TEXT NOT NULL UNIQUE,
+    nome TEXT,
+    email TEXT,
+    role TEXT NOT NULL DEFAULT 'user',
+    created_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME,
+    used_username TEXT,
+    revoked_at DATETIME
+  );
+`);
+ensureColumn('tenant_settings', 'setup_wizard', 'TEXT DEFAULT NULL'); // 'done' = il percorso dei primi passi è chiuso (o non serve)
 // White-label completo (2026-08-15): un tenant che ha già logo/nome propri può
 // nascondere anche il nome "Platform" davanti al proprio (login e sidebar
 // mostrano solo il brand del tenant) — opzione generica per chiunque, non
@@ -540,11 +559,19 @@ ensureColumn('tenant_settings', 'ai_bollette_enabled', 'INTEGER DEFAULT 0');
 ensureColumn('tenant_settings', 'ai_report_enabled', 'INTEGER DEFAULT 0');
 ensureColumn('tenant_settings', 'ai_enabled', 'INTEGER DEFAULT 0'); // interruttore generale dell'AI (Impostazioni → AI): spento, nessun potenziamento lavora
 
-// Riepilogo del mattino su WhatsApp (un solo messaggio al giorno con scadenze di oggi, di domani e in ritardo).
+// Vecchio riepilogo del mattino su WhatsApp (sostituito dai report: vedi reports.js).
 // Spento finché non lo si accende; l'ora è quella italiana.
 ensureColumn('tenant_settings', 'digest_enabled', 'INTEGER DEFAULT 0');
 ensureColumn('tenant_settings', 'digest_hour', 'INTEGER DEFAULT 8');
 ensureColumn('tenant_settings', 'digest_last_sent', 'TEXT DEFAULT NULL');
+// Report su WhatsApp (reports.js): impostazioni dei tre report in JSON. Le colonne digest_* sono del vecchio riepilogo del mattino e non si usano più.
+ensureColumn('tenant_settings', 'report_settings', 'TEXT DEFAULT NULL');
+db.exec('CREATE TABLE IF NOT EXISTS report_sent (kind TEXT NOT NULL, key TEXT NOT NULL, sent_at DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (kind, key))');
+// Bot Telegram (telegram.js): ogni chat collegata appartiene a UN utente dell'app (con i suoi permessi); il codice di collegamento è monouso e dura 10 minuti.
+db.exec('CREATE TABLE IF NOT EXISTS telegram_links (id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id TEXT NOT NULL UNIQUE, user_id INTEGER NOT NULL, label TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)');
+db.exec('CREATE TABLE IF NOT EXISTS telegram_link_codes (code TEXT PRIMARY KEY, user_id INTEGER NOT NULL, expires_at INTEGER NOT NULL)');
+// Azioni proposte dal bot in attesa di un tocco di conferma (valgono 15 minuti, una volta sola, solo per la chat e l'utente che le hanno originate).
+db.exec('CREATE TABLE IF NOT EXISTS telegram_pending (id TEXT PRIMARY KEY, chat_id TEXT NOT NULL, user_id INTEGER NOT NULL, action TEXT NOT NULL, expires_at INTEGER NOT NULL)');
 
 // Suggerimenti dell'AI su un record. L'AI PROPONE, mai scrive: un suggerimento resta
 // 'pending' finché non lo si accetta (applica i campi al record) o lo si ignora.
@@ -952,6 +979,22 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_records_module_slug ON records(module_slug);
   CREATE INDEX IF NOT EXISTS idx_records_user_id ON records(user_id);
   CREATE INDEX IF NOT EXISTS idx_record_history_record_id ON record_history(record_id);
+
+  -- Suggerimenti di miglioramento (suggestions.js): osservazioni sull'uso del tenant, calcolate in locale; la proposta dell'AI, se chiesta, sta nella colonna ai.
+  CREATE TABLE IF NOT EXISTS suggestions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    rule_key TEXT NOT NULL,
+    module_slug TEXT NOT NULL,
+    target TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL,
+    data TEXT NOT NULL DEFAULT '{}',
+    status TEXT NOT NULL DEFAULT 'open',
+    ai TEXT,
+    first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+    resolved_at DATETIME,
+    UNIQUE(rule_key, module_slug, target)
+  );
   CREATE INDEX IF NOT EXISTS idx_record_history_module_slug ON record_history(module_slug);
   CREATE INDEX IF NOT EXISTS idx_automation_deltas_source ON automation_deltas(source_module, source_record_id);
   CREATE INDEX IF NOT EXISTS idx_automation_logs_module_slug ON automation_logs(module_slug);

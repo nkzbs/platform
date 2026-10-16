@@ -13,9 +13,29 @@ const router = express.Router();
 router.get('/queues', requireAuth, (req, res) => {
   res.json(roles.list({ use: 'avvisi' }).filter((m) => m.avvisi.states.nuovo).map((m) => ({
     module_slug: m.module_slug, name: m.name, stato: m.roles.stato || '_stato', nuovo: m.avvisi.states.nuovo, da_fare: m.avvisi.states.da_fare || '',
-    descrizione: m.roles.descrizione || 'descrizione', importo: m.roles.importo || 'importo', scadenza: m.roles.scadenza || 'scadenza', data: m.roles.data || 'data',
+    descrizione: m.roles.descrizione || '', importo: m.roles.importo || '', scadenza: m.roles.scadenza || '', data: m.roles.data || '',
     ai: moduleAi.can(m.module_slug, 'triage'), categoria: m.roles.categoria || '', fatto: m.avvisi.states.fatto || '', rate: !!(m.avvisi.piano.modulo && Object.values(m.avvisi.piano.campi).every(Boolean)),
     noun_s: m.avvisi.noun_s, noun_p: m.avvisi.noun_p,
+  })));
+});
+
+// Il modulo di timbrature (se c'è) — stessa dichiarazione già usata dal bot
+// Telegram (bot-timbrature.js): kind 'presenze' con i tre ruoli data/inizio/
+// fine. Nessun dato di righe qui: le legge il widget dall'elenco normale del
+// modulo, che rispetta già i permessi di chi guarda (2026-10-14, richiesto
+// dall'utente: widget dashboard per registrare gli orari).
+router.get('/presenze', requireAuth, (req, res) => {
+  res.json(roles.list({ kind: 'presenze' }).filter((m) => m.roles.data && m.roles.inizio && m.roles.fine).map((m) => ({
+    module_slug: m.module_slug, name: m.name, data: m.roles.data, inizio: m.roles.inizio, fine: m.roles.fine,
+  })));
+});
+
+// Il modulo delle buste paga (se c'è) — kind 'bustapaga', per confrontare le
+// ore pagate con le timbrature dello stesso mese (2026-10-14, richiesto
+// dall'utente: "ogni mese carico la busta paga e verifico le ore segnate").
+router.get('/bustapaga', requireAuth, (req, res) => {
+  res.json(roles.list({ kind: 'bustapaga' }).filter((m) => m.roles.data && m.roles.netto && m.roles.ore_pagate).map((m) => ({
+    module_slug: m.module_slug, name: m.name, data: m.roles.data, lordo: m.roles.lordo || '', netto: m.roles.netto, ore_pagate: m.roles.ore_pagate, trattenute: m.roles.trattenute || '',
   })));
 });
 
@@ -29,7 +49,10 @@ router.get('/:slug', requireAuth, requireAdmin, (req, res) => {
 
 router.put('/:slug', requireAuth, requireAdmin, (req, res) => {
   if (!db.prepare('SELECT 1 FROM modules WHERE slug = ?').get(req.params.slug)) return res.status(404).json({ error: 'Modulo non trovato' });
+  const ow = req.body && req.body.owner_user_id;
+  if (ow !== undefined && ow !== null && ow !== '' && !db.prepare('SELECT 1 FROM users WHERE id = ?').get(parseInt(ow, 10))) return res.status(400).json({ error: 'Utente non trovato.' });
   const out = roles.set(req.params.slug, req.body || {});
+  if (out.owner_user_id) require('../record-owner').adoptOrphans(); // le righe senza proprietario di questo modulo passano a lui
   logAudit(req.user.username, 'module.roles', req.params.slug, { kind: out.kind, uses: out.uses });
   res.json(out);
 });

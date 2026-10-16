@@ -1,6 +1,6 @@
 // Avvisi WhatsApp di un modulo quando arriva una riga nello stato "nuovo" (es. una bolletta da Gmail in "da smistare").
 // Quando avvisare, che cosa conta come "nuovo", come si chiamano le righe e a quale tag vanno i destinatari lo dichiara il modulo
-// (Builder → Avvisi, vedi module-roles.js). Stesso canale e stessi destinatari del riepilogo del mattino. Mai un errore verso il chiamante.
+// (Builder → Avvisi, vedi module-roles.js). Stesso canale e stessi destinatari dei report su WhatsApp (reports.js). Mai un errore verso il chiamante.
 const db = require('./db');
 const whatsapp = require('./whatsapp');
 const moduleRoles = require('./module-roles');
@@ -15,10 +15,10 @@ function buildNuovaRiga(slug, data) {
   if (!m || !m.avvisi.nuovo || !m.avvisi.states.nuovo) return null;
   const R = m.roles;
   if (data[R.stato || '_stato'] !== m.avvisi.states.nuovo) return null;
-  const parti = [cap(m.avvisi.noun_s) + ' ' + humanize(m.avvisi.states.nuovo) + ': ' + String(data[R.descrizione || 'descrizione'] || '(senza descrizione)').trim()];
-  const imp = Number(data[R.importo || 'importo']);
+  const parti = [cap(m.avvisi.noun_s) + ' ' + humanize(m.avvisi.states.nuovo) + ': ' + String(data[R.descrizione] || '(senza descrizione)').trim()];
+  const imp = Number(data[R.importo]);
   if (imp > 0) parti.push(fmtEur(imp));
-  const scad = data[R.scadenza || 'scadenza'];
+  const scad = data[R.scadenza];
   if (scad) parti.push('scade ' + String(scad).split('-').reverse().join('/'));
   return { text: parti.join(' · '), tag: m.avvisi.tag };
 }
@@ -29,7 +29,7 @@ async function notifyNuovaRiga(slug, data) {
     const msg = buildNuovaRiga(slug, data);
     if (!msg) return { skipped: 'il modulo non avvisa' };
     const row = db.prepare("SELECT credentials FROM connections WHERE integration_id = 'whatsapp_callmebot'").get();
-    let creds = null; try { creds = row && row.credentials ? JSON.parse(row.credentials) : null; } catch (e) { /* illeggibili */ }
+    const creds = row ? require('./secrets-at-rest').unseal(row.credentials) : null;
     if (!creds || !creds.api_key) return { skipped: 'whatsapp non collegato' };
     const dest = require('./notification-settings').recipientsForTag(msg.tag);
     if (!dest.length) return { skipped: 'nessun destinatario' };
@@ -72,7 +72,7 @@ async function scanNuove() {
   for (const { m, rows } of groups) {
     if (rows.length === 1) { sent.push(await notifyNuovaRiga(m.module_slug, rows[0].data)); continue; }
     const R = m.roles, A = m.avvisi;
-    const righe = rows.slice(0, 4).map((r) => '• ' + String(r.data[R.descrizione || 'descrizione'] || '(senza descrizione)').trim() + (Number(r.data[R.importo || 'importo']) > 0 ? ' ' + fmtEur(Number(r.data[R.importo || 'importo'])) : ''));
+    const righe = rows.slice(0, 4).map((r) => '• ' + String(r.data[R.descrizione] || '(senza descrizione)').trim() + (Number(r.data[R.importo]) > 0 ? ' ' + fmtEur(Number(r.data[R.importo])) : ''));
     if (rows.length > 4) righe.push('… e altre ' + (rows.length - 4));
     sent.push(await sendText(m.avvisi.tag, rows.length + ' ' + A.noun_p + ' ' + humanize(A.states.nuovo) + ':\n' + righe.join('\n')));
   }
@@ -84,7 +84,7 @@ async function sendText(tag, testo, kind = 'avviso') {
   try {
     if (!require('./features').isEnabled('whatsapp')) return { skipped: 'whatsapp non attivo' };
     const row = db.prepare("SELECT credentials FROM connections WHERE integration_id = 'whatsapp_callmebot'").get();
-    let creds = null; try { creds = row && row.credentials ? JSON.parse(row.credentials) : null; } catch (e) { /* illeggibili */ }
+    const creds = row ? require('./secrets-at-rest').unseal(row.credentials) : null;
     if (!creds || !creds.api_key) return { skipped: 'whatsapp non collegato' };
     const dest = require('./notification-settings').recipientsForTag(tag);
     if (!dest.length) return { skipped: 'nessun destinatario' };

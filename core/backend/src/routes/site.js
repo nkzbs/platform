@@ -365,7 +365,7 @@ function findFormBlocks(blocks) {
 function getConnectionCredentials(integrationId) {
   const row = db.prepare('SELECT credentials FROM connections WHERE integration_id = ?').get(integrationId);
   if (!row || !row.credentials) return null;
-  try { return JSON.parse(row.credentials); } catch { return null; }
+  return require('../secrets-at-rest').unseal(row.credentials);
 }
 function escapeHtmlLite(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

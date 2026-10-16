@@ -3,6 +3,7 @@ const express = require('express');
 const db = require('../db');
 const { requireAuth, requireAdmin } = require('./auth');
 const { logAudit } = require('../audit-log');
+const { requireInternalSecret } = require('../../../../shared/internal-secret.js');
 
 const router = express.Router();
 
@@ -31,6 +32,30 @@ router.post('/', requireAuth, requireAdmin, (req, res) => {
   } catch (e) {
     res.status(400).json({ error: 'Nome ruolo già esistente' });
   }
+});
+
+// Chiamata da Super Admin (lib/tenant-config-from-analysis.js) quando un tenant nasce da
+// un'Analisi: i "ruoli coinvolti" dei processi diventano ruoli reali nel tenant appena
+// creato. Idempotente: un nome già esistente (o built-in) viene saltato, mai un
+// duplicato/errore. Scoperto quasi tolto per errore (16/10/2026, vedi commento gemello su
+// apply-workflow-config-batch in routes/modules.js e docs/DECISIONI.md).
+router.post('/internal/sync', requireInternalSecret, (req, res) => {
+  const { roles } = req.body || {};
+  if (!Array.isArray(roles)) return res.status(400).json({ error: 'roles deve essere un array' });
+  const existing = new Set(db.prepare('SELECT name FROM roles').all().map((r) => r.name));
+  const insert = db.prepare('INSERT INTO roles (name, label, color) VALUES (?, ?, ?)');
+  const created = [];
+  roles.forEach((r) => {
+    if (!r || !r.slug || !r.label) return;
+    if (BUILT_IN.includes(r.slug) || existing.has(r.slug)) return;
+    try {
+      insert.run(r.slug, r.label, r.color || '#6B7280');
+      existing.add(r.slug);
+      created.push(r.slug);
+    } catch (e) { /* nome duplicato dopo slugify (es. due varianti accentate): ignora, non fatale */ }
+  });
+  if (created.length > 0) logAudit('platform:provisioning', 'role.sync_from_analysis', created.join(','), null);
+  res.json({ created });
 });
 
 router.delete('/:name', requireAuth, requireAdmin, (req, res) => {

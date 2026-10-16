@@ -9,6 +9,9 @@ import DashboardPage from './pages/DashboardPage'
 import LibreriaPage from './pages/LibreriaPage'
 import MovimentiPage from './pages/MovimentiPage'
 import BuilderPage from './pages/BuilderPage'
+import SetupWizard from './components/SetupWizard'
+import ProductTour from './components/ProductTour'
+import { ONBOARDING_STEPS } from './components/onboardingSteps'
 import GuidaPage from './pages/GuidaPage'
 import AuditPage from './pages/AuditPage'
 import ImpostazioniPage from './pages/ImpostazioniPage'
@@ -128,11 +131,12 @@ export default function App() {
   const [features, setFeatures] = useState({}) // funzioni facoltative accese su questo progetto (da /api/tenant-info)
   const [tenantLogoUrl, setTenantLogoUrl] = useState('')
   const [hidePlatformName, setHidePlatformName] = useState(false)
-  const [loginCms, setLoginCms] = useState(null)
   // Sidebar come drawer off-canvas sotto md — chiusa di default, aperta
   // dall'hamburger nella barra in alto (nascosto sopra md, dove la sidebar è
   // sempre visibile come prima).
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [showTour, setShowTour] = useState(false) // il giro guidato: parte a richiesta, mai da solo
+  const finishTour = () => { setShowTour(false); setMobileNavOpen(false); setCurrentPage('dashboard') }
 
   const loadModules = async () => {
     if (!token) return
@@ -171,12 +175,6 @@ export default function App() {
     setAiOn(!!data.ai)
     setTenantLogoUrl((data.logo_url || ''))
     setHidePlatformName(!!data.hide_platform_name)
-    setLoginCms(data.login_headline ? {
-      headline: data.login_headline,
-      subheadline: data.login_subheadline || '',
-      body: data.login_body || '',
-      heroImageUrl: (data.login_hero_image_url || ''),
-    } : null)
     const triplet = hex2rgbTriplet(data.accent_color)
     if (triplet) document.documentElement.style.setProperty('--accent', triplet)
     document.title = data.name ? data.name + ' — Platform' : 'Platform'
@@ -233,7 +231,7 @@ export default function App() {
   const onLogin = (t, u) => { setToken(t); setUser(u) }
 
 
-  if (!token) return <Login onLogin={onLogin} tenantName={tenantName} logoUrl={tenantLogoUrl} hidePlatformName={hidePlatformName} cms={loginCms} />
+  if (!token) return <Login onLogin={onLogin} tenantName={tenantName} logoUrl={tenantLogoUrl} hidePlatformName={hidePlatformName} />
 
   const currentModule = installedModules.find((m) => m.slug === currentPage)
   const allModulesForBuilder = installedModules
@@ -274,12 +272,17 @@ export default function App() {
             nuovo esplicitamente dall'utente, stavolta come scelta definitiva.
             'sito_web' qui sotto instrada sullo stesso meccanismo di 'account'
             sopra, solo con un tab diverso. */}
-        {(currentPage === 'impostazioni' || currentPage === 'account' || currentPage === 'sito_web' || currentPage === 'export_dati') && user &&
-          <ImpostazioniPage token={token} user={user} features={features} modules={installedModules} onFeaturesChanged={loadTenantName} initialTab={currentPage === 'impostazioni' ? undefined : currentPage} />}
+        {(currentPage === 'impostazioni' || currentPage === 'account' || currentPage === 'sito_web' || currentPage === 'export_dati' || currentPage === 'connessioni') && user &&
+          <ImpostazioniPage token={token} user={user} features={features} modules={installedModules} onOpenInBuilder={openInBuilder} onFeaturesChanged={loadTenantName} onStartTour={() => setShowTour(true)} initialTab={currentPage === 'impostazioni' ? undefined : currentPage} />}
         {currentModule && !['dashboard', 'utenti', 'report'].includes(currentPage) && <ModulePage module={currentModule} token={token} user={user} onNavigate={setCurrentPage} />}
         </div>
       </main>
       <ToastContainer />
+      {token && user && <SetupWizard token={token} user={user} onNavigate={setCurrentPage} onOpenBuilderNewModule={openBuilderNewModule} onStartTour={() => setShowTour(true)} />}
+      {showTour && (
+        <ProductTour steps={ONBOARDING_STEPS} currentPage={currentPage} onNavigate={setCurrentPage} onFinish={finishTour}
+          onStepChange={(step) => setMobileNavOpen(window.innerWidth < 768 && !!step.target && step.target.startsWith('sidebar'))} />
+      )}
     </div>
   )
 }

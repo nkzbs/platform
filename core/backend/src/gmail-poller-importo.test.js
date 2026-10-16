@@ -48,7 +48,7 @@ test('date testuali ("entro il 8 settembre 2026") e date passate ignorate', () =
   assertEq(ISO('fattura del 01/07/2026'), null);
 });
 console.log('\n--- la riga creata da una mail: campi e stato li dichiara il modulo, il tipo di regola dice cosa leggere ---');
-const SPESA = { roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', fisso: 'fisso' }, avvisi: { states: { nuovo: 'da_smistare' } } };
+const SPESA = { roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', categoria: 'categoria', descrizione: 'descrizione', stato: '_stato', fisso: 'fisso', note: 'note' }, avvisi: { states: { nuovo: 'da_smistare' } } };
 const R = { mittente: 'a@b.it', descrizione: 'A2A', categoria: 'Luce', tipo: 'bolletta' };
 test('bolletta: importo, scadenza e stato "nuovo" del modulo', () => {
   const { data } = costruisciRiga({ rule: R, declared: SPESA, subject: 'Bolletta', importo: 44, scadenza: '2026-10-01', dataSpesa: '2026-09-20' });
@@ -69,9 +69,8 @@ test('bolletta senza importo letto: lo dice nelle note, importo 0', () => {
   const { data } = costruisciRiga({ rule: R, declared: SPESA, subject: 'Bolletta', importo: null, scadenza: null, dataSpesa: '2026-09-20' });
   assertEq(data.importo, 0); assertEq(/importo non rilevato/.test(data.note), true);
 });
-test('modulo non dichiarato: nomi più comuni e stato da_smistare', () => {
-  const { data } = costruisciRiga({ rule: R, declared: null, subject: 'Bolletta', importo: 10, scadenza: null, dataSpesa: '2026-09-20' });
-  assertEq(data.importo, 10); assertEq(data._stato, 'da_smistare');
+test('modulo non dichiarato: non riceve righe (nessun nome di campo nel codice)', () => {
+  assertEq(costruisciRiga({ rule: R, declared: null, subject: 'Bolletta', importo: 10, scadenza: null, dataSpesa: '2026-09-20' }), null);
 });
 
 console.log(`\n${'='.repeat(60)}\n${passed} passati, ${failed} falliti su ${passed + failed} test.`);

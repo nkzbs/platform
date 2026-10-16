@@ -3,6 +3,9 @@ import { API } from '../lib/api'
 import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
 import RichText from '../components/RichText'
+import CollegaModuli from '../components/CollegaModuli'
+import VerticaliLibreria from '../components/VerticaliLibreria'
+import ProponiAllaLibreriaModal from '../components/ProponiAllaLibreria'
 import { parseSchemaFrontend, getAutomationSteps, getRequiredConnectors } from '../lib/schema-v3-frontend'
 
 // La Libreria del tenant: i moduli che ho già (installati) e quelli salvati nella Libreria di
@@ -24,6 +27,10 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
   const [detailModule, setDetailModule] = useState(null)
   const [uninstalled, setUninstalled] = useState(null) // { name } — conferma dopo una disinstallazione riuscita
   const [search, setSearch] = useState('')
+  const [proposta, setProposta] = useState(null) // { module, description } — «Proponi alla Libreria» (modale in components/ProponiAllaLibreria.jsx)
+  const [proposte, setProposte] = useState([]) // lo stato delle proposte già inviate
+  const caricaProposte = () => api.get('/modules/registry-proposals').then((d) => Array.isArray(d) && setProposte(d))
+  useEffect(() => { caricaProposte() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [connections, setConnections] = useState([])
   const [googleStatus, setGoogleStatus] = useState(null)
@@ -61,6 +68,18 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
     else if (res && res.ok) setUninstalled({ name: m.name })
   }
 
+  // Installazione multipla: si spuntano più moduli dello store e si scaricano insieme (le relazioni tra loro si creano poi nel Builder).
+  const [collega, setCollega] = useState(false)
+  const [ultimoModello, setUltimoModello] = useState(null) // id del modello appena installato (per «Guida del modello»)
+  const [richiestaGuida, setRichiestaGuida] = useState(null)
+  const [selezione, setSelezione] = useState([]) // id dei moduli della Libreria spuntati
+  const [bulk, setBulk] = useState({ busy: false, esito: null, errore: '' })
+  const spunta = (id) => setSelezione((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
+  const installaSelezionati = async () => {
+    setBulk({ busy: true, esito: null, errore: '' })
+    const r = await api.post('/modules/registry/bulk-install', { ids: selezione })
+    if (r.ok) { setBulk({ busy: false, esito: r.data, errore: '' }); setSelezione([]); load(); loadRegistry(); onRefresh() } else setBulk({ busy: false, esito: null, errore: (r.data && r.data.error) || 'Installazione non riuscita.' })
+  }
   const startInstall = (m) => { setInstalling(m); setInstallError('') }
 
   // Applica un aggiornamento pubblicato dal registro (2026-08-29) — punto che
@@ -258,6 +277,9 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
       <div key={(m._kind || 'own') + '-' + m.id} id={'module-card-' + m.slug}
         className="bg-surface-card rounded-xl border border-gray-800 hover:border-gray-700 transition p-4 flex flex-col cursor-pointer" onClick={() => openDetail(m)}>
         <div className="flex items-center gap-2.5 mb-2">
+          {!installed && m._kind === 'registry' && (
+            <input type="checkbox" className="flex-shrink-0 w-4 h-4 accent-[var(--accent)]" checked={selezione.includes(m.id)} onClick={(e) => e.stopPropagation()} onChange={() => spunta(m.id)} title="Scegli per installare più moduli insieme" />
+          )}
           <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: (m.color || '#2563EB') + '22', color: m.color || '#2563EB' }}>
             <Icon name={m.icon || 'box'} size={16} />
           </div>
@@ -312,10 +334,10 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
   return (
     <div>
       <h1 className="text-lg font-bold text-ink tracking-[-0.35px] mb-1">Libreria</h1>
-      <p className="text-gray-500 text-sm mb-6">I tuoi moduli e quelli salvati nella Libreria, in un unico posto.</p>
+      <p className="text-gray-500 text-sm mb-6">I tuoi moduli e quelli salvati nella Libreria, in un unico posto. <button onClick={() => setCollega(true)} className="text-accent hover:underline">Collega i moduli</button></p>
 
       {onCreateNewModule && (
-        <div className="flex items-center justify-between gap-4 flex-wrap bg-surface-card border border-gray-800 rounded-xl p-4 mb-5">
+        <div data-tour="libreria-nuovo" className="flex items-center justify-between gap-4 flex-wrap bg-surface-card border border-gray-800 rounded-xl p-4 mb-5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-accent/15 text-accent flex items-center justify-center flex-shrink-0"><Icon name="tool" size={18} /></div>
             <div>
@@ -352,6 +374,21 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
       )}
 
 
+      {bulk.esito && (
+        <div className="bg-surface-card border border-gray-800 rounded-xl p-3.5 mb-4 text-sm flex items-start justify-between gap-3">
+          <div>
+            <div className="text-ink">{bulk.esito.installati.length} moduli installati{bulk.esito.saltati.length > 0 ? ', ' + bulk.esito.saltati.length + ' c\'erano già' : ''}. Ora puoi collegarli tra loro.</div>
+            {bulk.esito.falliti.length > 0 && <div className="text-xs text-amber-400 mt-1">Non installati: {bulk.esito.falliti.join(', ')}.</div>}
+          </div>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <button onClick={() => setCollega(true)} className="text-xs px-3 py-1.5 rounded-lg bg-accent hover:opacity-90 text-white flex items-center gap-1.5"><Icon name="link" size={12} />Collega i moduli</button>
+            {ultimoModello && <button onClick={() => setRichiestaGuida(ultimoModello)} className="text-xs px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200">Guida del modello</button>}
+            <button onClick={() => setBulk({ busy: false, esito: null, errore: '' })} className="text-xs text-gray-500 hover:text-ink">Chiudi</button>
+          </div>
+        </div>
+      )}
+      <VerticaliLibreria token={token} installatiSlugs={new Set(modules.filter((m) => m.installed).flatMap((m) => [m.slug, m.registry_slug]).filter(Boolean))} richiestaGuida={richiestaGuida} onGuidaAperta={() => setRichiestaGuida(null)} onInstalled={(esito, v) => { setUltimoModello(v ? v.id : null); setBulk({ busy: false, esito, errore: '' }); load(); loadRegistry(); onRefresh() }} />
+
       <h2 className="text-sm font-semibold text-ink mb-3">Moduli</h2>
       <div className="relative mb-6 max-w-md">
         <Icon name="search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
@@ -361,6 +398,32 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
 
       {section('Installati', installedList, true, q ? 'Nessun modulo installato corrisponde alla ricerca.' : 'Nessun modulo installato ancora.')}
       {section('Disponibili', availableList, false, q ? 'Nessun modulo disponibile corrisponde alla ricerca.' : 'Hai già installato tutto quello che c\'è nella Libreria.')}
+
+      {proposte.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-sm font-semibold text-ink mb-2">Proposte inviate alla Libreria</h2>
+          <div className="space-y-1.5">
+            {proposte.slice(0, 8).map((p) => (
+              <div key={p.id} className="bg-surface-card border border-gray-800 rounded-lg px-3.5 py-2.5 flex items-center justify-between gap-3 text-sm">
+                <div className="min-w-0"><div className="text-ink truncate">{p.name}</div>{p.status === 'rejected' && p.reason && <div className="text-xs text-gray-500">Motivo: {p.reason}</div>}</div>
+                <span className={'text-[11px] px-2 py-1 rounded flex-shrink-0 ' + (p.status === 'approved' ? 'bg-green-900/30 text-green-400' : p.status === 'rejected' ? 'bg-red-900/30 text-red-400' : 'bg-amber-900/30 text-amber-400')}>{p.status === 'approved' ? 'Approvata' : p.status === 'rejected' ? 'Rifiutata' : 'In attesa'}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {selezione.length > 0 && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-surface-card border border-gray-700 shadow-xl rounded-xl px-4 py-3 flex items-center gap-3 max-w-[92vw]">
+          <span className="text-sm text-ink">{selezione.length} selezionat{selezione.length === 1 ? 'o' : 'i'}</span>
+          {bulk.errore && <span className="text-xs text-amber-400">{bulk.errore}</span>}
+          <button onClick={() => setSelezione([])} disabled={bulk.busy} className="text-xs text-gray-400 hover:text-ink">Annulla</button>
+          <button onClick={installaSelezionati} disabled={bulk.busy} className="text-sm px-4 py-2 rounded-lg bg-accent hover:opacity-90 disabled:opacity-50 text-white">{bulk.busy ? 'Installo…' : 'Installa'}</button>
+        </div>
+      )}
+
+      {collega && <CollegaModuli token={token} onClose={() => setCollega(false)} onDone={load} />}
+      {proposta && <ProponiAllaLibreriaModal api={api} module={proposta.module} description={proposta.description} onClose={() => setProposta(null)} onSent={caricaProposte} />}
 
       {detailModule && (() => {
         const installedMatch = modules.find((m) => m.slug === detailModule.slug)
@@ -386,6 +449,9 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
               <div className="flex items-center gap-2 flex-shrink-0">
                 {isInstalled ? (
                   <>
+                    {installedMatch && !installedMatch.is_system && (
+                      <button onClick={() => { setProposta({ module: installedMatch, description: detailModule.description || '' }); setDetailModule(null) }} className="text-sm px-3.5 py-2 rounded-lg transition bg-gray-800 hover:bg-gray-700 text-gray-200 flex items-center gap-1.5"><Icon name="upload" size={13} />Proponi alla Libreria</button>
+                    )}
                     {onOpenInBuilder && (
                       <button onClick={() => onOpenInBuilder(detailModule.slug)} className="text-sm px-3.5 py-2 rounded-lg transition bg-gray-800 hover:bg-gray-700 text-gray-300 flex items-center gap-1.5">
                         <Icon name="tool" size={13} />Personalizza

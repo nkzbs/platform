@@ -8,12 +8,10 @@ import DashboardPage from './pages/DashboardPage'
 import TenantsPage from './pages/TenantsPage'
 import LibreriaPage from './pages/LibreriaPage'
 import ActivityPage from './pages/ActivityPage'
-import UsersPage from './pages/UsersPage'
 import TenantBuilderPage from './pages/TenantBuilderPage'
-import UpdateManagerPage from './pages/UpdateManagerPage'
 import SettingsPage from './pages/SettingsPage'
-import AnalyticsPage from './pages/AnalyticsPage'
 import GuidaPage from './pages/GuidaPage'
+import AnalisiPage from './pages/AnalisiPage'
 
 // Semplificazione 2026-09-27: Platform torna a essere un side project a uso
 // personale — rimossi il Partner Portal, il CRM (Clienti/Clienti Core) e
@@ -138,13 +136,11 @@ export default function App() {
           {page === 'dashboard' && <DashboardPage token={token} onNavigate={setPage} />}
           {page === 'tenants' && <TenantsPage token={token} onViewActivity={viewTenantActivity} onNavigate={setPage} />}
           {page === 'libreria' && <LibreriaPage token={token} />}
+          {page === 'analisi' && <AnalisiPage token={token} onNavigate={setPage} onBuild={openBuilderWithPrefill} />}
           {page === 'super-builder' && <TenantBuilderPage token={token} initialPrompt={builderPrefill?.prompt} initialModuleName={builderPrefill?.moduleName} />}
-          {page === 'update-manager' && <UpdateManagerPage token={token} />}
           {page === 'attivita' && <ActivityPage token={token} initialTenantFilter={activityTenantFilter} />}
-          {page === 'analytics' && <AnalyticsPage token={token} />}
-          {page === 'impostazioni' && <SettingsPage token={token} />}
+          {page === 'impostazioni' && <SettingsPage token={token} myId={payload && payload.id} />}
           {page === 'guida' && <GuidaPage token={token} />}
-          {page === 'users' && <UsersPage token={token} />}
         </div>
       </main>
     </div>

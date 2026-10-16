@@ -34,6 +34,16 @@ servire a un tenant futuro" non è un motivo.
 | Password admin fissa scritta nel codice | Sostituita da una password casuale (o da variabile d'ambiente) |
 | ~25 colonne commerciali di `tenants`, ~20 tabelle inerti, la storia di migrazioni di `db.js` | Il database di Super Admin riparte da uno schema pulito di 12 tabelle |
 
+- **Update Manager** (13 ottobre): tolti la pagina, la coda per la propagazione notturna e il rollback/import/export dell'immagine. Con un solo tenant il pulsante **Aggiorna** sulla scheda del tenant basta. Restano `redeploy-all` e la tabella `update_manager` (inerte, non toccata).
+
+- **Privacy dell'Attività di Super Admin** (13 ottobre): Super Admin non legge più cosa fanno gli utenti dentro un tenant. Dal tenant esce solo l'elenco degli **errori tecnici** (`/api/audit-log/internal/monitoring-feed` risponde solo con `error_logs`); le azioni degli utenti e i movimenti dei record restano nel tenant, nel suo registro e nello storico di ogni riga. Nell'Attività di Super Admin restano le azioni di Super Admin stesso e gli errori dei tenant.
+
+- **Accesso di Super Admin ai tenant, da ridurre** (13 ottobre): «Apri →» **chiede le credenziali admin del tenant** (non entra da solo) e resta. Decisione di Nima: **in futuro Super Admin non dovrà avere ponti verso i dati dei tenant**. Oggi i ponti reali sono: «Reset credenziali» (imposta una nuova password admin del tenant), le chiavi del tenant (`jwt_secret`, `encryption_key`) conservate nel database di Super Admin e il controllo dei container. Niente di nuovo in Super Admin deve dipendere da questi: così toglierli sarà solo una cancellazione.
+
+- **Report come definizioni, proprietario per modulo** (13 ottobre): i tre report non sono più tre messaggi scritti a mano ma definizioni (tipo + parametri) con quattro tipi generici; il proprietario delle righe automatiche si sceglie per modulo (con ripiego sul predefinito del progetto). Motivo: «Platform sempre generico e configurabile» (vedi `PLATFORM-VISIONE.md`). Un tipo nuovo di report richiede ancora codice (una primitiva), un report nuovo di un tipo esistente no.
+
+- **Analisi dei processi tornata, senza la parte commerciale** (13 ottobre): ripresa dal vecchio Platform (processo con ruoli, passaggi e bivi, copertura della Libreria, manuale stampabile, creazione del tenant con ruoli e stati). Restano fuori clienti, partner, preventivi, prezzi e licenze, e la misurazione prima/dopo che leggeva i dati dei tenant. Un'analisi è un documento di Super Admin, collegabile al tenant che ne nasce.
+
 ### Tenuto, anche se "non serve oggi"
 
 | Cosa | Perché |
@@ -42,7 +52,6 @@ servire a un tenant futuro" non è un motivo.
 | **Super Builder / Builder** | È il pezzo di maggior valore: dove nascono i moduli |
 | **Dominio pubblico automatico** (Cloudflare + nginx) | Un tenant nuovo deve essere raggiungibile subito |
 | **Statistiche tra tenant** e **API interna tra Super Admin e tenant** | Base per far "interrogare" più tenant tra loro |
-| **Update Manager** (stato, aggiornamento, rollback dell'immagine core) | Serve a distribuire una nuova versione del codice ai tenant |
 | **Backup, export, ripristino, 2FA** | Dati finanziari reali |
 
 ### Cambiato
@@ -405,6 +414,82 @@ Il Builder resta completo (quello di Super Admin serve per gli altri tenant), ma
 - Restano: crea_record, crea_record_n_volte, notifica_interna, invia_notifica, invia_report_periodico, aggiorna_record.
 - Un blocco sconosciuto nei vecchi schemi viene ignorato (lenient), non rompe il modulo.
 
+## 2026-10-10 — Proprietario delle righe automatiche e "Sposta in…"
+- **Problema**: Spese Personali ha la regola "ognuno vede solo le proprie righe". Le righe che arrivano da Gmail, dall'estratto conto o dalle automazioni nascevano senza proprietario (e le 427 esistenti erano dell'admin): un utente normale non le vedeva, e Checklist/Riepilogo mostravano solo Casa.
+- **Scelta**: la regola resta (se un giorno Federica ha le Personali vede solo le sue). Le righe automatiche prendono un proprietario: quello della riga che le genera (le rate sono di chi ha creato il piano), altrimenti il "proprietario predefinito" scelto in Utenti (`tenant_settings.default_owner_user_id`, `core/backend/src/record-owner.js`). Le righe esistenti si riassegnano con un'azione esplicita dell'admin (Utenti → "Proprietario delle righe automatiche", con anteprima del numero), che cambia solo `records.user_id`.
+- **Sposta in…** (Smista): una riga "da smistare" può cambiare modulo di spesa (Casa ↔ Personale). Destinazioni = moduli con lo stesso `kind` e gli avvisi dichiarati. I campi si abbinano per ruolo, gli altri solo con stessa chiave e tipo; ciò che non passa viene mostrato prima e scritto nella cronologia. Stesso id, stessi allegati; se la riga non aveva proprietario diventa di chi la sposta.
+- Test: `core/backend/src/sposta-proprietario.test.js`.
+
+## 2026-10-10 — Vista ad archivio (Documenti)
+- Nuovo modo di vedere l'elenco di un modulo, accanto a Tabella e Card: **Archivio** (Builder → modulo → "Come si vede l'elenco"). Nessuna pagina su misura: vale per qualunque modulo con un campo «scelta» e un campo «file».
+- **Come un archivio (rifatto lo stesso giorno su richiesta)**: la radice mostra solo le cartelle (i valori del primo campo select, anche vuote, sbiadite), si entra per vedere i file, con le briciole «Archivio › cartella › anno». Una cartella con almeno 8 file e almeno 2 anni diversi si divide da sola in **sottocartelle per anno**; l'anno si legge dal titolo (es. `ClientStatements_20190830…`, `CU-2021…`) o, se manca, dalla data del record. Con una ricerca attiva si vede l'elenco piatto di tutto l'archivio.
+- File = primo campo file; titolo = primo campo di testo; data = primo campo data. Schede con icona per tipo (miniatura per le immagini), elenco alternativo, anteprima a schermo intero (immagini e PDF con il visualizzatore del browser; gli altri tipi si scaricano). Spostare un file di cartella = cambiare quel solo campo (trascinando su PC, dal menu "Cartella" nell'anteprima).
+- Non fatto: miniatura della prima pagina dei PDF (servirebbe pdf.js, peso notevole): le schede PDF mostrano l'icona.
+- Codice: `core/frontend/src/pages/ModulePage/ArchiveView.jsx`; `list_view = 'archive'` accettato da `routes/modules.js`.
+- **Cartelle modificabili** (stesso giorno): nell'archivio la matita rinomina una cartella, il cestino toglie quelle vuote, «Nuova cartella» ne aggiunge. Una cartella è un valore del campo «scelta», quindi `POST /api/field-options/:modulo/:campo` (`routes/field-options.js`, test `field-options.test.js`) cambia lo schema pubblicato (con una riga di cronologia) e tutte le righe che lo usano, in una transazione. Rifiuta nomi doppi (anche con maiuscole diverse), vuoti, oltre 60 caratteri; rifiuta di rinominare se il vecchio nome è citato in una regola del modulo (condizioni, automazioni) e di togliere una cartella non vuota. Possono usarlo gli utenti con permesso di modifica sul modulo, non solo l'admin.
+- Corretto un errore: il parametro `searching` dell'archivio (ricerca = elenco piatto) era stato collegato al componente sbagliato in `ModulePage/index.jsx`.
+- **Modulo «Nuovo» più semplice** (stesso giorno): i collegamenti facoltativi a altri moduli (per Documenti: spesa casa/personale, debito casa/personale) stanno chiusi in fondo sotto «Collegamenti (facoltativo)»; i campi obbligatori vengono prima. Nei moduli con vista ad archivio il **file è il primo campo**, il titolo si compila da solo dal nome del file (se vuoto) e il nuovo documento parte dalla **cartella aperta** (campo «Tipo» già scelto). Regola generica in `ModulePage/index.jsx`, nessun nome di modulo.
+
+## 2026-10-10 — Chiusura 0.1.1
+- La versione è unica per tutta la piattaforma e si cambia a mano a ogni chiusura di fase (sidebar, `/health`, `package.json`, `package-lock.json`, README). Le note di ogni versione stanno in [`NOTE-DI-RILASCIO.md`](NOTE-DI-RILASCIO.md): cosa c'è, cosa è **da verificare dal vivo** e cosa sapere.
+- Chiusa con tre cose dichiaratamente non provate in produzione (Gmail dopo il ricollegamento di Google, invio vero del backup via mail, archivio con i file veri su Drive): sono segnate nelle note e in `TEST-FINANCE.md` (6b, 6c), non nascoste.
+- Il deploy dei tenant con il 2FA attivo non si fa da script: l'immagine si costruisce da `redeploy-nas.sh` e il tenant si aggiorna dal pulsante **Aggiorna** in Super Admin.
+
+## 2026-10-11 — Report su WhatsApp: tre messaggi, tutti guardano lo stato di pagamento
+- **Problema** (segnalato da Nima): i report arrivavano ma contavano **tutte** le spese per data senza verificare se erano pagate (il settimanale diceva «−100% vs precedente»; il riepilogo del mattino ripeteva ogni giorno le stesse voci), e il mattino alle 08:00 non aveva senso.
+- **Scelta**: tre messaggi, ognuno con una sola domanda, che non partono se non c'è niente da dire: **da pagare** (ogni 27, venerdì prima se è weekend; dal 27 al 26 del mese dopo + scadute + «ultimo stipendio → ti restano»), **da smistare** (ogni sera, finché la coda non è vuota), **scadute** (lunedì sera). Tutti leggono lo **stato** dichiarato dai moduli, mai la sola data. Il riepilogo del mattino (`daily-digest.js`) è stato **tolto**, non convertito; la chiave tecnica `riepilogo_mattino` resta (è salvata nei tenant) ma accende i nuovi report.
+- **Limite dichiarato**: il report si fida di ciò che è segnato «pagato»; se paghi e non spunti, continua a dire «da pagare». La verifica automatica con la banca (movimenti) non c'è: `bank-import.js` è spento su Finance e non modulare. Il promemoria «scadute» lo rende visibile ogni lunedì.
+- Le automazioni vecchie dentro Spese Casa/Personali (report settimanale e mensile, «scadenza oggi» delle 08:00) restano nello schema finché l'admin non preme «Toglili dai moduli» nella scheda Report: rimozione esplicita, con cronologia, non un silenzio nascosto. Nel frattempo gli avvisi «scadenza» per riga restano muti, il report periodico no.
+- Test: `reports.test.js` (21), `reports-legacy.test.js` (5).
+- **Formato compatto** (stesso giorno, dopo aver visto i primi messaggi veri): troppo lunghi. Ora le scadute stanno in una riga nel messaggio del 27 (l'elenco è nel loro messaggio), «in arrivo» mostra al massimo 8 voci, importi senza centesimi inutili. Limite di CallMeBot: in fondo a ogni messaggio aggiunge «I need your support» (non si toglie). **Secondo destinatario**: oggi il sistema usa **una sola chiave CallMeBot** per tutti, ma la chiave è legata al numero di chi l'ha attivata, quindi a un secondo numero il messaggio non arriva; serviranno una chiave per persona e un filtro per modulo (Federica deve ricevere solo Casa). **Telegram o un bot** (formattazione vera, bottoni «Pagata», un solo bot per più persone, nessuna pubblicità) è stato proposto e **rimandato**: prima si guardano i report per un paio di settimane.
+
+## 2026-10-11 — Bot Telegram: canale a doppio senso, a gradini e senza scritture libere
+- **Perché Telegram e non WhatsApp**: CallMeBot spedisce soltanto, con una chiave per numero e una riga pubblicitaria in fondo; un bot vero su WhatsApp (Business Platform) vuole numero dedicato, account Meta, modelli approvati e costo a messaggio. Telegram è gratuito, ha bottoni e formattazione, e un solo bot serve più persone.
+- **Cosa fa (gradino 1)**: i report arrivano anche su Telegram, ognuno nella **versione dell'utente**, con «✅ Pagata» e «Apri l'app»; comandi fissi in sola lettura. **Cosa non fa**: nessuna domanda libera all'AI (gradino 2), nessun comando che scrive oltre al bottone (gradino 4), nessuna foto di bollette (gradino 3).
+- **Confini di sicurezza** (il bot non ha il 2FA): chat collegata a UN utente con codice monouso da loggato; ogni controllo dell'app riusato, non copiato (`runTransition` estratta da `routes/records.js`, `visibleSlugsFor` da `routes/modules.js`, `filterViewable`); webhook con segreto; token cifrato; solo chat private; 20 messaggi al minuto; ogni azione nel registro; il bottone è l'unico modo di scrivere. Prova «al contrario» fatta: togliendo il filtro per utente 3 test falliscono.
+- **Rimandato**: seconda persona su WhatsApp (richiederebbe una chiave CallMeBot per numero): con Telegram il problema non esiste.
+- Test: `telegram.test.js` (23, con Telegram simulato).
+
+## 2026-10-11 — Bot «full powered»: frasi libere e azioni, sempre con conferma
+- **Richiesta**: un bot che faccia (quasi) tutto ciò che si fa nell'app. **Scelta**: sì, ma l'AI **propone e non esegue**. Una frase diventa UNA azione di un elenco chiuso (`domanda`, `elenco`, `segna_pagata`, `riapri`, `smista`, `nuova_spesa`, `altro`), la riga la trova il tenant, ogni scrittura è una **proposta con bottone di conferma** (15 minuti, una volta sola, solo per chi l'ha originata), e l'esecuzione passa dall'**API dell'app come quell'utente** invece di una seconda copia della logica.
+- **Perché così**: il bot non ha il 2FA e parla con un modello: i due rischi sono «un telefono sbloccato» e «un modello che si sbaglia o viene manipolato». Il primo si limita con poche azioni e una conferma; il secondo con un elenco chiuso, doppia validazione (`shared/ai-bot-intent.js`), nessun record né id verso il modello, e nessun testo del modello che arrivi all'utente come descrizione dell'azione (la descrizione viene dai dati validati).
+- **Esclusi di proposito**: eliminare, modificare campi liberi, utenti, impostazioni, backup. **Rimandato**: leggere foto di scontrini (servirebbe un OCR/visione nel gateway AI; per ora solo PDF), conversazioni con memoria.
+- **Prove «al contrario»**: togliendo il controllo di proprietà della proposta, o il filtro per utente nella ricerca delle voci, due test falliscono.
+- Test: `telegram-bot.test.js` (22), `ai-bot.test.js` in Super Admin (11).
+
+## 2026-10-11 — Segreti cifrati a riposo e librerie aggiornate
+- **Problema** (domanda di Nima sulla sicurezza): nel database di Finance erano **in chiaro** i token e il segreto di Google (accesso a Gmail e Drive), la chiave di CallMeBot, il segreto del webhook Telegram e i **segreti del 2FA**; vale anche per i segreti 2FA di Super Admin. Chi avesse un file del database o un backup li leggeva.
+- **Scelta**: cifrarli con la chiave del progetto, tutto in un modulo (`secrets-at-rest.js`), con lettura retrocompatibile e migrazione all'avvio verificata. Prova «al contrario» fatta dai test: un valore manomesso o con chiave sbagliata diventa «assente», non un testo di errore.
+- **Trovato lungo la strada**: l'admin di Finance risultava **senza 2FA** (segreto avviato e mai confermato); e `/2fa/setup` poteva **sostituire il segreto di un utente con il 2FA già attivo** chiudendolo fuori: ora risponde 409 se il 2FA è già attivo.
+- **Librerie**: `npm audit fix` in Finance (era 1 critico e 3 moderati → 0) e in Super Admin; nodemailer 6 → 10 (API verificata con un trasporto di prova); nel provisioner (ha `docker.sock`) 1 critico e 1 alto corretti con `dockerode` 4.0.12. Restano 2 moderati su `uuid` (non raggiungibile da noi) che `npm audit fix` può chiudere solo riportando indietro `dockerode`: lasciati, annotato in ARCHITETTURA.
+- **Non fatto, di proposito**: cifrare le chiavi dei tenant nel registro di Super Admin (servono al ripristino; una chiave sullo stesso server non protegge da chi ha il server). **Da fare dal proprietario**: ruotare le password vecchie, ruotare i segreti già usciti in backup in chiaro (vedi OPERAZIONI), rilasciare il provisioner.
+- Test: `secrets-at-rest.test.js` in Finance (9) e in Super Admin (2).
+
+## 2026-10-11 — Foto di scontrini al bot
+- **Richiesta**: mandare la foto di uno scontrino e avere la spesa registrata. **Scelta**: lettura con un modello di visione di Mistral tramite Super Admin (stesso gateway, stesso tetto di spesa), risultato ridotto a pochi campi **validati due volte** (`shared/ai-receipt.js`), proposta con conferma, foto allegata, avviso di doppione. Nessuna scrittura senza il tocco; l'importo letto va **controllato dall'utente sullo scontrino** (il bot lo dice).
+- **Perché la conferma è obbligatoria anche qui**: un modello di visione sbaglia più di uno che legge testo (cifre simili, scontrini sgualciti): un totale sbagliato scritto in silenzio vale più di un tocco in più.
+- **Limiti dichiarati**: solo euro; foto JPEG/PNG/WebP (le HEIC vanno mandate come «foto» dal telefono, che le converte); non legge le singole voci dello scontrino (solo il totale); l'immagine arriva a Mistral e non si può oscurare; **mai provato con Mistral vero** (solo risposte simulate nei test): il primo scontrino reale dirà se il modello e la chiave in uso la leggono.
+- Test: `telegram-bot.test.js` (+10), `ai-receipt.test.js` in Super Admin (8).
+
+## 2026-10-13 — Un solo Builder
+I due Builder (tenant e Super Admin) erano copie sincronizzate a mano. Ora c'è un'unica implementazione in `shared/frontend/builder/`, con alias Vite `@shared`/`@app` e una render-prop `moduleActions` per le azioni di promozione del modulo (tenant: Proponi alla Libreria; Super Admin: Salva nella Libreria). Super Admin ha l'alias Tailwind `accent`.
+
+## 2026-10-13 — Il verticale lo costruisce l'utente del tenant
+Nessun verticale «curato» da Super Admin: chi costruisce il proprio gestionale spunta più moduli nello store e li installa insieme (`POST /api/modules/registry/bulk-install`: salta i presenti, installa le dipendenze, segnala i falliti), poi crea le relazioni nel Builder. Un primo tentativo con verticali gestiti da Super Admin è stato scartato.
+
+## 2026-10-13 — Collega i moduli e primi passi
+- **Collega i moduli** (`core/backend/src/module-links.js`): relazioni proposte da regole sui nomi (nome contenuto, campo che si chiama come un altro modulo), mai verso moduli di sistema; chi applica ricalcola tutto (chiave, etichetta, campo da mostrare), non duplica, scrive storia e versione come una pubblicazione.
+- **Primi passi** (`routes/setup-wizard.js`, `SetupWizard.jsx`): compare solo a un admin, se il tenant non ha nessuna riga e il percorso non è mai stato chiuso; quindi un tenant già in uso (Finance) non lo vede e uno creato dall'analisi lo chiude da solo. Lo stato dei passi si legge dai dati. Nel vecchio Platform esisteva un tour guidato con spotlight (ProductTour, sul Sito Web), non un percorso di configurazione: non è stato riportato.
+
+## 2026-10-13 — Verticali proposti come punti di partenza
+Un tenant vuoto vede in Libreria «Parti da un modello»: tessere di verticali (gruppi di moduli generici che funzionano insieme), da `super-admin/backend/src/seeds/verticali.json` (dati, non codice) risolti sui moduli che la Libreria ha davvero (`lib/verticali.js`, `GET /api/registry/public/verticals`). Si tolgono le spunte ai moduli che non servono e si installa col solito bulk-install; poi «Collega i moduli». Convive con la scelta libera di più moduli nello store. Corretto: l'installazione multipla non ricaricava il menu laterale.
+
+## 2026-10-13 — Distacco di un tenant su un server dell'utente
+Copia (non spostamento) via SSH, avviata dal tenant: `ssh2` in Super Admin, token firmato col segreto del tenant, impronta del server confermata e fissata, credenziali solo in memoria, destinazioni interne vietate. Il tenant copiato non ha più Super Admin (AI, Libreria e aggiornamenti non disponibili finché non esisterà una chiave AI propria del tenant). Super Admin non vede dati: copia un file di database che già custodisce nei backup.
+
+## 2026-10-13 — Inviti con link monouso
+Un invito è un link che porta a scegliere utente e password, non una password spedita. Consegna a scelta (copia, WhatsApp/Telegram con messaggio pronto, email da Super Admin): nessun invio automatico su WhatsApp/Telegram perché le piattaforme non permettono di scrivere per primi a persone nuove. Vale per il primo admin (da Super Admin) e per gli utenti (dall'admin del tenant).
+
 ## 2026-10-16 — Controllo di sicurezza e pulizia
 
 **Corretto** (con test dove si può provare):
@@ -424,10 +509,17 @@ Il Builder resta completo (quello di Super Admin serve per gli altri tenant), ma
   lockfile (`npm ci`): prima `npm install` sceglieva versioni nuove a ogni build.
 - Super Admin non si può più aprire dentro un iframe di un altro sito.
 
-**Tolto perché non usato**: sei rotte interne dei tenant senza chiamanti (export, apply-workflow-config e batch,
-resolve-module, module-cycle-time, roles/sync), gli script `export-schema`/`import-schema` (istanze standalone), tre Dockerfile
-e un nginx.conf mai usati, la vecchia pagina di login di Super Admin senza 2FA, qualche funzione morta. La Guida dell'app
-descriveva funzioni tolte (verticali, moduli di supporto, stampa, Store): riscritta sul codice di oggi.
+**Tolto perché non usato**: quattro rotte interne dei tenant senza chiamanti (`modules/internal/export`,
+`modules/internal/apply-workflow-config` — non la versione batch, ancora usata dall'Analisi, vedi sotto —
+`audit-log/internal/resolve-module`, `audit-log/internal/module-cycle-time`), gli script `export-schema`/`import-schema`
+(istanze standalone), tre Dockerfile e un nginx.conf mai usati, la vecchia pagina di login di Super Admin senza 2FA, qualche
+funzione morta. La Guida dell'app descriveva funzioni tolte (verticali, moduli di supporto, stampa, Store): riscritta sul
+codice di oggi.
+**Non tolto nonostante il sospetto iniziale**: `modules/internal/apply-workflow-config-batch` e `roles/internal/sync` sembravano
+senza chiamanti guardando il codice di qualche giorno prima, ma `super-admin/backend/src/lib/tenant-config-from-analysis.js`
+(l'Analisi dei processi, nata nel frattempo) li chiama davvero per configurare ruoli e workflow quando crea un tenant. Scoperto
+unendo questo ramo a `main` (erano rimasti indietro una settimana): corretti applicando comunque `requireInternalSecret` invece
+del controllo manuale, come alle altre.
 
 **Restano aperti** (decisioni da prendere, non corretti):
 - Ogni tenant riceve lo **stesso** `INTERNAL_API_SECRET` di Super Admin e del provisioner, e monta **tutto** il volume `/data`
@@ -438,3 +530,5 @@ descriveva funzioni tolte (verticali, moduli di supporto, stampa, Store): riscri
 - Le porte dei tenant sono pubblicate sull'host: dalla rete di casa si raggiungono senza passare da nginx.
 - Il limite ai tentativi di accesso conta l'IP del proxy, non quello vero: tutti condividono lo stesso contatore.
 - Le pagine dei tenant non hanno protezione anti-iframe, perché Super Admin le apre in un iframe (Builder integrato).
+- Cloudflare è ancora in modalità TLS "Flexible": il traffico tra Cloudflare e il NAS viaggia in chiaro. Visibile ora dal
+  pannello "Sicurezza della piattaforma" (15 ottobre) invece che solo nei commenti del codice; non ancora corretto.

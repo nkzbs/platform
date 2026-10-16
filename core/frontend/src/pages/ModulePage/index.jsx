@@ -11,6 +11,7 @@ import RecordDetailModal from './RecordDetailModal'
 import ReportPanel from './ReportPanel'
 import AiSuggestionsPanel from '../../components/AiSuggestionsPanel'
 import ImportPdf from '../../components/ImportPdf'
+import ImportPayslip from '../../components/ImportPayslip'
 import SchemaReports from './SchemaReports'
 import BranchCreateModal from './BranchCreateModal'
 import PeriodView from './PeriodView'
@@ -19,8 +20,9 @@ import YearlyBreakdownView from './YearlyBreakdownView'
 import CategoryPivotView from './CategoryPivotView'
 import WeeklyBreakdownView from './WeeklyBreakdownView'
 import ViewTabs from './ViewTabs'
-import FormulaEditor from '../BuilderPage/FormulaEditor'
-import { StepChainEditor } from '../BuilderPage/StepChainEditor'
+import ArchiveView from './ArchiveView'
+import FormulaEditor from '@shared/builder/FormulaEditor.jsx'
+import { StepChainEditor } from '@shared/builder/StepChainEditor.jsx'
 
 function ModulePage({ module: mod, token, user, onNavigate }) {
   const api = useApi(token)
@@ -32,6 +34,9 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
   const [form, setForm] = useState({})
   const [relatedCache, setRelatedCache] = useState({})
   const [detailId, setDetailId] = useState(null)
+  // Modulo "nuovo" semplice: i collegamenti facoltativi stanno chiusi in fondo; in un archivio il nuovo documento parte dalla cartella aperta
+  const [mostraCollegamenti, setMostraCollegamenti] = useState(false)
+  const [cartellaCorrente, setCartellaCorrente] = useState('')
   const [uploading, setUploading] = useState({})
   // Quick-create: quale relazione ha aperto il mini-form (null = chiuso) + i suoi valori
   const [quickCreateRel, setQuickCreateRel] = useState(null)
@@ -160,7 +165,12 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
     setUploading((p) => ({ ...p, [fieldKey]: false }))
     if (res.ok) {
       const uploaded = await res.json()
-      setForm((p) => ({ ...p, [fieldKey]: uploaded }))
+      setForm((p) => {
+        const next = { ...p, [fieldKey]: uploaded }
+        const tf = mod.list_view === 'archive' ? fields.find((f) => f.type === 'text') : null
+        if (tf && !String(p[tf.key] || '').trim() && uploaded && uploaded.name) next[tf.key] = String(uploaded.name).replace(/\.[^.]+$/, '')
+        return next
+      })
     } else {
       window.alert('Upload non riuscito')
     }
@@ -174,21 +184,6 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
   const loadRecords = async () => {
     const data = await api.get('/records/' + mod.slug)
     if (data) setRecords(data)
-  }
-
-  // Azzeramento giacenze furgone — richiesto esplicitamente per coffee ("pulizia
-  // totale furgoni"). Usa l'azione generica bulk-set-field (non hardcoded lato
-  // backend), il bottone qui è l'unica parte specifica a questo modulo, stesso
-  // principio delle pagine bespoke (Spese/Documenti) applicato a un solo bottone
-  // invece che a un'intera pagina.
-  const [zeroingGiacenze, setZeroingGiacenze] = useState(false)
-  const zeroGiacenzeFurgone = async () => {
-    if (!confirm('Azzerare la giacenza di TUTTI i furgoni (' + records.length + ' righe)? Azione non annullabile.')) return
-    setZeroingGiacenze(true)
-    const res = await api.post('/records/' + mod.slug + '/bulk-set-field', { campo: 'quantita', valore: 0 })
-    setZeroingGiacenze(false)
-    if (res && res.ok) { toast(res.data.count + ' giacenze azzerate'); loadRecords() }
-    else toast((res && res.data && res.data.error) || 'Errore nell\'azzeramento', 'error')
   }
 
   useEffect(() => { loadSchema(); loadRecords(); loadEmbeddedChildren() }, [mod.slug])
@@ -591,13 +586,8 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
         </div>
         {editableFields.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
-            {mod.slug === 'giacenza_furgone' && user && user.role === 'admin' && (
-              <button onClick={zeroGiacenzeFurgone} disabled={zeroingGiacenze}
-                className="bg-red-900/30 hover:bg-red-900/50 disabled:opacity-50 text-red-400 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2" title="Azzera la giacenza di tutti i furgoni">
-                <Icon name="trash" size={14} />{zeroingGiacenze ? 'Azzero...' : 'Azzera tutte le giacenze'}
-              </button>
-            )}
             {canCreate && <ImportPdf token={token} mod={mod} onCreated={loadRecords} />}
+            {canCreate && <ImportPayslip token={token} mod={mod} user={user} onCreated={loadRecords} />}
             <button onClick={exportCsv} className="bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2" title="Esporta CSV">
               <Icon name="download" size={14} />CSV
             </button>
@@ -635,7 +625,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
                 </button>
               ))
             ) : canCreate && (
-              <button onClick={() => { setShowNew(true); setForm(workflow && workflow.states && workflow.states.length > 0 ? { _stato: workflow.states[0].key } : {}) }} className="bg-accent hover:opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+              <button onClick={() => { setShowNew(true); setMostraCollegamenti(false); const ff = mod.list_view === 'archive' ? fields.find((f) => f.type === 'select') : null; setForm({ ...(workflow && workflow.states && workflow.states.length > 0 ? { _stato: workflow.states[0].key } : {}), ...(ff && cartellaCorrente ? { [ff.key]: cartellaCorrente } : {}) }) }} className="bg-accent hover:opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
                 <Icon name="plus" size={14} />Nuovo
               </button>
             )}
@@ -754,7 +744,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
         </div>
       )}
 
-      {filterTabField && filterTabOptions.length > 0 && (
+      {filterTabField && filterTabOptions.length > 0 && mod.list_view !== 'archive' && (
         <div className="flex items-center gap-1 mb-4 flex-wrap">
           <button onClick={() => setActiveFilterTab(null)} className={'px-3 py-1.5 rounded-lg text-sm font-medium transition ' + (activeFilterTab === null ? 'bg-accent text-white' : 'bg-gray-800 text-gray-400 hover:text-ink')}>
             Tutti
@@ -782,6 +772,8 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
         <ParentChildrenView config={schema.parent_children_views[0]} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} />
       ) : schema && schema.period_views && schema.period_views.length > 0 ? (
         <PeriodView config={schema.period_views[0]} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} />
+      ) : mod.list_view === 'archive' ? (
+        <ArchiveView mod={mod} schema={schema} records={displayRecords} token={token} canEdit={canDo('edit')} onOpen={(id) => setDetailId(id)} onChanged={loadRecords} onCartella={setCartellaCorrente} onSchemaChanged={async () => { await loadSchema(); await loadRecords() }} searching={search.trim() !== ''} />
       ) : mod.list_view === 'card_grid' ? (
         displayRecords.length === 0 ? (
           <div className="bg-surface-card rounded-md p-12 text-center border border-gray-800">
@@ -1112,8 +1104,30 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
                     options={workflow.states.filter((s) => s.initial || true).map((s) => ({ value: s.key, label: s.label }))} />
                 </div>
               )}
-              {relations.map(renderRelationField)}
-              {visibleEditableFields.map(renderRegularField)}
+              {(() => {
+                // Prima ciò che serve davvero: in un archivio il file in testa, poi i campi obbligatori, poi gli altri; i collegamenti
+                // facoltativi (spese, debiti…) stanno chiusi in fondo, a meno che uno sia obbligatorio.
+                const arch = mod.list_view === 'archive'
+                const peso = (f) => (arch && f.type === 'file' ? 0 : f.required ? 1 : 2)
+                const campi = [...visibleEditableFields].sort((a, b) => peso(a) - peso(b))
+                const obbl = relations.filter((r) => r.required)
+                const facolt = relations.filter((r) => !r.required)
+                return (
+                  <>
+                    {obbl.map(renderRelationField)}
+                    {campi.map(renderRegularField)}
+                    {facolt.length > 0 && (
+                      <div className="border-t border-gray-800 pt-3">
+                        <button type="button" onClick={() => setMostraCollegamenti((v) => !v)} className="w-full flex items-center justify-between text-sm text-gray-400 hover:text-ink py-1">
+                          <span>Collegamenti <span className="text-xs text-gray-600">(facoltativo)</span></span>
+                          <Icon name={mostraCollegamenti ? 'chevron-down' : 'chevron-right'} size={14} />
+                        </button>
+                        {mostraCollegamenti && <div className="space-y-3 mt-2">{facolt.map(renderRelationField)}</div>}
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
             </div>
 
             {Object.entries(liveResults).some(([, r]) => r.valid && r.value === true) && (

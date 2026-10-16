@@ -6,6 +6,8 @@ const db = require('../db');
 const { requireAuth } = require('./auth');
 const { driveDownload } = require('./google-oauth');
 const { saveUploadBuffer, deleteUploadById, UPLOAD_DIR } = require('../lib/upload-storage');
+const { parseSchemaNormalized } = require('../schema-v3');
+const { ruleFor, ownedOrAllowed } = require('../permissions');
 // G7 (PLATFORM-0.6-GAP-ANALYSIS.md) — whitelist di tipo file: prima solo il limite di
 // dimensione, nessun controllo su COSA veniva caricato. Logica in un modulo a sé
 // (upload-mime-whitelist.js, zero dipendenze) per essere testabile come funzione pura
@@ -53,9 +55,41 @@ router.post('/', requireAuth, uploadSingle, async (req, res) => {
   }
 });
 
+// Falla reale trovata il 2026-10-14 (segnalata dall'utente, mai verificata
+// prima): GET e DELETE qui sotto avevano solo requireAuth — qualunque utente
+// autenticato poteva leggere o cancellare QUALUNQUE allegato di QUALUNQUE
+// record indovinando l'id, bypassando del tutto "solo propri" (già rispettato
+// dalla lettura/cancellazione del record stesso). Un upload è accessibile se:
+// (a) l'ha caricato chi chiede (uploaded_by, vale anche prima che sia
+// collegato a un record — la finestra tra POST /uploads e POST .../attachments),
+// oppure (b) è collegato a record_attachments su un record che il ruolo di chi
+// chiede può vedere (GET) o modificare (DELETE), secondo la stessa regola già
+// in uso per i record (permissions.js). Un upload non suo e non ancora
+// collegato a niente non è leggibile da nessun altro, admin incluso: non c'è
+// un record la cui regola di permesso possa autorizzarlo.
+function getModuleSchema(slug) {
+  const mod = db.prepare('SELECT schema_json FROM modules WHERE slug = ?').get(slug);
+  if (!mod) return null;
+  return parseSchemaNormalized(mod.schema_json);
+}
+function canAccessUpload(req, row, action) { // action: 'view' | 'edit'
+  if (row.uploaded_by === req.user.id) return true;
+  const links = db.prepare('SELECT module_slug, record_id FROM record_attachments WHERE upload_id = ?').all(row.id);
+  if (links.length === 0) return false;
+  return links.every((link) => {
+    const record = db.prepare('SELECT * FROM records WHERE id = ? AND module_slug = ?').get(link.record_id, link.module_slug);
+    if (!record) return false;
+    const rule = ruleFor(getModuleSchema(link.module_slug) || {}, req.user.role);
+    if (!rule) return true;
+    const permOk = action === 'view' ? rule.view : rule.edit;
+    return permOk && ownedOrAllowed(rule, record, req.user);
+  });
+}
+
 router.get('/:id', requireAuth, async (req, res) => {
   const row = db.prepare('SELECT * FROM uploads WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'File non trovato' });
+  if (!canAccessUpload(req, row, 'view')) return res.status(403).json({ error: 'Non hai i permessi per vedere questo allegato' });
   const inline = isInlineSafeMime(row.mime_type);
   res.setHeader('Content-Type', inline ? row.mime_type : 'application/octet-stream');
   res.setHeader('Content-Disposition', contentDisposition(inline ? 'inline' : 'attachment', row.original_name));
@@ -75,6 +109,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 router.delete('/:id', requireAuth, async (req, res) => {
   const row = db.prepare('SELECT * FROM uploads WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'File non trovato' });
+  if (!canAccessUpload(req, row, 'edit')) return res.status(403).json({ error: 'Non hai i permessi per cancellare questo allegato' });
   try {
     await deleteUploadById(req.params.id);
     res.json({ ok: true });

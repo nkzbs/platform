@@ -1,6 +1,6 @@
 {
   "name": "platform-core-backend",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "main": "src/index.js",
   "engines": {
     "node": "22.x"
@@ -10,6 +10,7 @@
     "test": "node run-tests.js"
   },
   "dependencies": {
+    "@simplewebauthn/server": "^14.0.3",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^13.0.3",
     "cors": "^2.8.5",

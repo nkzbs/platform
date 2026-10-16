@@ -1,6 +1,8 @@
+import TelegramCard from '../components/TelegramCard'
 import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
+import { startRegistration, browserSupportsWebAuthn } from '@simplewebauthn/browser'
 
 // ─── ACCOUNT — pagina self-service ──────────────────────────────────────────────
 // Accessibile a QUALUNQUE utente loggato (non admin-gated come UsersPage.jsx) —
@@ -15,7 +17,7 @@ import Icon from '../components/Icon'
 import { API } from '../lib/api'
 const ROLE_LABEL = { admin: 'Amministratore', user: 'Utente', agent: 'Agente' }
 
-function AccountPage({ token, user }) {
+function AccountPage({ token, user, onStartTour }) {
   const api = useApi(token)
   const [pw, setPw] = useState({ current_password: '', new_password: '' })
   const [pwBusy, setPwBusy] = useState(false)
@@ -70,6 +72,38 @@ function AccountPage({ token, user }) {
     setShowDisable(false)
     setDisablePassword('')
     loadStatus()
+  }
+
+  // Passkey (2026-10-14, richiesto dall'utente: "oltre alle 2FA voglio
+  // passkey ovunque") — AGGIUNTIVA al 2FA sopra, self-service come quello:
+  // ognuno gestisce solo le proprie.
+  const [passkeys, setPasskeys] = useState(null)
+  const [pkNickname, setPkNickname] = useState('')
+  const [pkBusy, setPkBusy] = useState(false)
+  const [pkError, setPkError] = useState('')
+  const loadPasskeys = () => api.get('/webauthn/list').then((d) => { if (d) setPasskeys(d) })
+  useEffect(() => { loadPasskeys() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const addPasskey = async () => {
+    setPkError(''); setPkBusy(true)
+    try {
+      const optRes = await api.post('/webauthn/register-options', {})
+      if (!optRes.ok) { setPkError(optRes.data?.error || 'Errore'); return }
+      const attestation = await startRegistration({ optionsJSON: optRes.data.options })
+      const verRes = await api.post('/webauthn/register-verify', { pending_token: optRes.data.pending_token, response: attestation, nickname: pkNickname })
+      if (!verRes.ok) { setPkError(verRes.data?.error || 'Errore'); return }
+      setPkNickname('')
+      loadPasskeys()
+    } catch (e) {
+      if (e.name !== 'NotAllowedError') setPkError('Creazione della passkey non riuscita')
+    } finally {
+      setPkBusy(false)
+    }
+  }
+
+  const removePasskey = async (id) => {
+    await api.del('/webauthn/' + id)
+    loadPasskeys()
   }
 
   const inputCls = 'w-full bg-surface-page text-ink px-4 py-3 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition'
@@ -168,6 +202,56 @@ function AccountPage({ token, user }) {
           </div>
         )}
       </div>
+
+      {browserSupportsWebAuthn() && (
+        <div className="bg-surface-card rounded-md p-6 border border-gray-800 lg:col-span-2">
+          <div className="flex items-start gap-4 mb-5">
+            <div className="w-10 h-10 rounded-lg bg-cp-purple/20 flex items-center justify-center flex-shrink-0">
+              <Icon name="key" size={20} className="text-cp-purple" />
+            </div>
+            <div>
+              <div className="text-ink font-medium mb-1">Passkey</div>
+              <div className="text-sm text-gray-500">Entra con l'impronta, il volto o il PIN del dispositivo — senza scrivere username né password. Puoi averne più di una (telefono, computer...).</div>
+            </div>
+          </div>
+
+          {pkError && <div className="bg-red-900/30 text-red-400 text-sm p-3 rounded-lg mb-4 border border-red-900/50">{pkError}</div>}
+
+          <div className="space-y-2 mb-5">
+            {passkeys === null && <div className="text-sm text-gray-600">Caricamento...</div>}
+            {passkeys && passkeys.length === 0 && <div className="text-sm text-gray-600">Nessuna passkey ancora.</div>}
+            {passkeys && passkeys.map((p) => (
+              <div key={p.id} className="flex items-center justify-between gap-3 bg-surface-page rounded-lg px-4 py-3 border border-gray-800">
+                <div className="min-w-0">
+                  <div className="text-sm text-ink truncate">{p.nickname || 'Passkey senza nome'}</div>
+                  <div className="text-xs text-gray-600 mt-0.5">
+                    Aggiunta il {new Date(p.created_at).toLocaleDateString('it-IT')}
+                    {p.last_used_at && ' · usata l\'ultima volta il ' + new Date(p.last_used_at).toLocaleDateString('it-IT')}
+                  </div>
+                </div>
+                <button onClick={() => removePasskey(p.id)} className="text-xs text-red-400 hover:text-red-300 transition flex-shrink-0">Rimuovi</button>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
+            <input className="flex-1 min-w-[180px] bg-surface-page text-ink px-3.5 py-2.5 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition placeholder-gray-600"
+              placeholder="Nome (facoltativo, es. Il mio iPhone)" value={pkNickname} onChange={(e) => setPkNickname(e.target.value)} />
+            <button onClick={addPasskey} disabled={pkBusy} className="bg-accent hover:opacity-90 disabled:opacity-50 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition">
+              {pkBusy ? 'Creazione...' : 'Aggiungi una passkey'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {onStartTour && (
+        <div className="bg-surface-card border border-gray-800 rounded-xl p-5 lg:col-span-2 flex items-center justify-between gap-4 flex-wrap">
+          <div><div className="text-ink text-sm font-medium">Giro guidato</div><div className="text-xs text-gray-500 mt-0.5">Un percorso breve che ti mostra dov'è ogni cosa, evidenziandola sulla pagina.</div></div>
+          <button onClick={onStartTour} className="text-sm px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 flex-shrink-0">Fai il giro guidato</button>
+        </div>
+      )}
+
+      <TelegramCard token={token} user={user} mode="telefono" className="lg:col-span-2" />
     </div>
   )
 }

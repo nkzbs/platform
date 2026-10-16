@@ -1,0 +1,172 @@
+{
+  "spese_personali": {
+    "kind": "spesa",
+    "uses": [
+      "riepiloghi",
+      "avvisi",
+      "mail",
+      "estratto"
+    ],
+    "roles": {
+      "importo": "importo",
+      "data": "data",
+      "scadenza": "scadenza",
+      "categoria": "categoria",
+      "descrizione": "descrizione",
+      "stato": "_stato",
+      "fisso": "fisso",
+      "data_pagamento": "data_pagamento",
+      "note": "note",
+      "data_incerta": "data_incerta",
+      "debito": "debito"
+    },
+    "avvisi": {
+      "states": {
+        "nuovo": "da_smistare",
+        "da_fare": "da_pagare",
+        "fatto": "pagato"
+      },
+      "piano": {
+        "modulo": "debiti_personali",
+        "campi": {
+          "nome": "nome",
+          "importo_totale": "importo_totale",
+          "n_rate": "n_rate",
+          "importo_rata": "importo_rata",
+          "data_prima_rata": "data_prima_rata"
+        }
+      },
+      "nuovo": true,
+      "scadenze": true,
+      "tag": "scadenza",
+      "label": "pers.",
+      "noun_s": "bolletta",
+      "noun_p": "bollette"
+    },
+    "estratto": {
+      "giro_categories": [
+        "Contributo Casa"
+      ],
+      "registra": true,
+      "categoria_default": "Altro"
+    },
+    "riepiloghi": {
+      "exclude_categories": [],
+      "exclude_groups": [],
+      "exclude_descriptions": [],
+      "salary_categories": [],
+      "savings_categories": [],
+      "rate_categories": [
+        "Rata"
+      ],
+      "savings_field": ""
+    }
+  },
+  "spese_casa": {
+    "kind": "spesa",
+    "uses": [
+      "avvisi",
+      "mail",
+      "estratto"
+    ],
+    "roles": {
+      "importo": "importo",
+      "data": "data",
+      "scadenza": "scadenza",
+      "categoria": "categoria",
+      "descrizione": "descrizione",
+      "stato": "_stato",
+      "fisso": "fisso",
+      "data_pagamento": "data_pagamento",
+      "note": "note",
+      "data_incerta": "data_incerta",
+      "debito": "debito"
+    },
+    "avvisi": {
+      "states": {
+        "nuovo": "da_smistare",
+        "da_fare": "da_pagare",
+        "fatto": "pagato"
+      },
+      "piano": {
+        "modulo": "debiti_casa",
+        "campi": {
+          "nome": "nome",
+          "importo_totale": "importo_totale",
+          "n_rate": "n_rate",
+          "importo_rata": "importo_rata",
+          "data_prima_rata": "data_prima_rata"
+        }
+      },
+      "nuovo": true,
+      "scadenze": true,
+      "tag": "scadenza",
+      "label": "casa",
+      "noun_s": "bolletta",
+      "noun_p": "bollette"
+    },
+    "estratto": {
+      "giro_categories": [],
+      "registra": false,
+      "categoria_default": ""
+    },
+    "riepiloghi": {
+      "exclude_categories": [],
+      "exclude_groups": [],
+      "exclude_descriptions": [],
+      "salary_categories": [],
+      "savings_categories": [],
+      "rate_categories": [
+        "Rata"
+      ],
+      "savings_field": ""
+    }
+  },
+  "timbrature": {
+    "kind": "presenze",
+    "uses": [],
+    "roles": {
+      "data": "data",
+      "inizio": "entrata",
+      "fine": "uscita"
+    }
+  },
+  "entrate": {
+    "kind": "entrata",
+    "uses": [
+      "riepiloghi",
+      "estratto"
+    ],
+    "roles": {
+      "importo": "importo",
+      "data": "data",
+      "categoria": "categoria",
+      "descrizione": "descrizione",
+      "gruppo": "gruppo"
+    },
+    "riepiloghi": {
+      "exclude_categories": [
+        "Risparmi",
+        "Fondo"
+      ],
+      "exclude_groups": [
+        "Casa"
+      ],
+      "exclude_descriptions": [
+        "Saldo conto"
+      ],
+      "salary_categories": [
+        "Stipendio"
+      ],
+      "savings_categories": [
+        "Fondo"
+      ],
+      "savings_field": "accantonamento_suggerito"
+    },
+    "estratto": {
+      "giro_categories": [],
+      "registra": false,
+      "categoria_default": ""
+    }
+  }
+}

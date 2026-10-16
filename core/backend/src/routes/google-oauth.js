@@ -25,11 +25,11 @@ const router = express.Router();
 function getCreds() {
   const row = db.prepare("SELECT credentials FROM connections WHERE integration_id = 'google'").get();
   if (!row || !row.credentials) return {};
-  try { return JSON.parse(row.credentials) || {}; } catch { return {}; }
+  return require('../secrets-at-rest').unseal(row.credentials) || {};
 }
 
 function setCreds(next, connected) {
-  const json = JSON.stringify(next);
+  const json = require('../secrets-at-rest').seal(next); // cifrato a riposo
   const row = db.prepare("SELECT integration_id FROM connections WHERE integration_id = 'google'").get();
   if (row) {
     db.prepare('UPDATE connections SET credentials = ?' + (connected !== undefined ? ', connected = ?, connected_at = CURRENT_TIMESTAMP' : '') + " WHERE integration_id = 'google'")
@@ -171,7 +171,8 @@ router.get('/oauth/callback', async (req, res) => {
 // POST /disconnect
 router.post('/disconnect', requireAuth, requireAdmin, (req, res) => {
   const cfg = getCreds();
-  setCreds({ client_id: cfg.client_id, client_secret: cfg.client_secret }, false);
+  // Si perdono i token, non le scelte: "salva su Drive" e la cartella restano, così ricollegare non spegne in silenzio il salvataggio dei nuovi file su Drive.
+  setCreds({ client_id: cfg.client_id, client_secret: cfg.client_secret, drive_enabled: cfg.drive_enabled, drive_folder_id: cfg.drive_folder_id }, false);
   res.json({ ok: true });
 });
 

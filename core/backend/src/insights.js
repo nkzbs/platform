@@ -15,11 +15,11 @@ const { internalSecret } = require('../../../shared/internal-secret.js');
 // risparmio vero. Si legge dalle righe delle categorie `savings_categories` e dal campo `savings_field` delle
 // righe di stipendio; dove manca si stima dal rapporto con il netto degli altri mesi (e lo si dice).
 // Valori di partenza neutri: nessun modulo e nessun criterio. Moduli, campi e criteri li dichiara ogni modulo (Builder → Ruoli del modulo
-// e Criteri dei riepiloghi, vedi module-roles.js); qui restano solo i nomi di campo più comuni, usati se il modulo non ne indica altri.
+// e Criteri dei riepiloghi, vedi module-roles.js): qui non c'è nessun nome di campo, di stato o di categoria. Un ruolo non dichiarato spegne la voce.
 const DEFAULT_CONFIG = {
-  entrate: { modules: [], amount: 'importo', date: 'data', category: 'categoria', group: 'gruppo',
+  entrate: { modules: [], amount: '', date: '', category: '', group: '', description: '',
     exclude_categories: [], exclude_groups: [], exclude_descriptions: [], salary_categories: [], savings_categories: [], savings_field: '' },
-  spese: { modules: [], amount: 'importo', date: 'data', category: 'categoria', status: '_stato', fixed: 'fisso' },
+  spese: { modules: [], amount: '', date: '', category: '', status: '', fixed: '', uncertain: '', debt: '', rate_categories: [] },
   anomaly: { pct: 25, min_delta_eur: 20, window_months: 6 },
   balance_floor_eur: 300,
 };
@@ -41,8 +41,9 @@ function fromRoles() {
     if (r.data) cfg.date = r.data;
     if (r.categoria) cfg.category = r.categoria;
     if (key === 'entrate' && r.gruppo) cfg.group = r.gruppo;
+    if (key === 'entrate' && r.descrizione) cfg.description = r.descrizione;
     if (key === 'entrate') Object.assign(cfg, mods[0].riepiloghi); // criteri dichiarati dal modulo (anche vuoti: nessuna esclusione)
-    if (key === 'spese') { if (r.stato) cfg.status = r.stato; if (r.fisso) cfg.fixed = r.fisso; }
+    if (key === 'spese') { if (r.stato) cfg.status = r.stato; if (r.fisso) cfg.fixed = r.fisso; if (r.data_incerta) cfg.uncertain = r.data_incerta; if (r.debito) cfg.debt = r.debito; cfg.rate_categories = mods[0].riepiloghi.rate_categories || []; }
     out[key] = cfg;
   }
   return out;
@@ -106,13 +107,26 @@ function installedModules(slugs) {
   return slugs.filter((s) => rows.includes(s));
 }
 
+// I «limiti» che si dicono all'assistente: derivano da ciò che i moduli dichiarano (moduli, categorie e gruppi esclusi), nessuna frase su moduli o categorie precise.
+function limitiVista(cfg) {
+  return 'Conta ciò che è registrato in questa istanza: moduli di spese (' + ([...installedModules(cfg.spese.modules)].join(', ') || 'nessuno') + ') e di entrate (' + ([...installedModules(cfg.entrate.modules)].join(', ') || 'nessuno') + '). I pagamenti con carta o da altri conti non registrati non compaiono.';
+}
+function limitiEsclusi(cfg) {
+  const E = cfg.entrate, parti = [];
+  if ((E.exclude_categories || []).length) parti.push('categorie ' + E.exclude_categories.join(', '));
+  if ((E.exclude_groups || []).length) parti.push('gruppi ' + E.exclude_groups.join(', '));
+  if ((E.exclude_descriptions || []).length) parti.push('righe chiamate ' + E.exclude_descriptions.join(', '));
+  return 'Non sono conteggiati come entrate: ' + (parti.join('; ') || 'nessuna esclusione dichiarata') + '.';
+}
+function limitiNuovo() { return 'Le righe ancora da smistare non contano come spese finché non le smisti.'; }
+
 // Legge i record una volta sola e li raggruppa per mese.
 function collect(cfg) {
   const entrate = {}, spese = {}, stipendi = {}, accantonato = {};
   const senzaData = { n: 0, totale: 0 }; // righe la cui data vera è andata persa (campo data_incerta): fuori dai conti mensili
   const spCat = {}; // mese -> categoria -> totale
   const spFix = {}; // mese -> { fisse, variabili }
-  const spKind = {}; // mese -> { rate, fisse, variabili } (rata = collegata a un debito o categoria Rata; poi fisse; il resto variabili)
+  const spKind = {}; // mese -> { rate, fisse, variabili } (rata = collegata a un debito o di una categoria dichiarata «rata»; poi fisse; il resto variabili)
   const spStato = {}; // mese -> { pagate, da_pagare }
   const E = cfg.entrate;
   const incGrp = new Set(E.include_groups || []);
@@ -126,7 +140,7 @@ function collect(cfg) {
       if (!m || a == null) continue;
       if (exGrp.has(d[E.group])) continue; // registro della casa, non entrate personali
       if (incGrp.size && !incGrp.has(d[E.group])) continue; // vista di un widget: solo questi gruppi
-      if (exDesc.includes(String(d.descrizione || '').trim().toLowerCase())) continue; // es. riporto di saldo
+      if (E.description && exDesc.includes(String(d[E.description] || '').trim().toLowerCase())) continue; // es. riporto di saldo
       // l'accantonamento trattenuto in busta: righe di categoria "fondo" oppure il campo sulla riga dello stipendio
       if (sav.has(d[E.category])) accantonato[m] = (accantonato[m] || 0) + a;
       else if (sal.has(d[E.category]) && (num(d[E.savings_field]) || 0) > 0) accantonato[m] = (accantonato[m] || 0) + num(d[E.savings_field]);
@@ -136,22 +150,23 @@ function collect(cfg) {
     }
   }
   for (const slug of installedModules(cfg.spese.modules)) {
+    const declared = require('./module-roles').get(slug), S = (declared && declared.avvisi && declared.avvisi.states) || {}; // stati dichiarati dal modulo
     for (const r of db.prepare('SELECT data FROM records WHERE module_slug = ?').all(slug)) {
       let d; try { d = JSON.parse(r.data); } catch (e) { continue; }
       const m = monthOf(d[cfg.spese.date]); const a = num(d[cfg.spese.amount]);
       if (!m || a == null) continue;
-      if (d.data_incerta) { senzaData.n++; senzaData.totale += a; continue; }
-      // le righe "da smistare" (bollette appena arrivate da Gmail, importo spesso 0) non sono ancora spese vere
-      if (d[cfg.spese.status] === 'da_smistare') continue;
+      if (cfg.spese.uncertain && d[cfg.spese.uncertain]) { senzaData.n++; senzaData.totale += a; continue; }
+      // le righe nello stato «nuovo» dichiarato dal modulo (es. bollette appena arrivate da Gmail, importo spesso 0) non sono ancora spese vere
+      if (S.nuovo && d[cfg.spese.status] === S.nuovo) continue;
       spese[m] = (spese[m] || 0) + a;
       const cat = d[cfg.spese.category] || 'Altro';
       (spCat[m] = spCat[m] || {})[cat] = ((spCat[m] || {})[cat] || 0) + a;
       const kd = (spKind[m] = spKind[m] || { rate: 0, fisse: 0, variabili: 0 });
-      if (d.debito || cat === 'Rata') kd.rate += a; else if (d[cfg.spese.fixed]) kd.fisse += a; else kd.variabili += a;
+      if ((cfg.spese.debt && d[cfg.spese.debt]) || (cfg.spese.rate_categories || []).includes(cat)) kd.rate += a; else if (d[cfg.spese.fixed]) kd.fisse += a; else kd.variabili += a;
       const f = (spFix[m] = spFix[m] || { fisse: 0, variabili: 0 });
       if (d[cfg.spese.fixed]) f.fisse += a; else f.variabili += a;
       const st = (spStato[m] = spStato[m] || { pagate: 0, da_pagare: 0 });
-      if (d[cfg.spese.status] === 'pagato') st.pagate += a; else st.da_pagare += a;
+      if (S.fatto && d[cfg.spese.status] === S.fatto) st.pagate += a; else st.da_pagare += a;
     }
   }
   return { entrate, spese, spCat, spFix, spStato, spKind, stipendi, accantonato, senzaData };
@@ -207,9 +222,7 @@ function buildSnapshot(month, now = new Date(), view = null) {
     if (c.media_6m >= cfg.anomaly.min_delta_eur && c.variazione_pct != null && c.variazione_pct >= cfg.anomaly.pct && delta >= cfg.anomaly.min_delta_eur) anomalie.push({ tipo: 'sopra_la_media', ...c });
     else if (c.media_6m === 0 && c.valore >= 50) anomalie.push({ tipo: 'categoria_nuova', ...c });
   }
-  const limiti = ['Vista personale: conta ciò che è registrato in Finance (' + [...installedModules(cfg.spese.modules)].join(', ') + ' per le spese). Le spese di casa (affitto, bollette) non sono incluse: contano solo le quote che versi tu alla casa, se registrate come "Contributo Casa". I pagamenti con carta o da altri conti non registrati non compaiono.',
-    'Non sono conteggiati come entrate: ' + ((cfg.entrate.exclude_categories || []).join(', ') || 'nessuna categoria esclusa') + ', i contributi alla casa e i riporti di saldo.',
-    'Le righe "da smistare" non contano come spese finché non le smisti.'];
+  const limiti = [limitiVista(cfg), limitiEsclusi(cfg), limitiNuovo(cfg)];
   if (col.senzaData.n) limiti.push('Non contate in nessun mese: ' + col.senzaData.n + ' spese (circa ' + Math.round(col.senzaData.totale) + ' €) la cui data vera è andata persa nell\'importazione.');
   if (acc.valore) limiti.push('L\'accantonamento (fondo o azioni, trattenuto in busta paga) non arriva sul conto: è contato come risparmio.' + (acc.stimato ? ' Per questo mese è una stima (circa ' + Math.round((acc.valore / (col.stipendi[month] || 1)) * 100) + '% del netto, come negli altri mesi): manca la riga con l\'importo vero.' : ''));
   if (month >= cur) limiti.unshift('Mese in corso: i dati sono parziali.');
@@ -218,7 +231,7 @@ function buildSnapshot(month, now = new Date(), view = null) {
   // Vista di sole spese (es. la casa): niente entrate, saldo e risparmio; contano le spese registrate nei moduli scelti.
   if (soloSpese) {
     const stS = spStato[month] || { pagate: 0, da_pagare: 0 }, fxS = spFix[month] || { fisse: 0, variabili: 0 };
-    const limitiS = ['Conta le spese registrate in: ' + [...installedModules(cfg.spese.modules)].join(', ') + '.', 'Le righe "da smistare" non contano come spese finché non le smisti.'];
+    const limitiS = ['Conta le spese registrate in: ' + [...installedModules(cfg.spese.modules)].join(', ') + '.', limitiNuovo()];
     if (month >= cur) limitiS.unshift('Mese in corso: i dati sono parziali.');
     return {
       available: true, key: month + viewKey(view), month, in_corso: month >= cur, solo_spese: true,
@@ -288,8 +301,7 @@ function buildYearSnapshot(year, now = new Date(), view = null) {
       categorie, limiti: ['Conta le spese registrate in: ' + [...installedModules(cfg.spese.modules)].join(', ') + '.', 'Le righe "da smistare" non contano come spese finché non le smisti.'],
     };
   }
-  const limiti = ['Vista personale: conta ciò che è registrato in Finance (' + [...installedModules(cfg.spese.modules)].join(', ') + ' per le spese). Le spese di casa non sono incluse: contano solo le quote che versi tu alla casa, se registrate come "Contributo Casa".',
-    'Non sono conteggiati come entrate: ' + ((cfg.entrate.exclude_categories || []).join(', ') || 'nessuna categoria esclusa') + ', i contributi alla casa e i riporti di saldo.'];
+  const limiti = [limitiVista(cfg), limitiEsclusi(cfg)];
   if (col.senzaData.n) limiti.push('Non contate in nessun mese: ' + col.senzaData.n + ' spese (circa ' + Math.round(col.senzaData.totale) + ' €) la cui data vera è andata persa nell\'importazione.');
   if (ac.valore) limiti.push('L\'accantonamento (fondo o azioni, trattenuto in busta paga) non arriva sul conto: è contato come risparmio.' + (ac.stimato ? ' Per alcuni mesi è una stima: manca la riga con l\'importo vero.' : ''));
   if (acP.valore === 0 && ac.valore > 0) limiti.push('L\'anno scorso non c\'era ancora l\'accantonamento: il confronto del risparmio non è alla pari.');

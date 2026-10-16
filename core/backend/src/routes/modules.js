@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { requireAuth, requireAdmin } = require('./auth');
-const { parseSchemaNormalized, getRequiredConnectors } = require('../schema-v3');
+const { parseSchemaNormalized, getRequiredConnectors, isV3, toV3 } = require('../schema-v3');
 const { logAudit } = require('../audit-log');
 const { ruleFor } = require('../permissions');
 const { requireInternalSecret, internalSecret } = require('../../../../shared/internal-secret.js');
@@ -28,6 +28,35 @@ router.get('/registry', requireAuth, requireAdmin, async (req, res) => {
   } catch (e) {
     res.status(502).json({ error: 'Registro non raggiungibile', unavailable: true });
   }
+});
+
+// ─── PROPONI ALLA LIBRERIA ─────────────────────────────────────────────────────────────────────────────────
+// Un modulo di questo tenant si può proporre alla Libreria di Super Admin: parte SOLO lo schema (mai le righe) e finisce in una coda; lo approva Super Admin (diventa una versione della Libreria)
+// o lo rifiuta con un motivo, che si vede qui. Niente entra nella Libreria da solo.
+router.post('/:slug/propose-to-registry', requireAuth, requireAdmin, async (req, res) => {
+  const m = db.prepare('SELECT name, slug, icon, color, group_name, schema_json, support_module, is_system FROM modules WHERE slug = ? AND installed = 1').get(req.params.slug);
+  if (!m) return res.status(404).json({ error: 'Modulo non trovato o non installato' });
+  if (m.is_system) return res.status(400).json({ error: 'I moduli di sistema non si propongono.' });
+  const b = req.body || {};
+  try {
+    const r = await fetch(SUPER_ADMIN_URL + '/api/registry/public/proposals', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET }, signal: AbortSignal.timeout(15000),
+      body: JSON.stringify({ tenant_slug: TENANT_SLUG, module: { slug: m.slug, name: m.name, icon: m.icon, color: m.color, group_name: m.group_name, schema_json: m.schema_json }, description: b.description, note: b.note }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) return res.status(r.status === 404 || r.status === 400 ? 400 : 502).json({ error: data.error || 'La Libreria non risponde.' });
+    logAudit(req.user.username, 'module.propose_registry', m.slug, { id: data.id });
+    res.json(data);
+  } catch (e) { res.status(502).json({ error: 'La Libreria non è raggiungibile in questo momento.' }); }
+});
+
+// Lo stato delle proposte di questo tenant (in attesa, approvata, rifiutata con motivo).
+router.get('/registry-proposals', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const r = await fetch(SUPER_ADMIN_URL + '/api/registry/public/proposals?tenant_slug=' + encodeURIComponent(TENANT_SLUG), { headers: { 'x-internal-secret': INTERNAL_SECRET }, signal: AbortSignal.timeout(10000) });
+    if (!r.ok) return res.json([]);
+    res.json(await r.json());
+  } catch (e) { res.json([]); }
 });
 
 // Nessun job in background: il controllo scatta solo quando il tenant riapre lo
@@ -142,6 +171,51 @@ function findMissingDependencies(schemaJson) {
     .map((r) => r.target_module)
     .filter((slug, i, arr) => slug && !installedSlugs.has(slug) && arr.indexOf(slug) === i);
 }
+
+// ─── COLLEGA I MODULI ─────────────────────────────────────────────────────────────────────────────────────────────
+// Dopo aver installato più moduli: le relazioni che mancano (regole sui nomi, vedi module-links.js) da confermare una per una.
+router.get('/collegamenti/proposte', requireAuth, requireAdmin, (req, res) => res.json(require('../module-links').proposte()));
+router.post('/collegamenti/applica', requireAuth, requireAdmin, (req, res) => res.json(require('../module-links').applica(req.body && req.body.links, req.user)));
+
+// I verticali proposti da Super Admin (punti di partenza: gruppi di moduli). Si installano con l'installazione multipla qui sotto, dopo aver scelto quali moduli tenere.
+router.get('/registry-verticals', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const r = await fetch(SUPER_ADMIN_URL + '/api/registry/public/verticals?tenant_slug=' + encodeURIComponent(TENANT_SLUG), { headers: { 'x-internal-secret': INTERNAL_SECRET } });
+    if (!r.ok) throw new Error('giù');
+    res.json(await r.json());
+  } catch (e) { res.status(502).json({ error: 'Libreria non raggiungibile', unavailable: true }); }
+});
+
+// ─── INSTALLAZIONE MULTIPLA DALLO STORE ────────────────────────────────────────────────────────────────────────
+// Chi costruisce il proprio gestionale sceglie più moduli dallo store e li scarica in un colpo solo; le relazioni tra loro le crea poi
+// lui (Builder). Ogni modulo non ancora presente si installa come uno singolo (stesso percorso, dipendenze comprese); quelli già presenti
+// si saltano, niente si sovrascrive. Risponde con cosa è entrato, cosa c'era già e cosa non è riuscito.
+router.post('/registry/bulk-install', requireAuth, requireAdmin, async (req, res) => {
+  const ids = [...new Set((Array.isArray(req.body && req.body.ids) ? req.body.ids : []).map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 100);
+  if (!ids.length) return res.status(400).json({ error: 'Scegli almeno un modulo' });
+  let libreria;
+  try {
+    const rr = await fetch(SUPER_ADMIN_URL + '/api/registry/public/modules?tenant_slug=' + encodeURIComponent(TENANT_SLUG), { headers: { 'x-internal-secret': INTERNAL_SECRET } });
+    if (!rr.ok) throw new Error('giù');
+    libreria = await rr.json();
+  } catch (e) { return res.status(502).json({ error: 'Libreria non raggiungibile' }); }
+  const presenti = () => new Set(db.prepare('SELECT slug, registry_slug FROM modules WHERE installed = 1').all().flatMap((m) => [m.slug, m.registry_slug]).filter(Boolean));
+  const installati = [], saltati = [], falliti = [];
+  const installa = async (id, slug) => {
+    if (presenti().has(slug)) { saltati.push(slug); return; }
+    try {
+      const m = await installRegistryModuleById(id, req.user.username);
+      installati.push(m.slug);
+      for (const dep of findMissingDependencies(m.schema_json)) {
+        const d = libreria.find((x) => x.slug === dep);
+        if (d) await installa(d.id, d.slug); else falliti.push(dep + ' (richiesto da ' + slug + ')');
+      }
+    } catch (e) { falliti.push(slug); }
+  };
+  for (const id of ids) { const m = libreria.find((x) => x.id === id); if (m) await installa(m.id, m.slug); else falliti.push('#' + id); }
+  logAudit(req.user.username, 'module.bulk_install', null, { installati: installati.length, saltati: saltati.length, falliti: falliti.length });
+  res.json({ installati, saltati, falliti });
+});
 
 router.post('/registry/:id/install', requireAuth, requireAdmin, async (req, res) => {
   let payload;
@@ -373,6 +447,61 @@ router.post('/internal/install-batch', requireInternalSecret, (req, res) => {
   res.json({ ok: true, installed: modules.length, widgets: (widgets || []).length });
 });
 
+// Chiamata da Super Admin (lib/tenant-config-from-analysis.js) quando un tenant nasce da
+// un'Analisi: configura ruoli/permessi dei moduli appena installati in UNA sola chiamata
+// batch invece di una per modulo (2026-09-11, bug reale di performance: un'analisi con 7-8
+// moduli mandava altrettanti round-trip sequenziali al tenant appena creato, su un NAS
+// lento causa diretta di creazioni tenant da 270+ secondi). Il controllo "non sovrascrivere
+// un workflow/permessi già presenti" resta qui, non nel chiamante — è il tenant a possedere
+// il proprio schema. Scoperto quasi tolto per errore (16/10/2026): sembrava senza chiamanti
+// guardando un checkout di qualche giorno prima di quando è nata questa Analisi — vedi
+// docs/DECISIONI.md, voce "Controllo di sicurezza e pulizia".
+router.post('/internal/apply-workflow-config-batch', requireInternalSecret, (req, res) => {
+  const { configs } = req.body || {};
+  if (!Array.isArray(configs) || configs.length === 0) return res.status(400).json({ error: 'configs obbligatorio (array non vuoto)' });
+
+  const results = configs.map(({ registry_module_id, workflow_steps, permissions_step }) => {
+    if (!registry_module_id) return { registry_module_id: null, configured: false, reason: 'registry_module_id_mancante' };
+
+    const moduleRow = db.prepare('SELECT id, schema_json FROM modules WHERE registry_module_id = ?').get(registry_module_id);
+    if (!moduleRow) return { registry_module_id, configured: false, reason: 'modulo_non_trovato_sul_tenant' };
+
+    let schema;
+    try { schema = JSON.parse(moduleRow.schema_json || '{}'); } catch (e) { schema = {}; }
+    const v3 = isV3(schema) ? schema : toV3(schema);
+    const hasWorkflow = v3.steps.some((s) => s.block_type === 'workflow_state');
+    const hasPermissions = v3.steps.some((s) => s.block_type === 'permissions');
+
+    const newSteps = [];
+    if (!hasWorkflow && Array.isArray(workflow_steps) && workflow_steps.length > 0) newSteps.push(...workflow_steps);
+    if (!hasPermissions && permissions_step) newSteps.push(permissions_step);
+
+    if (newSteps.length === 0) {
+      return { registry_module_id, configured: false, reason: (hasWorkflow || hasPermissions) ? 'workflow_o_permessi_gia_presenti' : 'nessun_dato_da_generare' };
+    }
+
+    const finalSchema = { version: 3, steps: [...v3.steps, ...newSteps] };
+    try { parseSchemaNormalized(JSON.stringify(finalSchema)); } catch (e) {
+      return { registry_module_id, configured: false, reason: 'schema_non_valido: ' + e.message };
+    }
+
+    db.prepare('UPDATE modules SET schema_json = ? WHERE id = ?').run(JSON.stringify(finalSchema), moduleRow.id);
+    return {
+      registry_module_id, configured: true,
+      workflow_states: newSteps.filter((s) => s.block_type === 'workflow_state').length,
+      has_permissions: newSteps.some((s) => s.block_type === 'permissions'),
+    };
+  });
+
+  const configured = results.filter((r) => r.configured);
+  if (configured.length > 0) {
+    logAudit('platform:provisioning', 'modules.workflow_config_applied_batch', configured.length + ' moduli', {
+      registry_module_ids: configured.map((r) => r.registry_module_id),
+    });
+  }
+  res.json({ results });
+});
+
 // Fase 12.5 — B2c: gemella di install-batch, ma per il caso "un solo modulo, crea O
 // aggiorna per slug" — usato sia da Super Builder AI (/deploy, bozza generata
 // dall'AI verso il proprio sandbox) sia dall'anteprima di una pubblicazione ancora
@@ -497,7 +626,7 @@ router.patch('/:slug', requireAuth, requireAdmin, (req, res) => {
   // stringa vuota vuol dire "nessuna sezione", mostrato in cima senza intestazione.
   if (group_name !== undefined) db.prepare('UPDATE modules SET group_name = ? WHERE slug = ?').run(group_name && group_name.trim() ? group_name.trim() : null, req.params.slug);
   if (group_order !== undefined) db.prepare('UPDATE modules SET group_order = ? WHERE slug = ?').run(parseInt(group_order) || 0, req.params.slug);
-  if (list_view !== undefined) db.prepare('UPDATE modules SET list_view = ? WHERE slug = ?').run(list_view === 'card_grid' ? 'card_grid' : 'table', req.params.slug);
+  if (list_view !== undefined) db.prepare('UPDATE modules SET list_view = ? WHERE slug = ?').run(['card_grid', 'archive'].includes(list_view) ? list_view : 'table', req.params.slug);
   if (batch_upload_field !== undefined) db.prepare('UPDATE modules SET batch_upload_field = ? WHERE slug = ?').run(batch_upload_field || null, req.params.slug);
   if (batch_upload_category_field !== undefined) db.prepare('UPDATE modules SET batch_upload_category_field = ? WHERE slug = ?').run(batch_upload_category_field || null, req.params.slug);
   const updated = db.prepare('SELECT * FROM modules WHERE slug = ?').get(req.params.slug);
@@ -539,10 +668,10 @@ function cleanupOrphanConnections(excludeSlug, integrationIds) {
       // stessa logica di POST /integrazioni/google/disconnect.
       const row = db.prepare("SELECT credentials FROM connections WHERE integration_id = 'google'").get();
       if (row && row.credentials) {
-        let creds = {};
-        try { creds = JSON.parse(row.credentials) || {}; } catch {}
+        const sar = require('../secrets-at-rest');
+        const creds = sar.unseal(row.credentials) || {};
         db.prepare("UPDATE connections SET credentials = ?, connected = 0 WHERE integration_id = 'google'")
-          .run(JSON.stringify({ client_id: creds.client_id, client_secret: creds.client_secret }));
+          .run(sar.seal({ client_id: creds.client_id, client_secret: creds.client_secret }));
       }
     } else {
       db.prepare('DELETE FROM connections WHERE integration_id = ?').run(integrationId);
@@ -611,6 +740,8 @@ router.delete('/:slug', requireAuth, requireAdmin, (req, res) => {
 });
 
 module.exports = router;
+// Gli slug dei moduli che QUESTO utente vede (assegnazione moduli + permessi del ruolo): lo usa anche il bot Telegram, per non mostrare altro.
+module.exports.visibleSlugsFor = (user) => filterByRolePermissions(getVisibleInstalledModules(user), user.role).map((m) => m.slug).filter((x) => x !== 'dashboard');
 // Riusata da routes/assessment.js (2026-09-08, "Suggerimenti di miglioramento"
 // — installare direttamente il modulo che il pannello consiglia) — stesso
 // identico percorso già usato da questo file per un'installazione dallo

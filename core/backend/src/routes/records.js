@@ -651,30 +651,6 @@ router.post('/:slug/import', requireAuth, (req, res) => {
   res.json({ created, skipped, errors });
 });
 
-// Imposta un campo allo stesso valore per TUTTI i record di un modulo in un colpo
-// solo — azione di manutenzione generica (es. "azzera tutte le giacenze furgone",
-// richiesta esplicita per coffee), non hardcoded su un modulo specifico. Solo
-// admin: agisce su OGNI record del modulo, irreversibile a parte un backup del
-// tenant — non esposta come azione generale in UI, va collegata a un bottone
-// dedicato dove serve davvero (vedi ModulePage per giacenza_furgone).
-router.post('/:slug/bulk-set-field', requireAuth, requireAdmin, (req, res) => {
-  const { campo, valore } = req.body || {};
-  if (!campo) return res.status(400).json({ error: 'Campo obbligatorio' });
-  const rows = db.prepare('SELECT id, data FROM records WHERE module_slug = ?').all(req.params.slug);
-  const update = db.prepare('UPDATE records SET data = ? WHERE id = ?');
-  const tx = db.transaction(() => {
-    rows.forEach((r) => {
-      let d;
-      try { d = JSON.parse(r.data || '{}'); } catch { return; }
-      d[campo] = valore;
-      update.run(JSON.stringify(d), r.id);
-    });
-  });
-  tx();
-  logAudit(req.user.username, 'records.bulk_set_field', req.params.slug, { campo, valore, count: rows.length });
-  res.json({ ok: true, count: rows.length });
-});
-
 router.get('/:slug/:id', requireAuth, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const record = db.prepare('SELECT * FROM records WHERE id = ? AND module_slug = ?').get(req.params.id, req.params.slug);
@@ -808,33 +784,30 @@ router.put('/:slug/:id', requireAuth, (req, res) => {
   res.json(attached);
 });
 
-router.post('/:slug/:id/transition', requireAuth, (req, res) => {
-  const schema = getModuleSchema(req.params.slug) || {};
-  const existing = db.prepare('SELECT * FROM records WHERE id = ? AND module_slug = ?').get(req.params.id, req.params.slug);
-  if (!existing) return res.status(404).json({ error: 'Record non trovato' });
+// Cambio di stato di una riga, con TUTTI i controlli dell'app (permessi del ruolo, regole del workflow, validazioni, automazioni).
+// Usata dalla rotta qui sotto e dal bot Telegram (telegram.js): così una riga si chiude nello stesso modo da qualunque via.
+// Ritorna { status, body } invece di scrivere su `res`.
+function runTransition(user, slug, id, to) {
+  const err = (status, error) => ({ status, body: { error } });
+  const schema = getModuleSchema(slug) || {};
+  const existing = db.prepare('SELECT * FROM records WHERE id = ? AND module_slug = ?').get(id, slug);
+  if (!existing) return err(404, 'Record non trovato');
 
-  const rule = ruleFor(schema, req.user.role);
-  if (rule && (!rule.edit || !ownedOrAllowed(rule, existing, req.user))) {
-    return res.status(403).json({ error: 'Non hai i permessi per modificare questo record' });
-  }
+  const rule = ruleFor(schema, user.role);
+  if (rule && (!rule.edit || !ownedOrAllowed(rule, existing, user))) return err(403, 'Non hai i permessi per modificare questo record');
 
-  const { to } = req.body;
-  if (!to) return res.status(400).json({ error: 'Campo "to" obbligatorio' });
+  if (!to) return err(400, 'Campo "to" obbligatorio');
 
   const workflow = schema.workflow;
-  if (!workflow) return res.status(400).json({ error: 'Questo modulo non ha un workflow' });
+  if (!workflow) return err(400, 'Questo modulo non ha un workflow');
 
   const beforeData = JSON.parse(existing.data);
   const from = beforeData._stato;
 
   const transition = (workflow.transitions || []).find((t) => t.from === from && t.to === to);
-  if (!transition) {
-    return res.status(422).json({ error: `Transizione non ammessa: ${from} → ${to}` });
-  }
+  if (!transition) return err(422, `Transizione non ammessa: ${from} → ${to}`);
 
-  if (Array.isArray(transition.roles) && transition.roles.length > 0 && !transition.roles.includes(req.user.role)) {
-    return res.status(403).json({ error: 'Il tuo ruolo non può eseguire questa transizione' });
-  }
+  if (Array.isArray(transition.roles) && transition.roles.length > 0 && !transition.roles.includes(user.role)) return err(403, 'Il tuo ruolo non può eseguire questa transizione');
 
   // Validazione bloccante opzionale sulla transizione (es. "dare == avere" prima di
   // confermare un movimento contabile) — riusa la stessa sandbox di espressioni dei
@@ -842,14 +815,10 @@ router.post('/:slug/:id/transition', requireAuth, (req, res) => {
   // annotare un valore: è l'unico punto della piattaforma dove un'automazione può
   // impedire un cambiamento di stato invece di reagirci dopo il commit.
   if (transition.validazione && transition.validazione.expr) {
-    const context = { currentModule: req.params.slug, currentRecordId: existing.id, currentRecordData: beforeData };
+    const context = { currentModule: slug, currentRecordId: existing.id, currentRecordData: beforeData };
     const result = evaluateFormula(transition.validazione.expr, db, context);
-    if (!result.valid) {
-      return res.status(400).json({ error: 'Validazione transizione non valutabile: ' + (result.errors || []).join('; ') });
-    }
-    if (!result.value) {
-      return res.status(400).json({ error: transition.validazione.messaggio || `Transizione ${from} → ${to} bloccata: condizione non soddisfatta` });
-    }
+    if (!result.valid) return err(400, 'Validazione transizione non valutabile: ' + (result.errors || []).join('; '));
+    if (!result.value) return err(400, transition.validazione.messaggio || `Transizione ${from} → ${to} bloccata: condizione non soddisfatta`);
   }
 
   // Variante di validazione per un confronto con un record DIRETTAMENTE collegato
@@ -872,19 +841,24 @@ router.post('/:slug/:id/transition', requireAuth, (req, res) => {
     const ops = { '<=': (a, b) => a <= b, '>=': (a, b) => a >= b, '<': (a, b) => a < b, '>': (a, b) => a > b, '==': (a, b) => a === b, '!=': (a, b) => a !== b };
     const cmp = ops[rc.op] || ops['<='];
     if (relatedValue === null || !cmp(currentValue, relatedValue)) {
-      return res.status(400).json({ error: transition.validazione.messaggio || `Transizione ${from} → ${to} bloccata: vincolo con il record collegato non soddisfatto` });
+      return err(400, transition.validazione.messaggio || `Transizione ${from} → ${to} bloccata: vincolo con il record collegato non soddisfatto`);
     }
   }
 
   const newData = { ...beforeData, _stato: to };
-  db.prepare('UPDATE records SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND module_slug = ?').run(JSON.stringify(newData), req.params.id, req.params.slug);
-  const record = db.prepare('SELECT * FROM records WHERE id = ?').get(req.params.id);
+  db.prepare('UPDATE records SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND module_slug = ?').run(JSON.stringify(newData), id, slug);
+  const record = db.prepare('SELECT * FROM records WHERE id = ?').get(id);
   const decryptedData = decryptFields(JSON.parse(record.data), schema.fields);
-  const attached = attachComputedFields({ ...record, data: decryptedData }, schema, req.params.slug);
+  const attached = attachComputedFields({ ...record, data: decryptedData }, schema, slug);
 
-  fireTrigger(req.params.slug, 'cambio_stato', attached.data, attached.id, { stato: to });
-  logHistory(req.params.slug, attached.id, req.user.username, 'transition', beforeData, attached.data);
-  res.json(attached);
+  fireTrigger(slug, 'cambio_stato', attached.data, attached.id, { stato: to });
+  logHistory(slug, attached.id, user.username, 'transition', beforeData, attached.data);
+  return { status: 200, body: attached };
+}
+
+router.post('/:slug/:id/transition', requireAuth, (req, res) => {
+  const out = runTransition(req.user, req.params.slug, req.params.id, (req.body || {}).to);
+  res.status(out.status).json(out.body);
 });
 
 router.delete('/:slug/:id', requireAuth, async (req, res) => {
@@ -912,7 +886,27 @@ router.delete('/:slug/:id', requireAuth, async (req, res) => {
 });
 
 // ─── ALLEGATI TIPIZZATI ──────────────────────────────────────────────────────
+// Falla reale trovata il 2026-10-14 (segnalata dall'utente, mai verificata
+// prima): queste tre rotte avevano solo requireAuth, NESSUN controllo sul
+// record a cui l'allegato appartiene — un utente con ruolo "solo propri"
+// (view_own_only) poteva leggere/aggiungere/staccare allegati di un record
+// altrui semplicemente conoscendone slug+id, bypassando del tutto la regola
+// che per i record stessi (GET /:slug/:id) è già rispettata. Stesso identico
+// controllo di quella rotta, replicato qui.
+function loadRecordOr404(slug, id, res) {
+  const record = db.prepare('SELECT * FROM records WHERE id = ? AND module_slug = ?').get(id, slug);
+  if (!record) { res.status(404).json({ error: 'Record non trovato' }); return null; }
+  return record;
+}
+
 router.get('/:slug/:id/attachments', requireAuth, (req, res) => {
+  const record = loadRecordOr404(req.params.slug, req.params.id, res);
+  if (!record) return;
+  const schema = getModuleSchema(req.params.slug) || {};
+  const rule = ruleFor(schema, req.user.role);
+  if (rule && (!rule.view || !ownedOrAllowed(rule, record, req.user))) {
+    return res.status(403).json({ error: 'Non hai i permessi per vedere questo record' });
+  }
   const rows = db.prepare(`
     SELECT ra.id, ra.tipo, ra.created_at, u.original_name, u.size, u.mime_type, u.id as upload_id
     FROM record_attachments ra JOIN uploads u ON u.id = ra.upload_id
@@ -923,10 +917,27 @@ router.get('/:slug/:id/attachments', requireAuth, (req, res) => {
 });
 
 router.post('/:slug/:id/attachments', requireAuth, (req, res) => {
+  const record = loadRecordOr404(req.params.slug, req.params.id, res);
+  if (!record) return;
+  const schema = getModuleSchema(req.params.slug) || {};
+  const rule = ruleFor(schema, req.user.role);
+  if (rule && (!rule.edit || !ownedOrAllowed(rule, record, req.user))) {
+    return res.status(403).json({ error: 'Non hai i permessi per modificare questo record' });
+  }
   const { upload_id, tipo } = req.body;
   if (!upload_id) return res.status(400).json({ error: 'upload_id obbligatorio' });
-  const up = db.prepare('SELECT id FROM uploads WHERE id = ?').get(upload_id);
+  const up = db.prepare('SELECT id, uploaded_by FROM uploads WHERE id = ?').get(upload_id);
   if (!up) return res.status(404).json({ error: 'Upload non trovato' });
+  // Senza questo controllo, avere il permesso di modifica sul PROPRIO record
+  // bastava a "rubare" un file caricato da qualcun altro: lo si collegava al
+  // proprio record (questa rotta) e poi lo si leggeva da lì, aggirando
+  // qualunque permesso sul record originale dell'upload. L'unico flusso reale
+  // (RecordDetailModal.jsx, ModulePage/index.jsx) carica e allega nella
+  // stessa azione, sempre con lo stesso utente — un admin resta libero per
+  // import/correzioni.
+  if (up.uploaded_by !== req.user.id && req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Puoi allegare solo file che hai caricato tu' });
+  }
   const result = db.prepare(
     'INSERT INTO record_attachments (module_slug, record_id, upload_id, tipo) VALUES (?, ?, ?, ?)'
   ).run(req.params.slug, req.params.id, upload_id, tipo || null);
@@ -934,6 +945,13 @@ router.post('/:slug/:id/attachments', requireAuth, (req, res) => {
 });
 
 router.delete('/:slug/:id/attachments/:attId', requireAuth, async (req, res) => {
+  const record = loadRecordOr404(req.params.slug, req.params.id, res);
+  if (!record) return;
+  const schema = getModuleSchema(req.params.slug) || {};
+  const rule = ruleFor(schema, req.user.role);
+  if (rule && (!rule.edit || !ownedOrAllowed(rule, record, req.user))) {
+    return res.status(403).json({ error: 'Non hai i permessi per modificare questo record' });
+  }
   // Ogni riga qui ha un upload dedicato, mai condiviso con un altro record
   // (creato apposta al momento dell'allega, verificato su tutti e 3 i punti
   // del frontend che chiamano questa API) — cancellare il collegamento
@@ -948,3 +966,4 @@ router.delete('/:slug/:id/attachments/:attId', requireAuth, async (req, res) => 
 });
 
 module.exports = router;
+module.exports.runTransition = runTransition;

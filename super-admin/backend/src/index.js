@@ -11,20 +11,24 @@ const express = require('express');
 const cors = require('cors');
 const db = require('./db');
 const authRoutes = require('./routes/auth');
+const webauthnRoutes = require('./routes/webauthn');
 const tenantsRoutes = require('./routes/tenants');
 const tenantImportRoutes = require('./routes/tenant-import');
 const usersRoutes = require('./routes/users');
 const registryRoutes = require('./routes/registry');
+const analysesRoutes = require('./routes/analyses');
+const tenantExportRoutes = require('./routes/tenant-export');
+const tenantInviteRoutes = require('./routes/tenant-invite');
 const superBuilderRoutes = require('./routes/super-builder');
-const updateManagerRoutes = require('./routes/update-manager');
 const monitoringRoutes = require('./routes/monitoring');
 const analyticsRoutes = require('./routes/analytics');
 const guidaRoutes = require('./routes/guida');
 const aiUsageRoutes = require('./routes/ai-usage');
 const tenantAiRoutes = require('./routes/tenant-ai');
+const securityStatusRoutes = require('./routes/security-status');
 const { startBackupScheduler } = require('./backup-scheduler');
+const { startWeeklyBackupMail } = require('./weekly-backup-mail');
 const { startBackupVerifyScheduler } = require('./backup-verify');
-const { startUpdateScheduler } = require('./update-scheduler');
 const { startAnalyticsScheduler } = require('./analytics-scheduler');
 const { startTenantStatusReconciler } = require('./tenant-status-reconciler');
 const { startAuditRetentionScheduler } = require('./audit-retention-scheduler');
@@ -36,6 +40,8 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors(require('../../../shared/cors-origin').buildCorsOptions(process.env.CLOUDFLARE_ZONE_NAME)));
 app.use(require('../../../shared/security-headers').applySecurityHeaders);
+// le foto per il bot arrivano come base64 (fino a 3 MB): solo questo percorso ha un limite più alto, il resto resta quello di sempre
+app.use('/api/tenant-ai/receipt', express.json({ limit: '6mb' }));
 app.use(express.json());
 
 // Stesso limite generico del gemello in core/backend/src/index.js — rete di
@@ -46,19 +52,23 @@ app.use(express.json());
 app.use('/api', rateLimit({ windowMs: 60 * 1000, max: 600, message: 'Troppe richieste da questo indirizzo, rallenta', name: 'api-global' }));
 
 app.use('/api/auth', authRoutes);
+app.use('/api/webauthn', webauthnRoutes);
 app.use('/api/tenants', tenantImportRoutes);
 app.use('/api/tenants', tenantsRoutes);
+app.use('/api/analyses', analysesRoutes);
+app.use('/api/tenant-export', tenantExportRoutes);
+app.use('/api/tenant-invite', tenantInviteRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/registry', registryRoutes);
 app.use('/api/super-builder', superBuilderRoutes);
-app.use('/api/update-manager', updateManagerRoutes);
 app.use('/api/monitoring', monitoringRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/guida', guidaRoutes);
 app.use('/api/ai-usage', aiUsageRoutes);
 app.use('/api/tenant-ai', tenantAiRoutes);
+app.use('/api/security-status', securityStatusRoutes);
 
-app.get('/health', (req, res) => res.json({ status: 'ok', version: '0.1.0' }));
+app.get('/health', (req, res) => res.json({ status: 'ok', version: '0.2.0' }));
 
 // G19 (PLATFORM-0.6-GAP-ANALYSIS.md) — pubblica di proposito, nessuna autenticazione: serve al
 // workflow GitHub Actions di uptime-check (.github/workflows/uptime-check.yml) per sapere quali
@@ -89,11 +99,14 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Errore interno' });
 });
 
+{ const m = require('./secrets-at-rest').migrate(); if (m.totp || m.falliti) console.log('Segreti 2FA cifrati a riposo: ' + m.totp + (m.falliti ? ' (' + m.falliti + ' NON riusciti)' : '')); }
+{ const n = require('./lib/moduli-generici').recategorizza(); if (n) console.log('Libreria: ' + n + ' moduli generici ricategorizzati (da "Generico" unico a una categoria vera)'); }
+
 app.listen(PORT, () => {
   console.log('Super Admin backend running on port ' + PORT);
   startBackupScheduler();
+  startWeeklyBackupMail();
   startBackupVerifyScheduler();
-  startUpdateScheduler();
   startAnalyticsScheduler();
   startTenantStatusReconciler();
   startAuditRetentionScheduler();

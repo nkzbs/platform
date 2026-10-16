@@ -147,6 +147,39 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_ai_usage_log_created_at ON ai_usage_log(created_at);
 
+  -- Analisi dei processi (routes/analyses.js): il racconto di un'attività, i suoi processi (JSON ripulito da lib/analysis.js) e, se ne è nato, il tenant.
+  CREATE TABLE IF NOT EXISTS process_analyses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    descrizione TEXT NOT NULL DEFAULT '',
+    profilo TEXT NOT NULL DEFAULT '{}',
+    processi TEXT NOT NULL DEFAULT '[]',
+    tenant_slug TEXT,
+    created_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  -- Proposte di moduli dai tenant alla Libreria: arrivano in coda e le approva (o rifiuta) Super Admin. Un tenant può proporre un suo modulo (solo lo schema, mai i dati).
+  CREATE TABLE IF NOT EXISTS registry_proposals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_slug TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    name TEXT NOT NULL,
+    icon TEXT,
+    color TEXT,
+    group_name TEXT,
+    schema_json TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    note TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'pending',
+    reason TEXT,
+    registry_module_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    decided_at DATETIME,
+    decided_by TEXT
+  );
+
   -- Chiave Mistral di un tenant (cifrata). Un tenant senza riga usa la chiave generale di Super Admin.
   CREATE TABLE IF NOT EXISTS tenant_ai_keys (
     tenant_slug TEXT PRIMARY KEY,
@@ -174,7 +207,28 @@ db.exec(`
 if (!db.prepare("SELECT 1 FROM pragma_table_info('ai_usage_log') WHERE name = 'tenant_slug'").get()) {
   db.exec('ALTER TABLE ai_usage_log ADD COLUMN tenant_slug TEXT');
 }
+// Backup settimanale via mail (weekly-backup-mail.js): acceso/spento per tenant, ultimo invio, e la passphrase che cifra l'allegato (cifrata a riposo).
+for (const col of ['backup_mail_weekly INTEGER DEFAULT 0', 'backup_mail_last_sent TEXT', 'backup_mail_passphrase TEXT']) {
+  if (!db.prepare("SELECT 1 FROM pragma_table_info('tenants') WHERE name = ?").get(col.split(' ')[0])) db.exec('ALTER TABLE tenants ADD COLUMN ' + col);
+}
 db.prepare('INSERT OR IGNORE INTO update_manager (id) VALUES (1)').run();
+// I verticali proposti ai tenant: gruppi di moduli della Libreria con nome, icona e descrizione (dati, nessun settore nel codice). Si gestiscono da Libreria;
+// al primo avvio si riempiono dal file seeds/verticali.json (lib/verticali.js).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS registry_verticals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    icon TEXT,
+    description TEXT,
+    module_slugs TEXT NOT NULL DEFAULT '[]',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+`);
+if (!db.prepare('PRAGMA table_info(registry_modules)').all().some((c) => c.name === 'ruoli')) db.exec('ALTER TABLE registry_modules ADD COLUMN ruoli TEXT'); // dichiarazione dei ruoli del modulo (kind, campi, stati…), applicata ai tenant creati dall\'analisi
+if (!db.prepare('PRAGMA table_info(process_analyses)').all().some((c) => c.name === 'creazione')) db.exec('ALTER TABLE process_analyses ADD COLUMN creazione TEXT');
+if (!db.prepare('PRAGMA table_info(process_analyses)').all().some((c) => c.name === 'auto')) db.exec('ALTER TABLE process_analyses ADD COLUMN auto TEXT'); // avanzamento di «Fai tutto»
+if (!db.prepare('PRAGMA table_info(process_analyses)').all().some((c) => c.name === 'scelte')) db.exec("ALTER TABLE process_analyses ADD COLUMN scelte TEXT NOT NULL DEFAULT '{}'"); // proposte (report, AI) che l\'utente ha tolto // avanzamento della creazione del tenant dall\'analisi
 
 // Seed del registro moduli — solo se completamente vuoto (prima installazione).
 // Mai sovrascrive: se l'operatore ha già pubblicato moduli propri, non tocca nulla.

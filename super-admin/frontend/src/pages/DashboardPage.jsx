@@ -102,9 +102,9 @@ function DashboardPage({ token, onNavigate }) {
       {latest && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-            <Kpi label="Tenant attivi" value={latest.total_tenants} icon="grid" tone="blue"
-              delta={before ? pctDelta(latest.total_tenants, before.total_tenants) : null}
-              hint="Istanze cliente (tenant) attualmente in esecuzione." />
+            <Kpi label="Tenant attivi" value={overview ? (overview.tenant_status.active || 0) : latest.total_tenants} icon="grid" tone="blue"
+              delta={before ? pctDelta(overview ? (overview.tenant_status.active || 0) : latest.total_tenants, before.total_tenants) : null}
+              hint="Tenant in stato Attivo in questo momento — stesso numero della fetta «Attivo» del grafico a fianco." />
             <Kpi label="Salute piattaforma" value={healthPct != null ? healthPct + '%' : '—'} icon="activity" tone="purple"
               hint="Percentuale di tenant in stato Attivo sul totale — più è alta, meno tenant sono fermi o in errore." />
           </div>
@@ -149,18 +149,6 @@ function DashboardPage({ token, onNavigate }) {
             <div className="bg-surface-card rounded-md border border-gray-800 p-5">
               <div className="text-xs font-semibold text-ink mb-3">Distribuzione moduli</div>
               {overview && <HBar rows={overview.module_distribution.map((m) => ({ label: m.category, value: m.count }))} />}
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="bg-surface-card rounded-md border border-gray-800 p-5 flex items-center justify-between">
-              <div>
-                <div className="text-xs font-semibold text-ink mb-1">Stato aggiornamenti</div>
-                <div className="text-xs text-gray-500">
-                  {overview && overview.update_manager.queued ? 'Un aggiornamento è in coda per stanotte.' : 'Nessun aggiornamento in coda.'}
-                </div>
-              </div>
-              <div className="text-2xl font-bold text-ink">{overview ? overview.tenants_auto_update_enabled + '/' + overview.tenants_total : '—'}</div>
             </div>
           </div>
 

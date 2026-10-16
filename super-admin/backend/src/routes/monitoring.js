@@ -22,11 +22,11 @@ async function fetchTenantMonitoringFeed(tenant, limit, before) {
       headers: { 'x-internal-secret': INTERNAL_SECRET },
       signal: AbortSignal.timeout(5000),
     });
-    if (!res.ok) return { audit_log: [], error_logs: [], business_events: [] };
+    if (!res.ok) return { error_logs: [] };
     const body = await res.json();
-    return { audit_log: body.audit_log || [], error_logs: body.error_logs || [], business_events: body.business_events || [] };
+    return { error_logs: body.error_logs || [] };
   } catch (e) {
-    return { audit_log: [], error_logs: [], business_events: [] }; // tenant irraggiungibile — non un errore da segnalare qui
+    return { error_logs: [] }; // tenant irraggiungibile — non un errore da segnalare qui
   }
 }
 
@@ -48,6 +48,7 @@ router.get('/errors', requireAuth, async (req, res) => {
   res.json(merged);
 });
 
+// PRIVACY (13 ottobre 2026): le azioni di Super Admin e gli ERRORI tecnici dei tenant. Cosa fanno gli utenti dentro un tenant (azioni, record) non arriva qui.
 // Log + Monitoring unificati in un solo feed cronologico — prima erano due pagine
 // separate (Log: solo azioni di Super Admin su se stesso; Monitoring: solo errori,
 // cross-tenant) con descrizioni deboli (azione grezza tipo "tenant.redeploy_all",
@@ -78,13 +79,8 @@ router.get('/timeline', requireAuth, async (req, res) => {
 
   const tenants = db.prepare("SELECT slug, name FROM tenants WHERE status != 'deleted'").all();
   const feeds = await Promise.all(tenants.map((t) => fetchTenantMonitoringFeed(t, limit, before)));
-  const tenantAudit = tenants.flatMap((t, i) => feeds[i].audit_log.map((r) => ({ ...r, tenant_slug: t.slug, tenant_name: t.name })));
   const tenantErrors = tenants.flatMap((t, i) => feeds[i].error_logs.map((r) => ({ ...r, tenant_slug: t.slug, tenant_name: t.name })));
-  // F9 — solo per-tenant: Super Admin non ha "record" di modulo propri (i suoi
-  // oggetti — partner/clienti/tenant — sono già coperti da audit_log sopra).
-  const tenantBusiness = tenants.flatMap((t, i) => feeds[i].business_events.map((r) => ({ ...r, tenant_slug: t.slug, tenant_name: t.name })));
-
-  const auditEvents = [...ownAudit, ...tenantAudit].map((r) => ({
+  const auditEvents = ownAudit.map((r) => ({
     kind: 'audit',
     id: 'audit-' + (r.tenant_slug || 'sa') + '-' + r.id,
     tenant_slug: r.tenant_slug,
@@ -109,20 +105,7 @@ router.get('/timeline', requireAuth, async (req, res) => {
     description: describeError(r),
   }));
 
-  const businessEvents = tenantBusiness.map((r) => ({
-    kind: 'business',
-    id: 'business-' + r.tenant_slug + '-' + r.id,
-    tenant_slug: r.tenant_slug,
-    tenant_name: r.tenant_name,
-    actor: r.actor,
-    action: r.action,
-    module_slug: r.module_slug,
-    record_id: r.record_id,
-    created_at: r.created_at,
-    description: describeBusinessEvent(r),
-  }));
-
-  const merged = [...auditEvents, ...errorEvents, ...businessEvents]
+  const merged = [...auditEvents, ...errorEvents]
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     .slice(0, limit);
   // Risposta ora {rows, has_more} invece di un array nudo — l'UNICO chiamante è

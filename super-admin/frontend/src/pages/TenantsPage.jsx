@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { API } from '../lib/api'
+import InviteTenantModal from '../components/InviteTenantModal'
 import Icon from '../components/Icon'
 import Select from '../components/Select'
 import Tile from '../components/Tile'
@@ -95,6 +96,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
   const [restoringId, setRestoringId] = useState(null)
   const [backupMsg, setBackupMsg] = useState({})
   const [resettingSlug, setResettingSlug] = useState(null)
+  const [inviteTenant, setInviteTenant] = useState(null) // il tenant per cui si sta creando un invito
   // PLATFORM-UI-REDESIGN-CATALOG.md #21 — moduli a licenza per tenant, dentro la tab "Moduli".
   const [registryModules, setRegistryModules] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -201,7 +203,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
 
   const toggleDetails = (slug) => {
     setExpandedSlug((p) => (p === slug ? null : slug))
-    if (expandedSlug !== slug) { loadBackups(slug); loadSessions(slug); loadModuleStats(slug); loadBackupSettings(slug); loadAIRecommendations(slug) }
+    if (expandedSlug !== slug) { loadBackups(slug); loadSessions(slug); loadModuleStats(slug); loadBackupSettings(slug) }
   }
 
   const formatDuration = (loginAt, lastSeenAt) => {
@@ -278,6 +280,39 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
     }
   }
 
+  // Aggiorna: ricrea il container del tenant con l'ultima immagine, sullo stesso volume dati (i dati non si toccano).
+  // Il popup mostra i passi veri man mano che il server li esegue (stream di righe JSON) e chiude con AGGIORNATO / NON AGGIORNATO.
+  const [upd, setUpd] = useState(null) // { t, lines: [{at,msg}], state: 'running'|'ok'|'ko'|'busy', note }
+  const runUpdate = async (t, force) => {
+    setUpd({ t, lines: [], state: 'running', note: '' })
+    const add = (msg, at) => setUpd((u) => u && { ...u, lines: [...u.lines, { at: at || new Date().toISOString(), msg }] })
+    try {
+      const res = await fetch(API + '/tenants/' + t.slug + '/redeploy?stream=1', { method: 'POST', headers, body: JSON.stringify({ force: !!force }) })
+      if (!res.ok || !res.body) { const d = await res.json().catch(() => ({})); add('Errore: ' + (d.error || res.status)); setUpd((u) => u && { ...u, state: 'ko' }); return }
+      const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = ''; let last = null
+      for (;;) {
+        const { value, done } = await reader.read()
+        if (done) break
+        buf += dec.decode(value, { stream: true })
+        let i
+        while ((i = buf.indexOf('\n')) >= 0) {
+          const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1)
+          if (!line) continue
+          let o; try { o = JSON.parse(line) } catch (e) { continue }
+          if (o.msg) add(o.msg, o.at)
+          if (o.done) last = o
+        }
+      }
+      if (!last) setUpd((u) => u && { ...u, state: 'ko', note: 'Collegamento interrotto: controlla lo stato nei Dettagli.' })
+      else if (last.ok) setUpd((u) => u && { ...u, state: last.healthy === false ? 'ko' : 'ok', note: last.healthy === false ? 'Il container è stato ricreato ma il tenant non risponde ancora.' : '' })
+      else if (last.skipped === 'active_session') setUpd((u) => u && { ...u, state: 'busy', note: 'Sessione attiva: ' + last.active_session.username })
+      else setUpd((u) => u && { ...u, state: 'ko', note: last.error || '' })
+    } catch (e) {
+      add('Errore di rete: ' + e.message); setUpd((u) => u && { ...u, state: 'ko' })
+    } finally { load() }
+  }
+  const redeploy = (t) => runUpdate(t, false)
+
   const resetCredentials = async (t) => {
     if (!confirm('Generare nuove credenziali per "' + t.name + '"? La password attuale smetterà subito di funzionare.')) return
     setResettingSlug(t.slug)
@@ -300,6 +335,31 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
       const data = await res.json()
       setBackupsBySlug((p) => ({ ...p, [slug]: data }))
     }
+  }
+
+  // Backup settimanale via mail: acceso/spento, invio di prova, passphrase dell'allegato cifrato.
+  const [mailBusy, setMailBusy] = useState(null)
+  const [mailMsg, setMailMsg] = useState({})
+  const [passVisible, setPassVisible] = useState({})
+  const toggleMail = async (slug, enabled) => {
+    setMailBusy(slug); setMailMsg((m) => ({ ...m, [slug]: null }))
+    const res = await fetch(API + '/tenants/' + slug + '/backup-mail', { method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }) })
+    setMailBusy(null)
+    if (res.ok) loadBackupSettings(slug); else setMailMsg((m) => ({ ...m, [slug]: { ok: false, text: 'Non riuscito.' } }))
+  }
+  const sendMailNow = async (slug) => {
+    setMailBusy(slug); setMailMsg((m) => ({ ...m, [slug]: null }))
+    const res = await fetch(API + '/tenants/' + slug + '/backup-mail/send-now', { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: '{}' })
+    const data = await res.json().catch(() => ({}))
+    setMailBusy(null)
+    setMailMsg((m) => ({ ...m, [slug]: res.ok ? { ok: true, text: 'Mail inviata (' + data.size_mb + ' MB): controlla la posta.' } : { ok: false, text: data.error || 'Invio non riuscito.' } }))
+    loadBackupSettings(slug)
+  }
+  const showPassphrase = async (slug) => {
+    if (passVisible[slug]) { setPassVisible((p) => ({ ...p, [slug]: null })); return }
+    const res = await fetch(API + '/tenants/' + slug + '/backup-mail/passphrase', { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: '{}' })
+    const data = await res.json().catch(() => ({}))
+    setPassVisible((p) => ({ ...p, [slug]: res.ok ? data.passphrase : null }))
   }
 
   const loadBackupSettings = async (slug) => {
@@ -445,7 +505,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
       ) : visibleTenants.length === 0 ? (
         <div className="bg-surface-card rounded-md p-8 text-center border border-gray-800 border-dashed">
           <div className="text-gray-500 text-sm">Nessun tenant corrisponde ai filtri scelti</div>
-          <button onClick={() => { setSearchQuery(''); setTenantStatusFilter(''); setVerticalFilter(''); setTenantsPage(1) }}
+          <button onClick={() => { setSearchQuery(''); setTenantStatusFilter(''); setTenantsPage(1) }}
             className="text-cp-primary hover:opacity-80 text-sm transition mt-1">Azzera tutti i filtri</button>
         </div>
       ) : (
@@ -534,6 +594,13 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                     Dettagli
                     <Icon name={expanded ? 'chevron-down' : 'chevron-right'} size={12} />
                   </button>
+                  {t.status === 'active' && (
+                    <button onClick={() => redeploy(t)} disabled={actionSlug === t.slug} title="Ricrea il container con l'ultima versione; i dati non si toccano"
+                      className="text-sm px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition disabled:opacity-40 flex items-center gap-1.5">
+                      <Icon name="refresh" size={12} />
+                      Aggiorna
+                    </button>
+                  )}
                   <button
                     onClick={() => toggle(t)}
                     disabled={t.status === 'creating' || t.status === 'error' || actionSlug === t.slug}
@@ -608,7 +675,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                   <div className="text-xs text-gray-600 mt-3">Aggiornato ogni 3 secondi mentre questo pannello è aperto.</div>
                   {onViewActivity && (
                     <button onClick={() => onViewActivity(t.name)} className="text-xs text-cp-primary hover:opacity-80 mt-2">
-                      Vedi log attività di questo tenant →
+                      Vedi errori di questo tenant →
                     </button>
                   )}
                   </>
@@ -638,12 +705,15 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                   <div>
                     <div className="flex items-center justify-between">
                       <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Credenziali accesso</div>
+                      <div className="flex gap-2">
+                      <button onClick={() => setInviteTenant(t)} className="text-xs bg-cp-primary/20 hover:bg-cp-primary/30 text-cp-primary px-3 py-1.5 rounded-lg transition">Invita</button>
                       <button onClick={() => resetCredentials(t)} disabled={resettingSlug === t.slug}
                         className="text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-3 py-1.5 rounded-lg transition">
                         {resettingSlug === t.slug ? 'Generazione...' : 'Reset credenziali'}
                       </button>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-600 mt-1.5">Genera una nuova password per l'utente admin di questo tenant — la precedente smette subito di funzionare.</div>
+                    <div className="text-xs text-gray-600 mt-1.5">«Invita» manda un link con cui la persona sceglie da sé utente e password (consigliato). «Reset credenziali» genera una nuova password per l'utente admin di questo tenant — la precedente smette subito di funzionare.</div>
                   </div>
                   )}
 
@@ -656,6 +726,39 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                         {backingUpSlug === t.slug ? 'Backup in corso...' : 'Backup ora'}
                       </button>
                     </div>
+                    {(() => {
+                      const bs = offsiteSettingsBySlug[t.slug] || {}
+                      const on = !!bs.backup_mail_weekly
+                      return (
+                        <div className="mb-4 rounded-lg border border-gray-800 p-3">
+                          <div className="flex items-center justify-between gap-3 flex-wrap">
+                            <div>
+                              <div className="text-sm text-ink font-medium">Backup settimanale via mail</div>
+                              <div className="text-xs text-gray-500 mt-0.5">Ogni lunedì dalle 08:00 ricevi la copia del database, compressa e cifrata. Non contiene i file caricati (documenti, PDF, foto).</div>
+                            </div>
+                            <button onClick={() => toggleMail(t.slug, !on)} disabled={mailBusy === t.slug || bs.backup_mail_smtp_ready === false}
+                              className={'text-xs px-3 py-1.5 rounded-lg transition disabled:opacity-50 ' + (on ? 'bg-green-900/30 text-green-400 border border-green-900/50' : 'bg-gray-800 hover:bg-gray-700 text-gray-300')}>
+                              {on ? 'Acceso' : 'Spento'}
+                            </button>
+                          </div>
+                          {bs.backup_mail_smtp_ready === false && <div className="text-xs text-amber-400 mt-2">La posta non è configurata su questo Super Admin: non posso inviare.</div>}
+                          {on && (
+                            <div className="mt-3 flex items-center gap-2 flex-wrap text-xs">
+                              <button onClick={() => sendMailNow(t.slug)} disabled={mailBusy === t.slug} className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300">{mailBusy === t.slug ? 'Invio…' : 'Invia ora una prova'}</button>
+                              <button onClick={() => showPassphrase(t.slug)} className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300">{passVisible[t.slug] ? 'Nascondi passphrase' : 'Mostra passphrase'}</button>
+                              <span className="text-gray-500">{bs.backup_mail_last_sent ? 'Ultimo invio: ' + new Date(bs.backup_mail_last_sent).toLocaleString('it-IT') : 'Ancora nessun invio'}</span>
+                            </div>
+                          )}
+                          {on && passVisible[t.slug] && (
+                            <div className="mt-2 text-xs">
+                              <code className="px-2 py-1 rounded bg-black/20 text-ink select-all break-all">{passVisible[t.slug]}</code>
+                              <div className="text-gray-500 mt-1">Conservala in un posto sicuro (gestore di password): senza, le copie ricevute non si riaprono. Il comando per riaprirle è scritto in ogni mail.</div>
+                            </div>
+                          )}
+                          {mailMsg[t.slug] && <div className={'text-xs mt-2 ' + (mailMsg[t.slug].ok ? 'text-green-400' : 'text-red-400')}>{mailMsg[t.slug].text}</div>}
+                        </div>
+                      )
+                    })()}
                     {backupMsg[t.slug] && (
                       backupMsg[t.slug].ok
                         ? <div className="text-xs text-green-400 mb-2">
@@ -947,6 +1050,44 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
           </div>
         </div>
       )}
+      {upd && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-surface-card border border-gray-800 rounded-xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="px-6 pt-6 pb-4 flex items-center gap-3">
+              <div className={'w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ' + (upd.state === 'ok' ? 'bg-green-500/15 text-green-500' : upd.state === 'ko' ? 'bg-red-500/15 text-red-500' : upd.state === 'busy' ? 'bg-amber-500/15 text-amber-500' : 'bg-cp-primary/15 text-cp-primary')}>
+                <Icon name={upd.state === 'ok' ? 'check' : upd.state === 'ko' ? 'alert-triangle' : 'refresh'} size={18} className={upd.state === 'running' ? 'animate-spin' : ''} />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold text-ink leading-tight">{upd.state === 'ok' ? 'Aggiornato' : upd.state === 'ko' ? 'Non aggiornato' : upd.state === 'busy' ? 'Sessione attiva' : 'Aggiornamento in corso'}</h2>
+                <div className="text-sm text-gray-500">{upd.t.name}</div>
+              </div>
+            </div>
+            <ol className="px-6 pb-4 space-y-2.5 max-h-72 overflow-y-auto">
+              {upd.lines.map((l, i) => {
+                const last = i === upd.lines.length - 1
+                const working = upd.state === 'running' && last
+                return (
+                  <li key={i} className="flex items-start gap-3 text-sm">
+                    <span className="mt-0.5 w-4 h-4 flex-shrink-0 flex items-center justify-center">
+                      {working ? <Icon name="refresh" size={14} className="animate-spin text-cp-primary" /> : <Icon name="check" size={14} className="text-green-500" />}
+                    </span>
+                    <span className="flex-1 text-ink">{l.msg}</span>
+                    <span className="text-xs text-gray-500 tabular-nums mt-0.5">{new Date(l.at).toLocaleTimeString('it-IT')}</span>
+                  </li>
+                )
+              })}
+            </ol>
+            {upd.state === 'ok' && <div className="mx-6 mb-5 rounded-lg bg-green-500/10 border border-green-500/30 text-green-600 text-center font-semibold tracking-wide py-3">AGGIORNATO</div>}
+            {upd.state === 'ko' && <div className="mx-6 mb-5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-600 text-center py-3"><div className="font-semibold tracking-wide">NON AGGIORNATO</div>{upd.note && <div className="text-xs mt-1 px-3">{upd.note}</div>}</div>}
+            {upd.state === 'busy' && <div className="mx-6 mb-5 text-sm text-gray-500">{upd.note}. Aggiornando, l'utente collegato viene scollegato per qualche secondo.</div>}
+            <div className="px-6 py-4 border-t border-gray-800 flex justify-end gap-2">
+              {upd.state === 'busy' && <button onClick={() => runUpdate(upd.t, true)} className="text-sm px-4 py-2 rounded-lg bg-cp-primary hover:bg-cp-primary-hover text-white transition">Aggiorna comunque</button>}
+              <button onClick={() => setUpd(null)} disabled={upd.state === 'running'} className="text-sm px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 transition disabled:opacity-40">{upd.state === 'running' ? 'Attendi…' : 'Chiudi'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {inviteTenant && <InviteTenantModal token={token} tenant={inviteTenant} onClose={() => setInviteTenant(null)} />}
     </div>
   )
 }

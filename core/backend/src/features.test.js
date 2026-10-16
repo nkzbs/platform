@@ -47,7 +47,7 @@ async function main() {
     assertEq(info.features.movimenti, false);
   });
   await test('con la funzione spenta le rotte rispondono 403 "feature_off"; senza login restano 401', async () => {
-    for (const p of ['/bank/summary', '/insights', '/digest/settings']) {
+    for (const p of ['/bank/summary', '/insights', '/reports/settings']) {
       assertEq((await call('GET', p, null, {})).status, 401, p + ' senza login');
       const r = await call('GET', p);
       assertEq(r.status, 403, p);
@@ -68,8 +68,8 @@ async function main() {
     const out = await require('./ai-suggestions').suggestForRecord({ moduleSlug: 'spese_casa', recordId: 1, force: true });
     assertEq(out.skipped, 'non attivo su questo modulo');
   });
-  await test('il riepilogo del mattino non parte se la funzione è spenta', async () => {
-    assertEq((await require('./daily-digest').tick()).skipped, 'funzione non attiva');
+  await test('i report su WhatsApp non partono se la funzione è spenta', async () => {
+    assertEq((await require('./reports').tick()).skipped, 'funzione non attiva');
   });
 
   console.log('\n--- accenderle e spegnerle ---');

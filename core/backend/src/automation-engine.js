@@ -12,6 +12,8 @@
 // qui non esistono. Ogni esecuzione viene comunque loggata in automation_logs con
 // esito 'simulato', mai spacciata per una chiamata reale riuscita.
 
+const https = require('https');
+const http = require('http');
 const db = require('./db');
 const { getAutomationSteps, parseSchemaNormalized } = require('./schema-v3');
 const { attachComputedFields } = require('./computed-fields');
@@ -134,7 +136,7 @@ function getDestinatariPerTag(tag) {
 function getCredentials(integrationId) {
   const row = db.prepare('SELECT credentials FROM connections WHERE integration_id = ?').get(integrationId);
   if (!row || !row.credentials) return null;
-  try { return JSON.parse(row.credentials); } catch { return null; }
+  return require('./secrets-at-rest').unseal(row.credentials);
 }
 
 async function callRealAPI(integrationId, azione, config, recordData) {
@@ -502,10 +504,10 @@ function runAzioni(azioni, recordData, moduleSlug, automationLabel, recordId, lo
         return tmpl.replace(/\{\{(\w+)\}\}/g, (_, k) => recordData && recordData[k] !== undefined ? String(recordData[k]) : '');
       };
       const testo = interpolate(cfg.messaggio) || automationLabel;
-      // Con il riepilogo del mattino acceso, gli avvisi "scadenza" per singola riga non partono più:
-      // arrivano tutti insieme nel riepilogo (un messaggio al giorno invece di uno per riga).
-      if (cfg.trigger_tag === require('./daily-digest').TAG && require('./daily-digest').isEnabled()) {
-        if (dryRun) { dryLog.push({ desc: 'invia_notifica [' + cfg.trigger_tag + ']: sostituita dal riepilogo del mattino' }); return; }
+      // Con i report su WhatsApp accesi, gli avvisi "scadenza" per singola riga non partono più:
+      // le scadenze arrivano nei report (da pagare, scadute) invece di un messaggio per riga.
+      if (cfg.trigger_tag === require('./reports').TAG && require('./reports').isEnabled()) {
+        if (dryRun) { dryLog.push({ desc: 'invia_notifica [' + cfg.trigger_tag + ']: sostituita dai report su WhatsApp' }); return; }
         db.prepare('INSERT INTO automation_logs (module_slug, automation_label, trigger_desc, action_desc, esito, record_id) VALUES (?, ?, ?, ?, ?, ?)').run(moduleSlug, automationLabel, logged.triggerDesc, 'invia_notifica [' + cfg.trigger_tag + ']: ' + testo.slice(0, 60), 'sostituita dal riepilogo', recordId || null);
         return;
       }
@@ -691,7 +693,7 @@ function runAzioni(azioni, recordData, moduleSlug, automationLabel, recordId, lo
         const dati = resolveDati(cfg.dati || {}, recordData, null, { targetModuleSlug: cfg.modulo, sourceRecordId: recordId });
         try {
           if (dryRun) { dryLog.push({ desc: 'crea_record in ' + cfg.modulo + ' con ' + JSON.stringify(dati) }); return; }
-          const resultNuovo = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(cfg.modulo, null, JSON.stringify(dati));
+          const resultNuovo = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(cfg.modulo, require('./record-owner').ownerFor(recordId, cfg.modulo), JSON.stringify(dati));
           fireNuovoRecordCascata(cfg.modulo, resultNuovo.lastInsertRowid, dati);
           db.prepare('INSERT INTO automation_logs (module_slug, automation_label, trigger_desc, action_desc, esito, record_id) VALUES (?, ?, ?, ?, ?, ?)').run(moduleSlug, automationLabel, logged.triggerDesc, 'crea_record in ' + cfg.modulo, 'eseguito', recordId || null);
         } catch (e) {
@@ -710,7 +712,7 @@ function runAzioni(azioni, recordData, moduleSlug, automationLabel, recordId, lo
         for (let i = 1; i <= n && i <= 500; i++) {
           const dati = resolveDati(cfg.dati || {}, recordData, i, { targetModuleSlug: cfg.modulo, sourceRecordId: recordId });
           try {
-            const resultN = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(cfg.modulo, null, JSON.stringify(dati));
+            const resultN = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(cfg.modulo, require('./record-owner').ownerFor(recordId, cfg.modulo), JSON.stringify(dati));
             fireNuovoRecordCascata(cfg.modulo, resultN.lastInsertRowid, dati);
           } catch (e) {
             console.error('automation-engine: crea_record_n_volte iterazione ' + i + ' fallita:', e.message);
