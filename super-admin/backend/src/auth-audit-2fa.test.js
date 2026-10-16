@@ -122,6 +122,22 @@ async function main() {
     pendingToken = body.pending_token;
   });
 
+  // Il token "in attesa della 2FA" basta solo per /login/2fa-verify: né l'header
+  // Authorization né i download con ?token= (backup, export) lo devono accettare.
+  await test('token in attesa della 2FA -> 401 su API e su tutti i download con ?token=', async () => {
+    const api = await fetch(BASE + '/api/registry/modules', { headers: { Authorization: 'Bearer ' + pendingToken } });
+    assertEq(api.status, 401, 'API con header');
+    for (const url of ['/api/registry/modules/1/export', '/api/registry/tenants/x/modules/y/export', '/api/tenants/x/backups/1/download', '/api/update-manager/export']) {
+      const res = await fetch(BASE + url + '?token=' + encodeURIComponent(pendingToken));
+      assertEq(res.status, 401, url);
+    }
+  });
+
+  await test('download con ?token= di sessione valido -> passa il controllo (404, non 401)', async () => {
+    const res = await fetch(BASE + '/api/registry/modules/999999/export?token=' + encodeURIComponent(auth.Authorization.slice(7)));
+    assertEq(res.status, 404);
+  });
+
   await test('POST /login/2fa-verify con codice sbagliato -> 401 E riga audit_log auth.2fa_verify_failed', async () => {
     const res = await fetch(BASE + '/api/auth/login/2fa-verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pending_token: pendingToken, code: '000000' }) });
     assertEq(res.status, 401);

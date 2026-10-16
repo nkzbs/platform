@@ -1,16 +1,14 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const fs = require('fs');
 const os = require('os');
 const zlib = require('zlib');
 const { Readable } = require('stream');
 const db = require('../db');
-const { requireAuth } = require('./auth');
+const { requireAuth, requireQueryToken } = require('./auth');
 const { logAudit } = require('../audit-log');
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
 const IMAGE_REPO = 'platform-core';
 
 // G2 (PLATFORM-0.6-GAP-ANALYSIS.md, 2026-08-22) — non più accesso diretto a
@@ -196,13 +194,7 @@ router.post('/cancel', requireAuth, (req, res) => {
 // query string (?token=) invece dell'header Authorization — un <a href> di
 // download normale non può mandare header custom; il token è lo stesso JWT di
 // sempre, verificato a mano qui perché requireAuth si aspetta l'header.
-router.get('/export', async (req, res) => {
-  let payload;
-  try {
-    payload = jwt.verify(req.query.token || '', JWT_SECRET);
-  } catch (e) {
-    return res.status(401).json({ error: 'Non autorizzato' });
-  }
+router.get('/export', requireQueryToken, async (req, res) => {
   try {
     // Stream grezzo (tar non compresso) dal docker-provisioner — la
     // compressione gzip resta responsabilità di qui, com'era prima del

@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
 const db = require('../db');
-const { requireAuth } = require('./auth');
+const { requireAuth, requireQueryToken } = require('./auth');
 
 // Carica il tenant e lo attacca a req.tenant, così le route sotto non lo
 // ricaricano una seconda volta. Va SEMPRE dopo requireAuth — applicato
@@ -25,9 +25,7 @@ const { moduleStatsForTenant } = require('../lib/module-stats');
 const cloudflare = require('../cloudflare');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const { encrypt: encryptSecret } = require('../crypto-secrets');
-const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
 
 const router = express.Router();
 
@@ -837,13 +835,7 @@ router.get('/:slug/backups', requireAuth, requireTenantScope, (req, res) => {
 // esattamente lo schema+dati reali, non serve reinventare un formato JSON parallelo).
 // Auth via query string (?token=), stesso pattern di /update-manager/export: un <a href>
 // di download normale non può mandare l'header Authorization.
-router.get('/:slug/backups/:backupId/download', (req, res) => {
-  let payload;
-  try {
-    payload = jwt.verify(req.query.token || '', JWT_SECRET);
-  } catch (e) {
-    return res.status(401).json({ error: 'Non autorizzato' });
-  }
+router.get('/:slug/backups/:backupId/download', requireQueryToken, (req, res) => {
   const backup = db.prepare('SELECT * FROM tenant_backups WHERE id = ? AND tenant_slug = ?').get(req.params.backupId, req.params.slug);
   if (!backup || backup.status !== 'ok') return res.status(404).json({ error: 'Backup non trovato' });
   if (!fs.existsSync(backup.file_path)) return res.status(404).json({ error: 'File di backup non più presente su disco' });
