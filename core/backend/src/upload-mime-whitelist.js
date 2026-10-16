@@ -14,10 +14,31 @@ const ALLOWED_MIME_EXACT = new Set([
   'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   'application/zip', 'application/x-zip-compressed',
 ]);
+// SVG è un'immagine che può contenere script: aperto dall'app girerebbe con la sua origine.
+const SCRIPTABLE_MIME = new Set(['image/svg+xml']);
+
 function isAllowedUploadMime(mime) {
-  if (!mime) return false;
+  if (!mime || SCRIPTABLE_MIME.has(mime)) return false;
   if (ALLOWED_MIME_EXACT.has(mime)) return true;
   return ALLOWED_MIME_PREFIXES.some((p) => mime.startsWith(p));
 }
 
-module.exports = { isAllowedUploadMime };
+// Quali file si possono aprire nel browser invece di scaricarli. Vale per ogni
+// provenienza (caricamento, allegati Gmail con il tipo dichiarato dal mittente,
+// ripristino di un backup): un tipo non sicuro si scarica sempre.
+const INLINE_SAFE_EXACT = new Set(['application/pdf', 'text/plain', 'text/csv']);
+function isInlineSafeMime(mime) {
+  const m = String(mime || '').toLowerCase().split(';')[0].trim();
+  if (INLINE_SAFE_EXACT.has(m)) return true;
+  return m.startsWith('image/') && !SCRIPTABLE_MIME.has(m);
+}
+
+// Content-Disposition con il nome originale anche se contiene accenti, € o emoji
+// (un header con caratteri fuori da latin1 fa fallire la risposta).
+function contentDisposition(type, filename) {
+  const name = String(filename || 'file');
+  const ascii = name.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '');
+  return type + '; filename="' + ascii + '"; filename*=UTF-8\'\'' + encodeURIComponent(name);
+}
+
+module.exports = { isAllowedUploadMime, isInlineSafeMime, contentDisposition };

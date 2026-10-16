@@ -10,7 +10,7 @@ const { saveUploadBuffer, deleteUploadById, UPLOAD_DIR } = require('../lib/uploa
 // dimensione, nessun controllo su COSA veniva caricato. Logica in un modulo a sé
 // (upload-mime-whitelist.js, zero dipendenze) per essere testabile come funzione pura
 // — vedi uploads.test.js (F0.1.7.1.D2, PLATFORM-MASTER-ROADMAP.md).
-const { isAllowedUploadMime } = require('../upload-mime-whitelist');
+const { isAllowedUploadMime, isInlineSafeMime, contentDisposition } = require('../upload-mime-whitelist');
 
 const router = express.Router();
 
@@ -56,8 +56,9 @@ router.post('/', requireAuth, uploadSingle, async (req, res) => {
 router.get('/:id', requireAuth, async (req, res) => {
   const row = db.prepare('SELECT * FROM uploads WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ error: 'File non trovato' });
-  res.setHeader('Content-Type', row.mime_type || 'application/octet-stream');
-  res.setHeader('Content-Disposition', 'inline; filename="' + row.original_name.replace(/"/g, '') + '"');
+  const inline = isInlineSafeMime(row.mime_type);
+  res.setHeader('Content-Type', inline ? row.mime_type : 'application/octet-stream');
+  res.setHeader('Content-Disposition', contentDisposition(inline ? 'inline' : 'attachment', row.original_name));
   if (row.stored_name.startsWith('drive:')) {
     try {
       res.send(await driveDownload(row.stored_name.slice(6)));
