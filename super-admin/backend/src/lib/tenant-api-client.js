@@ -1,8 +1,9 @@
+const { internalSecret } = require('../../../../shared/internal-secret.js');
 // Fase 12.5 (PLATFORM-MASTER-ROADMAP.md, audit 2026-09-02) — client HTTP condiviso verso
 // l'API di un tenant (core/backend), estratto da routes/tenants.js perché ora serve anche a
 // lib/tenant-config-from-analysis.js. Stesso pattern di autenticazione già in uso per
 // mintTenantAdminToken (secret interno, rete Docker `http://platform-<slug>:80`).
-const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'changeme_internal';
+const INTERNAL_SECRET = internalSecret();
 
 // MAX_ATTEMPTS 6 -> 18 (2026-09-11, bug reale in produzione: un tenant con
 // analisi coperta 8/8 è nato con SOLO i 2 moduli placeholder di core/backend,

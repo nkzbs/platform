@@ -3,9 +3,10 @@
 // gruppo (le categorie del report), mai le singole righe; Super Admin ripulisce, ferma tutto
 // al tetto di spesa e restituisce il testo solo se ogni numero scritto esiste nei dati.
 const db = require('./db');
+const { internalSecret } = require('../../../shared/internal-secret.js');
 
 const SUPER_ADMIN_URL = process.env.SUPER_ADMIN_URL || 'http://super-admin-backend:3000';
-const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'changeme_internal';
+const INTERNAL_SECRET = internalSecret();
 
 function isEnabled() {
   const row = db.prepare('SELECT ai_report_enabled FROM tenant_settings WHERE id = 1').get();

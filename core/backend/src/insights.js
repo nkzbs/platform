@@ -6,6 +6,7 @@
 // (insights_config), con un default pensato per Finance.
 const crypto = require('crypto');
 const db = require('./db');
+const { internalSecret } = require('../../../shared/internal-secret.js');
 
 // La vista è quella PERSONALE ("io"): stipendi meno spese personali (comprese le quote versate alla casa,
 // categoria 'Contributo Casa'). Le spese di casa e i contributi alla casa registrati come entrate stanno nel
@@ -24,7 +25,7 @@ const DEFAULT_CONFIG = {
 };
 
 const SUPER_ADMIN_URL = process.env.SUPER_ADMIN_URL || 'http://super-admin-backend:3000';
-const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'changeme_internal';
+const INTERNAL_SECRET = internalSecret();
 
 // Valori di partenza dai ruoli dichiarati nel Builder (module-roles.js): i moduli di entrate e di spese che entrano nei riepiloghi
 // e quali loro campi sono importo, data, categoria... Dove non c'è nessuna dichiarazione restano i valori scritti sopra.

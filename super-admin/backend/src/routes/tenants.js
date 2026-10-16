@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
 const db = require('../db');
-const { requireAuth } = require('./auth');
+const { requireAuth, requireQueryToken } = require('./auth');
 
 // Carica il tenant e lo attacca a req.tenant, così le route sotto non lo
 // ricaricano una seconda volta. Va SEMPRE dopo requireAuth — applicato
@@ -25,9 +25,8 @@ const { moduleStatsForTenant } = require('../lib/module-stats');
 const cloudflare = require('../cloudflare');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const { encrypt: encryptSecret } = require('../crypto-secrets');
-const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
+const { internalSecret } = require('../../../../shared/internal-secret.js');
 
 const router = express.Router();
 
@@ -36,7 +35,7 @@ const router = express.Router();
 // servizio con /var/run/docker.sock montato. Stesso principio già in uso per
 // le chiamate interne tenant→Super Admin (x-internal-secret).
 const PROVISIONER_URL = process.env.PROVISIONER_URL || 'http://docker-provisioner:4000';
-const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'changeme_internal';
+const INTERNAL_SECRET = internalSecret();
 const provisionerHeaders = { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET };
 // Stesso principio di SUPPORT_UPLOAD_DIR (support.js)/UPLOAD_DIR (core/backend) — invocato
 // solo a runtime da questa route (mai al boot), quindi non blocca l'avvio fuori da un
@@ -291,7 +290,7 @@ async function createTenant({ name, slug, domain, actor, isSandbox, skipDefaults
         // Usato solo dal tenant per chiamare gli endpoint /api/registry/public/* del
         // Super Admin (registro moduli) — non è mai esposto fuori dalla rete Docker
         // interna, quindi un secret condiviso semplice è sufficiente qui.
-        'INTERNAL_API_SECRET=' + (process.env.INTERNAL_API_SECRET || 'changeme_internal'),
+        'INTERNAL_API_SECRET=' + internalSecret(),
         'SUPER_ADMIN_URL=' + (process.env.SUPER_ADMIN_INTERNAL_URL || 'http://super-admin-backend:3000'),
         // Stesso Redis di Super Admin, se configurato — TENANT_SLUG (già passato
         // sopra) isola i contatori di questo tenant dagli altri che condividono
@@ -472,7 +471,7 @@ async function redeployTenant(tenant, { force, actor, log }) {
       'TENANT_SLUG=' + tenant.slug,
       'TENANT_NAME=' + tenant.name,
       'ENCRYPTION_KEY=' + tenant.encryption_key,
-      'INTERNAL_API_SECRET=' + (process.env.INTERNAL_API_SECRET || 'changeme_internal'),
+      'INTERNAL_API_SECRET=' + internalSecret(),
       'SUPER_ADMIN_URL=' + (process.env.SUPER_ADMIN_INTERNAL_URL || 'http://super-admin-backend:3000'),
       ...(process.env.REDIS_URL ? ['REDIS_URL=' + process.env.REDIS_URL] : []),
     ],
@@ -833,7 +832,7 @@ async function mintTenantAdminToken(slug, credentials) {
   const r = await fetch('http://platform-' + slug + ':80' + path, {
     method: 'POST',
     headers: {
-      'x-internal-secret': process.env.INTERNAL_API_SECRET || 'changeme_internal',
+      'x-internal-secret': internalSecret(),
       'Content-Type': 'application/json',
     },
     body: credentials ? JSON.stringify(credentials) : undefined,
@@ -898,13 +897,7 @@ router.get('/:slug/backups', requireAuth, requireTenantScope, (req, res) => {
 // esattamente lo schema+dati reali, non serve reinventare un formato JSON parallelo).
 // Auth via query string (?token=), stesso pattern di /update-manager/export: un <a href>
 // di download normale non può mandare l'header Authorization.
-router.get('/:slug/backups/:backupId/download', (req, res) => {
-  let payload;
-  try {
-    payload = jwt.verify(req.query.token || '', JWT_SECRET);
-  } catch (e) {
-    return res.status(401).json({ error: 'Non autorizzato' });
-  }
+router.get('/:slug/backups/:backupId/download', requireQueryToken, (req, res) => {
   const backup = db.prepare('SELECT * FROM tenant_backups WHERE id = ? AND tenant_slug = ?').get(req.params.backupId, req.params.slug);
   if (!backup || backup.status !== 'ok') return res.status(404).json({ error: 'Backup non trovato' });
   if (!fs.existsSync(backup.file_path)) return res.status(404).json({ error: 'File di backup non più presente su disco' });

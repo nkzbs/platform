@@ -431,8 +431,14 @@ il tipo "semplice" (solo oggetto, data e allegati) per mail che non sono bollett
 
 - Nessuna password fissa nel codice: la password admin iniziale è casuale o arriva da variabile d'ambiente.
 - I segreti dei tenant non escono dalle API (test `tenant-import`).
-- Gli endpoint interni richiedono il segreto condiviso e non sono esposti all'esterno (nginx risponde solo
-  ai domini noti, il resto è chiuso con 444).
+- Gli endpoint interni richiedono il segreto condiviso (`shared/internal-secret.js`: nessun valore di riserva,
+  confronto a tempo costante) e non sono esposti all'esterno (nginx risponde solo ai domini noti, il resto è
+  chiuso con 444).
+- Un token è valido solo se l'utente è ancora attivo; il ruolo si rilegge dal database a ogni richiesta. Il token
+  "in attesa della 2FA" vale solo per completare il login, anche per i download con `?token=` di Super Admin.
+- Gli allegati si aprono nel browser solo se sono PDF, immagini (non SVG) o testo; ogni altro tipo si scarica.
+  SVG non si può caricare.
+- Le immagini Docker si costruiscono con `npm ci` dal lockfile.
 - I file `.env` e i database non entrano mai nel repository (`.gitignore`).
 - **Segreti cifrati a riposo** (`core/backend/src/secrets-at-rest.js`, `super-admin/backend/src/secrets-at-rest.js`): le credenziali dei collegamenti (Google con token e segreto, chiave CallMeBot, bot Telegram con il segreto del webhook, e ogni altro collegamento) e i **segreti del 2FA** stanno nel database cifrati con la chiave del progetto (`ENCRYPTION_KEY`, AES-256-GCM), non in chiaro. Chi ottiene il file del database o una sua copia non legge più token e chiavi. Ogni punto che li legge o li scrive passa dal modulo; la lettura accetta ancora il vecchio formato in chiaro e `migrate()` lo riscrive cifrato **all'avvio** (idempotente, verifica che si rilegga identico prima di scrivere; una riga illeggibile non si tocca). Un segreto che non si decifra (chiave diversa) risulta assente, mai un testo di errore usato come valore. **Conseguenza**: senza la chiave del progetto (che sta nel registro di Super Admin) i collegamenti vanno rifatti e il 2FA riconfigurato; i backup contengono i valori cifrati, quindi la chiave va conservata con i backup (già prescritto).
 - **Non cifrati (scelta dichiarata)**: le chiavi dei tenant (`encryption_key`, `jwt_secret`) nel registro di Super Admin, perché servono a ripristinare e ricreare i tenant; cifrarle con una chiave dello stesso server aggiungerebbe complessità al ripristino senza proteggere da chi ha il server.

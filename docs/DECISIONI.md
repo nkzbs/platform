@@ -489,3 +489,46 @@ Copia (non spostamento) via SSH, avviata dal tenant: `ssh2` in Super Admin, toke
 
 ## 2026-10-13 — Inviti con link monouso
 Un invito è un link che porta a scegliere utente e password, non una password spedita. Consegna a scelta (copia, WhatsApp/Telegram con messaggio pronto, email da Super Admin): nessun invio automatico su WhatsApp/Telegram perché le piattaforme non permettono di scrivere per primi a persone nuove. Vale per il primo admin (da Super Admin) e per gli utenti (dall'admin del tenant).
+
+## 2026-10-16 — Controllo di sicurezza e pulizia
+
+**Corretto** (con test dove si può provare):
+- **2FA aggirabile in Super Admin**: i download con `?token=` (backup dei tenant, export dei moduli e dell'immagine) accettavano
+  il token "in attesa della 2FA" e gli utenti disabilitati. Con la sola password si scaricava il database di un tenant. Ora
+  passano dallo stesso controllo di `requireAuth`.
+- **Segreti con valore di riserva**: `INTERNAL_API_SECRET` (18 file) e `JWT_SECRET` ricadevano su `changeme_internal` /
+  `changeme`, valori scritti nel repository. Super Admin e provisioner non bloccano l'avvio senza segreti (non hanno
+  `NODE_ENV=production`), quindi una variabile mancante apriva le API interne e il provisioner (che ha `docker.sock`). Ora
+  nessun valore di riserva: senza variabile tutto viene rifiutato. Un solo modulo, `shared/internal-secret.js`.
+- **Utenti disabilitati nei tenant**: restavano dentro fino alla scadenza del token (24 ore), e un admin declassato restava
+  admin. Ora stato e ruolo si rileggono a ogni richiesta.
+- **Allegati**: gli allegati Gmail si salvano con il tipo dichiarato dal mittente (anche HTML) e si poteva caricare SVG. Aperti
+  dall'app eseguivano script con la sua origine. Ora si aprono nel browser solo PDF, immagini non SVG e testo; il resto si
+  scarica. Un nome con accenti o € faceva fallire il download.
+- **Dipendenze**: aggiornate `proxy-addr`, `qs`, `uuid`, `@grpc/grpc-js`, `nodemailer` (v10). Le immagini Docker ora usano il
+  lockfile (`npm ci`): prima `npm install` sceglieva versioni nuove a ogni build.
+- Super Admin non si può più aprire dentro un iframe di un altro sito.
+
+**Tolto perché non usato**: quattro rotte interne dei tenant senza chiamanti (`modules/internal/export`,
+`modules/internal/apply-workflow-config` — non la versione batch, ancora usata dall'Analisi, vedi sotto —
+`audit-log/internal/resolve-module`, `audit-log/internal/module-cycle-time`), gli script `export-schema`/`import-schema`
+(istanze standalone), tre Dockerfile e un nginx.conf mai usati, la vecchia pagina di login di Super Admin senza 2FA, qualche
+funzione morta. La Guida dell'app descriveva funzioni tolte (verticali, moduli di supporto, stampa, Store): riscritta sul
+codice di oggi.
+**Non tolto nonostante il sospetto iniziale**: `modules/internal/apply-workflow-config-batch` e `roles/internal/sync` sembravano
+senza chiamanti guardando il codice di qualche giorno prima, ma `super-admin/backend/src/lib/tenant-config-from-analysis.js`
+(l'Analisi dei processi, nata nel frattempo) li chiama davvero per configurare ruoli e workflow quando crea un tenant. Scoperto
+unendo questo ramo a `main` (erano rimasti indietro una settimana): corretti applicando comunque `requireInternalSecret` invece
+del controllo manuale, come alle altre.
+
+**Restano aperti** (decisioni da prendere, non corretti):
+- Ogni tenant riceve lo **stesso** `INTERNAL_API_SECRET` di Super Admin e del provisioner, e monta **tutto** il volume `/data`
+  (compreso il registro di Super Admin con le chiavi di tutti i tenant). Un tenant compromesso, per esempio dal Sito Web
+  pubblico o da un allegato, arriva a tutto: altri tenant, chiavi, `docker.sock`.
+- La scelta moduli per utente nasconde i moduli dal menu ma non blocca l'API, e ogni utente collegato può aprire qualunque
+  allegato per numero.
+- Le porte dei tenant sono pubblicate sull'host: dalla rete di casa si raggiungono senza passare da nginx.
+- Il limite ai tentativi di accesso conta l'IP del proxy, non quello vero: tutti condividono lo stesso contatore.
+- Le pagine dei tenant non hanno protezione anti-iframe, perché Super Admin le apre in un iframe (Builder integrato).
+- Cloudflare è ancora in modalità TLS "Flexible": il traffico tra Cloudflare e il NAS viaggia in chiaro. Visibile ora dal
+  pannello "Sicurezza della piattaforma" (15 ottobre) invece che solo nei commenti del codice; non ancora corretto.

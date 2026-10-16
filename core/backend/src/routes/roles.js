@@ -3,6 +3,7 @@ const express = require('express');
 const db = require('../db');
 const { requireAuth, requireAdmin } = require('./auth');
 const { logAudit } = require('../audit-log');
+const { requireInternalSecret } = require('../../../../shared/internal-secret.js');
 
 const router = express.Router();
 
@@ -33,16 +34,12 @@ router.post('/', requireAuth, requireAdmin, (req, res) => {
   }
 });
 
-// Fase 12.5 (PLATFORM-MASTER-ROADMAP.md, audit 2026-09-02) — B2b: Super Admin generava
-// ruoli reali da un'analisi cliente accettata (nomi/tipi da "ruoli coinvolti", vedi
-// ProcessoEditor.jsx) scrivendo direttamente nella tabella roles del tenant. Questa
-// rotta la sostituisce — stesso principio di autenticazione di /modules/internal/*.
-// Idempotente: un nome già esistente (o built-in) viene saltato, mai un duplicato/errore.
-router.post('/internal/sync', (req, res) => {
-  const secret = req.headers['x-internal-secret'];
-  if (!secret || secret !== (process.env.INTERNAL_API_SECRET || 'changeme_internal')) {
-    return res.status(401).json({ error: 'Secret interno non valido' });
-  }
+// Chiamata da Super Admin (lib/tenant-config-from-analysis.js) quando un tenant nasce da
+// un'Analisi: i "ruoli coinvolti" dei processi diventano ruoli reali nel tenant appena
+// creato. Idempotente: un nome già esistente (o built-in) viene saltato, mai un
+// duplicato/errore. Scoperto quasi tolto per errore (16/10/2026, vedi commento gemello su
+// apply-workflow-config-batch in routes/modules.js e docs/DECISIONI.md).
+router.post('/internal/sync', requireInternalSecret, (req, res) => {
   const { roles } = req.body || {};
   if (!Array.isArray(roles)) return res.status(400).json({ error: 'roles deve essere un array' });
   const existing = new Set(db.prepare('SELECT name FROM roles').all().map((r) => r.name));

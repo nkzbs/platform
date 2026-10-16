@@ -1,4 +1,5 @@
 'use strict';
+const { internalSecret } = require('../../../../shared/internal-secret.js');
 const express = require('express');
 const { requireAuth, requireAdmin } = require('./auth');
 const ai = require('../ai-suggestions');
@@ -13,7 +14,7 @@ const moduleRoles = require('../module-roles');
 const { parseSchemaNormalized } = require('../schema-v3');
 const { ruleFor } = require('../permissions');
 const SUPER_ADMIN_URL = process.env.SUPER_ADMIN_URL || 'http://super-admin-backend:3000';
-const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'changeme_internal';
+const INTERNAL_SECRET = internalSecret();
 const { logAudit } = require('../audit-log');
 
 const router = express.Router();

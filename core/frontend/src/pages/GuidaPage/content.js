@@ -166,13 +166,6 @@ const GUIDA_SECTIONS = [
         title: 'Catalogo delle azioni', body: [
           '"Crea record in modulo" / "Crea N record (piani rateali/ricorrenti)" — genera uno o più record collegati, es. le rate di un piano di pagamento.',
           '"Aggiorna un campo di un record" — scrive un valore (fisso, calcolato, o il token speciale numero_annuale per una numerazione progressiva AAAA/NNNN) su questo record o su uno collegato.',
-          '"Applica prezzo/sconto dal listino del cliente" — su una riga d\'ordine, risale al cliente e al suo listino e copia prezzo/sconto della riga corrispondente, con fallback al prezzo base del prodotto se non trova nulla.',
-          '"Aggiorna un record collegato per ogni figlio" / "…instradando su un record correlato se esiste" — propaga un aggiornamento dal record corrente a tutti i record che lo referenziano.',
-          '"Libera altri record con lo stesso valore" — utile per un\'assegnazione esclusiva (es. un furgone assegnato a un solo agente alla volta: assegnarlo a uno libera automaticamente chi lo aveva prima).',
-          '"Trova (o crea) e aggiorna" / "Aggrega un batch in un nuovo record" — cercano un record esistente per criterio (o lo creano se manca) e vi accumulano un valore, utile per totali/aggregati periodici.',
-          '"Clona record + righe in un altro modulo" — copia un record e le sue righe collegate in un modulo diverso (es. da un preventivo a un ordine).',
-          '"Storna (inverti i delta di questo record)" — annulla gli effetti contabili/di stock già applicati da questo record, senza cancellarlo.',
-          '"Registra provvigione agente (scaglioni)" — calcola una provvigione a scaglioni sul fatturato e la registra.',
           '"Notifica interna (campanella)" — crea una notifica visibile solo dentro l\'app, nessun servizio esterno coinvolto.',
           '"Invia notifica" e "Invia report periodico" via WhatsApp (CallMeBot) — vedi sotto "Cosa succede davvero quando scatta": queste due sono le uniche azioni che oggi mandano davvero un messaggio, se la connessione WhatsApp è configurata.',
         ]
@@ -187,7 +180,7 @@ const GUIDA_SECTIONS = [
       {
         title: 'Cosa succede davvero quando scatta', body: [
           'Il trigger e la condizione Se/Altrimenti girano SEMPRE su dati reali del record — non sono mai finti. L\'azione finale dipende dalla connessione: se collega un servizio dove le credenziali sono davvero attive (oggi: WhatsApp via CallMeBot), il messaggio parte per davvero. Per un servizio non ancora collegato con credenziali reali, l\'azione resta SIMULATA — loggata comunque, ma nessuna chiamata esce davvero.',
-          'Il Log automazioni (pagina Connessioni) distingue i due casi: "chiamata_reale" per un invio davvero partito, "simulato" quando le credenziali non ci sono ancora — mai spacciato l\'uno per l\'altro.',
+          'Il Log automazioni (in Log attività) distingue i due casi: "chiamata_reale" per un invio davvero partito, "simulato" quando le credenziali non ci sono ancora — mai spacciato l\'uno per l\'altro.',
         ]
       },
     ]
@@ -198,12 +191,12 @@ const GUIDA_SECTIONS = [
       {
         title: 'Cosa sono', body: [
           'Le Connessioni sono le credenziali dei servizi esterni — valgono per tutta l\'istanza, non per singolo modulo: le colleghi una volta sola, poi qualunque automazione di qualunque modulo può usarle.',
-          'Non sono tutte allo stesso punto: WhatsApp (CallMeBot) è reale — una volta inserita la chiave, "Invia notifica" e "Invia report periodico" mandano davvero un messaggio. Google (Gmail + Calendar) è reale — login OAuth vero, usato dal poller Gmail per smistare bollette e creare eventi di scadenza. Fatture in Cloud, WhatsApp Business Cloud API, Slack, Stripe, Mailchimp restano invece simulate: lo stato "connesso" si salva, ma nessuna azione verso quei servizi esce davvero — richiederebbero le credenziali app reali di ognuno.',
+          'Si collegano da Impostazioni → Connessioni. Oggi sono due: WhatsApp (CallMeBot), con cui "Invia notifica" e "Invia report periodico" mandano davvero un messaggio, e Google (Gmail, Calendar, Drive), con login vero, usato dalle regole Gmail per trasformare le mail in righe.',
         ]
       },
       {
         title: 'Log automazioni', body: [
-          'Nella stessa pagina trovi il registro di tutte le esecuzioni recenti, da qualunque modulo — cosa è scattato, quale trigger l\'ha causato, quale azione è stata eseguita (davvero o simulata, vedi sopra).',
+          'In Log attività trovi il registro di tutte le esecuzioni recenti, da qualunque modulo — cosa è scattato, quale trigger l\'ha causato, quale azione è stata eseguita (davvero o simulata, vedi sopra).',
         ]
       },
     ]
@@ -213,7 +206,7 @@ const GUIDA_SECTIONS = [
     topics: [
       {
         title: 'Il canvas', body: [
-          'Ogni modulo è un unico elenco verticale di blocchi (Campo, Relazione, Stato/Transizione workflow, Permessi, Formula/Aggregato, Automazione, Documento di stampa) — l\'ordine sul canvas non cambia il comportamento, puoi riordinarli liberamente trascinandoli.',
+          'Ogni modulo è un unico elenco verticale di blocchi (Campo, Relazione, Stato/Transizione workflow, Permessi, Formula/Aggregato, Automazione, viste) — l\'ordine sul canvas non cambia il comportamento, puoi riordinarli liberamente trascinandoli.',
         ]
       },
       {
@@ -229,53 +222,28 @@ const GUIDA_SECTIONS = [
     ]
   },
   {
-    title: 'Stampa e documenti', icon: 'file', color: '#EC4899',
-    topics: [
-      {
-        title: 'Cos\'è un documento di stampa', body: [
-          'Un blocco "Documento di stampa" nel Builder definisce un modello HTML (nome, formato A4 o scontrino 80mm, contenuto) per generare un documento a partire da un record — una fattura, un preventivo, una nota di credito, o qualunque altro modulo dove ha senso stampare qualcosa.',
-          'Un modulo può avere più documenti di stampa (es. "Fattura" e "Copia cortesia") — tutti compaiono come opzioni distinte quando apri un record che li ha.',
-        ]
-      },
-      {
-        title: 'I token disponibili', body: [
-          '{{campo:X}} — il valore del campo X del record corrente. Se X è una relazione, mostra il valore del campo scelto come "display" della relazione (es. il nome del cliente, non un numero id illeggibile).',
-          '{{azienda:X}} — un campo dei dati aziendali dell\'istanza (ragione_sociale, indirizzo, piva, logo_url), configurati in Impostazioni.',
-          '{{oggi}} — la data odierna, formattata.',
-          '{{#righe modulo="X" campo="Y"}}...{{/righe}} — ripete il contenuto tra i due tag per ogni record del modulo X il cui campo Y punta al record corrente (le righe di una fattura, i partecipanti di un evento, ecc.) — dentro il ciclo, {{campo:}} si riferisce alla riga, non più al record padre.',
-        ]
-      },
-      {
-        title: 'Dove si stampa', body: [
-          'Qualunque record di un modulo con almeno un documento di stampa configurato mostra un bottone "Stampa" nel suo pannello di dettaglio — completamente generico, nessuna configurazione aggiuntiva richiesta oltre al blocco nel Builder.',
-          'Il documento si apre in anteprima, pronto per la stampa del browser (o per salvarlo come PDF dalla finestra di stampa) — niente da installare, nessun servizio esterno coinvolto.',
-        ]
-      },
-    ]
-  },
-  {
     title: 'Dashboard', icon: 'bar-chart', color: '#EC4899',
     topics: [
       {
         title: 'Widget', body: [
-          'Due tipi: KPI (un numero aggregato da un modulo) e Tabella (gli ultimi record). Per i KPI puoi scegliere l\'aggregazione: Somma, Media, Conteggio, Minimo, Massimo.',
-          'I widget sono condivisi da chiunque apra questa istanza — non sono legati al tuo browser o al tuo utente.',
+          '"Aggiungi widget" li elenca in gruppi: Numeri (somma, media o conteggio di un campo; numero per periodo con soglia; numero da formula), Elenchi (tabella delle ultime righe, checklist, coda delle righe da smistare) e Andamenti (mesi dell\'anno, per categoria, per settimana). Nei progetti con spese o entrate ci sono anche i widget di finanza.',
+          'Ogni widget dice chi lo vede: tutti, solo gli admin, o persone scelte una per una.',
         ]
       },
     ]
   },
   {
-    title: 'Store', icon: 'store', color: '#2563EB',
+    title: 'Libreria', icon: 'store', color: '#2563EB',
     topics: [
       {
-        title: 'Installare e creare moduli', body: [
-          'Lo Store elenca i tuoi moduli e quelli disponibili dal Registro in un\'unica griglia — installati o meno. Un modulo non installato non compare in sidebar né è utilizzabile finché non lo installi. I moduli di supporto non compaiono qui (vedi sopra) — restano gestibili dal Builder.',
-          'La card in cima allo Store, "Crea il tuo gestionale da zero", apre direttamente il wizard "nuovo modulo" del Builder — due passi: dati base del modulo, poi (facoltativo) collegarlo subito a un modulo già esistente con una relazione già pronta in bozza, oppure partire clonando lo schema di un modulo che hai già installato.',
+        title: 'Installati e Disponibili', body: [
+          'La Libreria ha due sezioni. Installati: i moduli di questo progetto. Disponibili: i moduli che hai disinstallato e quelli salvati in Libreria da Super Admin, con la loro versione.',
+          'Installare un modulo ne crea una copia tua, modificabile nel Builder senza toccare gli altri progetti. Quando in Libreria esce una versione nuova compare "Aggiorna": l\'aggiornamento sostituisce la tua copia, e te lo dice prima.',
         ]
       },
       {
-        title: 'Registro moduli', body: [
-          'Oltre a creare da zero, un modulo può arrivare già pronto dal Registro — un catalogo curato da chi gestisce la piattaforma (Super Admin), con moduli pubblicati da altri tenant o verificati. Installarne uno da lì copia lo schema così com\'è, poi resta un modulo tuo, modificabile come qualunque altro.',
+        title: 'Creare un modulo da zero', body: [
+          'Dal Builder, "Nuovo modulo": dati base del modulo, poi (facoltativo) un collegamento a un modulo esistente con una relazione già pronta in bozza, oppure la copia dello schema di un modulo che hai già.',
         ]
       },
     ]
@@ -285,12 +253,13 @@ const GUIDA_SECTIONS = [
     topics: [
       {
         title: 'Backup manuale', body: [
-          'Da Backup puoi scaricare in qualunque momento una copia completa del database di questa istanza (formato .db) o un export leggibile in JSON — utile per archiviare uno stato preciso o portare i dati altrove.',
+          'Da Impostazioni → Dati puoi scaricare in qualunque momento una copia completa del database (formato .db), un export CSV o un export JSON con moduli, record e allegati.',
+          'Super Admin fa comunque una copia automatica di ogni progetto (di default una al giorno, ne tiene 7).',
         ]
       },
       {
         title: 'Ripristino', body: [
-          'Caricando un file .db precedentemente scaricato, puoi ripristinare l\'istanza a quello stato — sovrascrive i dati attuali, chiede conferma esplicita prima di procedere.',
+          'Caricando un export JSON scaricato prima, ripristini moduli, record e allegati, anche su un progetto nuovo. Utenti e password non sono inclusi. Sovrascrive i dati attuali e chiede conferma prima di procedere.',
         ]
       },
     ]
@@ -299,8 +268,8 @@ const GUIDA_SECTIONS = [
     title: 'Impostazioni', icon: 'settings', color: '#6B7280',
     topics: [
       {
-        title: 'Dati dell\'istanza', body: [
-          'Ragione sociale, indirizzo, partita IVA e logo — usati nei documenti generati (fatture, stampe) invece di lasciarli vuoti o hardcoded.',
+        title: 'Le schede', body: [
+          'Utenti & Ruoli, Moduli, Connessioni, AI, Dati e Il mio account. Notifiche e Sito Web compaiono solo nei progetti che hanno quelle funzioni.',
         ]
       },
     ]
@@ -343,7 +312,7 @@ const GUIDA_GUIDED_STEPS = [
   {
     n: 1, title: 'Crea il tuo primo modulo', color: '#2563EB',
     body: [
-      'Vai su Store → "+ Nuovo modulo" (oppure sul "+" accanto a "Moduli" dentro il Builder). Il wizard ti chiede nome e, facoltativamente, se collegarlo subito a un modulo esistente con una relazione.',
+      'Apri il Builder e scegli "Nuovo modulo" (o il "+" accanto a "Moduli"). Il wizard ti chiede nome e, facoltativamente, se collegarlo subito a un modulo esistente con una relazione.',
       'Per iniziare, salta la relazione — la aggiungi al passo 3. Ti basta un nome, es. "Ordini".',
     ],
     example: 'Crei il modulo "Ordini", nessuna relazione per ora — la aggiungi al passo 3 collegandolo a "Clienti".',
@@ -397,9 +366,9 @@ const GUIDA_GUIDED_STEPS = [
     example: 'Pubblichi, apri Ordini dalla sidebar, crei un ordine di prova per "Mario Rossi" — se il Totale si calcola da solo e il menu Cliente mostra i nomi giusti, ha funzionato.',
   },
   {
-    n: 8, title: 'Rendilo visibile: Store e Dashboard', color: '#EC4899',
+    n: 8, title: 'Rendilo visibile: menu e Dashboard', color: '#EC4899',
     body: [
-      'Un modulo installato compare da solo in sidebar. Se invece è "di supporto" (es. righe di un ordine), resta nascosto dallo Store e dalla sidebar di proposito — resta comunque un modulo vero, modificabile.',
+      'Un modulo installato compare da solo nel menu.',
       'Per un colpo d\'occhio d\'insieme, aggiungi un widget KPI o Tabella dalla Dashboard, puntato su questo modulo.',
     ],
     example: 'Un widget KPI "Ordini questo mese" più un widget Tabella con gli ultimi 10 ordini, entrambi puntati sul modulo Ordini, in Dashboard.',

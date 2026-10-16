@@ -7,23 +7,13 @@ const { status: budgetStatus } = require('../lib/ai-budget');
 const { redact } = require('../lib/ai-redact');
 const reportAi = require('../lib/ai-report');
 const askAi = require('../lib/ai-ask');
+const { requireInternalSecret } = require('../../../../shared/internal-secret.js');
 const botAi = require('../lib/ai-bot');
 const receiptAi = require('../lib/ai-receipt');
 const payslipImageAi = require('../lib/ai-payslip-image');
 
 const suggestionAi = require('../lib/ai-suggestion');
 const router = express.Router();
-
-// Protegge /analyze — chiamato da core/backend (rete Docker interna, mai
-// esposto fuori), non da un utente Super Admin loggato. Stesso identico
-// pattern già in uso in routes/support.js per /internal/*.
-function requireInternalSecret(req, res, next) {
-  const secret = req.headers['x-internal-secret'];
-  if (!secret || secret !== (process.env.INTERNAL_API_SECRET || 'changeme_internal')) {
-    return res.status(401).json({ error: 'Secret interno non valido' });
-  }
-  next();
-}
 
 // Stato del tetto di spesa del mese (lo mostra la pagina delle impostazioni del tenant).
 router.get('/budget', requireInternalSecret, (req, res) => {

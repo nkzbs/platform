@@ -10,7 +10,8 @@ const { genBackupCodes, matchBackupCode } = require('../totp-backup-codes');
 const { logAudit } = require('../audit-log');
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
+// Nessun valore di riserva: senza JWT_SECRET la firma fallisce e nessun token è valido.
+const JWT_SECRET = process.env.JWT_SECRET;
 
 function userPublicShape(user) {
   return { id: user.id, username: user.username, role: user.role };
@@ -43,24 +44,39 @@ if (!existing) {
   }
 }
 
+// Verifica un token di sessione: firma valida, non un token "pending" della 2FA,
+// utente ancora attivo. Unico punto usato sia dall'header Authorization sia dai
+// download con ?token= (un <a href> non può mandare header).
+function verifySessionToken(token) {
+  let payload;
+  try {
+    payload = jwt.verify(token || '', JWT_SECRET);
+  } catch (e) {
+    return { error: 'Token non valido' };
+  }
+  if (payload.pending_2fa || !payload.id) return { error: 'Token non valido' };
+  // Bug reale (2026-08-23, vedi POST /login sopra): senza questo controllo,
+  // disabilitare un utente non revocava le sessioni già firmate.
+  const current = db.prepare('SELECT active FROM users WHERE id = ?').get(payload.id);
+  if (!current || !current.active) return { error: 'Utente disabilitato' };
+  return { user: payload };
+}
+
 function requireAuth(req, res, next) {
   const auth = req.headers.authorization;
   if (!auth) return res.status(401).json({ error: 'Non autorizzato' });
-  const token = auth.split(' ')[1];
-  try {
-    req.user = jwt.verify(token, JWT_SECRET);
-    // Bug reale (2026-08-23, vedi POST /login sopra): senza questo controllo,
-    // disabilitare un utente non revocava le sessioni già firmate — un JWT
-    // valido per 24h restava pienamente valido a prescindere da 'active'.
-    // Un lookup per richiesta ha un costo reale, accettabile qui: pochi
-    // utenti, traffico basso, e la revoca immediata è il punto stesso del
-    // pulsante "Disabilita" (non "disabilita al prossimo login").
-    const current = db.prepare('SELECT active FROM users WHERE id = ?').get(req.user.id);
-    if (!current || !current.active) return res.status(401).json({ error: 'Utente disabilitato' });
-    next();
-  } catch (e) {
-    res.status(401).json({ error: 'Token non valido' });
-  }
+  const { user, error } = verifySessionToken(auth.split(' ')[1]);
+  if (error) return res.status(401).json({ error });
+  req.user = user;
+  next();
+}
+
+// Per i download aperti con un link (?token=...): stesse regole di requireAuth.
+function requireQueryToken(req, res, next) {
+  const { user, error } = verifySessionToken(req.query.token);
+  if (error) return res.status(401).json({ error: 'Non autorizzato' });
+  req.user = user;
+  next();
 }
 
 // P2 (collaudo operativo 2026-09-03) — login e verifica 2FA non finivano mai in
@@ -207,6 +223,7 @@ router.post('/change-password', requireAuth, (req, res) => {
 
 module.exports = router;
 module.exports.requireAuth = requireAuth;
+module.exports.requireQueryToken = requireQueryToken;
 module.exports.signSessionToken = signSessionToken;
 // Riusata da routes/webauthn.js — stessa forma di "user" di ogni altra risposta di login.
 module.exports.userPublicShape = userPublicShape;

@@ -26,13 +26,6 @@
 // uno schema equivalente all'originale — verificato dai test in schema-v3.test.js
 // (backend), non solo per fiducia.
 
-export const STEP_TYPES_V3 = [
-  'field', 'relation', 'workflow_state', 'workflow_transition',
-  'scope', 'permissions', 'validazione_creazione', 'computed', 'report_aggregate', 'condition', 'automation',
-  'connection_required', 'branch_create', 'period_view', 'parent_children_view',
-  'yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'view_tabs',
-]
-
 export function genId(prefix) {
   return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
 }

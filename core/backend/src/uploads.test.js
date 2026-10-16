@@ -83,6 +83,25 @@ test('mime type sconosciuto/generico -> rifiutato (whitelist, non blacklist)', (
 // ─── SOMMARIO ─────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(50)}`);
+console.log('\n--- SVG, apertura nel browser e nome del file ---');
+const { isInlineSafeMime, contentDisposition } = require('./upload-mime-whitelist');
+
+test('SVG non si carica (può contenere script)', () => {
+  assertEq(isAllowedUploadMime('image/svg+xml'), false);
+});
+
+test('si aprono nel browser solo PDF, immagini (non SVG) e testo', () => {
+  for (const m of ['application/pdf', 'image/png', 'image/jpeg', 'text/plain', 'text/csv', 'application/pdf; charset=binary']) assertEq(isInlineSafeMime(m), true, m);
+  for (const m of ['text/html', 'image/svg+xml', 'IMAGE/SVG+XML', 'application/xhtml+xml', 'application/javascript', 'application/zip', '', undefined]) assertEq(isInlineSafeMime(m), false, String(m));
+});
+
+test('Content-Disposition con accenti, € ed emoji resta un header valido', () => {
+  const v = contentDisposition('attachment', 'Bolletta € "ottobre" 📄.pdf');
+  assertEq(/^[\x20-\x7e]*$/.test(v), true, 'solo ASCII stampabile');
+  assertEq(v.includes("filename*=UTF-8''Bolletta%20%E2%82%AC"), true, 'nome originale codificato');
+  assertEq(v.includes('"ottobre"'), false, 'niente virgolette nel nome semplice');
+});
+
 console.log(`Risultato: ${passed} passati, ${failed} falliti`);
 if (failed > 0) {
   process.exit(1);

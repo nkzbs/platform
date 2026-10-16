@@ -4,10 +4,11 @@ const { requireAuth, requireAdmin } = require('./auth');
 const { parseSchemaNormalized, getRequiredConnectors, isV3, toV3 } = require('../schema-v3');
 const { logAudit } = require('../audit-log');
 const { ruleFor } = require('../permissions');
+const { requireInternalSecret, internalSecret } = require('../../../../shared/internal-secret.js');
 
 const router = express.Router();
 const SUPER_ADMIN_URL = process.env.SUPER_ADMIN_URL || 'http://super-admin-backend:3000';
-const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'changeme_internal';
+const INTERNAL_SECRET = internalSecret();
 const TENANT_SLUG = process.env.TENANT_SLUG || 'default';
 
 // ─── REGISTRO MODULI (Super Admin) ─────────────────────────────────────────────
@@ -386,38 +387,9 @@ router.get('/installed', requireAuth, (req, res) => {
   res.json(filterByRolePermissions(modules, req.user.role));
 });
 
-// Fase 12.5 (PLATFORM-MASTER-ROADMAP.md, audit 2026-09-02) — B2a: prime due tappe del
-// Tenant API Contract. Prima Super Admin apriva il .db di QUESTO tenant direttamente
-// (cloneModulesFromTemplate/installModulesByIds/installDefaultModules in
-// super-admin/backend/src/routes/tenants.js) — funzionava solo perché tutto vive sullo
-// stesso volume Docker, non perché esisteva un contratto stabile. Queste due rotte
-// sostituiscono quell'accesso diretto: EXPORT (legge SE STESSO, usato quando questo
-// tenant è la sorgente di un clone-da-template) e INSTALL-BATCH (scrive SE STESSO,
-// usato per template clone / moduli di default / moduli scelti da un'analisi accettata
-// — stesso payload per tutti e tre i casi, la differenza è solo in COSA gli manda
-// super-admin/backend). Stesso principio di autenticazione già in uso su
-// /internal/stats sotto (secret interno, rete Docker, mai esposto fuori) — a differenza
-// di quella però questa scrive, quindi la validazione dello schema (parseSchemaNormalized)
-// non è opzionale: mai bypassare schema-v3, è esattamente il motivo per cui questa fase
-// esiste (vedi PLATFORM-CAPABILITY-TENANT-API-PLAN.md).
-router.get('/internal/export', (req, res) => {
-  const secret = req.headers['x-internal-secret'];
-  if (!secret || secret !== INTERNAL_SECRET) return res.status(401).json({ error: 'Secret interno non valido' });
-  // registry_slug/registry_source_tenant_slug aggiunti (2026-09-03) — servono a
-  // derivare i processi di una nuova Analisi da un Verticale (super-admin/backend/
-  // src/routes/client-analyses.js), che deve risolvere il registry_module_id
-  // CORRENTE (released) di ogni modulo del template, mai quello con cui fu
-  // installato all'epoca (potrebbe essere una versione preview/superata).
-  const modules = db.prepare(
-    "SELECT name, slug, icon, color, active, installed, sort_order, schema_json, schema_json_draft, schema_version, published_at, support_module, group_name, group_order, registry_slug, registry_source_tenant_slug FROM modules WHERE slug != 'dashboard'"
-  ).all();
-  const widgets = db.prepare('SELECT type, module_slug, field, aggregation, label, color, sort_order, config, roles FROM dashboard_widgets').all();
-  res.json({ modules, widgets });
-});
-
-router.post('/internal/install-batch', (req, res) => {
-  const secret = req.headers['x-internal-secret'];
-  if (!secret || secret !== INTERNAL_SECRET) return res.status(401).json({ error: 'Secret interno non valido' });
+// Chiamata da Super Admin (Libreria, moduli di default): scrive solo schemi validati
+// da schema-v3 (parseSchemaNormalized), mai uno schema non valido.
+router.post('/internal/install-batch', requireInternalSecret, (req, res) => {
   const { modules, widgets, set_baseline } = req.body || {};
   if (!Array.isArray(modules) || modules.length === 0) return res.status(400).json({ error: 'modules deve essere un array non vuoto' });
 
@@ -475,68 +447,16 @@ router.post('/internal/install-batch', (req, res) => {
   res.json({ ok: true, installed: modules.length, widgets: (widgets || []).length });
 });
 
-// Fase 12.5 — B2b: gemella di install-batch sopra, ma per il caso "modulo già
-// installato, aggiungi workflow/permessi generati da un'analisi cliente accettata"
-// (prima: lettura+scrittura diretta di modules.schema_json da
-// super-admin/backend/src/lib/tenant-config-from-analysis.js). Il controllo
-// "non sovrascrivere un workflow/permessi già presenti" resta qui, non nel
-// chiamante — è il tenant a possedere il proprio schema, non chi lo chiama da fuori.
-// workflow_steps/permissions_step arrivano già costruiti (buildWorkflowSteps/
-// buildPermissionsStep sono funzioni pure, senza bisogno di leggere questo DB —
-// restano lato super-admin/backend, che possiede i dati grezzi dell'analisi).
-router.post('/internal/apply-workflow-config', (req, res) => {
-  const secret = req.headers['x-internal-secret'];
-  if (!secret || secret !== INTERNAL_SECRET) return res.status(401).json({ error: 'Secret interno non valido' });
-  const { registry_module_id, workflow_steps, permissions_step } = req.body || {};
-  if (!registry_module_id) return res.status(400).json({ error: 'registry_module_id obbligatorio' });
-
-  const moduleRow = db.prepare('SELECT id, schema_json FROM modules WHERE registry_module_id = ?').get(registry_module_id);
-  if (!moduleRow) return res.json({ configured: false, reason: 'modulo_non_trovato_sul_tenant' });
-
-  let schema;
-  try { schema = JSON.parse(moduleRow.schema_json || '{}'); } catch (e) { schema = {}; }
-  const v3 = isV3(schema) ? schema : toV3(schema);
-  const hasWorkflow = v3.steps.some((s) => s.block_type === 'workflow_state');
-  const hasPermissions = v3.steps.some((s) => s.block_type === 'permissions');
-
-  const newSteps = [];
-  if (!hasWorkflow && Array.isArray(workflow_steps) && workflow_steps.length > 0) newSteps.push(...workflow_steps);
-  if (!hasPermissions && permissions_step) newSteps.push(permissions_step);
-
-  if (newSteps.length === 0) {
-    return res.json({ configured: false, reason: (hasWorkflow || hasPermissions) ? 'workflow_o_permessi_gia_presenti' : 'nessun_dato_da_generare' });
-  }
-
-  const finalSchema = { version: 3, steps: [...v3.steps, ...newSteps] };
-  // Stessa validazione reale già in uso in install-batch — mai scrivere uno schema
-  // che il tenant stesso non saprebbe più interpretare.
-  try { parseSchemaNormalized(JSON.stringify(finalSchema)); } catch (e) { return res.status(400).json({ error: `Schema risultante non valido: ${e.message}` }); }
-
-  db.prepare('UPDATE modules SET schema_json = ? WHERE id = ?').run(JSON.stringify(finalSchema), moduleRow.id);
-  logAudit('platform:provisioning', 'module.workflow_config_applied', String(registry_module_id), {
-    workflow_states: newSteps.filter((s) => s.block_type === 'workflow_state').length,
-    has_permissions: newSteps.some((s) => s.block_type === 'permissions'),
-  });
-  res.json({
-    configured: true,
-    workflow_states: newSteps.filter((s) => s.block_type === 'workflow_state').length,
-    has_permissions: newSteps.some((s) => s.block_type === 'permissions'),
-  });
-});
-
-// Gemella "batch" di apply-workflow-config sopra (2026-09-11, bug reale di
-// performance trovato dal vivo: un'analisi con 7-8 processi/moduli mandava
-// altrettante chiamate HTTP SEQUENZIALI al tenant appena creato — su un NAS
-// lento questo da solo spiegava gran parte di una creazione tenant durata
-// 273s). Stessa identica logica per-modulo di sopra, applicata in loop QUI
-// dentro il processo del tenant invece che una richiesta alla volta dal
-// chiamante — un solo round-trip di rete invece di N. Il chiamante
-// (applyAnalysisConfigToTenant, super-admin/backend) costruisce comunque i
-// workflow_steps/permissions_step per ogni modulo come prima, cambia solo
-// come li spedisce.
-router.post('/internal/apply-workflow-config-batch', (req, res) => {
-  const secret = req.headers['x-internal-secret'];
-  if (!secret || secret !== INTERNAL_SECRET) return res.status(401).json({ error: 'Secret interno non valido' });
+// Chiamata da Super Admin (lib/tenant-config-from-analysis.js) quando un tenant nasce da
+// un'Analisi: configura ruoli/permessi dei moduli appena installati in UNA sola chiamata
+// batch invece di una per modulo (2026-09-11, bug reale di performance: un'analisi con 7-8
+// moduli mandava altrettanti round-trip sequenziali al tenant appena creato, su un NAS
+// lento causa diretta di creazioni tenant da 270+ secondi). Il controllo "non sovrascrivere
+// un workflow/permessi già presenti" resta qui, non nel chiamante — è il tenant a possedere
+// il proprio schema. Scoperto quasi tolto per errore (16/10/2026): sembrava senza chiamanti
+// guardando un checkout di qualche giorno prima di quando è nata questa Analisi — vedi
+// docs/DECISIONI.md, voce "Controllo di sicurezza e pulizia".
+router.post('/internal/apply-workflow-config-batch', requireInternalSecret, (req, res) => {
   const { configs } = req.body || {};
   if (!Array.isArray(configs) || configs.length === 0) return res.status(400).json({ error: 'configs obbligatorio (array non vuoto)' });
 
@@ -590,9 +510,7 @@ router.post('/internal/apply-workflow-config-batch', (req, res) => {
 // schema-v3 prima di scrivere (unico caso in tutta la Fase 12.5 dove mancava anche
 // nell'originale, non solo nel refactor) — qui la validazione è obbligatoria, come
 // ovunque altro in questa fase.
-router.post('/internal/upsert', (req, res) => {
-  const secret = req.headers['x-internal-secret'];
-  if (!secret || secret !== INTERNAL_SECRET) return res.status(401).json({ error: 'Secret interno non valido' });
+router.post('/internal/upsert', requireInternalSecret, (req, res) => {
   const { slug, name, icon, color, schema_json, registry_module_id, registry_source_tenant_slug, registry_slug, registry_version } = req.body || {};
   if (!slug || !name || !schema_json) return res.status(400).json({ error: 'slug, name e schema_json obbligatori' });
   try { parseSchemaNormalized(schema_json); } catch (e) { return res.status(400).json({ error: `Schema non valido: ${e.message}` }); }
@@ -616,11 +534,7 @@ router.post('/internal/upsert', (req, res) => {
 // query di lib/module-stats.js su Super Admin (moduli installati non-di-supporto, per
 // categoria) ma calcolata DENTRO il processo del tenant — sostituisce l'apertura diretta
 // del .db per questo caso d'uso.
-router.get('/internal/stats', (req, res) => {
-  const secret = req.headers['x-internal-secret'];
-  if (!secret || secret !== (process.env.INTERNAL_API_SECRET || 'changeme_internal')) {
-    return res.status(401).json({ error: 'Secret interno non valido' });
-  }
+router.get('/internal/stats', requireInternalSecret, (req, res) => {
   const rows = db.prepare(
     "SELECT group_name, COUNT(*) as c FROM modules WHERE installed = 1 AND (support_module IS NULL OR support_module = 0) GROUP BY group_name"
   ).all();

@@ -54,8 +54,8 @@ imposti, altrimenti ne genera una casuale e la stampa **una volta sola** nel log
 Ogni backend ha la sua suite, nessuna dipendenza esterna (i servizi esterni sono simulati):
 
 ```bash
-cd core/backend && npm test            # 57 suite
-cd super-admin/backend && npm test     # 30 suite
+cd core/backend && npm test            # 62 suite
+cd super-admin/backend && npm test     # 34 suite
 ```
 
 **Controllo completo** prima di mettere online: `bash scripts/verifica.sh` (lint, test dei due backend, compilazione dei due frontend: circa 2-3 minuti) oppure `bash scripts/verifica.sh veloce` (solo lint, pochi secondi). Il lint (`npm run lint`, ESLint) cerca solo errori veri: nomi che non esistono, chiavi doppie, codice irraggiungibile. Un hook (`.githooks/pre-push`, attivo con `git config core.hooksPath .githooks`) lo lancia a ogni push.

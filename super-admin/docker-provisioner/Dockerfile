@@ -4,8 +4,8 @@
 # super-admin/backend/Dockerfile — non serve python3/make/g++ qui.
 FROM node:22-alpine
 WORKDIR /app
-COPY super-admin/docker-provisioner/package.json .
-RUN npm install --omit=dev
+COPY super-admin/docker-provisioner/package.json super-admin/docker-provisioner/package-lock.json ./
+RUN npm ci --omit=dev
 COPY super-admin/docker-provisioner/src/ ./src/
 EXPOSE 4000
 CMD ["node", "src/index.js"]

@@ -35,7 +35,16 @@ async function openUploadedFile(fileRef, token) {
   if (!res.ok) { window.alert('Impossibile aprire il file'); return }
   const blob = await res.blob()
   const url = URL.createObjectURL(blob)
-  window.open(url, '_blank')
+  // Il server manda come application/octet-stream i tipi che non si possono aprire
+  // nel browser senza rischi (HTML, SVG...): quelli si scaricano con il loro nome.
+  if (blob.type === 'application/octet-stream') {
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileRef.name || fileRef.original_name || 'file'
+    a.click()
+  } else {
+    window.open(url, '_blank')
+  }
   setTimeout(() => URL.revokeObjectURL(url), 30000)
 }
 

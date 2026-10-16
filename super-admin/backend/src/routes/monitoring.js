@@ -1,10 +1,11 @@
 const express = require('express');
 const db = require('../db');
 const { requireAuth } = require('./auth');
-const { describeAudit, describeError } = require('../lib/describe-event');
+const { describeAudit, describeError, describeBusinessEvent } = require('../lib/describe-event');
+const { internalSecret } = require('../../../../shared/internal-secret.js');
 
 const router = express.Router();
-const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'changeme_internal';
+const INTERNAL_SECRET = internalSecret();
 
 // G2b/G15 (PLATFORM-0.6-GAP-ANALYSIS.md) — sostituisce l'apertura diretta del .db di
 // ogni tenant (com'era prima: new Database(t.db_path, {readonly:true})) con una

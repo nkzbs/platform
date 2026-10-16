@@ -1,10 +1,10 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const Database = require('better-sqlite3');
 const db = require('../db');
-const { requireAuth } = require('./auth');
+const { requireAuth, requireQueryToken } = require('./auth');
 const { logAudit } = require('../audit-log');
 const { mintTenantAdminToken, installModulesByIds } = require('./tenants');
+const { requireInternalSecret } = require('../../../../shared/internal-secret.js');
 
 // La Libreria: i moduli che costruisco, salvati con una versione, da installare in
 // qualunque tenant. Installare = copiare: il tenant ne riceve una copia sua, che può
@@ -16,17 +16,6 @@ const { mintTenantAdminToken, installModulesByIds } = require('./tenants');
 // la perde sotto i piedi.
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
-
-// Protegge gli endpoint /public/*: chiamati dai backend dei singoli tenant (rete
-// Docker interna, mai esposti fuori), non da un utente Super Admin loggato.
-function requireInternalSecret(req, res, next) {
-  const secret = req.headers['x-internal-secret'];
-  if (!secret || secret !== (process.env.INTERNAL_API_SECRET || 'changeme_internal')) {
-    return res.status(401).json({ error: 'Secret interno non valido' });
-  }
-  next();
-}
 
 // Apre il .db di UN tenant in sola lettura: Super Admin monta lo stesso volume dati
 // di tutti i tenant.
@@ -184,12 +173,7 @@ router.get('/tenants/:slug/modules', requireAuth, (req, res) => {
 
 // Esporta UN modulo direttamente da un tenant come file JSON. Auth via ?token=
 // perché è un download da <a href>.
-router.get('/tenants/:slug/modules/:moduleSlug/export', (req, res) => {
-  try {
-    jwt.verify(req.query.token || '', JWT_SECRET);
-  } catch (e) {
-    return res.status(401).json({ error: 'Non autorizzato' });
-  }
+router.get('/tenants/:slug/modules/:moduleSlug/export', requireQueryToken, (req, res) => {
   const tdb = openTenantDbReadOnly(req.params.slug);
   if (!tdb) return res.status(404).json({ error: 'Tenant non trovato o database non ancora creato' });
   let mod;
@@ -274,12 +258,7 @@ router.get('/modules/:id/schema', requireAuth, (req, res) => {
 });
 
 // Esporta una versione come JSON scaricabile. Auth via ?token= (download da <a href>).
-router.get('/modules/:id/export', (req, res) => {
-  try {
-    jwt.verify(req.query.token || '', JWT_SECRET);
-  } catch (e) {
-    return res.status(401).json({ error: 'Non autorizzato' });
-  }
+router.get('/modules/:id/export', requireQueryToken, (req, res) => {
   const mod = db.prepare('SELECT name, slug, description, icon, color, schema_json, version FROM registry_modules WHERE id = ?').get(req.params.id);
   if (!mod) return res.status(404).json({ error: 'Modulo non trovato' });
   res.setHeader('Content-Disposition', 'attachment; filename="modulo-' + mod.slug + '-v' + mod.version + '.json"');

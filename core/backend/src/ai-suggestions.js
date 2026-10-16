@@ -1,4 +1,5 @@
 'use strict';
+const { internalSecret } = require('../../../shared/internal-secret.js');
 // Assistente AI per lo smistamento delle bollette. L'AI PROPONE (categoria, importo, scadenza,
 // fornitore), non scrive mai da sola: la proposta resta in `ai_suggestions` finché non la
 // si accetta o la si ignora. Il tenant non parla mai con Mistral: chiede a Super Admin, che
@@ -8,7 +9,7 @@ const { parseSchemaNormalized } = require('./schema-v3');
 const { logAudit } = require('./audit-log');
 
 const SUPER_ADMIN_URL = process.env.SUPER_ADMIN_URL || 'http://super-admin-backend:3000';
-const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'changeme_internal';
+const INTERNAL_SECRET = internalSecret();
 const moduleAi = require('./module-ai');
 const moduleRoles = require('./module-roles');
 
