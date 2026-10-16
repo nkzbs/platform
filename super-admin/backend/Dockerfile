@@ -6,8 +6,8 @@
 FROM node:22-alpine
 RUN apk add --no-cache python3 make g++
 WORKDIR /app
-COPY super-admin/backend/package.json .
-RUN npm install
+COPY super-admin/backend/package.json super-admin/backend/package-lock.json ./
+RUN npm ci --omit=dev
 COPY super-admin/backend/src/ ./src/
 COPY shared/ /shared/
 EXPOSE 3000

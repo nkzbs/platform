@@ -9,8 +9,8 @@
 # Stage 1: build frontend
 FROM node:22-alpine AS frontend-builder
 WORKDIR /frontend
-COPY core/frontend/package.json .
-RUN npm install
+COPY core/frontend/package.json core/frontend/package-lock.json ./
+RUN npm ci
 COPY core/frontend/ .
 COPY shared/ /shared/
 RUN npm run build
@@ -19,8 +19,8 @@ RUN npm run build
 FROM node:22-alpine AS backend-builder
 RUN apk add --no-cache python3 make g++
 WORKDIR /backend
-COPY core/backend/package.json .
-RUN npm install
+COPY core/backend/package.json core/backend/package-lock.json ./
+RUN npm ci --omit=dev
 
 # Stage 3: immagine finale
 FROM node:22-alpine

@@ -4,8 +4,8 @@
 # Comando: docker buildx build -f super-admin/frontend/Dockerfile . --load
 FROM node:22-alpine AS builder
 WORKDIR /app
-COPY super-admin/frontend/package.json .
-RUN npm install
+COPY super-admin/frontend/package.json super-admin/frontend/package-lock.json ./
+RUN npm ci
 COPY super-admin/frontend/ .
 COPY shared/ /shared/
 RUN npm run build
