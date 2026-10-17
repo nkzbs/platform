@@ -7,6 +7,7 @@ const { fireTrigger } = require('../automation-engine');
 const { logAudit } = require('../audit-log');
 const { encryptFields, decryptFields } = require('../crypto-fields');
 const { attachComputedFields: attachComputedFieldsShared } = require('../computed-fields');
+const { runSourceScript } = require('../source-engine');
 const { ruleFor, ownedOrAllowed, filterViewable, isOwnRecord } = require('../permissions');
 const { deleteUploadById } = require('../lib/upload-storage');
 const { computePeriodView, shiftPeriod, dateToIsoYearWeek } = require('../period-view');
@@ -740,6 +741,70 @@ router.post('/:slug/quick-create', requireAuth, (req, res) => {
   const attached = attachComputedFields({ ...record, data: decrypted }, targetSchema, req.params.slug);
   fireTrigger(req.params.slug, 'nuovo_record', attached.data, attached.id, {});
   logHistory(req.params.slug, attached.id, req.user.username, 'create', null, attached.data);
+  res.json(attached);
+});
+
+// Sources scriptabili (Builder, Fase 4 — vedi source-engine.js per il motore/
+// l'isolamento). Una Source cerca su un'API esterna (search_script) e propone un
+// record (document_script); l'import finale riusa lo STESSO trattamento di
+// POST /:slug e /quick-create (defaults, unicità, cifratura, automazioni, storico) —
+// un record arrivato da una Source non è un cittadino di seconda classe.
+function findApiSource(slug, key) {
+  const schema = getModuleSchema(slug) || {};
+  const src = (schema.api_sources || []).find((s) => s.key === key);
+  return { schema, src };
+}
+
+router.post('/:slug/sources/:key/search', requireAuth, async (req, res) => {
+  const { schema, src } = findApiSource(req.params.slug, req.params.key);
+  if (!src) return res.status(404).json({ error: 'Fonte non trovata' });
+  if (src.enabled === false) return res.status(400).json({ error: 'Questa fonte è disattivata' });
+  const rule = ruleFor(schema, req.user.role);
+  if (rule && !rule.create) return res.status(403).json({ error: 'Non hai i permessi per creare record in questo modulo' });
+  const type = req.body && req.body.type === 'barcode' ? 'barcode' : 'text';
+  if (type === 'barcode' && !src.input_barcode_enabled) return res.status(400).json({ error: 'Questa fonte non accetta la ricerca per codice a barre' });
+  if (type === 'text' && !src.input_text_enabled) return res.status(400).json({ error: 'Questa fonte non accetta la ricerca testuale' });
+  const value = String((req.body && req.body.query) || '').trim();
+  if (!value) return res.status(400).json({ error: 'Scrivi cosa cercare' });
+  if (!src.search_script || !src.search_script.trim()) return res.status(400).json({ error: 'Questa fonte non ha uno script di ricerca' });
+
+  const run = await runSourceScript(src.search_script, { query: { type, value } });
+  if (!run.ok) return res.status(422).json({ error: run.error, logs: run.logs });
+  const results = Array.isArray(run.result) ? run.result : [];
+  res.json({ results: results.slice(0, 25), logs: run.logs });
+});
+
+router.post('/:slug/sources/:key/import', requireAuth, async (req, res) => {
+  const { schema, src } = findApiSource(req.params.slug, req.params.key);
+  if (!src) return res.status(404).json({ error: 'Fonte non trovata' });
+  if (src.enabled === false) return res.status(400).json({ error: 'Questa fonte è disattivata' });
+  const rule = ruleFor(schema, req.user.role);
+  if (rule && !rule.create) return res.status(403).json({ error: 'Non hai i permessi per creare record in questo modulo' });
+  if (!src.document_script || !src.document_script.trim()) return res.status(400).json({ error: 'Questa fonte non ha uno script di importazione' });
+
+  const run = await runSourceScript(src.document_script, { params: (req.body && req.body.params) || {} });
+  if (!run.ok) return res.status(422).json({ error: run.error, logs: run.logs });
+  const proposed = (run.result && typeof run.result === 'object' && !Array.isArray(run.result)) ? run.result : null;
+  if (!proposed) return res.status(422).json({ error: 'Lo script di importazione deve chiamare app.result con un oggetto {campo: valore}', logs: run.logs });
+
+  // Solo i campi che il modulo conosce davvero — uno script di una Source di terzi
+  // non può scrivere un campo arbitrario che il Builder non ha dichiarato.
+  const fieldKeys = new Set((schema.fields || []).map((f) => f.key));
+  const filtered = Object.fromEntries(Object.entries(proposed).filter(([k]) => fieldKeys.has(k)));
+
+  const withDefaults = applyDefaults(filtered, schema.fields);
+  const uniqueError = checkUnique(req.params.slug, schema.fields, withDefaults, null);
+  if (uniqueError) return res.status(400).json(uniqueError);
+  const validationError = checkCreationValidation(schema, req.params.slug, withDefaults);
+  if (validationError) return res.status(400).json(validationError);
+  const safeBody = encryptFields(withDefaults, schema.fields);
+  const result = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(req.params.slug, req.user.id, JSON.stringify(safeBody));
+  const record = db.prepare('SELECT * FROM records WHERE id = ?').get(result.lastInsertRowid);
+  const decrypted = decryptFields(JSON.parse(record.data), schema.fields);
+  const attached = attachComputedFields({ ...record, data: decrypted }, schema, req.params.slug);
+  fireTrigger(req.params.slug, 'nuovo_record', attached.data, attached.id, {});
+  logHistory(req.params.slug, attached.id, req.user.username, 'create', null, attached.data);
+  logAudit(req.user.username, 'record.import_source', req.params.slug + '#' + attached.id, { source: req.params.key });
   res.json(attached);
 });
 

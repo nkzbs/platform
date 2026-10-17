@@ -70,6 +70,7 @@ export function toV3(schemaV2) {
   ;(s.category_pivots || []).forEach((cp) => steps.push({ id: genId('cpv'), block_type: 'category_pivot', ...cp }))
   ;(s.weekly_breakdowns || []).forEach((wb) => steps.push({ id: genId('wbk'), block_type: 'weekly_breakdown', ...wb }))
   ;(s.views || []).forEach((v) => steps.push({ id: genId('vwb'), block_type: 'view', ...v }))
+  ;(s.api_sources || []).forEach((src) => steps.push({ id: genId('src'), block_type: 'api_source', ...src }))
   if (s.requires_connection) steps.push({ id: genId('con'), block_type: 'connection_required', integration_id: s.requires_connection })
 
   // Blocchi v3-only (automation, condition) che toV2Lenient
@@ -112,6 +113,7 @@ export function toV2(schemaV3) {
     else if (block_type === 'weekly_breakdown') throw new Error('Impossibile convertire a v2: contiene un blocco "weekly_breakdown" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
     else if (block_type === 'view_tabs') throw new Error('Impossibile convertire a v2: contiene un blocco "view_tabs" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
     else if (block_type === 'view') throw new Error('Impossibile convertire a v2: contiene un blocco "view" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
+    else if (block_type === 'api_source') throw new Error('Impossibile convertire a v2: contiene un blocco "api_source" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
     else throw new Error('Tipo di blocco v3 sconosciuto: "' + block_type + '"')
   })
 
@@ -126,7 +128,7 @@ export function toV2(schemaV3) {
 // tutti i propri campi solo perché li contiene.
 export function toV2Lenient(schemaV3) {
   const steps = (schemaV3 && schemaV3.steps) || []
-  const out = { fields: [], relations: [], workflow: null, scope: null, permissions: null, validazione_creazione: null, aggregati: [], allegati: null,  branch_creates: [],    period_views: [], parent_children_views: [], yearly_breakdowns: [], category_pivots: [], weekly_breakdowns: [], views: [], view_tabs: null, requires_connection: null, _v3_unsupported: [] }
+  const out = { fields: [], relations: [], workflow: null, scope: null, permissions: null, validazione_creazione: null, aggregati: [], allegati: null,  branch_creates: [],    period_views: [], parent_children_views: [], yearly_breakdowns: [], category_pivots: [], weekly_breakdowns: [], views: [], api_sources: [], view_tabs: null, requires_connection: null, _v3_unsupported: [] }
   const states = []
   const transitions = []
 
@@ -148,6 +150,7 @@ export function toV2Lenient(schemaV3) {
     else if (block_type === 'category_pivot') out.category_pivots.push(rest)
     else if (block_type === 'weekly_breakdown') out.weekly_breakdowns.push(rest)
     else if (block_type === 'view') out.views.push(rest)
+    else if (block_type === 'api_source') out.api_sources.push(rest)
     else if (block_type === 'view_tabs') out.view_tabs = rest
     else if (block_type === 'connection_required') out.requires_connection = rest.integration_id
     else if (block_type === 'condition' || block_type === 'automation') out._v3_unsupported.push(step)

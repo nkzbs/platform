@@ -8,6 +8,8 @@ const { attachComputedFields } = require('../computed-fields');
 const { decryptFields } = require('../crypto-fields');
 const { extractRefs } = require('../formula');
 const { runAzioni } = require('../automation-engine');
+const { runSourceScript } = require('../source-engine');
+const vm = require('vm');
 
 const router = express.Router();
 
@@ -125,6 +127,22 @@ router.post('/formula/check', requireAuth, requireAdmin, (req, res) => {
     return res.json(evaluateSteps(steps, db, context || null));
   }
   res.json(evaluateFormula(expr || '', db, context || null));
+});
+
+// Prova dal vivo di uno script di una Source — sulla bozza non ancora pubblicata
+// nell'editor, stesso principio di /formula/check. mode: 'search' esegue search_script
+// con app.query = {type, value: query}; mode: 'document' esegue document_script con
+// app.params = params (es. incollati a mano, o presi da un risultato di ricerca vero
+// appena ottenuto). Nessuna scrittura: mai la creazione vera di un record qui.
+router.post('/sources/test', requireAuth, requireAdmin, async (req, res) => {
+  const { mode, code, query, query_type, params } = req.body || {};
+  if (!code || !code.trim()) return res.status(400).json({ ok: false, error: 'Lo script è vuoto' });
+  if (mode === 'document') {
+    const run = await runSourceScript(code, { params: params || {} });
+    return res.json(run);
+  }
+  const run = await runSourceScript(code, { query: { type: query_type === 'barcode' ? 'barcode' : 'text', value: String(query || '') } });
+  res.json(run);
 });
 
 // Anteprima "a vuoto" di un'automazione — stesso principio di /formula/check, ma per il
@@ -566,6 +584,30 @@ router.post('/:slug/publish', requireAuth, requireAdmin, (req, res) => {
         (v.filters || []).forEach(validateFilter);
       } else {
         formulaErrors.push({ label, errors: [`Modalità "${v.mode || ''}" non valida`] });
+      }
+    });
+    // api_source: solo un controllo di SINTASSI qui (gli script non si eseguono alla
+    // pubblicazione — nessuna chiamata di rete non richiesta) — lo stesso vm.Script usato
+    // da source-engine.js per intercettare un errore di scrittura prima che arrivi a un
+    // utente che prova a cercare. Comportamento reale (risultati, errori a runtime) si
+    // prova con "Prova" nel Builder (/builder/sources/test), mai qui.
+    (normalized.api_sources || []).forEach((src) => {
+      const label = src.label || 'Fonte esterna';
+      if (!src.key) { formulaErrors.push({ label, errors: ['Manca la chiave della fonte'] }); }
+      if (!src.input_text_enabled && !src.input_barcode_enabled) {
+        formulaErrors.push({ label, errors: ['Deve accettare almeno un tipo di ricerca (testo o codice a barre)'] });
+      }
+      if (!src.search_script || !src.search_script.trim()) {
+        formulaErrors.push({ label, errors: ['Manca lo script di ricerca'] });
+      } else {
+        try { new vm.Script('(async () => {\n' + src.search_script + '\n})()'); }
+        catch (e) { formulaErrors.push({ label, errors: ['Script di ricerca, errore di sintassi: ' + e.message] }); }
+      }
+      if (!src.document_script || !src.document_script.trim()) {
+        formulaErrors.push({ label, errors: ['Manca lo script di importazione'] });
+      } else {
+        try { new vm.Script('(async () => {\n' + src.document_script + '\n})()'); }
+        catch (e) { formulaErrors.push({ label, errors: ['Script di importazione, errore di sintassi: ' + e.message] }); }
       }
     });
     // view_tabs: più viste "sostituisce tutta la tabella" alternabili a tab sullo
