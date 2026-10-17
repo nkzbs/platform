@@ -20,6 +20,7 @@ import YearlyBreakdownView from './YearlyBreakdownView'
 import CategoryPivotView from './CategoryPivotView'
 import WeeklyBreakdownView from './WeeklyBreakdownView'
 import GenericView from './GenericView'
+import SourceSearchModal from './SourceSearchModal'
 import ViewTabs from './ViewTabs'
 import ArchiveView from './ArchiveView'
 import FormulaEditor from '@shared/builder/FormulaEditor.jsx'
@@ -30,6 +31,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
   const [records, setRecords] = useState([])
   const [schema, setSchema] = useState(null)
   const [showNew, setShowNew] = useState(false)
+  const [showSourceSearch, setShowSourceSearch] = useState(false)
   const [branchCreateOpen, setBranchCreateOpen] = useState(null)
   const [showReport, setShowReport] = useState(false)
   const [form, setForm] = useState({})
@@ -619,6 +621,11 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
                 <Icon name="calendar" size={14} />Calendario
               </button>
             )}
+            {canCreate && (schema.api_sources || []).filter((s) => s.enabled !== false).length > 0 && (
+              <button onClick={() => setShowSourceSearch(true)} className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                <Icon name="search" size={14} />Cerca da fonte esterna
+              </button>
+            )}
             {canCreate && branchCreates.length > 0 ? (
               branchCreates.map((bc, i) => (
                 <button key={i} onClick={() => setBranchCreateOpen(bc)} className="bg-accent hover:opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
@@ -1155,6 +1162,12 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
           </FormDrawer>
         )
       })()}
+
+      {showSourceSearch && (
+        <SourceSearchModal mod={mod} sources={(schema.api_sources || []).filter((s) => s.enabled !== false)} token={token}
+          onClose={() => setShowSourceSearch(false)}
+          onImported={async (record) => { setShowSourceSearch(false); await loadRecords(); setDetailId(record.id) }} />
+      )}
 
       {detailId && (
         <RecordDetailModal mod={mod} schema={schema} recordId={detailId} relatedCache={relatedCache} onClose={() => setDetailId(null)} token={token} onSaved={loadRecords} user={user} />
