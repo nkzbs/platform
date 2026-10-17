@@ -18,6 +18,7 @@ import ExportServerCard from '../components/ExportServerCard'
 import TelegramCard from '../components/TelegramCard'
 import SitoWebPage from './SitoWebPage'
 import SicurezzaTab from '../components/SicurezzaTab'
+import ListePage from './ListePage'
 
 // "Il mio account" unito qui (2026-08-29, richiesto esplicitamente dall'utente) —
 // prima era una pagina a sé raggiunta dal proprio nome in fondo alla Sidebar.
@@ -304,6 +305,7 @@ function TabBar({ items, active, onChange }) {
 const SETTINGS_TABS = [
   { key: 'utenti', icon: 'users', label: 'Utenti & Ruoli' },
   { key: 'moduli', icon: 'box', label: 'Moduli' },
+  { key: 'liste', icon: 'list', label: 'Liste' },
   { key: 'sito_web', icon: 'globe', label: 'Sito Web' },
   { key: 'connessioni', icon: 'link', label: 'Connessioni' },
   { key: 'notifiche', icon: 'bell', label: 'Report' },
@@ -347,6 +349,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
       {tab === 'account' && <AccountPage token={token} user={user} onStartTour={onStartTour} />}
 
       {tab === 'moduli' && <ModuliTab token={token} />}
+      {tab === 'liste' && <ListePage token={token} />}
 
       {tab === 'sito_web' && <SitoWebPage token={token} />}
 

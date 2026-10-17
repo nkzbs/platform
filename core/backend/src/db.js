@@ -169,6 +169,28 @@ db.exec(`
     UNIQUE(source_module, source_id, relation_key, target_id)
   );
 
+  -- Liste di opzioni condivise (Builder, Fase 2 della semplificazione ispirata a
+  -- Collections): un campo select/multiselect può collegarsi a una di queste invece di
+  -- avere le sue opzioni private. Le opzioni restano comunque denormalizzate dentro
+  -- ogni field.options dello schema (nessuna route/componente che legge options cambia:
+  -- FieldEditorInput, l'anteprima del Builder, suggestions.js...) — queste due tabelle
+  -- sono solo la sorgente di verità da cui routes/option-lists.js propaga ogni
+  -- add/rename/remove a tutti i campi collegati, stesso meccanismo di cascata già usato
+  -- da field-options.js per il rename su un singolo campo, esteso a più moduli.
+  CREATE TABLE IF NOT EXISTS option_lists (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS option_list_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    list_id INTEGER NOT NULL REFERENCES option_lists(id) ON DELETE CASCADE,
+    value TEXT NOT NULL,
+    weight INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_option_list_items_list ON option_list_items(list_id);
+
   -- Storico modifiche record — una riga per ogni create/update/delete/transition.
   -- before_data/after_data sono snapshot JSON del data al momento dell'azione.
   -- Non sostituisce backup: è un log leggibile dall'utente, non una fonte per restore.

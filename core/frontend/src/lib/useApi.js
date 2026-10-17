@@ -40,7 +40,7 @@ function useApi(token, baseUrl) {
   const del = useCallback(async (path) => {
     const res = await fetch(base + path, { method: 'DELETE', headers: headers() })
     notifyUnauthorized(res)
-    return { ok: res.ok }
+    return { ok: res.ok, data: await res.json() }
   }, [headers, base])
 
   return { get, post, put, patch, del, headers }

@@ -204,6 +204,15 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
   // questi selettori erano hardcoded su ['admin', 'user'], quindi un ruolo custom come
   // "Agente" non poteva mai essere abilitato/configurato da nessuna parte nel Builder.
   const [allRoles, setAllRoles] = useState([{ name: 'admin', label: 'Admin' }, { name: 'user', label: 'Utente' }])
+  // Liste condivise per campi select/multiselect (Impostazioni → Liste) — caricata una
+  // volta sola come connections/allRoles. Un campo collegato (step.list_id) copia qui le
+  // voci correnti in step.options al momento della scelta/pubblicazione; da lì in poi la
+  // propagazione di add/rename/remove la fa routes/option-lists.js, non il Builder.
+  const [optionLists, setOptionLists] = useState([])
+  const loadOptionLists = async () => {
+    const data = await api.get('/option-lists')
+    if (data) setOptionLists(data)
+  }
   const loadRoles = async () => {
     const data = await api.get('/roles')
     if (data) setAllRoles(data.map((r) => ({ name: r.name, label: r.label })))
@@ -251,7 +260,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
     if (data) setConnections(data)
   }
 
-  useEffect(() => { loadModules(); loadFieldCache(); loadConnections(); loadRoles() }, [])
+  useEffect(() => { loadModules(); loadFieldCache(); loadConnections(); loadRoles(); loadOptionLists() }, [])
 
   // Arrivo diretto dallo Store ("Personalizza questo modulo") — preseleziona senza
   // che l'utente debba ricercarlo nella lista a sinistra. onPreselectHandled avvisa
@@ -998,9 +1007,47 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                       <div className="text-[10px] text-gray-700 mt-0.5">Questo è il nome da usare nelle formule (es. sum_children({selected}.{step.key})) — si aggiorna da solo con la label, a meno che tu non la personalizzi qui.</div>
                     </div>
                     {(step.type === 'select' || step.type === 'multiselect') && (
-                      <textarea className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-700 focus:border-accent transition resize-none mb-3" rows={2} placeholder="Opzioni (una per riga)"
-                        value={(step.options || []).join('\n')}
-                        onChange={(e) => updateStep(idx, 'options', e.target.value.split('\n').filter(Boolean))} />
+                      <div className="mb-3">
+                        {step.list_id ? (
+                          <div className="bg-surface-page rounded-lg border border-gray-700 p-2.5 flex items-center justify-between gap-2">
+                            <div className="text-[11px] text-gray-500">
+                              <Icon name="list" size={11} className="inline mr-1" />
+                              Lista condivisa: <span className="text-ink font-medium">{(optionLists.find((l) => l.id === step.list_id) || {}).name || ('#' + step.list_id)}</span>
+                              <span className="text-gray-600"> — {(step.options || []).length} {(step.options || []).length === 1 ? 'voce' : 'voci'}, gestite da Impostazioni → Liste</span>
+                            </div>
+                            <button onClick={() => updateStep(idx, 'list_id', undefined)} className="text-[11px] text-gray-500 hover:text-ink transition flex-shrink-0 whitespace-nowrap">Scollega</button>
+                          </div>
+                        ) : (
+                          <>
+                            <textarea className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-700 focus:border-accent transition resize-none mb-1.5" rows={2} placeholder="Opzioni (una per riga)"
+                              value={(step.options || []).join('\n')}
+                              onChange={(e) => updateStep(idx, 'options', e.target.value.split('\n').filter(Boolean))} />
+                            <select className="bg-surface-page text-gray-500 px-2 py-1 rounded-lg text-[11px] outline-none border border-gray-700" value="" onChange={async (e) => {
+                              const v = e.target.value
+                              if (!v) return
+                              if (v === '__nuova__') {
+                                const name = window.prompt('Nome della nuova lista condivisa:')
+                                if (!name || !name.trim()) return
+                                const { ok, data } = await api.post('/option-lists', { name: name.trim() })
+                                if (ok) {
+                                  await loadOptionLists()
+                                  updateStep(idx, 'list_id', data.id)
+                                  updateStep(idx, 'options', [])
+                                }
+                              } else {
+                                const listId = parseInt(v, 10)
+                                const detail = await api.get('/option-lists/' + listId)
+                                updateStep(idx, 'list_id', listId)
+                                updateStep(idx, 'options', detail ? detail.items.map((i) => i.value) : [])
+                              }
+                            }}>
+                              <option value="">+ Usa una lista condivisa...</option>
+                              {optionLists.map((l) => <option key={l.id} value={l.id}>{l.name} ({l.item_count})</option>)}
+                              <option value="__nuova__">+ Crea nuova lista condivisa...</option>
+                            </select>
+                          </>
+                        )}
+                      </div>
                     )}
                     {step.type !== 'computed' && (
                       <div className="mb-2">

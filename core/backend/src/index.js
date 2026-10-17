@@ -36,6 +36,7 @@ const aiRoutes = require('./routes/ai');
 const notificationSettingsRoutes = require('./routes/notification-settings');
 const recordOwnerRoutes = require('./routes/record-owner');
 const fieldOptionsRoutes = require('./routes/field-options');
+const optionListsRoutes = require('./routes/option-lists');
 const telegramRoutes = require('./routes/telegram');
 const insightsRoutes = require('./routes/insights');
 const bankRoutes = require('./routes/bank');
@@ -115,6 +116,7 @@ const routeMounts = [
   ['/smista', smistaRoutes],
   ['/record-owner', recordOwnerRoutes],
   ['/field-options', fieldOptionsRoutes],
+  ['/option-lists', optionListsRoutes],
   ['/telegram', telegramRoutes],
   ['/', notificationSettingsRoutes],
   ['/reports', reportsRoutes],
