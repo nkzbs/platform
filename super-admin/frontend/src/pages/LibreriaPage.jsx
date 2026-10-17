@@ -23,6 +23,8 @@ function techSpec(m) {
     permissionsRules: (schema.permissions && schema.permissions.rules) || [],
     automations: getAutomationSteps(m.schema_json),
     connectors: getRequiredConnectors(m.schema_json),
+    views: schema.views || [],
+    apiSources: schema.api_sources || [],
   }
 }
 
@@ -378,6 +380,18 @@ function LibreriaPage({ token }) {
                     <div className="text-[11px] text-gray-500 mb-1.5">Automazioni ({spec.automations.length})</div>
                     {spec.automations.length === 0 ? <div className="text-xs text-gray-600">Nessuna</div> : (
                       <ul className="text-xs text-gray-300 space-y-1">{spec.automations.map((a) => <li key={a.id}>{a.label || '(senza nome)'}</li>)}</ul>
+                    )}
+                  </div>
+                  <div className="bg-surface-page border border-gray-800 rounded-lg p-3">
+                    <div className="text-[11px] text-gray-500 mb-1.5">Viste ({spec.views.length})</div>
+                    {spec.views.length === 0 ? <div className="text-xs text-gray-600">Nessuna</div> : (
+                      <ul className="text-xs text-gray-300 space-y-1">{spec.views.map((v) => <li key={v.key}>{v.label || v.key} <span className="text-gray-600 font-mono">({v.mode}{v.placement === 'add' ? ', si aggiunge' : ''})</span></li>)}</ul>
+                    )}
+                  </div>
+                  <div className="bg-surface-page border border-gray-800 rounded-lg p-3">
+                    <div className="text-[11px] text-gray-500 mb-1.5">Fonti esterne ({spec.apiSources.length})</div>
+                    {spec.apiSources.length === 0 ? <div className="text-xs text-gray-600">Nessuna</div> : (
+                      <ul className="text-xs text-gray-300 space-y-1">{spec.apiSources.map((s) => <li key={s.key}>{s.label || s.key}{s.enabled === false ? <span className="text-gray-600"> (disattivata)</span> : null}</li>)}</ul>
                     )}
                   </div>
                   <div className="bg-surface-page border border-gray-800 rounded-lg p-3">
