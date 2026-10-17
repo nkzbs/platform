@@ -2,6 +2,28 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.2.1 — 17 ottobre 2026
+
+Round di pulizia e sicurezza (16-17 ottobre), senza nuove funzioni visibili.
+
+- **2FA aggirabile sui download di Super Admin corretta**: i link con `?token=` (backup dei tenant, export dei moduli e dell'immagine) accettavano il token "in attesa della 2FA" e gli utenti disabilitati; con la sola password si scaricava il database di un tenant. Ora passano dallo stesso controllo di tutto il resto.
+- **Niente più segreti con valore di riserva**: `INTERNAL_API_SECRET` e `JWT_SECRET` non ricadono più su un valore scritto nel codice se la variabile d'ambiente manca — l'avvio si rifiuta invece di aprire le API interne o il provisioner.
+- **Utenti disabilitati fuori subito dai tenant** (non più fino alla scadenza del token), un admin declassato perde i privilegi alla richiesta successiva.
+- **Allegati**: si aprono nel browser solo PDF, immagini non SVG e testo; il resto si scarica. Corretto anche il download con nomi che hanno accenti o €.
+- **Dipendenze aggiornate** (`proxy-addr`, `qs`, `uuid`, `@grpc/grpc-js`, `nodemailer` v10); le immagini Docker usano il lockfile (`npm ci`) invece di `npm install`.
+- Super Admin non si apre più dentro un iframe di un altro sito.
+- **Pulizia**: tolte sei rotte interne dei tenant mai chiamate, Guida riscritta sul codice attuale (verticali, moduli di supporto, Store non più descritti se non esistono più), qualche funzione morta tolta.
+- Pannello **«Sicurezza della piattaforma»** (in Impostazioni, già nelle note del 15 ottobre) resta il punto dove vedere lo stato: 2FA/passkey, limiti anti-forza-bruta, eventi sospetti, TLS Cloudflare.
+
+### Resta aperto (decisioni, non bug corretti)
+
+- Ogni tenant ha lo stesso `INTERNAL_API_SECRET` di Super Admin e del provisioner, e monta tutto il volume `/data` (compreso il registro con le chiavi di tutti i tenant).
+- Le porte dei tenant sono pubblicate sull'host: raggiungibili dalla rete locale senza passare da nginx.
+- Il limite ai tentativi di accesso conta l'IP del proxy, non quello vero.
+- Cloudflare resta in modalità TLS "Flexible" (traffico in chiaro tra Cloudflare e il NAS).
+- Password trovate in chiaro nella cronologia Git (prima della pulizia del 21 agosto) non sono state ruotate.
+- Nessuna verifica di sicurezza esterna è mai stata condotta.
+
 ## 0.2.0 — 13 ottobre 2026
 
 **Dalla sera del 13 ottobre in poi** (le voci più sotto, fino a «Formato dei report su WhatsApp compatto», sono precedenti):
