@@ -281,6 +281,13 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
   // voci correnti in step.options al momento della scelta/pubblicazione; da lì in poi la
   // propagazione di add/rename/remove la fa routes/option-lists.js, non il Builder.
   const [optionLists, setOptionLists] = useState([])
+  // Pannello "Configura sotto-tipi" aperto per un campo select (step.id, o null) —
+  // niente di nuovo nello schema: scrive lo stesso visible_if che già esiste da
+  // sempre su ogni campo, un campo alla volta solo da un posto solo. Deliberatamente
+  // NON un concetto a parte (niente "entità" dedicata) — select + visible_if coprono
+  // già "campi diversi per tipo diverso dello stesso record", costruire un secondo
+  // modo di fare la stessa cosa sarebbe stata complessità in più, non in meno.
+  const [subtypePanelFor, setSubtypePanelFor] = useState(null)
   const loadOptionLists = async () => {
     const data = await api.get('/option-lists')
     if (data) setOptionLists(data)
@@ -1119,6 +1126,45 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                               <option value="__nuova__">+ Crea nuova lista condivisa...</option>
                             </select>
                           </>
+                        )}
+                      </div>
+                    )}
+                    {step.type === 'select' && (step.options || []).length > 0 && (
+                      <div className="mb-3">
+                        <button onClick={() => setSubtypePanelFor(subtypePanelFor === step.id ? null : step.id)}
+                          className="text-[11px] text-gray-500 hover:text-ink transition flex items-center gap-1">
+                          <Icon name={subtypePanelFor === step.id ? 'chevron-down' : 'chevron-right'} size={11} />
+                          Configura sotto-tipi (quali campi valgono per ogni "{step.label || step.key}")
+                        </button>
+                        {subtypePanelFor === step.id && (
+                          <div className="mt-2 bg-surface-page rounded-lg border border-gray-700 p-3">
+                            <div className="text-[10px] text-gray-600 mb-2">
+                              Per ogni altro campo, scegli se vale sempre o solo per un valore di "{step.label || step.key}" — scrive lo stesso "Visibile solo se..." che trovi aprendo quel campo, da un posto solo invece che uno alla volta.
+                            </div>
+                            {schema.steps.filter((s) => s.block_type === 'field' && s.key !== step.key).length === 0 ? (
+                              <div className="text-[11px] text-gray-600">Nessun altro campo su questo modulo.</div>
+                            ) : (
+                              <div className="space-y-1.5">
+                                {schema.steps.map((s, otherIdx) => ({ s, otherIdx })).filter(({ s }) => s.block_type === 'field' && s.key !== step.key).map(({ s: other, otherIdx }) => {
+                                  const tiedToThis = other.visible_if && other.visible_if.enabled && other.visible_if.field === step.key
+                                  return (
+                                    <div key={other.key} className="flex items-center justify-between gap-2">
+                                      <span className="text-xs text-gray-400 truncate">{other.label || other.key}</span>
+                                      <select className="bg-surface-card text-ink px-2 py-1 rounded text-[11px] outline-none border border-gray-700 flex-shrink-0"
+                                        value={tiedToThis ? other.visible_if.value : ''}
+                                        onChange={(e) => {
+                                          const v = e.target.value
+                                          updateStep(otherIdx, 'visible_if', v ? { enabled: true, field: step.key, op: '==', value: v } : { enabled: false, field: '', op: '==', value: '' })
+                                        }}>
+                                        <option value="">Sempre visibile</option>
+                                        {(step.options || []).map((o) => { const v = typeof o === 'string' ? o : o.value; return <option key={v} value={v}>Solo se "{v}"</option> })}
+                                      </select>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}
