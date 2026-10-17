@@ -21,7 +21,7 @@ import { computeValidations } from './validation'
 // entrambi i punti, senza il problema per cui una funzione definita prima non
 // può chiudere su una const definita dopo nello stesso render.
 const BLOCK_TYPE_CATEGORY = {
-  field: 'Dati', allegati: 'Dati',
+  field: 'Dati', allegati: 'Dati', api_source: 'Dati',
   relation: 'Relazioni',
   workflow_state: 'Workflow', workflow_transition: 'Workflow',
   permissions: 'Permessi', validazione_creazione: 'Permessi',
@@ -42,7 +42,7 @@ const BLOCK_TYPE_LABEL = {
   connection_required: 'Richiede connessione', automation: 'Automazione',
   branch_create: 'Crea in filiale', period_view: 'Vista periodo',
   parent_children_view: 'Vista padre/figli', yearly_breakdown: 'Riepilogo annuale', category_pivot: 'Pivot categoria',
-  weekly_breakdown: 'Riepilogo settimanale', view_tabs: 'Tab di vista', report_aggregate: 'Report aggregato', view: 'Vista',
+  weekly_breakdown: 'Riepilogo settimanale', view_tabs: 'Tab di vista', report_aggregate: 'Report aggregato', view: 'Vista', api_source: 'Fonte esterna',
 }
 function summaryForStep(step) {
   const typeLabel = BLOCK_TYPE_LABEL[step.block_type] || step.block_type
@@ -126,6 +126,78 @@ function AutomationDryRun({ slug, api, automation }) {
                 ))}
               </ul>
             )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Prova dal vivo di una Source (fonte esterna) — stesso principio di AutomationDryRun:
+// il codice ESATTAMENTE com'è scritto ora nell'editor (anche non salvato) gira per
+// davvero sul backend (chiamate di rete vere, vedi source-engine.js), ma non scrive
+// mai un record (POST /builder/sources/test, mai /sources/:key/import). Prima cerca
+// (search_script), poi — scegliendo un risultato — prova anche document_script con i
+// params di quel risultato, lo stesso percorso che farebbe un'importazione vera.
+function ApiSourceTest({ api, source }) {
+  const [query, setQuery] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [searchResult, setSearchResult] = useState(null) // { ok, result: [...], error, logs }
+  const [docResult, setDocResult] = useState(null)
+  const [docLoading, setDocLoading] = useState(null) // indice del risultato in prova
+
+  const provaRicerca = async () => {
+    setLoading(true); setSearchResult(null); setDocResult(null)
+    const res = await api.post('/builder/sources/test', { mode: 'search', code: source.search_script, query, query_type: 'text' })
+    setLoading(false)
+    setSearchResult(res.data || { ok: false, error: 'Errore di rete' })
+  }
+  const provaImportazione = async (r, i) => {
+    setDocLoading(i); setDocResult(null)
+    const res = await api.post('/builder/sources/test', { mode: 'document', code: source.document_script, params: r.params || {} })
+    setDocLoading(null)
+    setDocResult(res.data || { ok: false, error: 'Errore di rete' })
+  }
+
+  return (
+    <div className="mt-3 pt-3 border-t border-gray-800">
+      <div className="text-[10px] uppercase tracking-wide text-cyan-400 font-semibold mb-2">
+        Prova — chiamate di rete vere, nessuna scrittura
+      </div>
+      <div className="flex items-center gap-2 mb-2">
+        <input className="flex-1 bg-surface-page text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-700 placeholder-gray-600"
+          placeholder="Testo da cercare..." value={query} onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && query.trim() && !loading && provaRicerca()} />
+        <button onClick={provaRicerca} disabled={loading || !query.trim() || !source.search_script}
+          className="text-[11px] px-2.5 py-1.5 rounded-md bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition disabled:opacity-40 flex items-center gap-1.5 flex-shrink-0">
+          <Icon name="search" size={11} />{loading ? 'Cerco…' : 'Cerca'}
+        </button>
+      </div>
+
+      {searchResult && !searchResult.ok && (
+        <div className="text-[11px] text-red-400 bg-red-900/10 border border-red-900/40 rounded-lg p-2 mb-2">{searchResult.error}</div>
+      )}
+      {searchResult && searchResult.ok && Array.isArray(searchResult.result) && (
+        searchResult.result.length === 0
+          ? <div className="text-[11px] text-gray-600">Nessun risultato.</div>
+          : (
+            <div className="space-y-1.5">
+              {searchResult.result.slice(0, 10).map((r, i) => (
+                <div key={i} className="bg-surface-page rounded-lg border border-gray-700 p-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-xs text-ink truncate">{r.title || '(senza titolo)'}{r.subtitle ? <span className="text-gray-500"> — {r.subtitle}</span> : null}</div>
+                    <button onClick={() => provaImportazione(r, i)} disabled={docLoading !== null || !source.document_script}
+                      className="text-[10px] px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition disabled:opacity-40 flex-shrink-0">
+                      {docLoading === i ? 'Provo…' : 'Prova importazione'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+      )}
+      {docResult && (
+        <div className={'mt-2 text-[11px] rounded-lg p-2 border ' + (docResult.ok ? 'bg-green-900/10 border-green-900/40 text-green-400' : 'bg-red-900/10 border-red-900/40 text-red-400')}>
+          {docResult.ok ? <pre className="whitespace-pre-wrap font-mono">{JSON.stringify(docResult.result, null, 2)}</pre> : docResult.error}
         </div>
       )}
     </div>
@@ -692,6 +764,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
     { label: 'Permessi', desc: "Chi può vedere, creare, modificare, eliminare i record — per ruolo.", icon: 'eye', color: '#FFB84D', category: 'Permessi', block_type: 'permissions', defaults: { rules: [] }, disabled: schema && schema.steps.some((s) => s.block_type === 'permissions'), note: 'Già presente su questo modulo' },
     { label: 'Validazione creazione', desc: 'Blocca la creazione di un nuovo record se una condizione non è soddisfatta.', icon: 'shield', color: '#F97316', category: 'Permessi', block_type: 'validazione_creazione', defaults: { expr: '', messaggio: '' }, disabled: schema && schema.steps.some((s) => s.block_type === 'validazione_creazione'), note: 'Già presente su questo modulo' },
     { label: 'Allegati tipizzati', desc: 'Permette di allegare file con tipo (es. Fattura, Prova pagamento) a ogni record.', icon: 'file', color: '#06B6D4', category: 'Dati', block_type: 'allegati', defaults: { types: ['allegato'] }, disabled: schema && schema.steps.some((s) => s.block_type === 'allegati'), note: 'Già presente su questo modulo' },
+    { label: 'Fonte esterna', desc: "Cerca su un'API esterna (es. un catalogo libri, un listino) e propone un nuovo record — due script JS: uno cerca, l'altro costruisce il record dal risultato scelto. Compare come pulsante \"Cerca da fonte esterna\" accanto a \"Nuovo record\".", icon: 'search', color: '#06B6D4', category: 'Dati', block_type: 'api_source', defaults: { key: 'fonte_' + Date.now(), label: 'Nuova fonte', enabled: true, input_text_enabled: true, input_barcode_enabled: false, search_script: '', document_script: '' } },
     { label: 'Richiede connessione', desc: 'Serve SOLO se il modulo dipende da un connettore fuori dalle sue automazioni (es. un poller dedicato come quello Gmail) — se invece è una tua automazione a usare Slack/WhatsApp/ecc, il modulo lo segnala da solo, non serve aggiungere questo blocco a mano.', icon: 'plug', color: '#F59E0B', category: 'Automazione', block_type: 'connection_required', defaults: { integration_id: 'google' }, disabled: schema && schema.steps.some((s) => s.block_type === 'connection_required'), note: 'Già presente su questo modulo' },
     { label: 'Formula / Aggregato', desc: 'Calcolo su relazioni (sum/avg/count…).', icon: 'cpu', color: '#F87171', category: 'Calcolo', block_type: 'report_aggregate', defaults: { key: 'agg_' + Date.now(), label: 'Nuovo aggregato', expr: '', format: 'number' } },
     { label: 'Automazione', desc: 'Quando succede qualcosa in questo modulo, esegui delle azioni (con Se/Altrimenti).', icon: 'zap', color: '#FBBF24', category: 'Automazione', block_type: 'automation', defaults: { label: 'Nuova automazione', enabled: true, trigger: { evento: 'nuovo_record', stato: '', campo: '' }, azioni: [] } },
@@ -2450,6 +2523,57 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                   )
                 }
 
+                if (step.block_type === 'api_source') {
+                  return (
+                    <div key={step.id} {...dragHandlers(idx)}
+                      className="bg-surface-card rounded-md border border-gray-800 p-4 cursor-grab active:cursor-grabbing"
+                      style={{ borderLeft: '3px solid #06B6D4' }}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-400">
+                          <span className="text-gray-600 select-none">&#8942;&#8942;</span>
+                          <Icon name="search" size={12} /> Fonte esterna
+                        </div>
+                        <button onClick={() => removeStep(idx)} className="text-red-400/60 hover:text-red-400 transition"><Icon name="trash" size={14} /></button>
+                      </div>
+                      <input className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-700 focus:border-accent transition mb-2.5" placeholder="Titolo" value={step.label || ''} onChange={(e) => updateStep(idx, 'label', e.target.value)} />
+
+                      <div className="flex items-center gap-4 mb-3 text-xs">
+                        <label className="flex items-center gap-1.5 text-gray-400 cursor-pointer">
+                          <input type="checkbox" checked={step.enabled !== false} onChange={(e) => updateStep(idx, 'enabled', e.target.checked)} className="accent-accent" />
+                          Attiva
+                        </label>
+                        <label className="flex items-center gap-1.5 text-gray-400 cursor-pointer">
+                          <input type="checkbox" checked={!!step.input_text_enabled} onChange={(e) => updateStep(idx, 'input_text_enabled', e.target.checked)} className="accent-accent" />
+                          Ricerca testuale
+                        </label>
+                        <label className="flex items-center gap-1.5 text-gray-400 cursor-pointer">
+                          <input type="checkbox" checked={!!step.input_barcode_enabled} onChange={(e) => updateStep(idx, 'input_barcode_enabled', e.target.checked)} className="accent-accent" />
+                          Ricerca per codice a barre
+                        </label>
+                      </div>
+
+                      <div className="mb-2.5">
+                        <div className="text-[11px] text-gray-500 mb-1">
+                          Script di ricerca — riceve <code className="text-cyan-400">app.query.value</code> (e <code className="text-cyan-400">app.query.type</code>, <code>'text'</code> o <code>'barcode'</code>), chiama <code className="text-cyan-400">app.result([...])</code> con un elenco di <code>{'{ title, subtitle, params }'}</code>.
+                        </div>
+                        <textarea className="w-full bg-surface-page text-gray-200 px-3 py-2 rounded-lg text-xs outline-none border border-gray-700 focus:border-accent transition font-mono resize-y" rows={6}
+                          placeholder={"let res = await app.request('https://api.esempio.it/cerca?q=' + encodeURIComponent(app.query.value)).send();\nlet dati = res.json();\napp.result((dati.items || []).map(x => ({ title: x.nome, subtitle: x.codice, params: { id: x.id } })));"}
+                          value={step.search_script || ''} onChange={(e) => updateStep(idx, 'search_script', e.target.value)} />
+                      </div>
+
+                      <div className="mb-1">
+                        <div className="text-[11px] text-gray-500 mb-1">
+                          Script di importazione — riceve <code className="text-cyan-400">app.params</code> (quello del risultato scelto), chiama <code className="text-cyan-400">app.result({'{ campo: valore, ... }'})</code> — solo i campi già dichiarati in "Dati" sopra entrano nel record, gli altri sono scartati in silenzio.
+                        </div>
+                        <textarea className="w-full bg-surface-page text-gray-200 px-3 py-2 rounded-lg text-xs outline-none border border-gray-700 focus:border-accent transition font-mono resize-y" rows={6}
+                          placeholder={"let res = await app.request('https://api.esempio.it/scheda/' + app.params.id).send();\nlet dati = res.json();\napp.result({ nome: dati.nome, codice: dati.codice });"}
+                          value={step.document_script || ''} onChange={(e) => updateStep(idx, 'document_script', e.target.value)} />
+                      </div>
+
+                      <ApiSourceTest api={api} source={step} />
+                    </div>
+                  )
+                }
 
                 if (step.block_type === 'report_aggregate') {
                   // Due forme distinte, mai miste sullo stesso blocco: "valore singolo"
