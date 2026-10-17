@@ -19,6 +19,7 @@ import ParentChildrenView from './ParentChildrenView'
 import YearlyBreakdownView from './YearlyBreakdownView'
 import CategoryPivotView from './CategoryPivotView'
 import WeeklyBreakdownView from './WeeklyBreakdownView'
+import GenericView from './GenericView'
 import ViewTabs from './ViewTabs'
 import ArchiveView from './ArchiveView'
 import FormulaEditor from '@shared/builder/FormulaEditor.jsx'
@@ -718,6 +719,14 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
         </div>
       )}
 
+      {schema && schema.views && schema.views.filter((v) => v.placement === 'add').length > 0 && (
+        <div className="mb-6 space-y-4">
+          {schema.views.filter((v) => v.placement === 'add').map((v) => (
+            <GenericView key={v.key} step={v} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} defaultModuleSlug={mod.slug} />
+          ))}
+        </div>
+      )}
+
       {workflow && (
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           {workflow.states.map((s) => (
@@ -772,6 +781,8 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
         <ParentChildrenView config={schema.parent_children_views[0]} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} />
       ) : schema && schema.period_views && schema.period_views.length > 0 ? (
         <PeriodView config={schema.period_views[0]} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} />
+      ) : schema && schema.views && schema.views.find((v) => v.placement === 'replace') ? (
+        <GenericView step={schema.views.find((v) => v.placement === 'replace')} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} defaultModuleSlug={mod.slug} />
       ) : mod.list_view === 'archive' ? (
         <ArchiveView mod={mod} schema={schema} records={displayRecords} token={token} canEdit={canDo('edit')} onOpen={(id) => setDetailId(id)} onChanged={loadRecords} onCartella={setCartellaCorrente} onSchemaChanged={async () => { await loadSchema(); await loadRecords() }} searching={search.trim() !== ''} />
       ) : mod.list_view === 'card_grid' ? (

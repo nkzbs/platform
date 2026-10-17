@@ -27,7 +27,7 @@ const BLOCK_TYPE_CATEGORY = {
   permissions: 'Permessi', validazione_creazione: 'Permessi',
   report_aggregate: 'Calcolo', yearly_breakdown: 'Calcolo', category_pivot: 'Calcolo', weekly_breakdown: 'Calcolo',
   connection_required: 'Automazione', automation: 'Automazione',
-  branch_create: 'Layout form', period_view: 'Layout form', parent_children_view: 'Layout form', view_tabs: 'Layout form',
+  branch_create: 'Layout form', period_view: 'Layout form', parent_children_view: 'Layout form', view_tabs: 'Layout form', view: 'Layout form',
 }
 
 // Etichetta leggibile per tipo di blocco — usata solo per la riga di riepilogo
@@ -42,7 +42,7 @@ const BLOCK_TYPE_LABEL = {
   connection_required: 'Richiede connessione', automation: 'Automazione',
   branch_create: 'Crea in filiale', period_view: 'Vista periodo',
   parent_children_view: 'Vista padre/figli', yearly_breakdown: 'Riepilogo annuale', category_pivot: 'Pivot categoria',
-  weekly_breakdown: 'Riepilogo settimanale', view_tabs: 'Tab di vista', report_aggregate: 'Report aggregato',
+  weekly_breakdown: 'Riepilogo settimanale', view_tabs: 'Tab di vista', report_aggregate: 'Report aggregato', view: 'Vista',
 }
 function summaryForStep(step) {
   const typeLabel = BLOCK_TYPE_LABEL[step.block_type] || step.block_type
@@ -687,11 +687,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
     { label: 'Formula / Aggregato', desc: 'Calcolo su relazioni (sum/avg/count…).', icon: 'cpu', color: '#F87171', category: 'Calcolo', block_type: 'report_aggregate', defaults: { key: 'agg_' + Date.now(), label: 'Nuovo aggregato', expr: '', format: 'number' } },
     { label: 'Automazione', desc: 'Quando succede qualcosa in questo modulo, esegui delle azioni (con Se/Altrimenti).', icon: 'zap', color: '#FBBF24', category: 'Automazione', block_type: 'automation', defaults: { label: 'Nuova automazione', enabled: true, trigger: { evento: 'nuovo_record', stato: '', campo: '' }, azioni: [] } },
     { label: 'Creazione con scelta', desc: "Un bottone che chiede prima una scelta (es. \"Diretto\" o \"A rate\") e poi mostra campi diversi, creando il record in un modulo diverso a seconda della scelta — es. un pagamento diretto crea una Spesa, un pagamento a rate crea un Debito.", icon: 'git-branch', color: '#EC4899', category: 'Layout form', block_type: 'branch_create', defaults: { label: 'Nuovo', branches: [] } },
-    { label: 'Vista per periodo navigabile', desc: "Naviga avanti/indietro per mese o anno (es. spese del mese, entrate/uscite dell'anno) con metriche (somma/conteggio) per il periodo attivo, opzionalmente confrontate col periodo precedente, e lista filtrata sotto. Sostituisce l'intera vista del modulo.", icon: 'calendar', color: '#10B981', category: 'Layout form', block_type: 'period_view', defaults: { key: 'periodo_' + Date.now(), label: 'Vista periodo', granularity: 'mese', date_field: '', compare_previous: false, metrics: [], filters: [] }, disabled: schema && schema.steps.some((s) => s.block_type === 'period_view'), note: 'Un solo blocco per modulo' },
-    { label: 'Genitori con figli', desc: "Ogni record di questo modulo con un riepilogo dei suoi record collegati in un altro modulo (es. un Debito con le sue Rate: pallini numerati, progresso, residuo). Sostituisce l'intera vista del modulo.", icon: 'git-branch', color: '#8B5CF6', category: 'Layout form', block_type: 'parent_children_view', defaults: { key: 'figli_' + Date.now(), label: 'Piani', children_module: '', children_relation: '', children_status_field: '_stato', children_status_done_value: '', children_order_field: '', amount_field: '', child_amount_field: '' }, disabled: schema && schema.steps.some((s) => s.block_type === 'parent_children_view'), note: 'Un solo blocco per modulo' },
-    { label: 'Riepilogo mensile per anno', desc: "Tabella con tutti i 12 mesi di un anno (navigabile), ciascuno con le sue metriche, opzionalmente confrontato con lo stesso mese dell'anno precedente. Si aggiunge alla vista del modulo, non la sostituisce — se ne possono aggiungere più di uno.", icon: 'bar-chart', color: '#F59E0B', category: 'Calcolo', block_type: 'yearly_breakdown', defaults: { key: 'riepilogo_' + Date.now(), label: 'Riepilogo mensile', source_module: '', date_field: '', compare_previous_year: true, metrics: [], filters: [] } },
-    { label: 'Pivot per categoria', desc: "Raggruppa per un campo (es. categoria) su più anni a confronto, con variazione % tra i due più recenti — es. \"anno su anno\" o uno storico pluriennale. Si aggiunge alla vista del modulo, non la sostituisce.", icon: 'grid', color: '#EC4899', category: 'Calcolo', block_type: 'category_pivot', defaults: { key: 'pivot_' + Date.now(), label: 'Per categoria', source_module: '', date_field: '', group_by: '', metric_field: '', metric_func: 'sum', metric_format: 'currency', n_years: 2, filters: [] } },
-    { label: 'Ore per settimana', desc: "Barre con le settimane ISO di un mese (navigabile) e il loro totale, con una soglia opzionale (es. straordinari oltre le ore settimanali previste). Si aggiunge alla vista del modulo, non la sostituisce.", icon: 'bar-chart', color: '#2563EB', category: 'Calcolo', block_type: 'weekly_breakdown', defaults: { key: 'settimane_' + Date.now(), label: 'Ore per settimana', source_module: '', date_field: '', metric_field: '', metric_func: 'sum', metric_format: 'number', threshold: '', filters: [] } },
+    { label: 'Vista', desc: "Una vista configurabile sui record: per periodo navigabile (mese/anno, con metriche e confronto col precedente), riepilogo per sotto-periodo, pivot per categoria su più anni, barre settimanali con soglia, oppure genitori con rollup dei figli collegati. Sostituisce o si aggiunge alla vista del modulo secondo la modalità scelta.", icon: 'bar-chart', color: '#10B981', category: 'Layout form', block_type: 'view', defaults: { key: 'vista_' + Date.now(), label: 'Nuova vista', mode: 'period', placement: 'replace', granularity: 'mese', date_field: '', compare_previous: false, breakdown: false, metrics: [], filters: [] } },
     { label: 'Tab della vista', desc: "Più viste che sostituiscono la tabella, alternabili a tab sullo stesso modulo — es. un tab \"Spese\" (la vista mensile propria) e un tab \"Debiti\" (il progresso di un altro modulo). Ogni tab riusa un blocco già dichiarato altrove (qui o su un altro modulo), non lo ridefinisce.", icon: 'list', color: '#8B5CF6', category: 'Layout form', block_type: 'view_tabs', defaults: { tabs: [] }, disabled: schema && schema.steps.some((s) => s.block_type === 'view_tabs'), note: 'Un solo blocco per modulo' },
   ]
   const CATEGORY_ORDER = ['Dati', 'Relazioni', 'Workflow', 'Permessi', 'Calcolo', 'Automazione', 'Layout form']
@@ -2093,8 +2089,8 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                   const addTab = () => updateTabs([...tabs, { key: 'tab_' + Date.now(), label: '', block_type: 'period_view', block_key: '', source_module: null }])
                   const updateTab = (ti, patch) => updateTabs(tabs.map((t, i) => i === ti ? { ...t, ...patch } : t))
                   const removeTab = (ti) => updateTabs(tabs.filter((_, i) => i !== ti))
-                  const BLOCK_TYPE_LABELS = { period_view: 'Vista per periodo', parent_children_view: 'Genitori con figli' }
-                  const BLOCK_ARRAY_KEY = { period_view: 'period_views', parent_children_view: 'parent_children_views' }
+                  const BLOCK_TYPE_LABELS = { period_view: 'Vista per periodo', parent_children_view: 'Genitori con figli', view: 'Vista' }
+                  const BLOCK_ARRAY_KEY = { period_view: 'period_views', parent_children_view: 'parent_children_views', view: 'views' }
                   return (
                     <div key={step.id} {...dragHandlers(idx)}
                       className="bg-surface-card rounded-md border border-gray-800 p-4 cursor-grab active:cursor-grabbing"
@@ -2111,7 +2107,9 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                           const srcSlug = t.source_module || selected
                           const srcMod = fieldCache.find((m) => m.slug === srcSlug)
                           const arrayKey = BLOCK_ARRAY_KEY[t.block_type]
-                          const blockOpts = (srcMod && srcMod[arrayKey] || []).map((b) => ({ value: b.key, label: b.label || b.key }))
+                          const blockOpts = (srcMod && srcMod[arrayKey] || [])
+                            .filter((b) => t.block_type !== 'view' || b.placement === 'replace')
+                            .map((b) => ({ value: b.key, label: b.label || b.key }))
                           return (
                             <div key={ti} className="bg-surface-page rounded-lg border border-gray-700 p-3 space-y-2">
                               <div className="flex items-center gap-2">
@@ -2138,6 +2136,254 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                         </button>
                         {tabs.length === 0 && <div className="text-[10px] text-gray-600">Nessuna tab — "Aggiungi tab" per iniziare (servono almeno 2).</div>}
                       </div>
+                    </div>
+                  )
+                }
+
+                if (step.block_type === 'view') {
+                  const mode = step.mode || 'period'
+                  const ownMod = fieldCache.find((m) => m.slug === selected)
+                  const srcMod = fieldCache.find((m) => m.slug === (step.source_module || selected))
+                  const relsSrc = (srcMod && srcMod.relations || []).filter((r) => r.type === 'many_to_one')
+                  const metrics = step.metrics || []
+                  const filters = step.filters || []
+                  const updateMetric = (i, patch) => updateStep(idx, 'metrics', metrics.map((m, mi) => mi === i ? { ...m, ...patch } : m))
+                  const addMetric = () => updateStep(idx, 'metrics', [...metrics, { key: 'metrica_' + Date.now(), label: 'Nuova metrica', field: '', func: 'sum', format: 'currency' }])
+                  const removeMetric = (i) => updateStep(idx, 'metrics', metrics.filter((_, mi) => mi !== i))
+                  const updateFilter = (i, patch) => updateStep(idx, 'filters', filters.map((f, fi) => fi === i ? { ...f, ...patch } : f))
+                  const addFilter = () => updateStep(idx, 'filters', [...filters, { field: '_stato', op: '!=', value: '' }])
+                  const removeFilter = (i) => updateStep(idx, 'filters', filters.filter((_, fi) => fi !== i))
+                  const filterFieldOptions = ['_stato', ...(srcMod && srcMod.fields || []).map((f) => f.key),
+                    ...relsSrc.flatMap((r) => { const t = fieldCache.find((m) => m.slug === r.target_module); return (t && t.fields || []).map((f) => r.key + '.' + f.key) })]
+                  const childMod = fieldCache.find((m) => m.slug === step.children_module)
+                  const childRels = (childMod && childMod.relations || []).filter((r) => r.type === 'many_to_one' && r.target_module === selected)
+                  const setMode = (newMode) => {
+                    updateStep(idx, 'mode', newMode)
+                    updateStep(idx, 'placement', newMode === 'children' ? 'replace' : (newMode === 'period' ? (step.placement || 'replace') : 'add'))
+                  }
+                  return (
+                    <div key={step.id} {...dragHandlers(idx)}
+                      className="bg-surface-card rounded-md border border-gray-800 p-4 cursor-grab active:cursor-grabbing"
+                      style={{ borderLeft: '3px solid #10B981' }}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-400">
+                          <span className="text-gray-600 select-none">&#8942;&#8942;</span>
+                          <Icon name="bar-chart" size={12} /> Vista
+                        </div>
+                        <button onClick={() => removeStep(idx)} className="text-red-400/60 hover:text-red-400 transition"><Icon name="trash" size={14} /></button>
+                      </div>
+                      <input className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-700 focus:border-accent transition mb-2.5" placeholder="Titolo" value={step.label || ''} onChange={(e) => updateStep(idx, 'label', e.target.value)} />
+
+                      <div className="grid grid-cols-3 gap-2 mb-2.5">
+                        <select className="bg-surface-page text-ink px-2 py-2 rounded-lg text-xs outline-none border border-gray-700" value={mode} onChange={(e) => setMode(e.target.value)}>
+                          <option value="period">Per periodo</option>
+                          <option value="pivot">Pivot per categoria</option>
+                          <option value="simple">Barre settimanali</option>
+                          <option value="children">Genitori con figli</option>
+                        </select>
+                        {mode === 'period' && (
+                          <label className="flex items-center gap-1.5 text-xs text-gray-400 px-2">
+                            <input type="checkbox" checked={!!step.breakdown} onChange={(e) => updateStep(idx, 'breakdown', e.target.checked)} />
+                            Riepilogo (tabella sotto-periodi)
+                          </label>
+                        )}
+                        {mode === 'period' && (
+                          <select className="bg-surface-page text-ink px-2 py-2 rounded-lg text-xs outline-none border border-gray-700" value={step.placement || 'replace'} onChange={(e) => updateStep(idx, 'placement', e.target.value)}>
+                            <option value="replace">Sostituisce la vista</option>
+                            <option value="add">Si aggiunge alla vista</option>
+                          </select>
+                        )}
+                      </div>
+
+                      {mode !== 'children' && (
+                        <Select value={step.source_module || ''} onChange={(v) => { updateStep(idx, 'source_module', v); updateStep(idx, 'date_field', ''); updateStep(idx, 'group_by', ''); updateStep(idx, 'metric_field', '') }} placeholder="Modulo (vuoto = questo)"
+                          options={fieldCache.map((m) => ({ value: m.slug, label: m.name }))} className="mb-2.5" />
+                      )}
+
+                      {mode === 'period' && (
+                        <>
+                          <div className="grid grid-cols-2 gap-2 mb-2.5">
+                            <select className="bg-surface-page text-ink px-2 py-2 rounded-lg text-xs outline-none border border-gray-700" value={step.granularity || 'mese'} onChange={(e) => updateStep(idx, 'granularity', e.target.value)}>
+                              <option value="mese">Naviga per mese</option>
+                              <option value="settimana">Naviga per settimana</option>
+                              <option value="anno">Naviga per anno</option>
+                            </select>
+                            <select className="bg-surface-page text-ink px-2 py-2 rounded-lg text-xs outline-none border border-gray-700" value={step.date_field || ''} onChange={(e) => updateStep(idx, 'date_field', e.target.value)}>
+                              <option value="">Campo data...</option>
+                              {(srcMod && srcMod.fields || []).filter((f) => f.type === 'date' || f.type === 'datetime').map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+                            </select>
+                          </div>
+                          <label className="flex items-center gap-1.5 text-xs text-gray-400 px-2 mb-2.5">
+                            <input type="checkbox" checked={!!step.compare_previous} onChange={(e) => updateStep(idx, 'compare_previous', e.target.checked)} />
+                            Confronta col periodo precedente
+                          </label>
+
+                          <div className="bg-surface-page rounded-lg border border-gray-700 p-3 mb-2.5">
+                            <div className="text-[11px] text-gray-400 font-semibold mb-2">Metriche</div>
+                            {metrics.map((m, i) => (
+                              <div key={i} className="mb-2 pb-2 border-b border-gray-800/60 last:border-0">
+                                <div className="grid grid-cols-[1fr_1fr_70px_70px_28px] gap-2 mb-1.5 items-center">
+                                  <input className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" placeholder="etichetta" value={m.label || ''} onChange={(e) => updateMetric(i, { label: e.target.value })} />
+                                  <select className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" value={m.field || ''} onChange={(e) => updateMetric(i, { field: e.target.value })} disabled={m.func === 'count'}>
+                                    <option value="">campo...</option>
+                                    {(srcMod && srcMod.fields || []).filter((f) => ['number', 'currency', 'computed'].includes(f.type)).map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+                                  </select>
+                                  <select className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" value={m.func || 'sum'} onChange={(e) => updateMetric(i, { func: e.target.value })}>
+                                    <option value="sum">somma</option>
+                                    <option value="count">conteggio</option>
+                                    <option value="avg">media</option>
+                                  </select>
+                                  <select className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" value={m.format || 'currency'} onChange={(e) => updateMetric(i, { format: e.target.value })}>
+                                    <option value="currency">valuta</option>
+                                    <option value="number">numero</option>
+                                    <option value="ore">ore (min)</option>
+                                  </select>
+                                  <button onClick={() => removeMetric(i)} className="text-red-400/60 hover:text-red-400 transition"><Icon name="trash" size={12} /></button>
+                                </div>
+                                <div className="grid grid-cols-[1fr_60px_1fr] gap-2">
+                                  <select className="bg-surface-card text-gray-400 px-2 py-1 rounded-lg text-[11px] outline-none border border-gray-700" value={(m.filter && m.filter.field) || ''} onChange={(e) => updateMetric(i, { filter: e.target.value ? { field: e.target.value, op: (m.filter && m.filter.op) || '==', value: (m.filter && m.filter.value) || '' } : undefined })}>
+                                    <option value="">solo per questa metrica: nessun filtro</option>
+                                    {filterFieldOptions.map((k) => <option key={k} value={k}>filtro: {k}</option>)}
+                                  </select>
+                                  <select className="bg-surface-card text-gray-400 px-2 py-1 rounded-lg text-[11px] outline-none border border-gray-700" disabled={!m.filter} value={(m.filter && m.filter.op) || '=='} onChange={(e) => updateMetric(i, { filter: { ...m.filter, op: e.target.value } })}>
+                                    {['==', '!=', '>', '<', '>=', '<='].map((o) => <option key={o} value={o}>{o}</option>)}
+                                  </select>
+                                  <input className="bg-surface-card text-gray-400 px-2 py-1 rounded-lg text-[11px] outline-none border border-gray-700" placeholder="valore" disabled={!m.filter} value={(m.filter && m.filter.value) || ''} onChange={(e) => updateMetric(i, { filter: { ...m.filter, value: e.target.value } })} />
+                                </div>
+                              </div>
+                            ))}
+                            <button onClick={addMetric} className="text-xs text-accent hover:opacity-80 transition mt-1">+ Aggiungi metrica</button>
+                          </div>
+
+                          <div className="bg-surface-page rounded-lg border border-gray-700 p-3">
+                            <div className="text-[11px] text-gray-400 font-semibold mb-2">Filtri (opzionali)</div>
+                            {filters.map((f, i) => (
+                              <div key={i} className="grid grid-cols-[1fr_70px_1fr_28px] gap-2 mb-1.5 items-center">
+                                <select className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" value={f.field || ''} onChange={(e) => updateFilter(i, { field: e.target.value })}>
+                                  {filterFieldOptions.map((k) => <option key={k} value={k}>{k}</option>)}
+                                </select>
+                                <select className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" value={f.op || '=='} onChange={(e) => updateFilter(i, { op: e.target.value })}>
+                                  {['==', '!=', '>', '<', '>=', '<='].map((o) => <option key={o} value={o}>{o}</option>)}
+                                </select>
+                                <input className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" placeholder="valore" value={f.value || ''} onChange={(e) => updateFilter(i, { value: e.target.value })} />
+                                <button onClick={() => removeFilter(i)} className="text-red-400/60 hover:text-red-400 transition"><Icon name="trash" size={12} /></button>
+                              </div>
+                            ))}
+                            <button onClick={addFilter} className="text-xs text-accent hover:opacity-80 transition mt-1">+ Aggiungi filtro</button>
+                          </div>
+                        </>
+                      )}
+
+                      {mode === 'pivot' && (
+                        <>
+                          <div className="grid grid-cols-2 gap-2 mb-2.5">
+                            <select className="bg-surface-page text-ink px-2 py-2 rounded-lg text-xs outline-none border border-gray-700" value={step.date_field || ''} onChange={(e) => updateStep(idx, 'date_field', e.target.value)}>
+                              <option value="">Campo data...</option>
+                              {(srcMod && srcMod.fields || []).filter((f) => f.type === 'date' || f.type === 'datetime').map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+                            </select>
+                            <select className="bg-surface-page text-ink px-2 py-2 rounded-lg text-xs outline-none border border-gray-700" value={step.group_by || ''} onChange={(e) => updateStep(idx, 'group_by', e.target.value)}>
+                              <option value="">Raggruppa per...</option>
+                              {(srcMod && srcMod.fields || []).filter((f) => f.type === 'select' || f.type === 'text').map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+                            </select>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 mb-2.5">
+                            <select className="bg-surface-page text-ink px-2 py-2 rounded-lg text-xs outline-none border border-gray-700" value={step.metric_field || ''} onChange={(e) => updateStep(idx, 'metric_field', e.target.value)}>
+                              <option value="">Campo metrica...</option>
+                              {(srcMod && srcMod.fields || []).filter((f) => ['number', 'currency', 'computed'].includes(f.type)).map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+                            </select>
+                            <select className="bg-surface-page text-ink px-2 py-2 rounded-lg text-xs outline-none border border-gray-700" value={step.metric_func || 'sum'} onChange={(e) => updateStep(idx, 'metric_func', e.target.value)}>
+                              <option value="sum">somma</option>
+                              <option value="avg">media</option>
+                              <option value="count">conteggio</option>
+                            </select>
+                            <input type="number" min="1" max="10" className="bg-surface-page text-ink px-2 py-2 rounded-lg text-xs outline-none border border-gray-700" placeholder="N anni" value={step.n_years ?? 2} onChange={(e) => updateStep(idx, 'n_years', parseInt(e.target.value) || 2)} />
+                          </div>
+                        </>
+                      )}
+
+                      {mode === 'simple' && (
+                        <>
+                          <div className="grid grid-cols-2 gap-2 mb-2.5">
+                            <select className="bg-surface-page text-ink px-2 py-2 rounded-lg text-xs outline-none border border-gray-700" value={step.date_field || ''} onChange={(e) => updateStep(idx, 'date_field', e.target.value)}>
+                              <option value="">Campo data...</option>
+                              {(srcMod && srcMod.fields || []).filter((f) => f.type === 'date' || f.type === 'datetime').map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+                            </select>
+                            <select className="bg-surface-page text-ink px-2 py-2 rounded-lg text-xs outline-none border border-gray-700" value={step.metric_field || ''} onChange={(e) => updateStep(idx, 'metric_field', e.target.value)}>
+                              <option value="">Campo metrica...</option>
+                              {(srcMod && srcMod.fields || []).filter((f) => ['number', 'currency', 'computed'].includes(f.type)).map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+                            </select>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 mb-2.5">
+                            <select className="bg-surface-page text-ink px-2 py-2 rounded-lg text-xs outline-none border border-gray-700" value={step.metric_func || 'sum'} onChange={(e) => updateStep(idx, 'metric_func', e.target.value)}>
+                              <option value="sum">somma</option>
+                              <option value="avg">media</option>
+                              <option value="count">conteggio</option>
+                            </select>
+                            <select className="bg-surface-page text-ink px-2 py-2 rounded-lg text-xs outline-none border border-gray-700" value={step.metric_format || 'number'} onChange={(e) => updateStep(idx, 'metric_format', e.target.value)}>
+                              <option value="number">numero</option>
+                              <option value="currency">valuta</option>
+                              <option value="ore">ore (da minuti)</option>
+                            </select>
+                            <input type="number" className="bg-surface-page text-ink px-2 py-2 rounded-lg text-xs outline-none border border-gray-700" placeholder="Soglia (opz.)" value={step.threshold ?? ''} onChange={(e) => updateStep(idx, 'threshold', e.target.value === '' ? undefined : parseFloat(e.target.value))} />
+                          </div>
+                          <div className="text-[10px] text-gray-600 mb-2.5">La soglia è nella stessa unità del campo metrica — oltre questo valore per settimana viene segnalato come "oltre soglia" (es. straordinari).</div>
+                        </>
+                      )}
+
+                      {(mode === 'pivot' || mode === 'simple') && (
+                        <div className="bg-surface-page rounded-lg border border-gray-700 p-3 mb-2.5">
+                          <div className="text-[11px] text-gray-400 font-semibold mb-2">Filtri (opzionali)</div>
+                          {filters.map((f, i) => (
+                            <div key={i} className="grid grid-cols-[1fr_70px_1fr_28px] gap-2 mb-1.5 items-center">
+                              <select className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" value={f.field || ''} onChange={(e) => updateFilter(i, { field: e.target.value })}>
+                                {filterFieldOptions.map((k) => <option key={k} value={k}>{k}</option>)}
+                              </select>
+                              <select className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" value={f.op || '=='} onChange={(e) => updateFilter(i, { op: e.target.value })}>
+                                {['==', '!=', '>', '<', '>=', '<='].map((o) => <option key={o} value={o}>{o}</option>)}
+                              </select>
+                              <input className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" placeholder="valore" value={f.value || ''} onChange={(e) => updateFilter(i, { value: e.target.value })} />
+                              <button onClick={() => removeFilter(i)} className="text-red-400/60 hover:text-red-400 transition"><Icon name="trash" size={12} /></button>
+                            </div>
+                          ))}
+                          <button onClick={addFilter} className="text-xs text-accent hover:opacity-80 transition mt-1">+ Aggiungi filtro</button>
+                        </div>
+                      )}
+
+                      {mode === 'children' && (
+                        <>
+                          <div className="bg-surface-page rounded-lg border border-gray-700 p-3 mb-2.5">
+                            <div className="text-[11px] text-gray-400 font-semibold mb-2">Figli</div>
+                            <Select value={step.children_module || ''} onChange={(v) => { updateStep(idx, 'children_module', v); updateStep(idx, 'children_relation', '') }} placeholder="Modulo figli (es. rate)"
+                              options={fieldCache.filter((m) => m.slug !== selected).map((m) => ({ value: m.slug, label: m.name }))} className="mb-2" />
+                            <select className="w-full bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700 mb-2" value={step.children_relation || ''} onChange={(e) => updateStep(idx, 'children_relation', e.target.value)} disabled={!childMod}>
+                              <option value="">Relazione dei figli verso questo modulo...</option>
+                              {childRels.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
+                            </select>
+                            <div className="grid grid-cols-2 gap-2 mb-2">
+                              <select className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" value={step.children_status_field || '_stato'} onChange={(e) => updateStep(idx, 'children_status_field', e.target.value)} disabled={!childMod}>
+                                <option value="_stato">Stato workflow (_stato)</option>
+                                {(childMod && childMod.fields || []).filter((f) => f.type === 'select' || f.type === 'checkbox').map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+                              </select>
+                              <input className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" placeholder="valore 'fatto' (es. pagato)" value={step.children_status_done_value || ''} onChange={(e) => updateStep(idx, 'children_status_done_value', e.target.value)} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <select className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" value={step.children_order_field || ''} onChange={(e) => updateStep(idx, 'children_order_field', e.target.value || undefined)} disabled={!childMod}>
+                                <option value="">Ordina per...</option>
+                                {(childMod && childMod.fields || []).filter((f) => f.type === 'date' || f.type === 'datetime').map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+                              </select>
+                              <select className="bg-surface-card text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" value={step.child_amount_field || ''} onChange={(e) => updateStep(idx, 'child_amount_field', e.target.value || undefined)} disabled={!childMod}>
+                                <option value="">Campo importo figlio...</option>
+                                {(childMod && childMod.fields || []).filter((f) => ['number', 'currency'].includes(f.type)).map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+                              </select>
+                            </div>
+                          </div>
+
+                          <select className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-700" value={step.amount_field || ''} onChange={(e) => updateStep(idx, 'amount_field', e.target.value || undefined)}>
+                            <option value="">Campo importo totale su questo modulo (opzionale, per il residuo)...</option>
+                            {(ownMod && ownMod.fields || []).filter((f) => ['number', 'currency'].includes(f.type)).map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+                          </select>
+                        </>
+                      )}
                     </div>
                   )
                 }

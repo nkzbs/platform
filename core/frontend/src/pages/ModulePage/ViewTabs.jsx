@@ -3,6 +3,7 @@ import useApi from '../../lib/useApi'
 import { parseSchemaFrontend } from '../../lib/schema-v3-frontend'
 import PeriodView from './PeriodView'
 import ParentChildrenView from './ParentChildrenView'
+import GenericView from './GenericView'
 
 // Più viste "sostituisce tutta la tabella" alternabili a tab sullo stesso modulo —
 // es. Spese Casa: tab "Spese" (period_view proprio) + tab "Debiti" (parent_children_view
@@ -12,6 +13,7 @@ import ParentChildrenView from './ParentChildrenView'
 const BLOCK_ARRAY = {
   period_view: 'period_views',
   parent_children_view: 'parent_children_views',
+  view: 'views',
 }
 
 function ViewTabs({ tabs, mod, schema, token, tableColumns, records }) {
@@ -61,6 +63,7 @@ function ViewTabs({ tabs, mod, schema, token, tableColumns, records }) {
 
         if (activeTab.block_type === 'period_view') return <PeriodView config={config} mod={srcMod} schema={srcSchema} token={token} tableColumns={srcTableColumns} records={srcRecords} />
         if (activeTab.block_type === 'parent_children_view') return <ParentChildrenView config={config} mod={srcMod} schema={srcSchema} token={token} tableColumns={srcTableColumns} records={srcRecords} />
+        if (activeTab.block_type === 'view') return <GenericView step={config} mod={srcMod} schema={srcSchema} token={token} tableColumns={srcTableColumns} records={srcRecords} defaultModuleSlug={srcMod.slug} />
         return null
       })()}
     </div>

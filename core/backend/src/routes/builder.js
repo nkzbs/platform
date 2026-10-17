@@ -31,6 +31,7 @@ router.get('/schema-cache', requireAuth, requireAdmin, (req, res) => {
       ...m, fields: schema.fields || [], relations: schema.relations || [],
       period_views: schema.period_views || [],
       parent_children_views: schema.parent_children_views || [],
+      views: schema.views || [],
     };
   });
   res.json(full);
@@ -478,12 +479,101 @@ router.post('/:slug/publish', requireAuth, requireAdmin, (req, res) => {
         formulaErrors.push({ label, errors: ['La soglia deve essere un numero'] });
       }
     });
+    // view: block_type unificato (Fase 1 della semplificazione del Builder, ispirato a
+    // Collections) — un solo blocco con 4 modalità (period/pivot/simple/children) per i
+    // NUOVI blocchi creati dal Builder; period_view/yearly_breakdown/category_pivot/
+    // weekly_breakdown/parent_children_view restano sopra, invariati, per i blocchi già
+    // esistenti. Stessi identici controlli, solo dispatchati per v.mode invece che per
+    // block_type separati.
+    (normalized.views || []).forEach((v) => {
+      const label = v.label || 'Vista';
+      const modMap = loadModuleMap(db);
+      const own = modMap[req.params.slug] || {};
+      const sourceSlug = v.source_module || req.params.slug;
+      const source = modMap[sourceSlug];
+      const validateFilter = (f) => {
+        if (!f.field) { formulaErrors.push({ label, errors: ['Filtro senza campo'] }); return; }
+        if (f.field === '_stato' || (f.field.includes('.') && f.field.endsWith('._stato'))) return;
+        if (!f.field.includes('.')) {
+          if (!((source && source.fields) || []).some((x) => x.key === f.field)) formulaErrors.push({ label, errors: [`Campo filtro "${f.field}" non trovato`] });
+          return;
+        }
+        const [relKey, targetField] = f.field.split('.');
+        const rel = ((source && source.relations) || []).find((r) => r.key === relKey && r.type === 'many_to_one');
+        if (!rel) { formulaErrors.push({ label, errors: [`Relazione "${relKey}" non trovata (o non many_to_one)`] }); return; }
+        const targetFields = (modMap[rel.target_module] || {}).fields || [];
+        if (!targetFields.some((x) => x.key === targetField)) formulaErrors.push({ label, errors: [`Campo "${targetField}" non trovato nel modulo "${rel.target_module}"`] });
+      };
+
+      if (v.mode === 'children') {
+        if (!v.children_module) { formulaErrors.push({ label, errors: ['Manca il modulo figli'] }); return; }
+        const childMod = modMap[v.children_module];
+        if (!childMod) { formulaErrors.push({ label, errors: [`Modulo figli "${v.children_module}" non trovato o non installato`] }); return; }
+        if (!v.children_relation) { formulaErrors.push({ label, errors: ['Manca la relazione dei figli verso questo modulo'] }); return; }
+        const rel = (childMod.relations || []).find((r) => r.key === v.children_relation && r.type === 'many_to_one' && r.target_module === req.params.slug);
+        if (!rel) { formulaErrors.push({ label, errors: [`Relazione "${v.children_relation}" non trovata (o non punta a questo modulo) su "${v.children_module}"`] }); return; }
+        if (!v.children_status_field || !(childMod.fields || []).some((f) => f.key === v.children_status_field) && v.children_status_field !== '_stato') {
+          formulaErrors.push({ label, errors: [`Campo stato figli "${v.children_status_field || ''}" non trovato`] });
+        }
+        if (!v.children_status_done_value) formulaErrors.push({ label, errors: ['Manca il valore "fatto" dello stato figli'] });
+        if (v.child_amount_field && !(childMod.fields || []).some((f) => f.key === v.child_amount_field)) {
+          formulaErrors.push({ label, errors: [`Campo importo figli "${v.child_amount_field}" non trovato`] });
+        }
+        if (v.amount_field && !(own.fields || []).some((f) => f.key === v.amount_field)) {
+          formulaErrors.push({ label, errors: [`Campo importo "${v.amount_field}" non trovato`] });
+        }
+        return;
+      }
+
+      if (!source) { formulaErrors.push({ label, errors: [`Modulo sorgente "${sourceSlug}" non trovato o non installato`] }); return; }
+
+      if (v.mode === 'period') {
+        if (!['mese', 'anno', 'settimana'].includes(v.granularity)) { formulaErrors.push({ label, errors: ['Granularità non valida — solo "mese", "settimana" o "anno"'] }); return; }
+        if (!v.date_field || !(source.fields || []).some((f) => f.key === v.date_field)) {
+          formulaErrors.push({ label, errors: [`Campo data "${v.date_field || ''}" non trovato su "${sourceSlug}"`] });
+        }
+        const metrics = v.metrics || [];
+        if (metrics.length === 0) formulaErrors.push({ label, errors: ['Serve almeno una metrica'] });
+        metrics.forEach((m, i) => {
+          if (!m.key || !m.label) { formulaErrors.push({ label, errors: [`Metrica ${i + 1}: manca chiave o etichetta`] }); return; }
+          if (m.func !== 'count' && (!m.field || !(source.fields || []).some((f) => f.key === m.field))) {
+            formulaErrors.push({ label, errors: [`Metrica "${m.label}": campo "${m.field || ''}" non trovato su "${sourceSlug}"`] });
+          }
+          if (m.filter) validateFilter(m.filter);
+        });
+        (v.filters || []).forEach(validateFilter);
+      } else if (v.mode === 'pivot') {
+        if (!v.date_field || !(source.fields || []).some((f) => f.key === v.date_field)) {
+          formulaErrors.push({ label, errors: [`Campo data "${v.date_field || ''}" non trovato su "${sourceSlug}"`] });
+        }
+        if (!v.group_by || !(source.fields || []).some((f) => f.key === v.group_by)) {
+          formulaErrors.push({ label, errors: [`Campo raggruppamento "${v.group_by || ''}" non trovato su "${sourceSlug}"`] });
+        }
+        if (!v.metric_field || !(source.fields || []).some((f) => f.key === v.metric_field)) {
+          formulaErrors.push({ label, errors: [`Campo metrica "${v.metric_field || ''}" non trovato su "${sourceSlug}"`] });
+        }
+        (v.filters || []).forEach(validateFilter);
+      } else if (v.mode === 'simple') {
+        if (!v.date_field || !(source.fields || []).some((f) => f.key === v.date_field)) {
+          formulaErrors.push({ label, errors: [`Campo data "${v.date_field || ''}" non trovato su "${sourceSlug}"`] });
+        }
+        if (!v.metric_field || !(source.fields || []).some((f) => f.key === v.metric_field)) {
+          formulaErrors.push({ label, errors: [`Campo metrica "${v.metric_field || ''}" non trovato su "${sourceSlug}"`] });
+        }
+        if (v.threshold != null && isNaN(Number(v.threshold))) {
+          formulaErrors.push({ label, errors: ['La soglia deve essere un numero'] });
+        }
+        (v.filters || []).forEach(validateFilter);
+      } else {
+        formulaErrors.push({ label, errors: [`Modalità "${v.mode || ''}" non valida`] });
+      }
+    });
     // view_tabs: più viste "sostituisce tutta la tabella" alternabili a tab sullo
     // stesso modulo (es. Spese: tab "Spese" col period_view proprio, tab "Debiti" col
     // parent_children_view di un ALTRO modulo via source_module) — ogni tab referenzia
     // un blocco già dichiarato altrove per key, non lo ridefinisce.
     const TAB_BLOCK_ARRAY = {
-      period_view: 'period_views', parent_children_view: 'parent_children_views',
+      period_view: 'period_views', parent_children_view: 'parent_children_views', view: 'views',
     };
     if (normalized.view_tabs && normalized.view_tabs.tabs) {
       const label = 'Tab della vista';
@@ -497,8 +587,11 @@ router.post('/:slug/publish', requireAuth, requireAdmin, (req, res) => {
         const sourceSlug = t.source_module || req.params.slug;
         const source = vtModMap[sourceSlug];
         if (!source) { formulaErrors.push({ label, errors: [`Tab "${t.label || i + 1}": modulo sorgente "${sourceSlug}" non trovato o non installato`] }); return; }
-        if (!t.block_key || !(source[arrayKey] || []).some((b) => b.key === t.block_key)) {
+        const resolvedBlock = (source[arrayKey] || []).find((b) => b.key === t.block_key);
+        if (!resolvedBlock) {
           formulaErrors.push({ label, errors: [`Tab "${t.label || i + 1}": blocco "${t.block_key || ''}" non trovato su "${sourceSlug}"`] });
+        } else if (t.block_type === 'view' && resolvedBlock.placement !== 'replace') {
+          formulaErrors.push({ label, errors: [`Tab "${t.label || i + 1}": la vista "${t.block_key}" non sostituisce la tabella (placement "add"), non può essere una tab`] });
         }
       });
     }

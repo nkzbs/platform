@@ -226,6 +226,11 @@ db.exec(`
   );
 `);
 if (!db.prepare('PRAGMA table_info(registry_modules)').all().some((c) => c.name === 'ruoli')) db.exec('ALTER TABLE registry_modules ADD COLUMN ruoli TEXT'); // dichiarazione dei ruoli del modulo (kind, campi, stati…), applicata ai tenant creati dall\'analisi
+// group_name (categoria della Libreria, es. Finanza/Vendite) era solo nel CREATE TABLE: un
+// database esistente da prima di quella colonna restava senza, e recategorizza() (Libreria:
+// le 55 categorie vere, 15/10) falliva all'avvio con "no such column". Stesso pattern di 'ruoli' sopra.
+if (!db.prepare('PRAGMA table_info(registry_modules)').all().some((c) => c.name === 'group_name')) db.exec('ALTER TABLE registry_modules ADD COLUMN group_name TEXT');
+if (!db.prepare('PRAGMA table_info(registry_proposals)').all().some((c) => c.name === 'group_name')) db.exec('ALTER TABLE registry_proposals ADD COLUMN group_name TEXT');
 if (!db.prepare('PRAGMA table_info(process_analyses)').all().some((c) => c.name === 'creazione')) db.exec('ALTER TABLE process_analyses ADD COLUMN creazione TEXT');
 if (!db.prepare('PRAGMA table_info(process_analyses)').all().some((c) => c.name === 'auto')) db.exec('ALTER TABLE process_analyses ADD COLUMN auto TEXT'); // avanzamento di «Fai tutto»
 if (!db.prepare('PRAGMA table_info(process_analyses)').all().some((c) => c.name === 'scelte')) db.exec("ALTER TABLE process_analyses ADD COLUMN scelte TEXT NOT NULL DEFAULT '{}'"); // proposte (report, AI) che l\'utente ha tolto // avanzamento della creazione del tenant dall\'analisi

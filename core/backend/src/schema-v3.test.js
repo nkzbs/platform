@@ -266,6 +266,60 @@ test('getAutomationSteps su schema v2-lenient (con _v3_unsupported) -> trova com
   assertEq(steps[0].id, 'aut1');
 });
 
+// ─── view: block_type unificato (Fase 1 semplificazione Builder, ispirato a
+// Collections) — stesse garanzie dei 5 block_type che subentra a sostituire per i
+// NUOVI blocchi: mai auto-convertito dai vecchi, mai perso in lettura. ──────────
+
+console.log('\n--- view (block_type unificato) ---');
+
+test('toV3: le 5 chiavi legacy diventano i 5 block_type distinti, MAI "view"', () => {
+  const v2 = {
+    period_views: [{ key: 'p', label: 'Periodo' }],
+    parent_children_views: [{ key: 'f', label: 'Figli' }],
+    yearly_breakdowns: [{ key: 'y', label: 'Anno' }],
+    category_pivots: [{ key: 'c', label: 'Pivot' }],
+    weekly_breakdowns: [{ key: 'w', label: 'Settimana' }],
+  };
+  const v3 = toV3(v2);
+  const types = v3.steps.map((s) => s.block_type);
+  assertEq(types, ['period_view', 'parent_children_view', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown']);
+  assertEq(types.includes('view'), false);
+});
+
+test('toV3: la chiave "views" diventa block_type "view"', () => {
+  const v2 = { views: [{ key: 'v1', label: 'Vista unificata', mode: 'period', placement: 'replace' }] };
+  const v3 = toV3(v2);
+  const step = v3.steps.find((s) => s.block_type === 'view');
+  assertEq(step.key, 'v1');
+  assertEq(step.mode, 'period');
+});
+
+test('toV2Lenient: un blocco "period_view" legacy e un blocco "view" nuovo restano array separati, mai uniti', () => {
+  const v3 = {
+    version: 3,
+    steps: [
+      { id: 'pvw1', block_type: 'period_view', key: 'p', label: 'Vecchia' },
+      { id: 'vwb1', block_type: 'view', key: 'v', label: 'Nuova', mode: 'period', placement: 'replace' },
+    ],
+  };
+  const out = toV2Lenient(v3);
+  assertEq(out.period_views.length, 1);
+  assertEq(out.period_views[0].key, 'p');
+  assertEq(out.views.length, 1);
+  assertEq(out.views[0].key, 'v');
+});
+
+test('toV2Lenient: "views" assente -> out.views resta [] (non scartato in _v3_unsupported, non undefined)', () => {
+  const out = toV2Lenient({ version: 3, steps: [] });
+  assertEq(out.views, []);
+  assertEq(out._v3_unsupported, []);
+});
+
+test('blocco "view" senza equivalente v2 (toV2 strict) -> lancia esplicitamente', () => {
+  const v3 = { version: 3, steps: [{ id: 'v1', block_type: 'view', mode: 'period' }] };
+  assertThrows(() => toV2(v3), 'view');
+});
+
 // ─── SOMMARIO ─────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(50)}`);
