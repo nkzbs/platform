@@ -2507,6 +2507,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                         onChange={(v) => updateStep(idx, 'expr', v)}
                         fieldCache={fieldCache}
                         api={api}
+                        context={{ currentModule: selected }}
                       />
                       <label className="flex items-center gap-2 mt-2 text-xs text-gray-500 cursor-pointer">
                         <input type="checkbox" checked={!!step.internal} onChange={(e) => updateStep(idx, 'internal', e.target.checked || undefined)} />
