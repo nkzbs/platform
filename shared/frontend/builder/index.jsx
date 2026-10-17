@@ -2161,6 +2161,12 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                     updateStep(idx, 'mode', newMode)
                     updateStep(idx, 'placement', newMode === 'children' ? 'replace' : (newMode === 'period' ? (step.placement || 'replace') : 'add'))
                   }
+                  const MODE_INFO = {
+                    period: { icon: 'calendar', label: 'Per periodo', desc: 'Naviga avanti/indietro per mese o anno, con metriche sul periodo attivo.' },
+                    pivot: { icon: 'grid', label: 'Pivot categoria', desc: 'Raggruppa per un campo su più anni, con la variazione tra i due più recenti.' },
+                    simple: { icon: 'bar-chart', label: 'Barre settimanali', desc: 'Le settimane ISO di un mese come barre, con una soglia opzionale (es. straordinari).' },
+                    children: { icon: 'git-branch', label: 'Genitori con figli', desc: 'Ogni record con il riepilogo dei suoi record collegati in un altro modulo.' },
+                  }
                   return (
                     <div key={step.id} {...dragHandlers(idx)}
                       className="bg-surface-card rounded-md border border-gray-800 p-4 cursor-grab active:cursor-grabbing"
@@ -2172,28 +2178,37 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                         </div>
                         <button onClick={() => removeStep(idx)} className="text-red-400/60 hover:text-red-400 transition"><Icon name="trash" size={14} /></button>
                       </div>
-                      <input className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-700 focus:border-accent transition mb-2.5" placeholder="Titolo" value={step.label || ''} onChange={(e) => updateStep(idx, 'label', e.target.value)} />
+                      <input className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-700 focus:border-accent transition mb-3" placeholder="Titolo" value={step.label || ''} onChange={(e) => updateStep(idx, 'label', e.target.value)} />
 
-                      <div className="grid grid-cols-3 gap-2 mb-2.5">
-                        <select className="bg-surface-page text-ink px-2 py-2 rounded-lg text-xs outline-none border border-gray-700" value={mode} onChange={(e) => setMode(e.target.value)}>
-                          <option value="period">Per periodo</option>
-                          <option value="pivot">Pivot per categoria</option>
-                          <option value="simple">Barre settimanali</option>
-                          <option value="children">Genitori con figli</option>
-                        </select>
-                        {mode === 'period' && (
-                          <label className="flex items-center gap-1.5 text-xs text-gray-400 px-2">
-                            <input type="checkbox" checked={!!step.breakdown} onChange={(e) => updateStep(idx, 'breakdown', e.target.checked)} />
-                            Riepilogo (tabella sotto-periodi)
-                          </label>
-                        )}
-                        {mode === 'period' && (
-                          <select className="bg-surface-page text-ink px-2 py-2 rounded-lg text-xs outline-none border border-gray-700" value={step.placement || 'replace'} onChange={(e) => updateStep(idx, 'placement', e.target.value)}>
-                            <option value="replace">Sostituisce la vista</option>
-                            <option value="add">Si aggiunge alla vista</option>
-                          </select>
-                        )}
+                      <div className="grid grid-cols-4 gap-2 mb-1.5">
+                        {Object.entries(MODE_INFO).map(([key, info]) => (
+                          <button key={key} type="button" onClick={() => setMode(key)}
+                            className={'flex flex-col items-center gap-1 px-2 py-2.5 rounded-lg text-[11px] font-medium border transition ' + (mode === key ? 'border-accent bg-accent/10 text-ink' : 'border-gray-700 bg-surface-page text-gray-500 hover:border-gray-600 hover:text-gray-300')}>
+                            <Icon name={info.icon} size={16} />
+                            {info.label}
+                          </button>
+                        ))}
                       </div>
+                      <div className="text-[11px] text-gray-500 mb-3">{MODE_INFO[mode].desc}</div>
+
+                      {mode === 'period' && (
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-3 text-[11px]">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-500">Vista:</span>
+                            <div className="flex rounded-lg border border-gray-700 overflow-hidden">
+                              <button type="button" onClick={() => updateStep(idx, 'breakdown', false)} className={'px-2.5 py-1 transition ' + (!step.breakdown ? 'bg-accent text-white' : 'bg-surface-page text-gray-400 hover:text-ink')}>Periodo singolo</button>
+                              <button type="button" onClick={() => updateStep(idx, 'breakdown', true)} className={'px-2.5 py-1 transition ' + (step.breakdown ? 'bg-accent text-white' : 'bg-surface-page text-gray-400 hover:text-ink')}>Riepilogo tabellare</button>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-500">Nella pagina del modulo:</span>
+                            <div className="flex rounded-lg border border-gray-700 overflow-hidden">
+                              <button type="button" onClick={() => updateStep(idx, 'placement', 'replace')} className={'px-2.5 py-1 transition ' + ((step.placement || 'replace') === 'replace' ? 'bg-accent text-white' : 'bg-surface-page text-gray-400 hover:text-ink')}>Sostituisce la vista</button>
+                              <button type="button" onClick={() => updateStep(idx, 'placement', 'add')} className={'px-2.5 py-1 transition ' + (step.placement === 'add' ? 'bg-accent text-white' : 'bg-surface-page text-gray-400 hover:text-ink')}>Si aggiunge</button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       {mode !== 'children' && (
                         <Select value={step.source_module || ''} onChange={(v) => { updateStep(idx, 'source_module', v); updateStep(idx, 'date_field', ''); updateStep(idx, 'group_by', ''); updateStep(idx, 'metric_field', '') }} placeholder="Modulo (vuoto = questo)"
