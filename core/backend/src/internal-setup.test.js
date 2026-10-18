@@ -55,7 +55,13 @@ async function main() {
   });
   await test('I REPORT sulle «pratiche» (senza importo) non scrivono importi inventati', async () => {
     const put = (d) => db.prepare("INSERT INTO records (module_slug, user_id, data) VALUES ('ticket', NULL, ?)").run(JSON.stringify(d));
-    const oggi = new Date(Date.now() - 86400000 * 3).toISOString().slice(0, 10);
+    // Data di scadenza in fuso di Roma (rep.romeParts), non UTC (Date...toISOString()):
+    // buildInRitardo calcola "oggi" con rep.romeParts(now).date — tra mezzanotte e le
+    // 2 (ora legale) il giorno di calendario a Roma è già cambiato mentre quello UTC no,
+    // quindi la vecchia versione (UTC) produceva "da 4 gg" invece di "da 3 gg" proprio in
+    // quella finestra. Bug del test, non del prodotto: daysBetween confronta due date
+    // nello stesso fuso solo se ENTRAMBE vengono da romeParts/addDays, come qui.
+    const oggi = rep.addDays(rep.romeParts(new Date()).date, -3);
     put({ titolo: 'Stampante rotta', scadenza: oggi, _stato: 'in_corso' }); put({ titolo: 'Accesso mail', _stato: 'aperto' });
     const ritardo = rep.addDefinition('in_ritardo', 'Ticket in ritardo').id; rep.saveSettings(ritardo, { stato: 'da_fare', piede: '' });
     const t1 = rep.build(ritardo).text; ok(/Stampante rotta · da 3 gg/.test(t1) && !/€/.test(t1) && !/NaN|undefined/.test(t1), t1);
