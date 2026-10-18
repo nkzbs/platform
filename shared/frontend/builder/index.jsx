@@ -440,6 +440,13 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
   }
 
   const publish = async () => {
+    // Bug reale trovato dal vivo (18/10): "Pubblica" promuoveva solo
+    // schema_json_draft già salvato — su un modulo mai salvato come bozza
+    // (es. appena creato, campi aggiunti e "Pubblica" premuto subito) ripubblicava
+    // silenziosamente lo schema vecchio, perdendo ogni modifica in memoria. Stesso
+    // salvataggio di saveDraft() qui, sempre, così "Pubblica" pubblica per
+    // definizione quello che si vede a schermo in quel momento.
+    await api.put('/builder/' + selected + '/draft', { schema })
     const res = await api.post('/builder/' + selected + '/publish', {})
     if (!res.ok) {
       const details = (res.data && res.data.details) || []
