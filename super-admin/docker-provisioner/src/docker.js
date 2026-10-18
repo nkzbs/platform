@@ -10,18 +10,23 @@
 // valido>", mai su nginx/redis/se stesso o su un'immagine arbitraria.
 const Docker = require('dockerode');
 const { execFile } = require('child_process');
+const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 
 const IMAGE_NAME = 'platform-core:latest';
 const IMAGE_REPO = 'platform-core';
 
-// Stesso repo del remote 'origin' di questo checkout — scaricato di nuovo
-// (git clone --depth 1, senza node_modules) ad ogni build invece che tenuto
-// come volume persistente: niente stato da gestire, il costo è solo qualche
-// secondo di clone su un repo di questa dimensione.
-const SOURCE_REPO_URL = process.env.SOURCE_REPO_URL || 'https://github.com/nkzbs/platform.git';
+// Tarball HTTPS del branch main, non `git clone` (18/10, bug reale trovato dal
+// vivo sul NAS): il seccomp del Docker Engine di Synology blocca la syscall
+// getrandom() che git usa per i file temporanei di un clone ("unable to get
+// random bytes", ENOSYS) — OpenSSL/Node invece ripiegano su /dev/urandom e non
+// ne risentono, quindi un download HTTPS normale funziona dove git fallisce.
+const SOURCE_TARBALL_URL = process.env.SOURCE_TARBALL_URL || 'https://codeload.github.com/nkzbs/platform/tar.gz/refs/heads/main';
 const SRC_DIR = '/tmp/platform-core-src';
+const SRC_TARBALL = '/tmp/platform-core-src.tar.gz';
 
 function run(cmd, args) {
   return new Promise((resolve, reject) => {
@@ -29,6 +34,27 @@ function run(cmd, args) {
       if (err) return reject(Object.assign(new Error((stderr || err.message).toString().trim()), { statusCode: 500 }));
       resolve(stdout.toString());
     });
+  });
+}
+
+function download(url, destPath, redirectsLeft) {
+  if (redirectsLeft === undefined) redirectsLeft = 5;
+  return new Promise((resolve, reject) => {
+    const file = fs.createWriteStream(destPath);
+    https.get(url, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        file.close(); fs.unlink(destPath, () => {});
+        if (redirectsLeft <= 0) return reject(new Error('Troppi redirect scaricando ' + url));
+        return resolve(download(res.headers.location, destPath, redirectsLeft - 1));
+      }
+      if (res.statusCode !== 200) {
+        file.close(); fs.unlink(destPath, () => {});
+        return reject(new Error('Download sorgente fallito: HTTP ' + res.statusCode + ' da ' + url));
+      }
+      res.pipe(file);
+      file.on('finish', () => file.close(() => resolve()));
+      file.on('error', reject);
+    }).on('error', (err) => { file.close(); fs.unlink(destPath, () => {}); reject(err); });
   });
 }
 
@@ -94,15 +120,41 @@ async function removeTenant(slug) {
 // sviluppatore via SSH. onLine(msg) riceve una riga per volta (download, ogni
 // step del Dockerfile) per il popup di avanzamento in Super Admin: un build
 // può durare oltre un minuto, un singolo "fatto" finale sembrerebbe bloccato.
+// Solo per il log di avanzamento — se GitHub non risponde (rate limit
+// anonimo, rete) il build prosegue comunque, non è mai bloccante.
+function fetchLatestCommitShort() {
+  return new Promise((resolve) => {
+    const req = https.get('https://api.github.com/repos/nkzbs/platform/commits/main', {
+      headers: { 'User-Agent': 'platform-docker-provisioner', Accept: 'application/vnd.github+json' },
+      timeout: 5000,
+    }, (res) => {
+      let body = '';
+      res.on('data', (c) => { body += c; });
+      res.on('end', () => {
+        try { resolve(JSON.parse(body).sha.slice(0, 7)) } catch (e) { resolve(null) }
+      });
+    });
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => { req.destroy(); resolve(null); });
+  });
+}
+
 async function buildCoreImage(onLine) {
   const say = (m) => { try { if (onLine) onLine(m) } catch (e) { /* un log non deve mai far fallire il build */ } };
-  say('Scarico il sorgente più recente da ' + SOURCE_REPO_URL + '…');
-  await run('rm', ['-rf', SRC_DIR]);
-  await run('git', ['clone', '--depth', '1', SOURCE_REPO_URL, SRC_DIR]);
-  const rev = (await run('git', ['-C', SRC_DIR, 'rev-parse', '--short', 'HEAD'])).trim();
-  say('Sorgente scaricato (commit ' + rev + '). Costruisco l\'immagine…');
+  const commit = await fetchLatestCommitShort();
+  say('Scarico il sorgente più recente' + (commit ? ' (commit ' + commit + ')' : '') + '…');
+  await run('rm', ['-rf', SRC_DIR, SRC_TARBALL]);
+  await download(SOURCE_TARBALL_URL, SRC_TARBALL);
+  await run('mkdir', ['-p', SRC_DIR]);
+  await run('tar', ['xzf', SRC_TARBALL, '-C', SRC_DIR]);
+  // L'archivio GitHub (codeload) estrae tutto sotto un'unica cartella
+  // 'platform-<branch>/' — il vero contesto di build è lì dentro, non SRC_DIR.
+  const entries = fs.readdirSync(SRC_DIR);
+  if (entries.length !== 1) throw new Error('Archivio sorgente inatteso: trovate ' + entries.length + ' cartelle invece di 1 (' + entries.join(', ') + ')');
+  const buildContext = path.join(SRC_DIR, entries[0]);
+  say('Sorgente scaricato ed estratto. Costruisco l\'immagine…');
   const stream = await docker.buildImage(
-    { context: SRC_DIR, src: ['core/Dockerfile', 'core', 'shared'] },
+    { context: buildContext, src: ['core/Dockerfile', 'core', 'shared'] },
     { t: IMAGE_NAME, dockerfile: 'core/Dockerfile' }
   );
   let buildError = null;
@@ -113,8 +165,8 @@ async function buildCoreImage(onLine) {
     });
   });
   if (buildError) throw Object.assign(new Error(buildError), { statusCode: 500 });
-  say('Immagine ' + IMAGE_NAME + ' pronta (commit ' + rev + ').');
-  return { commit: rev };
+  say('Immagine ' + IMAGE_NAME + ' pronta' + (commit ? ' (commit ' + commit + ')' : '') + '.');
+  return { commit: commit || null };
 }
 
 async function redeployTenant(slug, { env, port }) {
