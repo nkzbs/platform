@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from './Icon'
+import WhatsAppRecipientsPanel from './WhatsAppRecipientsPanel'
+import WhatsAppLogPanel from './WhatsAppLogPanel'
 
 // Report su WhatsApp e Telegram: ogni report è una DEFINIZIONE (un tipo + i suoi parametri). Se ne possono avere quanti se ne vogliono, anche dello stesso tipo.
 // Cosa conta come «da fare» o «nuovo» lo dichiarano i moduli (Builder → Avvisi); qui si sceglie quale tipo di messaggio, cosa guarda e quando mandarlo.
@@ -118,7 +120,7 @@ export default function ReportsSettingsTab({ token, user, features = {} }) {
             ))}
           </div>
         )}
-        <Campo label="Tag dei destinatari WhatsApp (Impostazioni → Connessioni → WhatsApp)">
+        <Campo label="Tag dei destinatari WhatsApp (vedi sezione WhatsApp qui sopra)">
           <input className={txt + ' max-w-[14rem]'} defaultValue={d.tag} key={d.id + 'tag' + d.tag} onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== d.tag && save(d.id, { tag: e.target.value.trim() })} />
         </Campo>
       </div>
@@ -142,6 +144,13 @@ export default function ReportsSettingsTab({ token, user, features = {} }) {
       </section>
 
       <p className="text-xs text-gray-500">Per collegare il bot Telegram: <b className="text-gray-300">Impostazioni → Connessioni → Telegram</b>. Ogni report ha anche il suo comando nel bot (<span className="font-mono">/nome</span>) e <span className="font-mono">/report</span> li elenca.</p>
+
+      {features.whatsapp && (
+        <section className="bg-surface-card border border-gray-800 rounded-xl p-5">
+          <WhatsAppRecipientsPanel token={token} nested />
+          <WhatsAppLogPanel token={token} refreshKey={JSON.stringify(result)} />
+        </section>
+      )}
 
       {data.settings.definizioni.map((d) => {
         const T = data.tipi[d.tipo]
@@ -210,7 +219,7 @@ export default function ReportsSettingsTab({ token, user, features = {} }) {
         {nuovoTipo && <p className="text-xs text-gray-500 mt-2">{data.tipi[nuovoTipo].descrizione}</p>}
       </section>
 
-      <div className="text-xs text-gray-500 px-1">Su WhatsApp li ricevono i destinatari con il tag del report (di solito <span className="font-mono text-gray-300">scadenza</span>) in «Destinatari WhatsApp». Con i report accesi, gli avvisi «scadenza» per singola riga restano muti.</div>
+      <div className="text-xs text-gray-500 px-1">Su WhatsApp li ricevono i destinatari con il tag del report (di solito <span className="font-mono text-gray-300">scadenza</span>) — vedi la sezione WhatsApp qui sopra. Con i report accesi, gli avvisi «scadenza» per singola riga restano muti.</div>
 
       {legacy && legacy.length > 0 && (
         <section className="bg-surface-card border border-amber-900/40 rounded-xl p-5">

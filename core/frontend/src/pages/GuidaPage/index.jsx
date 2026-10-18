@@ -5,7 +5,7 @@ import ModuleGuide from './ModuleGuide'
 import RichText from '../../components/RichText'
 import Icon from '../../components/Icon'
 
-function GuidaPage({ modules, token }) {
+function GuidaPage({ modules, token, onStartTour }) {
   const [tab, setTab] = useState('percorso')
   const [openSection, setOpenSection] = useState(GUIDA_SECTIONS[0].title)
   const [openTopic, setOpenTopic] = useState(null)
@@ -29,7 +29,14 @@ function GuidaPage({ modules, token }) {
 
   return (
     <div>
-      <h1 className="text-lg font-bold text-ink tracking-[-0.35px] mb-1">Guida</h1>
+      <div className="flex items-start justify-between gap-4 flex-wrap mb-1">
+        <h1 className="text-lg font-bold text-ink tracking-[-0.35px]">Guida</h1>
+        {onStartTour && (
+          <button onClick={onStartTour} className="text-xs px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 flex-shrink-0 flex items-center gap-1.5">
+            <Icon name="flag" size={13} />Fai il giro guidato
+          </button>
+        )}
+      </div>
       <p className="text-gray-500 text-sm mb-5">Come funziona Platform — moduli, campi, relazioni, permessi, automazioni e il resto.</p>
 
       <div className="flex items-center gap-1 mb-6 border-b border-gray-800">

@@ -17,7 +17,7 @@ import { startRegistration, browserSupportsWebAuthn } from '@simplewebauthn/brow
 import { API } from '../lib/api'
 const ROLE_LABEL = { admin: 'Amministratore', user: 'Utente', agent: 'Agente' }
 
-function AccountPage({ token, user, onStartTour }) {
+function AccountPage({ token, user }) {
   const api = useApi(token)
   const [pw, setPw] = useState({ current_password: '', new_password: '' })
   const [pwBusy, setPwBusy] = useState(false)
@@ -109,6 +109,7 @@ function AccountPage({ token, user, onStartTour }) {
   const inputCls = 'w-full bg-surface-page text-ink px-4 py-3 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition'
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-4xl items-start">
+      <div className="lg:col-span-2 text-[11px] font-semibold uppercase tracking-wide text-gray-600 -mb-1">Profilo</div>
       <div className="bg-surface-card rounded-md p-6 border border-gray-800">
         <div className="flex items-center gap-4 mb-5">
           <div className="w-12 h-12 rounded-full bg-accent/15 text-accent flex items-center justify-center text-lg font-semibold flex-shrink-0">
@@ -134,6 +135,7 @@ function AccountPage({ token, user, onStartTour }) {
         <button onClick={changePassword} disabled={pwBusy} className="mt-3 bg-accent hover:opacity-90 disabled:opacity-50 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition">{pwBusy ? 'Salvataggio...' : 'Cambia password'}</button>
       </div>
 
+      <div className="lg:col-span-2 text-[11px] font-semibold uppercase tracking-wide text-gray-600 mt-2 -mb-1">Sicurezza</div>
       <div className="bg-surface-card rounded-md p-6 border border-gray-800 lg:col-span-2">
         <div className="flex items-start gap-4 mb-5">
           <div className="w-10 h-10 rounded-lg bg-cp-purple/20 flex items-center justify-center flex-shrink-0">
@@ -244,13 +246,7 @@ function AccountPage({ token, user, onStartTour }) {
         </div>
       )}
 
-      {onStartTour && (
-        <div className="bg-surface-card border border-gray-800 rounded-xl p-5 lg:col-span-2 flex items-center justify-between gap-4 flex-wrap">
-          <div><div className="text-ink text-sm font-medium">Giro guidato</div><div className="text-xs text-gray-500 mt-0.5">Un percorso breve che ti mostra dov'è ogni cosa, evidenziandola sulla pagina.</div></div>
-          <button onClick={onStartTour} className="text-sm px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 flex-shrink-0">Fai il giro guidato</button>
-        </div>
-      )}
-
+      <div className="lg:col-span-2 text-[11px] font-semibold uppercase tracking-wide text-gray-600 mt-2 -mb-1">Notifiche</div>
       <TelegramCard token={token} user={user} mode="telefono" className="lg:col-span-2" />
     </div>
   )

@@ -57,6 +57,7 @@ export default function AiSettingsPage({ token, onChanged }) {
 
   return (
     <div className="max-w-2xl space-y-4">
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-600">Attivazione</div>
       <section className={'rounded-xl border p-5 ' + (st.enabled ? 'bg-accent/5 border-accent/30' : 'bg-surface-card border-gray-800')}>
         <div className="flex items-start gap-3">
           <div className={'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ' + (st.enabled ? 'bg-accent text-white' : 'bg-surface-page border border-gray-800 text-accent')}><Icon name="wand" size={18} /></div>
@@ -85,6 +86,7 @@ export default function AiSettingsPage({ token, onChanged }) {
         </section>
       )}
 
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-600 pt-1">Chiave e spesa</div>
       <section className="bg-surface-card border border-gray-800 rounded-xl p-5">
         <div className="flex items-start gap-3">
           <div className="w-9 h-9 rounded-lg bg-surface-page border border-gray-800 flex items-center justify-center text-accent flex-shrink-0"><Icon name="key" size={16} /></div>
@@ -117,6 +119,7 @@ export default function AiSettingsPage({ token, onChanged }) {
         ) : <div className="text-xs text-gray-500">Il consumo non è disponibile in questo momento.</div>}
       </section>
 
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-600 pt-1">Per modulo</div>
       <section className="bg-surface-card border border-gray-800 rounded-xl p-5">
         <h2 className="text-sm font-semibold text-ink mb-1">Potenziamenti per modulo</h2>
         <p className="text-xs text-gray-500 mb-3">Ogni modulo accende quelli che vuole. Servono i ruoli dichiarati nel Builder (Ruoli del modulo).</p>

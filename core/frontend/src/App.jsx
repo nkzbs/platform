@@ -256,7 +256,7 @@ export default function App() {
         {currentPage === 'movimenti' && user && user.role === 'admin' && features.movimenti && <MovimentiPage token={token} />}
         {currentPage === 'libreria' && user && user.role === 'admin' && <LibreriaPage token={token} onFeaturesChanged={loadTenantName} onRefresh={loadModules} onOpenInBuilder={openInBuilder} onCreateNewModule={openBuilderNewModule} />}
         {currentPage === 'builder' && user && user.role === 'admin' && <BuilderPage token={token} allModules={allModulesForBuilder} onModulesChanged={loadModules} preselectSlug={builderPreselect} onPreselectHandled={() => setBuilderPreselect(null)} openNewModule={builderOpenNew} onNewModuleHandled={() => setBuilderOpenNew(false)} />}
-        {currentPage === 'guida' && <GuidaPage modules={installedModules} token={token} />}
+        {currentPage === 'guida' && <GuidaPage modules={installedModules} token={token} onStartTour={() => setShowTour(true)} />}
         {/* Export e Backup uniti (2026-08-29): un solo tab-set dentro ExportDatiPage,
             Backup resta un tab admin-only al suo interno — stesso gate di prima, solo
             spostato dentro il componente invece che qui. */}
@@ -273,7 +273,7 @@ export default function App() {
             'sito_web' qui sotto instrada sullo stesso meccanismo di 'account'
             sopra, solo con un tab diverso. */}
         {(currentPage === 'impostazioni' || currentPage === 'account' || currentPage === 'sito_web' || currentPage === 'export_dati' || currentPage === 'connessioni') && user &&
-          <ImpostazioniPage token={token} user={user} features={features} modules={installedModules} onOpenInBuilder={openInBuilder} onFeaturesChanged={loadTenantName} onStartTour={() => setShowTour(true)} initialTab={currentPage === 'impostazioni' ? undefined : currentPage} />}
+          <ImpostazioniPage token={token} user={user} features={features} modules={installedModules} onOpenInBuilder={openInBuilder} onFeaturesChanged={loadTenantName} initialTab={currentPage === 'impostazioni' ? undefined : currentPage} />}
         {currentModule && !['dashboard', 'utenti', 'report'].includes(currentPage) && <ModulePage module={currentModule} token={token} user={user} onNavigate={setCurrentPage} />}
         </div>
       </main>

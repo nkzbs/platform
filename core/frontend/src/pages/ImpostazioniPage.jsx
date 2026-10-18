@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import GmailRulesPanel from '../components/GmailRulesPanel'
-import WhatsAppRecipientsPanel from '../components/WhatsAppRecipientsPanel'
-import WhatsAppLogPanel from '../components/WhatsAppLogPanel'
+import SiteLeadEmailPanel from '../components/SiteLeadEmailPanel'
 import ExportDatiPage from './ExportDatiPage'
 import BackupPage from './BackupPage'
 import AiSettingsPage from '../components/AiSettingsPage'
@@ -178,8 +177,9 @@ function ConnessioniTab({ token, user, features = {} }) {
                         )}
                       </div>
                     )}
-                    {row.id === 'whatsapp_callmebot' && features.whatsapp && <WhatsAppRecipientsPanel token={token} nested />}
-                    {row.id === 'whatsapp_callmebot' && features.whatsapp && <WhatsAppLogPanel token={token} refreshKey={waTest ? JSON.stringify(waTest.esito || waTest.busy || '') : ''} />}
+                    {row.id === 'whatsapp_callmebot' && features.whatsapp && (
+                      <div className="mt-4 pt-4 border-t border-gray-800 text-xs text-gray-500">Destinatari e log degli invii si trovano in <span className="text-gray-300">Report →</span></div>
+                    )}
                   </div>
                 )}
               </div>
@@ -187,6 +187,11 @@ function ConnessioniTab({ token, user, features = {} }) {
           </div>
         ))}
       </div>
+      {features.sito_web && (
+        <div className="mt-4">
+          <SiteLeadEmailPanel token={token} />
+        </div>
+      )}
     </div>
   )
 }
@@ -275,25 +280,34 @@ function ModuliTab({ token }) {
   )
 }
 
-// Barra di tab compatta (2026-09-28, richiesto dall'utente: "le impostazioni
-// vanno snellite e rese più belle graficamente" — su mobile la vecchia griglia
-// di card a due livelli (8 tile in alto + altre 3 solo per aprire "Azienda")
-// costringeva a uno scroll lungo prima di raggiungere qualunque contenuto
-// reale). Una riga sola, sottolineatura sul tab attivo, scroll orizzontale se
-// non entra tutta — stesso pattern già familiare (tab bar), non un widget nuovo
-// da imparare.
-function TabBar({ items, active, onChange }) {
+// Barra laterale raggruppata (2026-10-18, richiesto dall'utente: "impronta
+// SaaS enterprise" — sostituisce la barra di tab orizzontale del 28/09, che
+// restava una striscia piatta di 12 voci senza alcuna gerarchia). Stesso
+// principio già in uso altrove nell'app per "barra laterale + contenuto"
+// (GuidaPage/index.jsx "Riferimento": colonna impilata su mobile, `md:w-80`
+// fissa da `md:` in su) — non il drawer con overlay della Sidebar principale,
+// quello resta riservato alla navigazione primaria.
+function SettingsNav({ groups, active, onChange }) {
   return (
-    <div className="flex items-center gap-0.5 border-b border-gray-800 mb-6 flex-wrap">
-      {items.map((it) => (
-        <button key={it.key} onClick={() => onChange(it.key)}
-          className={'flex items-center gap-1.5 px-3 py-2.5 text-sm whitespace-nowrap border-b-2 transition flex-shrink-0 -mb-px ' +
-            (active === it.key ? 'border-accent text-ink font-medium' : 'border-transparent text-gray-500 hover:text-gray-300')}>
-          <Icon name={it.icon} size={14} />
-          {it.label}
-        </button>
-      ))}
-    </div>
+    <nav className="w-full md:w-56 flex-shrink-0 md:sticky md:top-20 md:self-start">
+      <div className="space-y-5">
+        {groups.map((g) => (
+          <div key={g.label}>
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-600 px-2.5 mb-1.5">{g.label}</div>
+            <div className="space-y-0.5">
+              {g.items.map((it) => (
+                <button key={it.key} onClick={() => onChange(it.key)}
+                  className={'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-left transition ' +
+                    (active === it.key ? 'bg-accent/20 text-accent font-medium' : 'text-gray-400 hover:text-ink hover:bg-surface-card')}>
+                  <Icon name={it.icon} size={15} />
+                  {it.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </nav>
   )
 }
 
@@ -302,22 +316,36 @@ function TabBar({ items, active, onChange }) {
 // per intero qui, resta invece su Coffee (ramo coffee-standalone), che ne ha
 // davvero bisogno per le sue ricevute/fatture. Stesso principio "rami che
 // divergono deliberatamente" già in uso per Store/Builder/Supporto.
-const SETTINGS_TABS = [
-  { key: 'utenti', icon: 'users', label: 'Utenti & Ruoli' },
-  { key: 'moduli', icon: 'box', label: 'Moduli' },
-  { key: 'liste', icon: 'list', label: 'Liste' },
-  { key: 'sito_web', icon: 'globe', label: 'Sito Web' },
-  { key: 'connessioni', icon: 'link', label: 'Connessioni' },
-  { key: 'notifiche', icon: 'bell', label: 'Report' },
-  { key: 'assistente', icon: 'wand', label: 'AI' },
-  { key: 'suggerimenti', icon: 'sparkles', label: 'Suggerimenti' },
-  { key: 'funzioni', icon: 'grid', label: 'Funzioni' },
-  { key: 'export_dati', icon: 'download', label: 'Dati' },
-  { key: 'sicurezza', icon: 'shield', label: 'Sicurezza' },
-  { key: 'account', icon: 'user', label: 'Il mio account' },
+// Raggruppate (2026-10-18) in 6 categorie invece di una lista piatta — stesse
+// chiavi/icone/etichette di prima, cambia solo come sono organizzate.
+const SETTINGS_GROUPS = [
+  { label: 'Account', items: [
+    { key: 'account', icon: 'user', label: 'Il mio account' },
+  ] },
+  { label: 'Workspace', items: [
+    { key: 'utenti', icon: 'users', label: 'Utenti & Ruoli' },
+    { key: 'moduli', icon: 'box', label: 'Moduli' },
+    { key: 'liste', icon: 'list', label: 'Liste' },
+    { key: 'funzioni', icon: 'grid', label: 'Funzioni' },
+  ] },
+  { label: 'Integrazioni', items: [
+    { key: 'connessioni', icon: 'link', label: 'Connessioni' },
+    { key: 'notifiche', icon: 'bell', label: 'Report' },
+  ] },
+  { label: 'Sito Web', items: [
+    { key: 'sito_web', icon: 'globe', label: 'Sito Web' },
+  ] },
+  { label: 'AI', items: [
+    { key: 'assistente', icon: 'wand', label: 'AI' },
+    { key: 'suggerimenti', icon: 'sparkles', label: 'Suggerimenti' },
+  ] },
+  { label: 'Dati & Sicurezza', items: [
+    { key: 'export_dati', icon: 'download', label: 'Dati' },
+    { key: 'sicurezza', icon: 'shield', label: 'Sicurezza' },
+  ] },
 ]
 
-function ImpostazioniPage({ token, user, initialTab, features = {}, modules = [], onFeaturesChanged, onOpenInBuilder, onStartTour }) {
+function ImpostazioniPage({ token, user, initialTab, features = {}, modules = [], onFeaturesChanged, onOpenInBuilder }) {
   const isAdmin = user && user.role === 'admin'
   const [tab, setTab] = useState(initialTab || (isAdmin ? 'utenti' : 'account'))
   // Navigazione ripetuta verso il tab "Il mio account" (click sul proprio nome in
@@ -326,51 +354,70 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
   useEffect(() => { if (initialTab) setTab(initialTab) }, [initialTab])
 
   // Le schede si adattano al progetto: una capacità spenta (Sito Web, WhatsApp...) non ha la sua scheda; chi non è admin vede il proprio account
-  // e, se non è un agente, l'export dei dati.
+  // e, se non è un agente, l'export dei dati. Filtro per voce dentro ogni gruppo, poi tolgo i gruppi rimasti vuoti.
   const canExport = user && user.role !== 'agente'
-  const visibleTabs = isAdmin
-    ? SETTINGS_TABS.filter((t) => (t.key === 'sito_web' ? features.sito_web : t.key === 'notifiche' ? features.riepilogo_mattino : t.key === 'suggerimenti' ? features.suggerimenti : true))
-    : SETTINGS_TABS.filter((t) => t.key === 'account' || (t.key === 'export_dati' && canExport))
+  const itemAllowed = (key) => {
+    if (isAdmin) return key === 'sito_web' ? features.sito_web : key === 'notifiche' ? features.riepilogo_mattino : key === 'suggerimenti' ? features.suggerimenti : true
+    return key === 'account' || (key === 'export_dati' && canExport)
+  }
+  const visibleGroups = SETTINGS_GROUPS
+    .map((g) => ({ ...g, items: g.items.filter((it) => itemAllowed(it.key)) }))
+    .filter((g) => g.items.length > 0)
+  const visibleCount = visibleGroups.reduce((n, g) => n + g.items.length, 0)
 
   return (
     <div>
-      {/* Un non-admin ha un solo tab possibile (Il mio account) — niente titolo/tab-bar
+      {/* Un non-admin ha una sola voce possibile (Il mio account) — niente titolo/nav
          "Impostazioni" ridondante sopra, va dritto al contenuto (che ha già il suo h1). */}
-      {(isAdmin || visibleTabs.length > 1) && (
-        <>
-          <div className="mb-4">
-            <h1 className="text-lg font-bold text-ink tracking-[-0.35px]">Impostazioni</h1>
-          </div>
-          <TabBar items={visibleTabs} active={tab} onChange={setTab} />
-        </>
-      )}
-
-      {tab === 'utenti' && <UsersPage token={token} />}
-      {tab === 'account' && <AccountPage token={token} user={user} onStartTour={onStartTour} />}
-
-      {tab === 'moduli' && <ModuliTab token={token} />}
-      {tab === 'liste' && <ListePage token={token} />}
-
-      {tab === 'sito_web' && <SitoWebPage token={token} />}
-
-      {tab === 'connessioni' && <ConnessioniTab token={token} user={user} features={features} />}
-
-      {tab === 'funzioni' && <FeaturesTab token={token} onChanged={onFeaturesChanged} />}
-      {tab === 'suggerimenti' && features.suggerimenti && <SuggestionsTab token={token} onOpenInBuilder={onOpenInBuilder} />}
-      {tab === 'notifiche' && <ReportsSettingsTab token={token} user={user} features={features} />}
-
-
-      {tab === 'assistente' && <AiSettingsPage token={token} onChanged={onFeaturesChanged} />}
-
-      {tab === 'sicurezza' && <SicurezzaTab token={token} />}
-
-      {tab === 'export_dati' && canExport && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-w-5xl">
-          <ExportDatiPage token={token} modules={modules} user={user} />
-          {isAdmin && <BackupPage token={token} />}
-          {isAdmin && <ExportServerCard token={token} />}
+      {(isAdmin || visibleCount > 1) && (
+        <div className="mb-5">
+          <h1 className="text-lg font-bold text-ink tracking-[-0.35px]">Impostazioni</h1>
         </div>
       )}
+
+      <div className={(isAdmin || visibleCount > 1) ? 'flex flex-col md:flex-row gap-6 md:gap-8' : ''}>
+        {(isAdmin || visibleCount > 1) && <SettingsNav groups={visibleGroups} active={tab} onChange={setTab} />}
+
+        <div className="flex-1 min-w-0">
+          {tab === 'utenti' && <UsersPage token={token} />}
+          {tab === 'account' && <AccountPage token={token} user={user} />}
+
+          {tab === 'moduli' && <ModuliTab token={token} />}
+          {tab === 'liste' && <ListePage token={token} />}
+
+          {tab === 'sito_web' && <SitoWebPage token={token} />}
+
+          {tab === 'connessioni' && <ConnessioniTab token={token} user={user} features={features} />}
+
+          {tab === 'funzioni' && <FeaturesTab token={token} onChanged={onFeaturesChanged} />}
+          {tab === 'suggerimenti' && features.suggerimenti && <SuggestionsTab token={token} onOpenInBuilder={onOpenInBuilder} />}
+          {tab === 'notifiche' && <ReportsSettingsTab token={token} user={user} features={features} />}
+
+          {tab === 'assistente' && <AiSettingsPage token={token} onChanged={onFeaturesChanged} />}
+
+          {tab === 'sicurezza' && <SicurezzaTab token={token} />}
+
+          {tab === 'export_dati' && canExport && (
+            <div className="max-w-5xl space-y-5">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-600 mb-2">Esportazione</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  <ExportDatiPage token={token} modules={modules} user={user} />
+                </div>
+              </div>
+              {isAdmin && (
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-600 mb-2">Backup e disaster recovery</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <BackupPage token={token} />
+                    <ExportServerCard token={token} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

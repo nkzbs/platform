@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.2 — 18 ottobre 2026
+
+Ridisegno di Impostazioni (solo core/frontend) — "impronta SaaS enterprise" richiesta esplicitamente: la vecchia barra di 12 tab orizzontali non aveva più ordine, sostituita da una sidebar laterale con 6 categorie (Account, Workspace, Integrazioni, Sito Web, AI, Dati & Sicurezza).
+
+- **Riorganizzazione dei contenuti**, non solo la navigazione: destinatari e log WhatsApp spostati da Connessioni a Report (restano un'unica funzione, ma vicino a cosa configurano davvero); email di notifica delle richieste del Sito Web spostata da Sito Web a Connessioni (nuovo `SiteLeadEmailPanel.jsx`); "Giro guidato" tolto da Il mio account e spostato in Guida (bottone in testa alla pagina); intestazioni di raggruppamento aggiunte dentro Il mio account (Profilo/Sicurezza/Notifiche), AI (Attivazione/Chiave e spesa/Per modulo) e Dati (Esportazione/Backup e disaster recovery).
+- **Bug trovato e corretto durante il collaudo dal vivo** (tenant locale, non produzione): il nuovo pannello email del Sito Web in Connessioni compariva anche sui tenant con la funzione Sito Web spenta, e il salvataggio falliva sempre (403) perché la rotta richiede quella funzione accesa. Ora il pannello è nascosto quando la funzione è spenta, come lo era la scheda da cui proveniva.
+- Provato dal vivo (non solo compilazione): tutte le 6 schede, il salvataggio dei destinatari WhatsApp spostati in Report, e il bottone "Fai il giro guidato" in Guida.
+
 ## 0.3.1 — 18 ottobre 2026
 
 Primo giro dal vivo della 0.3.0 su Finance (dati reali): trovati e corretti tre bug reali che la rendevano di fatto inutilizzabile, più un cambio nel modo in cui "Aggiorna" porta online il codice.

@@ -1941,7 +1941,6 @@ function SitoWebPage({ token }) {
     })
   }
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (settings) setNotifyEmail(settings.lead_notification_email || '') }, [settings])
 
   const markLeadStatus = async (id, status) => {
     const res = await api.patch('/site-pages/leads/' + id, { status })
@@ -1951,18 +1950,6 @@ function SitoWebPage({ token }) {
   const toggleSite = async (enabled) => {
     const res = await api.patch('/site-pages/settings', { site_enabled: enabled })
     if (res.ok) setSettings((s) => ({ ...s, site_enabled: enabled }))
-  }
-
-  // Email di notifica per i lead (2026-09-05) — l'indirizzo a cui arrivano
-  // le email vere quando qualcuno compila un blocco 'form'. L'invio vero
-  // richiede ANCHE la connessione 'email_resend' (Impostazioni →
-  // Integrazioni, stesse credenziali reali già usate per WhatsApp/Slack):
-  // qui c'è solo il destinatario, non le credenziali del mittente.
-  const [notifyEmail, setNotifyEmail] = useState('')
-  const [notifyEmailSaved, setNotifyEmailSaved] = useState(false)
-  const saveNotifyEmail = async () => {
-    const res = await api.patch('/site-pages/settings', { lead_notification_email: notifyEmail.trim() })
-    if (res.ok) { setSettings((s) => ({ ...s, lead_notification_email: res.data.lead_notification_email })); setNotifyEmailSaved(true); setTimeout(() => setNotifyEmailSaved(false), 1800) }
   }
 
   const createPage = async () => {
@@ -2056,25 +2043,11 @@ function SitoWebPage({ token }) {
       </button>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-        <Tile icon="mail" label="Notifiche" color="#06B6D4" active={openTile === 'notifiche'} onClick={() => toggleTile('notifiche')}
-          value={notifyEmail || 'Da impostare'} sub="Email per le richieste dai moduli di contatto" />
         <Tile icon="inbox" label="Richieste ricevute" color="#F59E0B" active={openTile === 'richieste'} onClick={() => toggleTile('richieste')}
           value={leads ? `${leads.length} totali` : '—'}
           sub={leads && leads.some((l) => l.status === 'nuovo') ? `${leads.filter((l) => l.status === 'nuovo').length} nuove` : 'Nessuna nuova'} />
       </div>
-
-      {openTile === 'notifiche' && (
-        <div className="bg-surface-card rounded-md p-4 border border-gray-800 mb-4">
-          <p className="text-[11px] text-gray-500 mb-2">Indirizzo a cui arrivano le email quando qualcuno compila un modulo di contatto. Serve anche collegare "Email (Resend)" in Impostazioni → Integrazioni, altrimenti il lead resta salvato ma l'email non parte.</p>
-          <div className="flex items-center gap-2 flex-wrap">
-            <input value={notifyEmail} onChange={(e) => setNotifyEmail(e.target.value)} placeholder="info@tuodominio.it"
-              className="bg-surface-input border border-gray-800 rounded-md px-2.5 py-1.5 text-sm text-ink flex-1 min-w-[220px]" />
-            <button onClick={saveNotifyEmail} className="text-sm bg-accent hover:bg-accent/90 text-white px-3 py-1.5 rounded-lg transition">
-              {notifyEmailSaved ? 'Salvato ✓' : 'Salva'}
-            </button>
-          </div>
-        </div>
-      )}
+      <p className="text-xs text-gray-500 -mt-1 mb-3">L'email a cui arrivano le notifiche dei moduli di contatto si imposta in <span className="text-gray-300">Impostazioni → Connessioni</span>.</p>
 
       {openTile === 'richieste' && (
         <div className="bg-surface-card border border-gray-800 rounded-md mb-4 overflow-hidden">
