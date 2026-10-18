@@ -368,7 +368,13 @@ router.get('/:slug/period-view/:key', requireAuth, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const rule = ruleFor(schema, req.user.role);
   if (rule && !rule.view) return res.status(403).json({ error: 'Non hai i permessi per vedere questo modulo' });
-  const config = (schema.period_views || []).find((p) => p.key === req.params.key);
+  // Blocco 'view' unificato (Builder semplificato, fase 1) con mode:'period' e
+  // breakdown falso — stessa shape di un period_view legacy, GenericView.jsx lo
+  // manda qui. Bug reale trovato dal vivo (18/10): questa route cercava SOLO in
+  // period_views, mai in views — un modulo che usa solo il nuovo block_type
+  // (nessun period_view legacy) dava sempre 404 "Vista non trovata".
+  const config = (schema.period_views || []).find((p) => p.key === req.params.key)
+    || (schema.views || []).find((v) => v.mode === 'period' && !v.breakdown && v.key === req.params.key);
   if (!config) return res.status(404).json({ error: 'Vista non trovata' });
 
   const modMap = loadModuleMap(db);
@@ -402,7 +408,9 @@ router.get('/:slug/parent-children/:key', requireAuth, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const rule = ruleFor(schema, req.user.role);
   if (rule && !rule.view) return res.status(403).json({ error: 'Non hai i permessi per vedere questo modulo' });
-  const config = (schema.parent_children_views || []).find((p) => p.key === req.params.key);
+  // Stesso bug/fix del period-view sopra, qui per mode:'children'.
+  const config = (schema.parent_children_views || []).find((p) => p.key === req.params.key)
+    || (schema.views || []).find((v) => v.mode === 'children' && v.key === req.params.key);
   if (!config) return res.status(404).json({ error: 'Vista non trovata' });
 
   const modMap = loadModuleMap(db);
@@ -451,7 +459,11 @@ router.get('/:slug/yearly-breakdown/:key', requireAuth, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const rule = ruleFor(schema, req.user.role);
   if (rule && !rule.view) return res.status(403).json({ error: 'Non hai i permessi per vedere questo modulo' });
-  const config = (schema.yearly_breakdowns || []).find((y) => y.key === req.params.key);
+  // Stesso bug/fix del period-view sopra — qui per mode:'period' con breakdown
+  // vero (yearly_breakdown è lo stesso mode:'period' del period_view, distinto
+  // solo dal flag breakdown, vedi GenericView.jsx).
+  const config = (schema.yearly_breakdowns || []).find((y) => y.key === req.params.key)
+    || (schema.views || []).find((v) => v.mode === 'period' && v.breakdown && v.key === req.params.key);
   if (!config) return res.status(404).json({ error: 'Vista non trovata' });
 
   const modMap = loadModuleMap(db);
@@ -469,7 +481,9 @@ router.get('/:slug/category-pivot/:key', requireAuth, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const rule = ruleFor(schema, req.user.role);
   if (rule && !rule.view) return res.status(403).json({ error: 'Non hai i permessi per vedere questo modulo' });
-  const config = (schema.category_pivots || []).find((c) => c.key === req.params.key);
+  // Stesso bug/fix del period-view sopra, qui per mode:'pivot'.
+  const config = (schema.category_pivots || []).find((c) => c.key === req.params.key)
+    || (schema.views || []).find((v) => v.mode === 'pivot' && v.key === req.params.key);
   if (!config) return res.status(404).json({ error: 'Vista non trovata' });
 
   const modMap = loadModuleMap(db);
@@ -490,7 +504,9 @@ router.get('/:slug/weekly-breakdown/:key', requireAuth, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const rule = ruleFor(schema, req.user.role);
   if (rule && !rule.view) return res.status(403).json({ error: 'Non hai i permessi per vedere questo modulo' });
-  const config = (schema.weekly_breakdowns || []).find((w) => w.key === req.params.key);
+  // Stesso bug/fix del period-view sopra, qui per mode:'simple'.
+  const config = (schema.weekly_breakdowns || []).find((w) => w.key === req.params.key)
+    || (schema.views || []).find((v) => v.mode === 'simple' && v.key === req.params.key);
   if (!config) return res.status(404).json({ error: 'Vista non trovata' });
 
   const modMap = loadModuleMap(db);
