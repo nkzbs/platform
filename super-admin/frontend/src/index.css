@@ -16,6 +16,9 @@
    qui mappati sugli equivalenti --cp-primary/-hover/-nav-active di questa
    app. --cp-success/warning/danger INVARIATI apposta, stesso motivo. */
 :root {
+  /* Vedi core/frontend/src/index.css per il perché — stesso fix, stesso
+     problema segnalato sulla tendina "Ruolo" di InviteModal. */
+  color-scheme: dark;
   --surface-page: 11 13 18;     /* #0b0d12 */
   --surface-card: 20 22 29;     /* #14161d */
   --surface-input: 15 17 22;    /* #0f1116 */
@@ -50,6 +53,7 @@
 }
 
 :root[data-theme="light"] {
+  color-scheme: light;
   --surface-page: 246 247 250;   /* #f6f7fa */
   --surface-card: 255 255 255;
   --surface-input: 240 242 246;  /* #f0f2f6 */

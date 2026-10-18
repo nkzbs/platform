@@ -22,6 +22,13 @@
    mappatura applicata identica a super-admin/frontend/src/index.css, per non
    rompere la coerenza visiva tra le due app voluta dal reskin di agosto. */
 :root {
+  /* Dice al browser di usare i CONTROLLI NATIVI (tendina di <select>,
+     selettore data/ora, scrollbar) in versione scura — altrimenti restano
+     chiari di default anche con tutto il resto in tema scuro: non sono DOM
+     della pagina (li disegna il sistema operativo), quindi le variabili CSS
+     sopra non li toccano. Segnalato dall'utente il 2026-10-18 su "Invita
+     una persona" → tendina Ruolo. */
+  color-scheme: dark;
   --surface-page: 11 13 18;     /* #0b0d12 */
   --surface-card: 20 22 29;     /* #14161d */
   --surface-input: 15 17 22;    /* #0f1116 */
@@ -56,6 +63,7 @@
    mockup ne vuole uno diverso (più acceso) per il chiaro, quindi va
    ridichiarato qui per la prima volta. */
 :root[data-theme="light"] {
+  color-scheme: light;
   --surface-page: 246 247 250;   /* #f6f7fa */
   --surface-card: 255 255 255;
   --surface-input: 240 242 246;  /* #f0f2f6 */
