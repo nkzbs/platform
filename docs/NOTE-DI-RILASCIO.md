@@ -2,6 +2,16 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.1 — 18 ottobre 2026
+
+Primo giro dal vivo della 0.3.0 su Finance (dati reali): trovati e corretti tre bug reali che la rendevano di fatto inutilizzabile, più un cambio nel modo in cui "Aggiorna" porta online il codice.
+
+- **Il blocco "Vista" nuovo non funzionava mai su un modulo che lo usava da solo** (`core/backend/src/routes/records.js`): le 5 route che calcolano i dati (per periodo, riepilogo annuale, pivot, barre settimanali, genitori-figli) cercavano il blocco solo nei vecchi array per-tipo, mai nel nuovo array unificato `views` — errore "Vista non trovata" anche con lo schema pubblicato giusto. Aggiunta copertura di test che prima mancava del tutto su queste 5 route.
+- **"Pubblica" nel Builder poteva pubblicare il nulla**: il tasto mandava sempre un corpo vuoto al server, promuovendo solo una bozza già salvata — su un modulo mai salvato come bozza (tipicamente appena creato) ripubblicava lo schema vecchio invariato, perdendo in silenzio ogni modifica fatta a schermo. Ora salva sempre prima lo schema corrente, poi lo pubblica.
+- **"Aggiorna" (Super Admin → Tenant) ora builda sempre dal sorgente più recente su GitHub**, dentro il `docker-provisioner` (unico servizio con accesso Docker) — prima ricreava il container dall'immagine già presente sul NAS, che poteva essere vecchia se nessuno aveva lanciato `redeploy-nas.sh` a mano dal laptop prima. Vedi `OPERAZIONI.md` per il dettaglio.
+  - **Incidente reale durante questo cambio**: il nome del volume dati impostato per questo nuovo meccanismo era sbagliato (`platform_platform-data`, un volume quasi vuoto, invece di `platform-data`, quello vero — un errore che `OPERAZIONI.md` avvisava già di evitare). Il primo "Aggiorna" di Finance con questo codice ha agganciato il container al volume sbagliato, facendo credere per una decina di minuti che l'account e i dati fossero spariti. Non è stato perso nulla: il volume vero non era mai stato toccato, e la causa è stata trovata e corretta nello stesso pomeriggio. Nessun dato reale è stato scritto sul volume sbagliato nel frattempo (l'accesso era bloccato).
+- Confermato dal vivo, non solo nel sandbox: schema, moduli legacy (period_view, yearly_breakdown, category_pivot) e il nuovo blocco Vista coesistono senza conflitti sullo stesso modulo reale (Spese Personali, Entrate).
+
 ## 0.3.0 — 18 ottobre 2026
 
 Semplificazione del Builder ispirata a Collections (l'app da cui Platform discende) — 5 fasi, tutte additive: nessun modulo esistente cambia comportamento finché non si usa esplicitamente qualcosa di nuovo dal Builder.
@@ -17,7 +27,7 @@ Semplificazione del Builder ispirata a Collections (l'app da cui Platform discen
 
 - Sources e Liste condivise funzionano solo nel codice dei tenant: in Super Builder (il sandbox di Super Admin) si possono disegnare ma non provare davvero (nessuna route lì).
 - I widget della Dashboard non supportano ancora il nuovo blocco "Vista" unificato, solo i vecchi tipi.
-- Nessuna delle 5 fasi è stata ancora usata su dati reali di Finance (solo verificata nel sandbox e con test automatici) — da provare dal vivo.
+- ~~Nessuna delle 5 fasi è stata ancora usata su dati reali di Finance~~ — provato dal vivo il 18/10, vedi 0.3.1: tre bug reali trovati e corretti (il blocco Vista in pratica non funzionava).
 
 ## 0.2.1 — 17 ottobre 2026
 

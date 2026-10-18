@@ -532,3 +532,26 @@ del controllo manuale, come alle altre.
 - Le pagine dei tenant non hanno protezione anti-iframe, perché Super Admin le apre in un iframe (Builder integrato).
 - Cloudflare è ancora in modalità TLS "Flexible": il traffico tra Cloudflare e il NAS viaggia in chiaro. Visibile ora dal
   pannello "Sicurezza della piattaforma" (15 ottobre) invece che solo nei commenti del codice; non ancora corretto.
+
+## 2026-10-18 — "Aggiorna" builda da sé, non dipende più da un passaggio manuale dal laptop
+
+**Il problema**: "Aggiorna" ricreava il container del tenant dall'immagine `platform-core:latest` già presente sul NAS, mai
+ricostruita da quella route — il build vero avveniva solo nello script `redeploy-nas.sh`, lanciato a mano dal Mac prima.
+Dimenticarlo (successo lo stesso pomeriggio, con la 0.3.0) faceva sembrare l'aggiornamento riuscito mentre serviva ancora
+codice vecchio — scoperto dal vivo controllando la versione mostrata da Finance dopo un "Aggiorna" apparentemente senza errori.
+
+**La scelta**: spostare il build dentro il `docker-provisioner` (unico servizio con `docker.sock`) — scarica il tarball del
+branch `main` da GitHub via HTTPS e builda lì, prima di ogni redeploy (singolo o `redeploy-all`, che builda una volta sola
+prima del giro). `git clone` è stato il primo tentativo e non funziona: il seccomp del Docker Engine del NAS (Synology,
+versione datata) blocca la syscall `getrandom()` che `git` usa per i file temporanei di un clone — un tarball HTTPS normale
+(Node/OpenSSL, che ripiegano su `/dev/urandom`) non ne risente. `redeploy-all` fallisce chiuso (nessun tenant toccato) se la
+build fallisce, invece di proseguire silenziosamente con l'immagine vecchia.
+
+**Incidente reale nello stesso cambio**: la variabile `DATA_VOLUME` data al `docker-provisioner` per questo nuovo
+meccanismo aveva il nome sbagliato (`platform_platform-data`, un volume quasi vuoto usato dai sandbox — esattamente
+l'errore che questo stesso file e `OPERAZIONI.md` avvisavano già di evitare, scritto lì da una sessione precedente e non
+controllato prima di scrivere di nuovo quel nome). Il primo "Aggiorna" di Finance col nuovo codice ha agganciato il
+container al volume vuoto, sembrando un reset completo dei dati (utenti, passkey, tutto). Non è stato perso nulla — il
+volume vero non è mai stato toccato, l'app semplicemente non lo stava più leggendo — ma ci sono volute diverse decine di
+minuti e due ripristini da backup sbagliati (letti dal volume giusto, quindi apparentemente plausibili, ma non quello
+che il container stava davvero servendo) prima di capire che il problema era il nome del volume, non i dati stessi.

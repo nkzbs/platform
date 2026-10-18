@@ -17,6 +17,10 @@ Come si mette online, si aggiorna e si mantiene Platform sul NAS. Per come è fa
 **Attenzione ai nomi.** Sul NAS il volume dati si chiama `platform-data` (senza prefisso) e la rete
 `platform_platform`. Esiste anche un volume `platform_platform-data` che contiene solo un file vuoto: **non è
 quello vero**. Con `docker compose` in locale i nomi hanno il prefisso `platform_`; sul NAS non si usa compose.
+**Bug reale (18/10)**: proprio questo scambio, impostato per sbaglio in una variabile d'ambiente del
+`docker-provisioner`, ha agganciato Finance al volume vuoto al primo "Aggiorna" col nuovo meccanismo di
+self-build — vedi `NOTE-DI-RILASCIO.md` 0.3.1. Ricontrollare questo nome ogni volta che si tocca
+`DATA_VOLUME` nella configurazione del provisioner.
 
 ### I container in produzione
 
@@ -33,15 +37,22 @@ Super Admin e i tenant sono raggiungibili da `admin.platform-core.it` e `<slug>.
 
 ## Mettere online una modifica
 
-Dal Mac, nella cartella del repository:
+**Per il core dei tenant (18/10): non serve più lo script.** Da quando "Aggiorna" builda da sé (vedi sotto),
+basta fare il `git push` e premere **Aggiorna** sulla riga del tenant in Super Admin — il `docker-provisioner`
+scarica da solo l'ultimo sorgente da GitHub e ricostruisce l'immagine prima di ricreare il container.
+
+Per Super Admin stesso (backend, frontend) e per il `docker-provisioner` — che non si aggiornano da soli,
+serve ancora lo script dal Mac, nella cartella del repository:
 
 ```bash
-bash scripts/redeploy-nas.sh                # tutto: backend, frontend, core
-bash scripts/redeploy-nas.sh frontend       # una sola parte (backend | frontend | core)
+bash scripts/redeploy-nas.sh                          # backend + frontend + provisioner + core
+bash scripts/redeploy-nas.sh frontend                 # una sola parte: backend | frontend | provisioner | core
 ```
 
 Lo script manda il sorgente al NAS, ricostruisce le immagini lì (il NAS è amd64, il Mac no), sostituisce i
-container di Super Admin e, per il core, aggiorna `platform-core:latest` e ricrea i tenant.
+container di Super Admin/provisioner (vecchio tenuto finché il nuovo non risulta in esecuzione) e, per il
+`core`, si limita a richiamare `/api/tenants/redeploy-all` — la build vera la fa il provisioner, non più lo
+script (un build locale qui sarebbe solo tempo perso in doppio).
 
 - **Rollback automatico**: di un container di Super Admin viene tenuto il vecchio fino a quando il nuovo non
   risulta in esecuzione; se non parte, torna il vecchio.
@@ -197,8 +208,16 @@ docker logs --tail 50 super-admin-backend
 - Un tenant si può tenere sul solo volume dati anche con il container fermo: i dati non dipendono dal container.
 
 ## Aggiornare un tenant (Super Admin → Tenant → Aggiorna)
-- Il pulsante **Aggiorna** sulla riga del tenant ricrea il container con l'ultima immagine, sullo stesso volume dati (i dati non si toccano). Si apre un popup con i passi veri e, a fine corsa, **AGGIORNATO** solo dopo che il tenant risponde. Se c'è una sessione attiva (ultimi 3 minuti) avvisa e offre "Aggiorna comunque".
-- Da script: `bash scripts/redeploy-nas.sh core` costruisce l'immagine, poi chiede il login a Super Admin per ricreare i tenant. Con il 2FA attivo il login dello script fallisce: l'immagine resta pronta e si preme **Aggiorna** a mano. Lo script non ritenta più il login se viene rifiutato (ogni tentativo conta nel limite di 10 ogni 5 minuti).
+- **Dal 18/10**: il pulsante **Aggiorna** builda da sé `platform-core:latest` dall'ultimo sorgente del branch
+  `main` su GitHub (dentro il `docker-provisioner`, via tarball HTTPS — non `git clone`, bloccato dal seccomp
+  del Docker Engine del NAS), poi ricrea il container sullo stesso volume dati (i dati non si toccano). Il
+  popup di avanzamento mostra i passi veri della build (può durare 1-5 minuti, non più pochi secondi), e
+  **AGGIORNATO** solo dopo che il tenant risponde davvero. Se c'è una sessione attiva (ultimi 3 minuti) avvisa
+  e offre "Aggiorna comunque". `POST /redeploy-all` builda una volta sola prima del giro su tutti i tenant
+  (non una volta per tenant), e fallisce chiuso — nessun tenant toccato — se la build fallisce.
+- Prima di questo cambio, Aggiorna ricreava il container dall'immagine già presente sul NAS senza mai
+  ricostruirla: se nessuno aveva lanciato `redeploy-nas.sh` a mano, sembrava riuscito ma serviva codice
+  vecchio. Lo script dal Mac resta necessario solo per Super Admin stesso e il `docker-provisioner` (vedi sopra).
 
 ## Se Finance o Super Admin danno 521 da Cloudflare
 Cloudflare punta alla porta 4000, cioè al container `platform-nginx`. Se è fermo (`docker ps -a`), si riavvia con `docker start platform-nginx`. Capitato dopo un riavvio notturno del NAS (2026-10-06 → 10-10): il container aveva il riavvio automatico ma non è ripartito, causa non accertata.
