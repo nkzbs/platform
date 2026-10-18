@@ -24,6 +24,44 @@ function passwordStrength(pw) {
   return { score, label: levels[score], color: colors[score] }
 }
 
+// Sidebar raggruppata (2026-10-18, stesso trattamento della Impostazioni del
+// tenant — segnalato dall'utente: "impostazioni in admin fanno pena" dopo
+// aver visto quella nuova). Qui le sezioni sono solo 4 (niente tab-bar da
+// sostituire come nel tenant), ma la stessa struttura a gruppi dà coerenza
+// visiva con il resto della piattaforma, non solo ordine in più.
+const SETTINGS_GROUPS = [
+  { label: 'Account', items: [{ key: 'accesso', icon: 'user', label: 'Il tuo accesso' }] },
+  { label: 'Piattaforma', items: [
+    { key: 'utenti', icon: 'users', label: 'Utenti Super Admin' },
+    { key: 'sicurezza', icon: 'shield', label: 'Sicurezza' },
+  ] },
+  { label: 'AI', items: [{ key: 'ai', icon: 'key', label: 'Chiavi AI' }] },
+]
+
+function SettingsNav({ groups, active, onChange }) {
+  return (
+    <nav className="w-full md:w-56 flex-shrink-0 md:sticky md:top-20 md:self-start">
+      <div className="space-y-5">
+        {groups.map((g) => (
+          <div key={g.label}>
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-600 px-2.5 mb-1.5">{g.label}</div>
+            <div className="space-y-0.5">
+              {g.items.map((it) => (
+                <button key={it.key} onClick={() => onChange(it.key)}
+                  className={'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-left transition ' +
+                    (active === it.key ? 'bg-cp-primary/20 text-cp-primary font-medium' : 'text-gray-400 hover:text-ink hover:bg-surface-card')}>
+                  <Icon name={it.icon} size={15} />
+                  {it.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </nav>
+  )
+}
+
 // ─── IMPOSTAZIONI ───────────────────────────────────────────────────────────────
 function SettingsPage({ token, myId }) {
   const [currentPassword, setCurrentPassword] = useState('')
@@ -160,6 +198,8 @@ function SettingsPage({ token, myId }) {
     loadTwofaStatus()
   }
 
+  const [tab, setTab] = useState('accesso')
+
   const inputCls = 'w-full bg-surface-page text-ink px-3.5 py-2.5 rounded-lg outline-none border border-gray-800 focus:border-cp-primary transition text-sm placeholder-gray-600'
   const primaryBtn = 'bg-cp-primary hover:bg-cp-primary-hover disabled:opacity-50 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition'
   const ghostBtn = 'px-4 py-2.5 rounded-lg text-sm bg-surface-page hover:bg-gray-800 text-gray-300 transition border border-gray-800'
@@ -180,19 +220,25 @@ function SettingsPage({ token, myId }) {
   )
 
   return (
-    <div className="max-w-2xl">
+    <div>
       <h1 className="text-lg font-bold text-ink tracking-[-0.35px] mb-1">Impostazioni</h1>
       <p className="text-gray-500 text-sm mb-6">Chi ha accesso a questo pannello, e il tuo accesso.</p>
+
+      <div className="flex flex-col md:flex-row gap-6 md:gap-8">
+        <SettingsNav groups={SETTINGS_GROUPS} active={tab} onChange={setTab} />
+        <div className="flex-1 min-w-0 max-w-2xl">
 
       {/* UTENTI SUPER ADMIN — prima era una voce di menu a sé (2026-10-14,
           richiesto dall'utente: stava vicino a Impostazioni ma senza reset
           password/2FA, che restano qui sotto come self-service). Reset
           password/2FA di un ALTRO admin non esistono: ognuno gestisce solo
           il proprio (vedi sezione Due fattori più sotto). */}
+      {tab === 'utenti' && (
       <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mb-4">
         <SectionHead icon="users" title="Utenti Super Admin" sub="Chi ha accesso a questo pannello. Password e 2FA restano a chi accede, qui sotto — nessun admin può resettarli per un altro." />
         <UsersPage token={token} embedded myId={myId} />
       </section>
+      )}
 
       {/* IL TUO ACCESSO — Password, 2FA e Passkey nidificati in UNA sezione
           (2026-10-14, segnalato dall'utente guardandola dal vivo: stavano
@@ -202,6 +248,7 @@ function SettingsPage({ token, myId }) {
           "Utenti Super Admin" (non dopo "Chiavi AI", segnalato dall'utente
           il giorno stesso): sono entrambe questioni di accesso/identità,
           "Chiavi AI" è un'altra categoria (configurazione di sistema). */}
+      {tab === 'accesso' && (
       <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mb-4">
         <SectionHead icon="user" title="Il tuo accesso" sub="Password, due fattori e passkey — solo tu li cambi, mai un altro admin al posto tuo." />
 
@@ -343,8 +390,10 @@ function SettingsPage({ token, myId }) {
           </div>
         )}
       </section>
+      )}
 
       {/* CHIAVI AI */}
+      {tab === 'ai' && (
       <section className="bg-surface-card border border-gray-800 rounded-xl p-5">
         <SectionHead icon="key" title="Chiavi AI" sub="La chiave di Super Admin è solo sua: serve a costruire i tenant e ad analizzare i processi. Non la usa mai un tenant." />
         {keys && (
@@ -373,9 +422,11 @@ function SettingsPage({ token, myId }) {
           </div>
         )}
       </section>
+      )}
 
       {/* SICUREZZA DELLA PIATTAFORMA */}
-      <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mt-4">
+      {tab === 'sicurezza' && (
+      <section className="bg-surface-card border border-gray-800 rounded-xl p-5">
         <SectionHead icon="shield" title="Sicurezza della piattaforma" sub="Stato attuale e ultimi eventi sospetti — solo i dati di Super Admin, mai quelli dentro un tenant." />
         {!secStatus && <div className="text-sm text-gray-600">Caricamento...</div>}
         {secStatus && (() => {
@@ -457,6 +508,10 @@ function SettingsPage({ token, myId }) {
           )
         })()}
       </section>
+      )}
+
+        </div>
+      </div>
     </div>
   )
 }

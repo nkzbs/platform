@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.5 — 18 ottobre 2026
+
+Stesso trattamento della nuova Impostazioni del tenant applicato a quella di Super Admin (solo `super-admin/frontend`) — richiesto esplicitamente dall'utente dopo aver visto le due affiancate ("impostazioni in admin fanno pena comunque"). Qui le sezioni erano già solo 4 in una pagina sola (niente tab-bar da sostituire come nel tenant): aggiunta la stessa sidebar raggruppata (Account / Piattaforma / AI) per coerenza visiva, nessun cambio di logica o di contenuto nelle 4 sezioni esistenti (Utenti Super Admin, Il tuo accesso, Chiavi AI, Sicurezza della piattaforma).
+
 ## 0.3.4 — 18 ottobre 2026
 
 Bug reale segnalato dall'utente subito dopo la 0.3.3: le tendine dei `<select>` (es. "Ruolo" in Invita una persona) e gli altri controlli nativi del browser (selettore data/ora, scrollbar) restavano chiari anche col tema scuro — non sono DOM della pagina, li disegna il sistema operativo, quindi le variabili CSS della palette non li toccano. Una riga CSS per tema (`color-scheme: dark`/`light`) basta a farli seguire il tema: nessuna variabile di colore cambiata.
