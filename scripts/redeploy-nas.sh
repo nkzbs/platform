@@ -8,7 +8,7 @@
 # platform-core:latest e ricrea i tenant. Un tenant dove qualcuno è collegato in quel momento
 # viene saltato (mai forzato): rilancia dopo qualche minuto.
 set -euo pipefail
-PARTS=("$@"); [ ${#PARTS[@]} -eq 0 ] && PARTS=(backend frontend core)
+PARTS=("$@"); [ ${#PARTS[@]} -eq 0 ] && PARTS=(backend frontend provisioner core)
 has() { local p; for p in "${PARTS[@]}"; do [ "$p" = "$1" ] && return 0; done; return 1; }
 
 NAS="claude@192.168.1.2"; D=/usr/local/bin/docker; BUILD=/volume1/docker/platform-build-01; SECRETS=/volume1/docker/deploy-secrets
@@ -52,10 +52,18 @@ if has backend || has frontend; then
   nas "$D exec platform-nginx nginx -s reload 2>&1 | tail -1 || true"
 fi
 
+if has provisioner; then
+  build super-admin/docker-provisioner/Dockerfile docker-provisioner
+  swap docker-provisioner "--network platform_platform --restart unless-stopped -v /var/run/docker.sock:/var/run/docker.sock --env-file $SECRETS/docker-provisioner.env -e PORT=4000 -e DATA_VOLUME=platform_platform-data -e TENANT_NETWORK=platform_platform" docker-provisioner:0.1
+fi
+
 if has core; then
-  build core/Dockerfile platform-core-full
-  nas "$D tag platform-core-full:0.1 platform-core:latest && echo 'platform-core:latest aggiornata'"
-  echo "== Ricreo i tenant"
+  # Niente più build locale qui (18/10): /api/tenants/redeploy-all adesso builda da sé
+  # platform-core:latest dal sorgente più recente su GitHub, dentro docker-provisioner
+  # (vedi super-admin/docker-provisioner/src/docker.js buildCoreImage) — un build
+  # doppio qui sarebbe solo tempo perso. Questo blocco resta solo per lanciare
+  # il redeploy di tutti i tenant da riga di comando.
+  echo "== Ricreo i tenant (la build dell'immagine la fa /redeploy-all da sé)"
   PW=$(cat "$BK/nas-super-admin-password.txt")
   api() { curl -s -X "$1" -H 'Host: admin.platform-core.it' -H 'Content-Type: application/json' ${TOKEN:+-H "Authorization: Bearer $TOKEN"} ${3:+-d "$3"} "http://192.168.1.2:4000/api$2"; }
   for i in $(seq 1 15); do

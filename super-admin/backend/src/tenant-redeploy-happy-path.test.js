@@ -54,6 +54,15 @@ let redeployCalls = 0;
 function startFakeProvisioner() {
   return new Promise((resolve) => {
     const server = http.createServer((req, res) => {
+      // routes/tenants.js chiama sempre questo PRIMA di /tenants/:slug/redeploy
+      // (buildCoreImage(), 18/10) — risposta NDJSON finta ma nello stesso
+      // formato reale (una riga per step, poi {done:true,ok:true}).
+      if (req.method === 'POST' && req.url === '/images/build-core') {
+        res.writeHead(200, { 'Content-Type': 'application/x-ndjson' });
+        res.write(JSON.stringify({ msg: 'build finta ok' }) + '\n');
+        res.end(JSON.stringify({ done: true, ok: true, commit: 'deadbeef' }) + '\n');
+        return;
+      }
       if (req.method === 'POST' && /^\/tenants\/[^/]+\/redeploy$/.test(req.url)) {
         redeployCalls++;
         res.writeHead(200, { 'Content-Type': 'application/json' });

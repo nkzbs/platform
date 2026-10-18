@@ -9,11 +9,28 @@
 // anche un chiamante compromesso può solo agire su un container "platform-<slug
 // valido>", mai su nginx/redis/se stesso o su un'immagine arbitraria.
 const Docker = require('dockerode');
+const { execFile } = require('child_process');
 
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 
 const IMAGE_NAME = 'platform-core:latest';
 const IMAGE_REPO = 'platform-core';
+
+// Stesso repo del remote 'origin' di questo checkout — scaricato di nuovo
+// (git clone --depth 1, senza node_modules) ad ogni build invece che tenuto
+// come volume persistente: niente stato da gestire, il costo è solo qualche
+// secondo di clone su un repo di questa dimensione.
+const SOURCE_REPO_URL = process.env.SOURCE_REPO_URL || 'https://github.com/nkzbs/platform.git';
+const SRC_DIR = '/tmp/platform-core-src';
+
+function run(cmd, args) {
+  return new Promise((resolve, reject) => {
+    execFile(cmd, args, { maxBuffer: 1024 * 1024 * 20 }, (err, stdout, stderr) => {
+      if (err) return reject(Object.assign(new Error((stderr || err.message).toString().trim()), { statusCode: 500 }));
+      resolve(stdout.toString());
+    });
+  });
+}
 
 // Stesso slug pattern già validato lato Super Admin alla creazione di un
 // tenant — qui è la SECONDA barriera (mai l'unica): anche se un chiamante
@@ -69,6 +86,35 @@ async function removeTenant(slug) {
   const container = docker.getContainer(containerName(slug));
   try { await container.stop(); } catch (e) { /* già fermo o assente */ }
   try { await container.remove(); } catch (e) { /* già assente */ }
+}
+
+// Ricostruisce platform-core:latest dal sorgente più recente del branch main
+// su GitHub — stesso Dockerfile/contesto (radice del repo) di
+// scripts/redeploy-nas.sh, solo eseguito qui invece che dal laptop dello
+// sviluppatore via SSH. onLine(msg) riceve una riga per volta (download, ogni
+// step del Dockerfile) per il popup di avanzamento in Super Admin: un build
+// può durare oltre un minuto, un singolo "fatto" finale sembrerebbe bloccato.
+async function buildCoreImage(onLine) {
+  const say = (m) => { try { if (onLine) onLine(m) } catch (e) { /* un log non deve mai far fallire il build */ } };
+  say('Scarico il sorgente più recente da ' + SOURCE_REPO_URL + '…');
+  await run('rm', ['-rf', SRC_DIR]);
+  await run('git', ['clone', '--depth', '1', SOURCE_REPO_URL, SRC_DIR]);
+  const rev = (await run('git', ['-C', SRC_DIR, 'rev-parse', '--short', 'HEAD'])).trim();
+  say('Sorgente scaricato (commit ' + rev + '). Costruisco l\'immagine…');
+  const stream = await docker.buildImage(
+    { context: SRC_DIR, src: ['core/Dockerfile', 'core', 'shared'] },
+    { t: IMAGE_NAME, dockerfile: 'core/Dockerfile' }
+  );
+  let buildError = null;
+  await new Promise((resolve, reject) => {
+    docker.followProgress(stream, (err, res) => (err ? reject(err) : resolve(res)), (evt) => {
+      if (evt.stream && evt.stream.trim()) say(evt.stream.replace(/\n$/, ''));
+      if (evt.error) { buildError = evt.error; say('Errore: ' + evt.error); }
+    });
+  });
+  if (buildError) throw Object.assign(new Error(buildError), { statusCode: 500 });
+  say('Immagine ' + IMAGE_NAME + ' pronta (commit ' + rev + ').');
+  return { commit: rev };
 }
 
 async function redeployTenant(slug, { env, port }) {
@@ -153,6 +199,7 @@ module.exports = {
   stopTenant,
   startTenant,
   removeTenant,
+  buildCoreImage,
   redeployTenant,
   inspectTenant,
   statsTenant,

@@ -54,6 +54,41 @@ async function provisionerRequest(method, path, body) {
   return data;
 }
 
+// Come provisionerRequest, ma per /images/build-core: risponde NDJSON (una riga
+// per step, può durare oltre un minuto) invece di un solo JSON finale — letta
+// riga per riga e inoltrata a `log`, stesso principio del popup di avanzamento
+// già usato da redeployTenant sotto. Chiamata PRIMA di redeployTenant: così
+// "Aggiorna" ricostruisce sempre platform-core:latest dal sorgente più
+// recente invece di assumere che qualcuno l'abbia già fatto da fuori (il
+// vecchio flusso, un passaggio manuale via scripts/redeploy-nas.sh dal
+// laptop dello sviluppatore — dimenticarlo faceva sembrare "Aggiorna"
+// riuscito mentre in realtà ricreava il container dalla stessa immagine di
+// prima, bug reale trovato dal vivo il 18/10).
+async function buildCoreImage({ log } = {}) {
+  const say = (m) => { try { if (log) log(m) } catch (e) { /* un log non deve mai fermare la build */ } };
+  const res = await fetch(PROVISIONER_URL + '/images/build-core', { method: 'POST', headers: provisionerHeaders });
+  if (!res.ok || !res.body) throw new Error('Provisioner non raggiungibile per la build (' + res.status + ')');
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  let final = null;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let idx;
+    while ((idx = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, idx); buf = buf.slice(idx + 1);
+      if (!line.trim()) continue;
+      let evt; try { evt = JSON.parse(line) } catch (e) { continue }
+      if (evt.done) { final = evt; continue }
+      if (evt.msg) say(evt.msg);
+    }
+  }
+  if (!final || !final.ok) throw new Error((final && final.error) || 'Build dell\'immagine fallita');
+  return final;
+}
+
 // F8 (PLATFORM-MASTER-ROADMAP.md) — Resource Optimization/G20: su questo NAS (1.9GB RAM
 // totali, misurato) creare più tenant hosted in burst causa swap thrashing — 90% di
 // fallimento oltre 1-2 container creati in contemporanea. Non risolvibile lato codice nel
@@ -504,6 +539,7 @@ router.post('/:slug/redeploy', requireAuth, requireTenantScope, async (req, res)
     res.setHeader('X-Accel-Buffering', 'no');
     const send = (o) => { try { res.write(JSON.stringify(o) + '\n') } catch (e) { /* client chiuso */ } };
     try {
+      await buildCoreImage({ log: (msg) => send({ msg, at: new Date().toISOString() }) });
       const result = await redeployTenant(req.tenant, { force, actor: req.user.username, log: (msg) => send({ msg, at: new Date().toISOString() }) });
       if (result.ok) syncNginxDomains().catch(() => {});
       send({ done: true, ok: !!result.ok, healthy: result.healthy, skipped: result.skipped, active_session: result.active_session });
@@ -515,6 +551,7 @@ router.post('/:slug/redeploy', requireAuth, requireTenantScope, async (req, res)
   }
   try {
     const tenant = req.tenant;
+    await buildCoreImage();
     const result = await redeployTenant(tenant, { force, actor: req.user.username });
     if (!result.ok) {
       return res.status(409).json({
@@ -548,6 +585,11 @@ router.post('/redeploy-all', requireAuth, async (req, res) => {
   // tenant aggiornati su 3" nel messaggio di esito, ma solo 2 visibili nella
   // lista sotto. Stesso filtro di GET / ora.
   const allTenants = db.prepare("SELECT * FROM tenants WHERE status != 'deleted' AND (is_sandbox = 0 OR is_sandbox IS NULL)").all();
+  try {
+    await buildCoreImage();
+  } catch (err) {
+    return res.status(500).json({ error: 'Build dell\'immagine fallita, nessun tenant toccato: ' + err.message });
+  }
   const results = [];
   for (const tenant of allTenants) {
     if (!tenant.auto_update_enabled) {

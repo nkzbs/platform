@@ -18,8 +18,10 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 const crypto = require('crypto');
+const http = require('http');
 
 const TEST_PORT = 34583;
+const FAKE_PROVISIONER_PORT = 34584;
 const BASE = 'http://localhost:' + TEST_PORT;
 const dbPath = path.join(os.tmpdir(), 'redeploy-sandbox-test-' + crypto.randomBytes(6).toString('hex') + '.db');
 
@@ -27,8 +29,27 @@ process.env.DB_PATH = dbPath;
 process.env.PORT = String(TEST_PORT);
 process.env.JWT_SECRET = 'rsb_test_secret_' + crypto.randomBytes(8).toString('hex');
 process.env.INTERNAL_API_SECRET = 'rsb_test_internal_' + crypto.randomBytes(8).toString('hex');
-process.env.PROVISIONER_URL = 'http://127.0.0.1:1'; // porta chiusa, ECONNREFUSED immediato
+// POST /redeploy-all builda l'immagine una sola volta PRIMA del loop sui tenant
+// (buildCoreImage(), 18/10): deve riuscire perché questo test verifichi il
+// conteggio/esclusione sandbox a valle — /tenants/:slug/redeploy resta
+// deliberatamente non gestito (404) così nessun redeploy per-tenant risulta
+// mai davvero riuscito, come da intento originale di questo file.
+process.env.PROVISIONER_URL = 'http://127.0.0.1:' + FAKE_PROVISIONER_PORT;
 process.env.SUPPORT_UPLOAD_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'rsb-test-uploads-'));
+
+function startFakeProvisioner() {
+  return new Promise((resolve) => {
+    const server = http.createServer((req, res) => {
+      if (req.method === 'POST' && req.url === '/images/build-core') {
+        res.writeHead(200, { 'Content-Type': 'application/x-ndjson' });
+        res.end(JSON.stringify({ done: true, ok: true, commit: 'deadbeef' }) + '\n');
+        return;
+      }
+      res.writeHead(404); res.end();
+    });
+    server.listen(FAKE_PROVISIONER_PORT, () => resolve(server));
+  });
+}
 
 let passed = 0, failed = 0;
 const failures = [];
@@ -57,6 +78,7 @@ async function waitForServer(timeoutMs) {
 }
 
 async function main() {
+  await startFakeProvisioner();
   require('./index.js');
   await waitForServer(10000);
 

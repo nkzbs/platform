@@ -61,6 +61,23 @@ app.delete('/tenants/:slug', requireInternalSecret, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Stream NDJSON (stesso formato del popup di avanzamento già usato da
+// tenants.js per /:slug/redeploy) — un build può durare oltre un minuto.
+app.post('/images/build-core', requireInternalSecret, async (req, res) => {
+  res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('X-Accel-Buffering', 'no');
+  const send = (o) => { try { res.write(JSON.stringify(o) + '\n') } catch (e) { /* client chiuso */ } };
+  try {
+    const result = await docker.buildCoreImage((msg) => send({ msg, at: new Date().toISOString() }));
+    send({ done: true, ok: true, commit: result.commit });
+  } catch (err) {
+    send({ msg: 'Errore: ' + err.message, at: new Date().toISOString() });
+    send({ done: true, ok: false, error: err.message });
+  }
+  res.end();
+});
+
 app.post('/tenants/:slug/redeploy', requireInternalSecret, jsonBody, async (req, res) => {
   try {
     const { env, port } = req.body || {};
