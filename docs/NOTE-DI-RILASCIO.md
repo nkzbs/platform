@@ -2,6 +2,16 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.3 — 18 ottobre 2026
+
+Nuova palette colori, su tutta la piattaforma (core/frontend e super-admin/frontend, entrambi i temi) — scelta esplicitamente dall'utente dopo aver visto il mockup di Impostazioni ("mi piace come schema colori").
+
+- **Tema scuro**: sfondo e card passano da blu notte (`#031321`/`#061927`) a grigio neutro (`#0B0D12`/`#14161D`); l'accent da blu acceso (`#087BFF`) a un blu più tenue (`#5B8DEF`).
+- **Tema chiaro**: sfondo passa dalla scala Tailwind "stone" (calda) a un grigio neutro freddo (`#F6F7FA`); per la prima volta il tema chiaro ha un suo accent dedicato (`#2F5FEA`) — prima non lo sovrascriveva e restava quello scuro anche di giorno.
+- **Lasciati invariati apposta**: i colori semantici di stato (successo/avviso/errore, già tarati per contrasto il 16-17/10) e il bianco-etichetta per tenant (un progetto con un colore proprio continua a sovrascrivere l'accent a runtime, invariato).
+- Stessa mappatura applicata identica a entrambe le app, per non rompere la coerenza visiva tra core e Super Admin voluta dal reskin di agosto (`PLATFORM-UI-RESKIN-PLAN.md`).
+- Provato dal vivo (tenant locale, non solo compilazione): entrambi i temi, dashboard e Impostazioni.
+
 ## 0.3.2 — 18 ottobre 2026
 
 Ridisegno di Impostazioni (solo core/frontend) — "impronta SaaS enterprise" richiesta esplicitamente: la vecchia barra di 12 tab orizzontali non aveva più ordine, sostituita da una sidebar laterale con 6 categorie (Account, Workspace, Integrazioni, Sito Web, AI, Dati & Sicurezza).

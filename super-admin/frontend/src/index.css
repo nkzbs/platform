@@ -10,27 +10,32 @@
    Formato "canali RGB separati da spazi", non esadecimale — necessario perché
    Tailwind possa comporre rgb(var(--x) / <alpha>) nei modificatori di opacità
    (vedi tailwind.config.js), altrimenti le classi con /NN non generano CSS. */
+/* Ridisegno palette 2026-10-18 — stessi valori nuovi applicati a
+   core/frontend/src/index.css (vedi lì il commento esteso sul perché:
+   mockup enterprise di Impostazioni, scelto esplicitamente dall'utente),
+   qui mappati sugli equivalenti --cp-primary/-hover/-nav-active di questa
+   app. --cp-success/warning/danger INVARIATI apposta, stesso motivo. */
 :root {
-  --surface-page: 3 19 33;      /* --cp-page #031321 */
-  --surface-card: 6 25 39;      /* --cp-surface #061927 */
-  --surface-input: 4 24 39;     /* --cp-input #041827 */
-  --surface-hover: 9 34 56;     /* --cp-surface-hover #092238 */
-  --surface-footer: 4 23 36;    /* --cp-sidebar #041724 */
-  --ink: 229 239 255;           /* --cp-text #e5efff */
-  --gray-200: 187 205 227;      /* via tra cp-text e cp-text-muted */
-  --gray-300: 145 167 187;      /* --cp-text-muted #91a7bb */
-  --gray-400: 124 148 169;      /* via tra cp-text-muted e cp-text-faint */
-  --gray-500: 102 129 151;      /* --cp-text-faint #668197 */
-  --gray-600: 69 100 122;       /* via tra cp-text-faint e cp-border-strong */
-  --gray-700: 36 70 92;         /* --cp-border-strong #24465c */
-  --gray-800: 26 52 71;         /* --cp-border #1a3447 */
-  --gray-900: 9 34 56;          /* --cp-surface-hover #092238, stesso di surface-hover */
+  --surface-page: 11 13 18;     /* #0b0d12 */
+  --surface-card: 20 22 29;     /* #14161d */
+  --surface-input: 15 17 22;    /* #0f1116 */
+  --surface-hover: 26 29 38;    /* #1a1d26 */
+  --surface-footer: 11 13 18;   /* #0b0d12, stesso di surface-page */
+  --ink: 237 239 243;           /* #edeff3 */
+  --gray-200: 212 215 222;
+  --gray-300: 188 192 202;
+  --gray-400: 163 169 181;
+  --gray-500: 138 144 160;      /* #8a90a0 */
+  --gray-600: 91 97 112;        /* #5b6170 */
+  --gray-700: 51 56 72;         /* #333848 */
+  --gray-800: 38 42 53;         /* #262a35 */
+  --gray-900: 24 27 35;
 
   /* Nuovi, non nella scala gray/surface originale — usati da Fase 2/3 in
      avanti per badge di stato/CTA, non retrofittati sui punti d'uso esistenti
      ora (fuori scope per le fondamenta). */
-  --cp-primary: 8 123 255;
-  --cp-primary-hover: 23 107 213;
+  --cp-primary: 91 141 239;     /* #5b8def — prima 8 123 255 (#087bff) */
+  --cp-primary-hover: 77 120 203;
   --cp-success: 82 216 144;
   --cp-success-bg: 8 55 41;
   --cp-warning: 240 182 75;
@@ -38,24 +43,29 @@
   --cp-danger: 238 83 100;
   --cp-danger-bg: 69 23 34;
   --cp-purple: 134 87 236;
-  --cp-nav-active: 6 75 145;    /* voce Sidebar attiva #064b91, Fase 2 */
+  --cp-nav-active: 46 71 120;   /* voce Sidebar attiva, scalata sul nuovo --cp-primary. Non
+     ridichiarata nel tema chiaro sotto apposta: la barra laterale resta scura
+     in entrambi i temi, come nel mockup (--rail-bg sempre scuro anche nel suo
+     :root chiaro). */
 }
 
 :root[data-theme="light"] {
-  --surface-page: 245 245 244;   /* stone-100 */
+  --surface-page: 246 247 250;   /* #f6f7fa */
   --surface-card: 255 255 255;
-  --surface-input: 250 250 249;  /* stone-50 */
-  --surface-hover: 245 245 244;  /* stone-100 */
-  --surface-footer: 245 245 244; /* stone-100 */
-  --ink: 28 25 23;                /* stone-900 */
-  --gray-200: 41 37 36;           /* stone-800 */
-  --gray-300: 68 64 60;           /* stone-700 */
-  --gray-400: 87 83 78;           /* stone-600 */
-  --gray-500: 120 113 108;        /* stone-500 */
-  --gray-600: 168 162 158;        /* stone-400 */
-  --gray-700: 214 211 209;        /* stone-300 */
-  --gray-800: 231 229 228;        /* stone-200 */
-  --gray-900: 245 245 244;        /* stone-100 */
+  --surface-input: 240 242 246;  /* #f0f2f6 */
+  --surface-hover: 240 242 246;  /* #f0f2f6 */
+  --surface-footer: 240 242 246; /* #f0f2f6 */
+  --ink: 16 19 26;                /* #10131a */
+  --gray-200: 39 43 52;
+  --gray-300: 62 67 77;
+  --gray-400: 84 90 103;
+  --gray-500: 107 114 128;        /* #6b7280 */
+  --gray-600: 154 161 174;        /* #9aa1ae */
+  --gray-700: 211 215 224;        /* #d3d7e0 */
+  --gray-800: 227 230 236;        /* #e3e6ec */
+  --gray-900: 246 247 250;        /* #f6f7fa, stesso di surface-page */
+  --cp-primary: 47 95 234;        /* #2f5fea — prima non c'era override, restava il blu scuro del tema buio */
+  --cp-primary-hover: 34 74 195;
 
   /* Bug reale segnalato dall'utente (2026-08-28): i token di stato sotto non
      avevano MAI avuto un override chiaro (mancavano da questo blocco fin
