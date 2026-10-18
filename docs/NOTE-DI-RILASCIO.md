@@ -2,6 +2,23 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.0 — 18 ottobre 2026
+
+Semplificazione del Builder ispirata a Collections (l'app da cui Platform discende) — 5 fasi, tutte additive: nessun modulo esistente cambia comportamento finché non si usa esplicitamente qualcosa di nuovo dal Builder.
+
+- **Blocco "Vista" unificato**: una sola voce nel Builder (icona, non più tendina) con 4 modalità — per periodo, pivot per categoria, barre settimanali, genitori con figli — al posto di 5 block_type quasi identici. I moduli con un vecchio blocco (vista per periodo, riepilogo annuale, ecc.) restano identici per sempre, mai convertiti.
+- **Liste condivise** (Impostazioni → Liste): un campo `select`/`multiselect` può collegarsi a una lista condivisa invece di avere opzioni private — aggiungere/rinominare/togliere una voce si propaga da sola a tutti i campi collegati, in qualunque modulo, comprese le righe già esistenti in caso di rinomina.
+- **Formula più coerente**: il blocco "Formula / Aggregato" (valore singolo) ora vede le stesse funzioni del campo calcolato (`active_tier`, `running_sum`, le aggregazioni sui figli) — prima la verifica dal vivo nell'editor falliva per formule che in pubblicazione funzionavano già.
+- **Sources scriptabili** ("Fonte esterna"): un modulo può cercare su un'API esterna (due script JS: uno cerca, l'altro costruisce il record) e proporre un nuovo record — pulsante "Cerca da fonte esterna" accanto a "Nuovo". Gli script girano isolati (niente accesso a file/processi), con un "Prova" dal vivo nel Builder che non scrive mai un record. **Scelta esplicita**: l'accesso di rete degli script è libero (nessun blocco su IP privati) — amplifica il rischio già aperto e non corretto del segreto/volume condivisi tra tenant (vedi `DECISIONI.md`, controllo di sicurezza del 16/10).
+- **Sotto-tipi via "Configura sotto-tipi"**: su un campo `select`, un pannello elenca gli altri campi del modulo con "Sempre visibile" / "Solo se [opzione]" — scrive lo stesso "Visibile solo se..." di sempre su più campi da un posto solo, invece di aprirli uno a uno. Nessun concetto nuovo nello schema.
+- **Libreria**: il pannello "Struttura" di un modulo registrato mostra ora anche Viste e Fonti esterne, non solo Campi/Relazioni/Workflow/Automazioni/Permessi.
+
+### Limiti noti (scelte, non difetti da correggere)
+
+- Sources e Liste condivise funzionano solo nel codice dei tenant: in Super Builder (il sandbox di Super Admin) si possono disegnare ma non provare davvero (nessuna route lì).
+- I widget della Dashboard non supportano ancora il nuovo blocco "Vista" unificato, solo i vecchi tipi.
+- Nessuna delle 5 fasi è stata ancora usata su dati reali di Finance (solo verificata nel sandbox e con test automatici) — da provare dal vivo.
+
 ## 0.2.1 — 17 ottobre 2026
 
 Round di pulizia e sicurezza (16-17 ottobre), senza nuove funzioni visibili.
