@@ -54,7 +54,11 @@ fi
 
 if has provisioner; then
   build super-admin/docker-provisioner/Dockerfile docker-provisioner
-  swap docker-provisioner "--network platform_platform --restart unless-stopped -v /var/run/docker.sock:/var/run/docker.sock --env-file $SECRETS/docker-provisioner.env -e PORT=4000 -e DATA_VOLUME=platform_platform-data -e TENANT_NETWORK=platform_platform" docker-provisioner:0.1
+  # DATA_VOLUME CORRETTO = platform-data (senza underscore): bug reale del 18/10,
+  # scoperto dal vivo — platform_platform-data è un volume DIVERSO (quasi vuoto,
+  # usato solo dai sandbox), avere messo quel nome qui aveva agganciato Finance
+  # al volume sbagliato al primo vero redeploy, sembrando un reset dei dati.
+  swap docker-provisioner "--network platform_platform --restart unless-stopped -v /var/run/docker.sock:/var/run/docker.sock --env-file $SECRETS/docker-provisioner.env -e PORT=4000 -e DATA_VOLUME=platform-data -e TENANT_NETWORK=platform_platform" docker-provisioner:0.1
 fi
 
 if has core; then
