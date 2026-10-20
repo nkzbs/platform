@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.7 — 20 ottobre 2026
+
+Bug reale trovato scavando su una segnalazione dell'utente ("oggi è arrivata una mail e non è stata smistata"): con l'app Google in modalità "Test" il token scade dopo 7 giorni (noto, documentato) — ma quando scade, il controllo automatico delle mail (ogni 15 minuti) falliva **in totale silenzio**, zero log e zero avviso, da quando era stato introdotto. Il codice trattava "Google mai collegato" (stato normale, giusto restare muti) e "era collegato, il token è scaduto" (guasto vero) allo stesso identico modo. Risultato: bollette smesse di arrivare senza che nessuno se ne accorgesse finché non mancava una mail vera.
+
+- Ora, solo quando il collegamento ERA attivo e smette di funzionare, parte un avviso WhatsApp una tantum (non si ripete a ogni ciclo di 15 minuti) che dice di ricollegare da Impostazioni → Connessioni → Google. Si azzera da solo al primo controllo che torna a funzionare, pronto per avvisare di nuovo alla prossima scadenza.
+- L'utente ha scelto esplicitamente di non pubblicare l'app Google ("non la voglio pubblicare") — il ciclo di scadenza ogni 7 giorni resta quindi normale amministrazione, non un difetto da correggere: da qui in avanti, almeno, non passa inosservato.
+
 ## 0.3.6 — 20 ottobre 2026
 
 Due correzioni in core/frontend, segnalate dall'utente dal vivo.

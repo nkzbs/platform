@@ -439,6 +439,15 @@ db.prepare("UPDATE modules SET is_system = 1 WHERE slug = 'dashboard' AND is_sys
 // da questo file — qui si protegge solo ciò che esiste già.
 db.prepare("UPDATE modules SET is_system = 1 WHERE slug = 'richieste_privacy' AND is_system != 1").run();
 ensureColumn('connections', 'credentials', 'TEXT DEFAULT NULL');
+// Il controllo Gmail (ogni 15 min) ignora in silenzio un token Google non valido,
+// apposta, per non essere rumoroso quando Google non è mai stato collegato — ma lo
+// stesso silenzio nascondeva anche il caso vero (era collegato, il token è scaduto:
+// in modalità "Test" dura solo 7 giorni): bollette smesse di arrivare senza che
+// nessuno se ne accorgesse finché non mancava una mail vera (segnalato dall'utente
+// il 20/10). Questa colonna ricorda se l'avviso è già partito per il guasto in
+// corso, così non si ripete a ogni ciclo — si azzera da sola al primo controllo
+// che torna a funzionare, pronta per avvisare di nuovo alla prossima scadenza.
+ensureColumn('connections', 'google_token_error_notified', 'INTEGER DEFAULT 0');
 ensureColumn('dashboard_widgets', 'config', "TEXT DEFAULT '{}'");
 // Vuoto/NULL = visibile a tutti (comportamento invariato). Con ruoli elencati, il
 // widget compare solo a chi ha uno di quei ruoli — così un ruolo come "Agente" può

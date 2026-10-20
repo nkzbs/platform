@@ -299,10 +299,22 @@ async function pollGmail() {
   try {
     accessToken = await getValidAccessToken();
   } catch (e) {
-    // Google non connesso — nessun errore rumoroso ad ogni ciclo, è uno stato
-    // normale finché l'utente non collega l'account dalla pagina Connessioni.
+    // Due casi diversi dietro lo stesso errore: 'mai collegato' (stato normale,
+    // nessun avviso) e 'era collegato, il token è scaduto' (guasto vero — in
+    // modalità "Test" Google scade il token dopo 7 giorni, vedi OPERAZIONI.md).
+    // Il flag 'connected' in connections NON si azzera da solo alla scadenza
+    // (solo lo scollegamento esplicito lo fa), quindi resta il segnale giusto
+    // per distinguerli. Un avviso solo alla prima volta che il guasto si
+    // presenta (non a ogni ciclo di 15 minuti): la colonna notified si azzera
+    // al primo controllo che torna a funzionare, sotto.
+    const conn = db.prepare("SELECT connected, google_token_error_notified FROM connections WHERE integration_id = 'google'").get();
+    if (conn && conn.connected && !conn.google_token_error_notified) {
+      db.prepare("UPDATE connections SET google_token_error_notified = 1 WHERE integration_id = 'google'").run();
+      require('./avvisi').sendText('scadenza', '⚠️ Il collegamento a Google si è interrotto (probabilmente scaduto): le mail non vengono più controllate. Ricollega da Impostazioni → Connessioni → Google.');
+    }
     return;
   }
+  db.prepare("UPDATE connections SET google_token_error_notified = 0 WHERE integration_id = 'google' AND google_token_error_notified != 0").run();
 
   for (const rule of rules) {
     try {
