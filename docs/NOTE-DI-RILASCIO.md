@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.6 — 20 ottobre 2026
+
+Due correzioni in core/frontend, segnalate dall'utente dal vivo.
+
+- **Mancava il modo di eliminare un record dalla sua scheda di dettaglio**: l'unico cestino esisteva nell'icona a fianco di ogni riga nell'elenco — chi apriva un record per guardarlo o modificarlo (il posto più naturale dove cercarlo) non trovava modo di cancellarlo. Aggiunto un bottone "Elimina" accanto a "Modifica" nell'intestazione del dettaglio, con conferma, rispettando lo stesso permesso già configurato nel modulo (nessun cambio per chi non ha il permesso di eliminare).
+- **Tolta la sotto-intestazione a due gruppi ("Esportazione" / "Backup e disaster recovery") nella scheda Dati di Impostazioni**, aggiunta nel ridisegno del 18/10 — segnalata come non convincente ("nesting... non mi piace così"): la card "Distacca su un tuo server" è da sempre un accordion a tutta larghezza, non una card come le altre due, e sotto un titolo di gruppo stonava. Tornata alla griglia unica di prima.
+
 ## 0.3.5 — 18 ottobre 2026
 
 Stesso trattamento della nuova Impostazioni del tenant applicato a quella di Super Admin (solo `super-admin/frontend`) — richiesto esplicitamente dall'utente dopo aver visto le due affiancate ("impostazioni in admin fanno pena comunque"). Qui le sezioni erano già solo 4 in una pagina sola (niente tab-bar da sostituire come nel tenant): aggiunta la stessa sidebar raggruppata (Account / Piattaforma / AI) per coerenza visiva, nessun cambio di logica o di contenuto nelle 4 sezioni esistenti (Utenti Super Admin, Il tuo accesso, Chiavi AI, Sicurezza della piattaforma).

@@ -398,22 +398,10 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
           {tab === 'sicurezza' && <SicurezzaTab token={token} />}
 
           {tab === 'export_dati' && canExport && (
-            <div className="max-w-5xl space-y-5">
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-600 mb-2">Esportazione</div>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  <ExportDatiPage token={token} modules={modules} user={user} />
-                </div>
-              </div>
-              {isAdmin && (
-                <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-600 mb-2">Backup e disaster recovery</div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    <BackupPage token={token} />
-                    <ExportServerCard token={token} />
-                  </div>
-                </div>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-w-5xl">
+              <ExportDatiPage token={token} modules={modules} user={user} />
+              {isAdmin && <BackupPage token={token} />}
+              {isAdmin && <ExportServerCard token={token} />}
             </div>
           )}
         </div>

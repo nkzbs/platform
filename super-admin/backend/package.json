@@ -1,6 +1,6 @@
 {
   "name": "platform-super-admin-backend",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "main": "src/index.js",
   "engines": {
     "node": "22.x"

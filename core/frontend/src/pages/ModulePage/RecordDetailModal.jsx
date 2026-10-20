@@ -100,7 +100,7 @@ function VaultPinGate({ token, userId, onUnlocked }) {
   )
 }
 
-function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token, onSaved, user }) {
+function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token, onSaved, user, canDelete, onDeleted }) {
   const api = useApi(token)
   const [record, setRecord] = useState(null)
   const [children, setChildren] = useState([])
@@ -407,6 +407,18 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
     if (onSaved) onSaved(res.data)
   }
 
+  // Elimina — prima esisteva solo nell'icona a cestino della riga in elenco, non qui
+  // dentro: chi apriva il record per guardarlo/modificarlo non trovava modo di
+  // cancellarlo (segnalato dall'utente il 2026-10-20). Stesso endpoint del cestino
+  // in elenco, con conferma: qui l'azione è più deliberata (si è aperto il record
+  // apposta), a differenza del cestino al volo nell'elenco.
+  const remove = async () => {
+    if (!window.confirm('Eliminare questo record? Non si può annullare.')) return
+    await api.del('/records/' + mod.slug + '/' + recordId)
+    onClose()
+    if (onDeleted) onDeleted()
+  }
+
   return (
     <FormDrawer
       title={mod.name + ' — dettaglio'}
@@ -415,6 +427,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
       headerExtra={(
         <>
           {!editing && record && <button onClick={startEditing} className="text-xs text-accent hover:opacity-80 transition flex items-center gap-1"><Icon name="edit" size={12} />Modifica</button>}
+          {!editing && record && canDelete && <button onClick={remove} className="text-xs text-red-400/70 hover:text-red-400 transition flex items-center gap-1"><Icon name="trash" size={12} />Elimina</button>}
         </>
       )}
     >

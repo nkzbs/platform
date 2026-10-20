@@ -1170,7 +1170,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
       )}
 
       {detailId && (
-        <RecordDetailModal mod={mod} schema={schema} recordId={detailId} relatedCache={relatedCache} onClose={() => setDetailId(null)} token={token} onSaved={loadRecords} user={user} />
+        <RecordDetailModal mod={mod} schema={schema} recordId={detailId} relatedCache={relatedCache} onClose={() => setDetailId(null)} token={token} onSaved={loadRecords} user={user} canDelete={canDelete} onDeleted={loadRecords} />
       )}
 
       {branchCreateOpen && (
