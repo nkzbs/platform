@@ -56,6 +56,17 @@ async function sendMessage(chatId, html, keyboard) {
 
 // ── collegare e scollegare il bot ───────────────────────────────────────────────────────────────────────────────────────
 // `appUrl` è l'indirizzo pubblico di questo tenant (https://finance…): da lì Telegram chiama il webhook e il bottone «Apri l'app» porta qui.
+// Il menu nativo di Telegram (quello che si apre scrivendo "/" in chat): solo i comandi fissi, sempre
+// uguali — quelli dei report (le definizioni accese, vedi aiuto()) cambiano con le impostazioni e
+// restano scelte dal menu a bottoni di /report, non duplicate qui.
+const COMMANDS = [
+  { command: 'menu', description: 'Bottoni per tutto, a sottomenu' },
+  { command: 'report', description: 'Tutti i report' },
+  { command: 'timbra', description: 'Entrata e uscita (se le hai)' },
+  { command: 'ore', description: 'Le ore della settimana' },
+  { command: 'aiuto', description: 'Cosa so fare' },
+  { command: 'scollega', description: 'Scollega questo telefono' },
+];
 async function connect(token, appUrl) {
   const t = String(token || '').trim();
   if (!/^\d{6,12}:[A-Za-z0-9_-]{30,}$/.test(t)) throw new Error('Il codice del bot non ha il formato giusto (es. 123456789:AA…).');
@@ -64,6 +75,7 @@ async function connect(token, appUrl) {
   const secret = crypto.randomBytes(24).toString('hex');
   await call(t, 'setWebhook', { url: appUrl.replace(/\/$/, '') + '/api/telegram/webhook', secret_token: secret, allowed_updates: ['message', 'callback_query'], drop_pending_updates: true });
   saveCreds({ bot_token: t, secret, bot_username: me.username, app_url: appUrl.replace(/\/$/, '') });
+  try { await call(t, 'setMyCommands', { commands: COMMANDS }); } catch (e) { /* cosmetico: il bot funziona lo stesso senza il menu nativo */ }
   return { bot_username: me.username };
 }
 async function disconnect() {

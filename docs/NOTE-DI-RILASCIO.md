@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.10 — 21 ottobre 2026
+
+Due rifiniture al bot Telegram, richieste dall'utente dopo averlo provato: "ok i comandi sono migliorati? hai messo i tasti?".
+
+- Foto profilo del bot impostata sull'icona di Platform (prima quella di fabbrica di Telegram) — fatto anche a mano sul bot già collegato in produzione.
+- Il menu nativo "/" di Telegram ora elenca i comandi fissi del bot (`/menu`, `/report`, `/timbra`, `/ore`, `/aiuto`, `/scollega`) con una breve descrizione: prima Telegram non sapeva che comandi avesse, perché il bot non li aveva mai dichiarati (`setMyCommands`, chiamato ora dentro `connect()`). Applicato anche al bot già collegato in produzione, che altrimenti lo avrebbe avuto solo al prossimo ricollegamento.
+
 ## 0.3.9 — 21 ottobre 2026
 
 Richiesto dall'utente ("potenzia il bot il più possibile"), con un vincolo chiaro: niente agente sempre acceso stile OpenClaw — la RAM del NAS è fuori discussione, e il bot di Telegram è già profondo (domande sui dati, azioni proposte con conferma, scontrini/bollette letti dall'AI, timbrature, report proattivi già configurabili su Telegram). Il gap vero, verificato leggendo `bot-ai.js`: ogni frase viene interpretata da sola, senza alcuna memoria — un "e il mese scorso?" dopo una domanda non significava niente per il modello.

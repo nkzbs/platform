@@ -94,6 +94,13 @@ async function main() {
   const cb = (m, inizio) => (bottoni(m).find((b) => b.callback_data.startsWith(inizio)) || {}).callback_data;
   const DOMANI = new Date(Date.now() + 86400000).toISOString().slice(0, 10), IERI = new Date(Date.now() - 5 * 86400000).toISOString().slice(0, 10);
 
+  console.log('\n--- collegare il bot ---');
+  await test('connettersi registra anche il menu nativo "/" con i comandi fissi', () => {
+    const sm = calls.find((c) => c.method === 'setMyCommands');
+    ok(sm, 'nessuna setMyCommands tra le chiamate di connect()');
+    ok(sm.body.commands.some((c) => c.command === 'menu') && sm.body.commands.some((c) => c.command === 'report') && sm.body.commands.some((c) => c.command === 'aiuto'), JSON.stringify(sm.body.commands));
+  });
+
   console.log('\n--- l\'AI è spenta o non risponde ---');
   await test('con l\'AI spenta le frasi libere lo dicono; i comandi fissi funzionano lo stesso', async () => {
     ok(/AI non è accesa/.test((await say(555, 'ho pagato l\'affitto')).text)); ok(/Da pagare|Niente|pagare/i.test((await say(555, '/pagare')).text));
