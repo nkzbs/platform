@@ -9,7 +9,7 @@ function Sidebar({ page, onNavigate, onLogout, mobileOpen, onMobileClose, payloa
   const items = NAV_ITEMS.filter((i) => !MENU_HIDDEN.has(i.id))
   const brandLabel = 'Admin'
   // Numero di versione annotato a mano a ogni chiusura di fase, non il version del package.json.
-  const brandSub = 'versione 0.3.8'
+  const brandSub = 'versione 0.3.9'
   // Chiude subito l'espansione al click (2026-08-29, bug reale trovato dal
   // vivo): senza, il cursore resta fermo sopra la voce appena cliccata e la
   // sidebar resta espansa SOPRA il contenuto appena caricato (nessun reflow,

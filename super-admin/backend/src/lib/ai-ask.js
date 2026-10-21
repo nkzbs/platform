@@ -11,7 +11,7 @@ const RAGGRUPPA = ['mese', 'anno', 'categoria', 'nessuno'];
 const RUOLI = ['importo', 'data', 'scadenza', 'categoria', 'descrizione', 'stato', 'gruppo'];
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
-const ASK_PROMPT = `Traduci una domanda sui propri dati in una query strutturata. Ricevi un JSON con "domanda", "oggi" (data di oggi) e "catalogo": i moduli disponibili, ciascuno con "slug", "name", "kind" (spesa o entrata), "ruoli" (i ruoli dei campi che puoi usare: importo, data, categoria, descrizione, stato, gruppo...) e "categorie" (i valori ammessi per il ruolo categoria). Rispondi SOLO con un oggetto JSON, senza testo attorno, con questi campi: "modulo" (uno slug del catalogo), "calcolo" (somma, conteggio, media, massimo, minimo; di default somma dell'importo), "periodo" (oggetto {"da":"AAAA-MM-GG","a":"AAAA-MM-GG"} oppure null; "lo scorso anno" e simili si calcolano da "oggi"), "filtri" (elenco di {"ruolo","op","valore"} con op uguale, contiene, maggiore o minore; ruolo uno di quelli del modulo, diverso dalla data: la data si esprime con "periodo"), "raggruppa" (mese, anno, categoria o nessuno) e "titolo" (una breve frase che descrive cosa si calcola, massimo 80 caratteri). Per una categoria usa esattamente uno dei valori di "categorie". Se la domanda non si può tradurre con questi strumenti rispondi {"errore":"non posso rispondere a questa domanda"}. Non inventare moduli, ruoli o categorie.`;
+const ASK_PROMPT = `Traduci una domanda sui propri dati in una query strutturata. Ricevi un JSON con "domanda", "oggi" (data di oggi), "catalogo": i moduli disponibili, ciascuno con "slug", "name", "kind" (spesa o entrata), "ruoli" (i ruoli dei campi che puoi usare: importo, data, categoria, descrizione, stato, gruppo...) e "categorie" (i valori ammessi per il ruolo categoria), ed eventualmente "storico" ({"testo","capito"}: la domanda precedente in questa conversazione e cosa si era capito, se recente). Se "domanda" da sola è un seguito troppo corto per essere capito (es. "e il mese scorso?", "e a ottobre?", "anche per la luce") ma "storico" c'è ed è chiaramente la stessa domanda con un dettaglio cambiato, riusa il resto di "storico" e applica solo quel cambiamento; se "domanda" è già completa da sola, o cambia argomento, ignora "storico". Rispondi SOLO con un oggetto JSON, senza testo attorno, con questi campi: "modulo" (uno slug del catalogo), "calcolo" (somma, conteggio, media, massimo, minimo; di default somma dell'importo), "periodo" (oggetto {"da":"AAAA-MM-GG","a":"AAAA-MM-GG"} oppure null; "lo scorso anno" e simili si calcolano da "oggi"), "filtri" (elenco di {"ruolo","op","valore"} con op uguale, contiene, maggiore o minore; ruolo uno di quelli del modulo, diverso dalla data: la data si esprime con "periodo"), "raggruppa" (mese, anno, categoria o nessuno) e "titolo" (una breve frase che descrive cosa si calcola, massimo 80 caratteri). Per una categoria usa esattamente uno dei valori di "categorie". Se la domanda non si può tradurre con questi strumenti rispondi {"errore":"non posso rispondere a questa domanda"}. Non inventare moduli, ruoli o categorie.`;
 
 function sanitizeAsk(data) {
   if (!data || typeof data !== 'object') return { error: 'data obbligatorio' };
@@ -26,7 +26,9 @@ function sanitizeAsk(data) {
   })).filter((m) => m.slug && m.ruoli.includes('importo'));
   if (!catalogo.length) return { error: 'Nessun modulo con un importo dichiarato.' };
   const oggi = ISO.test(String(data.oggi || '')) ? data.oggi : new Date().toISOString().slice(0, 10);
-  return { payload: { domanda, oggi, catalogo } };
+  const storico = data.storico && typeof data.storico === 'object' && data.storico.testo
+    ? { testo: redact(clean(data.storico.testo, 300)), capito: clean(data.storico.capito, 300) } : null;
+  return { payload: { domanda, oggi, catalogo, storico } };
 }
 
 // Valida la risposta del modello contro il catalogo. Ritorna { query } oppure { error }.

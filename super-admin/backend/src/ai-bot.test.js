@@ -20,7 +20,15 @@ console.log('\n--- cosa esce verso il modello ---');
 test('la frase è ripulita dai dati personali; niente record, solo i moduli', () => {
   const s = bot.sanitizeBot({ frase: 'ho pagato mario.rossi@x.it con IBAN IT60X0542811101000000123456', moduli: MODULI, oggi: '2026-10-11' });
   ok(!s.payload.frase.includes('mario.rossi') && !s.payload.frase.includes('IT60X05'), s.payload.frase);
-  eq(Object.keys(s.payload).sort(), ['frase', 'moduli', 'oggi', 'report', 'timbrature']);
+  eq(Object.keys(s.payload).sort(), ['frase', 'moduli', 'oggi', 'report', 'storico', 'timbrature']);
+});
+test('storico: assente senza dati, ripulito dai dati personali e tagliato quando c\'è', () => {
+  const senza = bot.sanitizeBot({ frase: 'ciao', moduli: MODULI });
+  eq(senza.payload.storico, null);
+  const con = bot.sanitizeBot({ frase: 'e il mese scorso', moduli: MODULI, storico: { testo: 'quanto ho speso mario.rossi@x.it di benzina', capito: 'x'.repeat(2000) } });
+  ok(!con.payload.storico.testo.includes('mario.rossi'), con.payload.storico.testo);
+  eq(con.payload.storico.capito.length, 300);
+  eq(bot.sanitizeBot({ frase: 'ciao', moduli: MODULI, storico: {} }).payload.storico, null, 'storico senza testo: ignorato');
 });
 test('frase vuota o senza moduli: errore; frase lunghissima: tagliata', () => {
   ok(!!bot.sanitizeBot({ frase: ' ', moduli: MODULI }).error); ok(!!bot.sanitizeBot({ frase: 'ciao', moduli: [] }).error);

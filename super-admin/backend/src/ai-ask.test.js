@@ -21,6 +21,14 @@ test('la domanda è ripulita dai dati personali e il catalogo tiene solo moduli 
   assertTrue(!s.payload.domanda.includes('mario.rossi') && !s.payload.domanda.includes('IT60X05'), s.payload.domanda);
   assertEq(s.payload.catalogo.map((m) => m.slug), ['spese_casa'], 'il modulo senza importo non è interrogabile');
 });
+test('storico: assente senza dati, ripulito dai dati personali e tagliato quando c\'è', () => {
+  const senza = ask.sanitizeAsk({ domanda: 'quanto ho speso?', catalogo: CAT });
+  assertEq(senza.payload.storico, null);
+  const con = ask.sanitizeAsk({ domanda: 'e il mese scorso?', catalogo: CAT, storico: { testo: 'quanto ha speso mario.rossi@x.it', capito: 'x'.repeat(2000) } });
+  assertTrue(!con.payload.storico.testo.includes('mario.rossi'), con.payload.storico.testo);
+  assertEq(con.payload.storico.capito.length, 300);
+  assertEq(ask.sanitizeAsk({ domanda: 'quanto ho speso?', catalogo: CAT, storico: {} }).payload.storico, null, 'storico senza testo: ignorato');
+});
 test('domanda troppo corta o catalogo vuoto: errore', () => {
   assertTrue(!!ask.sanitizeAsk({ domanda: 'a', catalogo: CAT }).error); assertTrue(!!ask.sanitizeAsk({ domanda: 'quanto ho speso?', catalogo: [] }).error);
 });

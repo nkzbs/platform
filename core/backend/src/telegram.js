@@ -162,15 +162,18 @@ function aiTooMany(chatId, now) { const arr = (aiHits.get(chatId) || []).filter(
 async function handleFree(chatId, user, text, now) {
   if (aiTooMany(chatId, now)) return sendMessage(chatId, 'Un momento, sto ricevendo troppe frasi: riprova tra un minuto.');
   api('sendChatAction', { chat_id: chatId, action: 'typing' }).catch(() => {});
-  const bot = require('./bot-ai'), act = require('./bot-actions');
-  const r = await bot.interpret(text, user, new Date(now));
+  const bot = require('./bot-ai'), act = require('./bot-actions'), mem = require('./bot-memory');
+  const storico = mem.get(chatId); // l'ultimo scambio, se recente — per capire un "e il mese scorso?"
+  const r = await bot.interpret(text, user, new Date(now), storico);
   if (r.error) return sendMessage(chatId, r.code === 'ai_unanswerable' ? 'Non ho capito. ' + 'Prova con /aiuto per vedere cosa posso fare.' : esc(r.error));
   const it = r.intent;
   if (it.azione === 'altro') return sendMessage(chatId, 'Questo non so ancora farlo (non elimino né modifico dati a piacere). Scrivi /aiuto per vedere cosa posso fare.');
   if (it.azione === 'elenco') return runCommand(chatId, user, it.cosa, now);
   if (it.azione === 'domanda') {
-    const a = await bot.ask(text, user, new Date(now));
-    return sendMessage(chatId, a.error ? (a.code === 'ai_unanswerable' ? 'Non riesco a rispondere a questa domanda con i dati che ho: prova a riformularla (periodo, categoria, modulo).' : esc(a.error)) : a.html);
+    const a = await bot.ask(text, user, new Date(now), storico);
+    if (a.error) return sendMessage(chatId, a.code === 'ai_unanswerable' ? 'Non riesco a rispondere a questa domanda con i dati che ho: prova a riformularla (periodo, categoria, modulo).' : esc(a.error));
+    mem.save(chatId, text, a.capito);
+    return sendMessage(chatId, a.html);
   }
   if (it.azione === 'timbra' || it.azione === 'ore') {
     const tb = require('./bot-timbrature');

@@ -35,7 +35,7 @@ const SPESE = (extra = []) => ({ version: 3, steps: [F('descrizione', 'Descrizio
 const SOLO_PROPRI = { id: 'p1', block_type: 'permissions', rules: [{ role: 'user', view: true, view_own_only: true, owner_field: '', create: true, edit: true, delete: true }] };
 const TOKEN = '123456789:' + 'A'.repeat(35);
 
-const calls = []; const intents = {}; const asks = {}; let saDown = false; const scontrino = { next: null }; const richiesteScontrino = [];
+const calls = []; const intents = {}; const asks = {}; let saDown = false; const scontrino = { next: null }; const richiesteScontrino = []; const richiesteAi = [];
 const realFetch = global.fetch;
 global.fetch = async (url, opt) => {
   const u = String(url), body = opt && opt.body ? JSON.parse(opt.body) : {};
@@ -55,6 +55,7 @@ global.fetch = async (url, opt) => {
   }
   if (u.includes('/api/tenant-ai/')) {
     if (saDown) throw new Error('rete giù');
+    richiesteAi.push({ url: u, data: body.data });
     const frase = (body.data && (body.data.frase || body.data.domanda)) || '';
     const tabella = u.includes('bot-intent') ? intents : asks;
     const r = tabella[frase];
@@ -205,6 +206,40 @@ async function main() {
     asks['quanto ho speso in totale'] = { modulo: 'spese_personali', calcolo: 'somma', periodo: null, filtri: [], raggruppa: 'nessuno', titolo: 'Totale spese personali' };
     const n = await say(555, 'quanto ho speso in totale'); ok(/Totale spese personali/.test(n.text) && /Totale: <b>/.test(n.text), n.text);
     const f = await say(666, 'quanto ho speso in totale'); ok(/Non riesco a rispondere/.test(f.text) && !/Totale spese personali/.test(f.text), f.text);
+  });
+
+  console.log('\n--- memoria del bot (seguiti di una domanda) ---');
+  await test('una domanda risposta, poi un seguito: lo «storico» arriva all\'AI con la domanda precedente e cosa si era capito', async () => {
+    require('./bot-memory').clear('555'); // isolamento dal test precedente («quanto ho speso in totale»), ancora fresco nella finestra di 15 minuti
+    intents['quanto ho speso in benzina a settembre'] = { azione: 'domanda' };
+    asks['quanto ho speso in benzina a settembre'] = { modulo: 'spese_personali', calcolo: 'somma', periodo: { da: '2026-09-01', a: '2026-09-30' }, filtri: [{ ruolo: 'categoria', op: 'uguale', valore: 'Benzina' }], raggruppa: 'nessuno', titolo: 'Benzina a settembre' };
+    richiesteAi.length = 0;
+    await say(555, 'quanto ho speso in benzina a settembre');
+    eq(richiesteAi.filter((r) => r.url.includes('bot-intent'))[0].data.storico, null, 'prima domanda: nessuno storico ancora');
+
+    intents['e il mese scorso'] = { azione: 'domanda' };
+    asks['e il mese scorso'] = { modulo: 'spese_personali', calcolo: 'somma', periodo: { da: '2026-08-01', a: '2026-08-31' }, filtri: [{ ruolo: 'categoria', op: 'uguale', valore: 'Benzina' }], raggruppa: 'nessuno', titolo: 'Benzina ad agosto' };
+    richiesteAi.length = 0;
+    await say(555, 'e il mese scorso');
+    const vistoIntent = richiesteAi.find((r) => r.url.includes('bot-intent')).data.storico;
+    const vistoAsk = richiesteAi.find((r) => r.url.includes('ask-data')).data.storico;
+    ok(vistoIntent && vistoIntent.testo === 'quanto ho speso in benzina a settembre' && /Benzina/.test(vistoIntent.capito), JSON.stringify(vistoIntent));
+    ok(vistoAsk && vistoAsk.testo === 'quanto ho speso in benzina a settembre', JSON.stringify(vistoAsk));
+  });
+  await test('un\'altra chat non vede lo storico di chi ha chiesto prima (la memoria è per chat, non globale)', async () => {
+    intents['quanto ho speso in totale per casa'] = { azione: 'domanda' };
+    asks['quanto ho speso in totale per casa'] = { modulo: 'spese_casa', calcolo: 'somma', periodo: null, filtri: [], raggruppa: 'nessuno', titolo: 'Totale casa' };
+    richiesteAi.length = 0;
+    await say(666, 'quanto ho speso in totale per casa');
+    eq(richiesteAi.find((r) => r.url.includes('bot-intent')).data.storico, null);
+  });
+  await test('passati 15 minuti lo storico non si usa più (una domanda nuova non eredita il contesto di una vecchia)', async () => {
+    db.prepare("UPDATE telegram_memory SET updated_at = ? WHERE chat_id = '555'").run(Date.now() - 16 * 60 * 1000);
+    intents['quanto ho speso in affitto'] = { azione: 'domanda' };
+    asks['quanto ho speso in affitto'] = { modulo: 'spese_personali', calcolo: 'somma', periodo: null, filtri: [{ ruolo: 'categoria', op: 'uguale', valore: 'Affitto' }], raggruppa: 'nessuno', titolo: 'Affitto' };
+    richiesteAi.length = 0;
+    await say(555, 'quanto ho speso in affitto');
+    eq(richiesteAi.find((r) => r.url.includes('bot-intent')).data.storico, null);
   });
 
   console.log('\n--- PDF mandati in chat ---');

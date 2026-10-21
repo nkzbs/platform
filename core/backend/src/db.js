@@ -603,6 +603,11 @@ db.exec('CREATE TABLE IF NOT EXISTS telegram_links (id INTEGER PRIMARY KEY AUTOI
 db.exec('CREATE TABLE IF NOT EXISTS telegram_link_codes (code TEXT PRIMARY KEY, user_id INTEGER NOT NULL, expires_at INTEGER NOT NULL)');
 // Azioni proposte dal bot in attesa di un tocco di conferma (valgono 15 minuti, una volta sola, solo per la chat e l'utente che le hanno originate).
 db.exec('CREATE TABLE IF NOT EXISTS telegram_pending (id TEXT PRIMARY KEY, chat_id TEXT NOT NULL, user_id INTEGER NOT NULL, action TEXT NOT NULL, expires_at INTEGER NOT NULL)');
+// Memoria minima del bot (bot-memory.js): un solo scambio per chat, per far funzionare i "seguiti"
+// di una domanda ("quanto ho speso in benzina a settembre?" → "e il mese scorso?") — oggi ogni
+// frase viene interpretata da sola, senza questo la seconda non ha senso per il modello. Scade da
+// sola (15 minuti, controllato in bot-memory.js): niente da pulire qui oltre a quando si scrive.
+db.exec('CREATE TABLE IF NOT EXISTS telegram_memory (chat_id TEXT PRIMARY KEY, testo TEXT NOT NULL, capito TEXT NOT NULL, updated_at INTEGER NOT NULL)');
 
 // Suggerimenti dell'AI su un record. L'AI PROPONE, mai scrive: un suggerimento resta
 // 'pending' finché non lo si accetta (applica i campi al record) o lo si ignora.

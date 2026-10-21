@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.9 — 21 ottobre 2026
+
+Richiesto dall'utente ("potenzia il bot il più possibile"), con un vincolo chiaro: niente agente sempre acceso stile OpenClaw — la RAM del NAS è fuori discussione, e il bot di Telegram è già profondo (domande sui dati, azioni proposte con conferma, scontrini/bollette letti dall'AI, timbrature, report proattivi già configurabili su Telegram). Il gap vero, verificato leggendo `bot-ai.js`: ogni frase viene interpretata da sola, senza alcuna memoria — un "e il mese scorso?" dopo una domanda non significava niente per il modello.
+
+- Nuova **memoria minima del bot** (`bot-memory.js`, tabella `telegram_memory`): un solo scambio per chat (ultima domanda + cosa si era capito), passato al modello come contesto facoltativo — "e il mese scorso?", "anche per la luce?" ora funzionano come seguiti naturali.
+- Scade da sola dopo 15 minuti di inattività: una domanda nuova non eredita per sbaglio il contesto di una vecchia. Nessun processo in più, nessuna libreria nuova — solo una tabella e un parametro opzionale in più nei prompt già esistenti (`ai-bot.js`/`ai-ask.js` su Super Admin).
+
 ## 0.3.8 — 21 ottobre 2026
 
 Richiesto dall'utente: con più verticali diversi, ciascuno salvato come app sul dock (macOS/Chrome), tutte avevano la stessa icona blu/viola — nessun modo di distinguerle a colpo d'occhio nel dock/launcher.

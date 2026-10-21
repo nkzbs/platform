@@ -45,15 +45,17 @@ async function viaSuperAdmin(path, data, timeoutMs = 30000) {
   } catch (e) { return { error: 'L\'AI non è raggiungibile.', code: 'ai_down' }; }
 }
 
-// Una frase libera → intento validato { azione, … } oppure { error, code }.
-async function interpret(frase, user, now = new Date()) {
+// Una frase libera → intento validato { azione, … } oppure { error, code }. `storico` (facoltativo,
+// vedi bot-memory.js): l'ultimo scambio di questa chat, così una frase vaga ("e il mese scorso?")
+// che da sola sarebbe "altro" si riconosce ancora come il seguito di una domanda.
+async function interpret(frase, user, now = new Date(), storico = null) {
   if (!moduleAi.masterOn()) return { error: 'L\'AI non è accesa (Impostazioni → AI).', code: 'ai_off' };
   const moduli = moduliPerUtente(user).map((m) => ({ slug: m.slug, name: m.name, etichetta: m.etichetta, categorie: m.categorie }));
   const timbrature = require('./bot-timbrature').haPresenze(user);
   if (!moduli.length && !timbrature) return { error: 'Non hai moduli a cui il bot possa lavorare.', code: 'no_modules' };
   const oggi = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(now);
   const report = require('./reports').settings().definizioni.filter((d) => d.enabled).map((d) => ({ id: d.id, nome: d.nome }));
-  const r = await viaSuperAdmin('bot-intent', { frase, oggi, timbrature, report, moduli });
+  const r = await viaSuperAdmin('bot-intent', { frase, oggi, timbrature, report, moduli, storico });
   if (r.error) return r;
   const v = validateIntent(r.body && r.body.intent, moduli, oggi, report.map((x) => x.id)); // rivalidato qui, con le stesse regole
   if (v.intent && (v.intent.azione === 'timbra' || v.intent.azione === 'ore') && !timbrature) return { error: 'Non hai timbrature.', code: 'ai_unanswerable' };
@@ -61,13 +63,15 @@ async function interpret(frase, user, now = new Date()) {
   return { intent: v.intent };
 }
 
-// «Chiedi ai dati» per il bot: ritorna { html } oppure { error }.
-async function ask(domanda, user, now = new Date()) {
+// «Chiedi ai dati» per il bot: ritorna { html, capito } oppure { error }. `capito` (la stessa frase
+// leggibile già mostrata nella risposta) è quello che telegram.js salva in bot-memory.js per il
+// prossimo giro — così "e il mese scorso?" sa a cosa si riferisce "e".
+async function ask(domanda, user, now = new Date(), storico = null) {
   if (!moduleAi.masterOn()) return { error: 'L\'AI non è accesa (Impostazioni → AI).', code: 'ai_off' };
   const vis = visibleSlugs(user);
   const cat = askData.catalogo().filter((m) => vis.has(m.slug)); // solo i moduli che questo utente vede
   if (!cat.length) return { error: 'Non ci sono dati che tu possa interrogare.' };
-  const r = await viaSuperAdmin('ask-data', { domanda, oggi: now.toISOString().slice(0, 10), catalogo: cat });
+  const r = await viaSuperAdmin('ask-data', { domanda, oggi: now.toISOString().slice(0, 10), catalogo: cat, storico });
   if (r.error) return r;
   const v = askData.validate(r.body && r.body.query, cat);
   if (v.error) return { error: v.error, code: 'ai_unanswerable' };
@@ -76,11 +80,12 @@ async function ask(domanda, user, now = new Date()) {
   logAudit(user.username, 'ai.ask', v.query.modulo, { calcolo: v.query.calcolo, via: 'bot' });
   const fmt = (x) => (v.query.calcolo === 'conteggio' ? String(x) : eur(x));
   const righe = (out.righe || []).slice(0, 12).map((g) => '• ' + esc(g.etichetta) + ' — ' + fmt(g.valore) + (v.query.calcolo === 'somma' ? ' (' + g.n + ')' : ''));
+  const capito = askData.leggibile(v.query, nome).join(' · ');
   const html = '<b>' + esc(v.query.titolo || 'Risultato') + '</b>\n\n' + (out.n_righe ? 'Totale: <b>' + fmt(out.totale) + '</b> su ' + out.n_righe + (out.n_righe === 1 ? ' riga' : ' righe') : 'Nessuna riga corrisponde.')
     + (righe.length > 1 || (righe.length === 1 && v.query.raggruppa !== 'nessuno') ? '\n' + righe.join('\n') : '')
     + (out.esclusi_da_smistare ? '\n\n<i>Non contate: ' + out.esclusi_da_smistare + ' da smistare.</i>' : '')
-    + '\n\n<i>Ho capito: ' + esc(askData.leggibile(v.query, nome).join(' · ')) + '</i>';
-  return { html };
+    + '\n\n<i>Ho capito: ' + esc(capito) + '</i>';
+  return { html, capito };
 }
 
 // Foto di uno scontrino → { ricevuta } validata (esercente, data, totale, categoria, confidenza) oppure { error, code }. L'immagine va a Super Admin e al modello solo in questo

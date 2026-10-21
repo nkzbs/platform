@@ -7,7 +7,7 @@ const { redact } = require('./ai-redact');
 
 const { AZIONI, ISO, validateIntent } = require('../../../../shared/ai-bot-intent.js');
 
-const BOT_PROMPT = `Sei il traduttore di un bot di un'app gestionale (spese, scadenze, timbrature). Ricevi un JSON con "frase" (cosa ha scritto l'utente), "oggi" (data di oggi), "timbrature" (true se l'utente può timbrare), "report" (i report disponibili) e "moduli": i moduli di spesa disponibili, ciascuno con "slug", "name", "etichetta" e "categorie" (valori ammessi). Scegli UNA azione tra queste e rispondi SOLO con un oggetto JSON, senza testo attorno:
+const BOT_PROMPT = `Sei il traduttore di un bot di un'app gestionale (spese, scadenze, timbrature). Ricevi un JSON con "frase" (cosa ha scritto l'utente), "oggi" (data di oggi), "timbrature" (true se l'utente può timbrare), "report" (i report disponibili), "moduli": i moduli di spesa disponibili, ciascuno con "slug", "name", "etichetta" e "categorie" (valori ammessi), ed eventualmente "storico" ({"testo","capito"}: l'ultima frase di questa conversazione e cosa si era capito, se recente). Se "frase" da sola è troppo vaga per capire cosa vuole (es. "e il mese scorso?", "anche quelle di casa") ma "storico" c'è ed è chiaramente lo stesso argomento, usalo per interpretarla come un seguito di quella; se "frase" è già chiara da sola, o parla d'altro, ignora "storico". Scegli UNA azione tra queste e rispondi SOLO con un oggetto JSON, senza testo attorno:
 - {"azione":"domanda"} se chiede un calcolo o un'informazione sui dati ("quanto ho speso di benzina a settembre?", "quante bollette A2A nel 2025?").
 - {"azione":"elenco","cosa":"id di uno dei \"report\""} se vuole vedere uno dei report disponibili (\"report\" è l'elenco di {id, nome}: scegli quello che risponde meglio alla richiesta, per esempio cosa deve pagare, le voci scadute, le righe da smistare).
 - {"azione":"segna_pagata","cerca":"parole per riconoscere la voce"} se dice di aver pagato una voce già esistente ("ho pagato l'affitto", "segna pagata la bolletta A2A").
@@ -34,7 +34,9 @@ function sanitizeBot(data) {
   if (!moduli.length && !timbrature) return { error: 'Nessun modulo.' };
   const oggi = ISO.test(String(data.oggi || '')) ? data.oggi : new Date().toISOString().slice(0, 10);
   const report = (Array.isArray(data.report) ? data.report : []).slice(0, 12).map((r) => ({ id: clean(r && r.id, 31), nome: clean(r && r.nome, 40) })).filter((r) => /^[a-z][a-z0-9_]{1,30}$/.test(r.id));
-  return { payload: { frase, oggi, timbrature, report, moduli } };
+  const storico = data.storico && typeof data.storico === 'object' && data.storico.testo
+    ? { testo: redact(clean(data.storico.testo, 300)), capito: clean(data.storico.capito, 300) } : null;
+  return { payload: { frase, oggi, timbrature, report, moduli, storico } };
 }
 
 module.exports = { BOT_PROMPT, sanitizeBot, validateIntent, AZIONI };
