@@ -53,6 +53,8 @@ export function createIcon(lucide) {
     mail: lucide.Mail,
     // Anteprima responsive per dispositivo nell'editor Sito Web (2026-09-05).
     monitor: lucide.Monitor, tablet: lucide.Tablet, smartphone: lucide.Smartphone,
+    // Tab "Aspetto" in Impostazioni (2026-10-21): colore dell'app, anche nell'icona del dock.
+    palette: lucide.Palette,
   }
 
   // stroke 1.6-1.8 per il brief — 1.75 come compromesso singolo invece di

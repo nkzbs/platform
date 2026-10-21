@@ -146,7 +146,7 @@ app.use('/__root_public', rootPublicRouter);
 
 app.get('/health', (req, res) => res.json({
   status: 'ok',
-  version: '0.3.7',
+  version: '0.3.8',
   tenant: process.env.TENANT_SLUG || 'unknown',
   name: process.env.TENANT_NAME || 'Platform Core'
 }));
@@ -208,6 +208,7 @@ require('./record-owner').adoptOrphans();
 require('./legacy-cleanup').removeStubModules();
 if (moduleRoles.seedIfEmpty()) console.log('Ruoli dei moduli: dichiarati per i moduli di finanza già presenti');
 if (features.seedIfEmpty()) console.log('Funzioni: tenant con moduli di finanza, funzioni accese; le altre restano spente');
+require('./pwa-icon').apply(); // icona del dock/PWA sul colore del tenant, se scelto (vedi Impostazioni → Aspetto)
 
 app.listen(PORT, () => {
   console.log('Platform Core [' + (process.env.TENANT_SLUG || 'default') + '] running on port ' + PORT);

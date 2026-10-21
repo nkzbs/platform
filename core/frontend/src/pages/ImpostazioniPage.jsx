@@ -18,6 +18,7 @@ import TelegramCard from '../components/TelegramCard'
 import SitoWebPage from './SitoWebPage'
 import SicurezzaTab from '../components/SicurezzaTab'
 import ListePage from './ListePage'
+import AspettoTab from './AspettoTab'
 
 // "Il mio account" unito qui (2026-08-29, richiesto esplicitamente dall'utente) —
 // prima era una pagina a sé raggiunta dal proprio nome in fondo alla Sidebar.
@@ -327,6 +328,7 @@ const SETTINGS_GROUPS = [
     { key: 'moduli', icon: 'box', label: 'Moduli' },
     { key: 'liste', icon: 'list', label: 'Liste' },
     { key: 'funzioni', icon: 'grid', label: 'Funzioni' },
+    { key: 'aspetto', icon: 'palette', label: 'Aspetto' },
   ] },
   { label: 'Integrazioni', items: [
     { key: 'connessioni', icon: 'link', label: 'Connessioni' },
@@ -390,6 +392,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
           {tab === 'connessioni' && <ConnessioniTab token={token} user={user} features={features} />}
 
           {tab === 'funzioni' && <FeaturesTab token={token} onChanged={onFeaturesChanged} />}
+          {tab === 'aspetto' && <AspettoTab token={token} />}
           {tab === 'suggerimenti' && features.suggerimenti && <SuggestionsTab token={token} onOpenInBuilder={onOpenInBuilder} />}
           {tab === 'notifiche' && <ReportsSettingsTab token={token} user={user} features={features} />}
 

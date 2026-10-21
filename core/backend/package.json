@@ -1,6 +1,6 @@
 {
   "name": "platform-core-backend",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "main": "src/index.js",
   "engines": {
     "node": "22.x"
@@ -20,6 +20,7 @@
     "multer": "^1.4.5-lts.1",
     "otplib": "^12.0.1",
     "pdf-parse": "^1.1.4",
+    "pngjs": "^7.0.0",
     "qrcode": "^1.5.4",
     "redis": "^4.6.13"
   }

@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.8 — 21 ottobre 2026
+
+Richiesto dall'utente: con più verticali diversi, ciascuno salvato come app sul dock (macOS/Chrome), tutte avevano la stessa icona blu/viola — nessun modo di distinguerle a colpo d'occhio nel dock/launcher.
+
+- Nuovo tab **Impostazioni → Aspetto**: un colore per l'app (`accent_color`, colonna già esistente da agosto ma senza UI — "white-label minimo" mai collegato a un posto da cui impostarlo).
+- Quel colore ora arriva anche nell'icona: `core/backend/src/pwa-icon.js` ricolora icon-192/512, apple-touch-icon e il `theme_color` del manifest ogni volta che il colore viene salvato (o riportati di fabbrica se il colore viene tolto) — nessuna libreria di grafica con binari nativi (niente canvas/sharp, già causa di problemi in passato), solo pngjs (puro JS) con un lerp(colore, bianco) sulla "bianchezza" di ogni pixel.
+- L'apple-touch-icon in `index.html` non è più inline (base64 fisso, non ricolorabile) ma un file esterno, come le altre icone.
+
 ## 0.3.7 — 20 ottobre 2026
 
 Bug reale trovato scavando su una segnalazione dell'utente ("oggi è arrivata una mail e non è stata smistata"): con l'app Google in modalità "Test" il token scade dopo 7 giorni (noto, documentato) — ma quando scade, il controllo automatico delle mail (ogni 15 minuti) falliva **in totale silenzio**, zero log e zero avviso, da quando era stato introdotto. Il codice trattava "Google mai collegato" (stato normale, giusto restare muti) e "era collegato, il token è scaduto" (guasto vero) allo stesso identico modo. Risultato: bollette smesse di arrivare senza che nessuno se ne accorgesse finché non mancava una mail vera.

@@ -45,6 +45,7 @@ ENV NODE_ENV=production
 # Backend
 WORKDIR /app
 COPY core/backend/src/ ./src/
+COPY core/backend/assets/ ./assets/
 COPY core/backend/package.json .
 COPY --from=backend-builder /backend/node_modules ./node_modules
 # Stesso file condiviso della build frontend (vedi sopra) — stesso path assoluto
