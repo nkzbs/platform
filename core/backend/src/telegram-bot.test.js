@@ -501,6 +501,30 @@ async function main() {
     eq(documenti.length, 1);
   });
 
+  console.log('\n--- debito casa (chi deve a chi) ---');
+  roles.set('spese_casa', { kind: 'spesa', uses: ['avvisi', 'riepiloghi'], roles: { ...RL, pagato_da: 'pagato_da' }, avvisi: { ...AV, label: 'casa' } });
+  const dc = require('./debito-casa');
+  // quota_a volutamente alta (900): la sezione "registrare un'entrata" più sopra ha già versato 500
+  // di "Contributo Nima" questo mese (stato condiviso tra le sezioni, additivo) — con una quota di
+  // 900 lo sbilancio resta vero e prevedibile comunque, invece di inseguire o azzerare quel record.
+  dc.setQuote({ nome_a: 'Nima', nome_b: 'Fede', quota_a: 900, quota_b: 400 });
+  // «rispondi» usa sempre il mese corrente vero (non un now finto nei test): il primo mese tracciato
+  // è quindi QUESTO mese, cosi' il saldo e' sempre su un solo mese, prevedibile a prescindere da
+  // quando gira la suite.
+  const meseDebito = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(new Date()).slice(0, 7);
+  put('spese_casa', { descrizione: 'Bolletta', importo: 400, data: meseDebito + '-05', _stato: 'pagato', pagato_da: 'Fede' }, 6); // Fede copre la sua quota pagando direttamente, non dal pot
+
+  await test('«quanto devo a Fede?»: Nima ha versato 500 (sezione «registrare un\'entrata» sopra) contro una quota di 900', async () => {
+    intents['quanto devo a fede?'] = { azione: 'debito_casa' };
+    const m = await say(555, 'quanto devo a fede?');
+    ok(/Devi <b>400,00 €<\/b> a <b>Fede<\/b>/.test(m.text), m.text);
+  });
+  await test('«siamo in pari con casa?»: dal punto di vista di Fede è lei che deve avere, non deve', async () => {
+    intents['siamo in pari con casa?'] = { azione: 'debito_casa' };
+    const m = await say(666, 'siamo in pari con casa?');
+    ok(/<b>Nima<\/b> ti deve <b>400,00 €<\/b>/.test(m.text), m.text);
+  });
+
   console.log('\n--- /menu: bottoni a sottomenu (2026-10-14) ---');
   await test('/menu mostra la radice: Spese & Entrate, Timbrature, Busta paga (Federica le ha entrambe), Report', async () => {
     const m = await say(666, '/menu');

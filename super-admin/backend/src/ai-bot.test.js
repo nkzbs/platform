@@ -24,7 +24,7 @@ console.log('\n--- cosa esce verso il modello ---');
 test('la frase è ripulita dai dati personali; niente record, solo i moduli', () => {
   const s = bot.sanitizeBot({ frase: 'ho pagato mario.rossi@x.it con IBAN IT60X0542811101000000123456', moduli: MODULI, oggi: '2026-10-11' });
   ok(!s.payload.frase.includes('mario.rossi') && !s.payload.frase.includes('IT60X05'), s.payload.frase);
-  eq(Object.keys(s.payload).sort(), ['busta_paga', 'frase', 'moduli', 'moduli_entrata', 'oggi', 'report', 'storico', 'timbrature']);
+  eq(Object.keys(s.payload).sort(), ['busta_paga', 'debito_casa', 'frase', 'moduli', 'moduli_entrata', 'oggi', 'report', 'storico', 'timbrature']);
 });
 test('storico: assente senza dati, ripulito dai dati personali e tagliato quando c\'è', () => {
   const senza = bot.sanitizeBot({ frase: 'ciao', moduli: MODULI });
@@ -107,6 +107,10 @@ test('senza moduli di spesa ma con le timbrature la frase è accettata', () => {
 });
 test('senza moduli di spesa ma con la busta paga la frase è accettata', () => {
   ok(!bot.sanitizeBot({ frase: 'ferie residue', oggi: '2026-10-12', busta_paga: true, moduli: [] }).error);
+});
+test('senza moduli di spesa ma col debito casa la frase è accettata; "debito_casa" non ha parametri', () => {
+  ok(!bot.sanitizeBot({ frase: 'quanto devo a Federica', oggi: '2026-10-12', debito_casa: true, moduli: [] }).error);
+  eq(bot.validateIntent({ azione: 'debito_casa', campo_a_caso: 'ignorato' }, mod, '2026-10-12').intent, { azione: 'debito_casa' });
 });
 test('busta_paga: periodo (mese o "ultima"), campo dell\'elenco, "domanda" solo con campo "spiega"', () => {
   eq(bot.validateIntent({ azione: 'busta_paga', periodo: 'ultima', campo: 'ferie_saldo' }, mod, '2026-10-12').intent, { azione: 'busta_paga', periodo: 'ultima', campo: 'ferie_saldo', domanda: null });

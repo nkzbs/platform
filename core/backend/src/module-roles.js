@@ -6,7 +6,9 @@ const db = require('./db');
 
 // presenze = timbrature: un modulo con una data, un'ora di inizio (entrata) e una di fine (uscita); ruoli `inizio` e `fine`.
 // bustapaga = una riga al mese con quanto scritto in busta (lordo, netto, ore pagate, trattenute); ruoli `lordo`, `netto`, `ore_pagate`, `trattenute` (`data` = il mese).
-const ROLE_KEYS = ['importo', 'data', 'scadenza', 'categoria', 'descrizione', 'stato', 'gruppo', 'fisso', 'data_pagamento', 'note', 'data_incerta', 'debito', 'inizio', 'fine', 'lordo', 'netto', 'ore_pagate', 'trattenute'];
+// `pagato_da`: su un modulo di spesa condivisa (un "pot" tra più persone), il campo che dice chi ha pagato quella riga
+// direttamente di tasca propria invece che dal conto comune — solo chi lo dichiara entra nel saldo dei contributi (debito-casa.js).
+const ROLE_KEYS = ['importo', 'data', 'scadenza', 'categoria', 'descrizione', 'stato', 'gruppo', 'fisso', 'data_pagamento', 'note', 'data_incerta', 'debito', 'inizio', 'fine', 'lordo', 'netto', 'ore_pagate', 'trattenute', 'pagato_da'];
 // pratica = una riga con stati e (se serve) una scadenza, senza essere denaro (ticket, ordini, scadenzario, manutenzioni…): entra negli avvisi e nei report, non nei riepiloghi di spese ed entrate.
 const KINDS = ['spesa', 'entrata', 'presenze', 'pratica', 'bustapaga'];
 const USES = ['riepiloghi', 'avvisi', 'mail', 'estratto'];

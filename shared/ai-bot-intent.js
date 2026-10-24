@@ -2,7 +2,7 @@
 // Bot Telegram: le regole che dicono cosa può essere una risposta dell'AI. Condivise tra Super Admin (che valida la risposta del modello) e il tenant (che la
 // rivalida prima di agire): le stesse regole in entrambi i posti, mai due copie che si allontanano. Qualsiasi cosa fuori elenco diventa «altro» o un errore, mai
 // un'azione. Vedi super-admin/backend/src/lib/ai-bot.js e core/backend/src/bot-ai.js.
-const AZIONI = ['domanda', 'elenco', 'segna_pagata', 'riapri', 'smista', 'nuova_spesa', 'nuova_entrata', 'timbra', 'ore', 'busta_paga', 'altro'];
+const AZIONI = ['domanda', 'elenco', 'segna_pagata', 'riapri', 'smista', 'nuova_spesa', 'nuova_entrata', 'timbra', 'ore', 'busta_paga', 'debito_casa', 'altro'];
 const PERIODI_ORE = ['oggi', 'settimana', 'mese', 'mese_scorso'];
 const ORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 const COSE = ['pagare', 'scadute', 'smistare'];
@@ -62,6 +62,10 @@ function validateIntent(raw, moduli, oggi, report, moduliEntrata) {
     if (campo === 'spiega' && domanda.length < 3) return { error: 'Non ho capito la domanda sulla busta paga' };
     return { intent: { azione, periodo, campo, domanda } };
   }
+
+  // debito_casa: "chi deve a chi" tra i contributi versati alla casa e la quota attesa di ciascuno
+  // ("quanto devo a Federica?", "siamo in pari?") — nessun parametro, risponde sempre col saldo ad oggi.
+  if (azione === 'debito_casa') return { intent: { azione } };
 
   if (azione === 'nuova_entrata') {
     const importo = Number(raw.importo);
