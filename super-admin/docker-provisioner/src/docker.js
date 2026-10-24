@@ -117,9 +117,12 @@ async function removeTenant(slug) {
 // Ricostruisce platform-core:latest dal sorgente più recente del branch main
 // su GitHub — stesso Dockerfile/contesto (radice del repo) di
 // scripts/redeploy-nas.sh, solo eseguito qui invece che dal laptop dello
-// sviluppatore via SSH. onLine(msg) riceve una riga per volta (download, ogni
-// step del Dockerfile) per il popup di avanzamento in Super Admin: un build
-// può durare oltre un minuto, un singolo "fatto" finale sembrerebbe bloccato.
+// sviluppatore via SSH. onLine(msg) riceve i messaggi per il popup di
+// avanzamento in Super Admin: solo i 2-3 passaggi di sopra/sotto (scarico,
+// costruisco, pronta), non più una riga per ogni passaggio del Dockerfile
+// (~80 righe, "troppo verbose" — richiesto dall'utente il 24/10). Durante la
+// costruzione (può durare oltre un minuto) l'icona che gira sull'ultima riga
+// nel popup basta a dire "sta ancora lavorando", senza un log a fiumi.
 // Solo per il log di avanzamento — se GitHub non risponde (rate limit
 // anonimo, rete) il build prosegue comunque, non è mai bloccante.
 function fetchLatestCommitShort() {
@@ -157,10 +160,15 @@ async function buildCoreImage(onLine) {
     { context: buildContext, src: ['core/Dockerfile', 'core', 'shared'] },
     { t: IMAGE_NAME, dockerfile: 'core/Dockerfile' }
   );
+  // Non più un messaggio per ogni riga grezza di `docker build` (richiesto
+  // dall'utente, "troppo verbose": erano ~80 righe — "Step 12/26", "--->
+  // hash", "Using cache" — per un'immagine di 26 passaggi). Chi guarda
+  // vuole sapere SE sta andando e SE è fallito, non il log del build:
+  // i tre messaggi sopra/sotto restano i soli passaggi mostrati, un errore
+  // vero interrompe comunque tutto (buildError sotto).
   let buildError = null;
   await new Promise((resolve, reject) => {
     docker.followProgress(stream, (err, res) => (err ? reject(err) : resolve(res)), (evt) => {
-      if (evt.stream && evt.stream.trim()) say(evt.stream.replace(/\n$/, ''));
       if (evt.error) { buildError = evt.error; say('Errore: ' + evt.error); }
     });
   });
