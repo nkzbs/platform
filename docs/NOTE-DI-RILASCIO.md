@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.14 — 24 ottobre 2026
+
+Due rifiniture ai widget "Riepilogo mensile" affiancati (0.3.12), trovate dall'utente dal vivo dopo il deploy.
+
+- Soglia per affiancare le due card abbassata da 1024px a 640px (`sm:col-span-1` oltre a `lg:col-span-3`): prima serviva una finestra quasi a schermo intero, ora basta una finestra di media larghezza — richiesto esplicitamente dall'utente ("voglio l'affiancata").
+- L'anello dello spendibile veniva tagliato dal bordo della card quando non c'era spazio per stare a fianco del testo. Messo sempre sotto il testo (mai più a fianco, nemmeno su schermi larghi): non solo risolve il taglio, ma toglie anche un'inconsistenza trovata subito dopo dall'utente — un testo più corto ("80%") lasciava stare l'anello a fianco mentre uno più lungo ("Nessuna entrata registrata") lo spingeva sotto, facendo sembrare le due card "sfalsate" quando una aveva un segno più/meno e l'altra no.
+
 ## 0.3.13 — 24 ottobre 2026
 
 Il popup "Aggiornamento in corso" di Super Admin mostrava ~80 righe — una per ogni passaggio grezzo di `docker build` ("Step 12/26", "---> hash", "Using cache") — richiesto dall'utente dopo averlo visto dal vivo: "troppo verbose... qualcosa di più minimale".

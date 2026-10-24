@@ -73,7 +73,11 @@ export default function RiepilogoMensile({ data, label, nomeMese }) {
         {/* HERO: spendibile + anello */}
         <Tile i={0} className="col-span-2 lg:row-span-2 lg:flex lg:items-center" style={{ background: `linear-gradient(135deg, ${col}2E 0%, ${ok ? AZZURRO : AMBRA}1F 100%)`, border: `1px solid ${col}40` }}>
           <div className="rm-glow absolute -top-10 -right-10 w-44 h-44 rounded-full blur-3xl pointer-events-none" style={{ background: col + '55' }} />
-          <div className="relative flex items-center justify-between gap-3 w-full">
+          {/* Sempre impilato (testo sopra, anello sotto) — mai affiancati "a volte sì a
+             volte no" a seconda di quanto è lungo il testo (es. "Nessuna entrata
+             registrata" contro "80%"): con due card di questo tipo vicine (Personale/Casa)
+             un layout che dipende dal contenuto le fa sembrare sfalsate l'una dall'altra. */}
+          <div className="relative flex flex-col gap-3 w-full">
             <div className="min-w-0">
               <Etichetta>Spendibile</Etichetta>
               <div className="flex items-baseline tabular-nums mt-1 leading-none" style={{ color: col }}>
