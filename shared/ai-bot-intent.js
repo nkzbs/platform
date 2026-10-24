@@ -2,12 +2,14 @@
 // Bot Telegram: le regole che dicono cosa può essere una risposta dell'AI. Condivise tra Super Admin (che valida la risposta del modello) e il tenant (che la
 // rivalida prima di agire): le stesse regole in entrambi i posti, mai due copie che si allontanano. Qualsiasi cosa fuori elenco diventa «altro» o un errore, mai
 // un'azione. Vedi super-admin/backend/src/lib/ai-bot.js e core/backend/src/bot-ai.js.
-const AZIONI = ['domanda', 'elenco', 'segna_pagata', 'riapri', 'smista', 'nuova_spesa', 'nuova_entrata', 'timbra', 'ore', 'altro'];
+const AZIONI = ['domanda', 'elenco', 'segna_pagata', 'riapri', 'smista', 'nuova_spesa', 'nuova_entrata', 'timbra', 'ore', 'busta_paga', 'altro'];
 const PERIODI_ORE = ['oggi', 'settimana', 'mese', 'mese_scorso'];
 const ORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 const COSE = ['pagare', 'scadute', 'smistare'];
 const MODI = ['uno', 'rate', 'pagata'];
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
+const MESE_ISO = /^\d{4}-\d{2}$/;
+const CAMPI_BUSTA_PAGA = ['netto', 'lordo', 'ore_pagate', 'trattenute', 'ferie_saldo', 'permessi_saldo', 'rol_saldo', 'tutto', 'spiega', 'mancanti'];
 
 const clean = (v, n) => String(v == null ? '' : v).replace(/[\r\n]+/g, ' ').trim().slice(0, n);
 
@@ -48,6 +50,19 @@ function validateIntent(raw, moduli, oggi, report, moduliEntrata) {
   }
   if (azione === 'ore') return { intent: { azione, periodo: PERIODI_ORE.includes(raw.periodo) ? raw.periodo : 'settimana' } };
 
+  // busta_paga: una domanda sui cedolini (non una somma/conteggio come "domanda" — una riga precisa,
+  // es. "ferie residue", "quante ore a ottobre", "l'ultima busta paga", "che buste paga mancano",
+  // o una domanda libera sul dettaglio — "campo: spiega" — risolta con l'AI sul testo del cedolino).
+  if (azione === 'busta_paga') {
+    const campo = CAMPI_BUSTA_PAGA.includes(raw.campo) ? raw.campo : 'tutto';
+    let periodo = null;
+    if (raw.periodo === 'ultima') periodo = 'ultima';
+    else if (MESE_ISO.test(String(raw.periodo))) periodo = raw.periodo;
+    const domanda = campo === 'spiega' ? clean(raw.domanda, 200) : null;
+    if (campo === 'spiega' && domanda.length < 3) return { error: 'Non ho capito la domanda sulla busta paga' };
+    return { intent: { azione, periodo, campo, domanda } };
+  }
+
   if (azione === 'nuova_entrata') {
     const importo = Number(raw.importo);
     if (!(Number.isFinite(importo) && importo > 0 && importo <= 1000000)) return { error: 'Importo non valido' };
@@ -74,4 +89,4 @@ function validateIntent(raw, moduli, oggi, report, moduliEntrata) {
 }
 
 
-export { AZIONI, COSE, MODI, PERIODI_ORE, ISO, validateIntent, validDate };
+export { AZIONI, COSE, MODI, PERIODI_ORE, CAMPI_BUSTA_PAGA, ISO, validateIntent, validDate };

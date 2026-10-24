@@ -69,14 +69,16 @@ async function interpret(frase, user, now = new Date(), storico = null) {
   const moduli = moduliPerUtente(user).map((m) => ({ slug: m.slug, name: m.name, etichetta: m.etichetta, categorie: m.categorie }));
   const moduliEntrata = entrataModuliPerUtente(user).map((m) => ({ slug: m.slug, name: m.name, categorie: m.categorie, gruppi: m.gruppi }));
   const timbrature = require('./bot-timbrature').haPresenze(user);
-  if (!moduli.length && !moduliEntrata.length && !timbrature) return { error: 'Non hai moduli a cui il bot possa lavorare.', code: 'no_modules' };
+  const bustaPaga = require('./bot-payslip').haBustaPaga(user);
+  if (!moduli.length && !moduliEntrata.length && !timbrature && !bustaPaga) return { error: 'Non hai moduli a cui il bot possa lavorare.', code: 'no_modules' };
   const oggi = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(now);
   const report = require('./reports').settings().definizioni.filter((d) => d.enabled).map((d) => ({ id: d.id, nome: d.nome }));
-  const r = await viaSuperAdmin('bot-intent', { frase, oggi, timbrature, report, moduli, moduli_entrata: moduliEntrata, storico });
+  const r = await viaSuperAdmin('bot-intent', { frase, oggi, timbrature, busta_paga: bustaPaga, report, moduli, moduli_entrata: moduliEntrata, storico });
   if (r.error) return r;
   const v = validateIntent(r.body && r.body.intent, moduli, oggi, report.map((x) => x.id), moduliEntrata); // rivalidato qui, con le stesse regole
   if (v.intent && (v.intent.azione === 'timbra' || v.intent.azione === 'ore') && !timbrature) return { error: 'Non hai timbrature.', code: 'ai_unanswerable' };
   if (v.intent && v.intent.azione === 'nuova_entrata' && !moduliEntrata.length) return { error: 'Non hai moduli di entrata.', code: 'ai_unanswerable' };
+  if (v.intent && v.intent.azione === 'busta_paga' && !bustaPaga) return { error: 'Non hai buste paga.', code: 'ai_unanswerable' };
   if (v.error) return { error: v.error, code: 'ai_unanswerable' };
   return { intent: v.intent };
 }

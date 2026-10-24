@@ -24,7 +24,7 @@ console.log('\n--- cosa esce verso il modello ---');
 test('la frase è ripulita dai dati personali; niente record, solo i moduli', () => {
   const s = bot.sanitizeBot({ frase: 'ho pagato mario.rossi@x.it con IBAN IT60X0542811101000000123456', moduli: MODULI, oggi: '2026-10-11' });
   ok(!s.payload.frase.includes('mario.rossi') && !s.payload.frase.includes('IT60X05'), s.payload.frase);
-  eq(Object.keys(s.payload).sort(), ['frase', 'moduli', 'moduli_entrata', 'oggi', 'report', 'storico', 'timbrature']);
+  eq(Object.keys(s.payload).sort(), ['busta_paga', 'frase', 'moduli', 'moduli_entrata', 'oggi', 'report', 'storico', 'timbrature']);
 });
 test('storico: assente senza dati, ripulito dai dati personali e tagliato quando c\'è', () => {
   const senza = bot.sanitizeBot({ frase: 'ciao', moduli: MODULI });
@@ -104,6 +104,18 @@ test('nuova_entrata: importo > 0, descrizione, modulo/categoria/gruppo validati 
 test('senza moduli di spesa ma con le timbrature la frase è accettata', () => {
   ok(!bot.sanitizeBot({ frase: 'sono entrata', oggi: '2026-10-12', timbrature: true, moduli: [] }).error);
   ok(!!bot.sanitizeBot({ frase: 'sono entrata', oggi: '2026-10-12', moduli: [] }).error);
+});
+test('senza moduli di spesa ma con la busta paga la frase è accettata', () => {
+  ok(!bot.sanitizeBot({ frase: 'ferie residue', oggi: '2026-10-12', busta_paga: true, moduli: [] }).error);
+});
+test('busta_paga: periodo (mese o "ultima"), campo dell\'elenco, "domanda" solo con campo "spiega"', () => {
+  eq(bot.validateIntent({ azione: 'busta_paga', periodo: 'ultima', campo: 'ferie_saldo' }, mod, '2026-10-12').intent, { azione: 'busta_paga', periodo: 'ultima', campo: 'ferie_saldo', domanda: null });
+  eq(bot.validateIntent({ azione: 'busta_paga', periodo: '2026-09', campo: 'ore_pagate' }, mod, '2026-10-12').intent, { azione: 'busta_paga', periodo: '2026-09', campo: 'ore_pagate', domanda: null });
+  eq(bot.validateIntent({ azione: 'busta_paga', periodo: null, campo: 'mancanti' }, mod, '2026-10-12').intent, { azione: 'busta_paga', periodo: null, campo: 'mancanti', domanda: null });
+  eq(bot.validateIntent({ azione: 'busta_paga', periodo: '12/2026', campo: 'boh' }, mod, '2026-10-12').intent.periodo, null, 'mese non in formato AAAA-MM -> null');
+  eq(bot.validateIntent({ azione: 'busta_paga', periodo: null, campo: 'boh' }, mod, '2026-10-12').intent.campo, 'tutto', 'campo sconosciuto -> tutto');
+  eq(bot.validateIntent({ azione: 'busta_paga', campo: 'spiega', domanda: 'perché ho preso meno questo mese?' }, mod, '2026-10-12').intent.domanda, 'perché ho preso meno questo mese?');
+  ok(!!bot.validateIntent({ azione: 'busta_paga', campo: 'spiega', domanda: '' }, mod, '2026-10-12').error, 'spiega senza domanda: errore');
 });
 test('elenco: «cosa» deve essere uno dei report del tenant (altrimenti, l\'elenco di partenza)', () => {
   eq(bot.validateIntent({ azione: 'elenco', cosa: 'ore_periodo_1' }, mod, '2026-10-12', ['pagare', 'ore_periodo_1']).intent, { azione: 'elenco', cosa: 'ore_periodo_1' });

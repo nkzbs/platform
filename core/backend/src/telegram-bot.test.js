@@ -35,10 +35,12 @@ const SPESE = (extra = []) => ({ version: 3, steps: [F('descrizione', 'Descrizio
 const SOLO_PROPRI = { id: 'p1', block_type: 'permissions', rules: [{ role: 'user', view: true, view_own_only: true, owner_field: '', create: true, edit: true, delete: true }] };
 const TOKEN = '123456789:' + 'A'.repeat(35);
 
-const calls = []; const intents = {}; const asks = {}; let saDown = false; const scontrino = { next: null }; const richiesteScontrino = []; const richiesteAi = [];
+const calls = []; const intents = {}; const asks = {}; const spiegazioni = {}; let saDown = false; const scontrino = { next: null }; const richiesteScontrino = []; const richiesteAi = []; const documenti = [];
 const realFetch = global.fetch;
 global.fetch = async (url, opt) => {
-  const u = String(url), body = opt && opt.body ? JSON.parse(opt.body) : {};
+  const u = String(url); let body = {};
+  if (opt && typeof opt.body === 'string') { try { body = JSON.parse(opt.body); } catch (e) { /* non JSON, es. multipart */ } }
+  if (u.includes('/sendDocument')) { documenti.push({ chatId: (opt.body.get && opt.body.get('chat_id')) || null, filename: opt.body.get && opt.body.get('document') && opt.body.get('document').name, caption: opt.body.get && opt.body.get('caption') }); return { status: 200, json: async () => ({ ok: true, result: { message_id: 999 } }) }; }
   if (u.startsWith('https://api.telegram.org/file/')) {
     const img = u.endsWith('.jpg'); const bytes = img ? Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(300, 7)]) : u.endsWith('.txt') ? Buffer.from('non sono un\'immagine, solo testo di prova') : Buffer.from('%PDF-1.4 bolletta di prova');
     return { ok: true, status: 200, arrayBuffer: async () => new Uint8Array(bytes).buffer };
@@ -52,6 +54,12 @@ global.fetch = async (url, opt) => {
     const r = scontrino.next; if (!r) return { ok: false, status: 422, json: async () => ({ error: 'illeggibile', code: 'ai_unreadable' }) };
     if (r.__status) return { ok: false, status: r.__status, json: async () => ({ error: 'errore AI', code: 'ai_limit' }) };
     return { ok: true, status: 200, json: async () => ({ ricevuta: r }) };
+  }
+  if (u.includes('/api/tenant-ai/payslip-explain')) {
+    if (saDown) throw new Error('rete giù'); richiesteAi.push({ url: u, data: body.data });
+    const r = spiegazioni[body.data && body.data.domanda];
+    if (!r) return { ok: false, status: 502, json: async () => ({ error: 'non so spiegarla' }) };
+    return { ok: true, status: 200, json: async () => ({ text: r }) };
   }
   if (u.includes('/api/tenant-ai/')) {
     if (saDown) throw new Error('rete giù');
@@ -431,6 +439,51 @@ async function main() {
     tg._resetRate(); calls.length = 0; await post({ update_id: 3, callback_query: { id: 'cbx', data: 'tb:e', message: { message_id: 78, chat: { id: 666, type: 'private' }, reply_markup: { inline_keyboard: [] } } } });
     ok(/Entrata/.test(ultimi('sendMessage').slice(-1)[0].body.text)); eq(righeTb(6).length, 1);
     ok(/Questa settimana/.test((await say(666, '/ore')).text));
+  });
+
+  console.log('\n--- domande sulla busta paga ---');
+  add('busta-paga', 'Busta Paga', { version: 3, steps: [F('periodo', 'Periodo', 'date'), F('netto', 'Netto', 'currency'), F('lordo', 'Lordo', 'currency'), F('ore_pagate', 'Ore pagate', 'number'), F('ferie_saldo', 'Ferie residue', 'number'), F('permessi_saldo', 'Permessi residui', 'number'), F('rol_saldo', 'ROL residui', 'number'), F('voci', 'Voci', 'textarea'), F('datore_lavoro', 'Datore di lavoro', 'text'), F('periodo_label', 'Periodo (etichetta)', 'text'), F('proprietario', 'Di chi è', 'select', { options: ['Nima', 'Fede'] })] });
+  roles.set('busta-paga', { kind: 'bustapaga', uses: [], roles: { data: 'periodo', netto: 'netto', lordo: 'lordo', ore_pagate: 'ore_pagate', trattenute: 'trattenute' } });
+  db.prepare("INSERT INTO user_modules (user_id, module_slug) VALUES (6, 'busta-paga')").run(); // solo Fede: Nima resta nel fallback "vede tutto" (vedi nota sopra)
+  put('busta-paga', { periodo: '2026-08-01', periodo_label: 'Agosto', netto: 1800, lordo: 2400, ore_pagate: 160, ferie_saldo: 12, permessi_saldo: 3, rol_saldo: 5, datore_lavoro: 'Acme', proprietario: 'Nima', voci: 'retribuzione ordinaria 2000' }, 5);
+  const idUltimaNima = put('busta-paga', { periodo: '2026-09-01', periodo_label: 'Settembre', netto: 1900, lordo: 2500, ore_pagate: 168, ferie_saldo: 10, permessi_saldo: 2, rol_saldo: 4, datore_lavoro: 'Acme', proprietario: 'Nima', voci: 'retribuzione ordinaria 2100, straordinario 150' }, 5);
+  put('busta-paga', { periodo: '2026-09-01', periodo_label: 'Settembre', netto: 1500, lordo: 1900, ore_pagate: 150, ferie_saldo: 20, permessi_saldo: 6, rol_saldo: 8, datore_lavoro: 'Orzi Dolci', proprietario: 'Fede', voci: 'retribuzione ordinaria 1800' }, 6);
+
+  await test('«ferie residue?»: la busta più recente di chi chiede, non quella di un altro', async () => {
+    intents['ferie residue?'] = { azione: 'busta_paga', periodo: null, campo: 'ferie_saldo' };
+    const n = await say(555, 'ferie residue?'); ok(/Ferie residue.*Settembre.*10/s.test(n.text), n.text);
+    const f = await say(666, 'ferie residue?'); ok(/Ferie residue.*Settembre.*20/s.test(f.text), f.text);
+  });
+  await test('«quante ore ho fatto ad agosto?»: il mese chiesto, non l\'ultimo', async () => {
+    intents['quante ore ho fatto ad agosto?'] = { azione: 'busta_paga', periodo: '2026-08', campo: 'ore_pagate' };
+    ok(/Ore pagate.*Agosto.*160/s.test((await say(555, 'quante ore ho fatto ad agosto?')).text));
+  });
+  await test('«che buste paga mancano?»: i mesi tra la prima e l\'ultima busta di chi chiede, senza quella di agosto mancante per Fede', async () => {
+    intents['che buste paga mancano?'] = { azione: 'busta_paga', periodo: null, campo: 'mancanti' };
+    ok(/Nessun buco/.test((await say(555, 'che buste paga mancano?')).text), 'Nima ha agosto+settembre, consecutivi');
+  });
+  await test('«dammi la mia ultima busta paga»: manda il file allegato (se c\'è), non un messaggio di solo testo', async () => {
+    const { saveUploadBuffer } = require('./lib/upload-storage');
+    const stored = await saveUploadBuffer(Buffer.from('%PDF-1.4 busta di prova'), 'settembre.pdf', 'application/pdf');
+    const upId = db.prepare('INSERT INTO uploads (original_name, stored_name, mime_type, size, uploaded_by) VALUES (?, ?, ?, ?, ?)').run('settembre.pdf', stored, 'application/pdf', 20, 5).lastInsertRowid;
+    db.prepare('INSERT INTO record_attachments (module_slug, record_id, upload_id, tipo) VALUES (?, ?, ?, ?)').run('busta-paga', idUltimaNima, upId, 'pdf');
+    intents['dammi la mia ultima busta paga'] = { azione: 'busta_paga', periodo: 'ultima', campo: 'tutto' };
+    documenti.length = 0;
+    const r = await say(555, 'dammi la mia ultima busta paga');
+    eq(r, null, 'niente sendMessage: il file è già la risposta');
+    eq(documenti.length, 1); eq(documenti[0].filename, 'settembre.pdf'); ok(/Settembre/.test(documenti[0].caption) && /1\.900/.test(documenti[0].caption), documenti[0].caption);
+  });
+  await test('domanda libera sul dettaglio ("spiega"): la risposta viene dall\'AI, sul testo della busta', async () => {
+    intents['perché ho preso di più questo mese?'] = { azione: 'busta_paga', periodo: 'ultima', campo: 'spiega', domanda: 'perché ho preso di più questo mese?' };
+    spiegazioni['perché ho preso di più questo mese?'] = 'A settembre hai fatto dello straordinario (150€ in più), per questo il netto è più alto.';
+    const m = await say(555, 'perché ho preso di più questo mese?');
+    ok(/Settembre/.test(m.text) && /straordinario/.test(m.text), m.text);
+  });
+  await test('un campo inventato dal modello non manda in errore: diventa "tutto" (qui l\'ultima busta di Nima ha un allegato, quindi manda il file)', async () => {
+    intents['boh busta paga'] = { azione: 'busta_paga', periodo: null, campo: 'tutto_inventato' };
+    documenti.length = 0;
+    eq(await say(555, 'boh busta paga'), null, 'campo sconosciuto -> tutto -> il file è già la risposta');
+    eq(documenti.length, 1);
   });
 
   console.log('\n--- /menu: bottoni a sottomenu (2026-10-14) ---');

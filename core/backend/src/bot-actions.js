@@ -405,13 +405,21 @@ async function proponiBustaPaga(user, chatId, file, fileFn, isPdf) {
     ore_pagate: p.ore_pagate != null ? Number(p.ore_pagate) : null,
     lordo: p.lordo != null ? Number(p.lordo) : null,
     trattenute: p.trattenute != null ? Number(p.trattenute) : null,
+    datore_lavoro: p.datore_lavoro || null,
+    ferie_saldo: p.ferie_saldo != null ? Number(p.ferie_saldo) : null,
+    permessi_saldo: p.permessi_saldo != null ? Number(p.permessi_saldo) : null,
+    rol_saldo: p.rol_saldo != null ? Number(p.rol_saldo) : null,
+    voci: p.voci || null,
   };
   const id = savePending(chatId, user.id, { tipo: 'busta_paga', file_id: file.file_id, filename: nome, campi });
   return {
-    html: '📄 Busta paga letta' + (campi.data ? ' — ' + shortDate(campi.data) : '') + ':\n'
+    html: '📄 Busta paga letta' + (campi.data ? ' — ' + shortDate(campi.data) : '') + (campi.datore_lavoro ? ' (' + esc(campi.datore_lavoro) + ')' : '') + ':\n'
       + '• netto ' + (campi.netto != null ? eur(campi.netto) : '<b>da verificare</b>')
       + (campi.ore_pagate != null ? '\n• ore pagate ' + campi.ore_pagate : '')
       + (campi.lordo != null ? '\n• lordo ' + eur(campi.lordo) : '')
+      + (campi.ferie_saldo != null ? '\n• ferie residue ' + campi.ferie_saldo : '')
+      + (campi.permessi_saldo != null ? '\n• permessi residui ' + campi.permessi_saldo : '')
+      + (campi.rol_saldo != null ? '\n• ROL residui ' + campi.rol_saldo : '')
       + (p.confidenza ? '\n• sicurezza di lettura: ' + esc(p.confidenza) : '')
       + '\n\nLa registro in <b>Busta Paga</b> con il file allegato. Controlla i dati.',
     keyboard: [[btn('✅ Registra', 'ok:' + id), btn('✖ Annulla', 'no:' + id)]],

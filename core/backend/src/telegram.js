@@ -54,6 +54,20 @@ async function sendMessage(chatId, html, keyboard) {
   return api('sendMessage', body);
 }
 
+// Rimanda indietro un file già allegato a un record (es. il PDF/foto di una busta paga): multipart,
+// a differenza di sendMessage/api che parlano solo JSON. `caption` in HTML, come i messaggi normali.
+async function sendDocument(chatId, bytes, filename, mime, caption) {
+  const c = creds(); if (!c) throw new Error('Telegram non è collegato');
+  const form = new FormData();
+  form.append('chat_id', String(chatId));
+  if (caption) { form.append('caption', caption); form.append('parse_mode', 'HTML'); }
+  form.append('document', new Blob([bytes], { type: mime || 'application/octet-stream' }), filename || 'file');
+  const res = await fetch(API + '/bot' + c.bot_token + '/sendDocument', { method: 'POST', body: form });
+  let j = null; try { j = await res.json(); } catch (e) { /* risposta non JSON */ }
+  if (!j || !j.ok) throw new Error((j && j.description) || 'Telegram ha risposto con un errore (' + res.status + ')');
+  return j.result;
+}
+
 // ── collegare e scollegare il bot ───────────────────────────────────────────────────────────────────────────────────────
 // `appUrl` è l'indirizzo pubblico di questo tenant (https://finance…): da lì Telegram chiama il webhook e il bottone «Apri l'app» porta qui.
 // Il menu nativo di Telegram (quello che si apre scrivendo "/" in chat): solo i comandi fissi, sempre
@@ -141,7 +155,7 @@ async function sendReportTo(chatId, kind, result) {
 // I comandi dei report sono quelli delle definizioni accese (/id): cambiano con le impostazioni, non sono scritti qui.
 function aiuto() {
   const rep = require('./reports').settings().definizioni.filter((d) => d.enabled).map((d) => '/' + d.id + ' — ' + esc(d.nome)).join('\n');
-  return '<b>Cosa so fare</b>\n/menu — bottoni per tutto, a sottomenu\n' + (rep ? rep + '\n' : '') + '/report — tutti i report\n/timbra — entrata e uscita (se hai le timbrature)\n/ore — le ore della settimana\n\n<b>Oppure scrivimi come parli</b>, per esempio:\n• «quanto ho speso di benzina a settembre?»\n• «ho pagato l\'affitto»\n• «smista la bolletta A2A in 3 rate»\n• «ho speso 20 euro di benzina»\n• «mi è arrivato lo stipendio di 1800», «ho versato 500 euro alla casa»\n• «sono entrata», «uscita alle 12:30», «oggi sono entrata alle 9 e uscita alle 18»\n• «quante ore ho fatto questa settimana?», «ho fatto straordinari questo mese?»\n• mandami la <b>foto di uno scontrino</b> o il <b>PDF</b> di una bolletta e li leggo\n• mandami la <b>foto o il PDF di una busta paga</b> con la didascalia "busta" e la archivio\n\nOgni modifica ti viene mostrata con un bottone di conferma: senza il tuo tocco non cambio niente (le timbrature si registrano subito, con il bottone «Annulla»).\n/scollega — scollega questo telefono';
+  return '<b>Cosa so fare</b>\n/menu — bottoni per tutto, a sottomenu\n' + (rep ? rep + '\n' : '') + '/report — tutti i report\n/timbra — entrata e uscita (se hai le timbrature)\n/ore — le ore della settimana\n\n<b>Oppure scrivimi come parli</b>, per esempio:\n• «quanto ho speso di benzina a settembre?»\n• «ho pagato l\'affitto»\n• «smista la bolletta A2A in 3 rate»\n• «ho speso 20 euro di benzina»\n• «mi è arrivato lo stipendio di 1800», «ho versato 500 euro alla casa»\n• «sono entrata», «uscita alle 12:30», «oggi sono entrata alle 9 e uscita alle 18»\n• «quante ore ho fatto questa settimana?», «ho fatto straordinari questo mese?»\n• mandami la <b>foto di uno scontrino</b> o il <b>PDF</b> di una bolletta e li leggo\n• mandami la <b>foto o il PDF di una busta paga</b> con la didascalia "busta" e la archivio\n• «ferie residue?», «quante ore ho fatto a ottobre?», «dammi la mia ultima busta paga», «che buste paga mancano?»\n\nOgni modifica ti viene mostrata con un bottone di conferma: senza il tuo tocco non cambio niente (le timbrature si registrano subito, con il bottone «Annulla»).\n/scollega — scollega questo telefono';
 }
 const NON_COLLEGATO = 'Questo telefono non è collegato all\'app.\nNell\'app: <b>Impostazioni → Il mio account → Telegram → Collega il mio Telegram</b>, poi tocca il link che ti viene mostrato.';
 const hits = new Map(); // chat → istanti degli ultimi messaggi
@@ -191,6 +205,10 @@ async function handleFree(chatId, user, text, now) {
     const tb = require('./bot-timbrature');
     const out = it.azione === 'timbra' ? await tb.timbra(user, chatId, it, new Date(now)) : tb.ore(user, it.periodo, new Date(now));
     return sendMessage(chatId, out.html, out.keyboard);
+  }
+  if (it.azione === 'busta_paga') {
+    const out = await require('./bot-payslip').rispondi(user, it, chatId);
+    return out.giaInviato ? undefined : sendMessage(chatId, out.html, out.keyboard);
   }
   const p = act.proponi(user, it, chatId);
   return sendMessage(chatId, p.html, p.keyboard);
@@ -326,4 +344,4 @@ async function handleUpdate(update, now = Date.now()) {
   } catch (e) { console.error('[telegram]', e.message); }
 }
 
-module.exports = { downloadFile, reportFor, isConfigured, status, connect, disconnect, secretMatches, createLinkCode, consumeLinkCode, linkedUser, listLinks, revokeLink, scopeFor, renderReport, sendReportTo, sendMessage, handleUpdate, waToHtml, esc, _resetRate: () => { hits.clear(); aiHits.clear(); } };
+module.exports = { downloadFile, reportFor, isConfigured, status, connect, disconnect, secretMatches, createLinkCode, consumeLinkCode, linkedUser, listLinks, revokeLink, scopeFor, renderReport, sendReportTo, sendMessage, sendDocument, handleUpdate, waToHtml, esc, _resetRate: () => { hits.clear(); aiHits.clear(); } };

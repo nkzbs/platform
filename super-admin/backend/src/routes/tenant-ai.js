@@ -131,18 +131,24 @@ router.post('/classify-bill', requireInternalSecret, async (req, res) => {
 // Il tenant manda solo l'estratto testuale del PDF (dati identificativi già tolti da redact());
 // l'AI PROPONE periodo, lordo, netto, ore pagate e trattenute. Chi l'ha caricata confronta le ore
 // pagate con quelle timbrate nello stesso mese: qui non si scrive niente, solo si legge un documento.
-const PAYSLIP_SYSTEM_PROMPT = `Sei un assistente che legge buste paga italiane. Ricevi un JSON con "testo" (l'estratto testuale del PDF della busta paga, con i dati più identificativi come IBAN, codice fiscale e numeri lunghi già tolti). Rispondi SOLO con un oggetto JSON, senza altro testo, con questi campi: "periodo" (il mese di competenza della busta, nel formato AAAA-MM-GG usando il primo giorno del mese, oppure null se non lo trovi), "lordo" (la retribuzione lorda del mese, numero con il punto decimale, oppure null), "netto" (il netto in busta, l'importo effettivamente pagato al lavoratore, numero con il punto decimale, oppure null), "ore_pagate" (il totale delle ore pagate nel periodo, ordinarie più straordinarie, come numero decimale, es. 168.5, oppure null se non lo trovi scritto chiaramente), "trattenute" (il totale di contributi e imposte trattenuti, numero con il punto decimale, oppure null), "confidenza" ("alta", "media" o "bassa"). Non inventare: se un dato non è scritto chiaramente nel testo scrivi null.`;
+const PAYSLIP_SYSTEM_PROMPT = `Sei un assistente che legge buste paga italiane. Ricevi un JSON con "testo" (l'estratto testuale del PDF della busta paga, con i dati più identificativi come IBAN, codice fiscale e numeri lunghi già tolti). Rispondi SOLO con un oggetto JSON, senza altro testo, con questi campi: "periodo" (il mese di competenza della busta, nel formato AAAA-MM-GG usando il primo giorno del mese, oppure null se non lo trovi), "datore_lavoro" (il nome del datore di lavoro/azienda in busta, oppure null), "lordo" (la retribuzione lorda del mese, numero con il punto decimale, oppure null), "netto" (il netto in busta, l'importo effettivamente pagato al lavoratore, numero con il punto decimale, oppure null), "ore_pagate" (il totale delle ore pagate nel periodo, ordinarie più straordinarie, come numero decimale, es. 168.5, oppure null se non lo trovi scritto chiaramente), "trattenute" (il totale di contributi e imposte trattenuti, numero con il punto decimale, oppure null), "ferie_saldo" (il saldo ferie residue a fine periodo, in ore o giorni come indicato in busta, numero oppure null), "permessi_saldo" (il saldo permessi/ex-festività residui, numero oppure null), "rol_saldo" (il saldo ROL/banca ore residui, numero oppure null), "voci" (una stringa con TUTTE le voci della busta — ogni riga del cedolino con codice, descrizione e importo, una per riga, es. "1.0001 Retribuzione ordinaria: 1.657,48" — leggi tutto il dettaglio, non solo i totali; stringa vuota se non riesci a leggere le righe), "confidenza" ("alta", "media" o "bassa"). Non inventare: se un dato non è scritto chiaramente nel testo scrivi null.`;
 
 function sanitizePayslip(raw) {
   const num = (v, max) => { const n = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.')); return Number.isFinite(n) && n >= 0 && n < max ? Math.round(n * 100) / 100 : null; };
+  const str = (v, max) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null);
   let periodo = validDate(raw.periodo);
   if (periodo) periodo = periodo.slice(0, 7) + '-01';
   return {
     periodo,
+    datore_lavoro: str(raw.datore_lavoro, 200),
     lordo: num(raw.lordo, 100000),
     netto: num(raw.netto, 100000),
     ore_pagate: num(raw.ore_pagate, 800),
     trattenute: num(raw.trattenute, 100000),
+    ferie_saldo: num(raw.ferie_saldo, 2000),
+    permessi_saldo: num(raw.permessi_saldo, 2000),
+    rol_saldo: num(raw.rol_saldo, 2000),
+    voci: str(raw.voci, 4000),
     confidenza: ['alta', 'media', 'bassa'].includes(raw.confidenza) ? raw.confidenza : 'bassa',
   };
 }
@@ -162,15 +168,55 @@ router.post('/payslip', requireInternalSecret, async (req, res) => {
     if (daFoto) {
       const s = payslipImageAi.sanitizePayslipImage(data);
       if (s.error) return res.status(400).json({ error: s.error });
-      text = await callAI('mistral', { system: payslipImageAi.PAYSLIP_IMAGE_PROMPT, user: 'Leggi la busta paga nella foto.', images: [{ mime: s.payload.mime, base64: s.payload.base64 }], maxTokens: 250, timeoutMs: 40000, tenantSlug: tenant_slug });
+      text = await callAI('mistral', { system: payslipImageAi.PAYSLIP_IMAGE_PROMPT, user: 'Leggi la busta paga nella foto.', images: [{ mime: s.payload.mime, base64: s.payload.base64 }], maxTokens: 800, timeoutMs: 40000, tenantSlug: tenant_slug });
     } else {
       const testo = redact(String(data.testo)).slice(0, 4000);
-      text = await callAI('mistral', { system: PAYSLIP_SYSTEM_PROMPT, user: JSON.stringify({ testo }), maxTokens: 200, tenantSlug: tenant_slug });
+      text = await callAI('mistral', { system: PAYSLIP_SYSTEM_PROMPT, user: JSON.stringify({ testo }), maxTokens: 800, tenantSlug: tenant_slug });
     }
     const raw = parseJsonObject(text);
     if (!raw) return res.status(502).json({ error: 'Risposta dell\'AI non valida' });
     if (raw.leggibile === false) return res.status(422).json({ error: 'Non sembra una busta paga leggibile.', code: 'ai_unreadable' });
     res.json({ suggestion: sanitizePayslip(raw) });
+  } catch (e) {
+    res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
+  }
+});
+
+// ─── Bot Telegram: domanda libera su UNA busta paga già registrata ("perché mi hanno trattenuto
+// così tanto", "cos'è questa voce", "quanto ho preso di straordinari") ─────────────────────────
+// Il tenant manda solo il dettaglio di quella riga (mai l'intero storico): le voci lette dal cedolino
+// più i totali già salvati. Stessa garanzia delle altre spiegazioni: ogni numero nel testo deve
+// comparire nei dati mandati, altrimenti scartato.
+const PAYSLIP_EXPLAIN_PROMPT = `Sei un assistente che spiega una singola busta paga italiana a chi la sta guardando. Ricevi un JSON con "domanda" (cosa vuole sapere), "periodo" (mese), e i dati di quella busta: "netto","lordo","ore_pagate","trattenute","ferie_saldo","permessi_saldo","rol_saldo" (numeri, possono mancare) e "voci" (il testo con le righe del cedolino, puo' essere vuoto). Rispondi in italiano, massimo 80 parole, usando SOLO i numeri e le voci presenti nei dati: se la domanda chiede qualcosa che non si trova nei dati, dillo chiaramente invece di inventare. Niente markdown, niente elenchi puntati, testo semplice.`;
+function sanitizePayslipExplain(data) {
+  if (!data || typeof data !== 'object') return { error: 'data obbligatorio' };
+  const domanda = String(data.domanda || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 200);
+  if (domanda.length < 3) return { error: 'Domanda mancante' };
+  const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+  return { payload: {
+    domanda: redact(domanda),
+    periodo: String(data.periodo_label || data.periodo || '').slice(0, 40),
+    netto: num(data.netto), lordo: num(data.lordo), ore_pagate: num(data.ore_pagate), trattenute: num(data.trattenute),
+    ferie_saldo: num(data.ferie_saldo), permessi_saldo: num(data.permessi_saldo), rol_saldo: num(data.rol_saldo),
+    voci: redact(String(data.voci || '').slice(0, 4000)),
+  } };
+}
+router.post('/payslip-explain', requireInternalSecret, async (req, res) => {
+  const { tenant_slug, data } = req.body || {};
+  if (!tenant_slug) return res.status(400).json({ error: 'tenant_slug obbligatorio' });
+  const s = sanitizePayslipExplain(data);
+  if (s.error) return res.status(400).json({ error: s.error });
+  if (!isProviderConfigured('mistral', tenant_slug)) return res.status(503).json({ error: 'Nessuna chiave Mistral: inseriscila in Impostazioni → Assistente AI.', code: 'ai_not_configured' });
+  try {
+    const raw = await callAI('mistral', { system: PAYSLIP_EXPLAIN_PROMPT, user: JSON.stringify(s.payload), maxTokens: 220, tenantSlug: tenant_slug });
+    const text = String(raw || '').replace(/\*\*|__|^#+\s*|^[-•]\s+/gm, '').trim();
+    if (!text || text.length > 500) return res.status(502).json({ error: 'Risposta dell\'AI non utilizzabile' });
+    const numeri = [s.payload.netto, s.payload.lordo, s.payload.ore_pagate, s.payload.trattenute, s.payload.ferie_saldo, s.payload.permessi_saldo, s.payload.rol_saldo]
+      .filter((n) => n != null)
+      .concat((s.payload.voci.match(/\d[\d.,]*/g) || []).map((v) => reportAi.parseNum(v)).filter((n) => n != null));
+    const check = reportAi.verifyNumbers(text, numeri);
+    if (!check.ok) return res.status(502).json({ error: 'Il testo conteneva un numero non presente nei dati (' + check.numero + '): scartato', code: 'ai_unverified' });
+    res.json({ text });
   } catch (e) {
     res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
   }

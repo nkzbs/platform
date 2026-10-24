@@ -249,6 +249,15 @@ router.post('/payslip/:slug/crea', requireAuth, async (req, res) => {
   const data = { note: 'Importato: ' + f.filename, [R.data]: c.data, [R.netto]: Math.round(netto * 100) / 100, [R.ore_pagate]: Math.round(ore * 100) / 100 };
   if (R.lordo && c.lordo != null && c.lordo !== '') { const l = Number(c.lordo); if (l >= 0) data[R.lordo] = Math.round(l * 100) / 100; }
   if (R.trattenute && c.trattenute != null && c.trattenute !== '') { const t = Number(c.trattenute); if (t >= 0) data[R.trattenute] = Math.round(t * 100) / 100; }
+  // Campi senza ruolo dichiarato (non servono al calcolo, solo a raccontare il cedolino): si scrivono
+  // sulla propria chiave diretta se il modulo le ha davvero (Builder → campi), mai a scatola chiusa.
+  const moduleRow = db.prepare('SELECT schema_json FROM modules WHERE slug = ?').get(slug);
+  const schemaFields = new Set((parseSchemaNormalized((moduleRow && moduleRow.schema_json) || '{}').fields || []).map((x) => x.key));
+  for (const [campo, max] of [['datore_lavoro', null], ['ferie_saldo', 2000], ['permessi_saldo', 2000], ['rol_saldo', 2000], ['voci', 4000]]) {
+    if (!schemaFields.has(campo) || c[campo] == null || c[campo] === '') continue;
+    data[campo] = max === null ? String(c[campo]).slice(0, 200) : (() => { const n = Number(c[campo]); return Number.isFinite(n) && n >= 0 && n < max ? Math.round(n * 100) / 100 : undefined; })();
+    if (data[campo] === undefined) delete data[campo];
+  }
   const id = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(slug, req.user.id, JSON.stringify(data)).lastInsertRowid;
   try {
     const stored = await saveUploadBuffer(f.bytes, f.filename, f.mime);
