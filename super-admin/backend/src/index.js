@@ -40,8 +40,9 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors(require('../../../shared/cors-origin').buildCorsOptions(process.env.CLOUDFLARE_ZONE_NAME)));
 app.use(require('../../../shared/security-headers').applySecurityHeaders);
-// le foto per il bot arrivano come base64 (fino a 3 MB): solo questo percorso ha un limite più alto, il resto resta quello di sempre
+// le foto per il bot arrivano come base64 (fino a 3 MB): solo questi percorsi hanno un limite più alto, il resto resta quello di sempre
 app.use('/api/tenant-ai/receipt', express.json({ limit: '6mb' }));
+app.use('/api/tenant-ai/payslip', express.json({ limit: '6mb' }));
 app.use(express.json());
 
 // Stesso limite generico del gemello in core/backend/src/index.js — rete di
