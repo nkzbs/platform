@@ -96,13 +96,24 @@ async function ask(domanda, user, now = new Date(), storico = null) {
   const v = askData.validate(r.body && r.body.query, cat);
   if (v.error) return { error: v.error, code: 'ai_unanswerable' };
   const nome = (cat.find((m) => m.slug === v.query.modulo) || {}).name || v.query.modulo;
-  const out = askData.run(v.query, user);
+  const out = askData.run(v.query, user, now);
   logAudit(user.username, 'ai.ask', v.query.modulo, { calcolo: v.query.calcolo, via: 'bot' });
   const fmt = (x) => (v.query.calcolo === 'conteggio' ? String(x) : eur(x));
-  const righe = (out.righe || []).slice(0, 12).map((g) => '• ' + esc(g.etichetta) + ' — ' + fmt(g.valore) + (v.query.calcolo === 'somma' ? ' (' + g.n + ')' : ''));
   const capito = askData.leggibile(v.query, nome).join(' · ');
-  const html = '<b>' + esc(v.query.titolo || 'Risultato') + '</b>\n\n' + (out.n_righe ? 'Totale: <b>' + fmt(out.totale) + '</b> su ' + out.n_righe + (out.n_righe === 1 ? ' riga' : ' righe') : 'Nessuna riga corrisponde.')
-    + (righe.length > 1 || (righe.length === 1 && v.query.raggruppa !== 'nessuno') ? '\n' + righe.join('\n') : '')
+  const pctTxt = (n) => (n == null ? 'non calcolabile (prima non c\'era niente)' : (n > 0 ? '+' : '') + n.toLocaleString('it-IT', { maximumFractionDigits: 1 }) + '%');
+
+  let corpo;
+  if (v.query.calcolo === 'confronto') {
+    corpo = 'Ora: <b>' + eur(out.totale) + '</b>\nPrima: ' + eur(out.totale_precedente) + '\nVariazione: <b>' + pctTxt(out.variazione_pct) + '</b>';
+  } else if (v.query.calcolo === 'proiezione') {
+    corpo = 'Finora: <b>' + eur(out.totale) + '</b> (' + out.giorni_trascorsi + ' di ' + out.giorni_totali + ' giorni)'
+      + '\nDi questo passo, a fine periodo: <b>' + (out.proiezione == null ? '—' : eur(out.proiezione)) + '</b>';
+  } else {
+    const righe = (out.righe || []).slice(0, 12).map((g) => '• ' + esc(g.etichetta) + ' — ' + fmt(g.valore) + (v.query.calcolo === 'somma' ? ' (' + g.n + ')' : ''));
+    corpo = (out.n_righe ? 'Totale: <b>' + fmt(out.totale) + '</b> su ' + out.n_righe + (out.n_righe === 1 ? ' riga' : ' righe') : 'Nessuna riga corrisponde.')
+      + (righe.length > 1 || (righe.length === 1 && v.query.raggruppa !== 'nessuno') ? '\n' + righe.join('\n') : '');
+  }
+  const html = '<b>' + esc(v.query.titolo || 'Risultato') + '</b>\n\n' + corpo
     + (out.esclusi_da_smistare ? '\n\n<i>Non contate: ' + out.esclusi_da_smistare + ' da smistare.</i>' : '')
     + '\n\n<i>Ho capito: ' + esc(capito) + '</i>';
   return { html, capito };

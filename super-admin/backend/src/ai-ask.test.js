@@ -55,6 +55,12 @@ test('periodo con date non valide o al contrario: rifiutato; la data non è un f
   assertTrue(!!ask.validateQuery({ modulo: 'spese_casa', periodo: { da: 'ieri', a: 'oggi' } }, cat).error);
   assertTrue(!!ask.validateQuery({ modulo: 'spese_casa', filtri: [{ ruolo: 'data', op: 'uguale', valore: '2025-01-01' }] }, cat).error);
 });
+test('confronto e proiezione: il periodo è obbligatorio (senza, non sapremmo con cosa confrontare o fino a quando proiettare)', () => {
+  assertTrue(!!ask.validateQuery({ modulo: 'spese_casa', calcolo: 'confronto' }, cat).error);
+  assertTrue(!!ask.validateQuery({ modulo: 'spese_casa', calcolo: 'proiezione' }, cat).error);
+  const v = ask.validateQuery({ modulo: 'spese_casa', calcolo: 'confronto', periodo: { da: '2026-10-01', a: '2026-10-31' } }, cat);
+  assertEq(v.query.calcolo, 'confronto'); assertEq(v.query.periodo, { da: '2026-10-01', a: '2026-10-31' });
+});
 test('l\'importo di un filtro deve essere un numero; massimo 4 filtri', () => {
   assertTrue(!!ask.validateQuery({ modulo: 'spese_casa', filtri: [{ ruolo: 'importo', op: 'maggiore', valore: 'tanto' }] }, cat).error);
   const f = { ruolo: 'descrizione', op: 'contiene', valore: 'a2a' };

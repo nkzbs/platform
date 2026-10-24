@@ -60,7 +60,7 @@ function scontrino() {
   return { html: 'Mandami la foto dello scontrino o il PDF della bolletta: li leggo e ti propongo la riga da creare.', keyboard: [back('soldi')] };
 }
 function domanda() {
-  return { html: 'Scrivimi la domanda sui tuoi dati, per esempio:\n«quanto ho speso di benzina a settembre?»\n«quanto devo ancora in totale?»', keyboard: [back('soldi')] };
+  return { html: 'Scrivimi la domanda sui tuoi dati, per esempio:\n«quanto ho speso di benzina a settembre?»\n«quanto devo ancora in totale?»\n«ho speso di più o di meno rispetto al mese scorso?»\n«di questo passo quanto spenderò entro fine mese?»', keyboard: [back('soldi')] };
 }
 
 function bustaPaga() {

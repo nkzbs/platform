@@ -66,6 +66,20 @@ test('conteggio, media, massimo e minimo', () => {
   assertEq(ask.run(Q({ calcolo: 'massimo', filtri: f }), admin).totale, 50);
   assertEq(ask.run(Q({ calcolo: 'minimo', filtri: f }), admin).totale, 40);
 });
+test('confronto: periodo attuale contro lo stesso periodo precedente (mese -> mese prima, anno -> anno prima)', () => {
+  const r = ask.run(Q({ calcolo: 'confronto', periodo: { da: '2025-02-01', a: '2025-02-28' } }), admin);
+  assertEq(r.totale, 120); assertEq(r.totale_precedente, 60); assertEq(r.periodo_precedente, { da: '2025-01-01', a: '2025-01-31' }); assertEq(r.variazione_pct, 100);
+  const ry = ask.run(Q({ calcolo: 'confronto', periodo: { da: '2026-01-01', a: '2026-12-31' } }), admin);
+  assertEq(ry.periodo_precedente, { da: '2025-01-01', a: '2025-12-31' }); assertEq(ry.totale_precedente, 180);
+  assertTrue(!!ask.validate({ modulo: 'costi', calcolo: 'confronto', raggruppa: 'nessuno', filtri: [] }, cat).error, 'confronto senza periodo si rifiuta');
+});
+test('proiezione: quanto si arriverebbe a spendere a fine periodo, di questo passo', () => {
+  const r = ask.run(Q({ calcolo: 'proiezione', periodo: { da: '2026-01-01', a: '2026-01-31' } }), admin, new Date('2026-01-16T12:00:00Z'));
+  assertEq(r.totale, 50); assertEq(r.giorni_trascorsi, 16); assertEq(r.giorni_totali, 31); assertEq(r.proiezione, 96.88);
+  const chiuso = ask.run(Q({ calcolo: 'proiezione', periodo: { da: '2025-01-01', a: '2025-01-31' } }), admin, new Date('2026-01-16T12:00:00Z'));
+  assertEq(chiuso.proiezione, 60, 'periodo gia\' concluso: la proiezione e\' il totale reale, nessuna estrapolazione');
+  assertTrue(!!ask.validate({ modulo: 'costi', calcolo: 'proiezione', raggruppa: 'nessuno', filtri: [] }, cat).error, 'proiezione senza periodo si rifiuta');
+});
 test('filtri su importo e testo', () => {
   assertEq(ask.run(Q({ filtri: [{ ruolo: 'importo', op: 'maggiore', valore: 55 }] }), admin).totale, 60 + 80);
   assertEq(ask.run(Q({ filtri: [{ ruolo: 'descrizione', op: 'contiene', valore: 'a2a' }] }), admin).totale, 140);

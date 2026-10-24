@@ -6,7 +6,7 @@ const moduleRoles = require('./module-roles');
 const { parseSchemaNormalized } = require('./schema-v3');
 const { ruleFor, filterViewable } = require('./permissions');
 
-const CALCOLI = ['somma', 'conteggio', 'media', 'massimo', 'minimo'];
+const CALCOLI = ['somma', 'conteggio', 'media', 'massimo', 'minimo', 'confronto', 'proiezione'];
 const OPS = ['uguale', 'contiene', 'maggiore', 'minore'];
 const RAGGRUPPA = ['mese', 'anno', 'categoria', 'nessuno'];
 const RUOLI = ['importo', 'data', 'scadenza', 'categoria', 'descrizione', 'stato', 'gruppo'];
@@ -39,6 +39,7 @@ function validate(q, cat) {
   if (!CALCOLI.includes(q.calcolo) || !RAGGRUPPA.includes(q.raggruppa)) return { error: 'Calcolo o raggruppamento non ammesso' };
   if (q.raggruppa === 'categoria' && !mod.ruoli.includes('categoria')) return { error: 'Il modulo non ha una categoria' };
   if (q.periodo && (!ISO.test(String(q.periodo.da)) || !ISO.test(String(q.periodo.a)) || q.periodo.da > q.periodo.a)) return { error: 'Periodo non valido' };
+  if ((q.calcolo === 'confronto' || q.calcolo === 'proiezione') && !q.periodo) return { error: 'Serve un periodo per il confronto o la proiezione' };
   const filtri = Array.isArray(q.filtri) ? q.filtri : [];
   if (filtri.length > 4) return { error: 'Troppi filtri' };
   for (const f of filtri) {
@@ -50,9 +51,44 @@ function validate(q, cat) {
 
 const monthOf = (v) => { const m = String(v || '').match(/^(\d{4})-(\d{2})/); return m ? m[1] + '-' + m[2] : null; };
 
+// Il periodo "equivalente precedente" di un periodo: lo stesso mese il mese prima, lo stesso anno l'anno prima,
+// altrimenti lo stesso numero di giorni subito prima — usato da "confronto" per sapere con cosa confrontare,
+// senza che chi chiede debba specificarlo (la domanda "rispetto al mese scorso" dà già un periodo di un mese).
+function addMonths(ym, n) { const [y, m] = ym.split('-').map(Number); const t = y * 12 + (m - 1) + n; return Math.floor(t / 12) + '-' + String((t % 12) + 1).padStart(2, '0'); }
+function lastDayOfMonth(ym) { const [y, m] = ym.split('-').map(Number); return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10); }
+function isWholeMonth(p) { const ym = p.da.slice(0, 7); return p.da === ym + '-01' && p.a === lastDayOfMonth(ym); }
+function isWholeYear(p) { const y = p.da.slice(0, 4); return p.da === y + '-01-01' && p.a === y + '-12-31'; }
+function periodoPrecedente(p) {
+  if (isWholeYear(p)) { const y = Number(p.da.slice(0, 4)) - 1; return { da: y + '-01-01', a: y + '-12-31' }; }
+  if (isWholeMonth(p)) { const ym = addMonths(p.da.slice(0, 7), -1); return { da: ym + '-01', a: lastDayOfMonth(ym) }; }
+  const giorni = Math.round((new Date(p.a) - new Date(p.da)) / 86400000) + 1;
+  const aPrec = new Date(p.da + 'T00:00:00Z'); aPrec.setUTCDate(aPrec.getUTCDate() - 1);
+  const daPrec = new Date(aPrec); daPrec.setUTCDate(daPrec.getUTCDate() - giorni + 1);
+  return { da: daPrec.toISOString().slice(0, 10), a: aPrec.toISOString().slice(0, 10) };
+}
+const pct = (val, base) => (base ? round2(((val - base) / Math.abs(base)) * 100) : null);
+
 // Esegue la query. `user` serve per i permessi del modulo. Le righe nello stato "nuovo" (ancora da smistare) e quelle con data incerta non contano,
-// come nelle altre viste dei numeri.
-function run(q, user) {
+// come nelle altre viste dei numeri. "confronto"/"proiezione" si appoggiano alla stessa somma, solo con un periodo in più (quello precedente) o
+// con un calcolo a partire da quanti giorni del periodo sono già passati (`now`).
+function run(q, user, now = new Date()) {
+  if (q.calcolo === 'confronto') {
+    const attuale = run({ ...q, calcolo: 'somma' }, user, now);
+    const precedenteP = periodoPrecedente(q.periodo);
+    const precedente = run({ ...q, calcolo: 'somma', periodo: precedenteP }, user, now);
+    return { totale: attuale.totale, totale_precedente: precedente.totale, periodo_precedente: precedenteP, variazione_pct: pct(attuale.totale, precedente.totale), righe: attuale.righe, n_righe: attuale.n_righe, esclusi_da_smistare: attuale.esclusi_da_smistare };
+  }
+  if (q.calcolo === 'proiezione') {
+    const base = run({ ...q, calcolo: 'somma' }, user, now);
+    const giorniTotali = Math.round((new Date(q.periodo.a) - new Date(q.periodo.da)) / 86400000) + 1;
+    const oggi = now.toISOString().slice(0, 10);
+    const giorniTrascorsi = oggi < q.periodo.da ? 0 : oggi > q.periodo.a ? giorniTotali : Math.round((new Date(oggi) - new Date(q.periodo.da)) / 86400000) + 1;
+    const proiezione = giorniTrascorsi > 0 ? round2((base.totale / giorniTrascorsi) * giorniTotali) : null;
+    return { totale: base.totale, proiezione, giorni_trascorsi: giorniTrascorsi, giorni_totali: giorniTotali, righe: base.righe, n_righe: base.n_righe, esclusi_da_smistare: base.esclusi_da_smistare };
+  }
+  return runSomma(q, user);
+}
+function runSomma(q, user) {
   const decl = moduleRoles.get(q.modulo);
   const R = decl.roles, nuovo = decl.avvisi.states.nuovo;
   const schema = (() => { const m = db.prepare('SELECT schema_json FROM modules WHERE slug = ?').get(q.modulo); try { return parseSchemaNormalized(m.schema_json); } catch (e) { return {}; } })();
@@ -90,7 +126,7 @@ function run(q, user) {
 
 // Il filtro in parole, per mostrare a chi chiede cosa è stato capito (e controllare).
 function leggibile(q, nomeModulo) {
-  const calc = { somma: 'Somma dell\'importo', conteggio: 'Numero di righe', media: 'Media dell\'importo', massimo: 'Importo massimo', minimo: 'Importo minimo' }[q.calcolo];
+  const calc = { somma: 'Somma dell\'importo', conteggio: 'Numero di righe', media: 'Media dell\'importo', massimo: 'Importo massimo', minimo: 'Importo minimo', confronto: 'Confronto col periodo precedente', proiezione: 'Proiezione a fine periodo' }[q.calcolo];
   const opTxt = { uguale: '=', contiene: 'contiene', maggiore: '>', minore: '<' };
   const out = ['Modulo: ' + nomeModulo, calc];
   for (const f of q.filtri) out.push(f.ruolo.charAt(0).toUpperCase() + f.ruolo.slice(1) + ' ' + opTxt[f.op] + ' ' + f.valore);

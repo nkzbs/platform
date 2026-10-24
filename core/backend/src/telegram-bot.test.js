@@ -252,6 +252,21 @@ async function main() {
     const n = await say(555, 'quanto ho speso in totale'); ok(/Totale spese personali/.test(n.text) && /Totale: <b>/.test(n.text), n.text);
     const f = await say(666, 'quanto ho speso in totale'); ok(/Non riesco a rispondere/.test(f.text) && !/Totale spese personali/.test(f.text), f.text);
   });
+  await test('«ho speso di più o di meno rispetto al mese scorso?»: confronto col periodo precedente, calcolato da solo', async () => {
+    intents['ho speso di piu o di meno rispetto al mese scorso'] = { azione: 'domanda' };
+    asks['ho speso di piu o di meno rispetto al mese scorso'] = { modulo: 'spese_personali', calcolo: 'confronto', periodo: { da: '2026-09-01', a: '2026-09-30' }, filtri: [], raggruppa: 'nessuno', titolo: 'Confronto spese personali' };
+    const m = await say(555, 'ho speso di piu o di meno rispetto al mese scorso');
+    ok(/Ora: <b>/.test(m.text) && /Prima: /.test(m.text) && /Variazione: <b>/.test(m.text), m.text);
+  });
+  await test('«di questo passo quanto spenderò entro fine mese?»: proiezione sul periodo in corso', async () => {
+    const oggi = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(new Date());
+    const mese = oggi.slice(0, 7);
+    const ultimoGiorno = new Date(Date.UTC(Number(mese.slice(0, 4)), Number(mese.slice(5, 7)), 0)).toISOString().slice(0, 10);
+    intents['di questo passo quanto spendero entro fine mese'] = { azione: 'domanda' };
+    asks['di questo passo quanto spendero entro fine mese'] = { modulo: 'spese_personali', calcolo: 'proiezione', periodo: { da: mese + '-01', a: ultimoGiorno }, filtri: [], raggruppa: 'nessuno', titolo: 'Proiezione fine mese' };
+    const m = await say(555, 'di questo passo quanto spendero entro fine mese');
+    ok(/Finora: <b>/.test(m.text) && /Di questo passo, a fine periodo: <b>/.test(m.text), m.text);
+  });
 
   console.log('\n--- memoria del bot (seguiti di una domanda) ---');
   await test('una domanda risposta, poi un seguito: lo «storico» arriva all\'AI con la domanda precedente e cosa si era capito', async () => {
