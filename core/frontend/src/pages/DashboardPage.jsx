@@ -74,7 +74,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
   // prepagata vs conto corrente) letta dalla relazione conto di ogni gruppo.
   const [riepilogoConfig, setRiepilogoConfig] = useState({
     giorno_cutoff: 27,
-    entrate: { modulo: '', campo_importo: '', campo_data: '' },
+    entrate: { modulo: '', campo_importo: '', campo_data: '', campo_gruppo: '', valore_gruppo: '' },
     gruppi: [],
     conti: { modulo: '', campo_tipo: '', valore_carta: '', valore_conto: '' },
   })
@@ -175,7 +175,16 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
         const prev = new Date(anno, mese - 1, 1)
         const daData = prev.getFullYear() + '-' + p2(prev.getMonth() + 1) + '-' + p2(cutoff)
         const aData = anno + '-' + p2(mese + 1) + '-' + p2(cutoff - 1)
-        const entrateMese = (entrateRec || []).filter((r) => { const d = String(r.data[cfg.entrate?.campo_data] || '').slice(0, 10); return d >= daData && d <= aData })
+        const entrateMese = (entrateRec || []).filter((r) => {
+          const d = String(r.data[cfg.entrate?.campo_data] || '').slice(0, 10)
+          if (d < daData || d > aData) return false
+          // Filtro facoltativo (es. "gruppo" = Casa/Personale): senza, ogni card con lo stesso
+          // modulo entrate sommerebbe le STESSE entrate, anche quando sono di gruppi diversi
+          // (richiesto dall'utente: le entrate della card Casa sono i contributi versati alla
+          // casa, non lo stipendio intero già contato nella card Personale).
+          if (cfg.entrate?.campo_gruppo && cfg.entrate?.valore_gruppo) return r.data[cfg.entrate.campo_gruppo] === cfg.entrate.valore_gruppo
+          return true
+        })
         const entrateTotale = entrateMese.reduce((s, r) => s + (parseFloat(r.data[cfg.entrate?.campo_importo]) || 0), 0)
 
         let uscite = 0, fissa = 0, pagato = 0, prevCarta = 0, prevConto = 0
@@ -300,7 +309,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
     if (w.type === 'periodo') setPeriodoConfig({ date_field: cfg.date_field || '', periodo: cfg.periodo || 'mese', soglia: cfg.soglia ?? '', soglia_operatore: cfg.soglia_operatore || '>', colore_soglia: cfg.colore_soglia || '#F87171' })
     if (w.type === 'riepilogo_mensile') setRiepilogoConfig({
       giorno_cutoff: cfg.giorno_cutoff || 27,
-      entrate: cfg.entrate || { modulo: '', campo_importo: '', campo_data: '' },
+      entrate: { modulo: '', campo_importo: '', campo_data: '', campo_gruppo: '', valore_gruppo: '', ...(cfg.entrate || {}) },
       gruppi: cfg.gruppi || [],
       conti: cfg.conti || { modulo: '', campo_tipo: '', valore_carta: '', valore_conto: '' },
     })
@@ -716,7 +725,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                   <div className="bg-surface-page border border-gray-800 rounded-lg p-3 space-y-2">
                     <div className="text-xs text-gray-400 font-medium">Entrate</div>
                     <select className="w-full bg-surface-card text-ink px-3 py-2 rounded-md text-sm outline-none border border-gray-700"
-                      value={riepilogoConfig.entrate.modulo} onChange={(e) => setRiepilogoConfig((c) => ({ ...c, entrate: { modulo: e.target.value, campo_importo: '', campo_data: '' } }))}>
+                      value={riepilogoConfig.entrate.modulo} onChange={(e) => setRiepilogoConfig((c) => ({ ...c, entrate: { modulo: e.target.value, campo_importo: '', campo_data: '', campo_gruppo: '', valore_gruppo: '' } }))}>
                       <option value="">Modulo entrate...</option>
                       {modules.filter((m) => !['dashboard'].includes(m.slug)).map((m) => <option key={m.slug} value={m.slug}>{m.name}</option>)}
                     </select>
@@ -732,6 +741,26 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                           <option value="">Campo data...</option>
                           {fieldsOf(riepilogoConfig.entrate.modulo).filter((f) => ['date', 'datetime'].includes(f.type)).map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
                         </select>
+                      </div>
+                    )}
+                    {riepilogoConfig.entrate.modulo && (
+                      <div>
+                        <p className="text-[11px] text-gray-600 mb-1">Facoltativo — per tenere separate le entrate di più card (es. "solo le mie", "solo i contributi Casa") invece di sommarle tutte insieme.</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <select className="bg-surface-card text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-700"
+                            value={riepilogoConfig.entrate.campo_gruppo} onChange={(e) => setRiepilogoConfig((c) => ({ ...c, entrate: { ...c.entrate, campo_gruppo: e.target.value, valore_gruppo: '' } }))}>
+                            <option value="">Nessun filtro</option>
+                            {fieldsOf(riepilogoConfig.entrate.modulo).filter((f) => f.type === 'select').map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+                          </select>
+                          {riepilogoConfig.entrate.campo_gruppo && (
+                            <select className="bg-surface-card text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-700"
+                              value={riepilogoConfig.entrate.valore_gruppo} onChange={(e) => setRiepilogoConfig((c) => ({ ...c, entrate: { ...c.entrate, valore_gruppo: e.target.value } }))}>
+                              <option value="">Valore...</option>
+                              {(fieldsOf(riepilogoConfig.entrate.modulo).find((f) => f.key === riepilogoConfig.entrate.campo_gruppo)?.options || [])
+                                .map((o) => (typeof o === 'string' ? o : o.value)).filter(Boolean).map((v) => <option key={v} value={v}>{v}</option>)}
+                            </select>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

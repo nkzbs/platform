@@ -2,6 +2,12 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.15 — 24 ottobre 2026
+
+Seguito della domanda dell'utente "le entrate di spese casa, come le gestiamo?": le card "Riepilogo mensile — Personale" e "— Casa" puntavano entrambe allo stesso modulo Entrate senza nessun filtro, quindi avrebbero sommato le STESSE entrate su entrambe (es. lo stipendio intero contato anche nella card Casa, invece dei soli contributi versati alla casa).
+
+- Il widget "Riepilogo mensile" ha ora un filtro facoltativo sulle entrate (un campo a scelta del modulo + un valore, stesso schema già usato per `conti`/`campo_tipo`): su Finance, Personale filtra `gruppo = Personale`, Casa filtra `gruppo = Casa` — campo e valori già esistenti nel modulo Entrate (incluse le categorie "Contributo Nima"/"Contributo Federica", mai usate finora da nessun widget). Verificato in locale: Personale mostra solo lo stipendio, Casa solo i contributi, senza doppio conteggio.
+
 ## 0.3.14 — 24 ottobre 2026
 
 Due rifiniture ai widget "Riepilogo mensile" affiancati (0.3.12), trovate dall'utente dal vivo dopo il deploy.
