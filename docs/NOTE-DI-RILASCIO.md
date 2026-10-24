@@ -2,6 +2,12 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.12 — 24 ottobre 2026
+
+Il widget "Riepilogo mensile" sommava Spese Casa e Spese Personali insieme — l'utente lo voleva solo personale, "al massimo dividi le due cose". Sul tenant Finance: il widget esistente è diventato "Riepilogo mensile — Personale" (solo lui), nuovo widget "— Casa" (lui e Federica) — stesso schema già in uso per "Come sta andando". Fatto con le vere rotte dell'app (non scrivendo a mano sul database di produzione).
+
+- `riepilogo_mensile` ora sta affiancato a un altro dello stesso tipo su schermi larghi (come già `come_sta_andando`), invece di occupare sempre tutta la riga — "due riquadri vicini", richiesto dall'utente dopo aver visto la divisione.
+
 ## 0.3.11 — 24 ottobre 2026
 
 Richiesto dall'utente dopo aver visto un report «Da pagare» su Telegram: le righe (sia «In arrivo» sia le scadute elencate nel messaggio) hanno ora un punto elenco e la data in grassetto come "chiave" — più facili da scorrere a colpo d'occhio. Stesso testo condiviso con WhatsApp (nessun doppione da mantenere allineato): `*grassetto*` e `• ` sono già capiti da entrambi i client.
