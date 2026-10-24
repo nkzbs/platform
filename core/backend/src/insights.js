@@ -196,7 +196,7 @@ function buildSnapshot(month, now = new Date(), view = null) {
   const mods = [...installedModules(cfg.entrate.modules), ...installedModules(cfg.spese.modules)];
   const soloSpese = !!(view && view.solo_spese);
   if ((!soloSpese && !installedModules(cfg.entrate.modules).length) || !installedModules(cfg.spese.modules).length) return { available: false, reason: soloSpese ? 'Serve almeno un modulo di spese installato.' : 'Servono almeno un modulo di entrate e uno di spese installati.' };
-  month = month && /^\d{4}-\d{2}$/.test(month) ? month : lastClosedMonth(now);
+  month = month && /^\d{4}-\d{2}$/.test(month) ? month : now.toISOString().slice(0, 7); // la vista parte sempre dal mese in corso, non dall'ultimo concluso
   const col = collect(cfg);
   const { entrate, spese, spCat, spFix, spStato } = col;
   const en = entrate[month] || 0, sp = spese[month] || 0;

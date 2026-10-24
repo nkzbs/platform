@@ -487,9 +487,16 @@ async function main() {
   });
 
   console.log('\n--- /menu: bottoni a sottomenu (2026-10-14) ---');
-  await test('/menu mostra la radice: Spese & Entrate, Timbrature (Federica le ha), Report', async () => {
+  await test('/menu mostra la radice: Spese & Entrate, Timbrature, Busta paga (Federica le ha entrambe), Report', async () => {
     const m = await say(666, '/menu');
-    ok(cb(m, 'mn:soldi'), 'manca Spese & Entrate'); ok(cb(m, 'mn:timbrature'), 'manca Timbrature'); ok(cb(m, 'mn:report'), 'manca Report');
+    ok(cb(m, 'mn:soldi'), 'manca Spese & Entrate'); ok(cb(m, 'mn:timbrature'), 'manca Timbrature'); ok(cb(m, 'mn:busta_paga'), 'manca Busta paga'); ok(cb(m, 'mn:report'), 'manca Report');
+  });
+  await test('tocco su "Busta paga" -> sottomenu con "Fai una domanda" e "Carica una busta paga"', async () => {
+    const m = await say(666, '/menu');
+    const t = await tap(666, cb(m, 'mn:busta_paga'));
+    ok(cb(t.modifica, 'mn:busta_paga_domanda'), 'manca Fai una domanda'); ok(cb(t.modifica, 'mn:busta_paga_carica'), 'manca Carica una busta paga');
+    const leaf = await tap(666, cb(t.modifica, 'mn:busta_paga_domanda'));
+    ok(/ferie residue/.test(leaf.modifica.text), leaf.modifica.text);
   });
   await test('tocco su "Spese & Entrate" -> sottomenu coi 3 percorsi e un Indietro verso la radice (stesso messaggio, modificato)', async () => {
     const m = await say(666, '/menu');

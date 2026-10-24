@@ -18,8 +18,10 @@ const back = (to) => [{ text: '🔙 Indietro', callback_data: 'mn:' + to }];
 
 function root(user) {
   const tb = require('./bot-timbrature');
+  const bp = require('./bot-payslip');
   const rows = [[{ text: '💰 Spese & Entrate', callback_data: 'mn:soldi' }]];
   if (tb.haPresenze(user)) rows.push([{ text: '⏱ Timbrature', callback_data: 'mn:timbrature' }]);
+  if (bp.haBustaPaga(user)) rows.push([{ text: '📄 Busta paga', callback_data: 'mn:busta_paga' }]);
   rows.push([{ text: '📑 Report', callback_data: 'mn:report' }]);
   return { html: '<b>Cosa vuoi fare?</b>', keyboard: rows };
 }
@@ -58,10 +60,27 @@ function scontrino() {
   return { html: 'Mandami la foto dello scontrino o il PDF della bolletta: li leggo e ti propongo la riga da creare.', keyboard: [back('soldi')] };
 }
 function domanda() {
-  return { html: 'Scrivimi la domanda sui tuoi dati, per esempio:\n«quanto ho speso di benzina a settembre?»', keyboard: [back('soldi')] };
+  return { html: 'Scrivimi la domanda sui tuoi dati, per esempio:\n«quanto ho speso di benzina a settembre?»\n«quanto devo ancora in totale?»', keyboard: [back('soldi')] };
 }
 
-const NODES = { root, soldi, timbrature, report, nuova_spesa: nuovaSpesa, scontrino, domanda };
+function bustaPaga() {
+  return {
+    html: '<b>Busta paga</b>',
+    keyboard: [
+      [{ text: '❓ Fai una domanda', callback_data: 'mn:busta_paga_domanda' }],
+      [{ text: '📎 Carica una busta paga', callback_data: 'mn:busta_paga_carica' }],
+      back('root'),
+    ],
+  };
+}
+function bustaPagaDomanda() {
+  return { html: 'Scrivimi la domanda, per esempio:\n«ferie residue?»\n«quante ore ho fatto a ottobre?»\n«dammi la mia ultima busta paga»\n«che buste paga mancano?»', keyboard: [back('busta_paga')] };
+}
+function bustaPagaCarica() {
+  return { html: 'Mandami la foto o il PDF della busta paga con la didascalia "busta": la leggo e te la archivio.', keyboard: [back('busta_paga')] };
+}
+
+const NODES = { root, soldi, timbrature, report, nuova_spesa: nuovaSpesa, scontrino, domanda, busta_paga: bustaPaga, busta_paga_domanda: bustaPagaDomanda, busta_paga_carica: bustaPagaCarica };
 
 // Chiave sconosciuta o scaduta (es. un vecchio messaggio con un bottone che
 // non esiste più) -> si torna alla radice invece di un errore secco.

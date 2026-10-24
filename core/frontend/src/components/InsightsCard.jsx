@@ -12,7 +12,7 @@ const shift = (ym, d) => { const [y, m] = ym.split('-').map(Number); const t = y
 // "Come sta andando": i numeri del mese li calcola il programma.
 export default function InsightsCard({ token, onNavigate, widgetId, title }) {
   const api = useApi(token)
-  const [month, setMonth] = useState(null) // null = ultimo mese concluso (lo decide il server)
+  const [month, setMonth] = useState(null) // null = mese in corso (lo decide il server)
   const [data, setData] = useState(null)
   const [showLimits, setShowLimits] = useState(false)
   const [vista, setVista] = useState('mese') // 'mese' | 'anno'
