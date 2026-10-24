@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.11 — 24 ottobre 2026
+
+Richiesto dall'utente dopo aver visto un report «Da pagare» su Telegram: le righe (sia «In arrivo» sia le scadute elencate nel messaggio) hanno ora un punto elenco e la data in grassetto come "chiave" — più facili da scorrere a colpo d'occhio. Stesso testo condiviso con WhatsApp (nessun doppione da mantenere allineato): `*grassetto*` e `• ` sono già capiti da entrambi i client.
+
 ## 0.3.10 — 21 ottobre 2026
 
 Due rifiniture al bot Telegram, richieste dall'utente dopo averlo provato: "ok i comandi sono migliorati? hai messo i tasti?".

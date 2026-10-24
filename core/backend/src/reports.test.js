@@ -88,13 +88,13 @@ global.fetch = async (url) => {
   });
   await test('le righe «in arrivo» sono in ordine di data, con la scadenza che batte la data; le scadute non si ripetono se hanno il loro messaggio', () => {
     const t = R.build('pagare', IL27).text;
-    ok(t.indexOf('27/10  Affitto') < t.indexOf('27/10  Benzina') && t.indexOf('27/10  Benzina') < t.indexOf('05/11  A2A'), t);
-    ok(t.includes('27/10  Affitto ottobre — 550 €') && t.includes('05/11  A2A Energia — 44 €'), t);
+    ok(t.indexOf('*27/10*  Affitto') < t.indexOf('*27/10*  Benzina') && t.indexOf('*27/10*  Benzina') < t.indexOf('*05/11*  A2A'), t);
+    ok(t.includes('• *27/10*  Affitto ottobre — 550 €') && t.includes('• *05/11*  A2A Energia — 44 €'), t);
     ok(!t.includes('Scaduta di recente'), 'le scadute le elenca il loro messaggio');
   });
   await test('con il messaggio «scadute» spento, le scadute si elencano nel messaggio del 27', () => {
     R.saveSettings('scadute', { enabled: false }); const t = R.build('pagare', IL27).text; R.saveSettings('scadute', { enabled: true });
-    ok(t.includes('20/10  Scaduta di recente — 50,17 €') && !t.includes('«Voci scadute»'), t);
+    ok(t.includes('• *20/10*  Scaduta di recente — 50,17 €') && !t.includes('«Voci scadute»'), t);
   });
   await test('«ultimo stipendio → ti restano»: lo stipendio meno il totale; spegnibile; se manca lo stipendio la riga non c\'è', () => {
     ok(R.build('pagare', IL27).text.includes('💰 Stipendio 1.799,58 € → restano *955,41 €*'));

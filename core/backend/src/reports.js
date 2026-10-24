@@ -257,16 +257,19 @@ function buildRiepilogo(d, now = new Date(), scope = null) {
   if (!nel.length && !scadute.length) return { text: intest + '\n\n' + TIPI.riepilogo_periodo.vuoto, counts: { voci: 0, scadute: 0, totale: 0 } };
   const perModulo = {};
   [...nel, ...scadute].forEach((x) => { perModulo[x.label] = (perModulo[x.label] || 0) + (x.importo || 0); });
+  // Una riga per voce, con la data in grassetto come "chiave" (si legge a colpo d'occhio scorrendo
+  // l'elenco) e un punto elenco — stessa lettura di buildCoda() qui sotto, non un concetto nuovo.
+  const riga = (x) => '• *' + shortDate(x.due) + '*  ' + x.descrizione + (x.importo == null ? '' : ' — ' + fmtCompact(x.importo));
   const parts = [intest, '*' + fmtEur(totale) + '*' + (Object.keys(perModulo).length > 1 ? '  (' + Object.entries(perModulo).map(([l, v]) => l + ' ' + fmtCompact(v)).join(' · ') + ')' : '')];
   if (scadute.length) {
     // le scadute le elenca il report «in ritardo», se ce n'è uno acceso: qui basta il totale (non si ripetono due volte)
     const altro = cfg.definizioni.find((x) => x.tipo === 'in_ritardo' && x.enabled && x.stato === d.stato);
     parts.push('⚠ *Scadute ' + fmtCompact(tot(scadute)) + '* — ' + scadute.length + (scadute.length === 1 ? ' voce' : ' voci') + ' dal ' + shortDate(scadute[0].due)
       + (altro ? '\n→ l\'elenco è nel messaggio «' + altro.nome + '»' : ''));
-    if (!altro) parts.push(scadute.slice(0, d.max_righe).map((x) => shortDate(x.due) + '  ' + x.descrizione + (x.importo == null ? '' : ' — ' + fmtCompact(x.importo))).join('\n'));
+    if (!altro) parts.push(scadute.slice(0, d.max_righe).map(riga).join('\n'));
   }
   if (nel.length) {
-    const lines = nel.slice(0, d.max_righe).map((x) => shortDate(x.due) + '  ' + x.descrizione + (x.importo == null ? '' : ' — ' + fmtCompact(x.importo)));
+    const lines = nel.slice(0, d.max_righe).map(riga);
     if (nel.length > d.max_righe) lines.push('+ altre ' + (nel.length - d.max_righe));
     parts.push('*In arrivo*\n' + lines.join('\n'));
   }
