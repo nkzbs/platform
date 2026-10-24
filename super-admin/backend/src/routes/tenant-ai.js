@@ -271,7 +271,7 @@ router.post('/bot-intent', requireInternalSecret, async (req, res) => {
     const text = await callAI('mistral', { system: botAi.BOT_PROMPT, user: JSON.stringify(s.payload), maxTokens: 250, tenantSlug: tenant_slug });
     const raw = parseJsonObject(text);
     if (!raw) return res.status(502).json({ error: 'Risposta dell\'AI non valida' });
-    const v = botAi.validateIntent(raw, s.payload.moduli, s.payload.oggi, s.payload.report.map((r) => r.id));
+    const v = botAi.validateIntent(raw, s.payload.moduli, s.payload.oggi, s.payload.report.map((r) => r.id), s.payload.moduli_entrata);
     if (v.error) return res.status(422).json({ error: v.error, code: 'ai_unanswerable' });
     res.json({ intent: v.intent });
   } catch (e) {

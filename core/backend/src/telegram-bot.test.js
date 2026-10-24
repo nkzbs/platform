@@ -207,6 +207,36 @@ async function main() {
     intents['spendo meno 5'] = { azione: 'nuova_spesa', descrizione: 'X1', importo: -5, data: null, modulo: null, pagata: true, categoria: null }; ok(/Non ho capito/.test((await say(555, 'spendo meno 5')).text));
   });
 
+  console.log('\n--- registrare un\'entrata ---');
+  add('entrate', 'Entrate', { version: 3, steps: [F('descrizione', 'Descrizione', 'text'), F('importo', 'Importo', 'currency'), F('data', 'Data', 'date'), F('gruppo', 'Gruppo', 'select', { options: ['Casa', 'Personale'] }), F('categoria', 'Categoria', 'select', { options: ['Stipendio', 'Contributo Nima', 'Contributo Federica'] })] });
+  roles.set('entrate', { kind: 'entrata', uses: ['riepiloghi'], roles: { importo: 'importo', data: 'data', descrizione: 'descrizione', gruppo: 'gruppo', categoria: 'categoria' } });
+  // Solo Federica (6): ha già righe sue in user_modules (riga 83), quindi è in modalità "elenco" e va
+  // aggiunta esplicitamente. Nima (5) non ne ha mai avute: resta nel fallback "vede tutti i moduli"
+  // (routes/modules.js, getVisibleInstalledModules) — avere QUI una riga anche per lui lo farebbe
+  // passare alla modalità "elenco" e perdere l'accesso a tutti gli altri moduli per il resto del file.
+  db.prepare("INSERT INTO user_modules (user_id, module_slug) VALUES (6, 'entrate')").run();
+  await test('«mi è arrivato lo stipendio di 1800»: propone, e dopo il tocco la riga esiste con categoria e gruppo', async () => {
+    intents['mi è arrivato lo stipendio di 1800'] = { azione: 'nuova_entrata', descrizione: 'Stipendio', importo: 1800, data: null, modulo: 'entrate', categoria: 'Stipendio', gruppo: 'Personale' };
+    const prima = db.prepare("SELECT COUNT(*) c FROM records WHERE module_slug = 'entrate'").get().c;
+    const m = await say(555, 'mi è arrivato lo stipendio di 1800'); ok(/Entrate/.test(m.text) && /1\.800,00/.test(m.text) && /Stipendio/.test(m.text) && /Personale/.test(m.text), m.text);
+    eq(db.prepare("SELECT COUNT(*) c FROM records WHERE module_slug = 'entrate'").get().c, prima, 'niente scritto prima del tocco');
+    const t = await tap(555, cb(m, 'ok:')); ok(/Aggiunta/.test(t.modifica.text), JSON.stringify(t.modifica));
+    const nuova = db.prepare("SELECT * FROM records WHERE module_slug = 'entrate' ORDER BY id DESC LIMIT 1").get(); const d = JSON.parse(nuova.data);
+    eq([nuova.user_id, d.descrizione, d.importo, d.categoria, d.gruppo], [5, 'Stipendio', 1800, 'Stipendio', 'Personale']);
+    ok(db.prepare("SELECT 1 FROM audit_log WHERE action = 'telegram.nuova_entrata'").get());
+  });
+  await test('«ho versato 500 euro alla casa»: gruppo Casa, categoria Contributo Nima', async () => {
+    intents['ho versato 500 euro alla casa'] = { azione: 'nuova_entrata', descrizione: 'Contributo casa', importo: 500, data: null, modulo: 'entrate', categoria: 'Contributo Nima', gruppo: 'Casa' };
+    const m = await say(555, 'ho versato 500 euro alla casa'); await tap(555, cb(m, 'ok:'));
+    const nuova = db.prepare("SELECT * FROM records WHERE module_slug = 'entrate' ORDER BY id DESC LIMIT 1").get(); const d = JSON.parse(nuova.data);
+    eq([d.categoria, d.gruppo], ['Contributo Nima', 'Casa']);
+  });
+  await test('un gruppo o una categoria inventati dal modello non passano: restano null', async () => {
+    intents['entrata strana'] = { azione: 'nuova_entrata', descrizione: 'Boh', importo: 10, data: null, modulo: 'entrate', categoria: 'Lotteria', gruppo: 'Marte' };
+    const m = await say(555, 'entrata strana'); ok(!/categoria/.test(m.text) && !/gruppo/.test(m.text), m.text);
+    await tap(555, cb(m, 'no:'));
+  });
+
   console.log('\n--- domande sui dati ---');
   await test('«quanto ho speso»: risposta calcolata dal codice, con i permessi di chi chiede (Federica non vede le personali)', async () => {
     intents['quanto ho speso in totale'] = { azione: 'domanda' };
@@ -373,6 +403,27 @@ async function main() {
     intents['quante ore oggi'] = { azione: 'ore', periodo: 'oggi' };
     const m = await say(666, 'quante ore oggi'); ok(/8h 30m/.test(m.text), m.text); ok(/1 turno è ancora aperto/.test(m.text), m.text);
     ok(/Nessuna timbratura/.test((await say(555, 'quante ore oggi')).text), '«solo propri»: Nima non vede quelle di Federica');
+  });
+  await test('«oggi sono entrata alle 9 e uscita alle 18»: un turno solo, già chiuso, in un colpo (non un\'entrata aperta da richiudere)', async () => {
+    db.prepare("DELETE FROM records WHERE module_slug = 'timbrature'").run();
+    intents['oggi sono entrata alle 9 e uscita alle 18'] = { azione: 'timbra', tipo: 'entrata', ora: '09:00', ora_fine: '18:00', data: OGGI };
+    const m = await say(666, 'oggi sono entrata alle 9 e uscita alle 18');
+    ok(/Turno/.test(m.text) && /09:00/.test(m.text) && /18:00/.test(m.text) && /9h/.test(m.text), m.text);
+    const r = righeTb(6); eq(r.length, 1); eq(r[0].d.entrata, '09:00'); eq(r[0].d.uscita, '18:00');
+  });
+  await test('«quante ore questa settimana» include lo straordinario quando supera la soglia (Impostazioni → Report, di fabbrica 40h)', async () => {
+    db.prepare("DELETE FROM records WHERE module_slug = 'timbrature'").run();
+    put('timbrature', { data: OGGI, entrata: '08:00', uscita: '18:00' }, 6); // 10h
+    const R = require('./reports');
+    const defId = R.addDefinition('ore_settimana').id;
+    intents['quante ore questa settimana'] = { azione: 'ore', periodo: 'settimana' };
+    const senza = await say(666, 'quante ore questa settimana');
+    ok(/Nessuno straordinario/.test(senza.text) && /40h/.test(senza.text), senza.text);
+    R.saveSettings(defId, { soglia_ore: 2 });
+    const con = await say(666, 'quante ore questa settimana');
+    ok(/Straordinario/.test(con.text) && /8h/.test(con.text), con.text); // 10h - 2h di soglia
+    intents['quante ore oggi, straordinari'] = { azione: 'ore', periodo: 'oggi' };
+    ok(!/[Ss]traordinario/.test((await say(666, 'quante ore oggi, straordinari')).text), 'nessun concetto di straordinario per "oggi"');
   });
   await test('/timbra mostra i bottoni; il tocco su «Sono entrata» timbra subito; /ore risponde', async () => {
     db.prepare("DELETE FROM records WHERE module_slug = 'timbrature'").run();

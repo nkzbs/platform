@@ -2,7 +2,7 @@
 // Bot Telegram: le regole che dicono cosa può essere una risposta dell'AI. Condivise tra Super Admin (che valida la risposta del modello) e il tenant (che la
 // rivalida prima di agire): le stesse regole in entrambi i posti, mai due copie che si allontanano. Qualsiasi cosa fuori elenco diventa «altro» o un errore, mai
 // un'azione. Vedi super-admin/backend/src/lib/ai-bot.js e core/backend/src/bot-ai.js.
-const AZIONI = ['domanda', 'elenco', 'segna_pagata', 'riapri', 'smista', 'nuova_spesa', 'timbra', 'ore', 'altro'];
+const AZIONI = ['domanda', 'elenco', 'segna_pagata', 'riapri', 'smista', 'nuova_spesa', 'nuova_entrata', 'timbra', 'ore', 'altro'];
 const PERIODI_ORE = ['oggi', 'settimana', 'mese', 'mese_scorso'];
 const ORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 const COSE = ['pagare', 'scadute', 'smistare'];
@@ -15,7 +15,8 @@ const validDate = (s) => { if (!ISO.test(String(s))) return false; const d = new
 
 // Valida la risposta del modello contro i moduli disponibili. Ritorna { intent } oppure { error }.
 // `report`: gli id dei report disponibili (le definizioni del tenant); senza, vale l'elenco di partenza.
-function validateIntent(raw, moduli, oggi, report) {
+// `moduliEntrata`: i moduli di entrata disponibili (stessa forma di `moduli`, più `gruppi`) — solo per nuova_entrata.
+function validateIntent(raw, moduli, oggi, report, moduliEntrata) {
   if (!raw || typeof raw !== 'object') return { error: 'Risposta non valida' };
   const azione = AZIONI.includes(raw.azione) ? raw.azione : 'altro';
   if (azione === 'domanda' || azione === 'altro') return { intent: { azione } };
@@ -37,12 +38,29 @@ function validateIntent(raw, moduli, oggi, report) {
   if (azione === 'timbra') {
     if (raw.tipo !== 'entrata' && raw.tipo !== 'uscita') return { error: 'Non ho capito se è un\'entrata o un\'uscita' };
     const ora = ORA.test(String(raw.ora || '')) ? raw.ora : null;
+    // ora_fine: solo con tipo "entrata", per un turno già concluso descritto in una frase sola
+    // ("oggi sono entrata alle 12 e uscita alle 21") — altrimenti resta sempre null.
+    const ora_fine = raw.tipo === 'entrata' && ORA.test(String(raw.ora_fine || '')) ? raw.ora_fine : null;
     // la data di una timbratura: valida e vicina (non nel futuro, non più vecchia di due mesi) se si conosce «oggi»; altrimenti solo valida
     let data = raw.data && validDate(raw.data) ? raw.data : null;
     if (data && oggi) { const g = (iso) => Math.round((new Date(iso + 'T00:00:00Z') - new Date(oggi + 'T00:00:00Z')) / 86400000); if (g(data) > 0 || g(data) < -62) data = null; }
-    return { intent: { azione, tipo: raw.tipo, ora, data } };
+    return { intent: { azione, tipo: raw.tipo, ora, ora_fine, data } };
   }
   if (azione === 'ore') return { intent: { azione, periodo: PERIODI_ORE.includes(raw.periodo) ? raw.periodo : 'settimana' } };
+
+  if (azione === 'nuova_entrata') {
+    const importo = Number(raw.importo);
+    if (!(Number.isFinite(importo) && importo > 0 && importo <= 1000000)) return { error: 'Importo non valido' };
+    const descrizione = clean(raw.descrizione, 80);
+    if (descrizione.length < 2) return { error: 'Manca la descrizione' };
+    const mods = Array.isArray(moduliEntrata) ? moduliEntrata : [];
+    const modulo = raw.modulo ? (mods.find((m) => m.slug === raw.modulo) || null) : null;
+    let categoria = null;
+    if (raw.categoria && modulo) { const c = (modulo.categorie || []).find((x) => x.toLowerCase() === String(raw.categoria).trim().toLowerCase()); categoria = c || null; }
+    let gruppo = null;
+    if (raw.gruppo && modulo) { const g = (modulo.gruppi || []).find((x) => x.toLowerCase() === String(raw.gruppo).trim().toLowerCase()); gruppo = g || null; }
+    return { intent: { azione, descrizione, importo: Math.round(importo * 100) / 100, data: raw.data && validDate(raw.data) ? raw.data : null, modulo: modulo ? modulo.slug : null, categoria, gruppo } };
+  }
 
   // nuova_spesa
   const importo = Number(raw.importo);

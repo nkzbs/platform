@@ -12,7 +12,7 @@ const moduleRoles = require('./module-roles');
 const moduleAi = require('./module-ai');
 const { logAudit } = require('./audit-log');
 const { callAs } = require('./lib/internal-api');
-const { moduliPerUtente, esc, eur } = require('./bot-ai');
+const { moduliPerUtente, entrataModuliPerUtente, esc, eur } = require('./bot-ai');
 const { imageKind } = require('../../../shared/ai-receipt.js');
 
 const TTL_MS = 15 * 60 * 1000;
@@ -98,6 +98,7 @@ function proponi(user, intent, chatId) {
   if (intent.azione === 'segna_pagata' || intent.azione === 'riapri') return proponiStato(user, intent, chatId);
   if (intent.azione === 'smista') return proponiSmista(user, intent, chatId);
   if (intent.azione === 'nuova_spesa') return proponiSpesa(user, intent, chatId);
+  if (intent.azione === 'nuova_entrata') return proponiEntrata(user, intent, chatId);
   return { html: 'Non so ancora farlo. Scrivimi /aiuto per vedere cosa posso fare.' };
 }
 
@@ -174,6 +175,43 @@ function confermaSpesa(user, intent, m, chatId) {
   return { html: riepilogoSpesa(m, intentOk, d), keyboard: [[btn('✅ Aggiungi', 'ok:' + id), btn('✖ Annulla', 'no:' + id)]] };
 }
 
+// ── registrare un'entrata (stipendio, versamento...) ──────────────────────────────────────────────────────────────────────
+// Stesso schema di nuova spesa (proponi → tocco → esegui), senza lo stato da_pagare/pagato: un'entrata si registra e basta.
+function costruisciEntrata(m, intent) {
+  const R = m.decl.roles, data = intent.data || oggiRoma();
+  const d = {};
+  if (R.descrizione) d[R.descrizione] = intent.descrizione;
+  if (R.importo) d[R.importo] = intent.importo;
+  if (R.data) d[R.data] = data;
+  if (intent.categoria && R.categoria) d[R.categoria] = intent.categoria;
+  if (intent.gruppo && R.gruppo) d[R.gruppo] = intent.gruppo;
+  return d;
+}
+function riepilogoEntrata(m, intent, d) {
+  const R = m.decl.roles;
+  return 'Aggiungo in <b>' + esc(m.name) + '</b>:\n• <b>' + esc(intent.descrizione) + '</b> — ' + eur(intent.importo) + '\n• ' + shortDate(d[R.data])
+    + (intent.categoria ? '\n• categoria ' + esc(intent.categoria) : '') + (intent.gruppo ? '\n• gruppo ' + esc(intent.gruppo) : '');
+}
+function proponiEntrata(user, intent, chatId) {
+  const mods = entrataModuliPerUtente(user);
+  if (!mods.length) return { html: 'Non hai moduli di entrata a cui possa aggiungere.' };
+  const m = (intent.modulo && mods.find((x) => x.slug === intent.modulo)) || (mods.length === 1 ? mods[0] : null);
+  if (!m) {
+    const id = savePending(chatId, user.id, { tipo: 'scelta_modulo_entrata', intent });
+    return { html: 'Dove la aggiungo? <b>' + esc(intent.descrizione) + '</b> — ' + eur(intent.importo), keyboard: [mods.map((x, i) => btn(x.name, 'pk:' + id + ':' + i)), [btn('✖ Annulla', 'no:' + id)]] };
+  }
+  return confermaEntrata(user, intent, m, chatId);
+}
+function confermaEntrata(user, intent, m, chatId) {
+  const intentOk = { ...intent,
+    categoria: intent.categoria && m.categorie.includes(intent.categoria) ? intent.categoria : null,
+    gruppo: intent.gruppo && m.gruppi.includes(intent.gruppo) ? intent.gruppo : null,
+  };
+  const d = costruisciEntrata(m, intentOk);
+  const id = savePending(chatId, user.id, { tipo: 'entrata', slug: m.slug, nome: m.name, data: d, descrizione: intent.descrizione });
+  return { html: riepilogoEntrata(m, intentOk, d), keyboard: [[btn('✅ Aggiungi', 'ok:' + id), btn('✖ Annulla', 'no:' + id)]] };
+}
+
 // ── esecuzione dopo il tocco ─────────────────────────────────────────────────────────────────────────────────────────────
 // `fileFn(file_id)` scarica un file da Telegram (serve all'importazione). Ritorna { html }.
 async function esegui(user, a, { fileFn } = {}) {
@@ -190,6 +228,12 @@ async function esegui(user, a, { fileFn } = {}) {
     const r = await callAs(user, 'POST', '/records/' + a.slug, a.data);
     if (!r.ok) return { html: '⚠ Non sono riuscito ad aggiungerla: ' + esc((r.data && (r.data.error || (r.data.errors || []).join('; '))) || 'errore') };
     logAudit(user.username, 'telegram.nuova_spesa', a.slug + '#' + (r.data && r.data.id), { via: 'bot' });
+    return { html: '✅ Aggiunta in <b>' + esc(a.nome) + '</b>: ' + esc(a.descrizione) };
+  }
+  if (a.tipo === 'entrata') {
+    const r = await callAs(user, 'POST', '/records/' + a.slug, a.data);
+    if (!r.ok) return { html: '⚠ Non sono riuscito ad aggiungerla: ' + esc((r.data && (r.data.error || (r.data.errors || []).join('; '))) || 'errore') };
+    logAudit(user.username, 'telegram.nuova_entrata', a.slug + '#' + (r.data && r.data.id), { via: 'bot' });
     return { html: '✅ Aggiunta in <b>' + esc(a.nome) + '</b>: ' + esc(a.descrizione) };
   }
   if (a.tipo === 'scontrino') {
@@ -221,6 +265,16 @@ async function esegui(user, a, { fileFn } = {}) {
     logAudit(user.username, 'telegram.import', a.slug + '#' + (r.data && r.data.id), { file: a.filename });
     return { html: '✅ ' + esc((r.data && r.data.message) || 'Riga creata.') };
   }
+  if (a.tipo === 'busta_paga') {
+    if (!fileFn) return { html: '⚠ File non disponibile.' };
+    if (!a.campi.data || a.campi.netto == null || a.campi.ore_pagate == null) return { html: '⚠ Non ho letto periodo, netto e ore pagate con sicurezza: mandala di nuovo con una foto più nitida (o tutta la pagina del PDF).' };
+    const f = await fileFn(a.file_id);
+    if (!f.ok) return { html: '⚠ ' + esc(f.error) };
+    const r = await callAs(user, 'POST', '/ai/payslip/' + BUSTA_PAGA_SLUG + '/crea', { filename: a.filename, base64: f.base64, campi: a.campi });
+    if (!r.ok) return { html: '⚠ ' + esc((r.data && r.data.error) || 'Registrazione non riuscita.') };
+    logAudit(user.username, 'telegram.busta_paga', BUSTA_PAGA_SLUG + '#' + (r.data && r.data.id), { file: a.filename });
+    return { html: '✅ ' + esc((r.data && r.data.message) || 'Busta paga registrata.') };
+  }
   return { html: '⚠ Azione non riconosciuta.' };
 }
 
@@ -233,10 +287,12 @@ async function tocca(user, chatId, kind, id, indice, ctx) {
   if (kind === 'dp') return a.tipo === 'scontrino' ? esegui(user, { ...a, pagata: false }, ctx) : { html: 'Azione non riconosciuta.' };
   // pk: scelta di un candidato / di un modulo
   const i = parseInt(indice, 10);
-  if (a.tipo === 'scelta_modulo') {
-    const mods = moduliPerUtente(user); const m = mods[i];
+  if (a.tipo === 'scelta_modulo' || a.tipo === 'scelta_modulo_entrata') {
+    const entrata = a.tipo === 'scelta_modulo_entrata';
+    const mods = entrata ? entrataModuliPerUtente(user) : moduliPerUtente(user); const m = mods[i];
     takePending(id, chatId, user.id);
-    return m ? confermaSpesa(user, a.intent, m, chatId) : { html: 'Scelta non valida.' };
+    if (!m) return { html: 'Scelta non valida.' };
+    return entrata ? confermaEntrata(user, a.intent, m, chatId) : confermaSpesa(user, a.intent, m, chatId);
   }
   if (a.tipo === 'scelta' && Number.isInteger(i) && a.candidati[i]) {
     takePending(id, chatId, user.id); // il tocco su una voce È la conferma
@@ -330,4 +386,36 @@ async function importaFoto(user, chatId, foto, fileFn) {
   return { html: 'Dove registro lo scontrino?', keyboard: [mods.map((m, i) => btn(m.name, 'im:' + id + ':' + i)), [btn('✖ Annulla', 'no:' + id)]] };
 }
 
-module.exports = { importaFoto, fotoMigliore, proponi, tocca, esegui, cambiaStato, importaDocumento, scegliModuloImport, trova, tokens, savePending, takePending, peekPending, MAX_PDF };
+// ── foto o PDF di una busta paga (riconosciuta dalla didascalia "busta") ──────────────────────────────────────────────
+// Riusa il potenziamento AI "payslip" già esistente per l'app (routes/ai.js, payslip-ai.js): propone periodo, netto,
+// ore pagate, lordo e trattenute; solo il tocco registra la riga, con il file allegato come prova.
+const BUSTA_PAGA_SLUG = 'busta-paga';
+async function proponiBustaPaga(user, chatId, file, fileFn, isPdf) {
+  if (!file) return { html: 'Il file è troppo grande (massimo 3 MB): mandalo di nuovo, anche ridimensionato.' };
+  if (!moduleAi.can(BUSTA_PAGA_SLUG, 'payslip')) return { html: 'La lettura della busta paga non è accesa (Builder → Potenziamenti AI → Leggi busta paga).' };
+  const f = await fileFn(file.file_id);
+  if (!f.ok) return { html: '⚠ ' + esc(f.error) };
+  const nome = String(file.file_name || ('busta-paga' + (isPdf ? '.pdf' : '.jpg')));
+  const r = await callAs(user, 'POST', '/ai/payslip/' + BUSTA_PAGA_SLUG + '/proposta', { filename: nome, base64: f.base64 });
+  if (!r.ok) return { html: '⚠ ' + esc((r.data && r.data.error) || 'Non riesco a leggere la busta paga.') };
+  const p = r.data.proposta || {};
+  const campi = {
+    data: p.periodo || null,
+    netto: p.netto != null ? Number(p.netto) : null,
+    ore_pagate: p.ore_pagate != null ? Number(p.ore_pagate) : null,
+    lordo: p.lordo != null ? Number(p.lordo) : null,
+    trattenute: p.trattenute != null ? Number(p.trattenute) : null,
+  };
+  const id = savePending(chatId, user.id, { tipo: 'busta_paga', file_id: file.file_id, filename: nome, campi });
+  return {
+    html: '📄 Busta paga letta' + (campi.data ? ' — ' + shortDate(campi.data) : '') + ':\n'
+      + '• netto ' + (campi.netto != null ? eur(campi.netto) : '<b>da verificare</b>')
+      + (campi.ore_pagate != null ? '\n• ore pagate ' + campi.ore_pagate : '')
+      + (campi.lordo != null ? '\n• lordo ' + eur(campi.lordo) : '')
+      + (p.confidenza ? '\n• sicurezza di lettura: ' + esc(p.confidenza) : '')
+      + '\n\nLa registro in <b>Busta Paga</b> con il file allegato. Controlla i dati.',
+    keyboard: [[btn('✅ Registra', 'ok:' + id), btn('✖ Annulla', 'no:' + id)]],
+  };
+}
+
+module.exports = { importaFoto, fotoMigliore, proponi, tocca, esegui, cambiaStato, importaDocumento, scegliModuloImport, proponiBustaPaga, trova, tokens, savePending, takePending, peekPending, MAX_PDF };

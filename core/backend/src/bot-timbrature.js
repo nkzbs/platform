@@ -12,7 +12,7 @@ const { esc } = require('./bot-ai');
 
 const oggiRoma = (now = new Date()) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(now);
 const oraRoma = (now = new Date()) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now);
-const { GIORNI, shiftDay, toMin, hhmm, durata, minuti, intervallo, somma } = require('./ore-calc');
+const { GIORNI, shiftDay, toMin, hhmm, durata, minuti, intervallo, somma, mensile } = require('./ore-calc');
 
 // Il modulo delle presenze che questo utente vede (e i nomi dei suoi campi). Se ce n'è più d'uno, il primo.
 function modulo(user) {
@@ -39,6 +39,21 @@ async function timbra(user, chatId, intent, now = new Date()) {
   if (!m) return { html: 'Non hai un modulo di timbrature a cui il bot possa lavorare.' };
   const oggi = oggiRoma(now), ora = intent.ora || oraRoma(now), data = intent.data || oggi;
   const aperte = righe(user, m).filter((r) => r.mia && toMin(r.d[m.R.inizio]) != null && toMin(r.d[m.R.fine]) == null && String(r.d[m.R.data] || '').slice(0, 10) >= shiftDay(oggi, -1)).sort((a, b) => String(b.d[m.R.data]).localeCompare(String(a.d[m.R.data])) || toMin(b.d[m.R.inizio]) - toMin(a.d[m.R.inizio]));
+
+  if (intent.tipo === 'entrata' && intent.ora_fine) {
+    // Turno già concluso, descritto in una frase sola ("oggi sono entrata alle 12 e uscita alle
+    // 21"): una riga sola con inizio E fine già valorizzati — niente turno aperto nel mezzo da
+    // chiudere con un secondo messaggio, a differenza del normale "sono entrata"/"uscita".
+    const dup = aperte.find((r) => String(r.d[m.R.data]).slice(0, 10) === data);
+    if (dup) return { html: 'Hai già un\'entrata alle <b>' + hhmm(dup.d[m.R.inizio]) + '</b> senza uscita quel giorno. Chiudila prima (es. «uscita alle 13:00»).' };
+    const r = await callAs(user, 'POST', '/records/' + m.slug, { [m.R.data]: data, [m.R.inizio]: ora, [m.R.fine]: intent.ora_fine });
+    if (!r.ok) return { html: '⚠ Non sono riuscito a registrare il turno: ' + esc((r.data && (r.data.error || (r.data.errors || []).join('; '))) || 'errore') };
+    const id = r.data && r.data.id;
+    logAudit(user.username, 'telegram.timbra', m.slug + '#' + id, { tipo: 'turno_completo', via: 'bot' });
+    const pid = savePending(chatId, user.id, { tipo: 'timbra_annulla', slug: m.slug, id, creata: true });
+    const tot = minuti(ora, intent.ora_fine);
+    return { html: '🟢🔴 <b>Turno</b> registrato: <b>' + ora + '–' + intent.ora_fine + '</b>' + (tot != null ? ' · ' + durata(tot) : '') + (data !== oggi ? ' del ' + data.slice(8, 10) + '/' + data.slice(5, 7) : '') + '.', keyboard: annullaKb(pid) };
+  }
 
   if (intent.tipo === 'entrata') {
     const dup = aperte.find((r) => String(r.d[m.R.data]).slice(0, 10) === data);
@@ -83,14 +98,44 @@ async function annulla(user, chatId, pid) {
   return { html: '↩ Uscita annullata: il turno è di nuovo aperto.' };
 }
 
+// Soglia settimanale (ore) per lo straordinario: quella già impostata nel report "Riepilogo ore
+// e straordinari" (Impostazioni → Report), se esiste — stessa fonte usata lì (reports.js,
+// buildOreSettimana), non una seconda soglia da tenere allineata. Se il report non è mai stato
+// aggiunto, il valore di partenza dichiarato per quel tipo (40h) resta un fallback ragionevole:
+// chi chiede «ho fatto straordinari?» al bot non dovrebbe dover configurare un report per saperlo.
+function sogliaOreSettimanali() {
+  try {
+    const { settings, TIPI } = require('./reports');
+    const def = settings().definizioni.find((d) => d.tipo === 'ore_settimana');
+    const v = Number(def ? def.soglia_ore : TIPI.ore_settimana.base.soglia_ore);
+    return Number.isFinite(v) && v > 0 ? v : null;
+  } catch (e) { return null; }
+}
+
 function ore(user, periodo, now = new Date()) {
   const m = modulo(user);
   if (!m) return { html: 'Non hai un modulo di timbrature a cui il bot possa lavorare.' };
   const oggi = oggiRoma(now), iv = intervallo(periodo, oggi), { titolo } = iv;
-  const { giorni, aperti, totale: tot } = somma(righe(user, m), m.R, iv);
+  const righeUtente = righe(user, m);
+  const { giorni, aperti, totale: tot } = somma(righeUtente, m.R, iv);
   if (!giorni.size && !aperti) return { html: '<b>' + titolo + '</b>\nNessuna timbratura in questo periodo.' };
   const righeTxt = [...giorni.keys()].sort().map((g) => '• ' + GIORNI[new Date(g + 'T00:00:00Z').getUTCDay()] + ' ' + g.slice(8, 10) + '/' + g.slice(5, 7) + ' — <b>' + durata(giorni.get(g).min) + '</b> (' + giorni.get(g).turni.join(', ') + ')');
-  return { html: '<b>' + titolo + '</b>: <b>' + durata(tot) + '</b> in ' + giorni.size + (giorni.size === 1 ? ' giorno' : ' giorni') + '\n\n' + righeTxt.slice(-31).join('\n') + (aperti ? '\n\n<i>' + aperti + (aperti === 1 ? ' turno è ancora aperto (manca l\'uscita) e non è contato.' : ' turni sono ancora aperti (manca l\'uscita) e non sono contati.') + '</i>' : '') };
+  // Lo straordinario è un concetto settimanale/mensile (ore oltre una soglia), non ha senso per
+  // «oggi» — stessa lettura già fatta in reports.js (buildOreSettimana/mensile, mai per un giorno solo).
+  let straordinarioTxt = '';
+  const soglia = periodo !== 'oggi' ? sogliaOreSettimanali() : null;
+  if (soglia != null) {
+    if (periodo === 'settimana') {
+      const str = Math.max(0, tot - soglia * 60);
+      straordinarioTxt = '\n\n' + (str ? '⏱ Straordinario: <b>' + durata(str) + '</b> (oltre ' + soglia + 'h)' : '⏱ Nessuno straordinario (soglia ' + soglia + 'h a settimana)');
+    } else if (periodo === 'mese' || periodo === 'mese_scorso') {
+      const base = periodo === 'mese' ? oggi : shiftDay(oggi.slice(0, 8) + '01', -1);
+      const anno = Number(base.slice(0, 4)), mese = Number(base.slice(5, 7));
+      const mn = mensile(righeUtente, m.R, anno, mese, soglia * 60);
+      straordinarioTxt = '\n\n' + (mn.straordinario ? '⏱ Straordinario: <b>' + durata(mn.straordinario) + '</b> (settimane oltre ' + soglia + 'h)' : '⏱ Nessuno straordinario (soglia ' + soglia + 'h a settimana)');
+    }
+  }
+  return { html: '<b>' + titolo + '</b>: <b>' + durata(tot) + '</b> in ' + giorni.size + (giorni.size === 1 ? ' giorno' : ' giorni') + '\n\n' + righeTxt.slice(-31).join('\n') + straordinarioTxt + (aperti ? '\n\n<i>' + aperti + (aperti === 1 ? ' turno è ancora aperto (manca l\'uscita) e non è contato.' : ' turni sono ancora aperti (manca l\'uscita) e non sono contati.') + '</i>' : '') };
 }
 
 const menu = () => ({ html: 'Cosa vuoi fare?', keyboard: [[{ text: '🟢 Sono entrata/o', callback_data: 'tb:e' }, { text: '🔴 Sono uscita/o', callback_data: 'tb:u' }], [{ text: '🕒 Le mie ore', callback_data: 'tb:o' }]] });

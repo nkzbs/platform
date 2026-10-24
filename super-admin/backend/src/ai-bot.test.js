@@ -15,12 +15,16 @@ const MODULI = [
   { slug: 'spese_personali', name: 'Spese Personali', etichetta: 'pers.', categorie: ['Benzina', 'Svago'] },
 ];
 const mod = bot.sanitizeBot({ frase: 'ciao', moduli: MODULI }).payload.moduli;
+const MODULI_ENTRATA = [
+  { slug: 'entrate', name: 'Entrate', categorie: ['Stipendio', 'Contributo Nima', 'Contributo Federica'], gruppi: ['Casa', 'Personale'] },
+];
+const modEntrata = bot.sanitizeBot({ frase: 'ciao', moduli: MODULI, moduli_entrata: MODULI_ENTRATA }).payload.moduli_entrata;
 
 console.log('\n--- cosa esce verso il modello ---');
 test('la frase è ripulita dai dati personali; niente record, solo i moduli', () => {
   const s = bot.sanitizeBot({ frase: 'ho pagato mario.rossi@x.it con IBAN IT60X0542811101000000123456', moduli: MODULI, oggi: '2026-10-11' });
   ok(!s.payload.frase.includes('mario.rossi') && !s.payload.frase.includes('IT60X05'), s.payload.frase);
-  eq(Object.keys(s.payload).sort(), ['frase', 'moduli', 'oggi', 'report', 'storico', 'timbrature']);
+  eq(Object.keys(s.payload).sort(), ['frase', 'moduli', 'moduli_entrata', 'oggi', 'report', 'storico', 'timbrature']);
 });
 test('storico: assente senza dati, ripulito dai dati personali e tagliato quando c\'è', () => {
   const senza = bot.sanitizeBot({ frase: 'ciao', moduli: MODULI });
@@ -73,12 +77,29 @@ test('«pagata» è vero solo se è proprio true (non una stringa)', () => {
   eq(bot.validateIntent({ azione: 'nuova_spesa', descrizione: 'Cena', importo: 30, pagata: 'true' }, mod).intent.pagata, false);
 });
 test('timbra: solo entrata/uscita, ora HH:MM valida, data recente e non futura; ore: periodo dell\'elenco', () => {
-  eq(bot.validateIntent({ azione: 'timbra', tipo: 'entrata', ora: '07:05', data: '2026-10-10' }, mod, '2026-10-12').intent, { azione: 'timbra', tipo: 'entrata', ora: '07:05', data: '2026-10-10' });
-  eq(bot.validateIntent({ azione: 'timbra', tipo: 'uscita', ora: '25:99', data: '2026-10-20' }, mod, '2026-10-12').intent, { azione: 'timbra', tipo: 'uscita', ora: null, data: null }, 'ora e data non valide → null');
+  eq(bot.validateIntent({ azione: 'timbra', tipo: 'entrata', ora: '07:05', data: '2026-10-10' }, mod, '2026-10-12').intent, { azione: 'timbra', tipo: 'entrata', ora: '07:05', ora_fine: null, data: '2026-10-10' });
+  eq(bot.validateIntent({ azione: 'timbra', tipo: 'uscita', ora: '25:99', data: '2026-10-20' }, mod, '2026-10-12').intent, { azione: 'timbra', tipo: 'uscita', ora: null, ora_fine: null, data: null }, 'ora e data non valide → null');
   eq(bot.validateIntent({ azione: 'timbra', tipo: 'uscita', data: '2025-01-01' }, mod, '2026-10-12').intent.data, null, 'troppo vecchia');
   ok(!!bot.validateIntent({ azione: 'timbra', tipo: 'cancella' }, mod).error);
   eq(bot.validateIntent({ azione: 'ore', periodo: 'mese', sql: 'x' }, mod).intent, { azione: 'ore', periodo: 'mese' });
   eq(bot.validateIntent({ azione: 'ore', periodo: 'sempre' }, mod).intent.periodo, 'settimana');
+});
+test('timbra: ora_fine solo con tipo "entrata" (un turno già concluso descritto in una frase sola)', () => {
+  eq(bot.validateIntent({ azione: 'timbra', tipo: 'entrata', ora: '09:00', ora_fine: '18:00', data: '2026-10-10' }, mod, '2026-10-12').intent.ora_fine, '18:00');
+  eq(bot.validateIntent({ azione: 'timbra', tipo: 'entrata', ora: '09:00', ora_fine: '27:99', data: '2026-10-10' }, mod, '2026-10-12').intent.ora_fine, null, 'formato non valido → null');
+  eq(bot.validateIntent({ azione: 'timbra', tipo: 'uscita', ora: '18:00', ora_fine: '09:00', data: '2026-10-10' }, mod, '2026-10-12').intent.ora_fine, null, 'ora_fine ignorato con tipo uscita');
+});
+test('moduli_entrata: sanitizzati con categorie e gruppi ammessi', () => {
+  eq(modEntrata, [{ slug: 'entrate', name: 'Entrate', categorie: ['Stipendio', 'Contributo Nima', 'Contributo Federica'], gruppi: ['Casa', 'Personale'] }]);
+});
+test('nuova_entrata: importo > 0, descrizione, modulo/categoria/gruppo validati contro moduli_entrata', () => {
+  eq(bot.validateIntent({ azione: 'nuova_entrata', descrizione: 'Stipendio', importo: 1800, modulo: 'entrate', categoria: 'Stipendio', gruppo: 'Personale' }, mod, '2026-10-12', [], modEntrata).intent,
+    { azione: 'nuova_entrata', descrizione: 'Stipendio', importo: 1800, data: null, modulo: 'entrate', categoria: 'Stipendio', gruppo: 'Personale' });
+  ok(!!bot.validateIntent({ azione: 'nuova_entrata', descrizione: 'x', importo: -5 }, mod, '2026-10-12', [], modEntrata).error, 'importo non valido');
+  ok(!!bot.validateIntent({ azione: 'nuova_entrata', descrizione: '', importo: 10 }, mod, '2026-10-12', [], modEntrata).error, 'descrizione mancante');
+  eq(bot.validateIntent({ azione: 'nuova_entrata', descrizione: 'xx', importo: 10, modulo: 'finto' }, mod, '2026-10-12', [], modEntrata).intent.modulo, null, 'modulo inventato -> null');
+  eq(bot.validateIntent({ azione: 'nuova_entrata', descrizione: 'xx', importo: 10, modulo: 'entrate', categoria: 'Inventata' }, mod, '2026-10-12', [], modEntrata).intent.categoria, null, 'categoria non ammessa -> null');
+  eq(bot.validateIntent({ azione: 'nuova_entrata', descrizione: 'xx', importo: 10, modulo: 'entrate', gruppo: 'Marte' }, mod, '2026-10-12', [], modEntrata).intent.gruppo, null, 'gruppo non ammesso -> null');
 });
 test('senza moduli di spesa ma con le timbrature la frase è accettata', () => {
   ok(!bot.sanitizeBot({ frase: 'sono entrata', oggi: '2026-10-12', timbrature: true, moduli: [] }).error);

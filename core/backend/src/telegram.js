@@ -141,7 +141,7 @@ async function sendReportTo(chatId, kind, result) {
 // I comandi dei report sono quelli delle definizioni accese (/id): cambiano con le impostazioni, non sono scritti qui.
 function aiuto() {
   const rep = require('./reports').settings().definizioni.filter((d) => d.enabled).map((d) => '/' + d.id + ' — ' + esc(d.nome)).join('\n');
-  return '<b>Cosa so fare</b>\n/menu — bottoni per tutto, a sottomenu\n' + (rep ? rep + '\n' : '') + '/report — tutti i report\n/timbra — entrata e uscita (se hai le timbrature)\n/ore — le ore della settimana\n\n<b>Oppure scrivimi come parli</b>, per esempio:\n• «quanto ho speso di benzina a settembre?»\n• «ho pagato l\'affitto»\n• «smista la bolletta A2A in 3 rate»\n• «ho speso 20 euro di benzina»\n• «sono entrata», «uscita alle 12:30», «quante ore ho fatto questa settimana?»\n• mandami la <b>foto di uno scontrino</b> o il <b>PDF</b> di una bolletta e li leggo\n\nOgni modifica ti viene mostrata con un bottone di conferma: senza il tuo tocco non cambio niente (le timbrature si registrano subito, con il bottone «Annulla»).\n/scollega — scollega questo telefono';
+  return '<b>Cosa so fare</b>\n/menu — bottoni per tutto, a sottomenu\n' + (rep ? rep + '\n' : '') + '/report — tutti i report\n/timbra — entrata e uscita (se hai le timbrature)\n/ore — le ore della settimana\n\n<b>Oppure scrivimi come parli</b>, per esempio:\n• «quanto ho speso di benzina a settembre?»\n• «ho pagato l\'affitto»\n• «smista la bolletta A2A in 3 rate»\n• «ho speso 20 euro di benzina»\n• «mi è arrivato lo stipendio di 1800», «ho versato 500 euro alla casa»\n• «sono entrata», «uscita alle 12:30», «oggi sono entrata alle 9 e uscita alle 18»\n• «quante ore ho fatto questa settimana?», «ho fatto straordinari questo mese?»\n• mandami la <b>foto di uno scontrino</b> o il <b>PDF</b> di una bolletta e li leggo\n• mandami la <b>foto o il PDF di una busta paga</b> con la didascalia "busta" e la archivio\n\nOgni modifica ti viene mostrata con un bottone di conferma: senza il tuo tocco non cambio niente (le timbrature si registrano subito, con il bottone «Annulla»).\n/scollega — scollega questo telefono';
 }
 const NON_COLLEGATO = 'Questo telefono non è collegato all\'app.\nNell\'app: <b>Impostazioni → Il mio account → Telegram → Collega il mio Telegram</b>, poi tocca il link che ti viene mostrato.';
 const hits = new Map(); // chat → istanti degli ultimi messaggi
@@ -244,15 +244,22 @@ async function handleMessage(msg, now) {
   const def = require('./reports').settings().definizioni.find((d) => '/' + d.id === cmd); // i comandi dei report sono gli id delle definizioni
   if (def) return runCommand(chatId, user, def.id, now);
   // una foto (scontrino) o un file: la foto di uno scontrino e un PDF di bolletta si leggono con l'AI; poi tu confermi
+  // la didascalia "busta (paga)" smista la foto/PDF verso la lettura busta paga invece dello scontrino/bolletta
+  const perBustaPaga = (nome) => /busta/i.test(msg.caption || '') || /busta/i.test(nome || '');
   if (msg.photo && msg.photo.length) {
     if (aiTooMany(chatId, now)) return sendMessage(chatId, 'Un momento, sto ricevendo troppe richieste: riprova tra un minuto.');
-    const act = require('./bot-actions'); const out = await act.importaFoto(user, chatId, act.fotoMigliore(msg.photo), downloadFile);
+    const act = require('./bot-actions'); const foto = act.fotoMigliore(msg.photo);
+    const out = perBustaPaga() ? await act.proponiBustaPaga(user, chatId, foto, downloadFile, false) : await act.importaFoto(user, chatId, foto, downloadFile);
     return sendMessage(chatId, out.html, out.keyboard);
   }
   if (msg.document) {
     if (aiTooMany(chatId, now)) return sendMessage(chatId, 'Un momento, sto ricevendo troppe richieste: riprova tra un minuto.');
     const act = require('./bot-actions'); const d = msg.document;
-    const out = /^image\//.test(d.mime_type || '') ? await act.importaFoto(user, chatId, d.file_size && d.file_size > 3 * 1024 * 1024 ? null : d, downloadFile) : await act.importaDocumento(user, chatId, d, downloadFile);
+    const isImg = /^image\//.test(d.mime_type || '');
+    const file = d.file_size && d.file_size > 3 * 1024 * 1024 ? null : d;
+    const out = perBustaPaga(d.file_name)
+      ? await act.proponiBustaPaga(user, chatId, file, downloadFile, !isImg)
+      : (isImg ? await act.importaFoto(user, chatId, file, downloadFile) : await act.importaDocumento(user, chatId, d, downloadFile));
     return sendMessage(chatId, out.html, out.keyboard);
   }
   if (!text || text.startsWith('/')) return sendMessage(chatId, 'Non ho capito. Prova con /report (o /aiuto).');

@@ -17,20 +17,36 @@ const eur = (n) => Number(n || 0).toLocaleString('it-IT', { useGrouping: 'always
 
 function visibleSlugs(user) { return new Set(require('./routes/modules').visibleSlugsFor(user)); }
 
+// Valori ammessi (options) del campo che ha questo ruolo in questo modulo, o [] se il ruolo non è
+// dichiarato o il campo non è un select — stesso bisogno già ripetuto per categoria, ora anche per gruppo.
+function opzioniCampo(moduleSlug, campo) {
+  if (!campo) return [];
+  try {
+    const f = (require('./schema-v3').parseSchemaNormalized(db.prepare('SELECT schema_json FROM modules WHERE slug = ?').get(moduleSlug).schema_json).fields || []).find((x) => x.key === campo);
+    return f && Array.isArray(f.options) ? f.options.map((o) => (typeof o === 'string' ? o : o.value)).filter(Boolean) : [];
+  } catch (e) { return []; }
+}
+
 // I moduli di spesa che QUESTO utente vede e che hanno dichiarato gli avvisi (con le categorie ammesse).
 function moduliPerUtente(user) {
   const vis = visibleSlugs(user);
-  return moduleRoles.list({ use: 'avvisi' }).filter((m) => m.kind === 'spesa' && vis.has(m.module_slug)).map((m) => {
-    const campo = m.roles.categoria;
-    let categorie = [];
-    if (campo) {
-      try {
-        const f = (require('./schema-v3').parseSchemaNormalized(db.prepare('SELECT schema_json FROM modules WHERE slug = ?').get(m.module_slug).schema_json).fields || []).find((x) => x.key === campo);
-        categorie = f && Array.isArray(f.options) ? f.options.map((o) => (typeof o === 'string' ? o : o.value)).filter(Boolean) : [];
-      } catch (e) { categorie = []; }
-    }
-    return { slug: m.module_slug, name: m.name || m.module_slug, etichetta: m.avvisi.label || String(m.name || m.module_slug).toLowerCase(), categorie, decl: m };
-  });
+  return moduleRoles.list({ use: 'avvisi' }).filter((m) => m.kind === 'spesa' && vis.has(m.module_slug)).map((m) => ({
+    slug: m.module_slug, name: m.name || m.module_slug, etichetta: m.avvisi.label || String(m.name || m.module_slug).toLowerCase(),
+    categorie: opzioniCampo(m.module_slug, m.roles.categoria), decl: m,
+  }));
+}
+
+// I moduli di entrata che QUESTO utente vede (es. "mi è arrivato lo stipendio", "ho versato 500
+// alla casa") — stesso principio di moduliPerUtente, con in più i "gruppi" se il modulo li ha
+// dichiarati (campo ruolo "gruppo", es. Casa/Personale: v. Impostazioni → Moduli → Ruoli).
+function entrataModuliPerUtente(user) {
+  const vis = visibleSlugs(user);
+  return moduleRoles.list({ kind: 'entrata' }).filter((m) => vis.has(m.module_slug)).map((m) => ({
+    slug: m.module_slug, name: m.name || m.module_slug,
+    categorie: opzioniCampo(m.module_slug, m.roles.categoria),
+    gruppi: opzioniCampo(m.module_slug, m.roles.gruppo),
+    decl: m,
+  }));
 }
 
 async function viaSuperAdmin(path, data, timeoutMs = 30000) {
@@ -51,14 +67,16 @@ async function viaSuperAdmin(path, data, timeoutMs = 30000) {
 async function interpret(frase, user, now = new Date(), storico = null) {
   if (!moduleAi.masterOn()) return { error: 'L\'AI non è accesa (Impostazioni → AI).', code: 'ai_off' };
   const moduli = moduliPerUtente(user).map((m) => ({ slug: m.slug, name: m.name, etichetta: m.etichetta, categorie: m.categorie }));
+  const moduliEntrata = entrataModuliPerUtente(user).map((m) => ({ slug: m.slug, name: m.name, categorie: m.categorie, gruppi: m.gruppi }));
   const timbrature = require('./bot-timbrature').haPresenze(user);
-  if (!moduli.length && !timbrature) return { error: 'Non hai moduli a cui il bot possa lavorare.', code: 'no_modules' };
+  if (!moduli.length && !moduliEntrata.length && !timbrature) return { error: 'Non hai moduli a cui il bot possa lavorare.', code: 'no_modules' };
   const oggi = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(now);
   const report = require('./reports').settings().definizioni.filter((d) => d.enabled).map((d) => ({ id: d.id, nome: d.nome }));
-  const r = await viaSuperAdmin('bot-intent', { frase, oggi, timbrature, report, moduli, storico });
+  const r = await viaSuperAdmin('bot-intent', { frase, oggi, timbrature, report, moduli, moduli_entrata: moduliEntrata, storico });
   if (r.error) return r;
-  const v = validateIntent(r.body && r.body.intent, moduli, oggi, report.map((x) => x.id)); // rivalidato qui, con le stesse regole
+  const v = validateIntent(r.body && r.body.intent, moduli, oggi, report.map((x) => x.id), moduliEntrata); // rivalidato qui, con le stesse regole
   if (v.intent && (v.intent.azione === 'timbra' || v.intent.azione === 'ore') && !timbrature) return { error: 'Non hai timbrature.', code: 'ai_unanswerable' };
+  if (v.intent && v.intent.azione === 'nuova_entrata' && !moduliEntrata.length) return { error: 'Non hai moduli di entrata.', code: 'ai_unanswerable' };
   if (v.error) return { error: v.error, code: 'ai_unanswerable' };
   return { intent: v.intent };
 }
@@ -100,4 +118,4 @@ async function leggiScontrino(base64, categorie, now = new Date()) {
   return { ricevuta: v.ricevuta };
 }
 
-module.exports = { interpret, ask, leggiScontrino, moduliPerUtente, visibleSlugs, esc, eur };
+module.exports = { interpret, ask, leggiScontrino, moduliPerUtente, entrataModuliPerUtente, visibleSlugs, esc, eur };
