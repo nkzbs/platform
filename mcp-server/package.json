@@ -1,0 +1,19 @@
+{
+  "name": "platform-mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Server MCP per Platform: gli stessi moduli/record dell'app, come strumenti per un client MCP (es. Claude Code) — stessa API reale, stessi permessi di chi ha creato il token.",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node src/mcp-server.test.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^4.1.12"
+  }
+}

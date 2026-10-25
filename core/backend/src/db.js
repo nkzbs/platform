@@ -774,6 +774,23 @@ ensureColumn('sessions', 'revoked_at', 'DATETIME DEFAULT NULL');
 // last_seen_at resta invariato per tutto il resto (storico sessioni, durata).
 ensureColumn('sessions', 'last_active_at', 'DATETIME');
 
+// Token API personali (25/10/2026, richiesto dall'utente per un server MCP: un
+// client esterno — non un browser — che agisce come un utente vero senza
+// passare da login/2FA ogni volta). Mai il token in chiaro a riposo: solo
+// l'hash (sha256), come le password. Un token è legato a UN utente, con tutti
+// i suoi permessi reali — non un ruolo a parte, nessuna seconda copia della
+// logica di autorizzazione. `label` è solo per riconoscerlo nell'elenco
+// (es. "MCP sul Mac"); `last_used_at` per capire quali sono ancora vivi.
+db.exec(`CREATE TABLE IF NOT EXISTS api_tokens (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  label TEXT NOT NULL,
+  token_hash TEXT NOT NULL UNIQUE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  last_used_at DATETIME,
+  revoked_at DATETIME
+)`);
+
 // 2FA (TOTP) — attivabile dal singolo utente dal proprio pannello (Account), mai
 // imposto da un admin su un altro utente. totp_secret resta NULL finché non viene
 // confermato con un codice reale (vedi routes/auth.js POST /2fa/confirm) — un

@@ -32,9 +32,29 @@ function isPassivePoll(req) {
   return PASSIVE_POLL_PATHS.some((p) => req.originalUrl === p || req.originalUrl.startsWith(p + '?'));
 }
 
+// Token API personale (es. per un server MCP): prefisso riconoscibile 'plat_',
+// mai confondibile con un JWT (che inizia sempre con 'eyJ', base64 di {"alg":...}).
+// Autentica come l'utente vero del token, con tutti i suoi permessi reali — non
+// un ruolo a parte. Nessuna scadenza automatica: si revoca da Impostazioni →
+// Il mio account, come un logout remoto.
+function tryApiToken(req) {
+  const auth = req.headers.authorization || '';
+  const raw = auth.startsWith('Bearer ') ? auth.slice(7) : auth;
+  if (!raw.startsWith('plat_')) return false;
+  const hash = require('crypto').createHash('sha256').update(raw).digest('hex');
+  const row = db.prepare('SELECT * FROM api_tokens WHERE token_hash = ?').get(hash);
+  if (!row || row.revoked_at) return false;
+  const current = db.prepare('SELECT * FROM users WHERE id = ?').get(row.user_id);
+  if (!current || !current.active) return false;
+  req.user = { id: current.id, username: current.username, role: current.role, display_name: current.display_name, linked_module_slug: current.linked_module_slug, linked_record_id: current.linked_record_id };
+  db.prepare('UPDATE api_tokens SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?').run(row.id);
+  return true;
+}
+
 function requireAuth(req, res, next) {
   const auth = req.headers.authorization;
   if (!auth) return res.status(401).json({ error: 'Non autorizzato' });
+  if (tryApiToken(req)) return next();
   try {
     req.user = jwt.verify(auth.split(' ')[1], JWT_SECRET);
     // Un token "pending" (2FA non ancora verificato, vedi POST /login sotto) non è

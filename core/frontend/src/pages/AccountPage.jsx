@@ -106,6 +106,30 @@ function AccountPage({ token, user }) {
     loadPasskeys()
   }
 
+  // Token API personali (2026-10-25, richiesto dall'utente per un server MCP) —
+  // self-service come passkey/2FA: ognuno vede e revoca solo i propri. Il valore
+  // in chiaro arriva SOLO nella risposta di creazione (newToken sotto): da quel
+  // momento in poi è solo un hash, nemmeno Platform può più mostrarlo.
+  const [apiTokens, setApiTokens] = useState(null)
+  const [tkLabel, setTkLabel] = useState('')
+  const [tkBusy, setTkBusy] = useState(false)
+  const [tkError, setTkError] = useState('')
+  const [newToken, setNewToken] = useState(null) // { label, token } — mostrato una volta sola
+  const loadApiTokens = () => api.get('/api-tokens').then((d) => { if (d) setApiTokens(d) })
+  useEffect(() => { loadApiTokens() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const createApiToken = async () => {
+    setTkError(''); setTkBusy(true)
+    const r = await api.post('/api-tokens', { label: tkLabel })
+    setTkBusy(false)
+    if (!r.ok) { setTkError((r.data && r.data.error) || 'Errore'); return }
+    setNewToken(r.data); setTkLabel(''); loadApiTokens()
+  }
+  const revokeApiToken = async (id) => {
+    await api.del('/api-tokens/' + id)
+    loadApiTokens()
+  }
+
   const inputCls = 'w-full bg-surface-page text-ink px-4 py-3 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition'
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-4xl items-start">
@@ -245,6 +269,53 @@ function AccountPage({ token, user }) {
           </div>
         </div>
       )}
+
+      <div className="bg-surface-card rounded-md p-6 border border-gray-800 lg:col-span-2">
+        <div className="flex items-start gap-4 mb-5">
+          <div className="w-10 h-10 rounded-lg bg-cp-purple/20 flex items-center justify-center flex-shrink-0">
+            <Icon name="plug" size={20} className="text-cp-purple" />
+          </div>
+          <div>
+            <div className="text-ink font-medium mb-1">Token API</div>
+            <div className="text-sm text-gray-500">Per collegare un client esterno (es. un server MCP) con i tuoi stessi permessi, senza login ogni volta. Vale quanto la tua password: tienilo al sicuro.</div>
+          </div>
+        </div>
+
+        {tkError && <div className="bg-red-900/30 text-red-400 text-sm p-3 rounded-lg mb-4 border border-red-900/50">{tkError}</div>}
+
+        {newToken && (
+          <div className="bg-amber-900/20 border border-amber-900/40 rounded-lg p-4 mb-4">
+            <div className="text-sm text-amber-300 mb-2">Copialo ora — non verrà più mostrato.</div>
+            <code className="block bg-black/30 text-ink text-xs p-2.5 rounded-lg break-all select-all">{newToken.token}</code>
+            <button onClick={() => setNewToken(null)} className="text-xs text-gray-400 hover:text-gray-200 transition mt-2">Fatto, l'ho copiato</button>
+          </div>
+        )}
+
+        <div className="space-y-2 mb-5">
+          {apiTokens === null && <div className="text-sm text-gray-600">Caricamento...</div>}
+          {apiTokens && apiTokens.length === 0 && <div className="text-sm text-gray-600">Nessun token ancora.</div>}
+          {apiTokens && apiTokens.filter((t) => !t.revoked_at).map((t) => (
+            <div key={t.id} className="flex items-center justify-between gap-3 bg-surface-page rounded-lg px-4 py-3 border border-gray-800">
+              <div className="min-w-0">
+                <div className="text-sm text-ink truncate">{t.label}</div>
+                <div className="text-xs text-gray-600 mt-0.5">
+                  Creato il {new Date(t.created_at).toLocaleDateString('it-IT')}
+                  {t.last_used_at && ' · usato l\'ultima volta il ' + new Date(t.last_used_at).toLocaleDateString('it-IT')}
+                </div>
+              </div>
+              <button onClick={() => revokeApiToken(t.id)} className="text-xs text-red-400 hover:text-red-300 transition flex-shrink-0">Revoca</button>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex gap-2 flex-wrap">
+          <input className="flex-1 min-w-[180px] bg-surface-page text-ink px-3.5 py-2.5 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition placeholder-gray-600"
+            placeholder="Nome (es. MCP sul Mac)" value={tkLabel} onChange={(e) => setTkLabel(e.target.value)} />
+          <button onClick={createApiToken} disabled={tkBusy || !tkLabel.trim()} className="bg-accent hover:opacity-90 disabled:opacity-50 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition">
+            {tkBusy ? 'Creazione...' : 'Crea un token'}
+          </button>
+        </div>
+      </div>
 
       <div className="lg:col-span-2 text-[11px] font-semibold uppercase tracking-wide text-gray-600 mt-2 -mb-1">Notifiche</div>
       <TelegramCard token={token} user={user} mode="telefono" className="lg:col-span-2" />
