@@ -374,7 +374,11 @@ async function driveListTree(folderId) {
     const dentroFiles = await driveListFiles(sc.id);
     dentro.push(...dentroFiles.map((f) => ({ ...f, cartella: sc.name })));
   }
-  return [...radice, ...dentro];
+  // `cartelle` include anche le sottocartelle VUOTE (senza file dentro) — servono a
+  // drive-poller.js per riconoscerle comunque come cartelle vere, anche senza nulla
+  // da importare (richiesto dall'utente il 25/10/2026: "voglio anche le cartelle
+  // vuote syncate").
+  return { files: [...radice, ...dentro], cartelle: sottocartelle.map((f) => f.name) };
 }
 
 async function driveDelete(fileId) {

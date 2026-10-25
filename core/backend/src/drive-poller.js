@@ -57,6 +57,65 @@ function nonImportabile(mimeType) {
   return mimeType === 'application/vnd.google-apps.folder' || String(mimeType || '').startsWith('application/vnd.google-apps.');
 }
 
+// Una sottocartella Drive il cui nome non è ancora un'opzione vera del campo
+// "cartella" diventa una — anche se è vuota (richiesto dall'utente il
+// 25/10/2026: "voglio anche le cartelle vuote syncate"): senza questo,
+// un'opzione nuova esisterebbe solo quando arriva il primo file dentro, mai
+// prima. Stessa rotta reale del Builder/ArchiveView (POST /field-options,
+// azione "add"): stessa convalida (nome non doppio, ≤60 caratteri), stessa
+// cronologia di pubblicazione. Ritorna i nomi aggiunti con successo, per
+// aggiornare subito le opzioni note in questo stesso giro del poller.
+async function registraCartelleNuove(m, cartelleTrovate) {
+  if (!m.folderField) return [];
+  const opzioni = new Set((m.folderField.options || []).map((o) => (typeof o === 'string' ? o : o.value)));
+  const nuove = [...new Set(cartelleTrovate)].filter((c) => c && !opzioni.has(c));
+  if (!nuove.length) return [];
+  const { callAs } = require('./lib/internal-api');
+  const db2 = require('./db');
+  const admin = db2.prepare("SELECT * FROM users WHERE role = 'admin' LIMIT 1").get();
+  if (!admin) return [];
+  const aggiunte = [];
+  for (const nome of nuove) {
+    try {
+      const r = await callAs(admin, 'POST', '/field-options/' + m.slug + '/' + m.folderField.key, { action: 'add', value: nome });
+      if (r.ok) aggiunte.push(nome); else console.error('[drive-poller] cartella "' + nome + '" non registrata:', JSON.stringify(r.data));
+    } catch (e) {
+      console.error('[drive-poller] cartella "' + nome + '" non registrata:', e.message);
+    }
+  }
+  return aggiunte;
+}
+
+// Un documento con un file già su Drive ma senza cartella resta nella radice
+// per sempre (organizza(), sotto, sposta solo chi ha già una cartella valida)
+// — richiesto dall'utente il 25/10/2026: "in drive ci sono file nella root,
+// vanno sistemati". Finisce in "Altro" (il catch-all già tra le opzioni:
+// mai inventato un valore a caso se "Altro" non è dichiarato). Solo i file
+// SU DRIVE: uno locale non ha nessun problema di posizione da correggere.
+async function assegnaCartellaPredefinita(m) {
+  if (!m.folderField) return 0;
+  const opzioni = (m.folderField.options || []).map((o) => (typeof o === 'string' ? o : o.value));
+  if (!opzioni.includes('Altro')) return 0;
+  const righe = db.prepare('SELECT id, data FROM records WHERE module_slug = ?').all(m.slug).map((r) => ({ id: r.id, data: JSON.parse(r.data) }));
+  const { callAs } = require('./lib/internal-api');
+  const admin = db.prepare("SELECT * FROM users WHERE role = 'admin' LIMIT 1").get();
+  let assegnati = 0;
+  for (const r of righe) {
+    const file = r.data[m.fileField.key];
+    const cartella = m.folderField ? r.data[m.folderField.key] : undefined;
+    if (cartella || !file || !file.id) continue;
+    const up = db.prepare('SELECT stored_name FROM uploads WHERE id = ?').get(file.id);
+    if (!up || !up.stored_name || !up.stored_name.startsWith('drive:')) continue;
+    try {
+      const resu = await callAs(admin, 'PUT', '/records/' + m.slug + '/' + r.id, { ...r.data, [m.folderField.key]: 'Altro' });
+      if (resu.ok) assegnati++; else console.error('[drive-poller] cartella predefinita non assegnata al record', r.id, ':', JSON.stringify(resu.data));
+    } catch (e) {
+      console.error('[drive-poller] cartella predefinita non assegnata al record', r.id, ':', e.message);
+    }
+  }
+  return assegnati;
+}
+
 // Sposta nella sottocartella Drive giusta ogni record che ha sia una cartella
 // sia un file su Drive, se non ci sta già (letto dalla stessa scansione
 // dell'albero, `posizioneAttuale`: nessuna chiamata Drive in più solo per
@@ -96,18 +155,21 @@ async function pollDrive() {
   const m = moduloArchivio();
   if (!m) return { disponibile: false }; // nessun archivio dichiarato, o più di uno: niente da fare
 
-  let files;
+  let files, cartelleTrovate;
   try {
     const folderId = await ensureDriveFolder();
-    files = await driveListTree(folderId);
+    ({ files, cartelle: cartelleTrovate } = await driveListTree(folderId));
   } catch (e) {
     console.error('[drive-poller] elenco file Drive fallito:', e.message);
     return { disponibile: true, errore: e.message };
   }
 
+  const cartelleRegistrate = await registraCartelleNuove(m, cartelleTrovate);
+  if (cartelleRegistrate.length) console.log('[drive-poller] nuove cartelle registrate:', cartelleRegistrate.join(', '));
+
   const noti = db.prepare("SELECT stored_name FROM uploads WHERE stored_name LIKE 'drive:%'").all().map((r) => r.stored_name.slice(6));
   const conosciuti = new Set(noti);
-  const opzioniCartella = new Set((m.folderField && m.folderField.options || []).map((o) => (typeof o === 'string' ? o : o.value)));
+  const opzioniCartella = new Set([...(m.folderField && m.folderField.options || []).map((o) => (typeof o === 'string' ? o : o.value)), ...cartelleRegistrate]);
   const nuovi = files.filter((f) => !conosciuti.has(f.id) && !nonImportabile(f.mimeType));
 
   const ownerId = require('./record-owner').ownerFor(null, m.slug);
@@ -131,11 +193,14 @@ async function pollDrive() {
   }
   if (importati) console.log('[drive-poller] ' + importati + ' file nuovi trovati su Drive, importati in "' + m.slug + '"');
 
+  const assegnati = await assegnaCartellaPredefinita(m);
+  if (assegnati) console.log('[drive-poller] ' + assegnati + ' documenti senza cartella messi in "Altro"');
+
   const posizioneAttuale = new Map(files.map((f) => [f.id, f.cartella]));
   const spostati = await organizza(m, posizioneAttuale);
   if (spostati) console.log('[drive-poller] ' + spostati + ' file spostati nella sottocartella Drive giusta');
 
-  return { disponibile: true, importati, spostati, modulo: m.slug };
+  return { disponibile: true, importati, spostati, assegnati, cartelle_nuove: cartelleRegistrate, modulo: m.slug };
 }
 
 function startDrivePoller() {

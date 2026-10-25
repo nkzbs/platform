@@ -84,6 +84,18 @@ function mancanti(user, m) {
 function moduloTimbrature() {
   return moduleRoles.list({ kind: 'presenze' }).find((x) => x.roles.data && x.roles.inizio && x.roles.fine) || null;
 }
+
+// Il vero utente dietro un nome scritto nel campo "proprietario" di una busta paga
+// (es. "Federica") — serve a righeOre sotto per confrontare OGNI riga con le
+// timbrature di CHI QUELLA riga riguarda davvero, non con quelle di chi sta
+// guardando. Bug reale trovato il 25/10/2026: chi guarda più persone insieme
+// (righeDi senza corrispondenza, es. l'admin) vedeva lo stesso numero di ore
+// timbrate ripetuto identico su righe di persone diverse, perché il confronto
+// usava sempre le timbrature di chi guardava, mai quelle della riga.
+function utentePerNome(nome) {
+  if (!nome) return null;
+  return db.prepare('SELECT * FROM users WHERE LOWER(display_name) = LOWER(?) OR LOWER(username) = LOWER(?)').get(nome, nome) || null;
+}
 // Ore timbrate da questo utente nel mese `periodoIso` (AAAA-MM), in ore decimali — null se non ha
 // un modulo di presenze o non ha mai timbrato quel mese (per non confondere "zero ore" con "non timbra").
 // Filtra per user_id DIRETTAMENTE (non la visibilità del modulo, che è un'altra cosa): qui serve
@@ -108,9 +120,14 @@ function righeOre(user, m, n = 12) {
   const righeTabella = righe.map((r) => {
     const periodo = String(r.data[m.R.data] || '').slice(0, 7);
     const pagate = r.data[m.R.ore_pagate];
-    const timbrate = mt ? oreTimbrateMese(user, periodo) : null;
+    // Le timbrature sono SEMPRE di chi dice "proprietario" sulla riga, non di chi
+    // guarda: quando righeDi mostra più persone insieme (nessuna corrispondenza per
+    // chi guarda), ogni riga va confrontata con le ore di quella persona, mai con
+    // quelle di chi sta chiedendo.
+    const utenteRiga = utentePerNome(r.data.proprietario) || user;
+    const timbrate = mt ? oreTimbrateMese(utenteRiga, periodo) : null;
     const diff = pagate != null && timbrate != null ? Math.round((timbrate - pagate) * 100) / 100 : null;
-    return { periodo, label: r.data.periodo_label || meseLabel(periodo), pagate, timbrate, diff };
+    return { periodo, label: r.data.periodo_label || meseLabel(periodo), proprietario: r.data.proprietario || null, pagate, timbrate, diff };
   });
   return { ha_timbrature: !!mt, righe: righeTabella };
 }
@@ -121,7 +138,11 @@ function righeOre(user, m, n = 12) {
 function reportOre(user, m, n = 12) {
   const { ha_timbrature, righe } = righeOre(user, m, n);
   if (!righe.length) return { html: 'Non ho nessuna busta paga archiviata.' };
-  const riga = (r) => esc(r.label) + ': ' + (r.pagate != null ? r.pagate + 'h pagate' : '— pagate')
+  // Più di una persona tra le righe (chi guarda non corrisponde a nessun
+  // "proprietario": vede tutti insieme, vedi righeDi) -> ogni riga dice anche di
+  // chi è, altrimenti due mesi uguali di persone diverse sembrano un doppione.
+  const piuPersone = new Set(righe.map((r) => r.proprietario).filter(Boolean)).size > 1;
+  const riga = (r) => esc(r.label) + (piuPersone && r.proprietario ? ' (' + esc(r.proprietario) + ')' : '') + ': ' + (r.pagate != null ? r.pagate + 'h pagate' : '— pagate')
     + (r.timbrate != null ? ', ' + r.timbrate + 'h timbrate' : ha_timbrature ? ', nessuna timbratura' : '')
     + (r.diff != null && Math.abs(r.diff) >= 0.5 ? ' <b>(Δ ' + (r.diff > 0 ? '+' : '') + r.diff + 'h)</b>' : r.diff != null ? ' (torna)' : '');
   const html = '📄 <b>Ore pagate vs timbrate</b> (' + 'ultimi ' + righe.length + ' mesi' + ')\n' + righe.map(riga).join('\n')

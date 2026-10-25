@@ -36,6 +36,16 @@ Due rifiniture a Drive, trovate/chieste dall'utente lo stesso giorno dello 0.3.1
 
 Fix trovato provando il pulsante dal vivo prima di spedirlo: con un errore vero di Drive (token scaduto, collegamento rotto) il pulsante mostrava "nessuna novità" invece dell'errore — un fallimento reale sembrava un successo silenzioso. Ora un errore resta un errore in faccia a chi ha premuto il tasto.
 
+**Incidente reale, lo stesso giorno**: il container di Finance leggeva e scriveva su un file database sbagliato (`finance.db`, quasi vuoto — nessun modulo busta paga) invece di quello vero (`finance-01.db`, tutta la cronologia reale, rinominato poi semplicemente `finance.db`). La configurazione in Super Admin puntava al file sbagliato da un punto imprecisato della giornata; password e collegamento Google rifatti nel frattempo erano finiti lì e sono andati persi nel ripristino. Corretto: fermato il tenant dall'API ufficiale (mai un `docker stop` a mano), scambiati i file, riavviato — verificato 142 buste paga, 192 documenti, 2352 timbrature di nuovo al loro posto. Google e Client ID/Secret ricollegati sul file giusto.
+
+## 0.3.20 — 25 ottobre 2026
+
+Rifiniture a Drive bidirezionale e un fix reale sul report busta paga, tutti richiesti/trovati lo stesso giorno di 0.3.17-0.3.19:
+
+- **Cartelle vuote sincronizzate**: una sottocartella Drive creata senza niente dentro ("voglio anche le cartelle vuote syncate") ora diventa comunque una nuova opzione del campo "tipo" di Documenti — prima contava solo quando arrivava il primo file. Stessa rotta reale del Builder/ArchiveView per registrarla (`POST /field-options`, azione "add"), stessa cronologia di pubblicazione.
+- **File nella radice di Drive sistemati** ("in drive ci sono file nella root, vanno sistemati"): un documento con un file già su Drive ma senza cartella assegnata finisce in "Altro" (il catch-all già tra le opzioni — mai inventato un valore a caso se "Altro" non è dichiarato) e viene spostato lì, invece di restare per sempre nella radice.
+- **Fix reale nel report busta paga** (bug "i mesi sembrano sdoppiati"): chi guarda il report ore/timbrature vedendo più persone insieme (chi guarda non corrisponde a nessun "proprietario", es. l'admin) vedeva lo STESSO numero di ore timbrate ripetuto identico su righe di persone diverse — il confronto usava sempre le timbrature di chi guardava, mai quelle della persona a cui quella riga appartiene davvero. Ogni riga ora si confronta con le timbrature della persona giusta, e quando la vista mostra più persone insieme ciascuna riga dice anche di chi è (sia nel bot sia nell'app), così due mesi uguali di persone diverse non sembrano più un doppione.
+
 ## 0.3.15 — 24 ottobre 2026
 
 Seguito della domanda dell'utente "le entrate di spese casa, come le gestiamo?": le card "Riepilogo mensile — Personale" e "— Casa" puntavano entrambe allo stesso modulo Entrate senza nessun filtro, quindi avrebbero sommato le STESSE entrate su entrambe (es. lo stipendio intero contato anche nella card Casa, invece dei soli contributi versati alla casa).

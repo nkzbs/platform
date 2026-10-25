@@ -88,6 +88,18 @@ async function main() {
     assertEq([sF.ferie.valore, sF.permessi.valore, sF.rol.valore], [20, 6, 8]);
   });
 
+  console.log('\n--- vista mista (chi guarda non è né Nima né Fede: vede entrambi insieme) ---');
+  await test('bug reale del 25/10/2026: chi vede più persone insieme ha le ore timbrate GIUSTE per ciascuna riga, non quelle di chi guarda ripetute due volte', async () => {
+    const loginAdmin = await (await fetch(BASE + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: process.env.INITIAL_ADMIN_PASSWORD }) })).json();
+    const r = await (await fetch(BASE + '/api/busta-paga-report/ore', { headers: { Authorization: 'Bearer ' + loginAdmin.token } })).json();
+    assertEq(r.righe.length, 2, 'vede le righe di entrambi (nessuna corrispondenza proprietario per "Admin")');
+    const righeNima = r.righe.filter((x) => x.proprietario === 'Nima');
+    const righeFede = r.righe.filter((x) => x.proprietario === 'Fede');
+    assertEq(righeNima.length, 1); assertEq(righeFede.length, 1);
+    assertEq(righeNima[0].timbrate, null, 'Nima non ha timbrature sue: resta null, non quelle di Fede');
+    assertEq(righeFede[0].timbrate, 16, 'Fede: le sue 16h vere, non quelle (nulle) di Nima');
+  });
+
   console.log(`\n${passed} passati, ${failed} falliti su ${passed + failed} test.`);
   process.exit(failed ? 1 : 0);
 }

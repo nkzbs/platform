@@ -41,6 +41,10 @@ export default function BustaPagaReportView({ token, mod }) {
   ) : null
 
   const righeConDati = ore && ore.righe ? ore.righe.filter((r) => r.pagate != null || r.timbrate != null) : []
+  // Più di una persona tra le righe (chi guarda non corrisponde a nessun "proprietario",
+  // es. l'admin: vede tutti insieme) -> si dice di chi è ogni riga, altrimenti due mesi
+  // uguali di persone diverse sembrano un doppione invece di due buste paga vere.
+  const piuPersone = new Set(righeConDati.map((r) => r.proprietario).filter(Boolean)).size > 1
 
   if (!saldi && righeConDati.length === 0) return null
 
@@ -69,8 +73,8 @@ export default function BustaPagaReportView({ token, mod }) {
             </thead>
             <tbody>
               {righeConDati.map((r) => (
-                <tr key={r.periodo} className="border-b border-gray-900 last:border-0">
-                  <td className="py-1.5 pr-3 text-gray-300">{r.label}</td>
+                <tr key={r.periodo + '|' + (r.proprietario || '')} className="border-b border-gray-900 last:border-0">
+                  <td className="py-1.5 pr-3 text-gray-300">{r.label}{piuPersone && r.proprietario && <span className="text-gray-500"> ({r.proprietario})</span>}</td>
                   <td className="py-1.5 pr-3 text-ink font-mono">{r.pagate != null ? r.pagate + 'h' : '—'}</td>
                   <td className="py-1.5 pr-3 text-ink font-mono">{ore.ha_timbrature ? (r.timbrate != null ? r.timbrate + 'h' : 'nessuna timbratura') : ''}</td>
                   <td className={'py-1.5 font-mono font-medium ' + (r.diff != null && Math.abs(r.diff) >= 0.5 ? 'text-amber-400' : 'text-gray-500')}>
