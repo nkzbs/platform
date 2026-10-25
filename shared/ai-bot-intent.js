@@ -9,7 +9,7 @@ const COSE = ['pagare', 'scadute', 'smistare'];
 const MODI = ['uno', 'rate', 'pagata'];
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const MESE_ISO = /^\d{4}-\d{2}$/;
-const CAMPI_BUSTA_PAGA = ['netto', 'lordo', 'ore_pagate', 'trattenute', 'ferie_saldo', 'permessi_saldo', 'rol_saldo', 'tutto', 'spiega', 'mancanti'];
+const CAMPI_BUSTA_PAGA = ['netto', 'lordo', 'ore_pagate', 'trattenute', 'ferie_saldo', 'permessi_saldo', 'rol_saldo', 'tutto', 'spiega', 'mancanti', 'report_ore', 'saldi'];
 
 const clean = (v, n) => String(v == null ? '' : v).replace(/[\r\n]+/g, ' ').trim().slice(0, n);
 

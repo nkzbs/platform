@@ -79,6 +79,59 @@ function mancanti(user, m) {
   return out;
 }
 
+// Il modulo di presenze (timbrature): stessa ricerca generica di bot-timbrature.js, per il confronto
+// ore busta paga / ore timbrate — nessun nome di modulo scritto qui.
+function moduloTimbrature() {
+  return moduleRoles.list({ kind: 'presenze' }).find((x) => x.roles.data && x.roles.inizio && x.roles.fine) || null;
+}
+// Ore timbrate da questo utente nel mese `periodoIso` (AAAA-MM), in ore decimali — null se non ha
+// un modulo di presenze o non ha mai timbrato quel mese (per non confondere "zero ore" con "non timbra").
+function oreTimbrateMese(user, periodoIso) {
+  const mt = moduloTimbrature(); if (!mt) return null;
+  const { rows } = require('./reports');
+  const scope = require('./telegram').scopeFor(user);
+  const righe = rows(mt.module_slug, scope).map((r) => ({ d: r.data }));
+  if (!righe.length) return null;
+  const [anno, mese] = periodoIso.split('-').map(Number);
+  const out = require('./ore-calc').mensile(righe, mt.roles, anno, mese, Infinity);
+  return out.giorni ? Math.round((out.totale / 60) * 100) / 100 : null;
+}
+
+// Riga per riga, busta paga contro timbrature: ore pagate sul cedolino, ore davvero timbrate quel
+// mese, e la differenza — per vedere a colpo d'occhio se i conteggi tornano. Solo gli ultimi `n` mesi
+// (un messaggio Telegram ha un limite di lunghezza; per il resto si chiede un mese alla volta).
+function reportOre(user, m, n = 12) {
+  const righe = righeDi(user, m).slice(0, n); // già ordinate dal più recente
+  if (!righe.length) return { html: 'Non ho nessuna busta paga archiviata.' };
+  const mt = moduloTimbrature();
+  const righeTabella = righe.map((r) => {
+    const periodo = String(r.data[m.R.data] || '').slice(0, 7);
+    const pagate = r.data[m.R.ore_pagate];
+    const timbrate = mt ? oreTimbrateMese(user, periodo) : null;
+    const diff = pagate != null && timbrate != null ? Math.round((timbrate - pagate) * 100) / 100 : null;
+    return { periodo, label: r.data.periodo_label || meseLabel(periodo), pagate, timbrate, diff };
+  });
+  const riga = (r) => esc(r.label) + ': ' + (r.pagate != null ? r.pagate + 'h pagate' : '— pagate')
+    + (r.timbrate != null ? ', ' + r.timbrate + 'h timbrate' : mt ? ', nessuna timbratura' : '')
+    + (r.diff != null && Math.abs(r.diff) >= 0.5 ? ' <b>(Δ ' + (r.diff > 0 ? '+' : '') + r.diff + 'h)</b>' : r.diff != null ? ' (torna)' : '');
+  const html = '📄 <b>Ore pagate vs timbrate</b> (' + 'ultimi ' + righeTabella.length + ' mesi' + ')\n' + righeTabella.map(riga).join('\n')
+    + (mt ? '' : '\n\n<i>Non hai un modulo di timbrature: mostro solo le ore pagate.</i>');
+  return { html };
+}
+
+// Gli ultimi saldi (ferie, permessi, ROL) insieme, dall'ultima busta paga che li ha letti — una busta
+// paga recente potrebbe non averli (es. il datore non li scrive più in busta): si prende l'ultimo valore
+// NON nullo di ciascuno, non necessariamente dalla stessa riga.
+function ultimiSaldi(user, m) {
+  const righe = righeDi(user, m);
+  const trova = (campo) => { for (const r of righe) { if (r.data[campo] != null) return { valore: r.data[campo], label: r.data.periodo_label || meseLabel(String(r.data[m.R.data] || '').slice(0, 7)) }; } return null; };
+  const ferie = trova('ferie_saldo'), permessi = trova('permessi_saldo'), rol = trova('rol_saldo');
+  if (!ferie && !permessi && !rol) return { html: 'Non ho nessun saldo ferie/permessi/ROL letto dalle tue buste paga.' };
+  const riga = (nome, v) => v ? '• ' + nome + ': <b>' + v.valore + '</b> (da ' + esc(v.label) + ')' : null;
+  const html = '📄 <b>Ferie, permessi e ROL residui</b>\n' + [riga('Ferie', ferie), riga('Permessi/ex-festività', permessi), riga('ROL/banca ore', rol)].filter(Boolean).join('\n');
+  return { html };
+}
+
 async function spiega(domanda, record, m) {
   const d = record.data;
   try {
@@ -120,6 +173,8 @@ async function rispondi(user, intent, chatId) {
     if (!miss.length) return { html: '✅ Nessun buco: hai tutte le buste paga tra la prima e l\'ultima archiviata.' };
     return { html: '📄 Mancano queste buste paga:\n' + miss.map((p) => '• ' + esc(meseLabel(p))).join('\n') };
   }
+  if (intent.campo === 'report_ore') return reportOre(user, m);
+  if (intent.campo === 'saldi') return ultimiSaldi(user, m);
   const record = trovaRecord(user, m, intent.periodo);
   if (!record) return { html: intent.periodo && intent.periodo !== 'ultima' ? 'Non ho trovato la busta paga di quel mese.' : 'Non ho nessuna busta paga archiviata.' };
   const d = record.data, label = d.periodo_label || meseLabel(d[m.R.data]);

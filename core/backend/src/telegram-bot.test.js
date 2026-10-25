@@ -500,6 +500,20 @@ async function main() {
     eq(await say(555, 'boh busta paga'), null, 'campo sconosciuto -> tutto -> il file è già la risposta');
     eq(documenti.length, 1);
   });
+  await test('«le ore tornano con le timbrature?»: ore pagate in busta contro ore davvero timbrate, mese per mese, con lo scarto in evidenza', async () => {
+    db.prepare("DELETE FROM records WHERE module_slug = 'timbrature' AND user_id = 6").run();
+    put('timbrature', { data: '2026-09-05', entrata: '08:00', uscita: '16:00' }, 6);
+    put('timbrature', { data: '2026-09-12', entrata: '08:00', uscita: '16:00' }, 6);
+    put('timbrature', { data: '2026-09-19', entrata: '08:00', uscita: '16:00' }, 6); // 24h timbrate contro 150h pagate in busta: scarto vero
+    intents['le ore tornano con le timbrature?'] = { azione: 'busta_paga', periodo: null, campo: 'report_ore' };
+    const m = await say(666, 'le ore tornano con le timbrature?');
+    ok(/Settembre.*150h pagate.*24h timbrate.*Δ -126h/s.test(m.text), m.text);
+  });
+  await test('«quanti giorni di ferie e permessi ho?»: ferie, permessi e ROL insieme, dall\'ultimo valore non nullo di ciascuno', async () => {
+    intents['quanti giorni di ferie e permessi ho?'] = { azione: 'busta_paga', periodo: null, campo: 'saldi' };
+    const m = await say(666, 'quanti giorni di ferie e permessi ho?');
+    ok(/Ferie: <b>20<\/b>/.test(m.text) && /Permessi\/ex-festività: <b>6<\/b>/.test(m.text) && /ROL\/banca ore: <b>8<\/b>/.test(m.text), m.text);
+  });
 
   console.log('\n--- debito casa (chi deve a chi) ---');
   roles.set('spese_casa', { kind: 'spesa', uses: ['avvisi', 'riepiloghi'], roles: { ...RL, pagato_da: 'pagato_da' }, avvisi: { ...AV, label: 'casa' } });
@@ -526,9 +540,15 @@ async function main() {
   });
 
   console.log('\n--- /menu: bottoni a sottomenu (2026-10-14) ---');
-  await test('/menu mostra la radice: Spese & Entrate, Timbrature, Busta paga (Federica le ha entrambe), Report', async () => {
+  await test('/menu mostra la radice: Spese & Entrate, Timbrature, Busta paga, Debito casa (Federica li ha tutti), Report', async () => {
     const m = await say(666, '/menu');
-    ok(cb(m, 'mn:soldi'), 'manca Spese & Entrate'); ok(cb(m, 'mn:timbrature'), 'manca Timbrature'); ok(cb(m, 'mn:busta_paga'), 'manca Busta paga'); ok(cb(m, 'mn:report'), 'manca Report');
+    ok(cb(m, 'mn:soldi'), 'manca Spese & Entrate'); ok(cb(m, 'mn:timbrature'), 'manca Timbrature'); ok(cb(m, 'mn:busta_paga'), 'manca Busta paga'); ok(cb(m, 'mn:debito_casa'), 'manca Debito casa'); ok(cb(m, 'mn:report'), 'manca Report');
+  });
+  await test('tocco su "Debito casa" -> risponde subito col saldo (nessun sottomenu, come i report)', async () => {
+    const m = await say(666, '/menu');
+    const t = await tap(666, cb(m, 'mn:debito_casa'));
+    ok(/<b>Nima<\/b> ti deve/.test(t.modifica.text), t.modifica.text);
+    eq(cb(t.modifica, 'mn:root'), 'mn:root');
   });
   await test('tocco su "Busta paga" -> sottomenu con "Fai una domanda" e "Carica una busta paga"', async () => {
     const m = await say(666, '/menu');

@@ -19,9 +19,11 @@ const back = (to) => [{ text: '🔙 Indietro', callback_data: 'mn:' + to }];
 function root(user) {
   const tb = require('./bot-timbrature');
   const bp = require('./bot-payslip');
+  const dc = require('./debito-casa');
   const rows = [[{ text: '💰 Spese & Entrate', callback_data: 'mn:soldi' }]];
   if (tb.haPresenze(user)) rows.push([{ text: '⏱ Timbrature', callback_data: 'mn:timbrature' }]);
   if (bp.haBustaPaga(user)) rows.push([{ text: '📄 Busta paga', callback_data: 'mn:busta_paga' }]);
+  if (dc.attivo()) rows.push([{ text: '💶 Debito casa', callback_data: 'mn:debito_casa' }]);
   rows.push([{ text: '📑 Report', callback_data: 'mn:report' }]);
   return { html: '<b>Cosa vuoi fare?</b>', keyboard: rows };
 }
@@ -74,13 +76,20 @@ function bustaPaga() {
   };
 }
 function bustaPagaDomanda() {
-  return { html: 'Scrivimi la domanda, per esempio:\n«ferie residue?»\n«quante ore ho fatto a ottobre?»\n«dammi la mia ultima busta paga»\n«che buste paga mancano?»', keyboard: [back('busta_paga')] };
+  return { html: 'Scrivimi la domanda, per esempio:\n«ferie residue?»\n«quante ore ho fatto a ottobre?»\n«dammi la mia ultima busta paga»\n«che buste paga mancano?»\n«le ore tornano con le timbrature?»\n«quanti giorni di ferie e permessi ho?»', keyboard: [back('busta_paga')] };
 }
 function bustaPagaCarica() {
   return { html: 'Mandami la foto o il PDF della busta paga con la didascalia "busta": la leggo e te la archivio.', keyboard: [back('busta_paga')] };
 }
 
-const NODES = { root, soldi, timbrature, report, nuova_spesa: nuovaSpesa, scontrino, domanda, busta_paga: bustaPaga, busta_paga_domanda: bustaPagaDomanda, busta_paga_carica: bustaPagaCarica };
+function debitoCasa(user) {
+  const dc = require('./debito-casa');
+  if (!dc.attivo()) return root(user);
+  const r = dc.rispondi(user);
+  return { html: r.html, keyboard: [back('root')] };
+}
+
+const NODES = { root, soldi, timbrature, report, nuova_spesa: nuovaSpesa, scontrino, domanda, busta_paga: bustaPaga, busta_paga_domanda: bustaPagaDomanda, busta_paga_carica: bustaPagaCarica, debito_casa: debitoCasa };
 
 // Chiave sconosciuta o scaduta (es. un vecchio messaggio con un bottone che
 // non esiste più) -> si torna alla radice invece di un errore secco.
