@@ -86,11 +86,12 @@ function moduloTimbrature() {
 }
 // Ore timbrate da questo utente nel mese `periodoIso` (AAAA-MM), in ore decimali — null se non ha
 // un modulo di presenze o non ha mai timbrato quel mese (per non confondere "zero ore" con "non timbra").
+// Filtra per user_id DIRETTAMENTE (non la visibilità del modulo, che è un'altra cosa): qui serve
+// sempre e solo "quello che questa persona ha timbrato", anche se il modulo non ha "solo propri"
+// configurato — altrimenti le ore di tutti finirebbero mescolate nel confronto di ciascuno.
 function oreTimbrateMese(user, periodoIso) {
   const mt = moduloTimbrature(); if (!mt) return null;
-  const { rows } = require('./reports');
-  const scope = require('./telegram').scopeFor(user);
-  const righe = rows(mt.module_slug, scope).map((r) => ({ d: r.data }));
+  const righe = db.prepare('SELECT data FROM records WHERE module_slug = ? AND user_id = ?').all(mt.module_slug, user.id).map((r) => ({ d: JSON.parse(r.data) }));
   if (!righe.length) return null;
   const [anno, mese] = periodoIso.split('-').map(Number);
   const out = require('./ore-calc').mensile(righe, mt.roles, anno, mese, Infinity);
@@ -98,11 +99,11 @@ function oreTimbrateMese(user, periodoIso) {
 }
 
 // Riga per riga, busta paga contro timbrature: ore pagate sul cedolino, ore davvero timbrate quel
-// mese, e la differenza — per vedere a colpo d'occhio se i conteggi tornano. Solo gli ultimi `n` mesi
-// (un messaggio Telegram ha un limite di lunghezza; per il resto si chiede un mese alla volta).
-function reportOre(user, m, n = 12) {
+// mese, e la differenza — per vedere a colpo d'occhio se i conteggi tornano. Dati nudi (nessun
+// testo/HTML): usati sia dal bot (reportOre, sotto) sia dalla rotta REST per la vista nell'app
+// (routes/busta-paga-report.js), stessa logica, due presentazioni.
+function righeOre(user, m, n = 12) {
   const righe = righeDi(user, m).slice(0, n); // già ordinate dal più recente
-  if (!righe.length) return { html: 'Non ho nessuna busta paga archiviata.' };
   const mt = moduloTimbrature();
   const righeTabella = righe.map((r) => {
     const periodo = String(r.data[m.R.data] || '').slice(0, 7);
@@ -111,21 +112,34 @@ function reportOre(user, m, n = 12) {
     const diff = pagate != null && timbrate != null ? Math.round((timbrate - pagate) * 100) / 100 : null;
     return { periodo, label: r.data.periodo_label || meseLabel(periodo), pagate, timbrate, diff };
   });
+  return { ha_timbrature: !!mt, righe: righeTabella };
+}
+
+// Riga per riga, busta paga contro timbrature: ore pagate sul cedolino, ore davvero timbrate quel
+// mese, e la differenza — per vedere a colpo d'occhio se i conteggi tornano. Solo gli ultimi `n` mesi
+// (un messaggio Telegram ha un limite di lunghezza; per il resto si chiede un mese alla volta).
+function reportOre(user, m, n = 12) {
+  const { ha_timbrature, righe } = righeOre(user, m, n);
+  if (!righe.length) return { html: 'Non ho nessuna busta paga archiviata.' };
   const riga = (r) => esc(r.label) + ': ' + (r.pagate != null ? r.pagate + 'h pagate' : '— pagate')
-    + (r.timbrate != null ? ', ' + r.timbrate + 'h timbrate' : mt ? ', nessuna timbratura' : '')
+    + (r.timbrate != null ? ', ' + r.timbrate + 'h timbrate' : ha_timbrature ? ', nessuna timbratura' : '')
     + (r.diff != null && Math.abs(r.diff) >= 0.5 ? ' <b>(Δ ' + (r.diff > 0 ? '+' : '') + r.diff + 'h)</b>' : r.diff != null ? ' (torna)' : '');
-  const html = '📄 <b>Ore pagate vs timbrate</b> (' + 'ultimi ' + righeTabella.length + ' mesi' + ')\n' + righeTabella.map(riga).join('\n')
-    + (mt ? '' : '\n\n<i>Non hai un modulo di timbrature: mostro solo le ore pagate.</i>');
+  const html = '📄 <b>Ore pagate vs timbrate</b> (' + 'ultimi ' + righe.length + ' mesi' + ')\n' + righe.map(riga).join('\n')
+    + (ha_timbrature ? '' : '\n\n<i>Non hai un modulo di timbrature: mostro solo le ore pagate.</i>');
   return { html };
 }
 
 // Gli ultimi saldi (ferie, permessi, ROL) insieme, dall'ultima busta paga che li ha letti — una busta
 // paga recente potrebbe non averli (es. il datore non li scrive più in busta): si prende l'ultimo valore
-// NON nullo di ciascuno, non necessariamente dalla stessa riga.
-function ultimiSaldi(user, m) {
+// NON nullo di ciascuno, non necessariamente dalla stessa riga. Dati nudi, stesso riuso di righeOre sopra.
+function datiSaldi(user, m) {
   const righe = righeDi(user, m);
   const trova = (campo) => { for (const r of righe) { if (r.data[campo] != null) return { valore: r.data[campo], label: r.data.periodo_label || meseLabel(String(r.data[m.R.data] || '').slice(0, 7)) }; } return null; };
-  const ferie = trova('ferie_saldo'), permessi = trova('permessi_saldo'), rol = trova('rol_saldo');
+  return { ferie: trova('ferie_saldo'), permessi: trova('permessi_saldo'), rol: trova('rol_saldo') };
+}
+
+function ultimiSaldi(user, m) {
+  const { ferie, permessi, rol } = datiSaldi(user, m);
   if (!ferie && !permessi && !rol) return { html: 'Non ho nessun saldo ferie/permessi/ROL letto dalle tue buste paga.' };
   const riga = (nome, v) => v ? '• ' + nome + ': <b>' + v.valore + '</b> (da ' + esc(v.label) + ')' : null;
   const html = '📄 <b>Ferie, permessi e ROL residui</b>\n' + [riga('Ferie', ferie), riga('Permessi/ex-festività', permessi), riga('ROL/banca ore', rol)].filter(Boolean).join('\n');
@@ -214,4 +228,4 @@ async function rispondi(user, intent, chatId) {
   return { html: html + '\n\n<i>(nessun file allegato)</i>' };
 }
 
-module.exports = { haBustaPaga, rispondi };
+module.exports = { haBustaPaga, rispondi, modulo, righeOre, datiSaldi };

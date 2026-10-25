@@ -2,6 +2,20 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.16 — 25 ottobre 2026
+
+Chiusura dell'arco "bot + app alla pari" su busta paga e contributi casa, più la risposta a "Platoform è la base, BOT è opzionale" (richiesto dall'utente): tutto ciò che il bot sa fare su questi temi ora esiste anche come vista nell'app, non solo come conversazione.
+
+- Bot: registrare un'entrata a frase libera, timbrare entrata+uscita nello stesso messaggio, domande sugli straordinari, lettura busta paga da foto (oltre che da PDF).
+- Fix: una foto di busta paga oltre ~100KB veniva rifiutata dall'AI per un limite sul corpo della richiesta mai impostato.
+- Bot: domande sulla busta paga (ferie residue, ore di un mese, buste mancanti, ultima, spiegazione libera di una voce).
+- Bot: domande di confronto e proiezione sui dati ("rispetto al mese scorso?", "di questo passo quanto spenderò?").
+- Bot: "debito casa" — chi deve soldi a chi sui contributi all'affitto, da una quota fissa per persona (configurabile) confrontata coi versamenti reali del mese.
+- Bot: "le ore tornano con le timbrature?" (ore pagate in busta contro ore davvero timbrate, mese per mese) e "quanti giorni di ferie e permessi ho?" (ferie/permessi/ROL insieme).
+- Lo stesso report ore-pagate-vs-timbrate e gli stessi saldi ferie/permessi/ROL sono ora visibili anche DENTRO il modulo Busta Paga nell'app, non solo chiedendoli al bot — si mostra da solo quando il modulo dichiarato come "bustapaga" è quello che si sta guardando.
+- Fix reale trovato scrivendo il test di questa vista: il confronto "ore timbrate" sommava le timbrature di TUTTI gli utenti, non solo di chi stava chiedendo, sui moduli di presenze senza "solo propri" configurato (il caso di Finance) — non si notava dal bot perché finora l'unica persona testata dal vivo aveva timbrature proprie uniche nel periodo.
+- Le 140 buste paga con un allegato sono ora collegate anche a un record nel modulo Documenti (stesso file, nessun doppio caricamento su Drive), così si vedono anche da lì e non solo aprendo il record busta paga.
+
 ## 0.3.15 — 24 ottobre 2026
 
 Seguito della domanda dell'utente "le entrate di spese casa, come le gestiamo?": le card "Riepilogo mensile — Personale" e "— Casa" puntavano entrambe allo stesso modulo Entrate senza nessun filtro, quindi avrebbero sommato le STESSE entrate su entrambe (es. lo stipendio intero contato anche nella card Casa, invece dei soli contributi versati alla casa).

@@ -12,6 +12,7 @@ import ReportPanel from './ReportPanel'
 import AiSuggestionsPanel from '../../components/AiSuggestionsPanel'
 import ImportPdf from '../../components/ImportPdf'
 import ImportPayslip from '../../components/ImportPayslip'
+import BustaPagaReportView from '../../components/BustaPagaReportView'
 import SchemaReports from './SchemaReports'
 import BranchCreateModal from './BranchCreateModal'
 import PeriodView from './PeriodView'
@@ -695,6 +696,8 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
       )}
 
       <AiSuggestionsPanel token={token} isAdmin={!!(user && user.role === 'admin')} moduleSlug={mod.slug} onChanged={loadRecords} />
+
+      <BustaPagaReportView token={token} mod={mod} />
 
       {showReport && (
         <div className="mb-6">
