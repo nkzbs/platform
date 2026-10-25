@@ -8,6 +8,8 @@
 const express = require('express');
 const db = require('../db');
 const { requireAuth, requireAdmin } = require('./auth');
+const integrityCheck = require('../integrity-check');
+const { logAudit } = require('../audit-log');
 
 const router = express.Router();
 
@@ -34,7 +36,30 @@ router.get('/', requireAuth, requireAdmin, (req, res) => {
       { name: 'API generale', window: '1 min', max: 600, fail_mode: 'open' },
     ],
     recent_suspicious_events: recentEvents,
+    integrity: integrityStatus(),
   });
+});
+
+// Controllo di integrità (integrity-check.js): confronta QUELLO SALVATO ora, non
+// rifà il controllo dell'avvio (che scrive avvisi/audit_log solo una volta,
+// all'avvio del processo) — qui solo lettura, per mostrarlo nel pannello.
+function integrityStatus() {
+  const base = integrityCheck.baselinePath();
+  const fs = require('fs');
+  let precedente = null;
+  try { precedente = JSON.parse(fs.readFileSync(base, 'utf8')); } catch (e) { return { disponibile: false }; }
+  const attuale = integrityCheck.fingerprint();
+  const persi = precedente.modules.filter((m) => !attuale.modules.includes(m));
+  const caloDrastico = precedente.totale_record > 20 && attuale.totale_record < precedente.totale_record * 0.5;
+  return { disponibile: true, ok: persi.length === 0 && !caloDrastico, persi, calo_drastico: caloDrastico, riferimento_del: precedente.controllato_il };
+}
+
+// "Sì, questo è lo stato giusto": aggiorna il riferimento allo stato attuale — dopo un
+// ripristino voluto, o per confermare che un avviso era un falso allarme. Mai automatico.
+router.post('/accetta-integrita', requireAuth, requireAdmin, (req, res) => {
+  integrityCheck.accettaStatoAttuale();
+  logAudit(req.user.username, 'integrity.accept', null, integrityCheck.fingerprint());
+  res.json({ ok: true });
 });
 
 module.exports = router;

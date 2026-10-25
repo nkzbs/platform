@@ -52,6 +52,12 @@ Rifiniture a Drive bidirezionale e un fix reale sul report busta paga, tutti ric
 
 Gli strumenti sono per lo più lettura/scrittura generica sugli stessi moduli dell'app (elenco moduli, schema, lista/leggi/crea/modifica record — mai "elimina") più le stesse risposte già costruite per il bot (chiedi ai dati, report busta paga, debito casa). Nessuna logica duplicata: ogni strumento chiama la stessa API reale di un browser collegato, stessi permessi dell'utente del token. Testato end-to-end per davvero: backend reale, token reale, server MCP avviato come processo a parte, client MCP reale — non un mock di nessuno dei tre pezzi.
 
+## 0.3.22 — 25 ottobre 2026
+
+**Controllo di integrità all'avvio** (richiesto dall'utente dopo l'incidente reale dello stesso giorno: un container montava un database sbagliato, quasi vuoto, senza il modulo busta paga — scoperto ore dopo per caso): `integrity-check.js`, generico, non specifico a nessun tenant. Confronta un'impronta minima del database appena montato (moduli installati + totale record) contro l'ultima nota, salvata ACCANTO al `.db` (mai dentro: scambiare il file sposterebbe anche il riferimento con sé). Un modulo sparito o un calo drastico dei record avvisa su tre canali — log, Log attività, WhatsApp/Telegram — ma non blocca mai l'avvio e non si auto-corregge mai: il riferimento si aggiorna solo con un'azione esplicita (Impostazioni → Sicurezza, dopo un ripristino voluto).
+
+**Guida del bot Telegram**: mancava del tutto nella Guida in-app — nuova sezione "Bot Telegram" (8 argomenti: collegarlo, comandi e menu, come funziona ogni scrittura, cosa sa fare per spese/dati/timbrature/busta paga/costi condivisi, cosa non fa di proposito, limiti). Anche come documento a sé, `docs/GUIDA-BOT.md`.
+
 ## 0.3.15 — 24 ottobre 2026
 
 Seguito della domanda dell'utente "le entrate di spese casa, come le gestiamo?": le card "Riepilogo mensile — Personale" e "— Casa" puntavano entrambe allo stesso modulo Entrate senza nessun filtro, quindi avrebbero sommato le STESSE entrate su entrambe (es. lo stipendio intero contato anche nella card Casa, invece dei soli contributi versati alla casa).

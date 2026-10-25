@@ -202,6 +202,57 @@ const GUIDA_SECTIONS = [
     ]
   },
   {
+    title: 'Bot Telegram', icon: 'message-circle', color: '#0EA5E9',
+    topics: [
+      {
+        title: 'Collegarlo', body: [
+          'L\'admin collega il bot una volta sola (Impostazioni → Connessioni → Telegram) incollando il codice segreto avuto da BotFather. Da lì, ogni persona collega il PROPRIO telefono da «Il mio account»: un codice monouso valido 10 minuti, da scrivere al bot. Una chat non collegata a nessun utente riceve solo le istruzioni per collegarsi, mai dati.',
+          'Ci si scollega in qualunque momento dall\'app o scrivendo /scollega al bot.',
+        ]
+      },
+      {
+        title: 'Comandi e menu a bottoni', body: [
+          'Comandi fissi: /pagare, /scadute, /smistare per i report; /menu apre un menu a bottoni con sottomenu (si ricostruisce da ciò che puoi fare davvero — un report spento o un modulo che non hai semplicemente non compaiono).',
+          'Oltre ai comandi, scrivere una frase libera: il bot capisce cosa vuoi fare tra un elenco chiuso di azioni possibili (sotto), non è una chat generica.',
+        ]
+      },
+      {
+        title: 'Ogni scrittura è una proposta', body: [
+          'Il bot non scrive mai da solo: descrive cosa farebbe e aspetta un tocco su «✅ Conferma» (o sceglie tra più candidati, se più righe assomigliano a quello che hai scritto). La proposta vale 15 minuti, una volta sola, solo per chi l\'ha chiesta.',
+          'Quando esegue, lo fa con la TUA utenza — stessi permessi, stesse regole «solo le mie righe», stesse automazioni di quando scrivi dall\'app.',
+        ]
+      },
+      {
+        title: 'Spese, entrate e bollette', body: [
+          'Registrare una spesa o un\'entrata a frase libera ("ho speso 20 euro di benzina", "mi è arrivato lo stipendio di 1800"), mandare la foto di uno scontrino o il PDF di una bolletta (se il potenziamento AI del modulo è acceso) — il bot propone i campi letti, tu confermi prima che nasca la riga.',
+          'Segnare pagata o riaprire una voce, smistare una bolletta appena arrivata (un pagamento, a rate, o già pagata).',
+        ]
+      },
+      {
+        title: 'Chiedere ai dati', body: [
+          'Una domanda in linguaggio naturale sui tuoi dati ("quanto ho speso di benzina a settembre?", "quanto devo ancora in totale?"), anche di confronto o proiezione ("rispetto al mese scorso?", "di questo passo quanto spenderò entro fine mese?"). Sempre una query strutturata sui moduli che vedi, mai una query libera sul database.',
+        ]
+      },
+      {
+        title: 'Timbrature, busta paga, contributi condivisi', body: [
+          'Se il tenant ha dichiarato i moduli giusti (Builder → Ruoli del modulo): timbrare entrata/uscita a voce, farsi dire le ore della settimana/del mese; fare domande sulla propria busta paga (ferie/permessi/ROL residui, ore di un mese preciso, l\'ultima ricevuta, quali mesi mancano, o una domanda libera sul dettaglio — letta dall\'AI); e per chi condivide un costo fisso ricorrente (es. un affitto) con un\'altra persona, chiedere chi deve soldi a chi, confrontando i versamenti reali di ciascuno con una quota configurabile.',
+          'Senza quei moduli dichiarati, il bot semplicemente non propone queste domande — nessun errore, nessuna voce di menu a vuoto.',
+        ]
+      },
+      {
+        title: 'Cosa NON fa, di proposito', body: [
+          'Mai eliminare righe, modificare campi liberi, utenti, impostazioni o backup. Le foto si leggono solo per gli scontrini (il resto va mandato come PDF). Il bot non ha il 2FA: il telefono collegato e sbloccato basta, per questo le azioni possibili sono volutamente poche e si revocano scollegandolo.',
+          'I messaggi stanno sui server di Telegram, non cifrati end-to-end: non mandarci password o dati particolarmente sensibili.',
+        ]
+      },
+      {
+        title: 'Limiti', body: [
+          'Al massimo 20 messaggi al minuto per chat (anti-abuso); le frasi libere che passano dall\'AI sono limitate a 8 al minuto per chat, poi il bot chiede di aspettare un momento.',
+        ]
+      },
+    ]
+  },
+  {
     title: 'Il Builder', icon: 'tool', color: '#7C3AED',
     topics: [
       {

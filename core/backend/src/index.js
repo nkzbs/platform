@@ -155,7 +155,7 @@ app.use('/__root_public', rootPublicRouter);
 
 app.get('/health', (req, res) => res.json({
   status: 'ok',
-  version: '0.3.21',
+  version: '0.3.22',
   tenant: process.env.TENANT_SLUG || 'unknown',
   name: process.env.TENANT_NAME || 'Platform Core'
 }));
@@ -209,6 +209,11 @@ app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);
   res.status(500).json({ error: 'Errore interno' });
 });
+
+// Il database montato è davvero lo stesso di sempre? (25/10/2026, dopo l'incidente reale
+// dello stesso giorno: un database sbagliato montato è passato inosservato per ore). PRIMA
+// di qualunque migrazione qui sotto, che potrebbe già cambiare moduli/record.
+require('./integrity-check').checkIntegrity();
 
 // Destinatari WhatsApp e regole Gmail non sono più moduli: porta nelle tabelle nuove le righe rimaste.
 require('./notification-settings').migrateLegacy();

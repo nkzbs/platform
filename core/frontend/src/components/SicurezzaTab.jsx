@@ -15,7 +15,9 @@ const ACTION_LABELS = {
 export default function SicurezzaTab({ token }) {
   const api = useApi(token)
   const [status, setStatus] = useState(null)
-  useEffect(() => { api.get('/security-status').then((d) => d && setStatus(d)) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const [accettaBusy, setAccettaBusy] = useState(false)
+  const load = () => api.get('/security-status').then((d) => d && setStatus(d))
+  useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!status) return <p className="text-sm text-gray-500">Carico…</p>
 
@@ -23,10 +25,33 @@ export default function SicurezzaTab({ token }) {
   const tfaAll = u.total > 0 && u.with_2fa === u.total
   const tfaNone = u.with_2fa === 0
   const pkAll = u.total > 0 && u.with_passkey === u.total
+  const integ = status.integrity
+
+  const accettaIntegrita = async () => {
+    setAccettaBusy(true)
+    await api.post('/security-status/accetta-integrita', {})
+    setAccettaBusy(false)
+    load()
+  }
 
   return (
     <div className="max-w-2xl space-y-5">
       <p className="text-sm text-gray-500">Stato della sicurezza di questo progetto e ultimi eventi sospetti.</p>
+
+      {integ && integ.disponibile && !integ.ok && (
+        <div className="bg-red-900/20 border border-red-900/40 rounded-lg p-4">
+          <div className="text-sm text-red-400 font-medium mb-1.5">⚠ Il database montato sembra diverso da quello visto l'ultima volta</div>
+          <div className="text-xs text-gray-400 space-y-0.5 mb-3">
+            {integ.persi.length > 0 && <div>Moduli non più presenti: {integ.persi.join(', ')}</div>}
+            {integ.calo_drastico && <div>I record totali sono scesi drasticamente rispetto al riferimento.</div>}
+            <div>Riferimento del {new Date(integ.riferimento_del).toLocaleString('it-IT')}.</div>
+          </div>
+          <div className="text-xs text-gray-500 mb-3">Se è un errore (database sbagliato montato), va corretto prima di continuare. Se è un ripristino voluto, conferma qui sotto.</div>
+          <button onClick={accettaIntegrita} disabled={accettaBusy} className="bg-red-900/40 hover:bg-red-900/60 disabled:opacity-50 text-red-300 px-3 py-2 rounded-lg text-xs font-medium transition">
+            {accettaBusy ? 'Confermo...' : 'È voluto: aggiorna il riferimento'}
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         <div className="bg-surface-card border border-gray-800 rounded-lg p-3">

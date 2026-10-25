@@ -97,6 +97,33 @@ async function main() {
     assertTrue(!j.recent_suspicious_events.some((e) => e.action === 'modules.install'), 'un\'azione non sospetta non deve comparire qui');
   });
 
+  console.log('\n--- integrità del database (integrity-check.js) ---');
+
+  await test('il controllo è già girato da solo all\'avvio del server (index.js): il riferimento esiste già, in regola', async () => {
+    const j = await (await fetch(BASE + '/api/security-status', { headers: auth })).json();
+    assertEq(j.integrity.disponibile, true);
+    assertEq(j.integrity.ok, true);
+  });
+
+  await test('con un riferimento che non corrisponde più: integrity.ok:false, elenca il modulo perso', async () => {
+    const integrityCheck = require('./integrity-check');
+    db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('Prova', 'modulo_prova', 'box', '#000', 1, 1, 50, '{}')").run();
+    integrityCheck.accettaStatoAttuale();
+    db.prepare("DELETE FROM modules WHERE slug = 'modulo_prova'").run();
+    const j = await (await fetch(BASE + '/api/security-status', { headers: auth })).json();
+    assertEq(j.integrity.disponibile, true);
+    assertEq(j.integrity.ok, false);
+    assertTrue(j.integrity.persi.includes('modulo_prova'));
+  });
+
+  await test('POST /accetta-integrita (solo admin): aggiorna il riferimento, il pannello torna ok', async () => {
+    assertEq((await fetch(BASE + '/api/security-status/accetta-integrita', { method: 'POST', headers: authAgente })).status, 403);
+    const r = await fetch(BASE + '/api/security-status/accetta-integrita', { method: 'POST', headers: auth });
+    assertEq(r.status, 200);
+    const j = await (await fetch(BASE + '/api/security-status', { headers: auth })).json();
+    assertEq(j.integrity.ok, true);
+  });
+
   console.log(`\n${'='.repeat(60)}`);
   console.log(passed + ' passati, ' + failed + ' falliti su ' + (passed + failed) + ' test.');
   if (failed > 0) console.log('Falliti: ' + failures.join(', '));
