@@ -279,6 +279,24 @@ async function driveDownload(fileId) {
   return Buffer.from(await res.arrayBuffer());
 }
 
+// Elenca i file nella cartella dedicata al tenant (non nelle sue sottocartelle:
+// drive-poller.js, che la usa, ignora di proposito chi sposta un file dentro una
+// sottocartella lì — un solo livello, come la cartella stessa che Platform crea).
+// Richiede lo scope drive.readonly (già nella richiesta OAuth, vedi oauth/start):
+// drive.file da solo vede solo i file che QUESTA app ha creato/aperto, non quelli
+// aggiunti dall'utente da fuori (es. dall'app Drive del telefono) — il bisogno
+// reale di "bidirezionale" (richiesto dall'utente il 25/10).
+async function driveListFiles(folderId) {
+  const accessToken = await getValidAccessToken();
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType,size,createdTime)&pageSize=200`, {
+    headers: { Authorization: 'Bearer ' + accessToken },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error('Elenco file Drive fallito: ' + (data.error?.message || res.statusText));
+  return data.files || [];
+}
+
 async function driveDelete(fileId) {
   const accessToken = await getValidAccessToken();
   const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
@@ -299,3 +317,5 @@ module.exports.isDriveEnabled = () => {
 module.exports.driveUpload = driveUpload;
 module.exports.driveDownload = driveDownload;
 module.exports.driveDelete = driveDelete;
+module.exports.driveListFiles = driveListFiles;
+module.exports.ensureDriveFolder = ensureDriveFolder;

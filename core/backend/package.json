@@ -1,6 +1,6 @@
 {
   "name": "platform-core-backend",
-  "version": "0.3.16",
+  "version": "0.3.17",
   "main": "src/index.js",
   "engines": {
     "node": "22.x"

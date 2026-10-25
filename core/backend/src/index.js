@@ -32,6 +32,7 @@ const securityStatusRoutes = require('./routes/security-status');
 const rolesRoutes = require('./routes/roles');
 const { startScheduler } = require('./scheduler');
 const { startGmailPoller } = require('./gmail-poller');
+const { startDrivePoller } = require('./drive-poller');
 const aiRoutes = require('./routes/ai');
 const notificationSettingsRoutes = require('./routes/notification-settings');
 const recordOwnerRoutes = require('./routes/record-owner');
@@ -148,7 +149,7 @@ app.use('/__root_public', rootPublicRouter);
 
 app.get('/health', (req, res) => res.json({
   status: 'ok',
-  version: '0.3.16',
+  version: '0.3.17',
   tenant: process.env.TENANT_SLUG || 'unknown',
   name: process.env.TENANT_NAME || 'Platform Core'
 }));
@@ -219,6 +220,7 @@ app.listen(PORT, () => {
   startMonitor(); // il giorno 2 alle 9: "come sta andando" su WhatsApp, per i widget che lo hanno acceso
   startAvvisi(); // ogni minuto: righe nuove in "da smistare" (da qualunque via) -> un messaggio WhatsApp
   startGmailPoller();
+  startDrivePoller();
   startAuditRetentionScheduler();
   startSuggestions(); // una volta al giorno, solo se la funzione «suggerimenti» è accesa
 });

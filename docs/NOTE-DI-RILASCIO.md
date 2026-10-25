@@ -15,6 +15,13 @@ Chiusura dell'arco "bot + app alla pari" su busta paga e contributi casa, più l
 - Lo stesso report ore-pagate-vs-timbrate e gli stessi saldi ferie/permessi/ROL sono ora visibili anche DENTRO il modulo Busta Paga nell'app, non solo chiedendoli al bot — si mostra da solo quando il modulo dichiarato come "bustapaga" è quello che si sta guardando.
 - Fix reale trovato scrivendo il test di questa vista: il confronto "ore timbrate" sommava le timbrature di TUTTI gli utenti, non solo di chi stava chiedendo, sui moduli di presenze senza "solo propri" configurato (il caso di Finance) — non si notava dal bot perché finora l'unica persona testata dal vivo aveva timbrature proprie uniche nel periodo.
 - Le 140 buste paga con un allegato sono ora collegate anche a un record nel modulo Documenti (stesso file, nessun doppio caricamento su Drive), così si vedono anche da lì e non solo aprendo il record busta paga.
+- **Incidente reale durante il deploy**: la migrazione automatica "porta destinatari WhatsApp e regole Gmail nelle tabelle nuove" falliva per un vincolo del database mai gestito (un modulo pubblicato lascia una riga in `modules_schema_history`, mai ripulita prima di cancellarlo), bloccando l'avvio dell'intero tenant in un ciclo di crash. Trovato e corretto in diretta, con un test che riproduce l'errore reale.
+
+## 0.3.17 — 25 ottobre 2026
+
+**Drive bidirezionale** (richiesto dall'utente: "così carico i file da app Google drive"): finora Platform scriveva solo su Drive (gli allegati creati dall'app), non leggeva mai ciò che qualcuno aggiungeva direttamente da Drive stesso. Ora un poller, ogni 15 minuti, guarda la cartella Drive del tenant e per ogni file nuovo (non ancora conosciuto da Platform) crea un record nel modulo ad archivio (Documenti su Finance) col file già allegato — generico, nessun nome di modulo scritto nel codice, si attiva da solo se c'è esattamente un modulo del genere. Richiedeva lo scope Drive di sola lettura, già incluso nella richiesta di collegamento esistente: nessuna ri-autorizzazione necessaria.
+
+Trovato e corretto nello stesso giro: il salvataggio su Drive era silenziosamente spento (il collegamento Google aveva perso l'interruttore "salva su Drive" durante un ricollegamento precedente, probabilmente quando è stato aggiunto lo scope di sola lettura) — i nuovi file finivano sul disco locale invece che su Drive senza nessun avviso. Riacceso.
 
 ## 0.3.15 — 24 ottobre 2026
 
