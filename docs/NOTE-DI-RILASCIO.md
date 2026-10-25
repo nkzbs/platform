@@ -23,6 +23,13 @@ Chiusura dell'arco "bot + app alla pari" su busta paga e contributi casa, più l
 
 Trovato e corretto nello stesso giro: il salvataggio su Drive era silenziosamente spento (il collegamento Google aveva perso l'interruttore "salva su Drive" durante un ricollegamento precedente, probabilmente quando è stato aggiunto lo scope di sola lettura) — i nuovi file finivano sul disco locale invece che su Drive senza nessun avviso. Riacceso.
 
+## 0.3.18 — 25 ottobre 2026
+
+Due rifiniture a Drive, trovate/chieste dall'utente lo stesso giorno dello 0.3.17:
+
+- **Niente più cartelle doppie**: `ensureDriveFolder` creava una nuova cartella "Platform - Finance" ogni volta che l'id salvato andava perso (è già successo una volta in produzione) — l'utente l'ha segnalato prima che diventasse un problema vero ("non è che ricrea la cartella ogni volta che riconnetto Google?"). Ora cerca sempre prima per nome una cartella già esistente e la riusa; solo se davvero non c'è ne crea una.
+- **Sottocartelle Drive = cartelle dell'app** (richiesto: "vorrei vedere una cartella Finance e relative sottocartelle come le vedo in modulo documenti"): un file trovato dentro una sottocartella Drive che corrisponde a un valore vero del campo "tipo" prende quella cartella nel record che crea; e ogni record con cartella e file su Drive già assegnati viene spostato (o lasciato) nella sottocartella Drive giusta a ogni giro del poller — sia i 140 cedolini busta paga collegati a Documenti sia qualunque file caricato dall'app finiscono organizzati per tipo dentro Drive, non più tutti appiattiti in una cartella sola.
+
 ## 0.3.15 — 24 ottobre 2026
 
 Seguito della domanda dell'utente "le entrate di spese casa, come le gestiamo?": le card "Riepilogo mensile — Personale" e "— Casa" puntavano entrambe allo stesso modulo Entrate senza nessun filtro, quindi avrebbero sommato le STESSE entrate su entrambe (es. lo stipendio intero contato anche nella card Casa, invece dei soli contributi versati alla casa).

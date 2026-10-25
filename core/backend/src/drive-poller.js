@@ -12,6 +12,17 @@
 // già la sua riga 'uploads' con stored_name = 'drive:<id>' PRIMA che questo
 // poller lo veda: non viene mai reimportato. Niente tabella di "già visti" a
 // parte — la tabella uploads è già l'elenco di ciò che Platform conosce.
+//
+// Sottocartelle = cartelle viste nell'app (richiesto dall'utente il
+// 25/10/2026: "vorrei vedere una cartella Finance e relative sottocartelle
+// come le vedo in modulo documenti"): un file trovato dentro una sottocartella
+// di Drive che corrisponde a un valore vero del campo "cartella" del modulo
+// prende quel valore; e ad ogni giro, ogni record con cartella e file già
+// collegati viene spostato nella sottocartella Drive giusta se non c'è già —
+// così sia i file nuovi sia quelli caricati prima (o la cui cartella è
+// cambiata dopo) finiscono allineati, senza bisogno di agganciarsi alla
+// creazione/modifica dei record (resterebbe generico: nessuna logica Drive
+// dentro routes/records.js).
 const db = require('./db');
 const { fireTrigger } = require('./automation-engine');
 
@@ -46,8 +57,38 @@ function nonImportabile(mimeType) {
   return mimeType === 'application/vnd.google-apps.folder' || String(mimeType || '').startsWith('application/vnd.google-apps.');
 }
 
+// Sposta nella sottocartella Drive giusta ogni record che ha sia una cartella
+// sia un file su Drive, se non ci sta già (letto dalla stessa scansione
+// dell'albero, `posizioneAttuale`: nessuna chiamata Drive in più solo per
+// controllare). Un record senza cartella (campo vuoto) resta dov'è, di solito
+// la cartella del tenant — nessuna sottocartella "vuota" da inventare.
+async function organizza(m, posizioneAttuale) {
+  if (!m.folderField) return 0;
+  const { ensureDriveSubfolder, driveMoveFile } = require('./routes/google-oauth');
+  const opzioni = new Set((m.folderField.options || []).map((o) => (typeof o === 'string' ? o : o.value)));
+  const righe = db.prepare("SELECT id, data FROM records WHERE module_slug = ?").all(m.slug).map((r) => ({ id: r.id, data: JSON.parse(r.data) }));
+  let spostati = 0;
+  for (const r of righe) {
+    const cartella = r.data[m.folderField.key];
+    const file = r.data[m.fileField.key];
+    if (!cartella || !opzioni.has(cartella) || !file || !file.id) continue;
+    const up = db.prepare('SELECT stored_name FROM uploads WHERE id = ?').get(file.id);
+    if (!up || !up.stored_name || !up.stored_name.startsWith('drive:')) continue; // su disco locale, niente da spostare su Drive
+    const driveId = up.stored_name.slice(6);
+    if (posizioneAttuale.get(driveId) === cartella) continue; // già nella sottocartella giusta
+    try {
+      const subfolderId = await ensureDriveSubfolder(cartella);
+      await driveMoveFile(driveId, subfolderId);
+      spostati++;
+    } catch (e) {
+      console.error('[drive-poller] spostamento del file del record', r.id, 'in "' + cartella + '" fallito:', e.message);
+    }
+  }
+  return spostati;
+}
+
 async function pollDrive() {
-  const { isDriveEnabled, ensureDriveFolder, driveListFiles } = require('./routes/google-oauth');
+  const { isDriveEnabled, ensureDriveFolder, driveListTree } = require('./routes/google-oauth');
   if (!isDriveEnabled()) return;
   const m = moduloArchivio();
   if (!m) return; // nessun archivio dichiarato, o più di uno: niente da fare
@@ -55,7 +96,7 @@ async function pollDrive() {
   let files;
   try {
     const folderId = await ensureDriveFolder();
-    files = await driveListFiles(folderId);
+    files = await driveListTree(folderId);
   } catch (e) {
     console.error('[drive-poller] elenco file Drive fallito:', e.message);
     return;
@@ -63,8 +104,8 @@ async function pollDrive() {
 
   const noti = db.prepare("SELECT stored_name FROM uploads WHERE stored_name LIKE 'drive:%'").all().map((r) => r.stored_name.slice(6));
   const conosciuti = new Set(noti);
+  const opzioniCartella = new Set((m.folderField && m.folderField.options || []).map((o) => (typeof o === 'string' ? o : o.value)));
   const nuovi = files.filter((f) => !conosciuti.has(f.id) && !nonImportabile(f.mimeType));
-  if (!nuovi.length) return;
 
   const ownerId = require('./record-owner').ownerFor(null, m.slug);
   let importati = 0;
@@ -76,6 +117,7 @@ async function pollDrive() {
       const data = { [m.fileField.key]: { id: uploadId, name: f.name, size: parseInt(f.size, 10) || 0, mime_type: f.mimeType || 'application/octet-stream' } };
       if (m.titleField) data[m.titleField.key] = titolo;
       if (m.dateField) data[m.dateField.key] = (f.createdTime || '').slice(0, 10) || new Date().toISOString().slice(0, 10);
+      if (m.folderField && f.cartella && opzioniCartella.has(f.cartella)) data[m.folderField.key] = f.cartella;
 
       const result = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(m.slug, ownerId, JSON.stringify(data));
       try { fireTrigger(m.slug, 'nuovo_record', data, result.lastInsertRowid, {}); } catch (e) { console.error('[drive-poller] fireTrigger fallito:', e.message); }
@@ -85,6 +127,10 @@ async function pollDrive() {
     }
   }
   if (importati) console.log('[drive-poller] ' + importati + ' file nuovi trovati su Drive, importati in "' + m.slug + '"');
+
+  const posizioneAttuale = new Map(files.map((f) => [f.id, f.cartella]));
+  const spostati = await organizza(m, posizioneAttuale);
+  if (spostati) console.log('[drive-poller] ' + spostati + ' file spostati nella sottocartella Drive giusta');
 }
 
 function startDrivePoller() {

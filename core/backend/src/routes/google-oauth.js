@@ -225,24 +225,79 @@ async function createCalendarEvent({ summary, description, date }) {
   return data.id;
 }
 
-// Trova (o crea, la prima volta) la cartella Drive dedicata a questo tenant — id
-// tenuto nelle stesse credenziali google (drive_folder_id), così non la
-// ricrea ad ogni upload. Nome fisso "Platform - <tenant>" per riconoscerla
-// facilmente a occhio dentro Drive.
+// Trova per nome una cartella Drive (non nel cestino), eventualmente dentro un
+// genitore preciso (sennò cerca ovunque), o la crea se non c'è. Mai due con lo
+// stesso nome nello stesso posto: prima si cerca, solo se non trova si crea —
+// bug reale trovato dal vivo su Finance il 25/10/2026 (l'utente l'ha chiesto
+// prima che diventasse un problema vero): un id salvato perso per qualunque
+// motivo (un ricollegamento che non l'ha portato avanti, una scrittura di
+// credenziali incompleta) non deve MAI far nascere una seconda cartella.
+async function findOrCreateDriveFolder(accessToken, name, parentId) {
+  const parts = [`name = '${name.replace(/'/g, "\\'")}'`, `mimeType = 'application/vnd.google-apps.folder'`, 'trashed = false'];
+  if (parentId) parts.push(`'${parentId}' in parents`);
+  const q = encodeURIComponent(parts.join(' and '));
+  const found = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)&pageSize=1`, {
+    headers: { Authorization: 'Bearer ' + accessToken },
+  });
+  const foundData = await found.json();
+  if (found.ok && foundData.files && foundData.files[0]) return foundData.files[0].id;
+  const res = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: parentId ? [parentId] : undefined }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error('Creazione cartella Drive fallita: ' + (data.error?.message || res.statusText));
+  return data.id;
+}
+
+// La cartella Drive dedicata a questo tenant — id tenuto nelle stesse
+// credenziali google (drive_folder_id), così non la ricerca/ricrea ad ogni
+// upload. Nome fisso "Platform - <tenant>" per riconoscerla facilmente a
+// occhio dentro Drive.
 async function ensureDriveFolder() {
   const cfg = getCreds();
   if (cfg.drive_folder_id) return cfg.drive_folder_id;
   const accessToken = await getValidAccessToken();
   const folderName = 'Platform - ' + (process.env.TENANT_NAME || process.env.TENANT_SLUG || 'core');
-  const res = await fetch('https://www.googleapis.com/drive/v3/files', {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder' }),
+  const id = await findOrCreateDriveFolder(accessToken, folderName, null);
+  setCreds({ ...getCreds(), drive_folder_id: id });
+  return id;
+}
+
+// Le sottocartelle della cartella del tenant, una per valore del campo
+// "cartella" del modulo ad archivio (stessa idea di ModulePage/ArchiveView.jsx:
+// le cartelle viste nell'app sono i valori del campo scelta) — richiesto
+// dall'utente il 25/10/2026: "vorrei vedere una cartella Finance e relative
+// sottocartelle come le vedo in modulo documenti". Una cache in memoria per
+// processo (si azzera al riavvio, costo minimo: un'altra ricerca per nome).
+const sottocartelleCache = new Map();
+async function ensureDriveSubfolder(nome) {
+  if (sottocartelleCache.has(nome)) return sottocartelleCache.get(nome);
+  const accessToken = await getValidAccessToken();
+  const parentId = await ensureDriveFolder();
+  const id = await findOrCreateDriveFolder(accessToken, nome, parentId);
+  sottocartelleCache.set(nome, id);
+  return id;
+}
+
+// Sposta un file Drive da dove si trova ora dentro `newParentId` (es. la
+// sottocartella giusta per il suo valore di "cartella" nell'app) — Drive
+// vuole sia i genitori da aggiungere sia quelli da togliere nella stessa
+// chiamata, quindi si legge prima dove sta davvero (mai assunto).
+async function driveMoveFile(fileId, newParentId) {
+  const accessToken = await getValidAccessToken();
+  const cur = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=parents`, { headers: { Authorization: 'Bearer ' + accessToken } });
+  const curData = await cur.json();
+  if (!cur.ok) throw new Error('Lettura posizione file Drive fallita: ' + (curData.error?.message || cur.statusText));
+  const oldParents = (curData.parents || []).filter((p) => p !== newParentId);
+  if (oldParents.length === 0 && (curData.parents || []).includes(newParentId)) return; // già lì
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?addParents=${newParentId}&removeParents=${oldParents.join(',')}&fields=id,parents`, {
+    method: 'PATCH',
+    headers: { Authorization: 'Bearer ' + accessToken },
   });
   const data = await res.json();
-  if (!res.ok) throw new Error('Creazione cartella Drive fallita: ' + (data.error?.message || res.statusText));
-  setCreds({ ...getCreds(), drive_folder_id: data.id });
-  return data.id;
+  if (!res.ok) throw new Error('Spostamento file Drive fallito: ' + (data.error?.message || res.statusText));
 }
 
 // Carica un allegato su Drive (upload multipart semplice, niente libreria Google
@@ -297,6 +352,31 @@ async function driveListFiles(folderId) {
   return data.files || [];
 }
 
+// Come driveListFiles, ma guarda anche UN livello di sottocartelle (mai più a
+// fondo, stesso limite di ArchiveView.jsx: le cartelle sono piatte, un solo
+// livello di scelta) — ogni file torna con `cartella` valorizzato al nome
+// della sottocartella che lo contiene, o null se è direttamente nella
+// cartella del tenant. Usata da drive-poller.js per leggere anche i file che
+// l'utente ha messo dentro una sottocartella da Drive stesso.
+async function driveListTree(folderId) {
+  const accessToken = await getValidAccessToken();
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType,size,createdTime)&pageSize=200`, {
+    headers: { Authorization: 'Bearer ' + accessToken },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error('Elenco file Drive fallito: ' + (data.error?.message || res.statusText));
+  const entries = data.files || [];
+  const sottocartelle = entries.filter((f) => f.mimeType === 'application/vnd.google-apps.folder');
+  const radice = entries.filter((f) => f.mimeType !== 'application/vnd.google-apps.folder').map((f) => ({ ...f, cartella: null }));
+  const dentro = [];
+  for (const sc of sottocartelle) {
+    const dentroFiles = await driveListFiles(sc.id);
+    dentro.push(...dentroFiles.map((f) => ({ ...f, cartella: sc.name })));
+  }
+  return [...radice, ...dentro];
+}
+
 async function driveDelete(fileId) {
   const accessToken = await getValidAccessToken();
   const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
@@ -318,4 +398,7 @@ module.exports.driveUpload = driveUpload;
 module.exports.driveDownload = driveDownload;
 module.exports.driveDelete = driveDelete;
 module.exports.driveListFiles = driveListFiles;
+module.exports.driveListTree = driveListTree;
 module.exports.ensureDriveFolder = ensureDriveFolder;
+module.exports.ensureDriveSubfolder = ensureDriveSubfolder;
+module.exports.driveMoveFile = driveMoveFile;

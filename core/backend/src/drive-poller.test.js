@@ -27,13 +27,17 @@ function assertEq(a, e, msg) { if (JSON.stringify(a) !== JSON.stringify(e)) thro
 // (require inline dentro pollDrive), così il finto modulo sotto può essere sostituito
 // e cambiato liberamente test per test, senza nessuna vera telefonata a Google.
 let driveEnabled = true;
-let fakeFiles = [];
+let fakeFiles = []; // ogni file può avere `cartella` (nome sottocartella) o null/assente = radice
+const sottocartelleCreate = []; // chiamate a ensureDriveSubfolder, per verificare cosa viene creato/usato
+const spostamenti = []; // chiamate a driveMoveFile: { driveId, newParentId }
 const oauthPath = require.resolve('./routes/google-oauth');
 require.cache[oauthPath] = {
   id: oauthPath, filename: oauthPath, loaded: true, exports: {
     isDriveEnabled: () => driveEnabled,
     ensureDriveFolder: async () => 'cartella_finta',
-    driveListFiles: async () => fakeFiles,
+    driveListTree: async () => fakeFiles.map((f) => ({ ...f, cartella: f.cartella || null })),
+    ensureDriveSubfolder: async (nome) => { sottocartelleCreate.push(nome); return 'sub_' + nome; },
+    driveMoveFile: async (driveId, newParentId) => { spostamenti.push({ driveId, newParentId }); },
   },
 };
 
@@ -107,6 +111,49 @@ require.cache[oauthPath] = {
     await pollDrive();
     assertEq(records('documenti').length, 1, 'ancora solo il record di prima, niente di nuovo creato');
     assertEq(db.prepare("SELECT COUNT(*) c FROM uploads WHERE stored_name IN ('drive:cartella_1','drive:doc_1')").get().c, 0);
+  });
+
+  await test('un file trovato dentro una sottocartella che è davvero un\'opzione del campo "tipo" prende quella cartella', async () => {
+    fakeFiles = [{ id: 'fattura_1', name: 'Luce ottobre.pdf', mimeType: 'application/pdf', size: '3000', createdTime: '2026-10-05T00:00:00Z', cartella: 'Fattura' }];
+    await pollDrive();
+    const rs = records('documenti').find((r) => r.data.titolo === 'Luce ottobre');
+    assertEq(rs.data.tipo, 'Fattura');
+  });
+
+  await test('un file dentro una sottocartella che NON è un\'opzione valida si importa comunque, senza cartella', async () => {
+    fakeFiles = [{ id: 'boh_1', name: 'misterioso.pdf', mimeType: 'application/pdf', size: '100', createdTime: '2026-10-06T00:00:00Z', cartella: 'NomeInventato' }];
+    await pollDrive();
+    const rs = records('documenti').find((r) => r.data.titolo === 'misterioso');
+    assertEq(rs.data.tipo, undefined);
+  });
+
+  await test('riordino: un record con cartella "Fattura" ma il cui file Drive è ancora nella radice viene spostato', async () => {
+    db.exec('DELETE FROM records; DELETE FROM uploads;');
+    sottocartelleCreate.length = 0; spostamenti.length = 0;
+    const upId = db.prepare("INSERT INTO uploads (original_name, stored_name, mime_type, size) VALUES ('bolletta.pdf', 'drive:bolletta_id', 'application/pdf', 100)").run().lastInsertRowid;
+    db.prepare("INSERT INTO records (module_slug, user_id, data) VALUES ('documenti', NULL, ?)").run(JSON.stringify({ titolo: 'Bolletta', tipo: 'Fattura', file: { id: upId, name: 'bolletta.pdf' } }));
+    fakeFiles = [{ id: 'bolletta_id', name: 'bolletta.pdf', mimeType: 'application/pdf', size: '100', createdTime: '2026-10-01T00:00:00Z', cartella: null }];
+    await pollDrive();
+    assertEq(sottocartelleCreate, ['Fattura']);
+    assertEq(spostamenti, [{ driveId: 'bolletta_id', newParentId: 'sub_Fattura' }]);
+  });
+
+  await test('riordino: un record già nella sottocartella giusta non viene toccato di nuovo', async () => {
+    sottocartelleCreate.length = 0; spostamenti.length = 0;
+    fakeFiles = [{ id: 'bolletta_id', name: 'bolletta.pdf', mimeType: 'application/pdf', size: '100', createdTime: '2026-10-01T00:00:00Z', cartella: 'Fattura' }];
+    await pollDrive();
+    assertEq(spostamenti, [], 'era già nella sottocartella giusta, nessuno spostamento');
+  });
+
+  await test('riordino: un record senza cartella (campo vuoto) resta dov\'è, nessuna sottocartella inventata', async () => {
+    db.exec('DELETE FROM records; DELETE FROM uploads;');
+    sottocartelleCreate.length = 0; spostamenti.length = 0;
+    const upId = db.prepare("INSERT INTO uploads (original_name, stored_name, mime_type, size) VALUES ('senza_tipo.pdf', 'drive:senza_tipo_id', 'application/pdf', 100)").run().lastInsertRowid;
+    db.prepare("INSERT INTO records (module_slug, user_id, data) VALUES ('documenti', NULL, ?)").run(JSON.stringify({ titolo: 'Senza tipo', file: { id: upId, name: 'senza_tipo.pdf' } }));
+    fakeFiles = [{ id: 'senza_tipo_id', name: 'senza_tipo.pdf', mimeType: 'application/pdf', size: '100', createdTime: '2026-10-01T00:00:00Z', cartella: null }];
+    await pollDrive();
+    assertEq(spostamenti, []);
+    assertEq(sottocartelleCreate, []);
   });
 
   console.log(`\n${'='.repeat(60)}`);
