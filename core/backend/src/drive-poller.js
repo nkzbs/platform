@@ -87,11 +87,14 @@ async function organizza(m, posizioneAttuale) {
   return spostati;
 }
 
+// Ritorna sempre un esito tipizzato (mai solo side-effect silenzioso): usato
+// sia dallo scheduler sotto sia dal pulsante "Sincronizza" in Documenti
+// (routes/drive-poller.js), che altrimenti non avrebbe nulla da mostrare.
 async function pollDrive() {
   const { isDriveEnabled, ensureDriveFolder, driveListTree } = require('./routes/google-oauth');
-  if (!isDriveEnabled()) return;
+  if (!isDriveEnabled()) return { disponibile: false };
   const m = moduloArchivio();
-  if (!m) return; // nessun archivio dichiarato, o più di uno: niente da fare
+  if (!m) return { disponibile: false }; // nessun archivio dichiarato, o più di uno: niente da fare
 
   let files;
   try {
@@ -99,7 +102,7 @@ async function pollDrive() {
     files = await driveListTree(folderId);
   } catch (e) {
     console.error('[drive-poller] elenco file Drive fallito:', e.message);
-    return;
+    return { disponibile: true, errore: e.message };
   }
 
   const noti = db.prepare("SELECT stored_name FROM uploads WHERE stored_name LIKE 'drive:%'").all().map((r) => r.stored_name.slice(6));
@@ -131,6 +134,8 @@ async function pollDrive() {
   const posizioneAttuale = new Map(files.map((f) => [f.id, f.cartella]));
   const spostati = await organizza(m, posizioneAttuale);
   if (spostati) console.log('[drive-poller] ' + spostati + ' file spostati nella sottocartella Drive giusta');
+
+  return { disponibile: true, importati, spostati, modulo: m.slug };
 }
 
 function startDrivePoller() {

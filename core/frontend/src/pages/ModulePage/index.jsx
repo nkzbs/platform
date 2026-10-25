@@ -13,6 +13,7 @@ import AiSuggestionsPanel from '../../components/AiSuggestionsPanel'
 import ImportPdf from '../../components/ImportPdf'
 import ImportPayslip from '../../components/ImportPayslip'
 import BustaPagaReportView from '../../components/BustaPagaReportView'
+import DriveSyncButton from '../../components/DriveSyncButton'
 import SchemaReports from './SchemaReports'
 import BranchCreateModal from './BranchCreateModal'
 import PeriodView from './PeriodView'
@@ -595,6 +596,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
             <button onClick={exportCsv} className="bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2" title="Esporta CSV">
               <Icon name="download" size={14} />CSV
             </button>
+            <DriveSyncButton token={token} mod={mod} onSynced={loadRecords} />
             {canCreate && mod.batch_upload_field && (
               <>
                 {batchCategoryField && (
