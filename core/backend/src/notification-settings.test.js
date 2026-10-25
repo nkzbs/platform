@@ -107,6 +107,14 @@ async function main() {
     db.exec('DELETE FROM whatsapp_recipients; DELETE FROM gmail_rules;');
     addModule('whatsapp_destinatari'); addModule('gmail_regole');
     db.prepare("INSERT OR REPLACE INTO user_modules (user_id, module_slug) VALUES (1, 'gmail_regole')").run();
+    // Un modulo pubblicato almeno una volta lascia una riga in modules_schema_history
+    // (module_id REFERENCES modules(id)) — caso reale trovato il 2026-10-25 su Finance:
+    // senza ripulirla, la DELETE FROM modules sotto falla per foreign key e blocca
+    // l'avvio dell'intero tenant in un ciclo di crash.
+    for (const slug of ['whatsapp_destinatari', 'gmail_regole']) {
+      const id = db.prepare('SELECT id FROM modules WHERE slug = ?').get(slug).id;
+      db.prepare("INSERT INTO modules_schema_history (module_id, schema_json, version) VALUES (?, '{}', 1)").run(id);
+    }
     legacy('whatsapp_destinatari', { nome: 'Nima', numero: '+39 333 111 1111', triggers: ['scadenza', 'report'], attivo: true });
     legacy('whatsapp_destinatari', { nome: 'Spento', numero: '+39 333 222 2222', triggers: [], attivo: false });
     legacy('gmail_regole', { mittente: 'a@b.it', descrizione: 'A', gruppo: 'Personale', categoria: 'Rata', attiva: true });
@@ -119,6 +127,7 @@ async function main() {
     assertEq(db.prepare("SELECT COUNT(*) c FROM records WHERE module_slug IN ('whatsapp_destinatari','gmail_regole')").get().c, 0);
     assertEq(db.prepare("SELECT COUNT(*) c FROM modules WHERE slug IN ('whatsapp_destinatari','gmail_regole')").get().c, 0);
     assertEq(db.prepare("SELECT COUNT(*) c FROM user_modules WHERE module_slug = 'gmail_regole'").get().c, 0);
+    assertEq(db.prepare('SELECT COUNT(*) c FROM modules_schema_history').get().c, 0, 'anche lo storico pubblicazioni dei due moduli viene ripulito');
   });
 
   await test('è idempotente: rilanciarla non duplica niente', () => {

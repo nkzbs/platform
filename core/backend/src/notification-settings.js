@@ -103,6 +103,12 @@ function migrateLegacy() {
     if (out.left === 0) {
       for (const slug of ['whatsapp_destinatari', 'gmail_regole']) {
         db.prepare('DELETE FROM user_modules WHERE module_slug = ?').run(slug);
+        // modules_schema_history tiene una riga per ogni pubblicazione passata dello schema
+        // (module_id REFERENCES modules(id), vedi db.js) — un modulo mai pubblicato non ne
+        // ha, uno pubblicato anche solo in origine sì: senza ripulirle prima, la DELETE sotto
+        // fallisce per violazione della foreign key (trovato dal vivo il 2026-10-25, bloccava
+        // l'avvio dell'intero tenant in un ciclo di crash ad ogni riavvio).
+        db.prepare('DELETE FROM modules_schema_history WHERE module_id = (SELECT id FROM modules WHERE slug = ?)').run(slug);
         db.prepare('DELETE FROM modules WHERE slug = ?').run(slug);
       }
     }
