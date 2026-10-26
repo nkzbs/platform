@@ -77,6 +77,10 @@ Gli strumenti sono per lo più lettura/scrittura generica sugli stessi moduli de
 
 Trovato e corretto lungo la strada: `scripts/redeploy-nas.sh` aveva un `DB_PATH` sbagliato cablato (puntava a un database vecchio e incompleto) — mai eseguito da quando la discrepanza esisteva, corretto prima che causasse danno.
 
+## 0.3.26 — 27 ottobre 2026
+
+**Nuovo tipo campo del Builder: `barcode`** (richiesto per archiviare oggetti in magazzino). Si comporta come un campo `text` — stesso salvataggio, stessa visualizzazione, nessuna modifica lato backend — con in più un pulsante che apre la fotocamera e legge il codice con l'API nativa del browser (`BarcodeDetector`, nessuna libreria esterna aggiunta). Dove la fotocamera non è disponibile o il browser non supporta la scansione, il campo resta comunque compilabile a mano: la scansione è una scorciatoia, non l'unico modo di usarlo. Verificato dal vivo nel browser: tipo selezionabile nel Builder, pulsante di scansione nel form "Nuovo record", errore corretto quando la fotocamera non è raggiungibile, salvataggio e visualizzazione in elenco identici a un campo di testo.
+
 ## 0.3.15 — 24 ottobre 2026
 
 Seguito della domanda dell'utente "le entrate di spese casa, come le gestiamo?": le card "Riepilogo mensile — Personale" e "— Casa" puntavano entrambe allo stesso modulo Entrate senza nessun filtro, quindi avrebbero sommato le STESSE entrate su entrambe (es. lo stipendio intero contato anche nella card Casa, invece dei soli contributi versati alla casa).

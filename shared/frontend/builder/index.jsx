@@ -1375,7 +1375,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                           )}
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                          {['text','email','phone','url','textarea','number','currency','select','date','datetime'].includes(step.type) && (
+                          {['text','email','phone','url','textarea','number','currency','select','date','datetime','barcode'].includes(step.type) && (
                             <div>
                               <label className="text-[10px] text-gray-600 block mb-0.5">Placeholder</label>
                               <input className="w-full bg-surface-page text-gray-300 px-2 py-1 rounded text-xs outline-none border border-gray-700 focus:border-accent transition placeholder-gray-700"

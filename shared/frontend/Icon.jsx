@@ -55,6 +55,8 @@ export function createIcon(lucide) {
     monitor: lucide.Monitor, tablet: lucide.Tablet, smartphone: lucide.Smartphone,
     // Tab "Aspetto" in Impostazioni (2026-10-21): colore dell'app, anche nell'icona del dock.
     palette: lucide.Palette,
+    // Campo 'barcode' del Builder (2026-10-26) — pulsante di scansione.
+    barcode: lucide.Barcode, camera: lucide.Camera,
   }
 
   // stroke 1.6-1.8 per il brief — 1.75 come compromesso singolo invece di

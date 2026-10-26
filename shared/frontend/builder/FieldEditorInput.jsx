@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import Icon from '@app/components/Icon'
 import Select from '@app/components/Select'
+import BarcodeScanModal from './BarcodeScanModal.jsx'
 
 // ─── MODULE GENERIC PAGE ──────────────────────────────────────────────────────
 // Mostra il dettaglio di un record: campi propri (inclusi i computed, sempre freschi),
@@ -13,6 +14,7 @@ import Select from '@app/components/Select'
 // modale dettaglio era sempre e solo in sola lettura).
 function FieldEditorInput({ f, value, onChange, uploading, onUploadFile, placeholder: placeholderProp }) {
   const [showSecret, setShowSecret] = useState(false)
+  const [scanning, setScanning] = useState(false)
   if (f.type === 'soglia') {
     return <div className="text-xs text-gray-600 py-2">Calcolato automaticamente dai dati del record.</div>
   }
@@ -140,6 +142,27 @@ function FieldEditorInput({ f, value, onChange, uploading, onUploadFile, placeho
             className="flex-shrink-0 text-accent hover:opacity-80 transition p-2" title="Apri in Google Maps">
             <Icon name="link" size={16} />
           </a>
+        )}
+      </div>
+    )
+  }
+  // Campo libero come 'text', con in più un pulsante che apre la fotocamera per
+  // leggere il codice a barre al posto di digitarlo — comodo per archiviare
+  // oggetti in magazzino. Lo stesso valore resta sempre modificabile a mano
+  // nell'input (la scansione è una scorciatoia, non l'unico modo di compilarlo).
+  if (f.type === 'barcode') {
+    return (
+      <div className="flex items-center gap-2">
+        <input className="flex-1 bg-surface-page text-ink px-4 py-3 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition placeholder-gray-600"
+          placeholder={placeholderProp || f.placeholder || 'Codice a barre'} value={value || ''} onChange={(e) => onChange(e.target.value)} />
+        <button type="button" onClick={() => setScanning(true)} title="Scansiona" className="flex-shrink-0 text-accent hover:opacity-80 transition p-2">
+          <Icon name="barcode" size={18} />
+        </button>
+        {scanning && (
+          <BarcodeScanModal
+            onDetected={(code) => { onChange(code); setScanning(false) }}
+            onClose={() => setScanning(false)}
+          />
         )}
       </div>
     )

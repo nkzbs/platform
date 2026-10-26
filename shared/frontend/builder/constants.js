@@ -1,5 +1,5 @@
 // ─── BUILDER ──────────────────────────────────────────────────────────────────
-const FIELD_TYPES = ['text', 'number', 'currency', 'date', 'datetime', 'time', 'select', 'multiselect', 'checkbox', 'textarea', 'email', 'phone', 'url', 'mappa', 'computed', 'file', 'giacenza', 'encrypted', 'soglia', 'soglia_data', 'scaglioni']
+const FIELD_TYPES = ['text', 'number', 'currency', 'date', 'datetime', 'time', 'select', 'multiselect', 'checkbox', 'textarea', 'email', 'phone', 'url', 'mappa', 'computed', 'file', 'barcode', 'giacenza', 'encrypted', 'soglia', 'soglia_data', 'scaglioni']
 
 // Icone e colori scelgibili per un modulo — sottoinsieme del set icone esistente, quelle
 // più adatte a rappresentare un modulo (escluse quelle puramente funzionali come x/trash/edit)
