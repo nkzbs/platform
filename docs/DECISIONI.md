@@ -617,10 +617,15 @@ path del container al volo, MAI rileggere la colonna grezza, altrimenti ogni red
 database nel posto sbagliato in silenzio (stesso tipo di incidente della "finance.db sbagliata" della stessa sera,
 ma auto-inflitto). Codice pronto (`tenantHostConfig` monta la sottocartella del tenant, risolta via
 `docker volume inspect`, mai assunta) e test scritti (assert su `HostConfig.Binds`, isolamento reale fra container) —
-**la migrazione dei dati reali dei tenant esistenti (Finance in testa) resta da eseguire**: richiede un demone Docker
-locale funzionante per la verifica finale prima di toccare dati di produzione (non disponibile a fine serata), più
-backup freschi verificati immediatamente prima di ogni tenant, copia-mai-sposta fino a verifica, rename-mai-delete
-per i file vecchi — stessa disciplina già rodata stasera sull'incidente di Finance.
+**migrazione completata la stessa notte**, non rimandata: tornato Docker Desktop disponibile (era proprio chiuso, non
+solo bloccato — bastava riaprirlo), i 17 test di `provisioner.test.js` sono passati tutti su Docker vero, isolamento
+incluso. Poi, nell'ordine previsto (ai-sandbox prima, Finance per ultimo): backup fresco verificato (`integrity_check:
+ok`, conteggio record confrontato) per ognuno, container fermato dalla rotta sanzionata, file copiati (mai spostati)
+nella sottocartella propria, copia verificata identica all'originale, `db_path` aggiornato, `docker-provisioner`
+distribuito con il nuovo `tenantHostConfig`, redeploy di ciascun tenant, verifica finale che `docker exec
+platform-<slug> ls /data` mostri SOLO i propri file (prova diretta che l'isolamento funziona, non solo che l'app è
+su) e che i dati veri tornino uguali (142 buste paga di Finance, stesso numero prima e dopo). I vecchi file piatti
+restano sul volume, intatti, come rete di sicurezza — nessuna cancellazione, nemmeno ora.
 
 Trovato e corretto lungo la strada: `scripts/redeploy-nas.sh` (lo script manuale che aggiorna Super Admin stesso, dato
 che non può ridistribuirsi da sé come fanno i tenant) aveva `DB_PATH=/data/super-admin-01.db` cablato — il database
