@@ -555,3 +555,27 @@ container al volume vuoto, sembrando un reset completo dei dati (utenti, passkey
 volume vero non è mai stato toccato, l'app semplicemente non lo stava più leggendo — ma ci sono volute diverse decine di
 minuti e due ripristini da backup sbagliati (letti dal volume giusto, quindi apparentemente plausibili, ma non quello
 che il container stava davvero servendo) prima di capire che il problema era il nome del volume, non i dati stessi.
+
+## 2026-10-26 — Cloudflare da Flexible a Full (strict): la porta "misteriosa" era una Origin Rule
+
+**Il problema**: `docs/OPERAZIONI.md` dice solo "Cloudflare punta alla porta 4000", senza spiegare perché — e la zona
+era rimasta in modalità TLS "Flexible" fin dall'inizio (gap noto, segnalato nel pannello "Sicurezza della piattaforma"
+dal 15 ottobre): il traffico tra Cloudflare e il NAS viaggiava in chiaro.
+
+**Cosa si è scoperto**: non è un comportamento di default di Cloudflare — è una Origin Rule della zona (creata il
+04/08/2026, "Cambia porta [Modello]") che riscrive la porta di destinazione a 4000 per ogni richiesta, a prescindere
+dal protocollo. Capirlo prima di agire ha evitato un lavoro inutile e rischioso: non serviva aprire una porta nuova né
+ricreare `platform-nginx` (l'unico ingresso condiviso da tutti i tenant e da Super Admin) per mappare una porta in più
+— al passaggio a Full (strict) Cloudflare continua a colpire la stessa porta 4000 di sempre, solo cifrata.
+
+**La scelta**: certificato Origin CA di Cloudflare (15 anni) generato dalla dashboard e installato su `platform-nginx`;
+la porta 80 del container (= 4000 dall'esterno) è passata da `listen 80;` a `listen 80 ssl;`. Nginx non può ascoltare
+in chiaro e in TLS sulla stessa porta insieme, quindi questo cambio e il click "Full (strict)" nella dashboard
+Cloudflare sono stati fatti nello stesso momento (reload nginx, non riavvio) per evitare una finestra in cui i due lati
+non si sarebbero capiti. Verificato subito dopo: Finance e Super Admin rispondevano entrambi, nessun errore nei log.
+
+**Lasciato aperto**: il permesso del token API per leggere/scrivere `/zones/:id/settings/ssl` non si è mai risolto
+(403 persistente anche dopo aver aggiunto sia "SSL and Certificates: Edit" sia "Zone Settings: Edit") — letture/scritture
+DNS funzionano col token attuale, solo quell'endpoint specifico no. Il pannello "Sicurezza della piattaforma" mostra
+quindi "Sconosciuta" invece della modalità vera finché non si risolve o si ricrea il token con permessi diversi; la
+modalità reale si verifica dalla dashboard Cloudflare.
