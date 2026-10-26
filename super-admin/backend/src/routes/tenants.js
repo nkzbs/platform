@@ -538,6 +538,14 @@ router.post('/:slug/redeploy', requireAuth, requireTenantScope, async (req, res)
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('X-Accel-Buffering', 'no');
     const send = (o) => { try { res.write(JSON.stringify(o) + '\n') } catch (e) { /* client chiuso */ } };
+    // Battito ogni 20s senza "msg" (il popup in TenantsPage.jsx mostra una riga solo
+    // se o.msg è presente, quindi non sporca la lista) — scoperto dal vivo (26/10/2026)
+    // che la build e l'attesa "il tenant risponde" possono restare silenziose per
+    // diversi minuti: Cloudflare chiude da sé una connessione proxy inattiva intorno ai
+    // 100s, il client vede "Errore di rete: Load failed" anche se il redeploy sul
+    // server prosegue e finisce comunque. Scrivere byte regolarmente tiene viva la
+    // connessione end-to-end senza dover inseguire i tempi esatti di ogni passo.
+    const heartbeat = setInterval(() => send({ at: new Date().toISOString() }), 20000);
     try {
       await buildCoreImage({ log: (msg) => send({ msg, at: new Date().toISOString() }) });
       const result = await redeployTenant(req.tenant, { force, actor: req.user.username, log: (msg) => send({ msg, at: new Date().toISOString() }) });
@@ -546,6 +554,8 @@ router.post('/:slug/redeploy', requireAuth, requireTenantScope, async (req, res)
     } catch (err) {
       send({ msg: 'Errore: ' + err.message, at: new Date().toISOString() });
       send({ done: true, ok: false, error: err.message });
+    } finally {
+      clearInterval(heartbeat);
     }
     return res.end();
   }
