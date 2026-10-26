@@ -12,6 +12,7 @@ const { logAudit } = require('../audit-log');
 const moduleAi = require('../module-ai');
 const sug = require('../suggestions');
 const { parseSchemaNormalized } = require('../schema-v3');
+const { signTenantRequest } = require('../lib/tenant-request-token');
 
 const router = express.Router();
 router.use(requireAuth, requireAdmin, requireFeature('suggerimenti'));
@@ -43,7 +44,7 @@ router.post('/:id/propose', async (req, res) => {
     stati: ((schema.workflow && schema.workflow.states) || []).map((x) => ({ key: x.key, label: x.label || x.key })),
   };
   try {
-    const r = await fetch(SUPER_ADMIN_URL + '/api/tenant-ai/suggestion', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET }, signal: AbortSignal.timeout(45000), body: JSON.stringify({ tenant_slug: process.env.TENANT_SLUG, data: payload }) });
+    const r = await fetch(SUPER_ADMIN_URL + '/api/tenant-ai/suggestion', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET, 'Authorization': 'Bearer ' + signTenantRequest('tenant-ai') }, signal: AbortSignal.timeout(45000), body: JSON.stringify({ tenant_slug: process.env.TENANT_SLUG, data: payload }) });
     const body = await r.json().catch(() => ({}));
     if (!r.ok) return res.status(r.status === 429 ? 429 : r.status === 503 ? 503 : 502).json({ error: body.error || 'L\'AI non è disponibile in questo momento.', code: body.code });
     db.prepare('UPDATE suggestions SET ai = ? WHERE id = ?').run(JSON.stringify(body.proposta), s.id);

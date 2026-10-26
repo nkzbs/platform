@@ -1,5 +1,6 @@
 'use strict';
 const { internalSecret } = require('../../../../shared/internal-secret.js');
+const { signTenantRequest } = require('../lib/tenant-request-token');
 const express = require('express');
 const { requireAuth, requireAdmin } = require('./auth');
 const ai = require('../ai-suggestions');
@@ -125,7 +126,7 @@ router.post('/ask', requireAuth, requireAdmin, async (req, res) => {
   let query;
   try {
     const r = await fetch(SUPER_ADMIN_URL + '/api/tenant-ai/ask-data', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET },
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET, 'Authorization': 'Bearer ' + signTenantRequest('tenant-ai') },
       body: JSON.stringify({ tenant_slug: process.env.TENANT_SLUG, data: { domanda, oggi: new Date().toISOString().slice(0, 10), catalogo: cat } }),
       signal: AbortSignal.timeout(30000),
     });

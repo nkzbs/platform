@@ -574,8 +574,55 @@ in chiaro e in TLS sulla stessa porta insieme, quindi questo cambio e il click "
 Cloudflare sono stati fatti nello stesso momento (reload nginx, non riavvio) per evitare una finestra in cui i due lati
 non si sarebbero capiti. Verificato subito dopo: Finance e Super Admin rispondevano entrambi, nessun errore nei log.
 
-**Lasciato aperto**: il permesso del token API per leggere/scrivere `/zones/:id/settings/ssl` non si è mai risolto
-(403 persistente anche dopo aver aggiunto sia "SSL and Certificates: Edit" sia "Zone Settings: Edit") — letture/scritture
-DNS funzionano col token attuale, solo quell'endpoint specifico no. Il pannello "Sicurezza della piattaforma" mostra
-quindi "Sconosciuta" invece della modalità vera finché non si risolve o si ricrea il token con permessi diversi; la
-modalità reale si verifica dalla dashboard Cloudflare.
+**Risolto più tardi la stessa sera**: il permesso mancante era proprio "Zone Settings" (non "SSL and Certificates",
+primo tentativo sbagliato) — trovato guardando la UI nuova di Cloudflare (riorganizzata per categoria) invece di
+continuare a indovinare nomi vecchi. Aggiunto al token esistente, verificato (`GET /zones/:id/settings/ssl` → 200,
+`value:"strict"`). Il pannello "Sicurezza della piattaforma" mostra ora la modalità reale.
+
+## 2026-10-26 — Tre lacune di sicurezza reali, trovate rispondendo a "Platform è sicuro al 100%?"
+
+**Il contesto**: a fine serata, dopo aver chiuso il gap TLS sopra, l'utente ha chiesto se la piattaforma fosse sicura
+al 100%. La risposta onesta ha fatto emergere tre punti già scritti nella lista "restano aperti" più sopra (16/10/2026)
+ma mai affrontati: il segreto interno condiviso fra tutti i tenant più il volume dati condiviso, i permessi moduli
+solo estetici, le porte dei tenant esposte sull'host. L'utente ha scelto di affrontare tutti e tre, incluso isolare
+davvero il volume dati (non solo il segreto) — confermato anche dopo aver segnalato che quella parte avrebbe
+richiesto una migrazione dati reale su Finance (in uso quotidiano). Indagine fatta con 3 agenti di esplorazione + 2 di
+progettazione prima di scrivere una riga di codice, proprio perché il rischio reale era alto e la stessa serata aveva
+già avuto un incidente (database sbagliato montato su Finance).
+
+**Porte dei tenant**: tolta la pubblicazione sull'host (`PortBindings` in `tenantHostConfig`, docker-provisioner) —
+nginx instrada già per nome container sulla rete Docker interna, confermato leggendo il codice prima di toccare
+niente, non assunto. Il link "Apri →" per un tenant senza dominio ancora assegnato ora passa da un proxy interno di
+Super Admin (nuova rotta `/tenants/:slug/preview/*`) invece che da `host:porta` diretto dal browser dell'admin.
+
+**Permessi moduli**: `user_modules` (chi vede quale modulo) filtrava solo il menu, mai le chiamate dirette alle API.
+Nuova middleware `requireModuleAccess` (`core/backend/src/routes/auth.js`), stesso stile di `requireAdmin`, applicata
+a `records.js`/`field-options.js`/`module-ai.js` — stesso comportamento di compatibilità del filtro menu esistente
+(admin sempre libero, nessuna riga configurata = nessuna restrizione, mai rotto un tenant esistente).
+
+**Segreto interno condiviso**: `tenant-ai.js` e `registry.js` (proposte modulo) decidono quale tenant leggere/
+addebitare in base a un `tenant_slug` dichiarato dal chiamante, protetto solo dal segreto condiviso con TUTTI i
+tenant — un tenant poteva dichiarare lo slug di un altro e leggerne/cancellarne la chiave Mistral o consumarne il
+budget AI. Riusato il pattern già esistente per l'export/gli inviti (`tenant-export.js`/`tenant-invite.js`): il
+tenant firma con il PROPRIO `jwt_secret` (già generato per ognuno, mai condiviso), Super Admin verifica contro il
+secret di quello specifico tenant. Accettato ANCHE il vecchio segreto condiviso durante la transizione (ogni uso
+loggato in `audit_log` come `internal.auth.legacy_secret`) — tolto il ramo vecchio è un passo separato, da fare solo
+dopo che tutti i tenant attivi si sono ridistribuiti col nuovo codice (giorni, non una notte).
+
+**Isolamento del volume dati**: la parte più delicata — ogni container tenant montava l'INTERO volume condiviso
+`platform-data`, non solo il proprio file. Un tenant compromesso arrivava a tutti gli altri database più al registro
+di Super Admin (con le chiavi di ognuno). Scoperto in fase di analisi un punto critico non ovvio: `tenants.db_path`
+cambia significato (vista del container vs vista di Super Admin) — `redeployTenant` va corretto per ricostruire il
+path del container al volo, MAI rileggere la colonna grezza, altrimenti ogni redeploy di un tenant migrato cerca il
+database nel posto sbagliato in silenzio (stesso tipo di incidente della "finance.db sbagliata" della stessa sera,
+ma auto-inflitto). Codice pronto (`tenantHostConfig` monta la sottocartella del tenant, risolta via
+`docker volume inspect`, mai assunta) e test scritti (assert su `HostConfig.Binds`, isolamento reale fra container) —
+**la migrazione dei dati reali dei tenant esistenti (Finance in testa) resta da eseguire**: richiede un demone Docker
+locale funzionante per la verifica finale prima di toccare dati di produzione (non disponibile a fine serata), più
+backup freschi verificati immediatamente prima di ogni tenant, copia-mai-sposta fino a verifica, rename-mai-delete
+per i file vecchi — stessa disciplina già rodata stasera sull'incidente di Finance.
+
+Trovato e corretto lungo la strada: `scripts/redeploy-nas.sh` (lo script manuale che aggiorna Super Admin stesso, dato
+che non può ridistribuirsi da sé come fanno i tenant) aveva `DB_PATH=/data/super-admin-01.db` cablato — il database
+VECCHIO e incompleto, non quello vero in uso. Mai eseguito da quando la discrepanza esisteva (altrimenti Super Admin
+avrebbe perso ore di storia reale a ogni suo stesso aggiornamento), corretto prima che causasse danno.

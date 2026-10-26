@@ -142,6 +142,35 @@ async function main() {
     assertTrue(body.State.Running === true);
   });
 
+  // 26/10/2026 — chiusura di un gap reale (ogni tenant montava l'INTERO volume
+  // condiviso: un container compromesso vedeva tutti gli altri tenant più il
+  // registro di Super Admin). Verifica diretta che il Bind punti alla
+  // sottocartella del tenant, mai alla radice del volume — e che nessuna
+  // porta sia più pubblicata sull'host (stesso giro, stesso gap documentato
+  // in docs/DECISIONI.md).
+  let volumeMountpoint;
+  await test('HostConfig.Binds punta alla sottocartella del tenant nel volume, non alla radice', async () => {
+    volumeMountpoint = JSON.parse(execSync('docker volume inspect ' + testVolume).toString())[0].Mountpoint;
+    const res = await fetch(BASE + '/tenants/' + SLUG + '/inspect', { headers: auth });
+    const body = await res.json();
+    assertEq(body.HostConfig.Binds.length, 1);
+    assertEq(body.HostConfig.Binds[0], volumeMountpoint + '/' + SLUG + ':/data');
+  });
+
+  await test('nessuna porta pubblicata sull\'host (PortBindings vuoto)', async () => {
+    const res = await fetch(BASE + '/tenants/' + SLUG + '/inspect', { headers: auth });
+    const body = await res.json();
+    const bindings = body.HostConfig.PortBindings || {};
+    assertEq(Object.keys(bindings).length, 0, 'PortBindings deve essere vuoto: niente pubblicato sull\'host');
+  });
+
+  await test('isolamento reale: il container del tenant non vede file di un altro tenant piazzato nello stesso volume', async () => {
+    const altroSlug = 'altro-' + runId;
+    execSync('docker run --rm -v ' + testVolume + ':/mnt alpine sh -c "mkdir -p /mnt/' + altroSlug + ' && touch /mnt/' + altroSlug + '/sentinella.db"');
+    const listing = execSync('docker exec platform-' + SLUG + ' ls /data').toString();
+    assertTrue(!listing.includes(altroSlug), '/data del tenant non deve contenere nulla di un altro slug — deve vedere solo la propria fetta del volume');
+  });
+
   await test('GET /tenants/:slug/stats — risposta con la forma attesa da dockerode stats', async () => {
     const res = await fetch(BASE + '/tenants/' + SLUG + '/stats', { headers: auth });
     const body = await res.json();
@@ -174,6 +203,12 @@ async function main() {
     const body = await res.json();
     assertEq(res.status, 200);
     assertTrue(body.id !== beforeInspect.Id, 'redeploy deve creare un container con un id Docker nuovo, non riavviare il vecchio');
+  });
+
+  await test('redeploy: il nuovo container resta scoped alla sua sottocartella (non torna alla radice del volume)', async () => {
+    const res = await fetch(BASE + '/tenants/' + SLUG + '/inspect', { headers: auth });
+    const body = await res.json();
+    assertEq(body.HostConfig.Binds[0], volumeMountpoint + '/' + SLUG + ':/data');
   });
 
   await test('GET /images/latest/inspect — sola lettura sull\'immagine reale platform-core:latest', async () => {

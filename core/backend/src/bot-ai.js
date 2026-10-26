@@ -8,6 +8,7 @@ const moduleAi = require('./module-ai');
 const askData = require('./ask-data');
 const { validateIntent } = require('../../../shared/ai-bot-intent.js');
 const { validateReceipt } = require('../../../shared/ai-receipt.js');
+const { signTenantRequest } = require('./lib/tenant-request-token');
 const { logAudit } = require('./audit-log');
 
 const SUPER_ADMIN_URL = process.env.SUPER_ADMIN_URL || 'http://super-admin-backend:3000';
@@ -52,7 +53,7 @@ function entrataModuliPerUtente(user) {
 async function viaSuperAdmin(path, data, timeoutMs = 30000) {
   try {
     const r = await fetch(SUPER_ADMIN_URL + '/api/tenant-ai/' + path, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET },
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET, 'Authorization': 'Bearer ' + signTenantRequest('tenant-ai') },
       body: JSON.stringify({ tenant_slug: process.env.TENANT_SLUG, data }), signal: AbortSignal.timeout(timeoutMs),
     });
     const body = await r.json().catch(() => ({}));

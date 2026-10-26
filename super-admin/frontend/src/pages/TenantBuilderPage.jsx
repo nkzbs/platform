@@ -111,10 +111,11 @@ function TenantBuilderPage({ token, initialPrompt, initialModuleName }) {
   }, [])
 
   // Con dominio reale (produzione, dietro Cloudflare/platform-nginx) il routing è
-  // per Host header su 443 — la porta interna del container non è più raggiungibile
-  // dall'esterno (stesso bug/fix già applicato al link "Apri →" in TenantsPage).
-  // Senza dominio (solo in locale) resta il fallback diretto host:porta.
-  const tenantBaseUrl = (t) => t.domain ? ('https://' + t.domain) : (window.location.protocol + '//' + window.location.hostname + ':' + t.port)
+  // per Host header su 443. Senza dominio: non più un fallback diretto host:porta
+  // (26/10/2026, le porte dei tenant non sono più pubblicate sull'host) — passa
+  // dal proxy interno di Super Admin (stesso usato dal link "Apri →" in
+  // TenantsPage), che inoltra sulla rete Docker interna.
+  const tenantBaseUrl = (t) => t.domain ? ('https://' + t.domain) : (API + '/tenants/' + t.slug + '/preview')
 
   function makeApiClient(t, base) {
     return {

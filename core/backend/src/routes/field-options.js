@@ -6,7 +6,7 @@
 // cambiarlo lì in silenzio le romperebbe. Togliere è possibile solo se nessuna riga lo usa. Chi può farlo: chi ha il permesso di modifica sul modulo.
 const express = require('express');
 const db = require('../db');
-const { requireAuth } = require('./auth');
+const { requireAuth, requireModuleAccess } = require('./auth');
 const { parseSchemaNormalized } = require('../schema-v3');
 const { ruleFor } = require('../permissions');
 const { logAudit } = require('../audit-log');
@@ -37,7 +37,7 @@ function applyToSchema(raw, fieldKey, change) {
   return { json: JSON.stringify(s), options: f.options.map(optValue) };
 }
 
-router.post('/:slug/:fieldKey', requireAuth, (req, res) => {
+router.post('/:slug/:fieldKey', requireAuth, requireModuleAccess, (req, res) => {
   const { slug, fieldKey } = req.params;
   if (!KEY.test(fieldKey)) return fail(res, 400, 'Campo non valido');
   const mod = db.prepare('SELECT * FROM modules WHERE slug = ? AND installed = 1').get(slug);

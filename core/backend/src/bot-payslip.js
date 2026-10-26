@@ -8,6 +8,7 @@
 const db = require('./db');
 const moduleRoles = require('./module-roles');
 const { esc, eur } = require('./bot-ai');
+const { signTenantRequest } = require('./lib/tenant-request-token');
 
 const SUPER_ADMIN_URL = process.env.SUPER_ADMIN_URL || 'http://super-admin-backend:3000';
 const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'changeme_internal';
@@ -171,7 +172,7 @@ async function spiega(domanda, record, m) {
   const d = record.data;
   try {
     const res = await fetch(SUPER_ADMIN_URL + '/api/tenant-ai/payslip-explain', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET },
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET, 'Authorization': 'Bearer ' + signTenantRequest('tenant-ai') },
       body: JSON.stringify({ tenant_slug: process.env.TENANT_SLUG, data: {
         domanda, periodo_label: d.periodo_label || meseLabel(d[m.R.data]),
         netto: d[m.R.netto], lordo: d[m.R.lordo], ore_pagate: d[m.R.ore_pagate], trattenute: d[m.R.trattenute],

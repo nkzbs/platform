@@ -5,6 +5,7 @@ const { parseSchemaNormalized, getRequiredConnectors, isV3, toV3 } = require('..
 const { logAudit } = require('../audit-log');
 const { ruleFor } = require('../permissions');
 const { requireInternalSecret, internalSecret } = require('../../../../shared/internal-secret.js');
+const { signTenantRequest } = require('../lib/tenant-request-token');
 
 const router = express.Router();
 const SUPER_ADMIN_URL = process.env.SUPER_ADMIN_URL || 'http://super-admin-backend:3000';
@@ -40,7 +41,7 @@ router.post('/:slug/propose-to-registry', requireAuth, requireAdmin, async (req,
   const b = req.body || {};
   try {
     const r = await fetch(SUPER_ADMIN_URL + '/api/registry/public/proposals', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET }, signal: AbortSignal.timeout(15000),
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET, 'Authorization': 'Bearer ' + signTenantRequest('registry') }, signal: AbortSignal.timeout(15000),
       body: JSON.stringify({ tenant_slug: TENANT_SLUG, module: { slug: m.slug, name: m.name, icon: m.icon, color: m.color, group_name: m.group_name, schema_json: m.schema_json }, description: b.description, note: b.note }),
     });
     const data = await r.json().catch(() => ({}));
@@ -53,7 +54,7 @@ router.post('/:slug/propose-to-registry', requireAuth, requireAdmin, async (req,
 // Lo stato delle proposte di questo tenant (in attesa, approvata, rifiutata con motivo).
 router.get('/registry-proposals', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const r = await fetch(SUPER_ADMIN_URL + '/api/registry/public/proposals?tenant_slug=' + encodeURIComponent(TENANT_SLUG), { headers: { 'x-internal-secret': INTERNAL_SECRET }, signal: AbortSignal.timeout(10000) });
+    const r = await fetch(SUPER_ADMIN_URL + '/api/registry/public/proposals?tenant_slug=' + encodeURIComponent(TENANT_SLUG), { headers: { 'x-internal-secret': INTERNAL_SECRET, 'Authorization': 'Bearer ' + signTenantRequest('registry') }, signal: AbortSignal.timeout(10000) });
     if (!r.ok) return res.json([]);
     res.json(await r.json());
   } catch (e) { res.json([]); }

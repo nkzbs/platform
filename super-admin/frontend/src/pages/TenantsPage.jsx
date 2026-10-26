@@ -138,7 +138,10 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
       const res = await fetch(API + '/tenants/' + t.slug + '/open-session', { method: 'POST', headers, body: JSON.stringify({ username: reauthUsername, password: reauthPassword }) })
       const data = await res.json()
       if (!res.ok) { setReauthError(data.error || 'Credenziali non valide'); return }
-      const base = t.domain ? ('https://' + t.domain) : (window.location.protocol + '//' + window.location.hostname + ':' + t.port)
+      // Senza dominio: non più host:porta diretto (26/10/2026, le porte dei
+      // tenant non sono più pubblicate sull'host) — passa dal proxy interno
+      // di Super Admin, stessa rete Docker del tenant.
+      const base = t.domain ? ('https://' + t.domain) : (API + '/tenants/' + t.slug + '/preview')
       // reauthReadyUrl (2026-09-02, sostituisce il tentativo con window.open):
       // aprire la scheda in automatico (about:blank sincrono + newTab.location.href
       // dopo il fetch) funzionava con un click vero ma inaffidabile nei test ripetuti

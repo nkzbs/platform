@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../db');
-const { requireAuth, requireAdmin } = require('./auth');
+const { requireAuth, requireAdmin, requireModuleAccess } = require('./auth');
 const { evaluateFormula, evaluateSteps, getModuleRows, aggregateValues, loadModuleMap, toDayCount, compareValues } = require('../formula');
 const { parseSchemaNormalized } = require('../schema-v3');
 const { fireTrigger } = require('../automation-engine');
@@ -115,7 +115,7 @@ function logHistory(moduleSlug, recordId, actor, action, beforeData, afterData) 
 // sotto in questo stesso file. `childRows` è l'equivalente in bozza di *_children —
 // righe embedded già in memoria lato form (vedi ModulePage), usate dal fallback
 // generico di evaluateSteps quando get_related non trova un currentRecordId reale.
-router.post('/:slug/evaluate-live', requireAuth, (req, res) => {
+router.post('/:slug/evaluate-live', requireAuth, requireModuleAccess, (req, res) => {
   const schema = getModuleSchema(req.params.slug);
   if (!schema) return res.status(404).json({ error: 'Modulo non trovato' });
   const liveFields = (schema.fields || []).filter((f) => f.type === 'computed' && f.live && ((f.steps && f.steps.length) || f.expr));
@@ -134,7 +134,7 @@ router.post('/:slug/evaluate-live', requireAuth, (req, res) => {
   res.json({ results });
 });
 
-router.get('/:slug', requireAuth, (req, res) => {
+router.get('/:slug', requireAuth, requireModuleAccess, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const { rel, value, date_field, from, to, updated_since } = req.query;
 
@@ -223,7 +223,7 @@ router.get('/:slug', requireAuth, (req, res) => {
 // il motore non conosce il significato dei dati, solo come aggregarli. Riusa
 // aggregateValues, la stessa matematica già usata per i campi computed, non una
 // copia — se quella cambia, anche questo endpoint si allinea da solo.
-router.get('/:slug/report', requireAuth, (req, res) => {
+router.get('/:slug/report', requireAuth, requireModuleAccess, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const { group_by, metric, func, metric_subtract, date_field, date_from, date_to, compare_from, compare_to } = req.query;
   if (!group_by || !metric) return res.status(400).json({ error: 'group_by e metric sono obbligatori' });
@@ -317,7 +317,7 @@ router.get('/:slug/report', requireAuth, (req, res) => {
 // altri aggregati dello stesso modulo per nome (vedi formula.js evaluateModuleAggregate/
 // agg_ref), per comporre valori tipo un "indice" pesato da più aggregati già definiti
 // a parte, invece di essere un'unica formula gigante.
-router.get('/:slug/aggregate/:key', requireAuth, (req, res) => {
+router.get('/:slug/aggregate/:key', requireAuth, requireModuleAccess, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const rule = ruleFor(schema, req.user.role);
   if (rule && !rule.view) return res.status(403).json({ error: 'Non hai i permessi per vedere questo modulo' });
@@ -364,7 +364,7 @@ function buildRelationCache(db, sourceModule, modMap, paths) {
 // Vista navigabile per periodo (mese o anno) — es. Spese Casa (mese corrente, avanti/
 // indietro), Report (anno corrente vs precedente). y/m in query indicano il periodo
 // richiesto (m assente per granularità 'anno'); senza query param, il periodo odierno.
-router.get('/:slug/period-view/:key', requireAuth, (req, res) => {
+router.get('/:slug/period-view/:key', requireAuth, requireModuleAccess, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const rule = ruleFor(schema, req.user.role);
   if (rule && !rule.view) return res.status(403).json({ error: 'Non hai i permessi per vedere questo modulo' });
@@ -404,7 +404,7 @@ router.get('/:slug/period-view/:key', requireAuth, (req, res) => {
 // Lista di genitori con riepilogo dei figli (es. Debiti con le rispettive Rate) — i figli
 // vivono in un altro modulo (children_module), collegati via una relazione many_to_one
 // SU quel modulo verso questo (children_relation, come sum_children).
-router.get('/:slug/parent-children/:key', requireAuth, (req, res) => {
+router.get('/:slug/parent-children/:key', requireAuth, requireModuleAccess, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const rule = ruleFor(schema, req.user.role);
   if (rule && !rule.view) return res.status(403).json({ error: 'Non hai i permessi per vedere questo modulo' });
@@ -455,7 +455,7 @@ function loadFilteredRows(sourceModule, filters, modMap) {
 // dell'anno precedente — es. ReportFinancePage "Riepilogo mensile". Diverso da
 // period_view: qui i 12 mesi convivono nella stessa risposta (una tabella/grafico), non
 // un solo periodo navigabile.
-router.get('/:slug/yearly-breakdown/:key', requireAuth, (req, res) => {
+router.get('/:slug/yearly-breakdown/:key', requireAuth, requireModuleAccess, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const rule = ruleFor(schema, req.user.role);
   if (rule && !rule.view) return res.status(403).json({ error: 'Non hai i permessi per vedere questo modulo' });
@@ -477,7 +477,7 @@ router.get('/:slug/yearly-breakdown/:key', requireAuth, (req, res) => {
 
 // Pivot per categoria su N anni, con delta% tra i due più recenti — es.
 // ReportFinancePage "Anno su anno" (2 anni) e "Storico utenze" (N anni).
-router.get('/:slug/category-pivot/:key', requireAuth, (req, res) => {
+router.get('/:slug/category-pivot/:key', requireAuth, requireModuleAccess, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const rule = ruleFor(schema, req.user.role);
   if (rule && !rule.view) return res.status(403).json({ error: 'Non hai i permessi per vedere questo modulo' });
@@ -500,7 +500,7 @@ router.get('/:slug/category-pivot/:key', requireAuth, (req, res) => {
 
 // Settimane ISO di un mese, ciascuna con la sua metrica + un totale opzionale "oltre
 // soglia" (es. Timbrature: ore per settimana + straordinari oltre 40h/settimana).
-router.get('/:slug/weekly-breakdown/:key', requireAuth, (req, res) => {
+router.get('/:slug/weekly-breakdown/:key', requireAuth, requireModuleAccess, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const rule = ruleFor(schema, req.user.role);
   if (rule && !rule.view) return res.status(403).json({ error: 'Non hai i permessi per vedere questo modulo' });
@@ -522,7 +522,7 @@ router.get('/:slug/weekly-breakdown/:key', requireAuth, (req, res) => {
   res.json({ key: config.key, label: config.label, format: config.metric_format || 'number', ...result });
 });
 
-router.get('/:slug/export', requireAuth, (req, res) => {
+router.get('/:slug/export', requireAuth, requireModuleAccess, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const rule = ruleFor(schema, req.user.role);
   if (rule && !rule.view) return res.status(403).json({ error: 'Non hai i permessi per esportare questo modulo' });
@@ -598,7 +598,7 @@ function exactHeaderMatch(headers, exportFields) {
 // "Discover" + "Profile": mostra cosa contiene il file PRIMA di scrivere qualunque record —
 // intestazioni trovate, un suggerimento di mappatura (match esatto, poi normalizzato come
 // fallback), le prime righe come anteprima, quanti campi del modulo restano senza colonna.
-router.post('/:slug/import/preview', requireAuth, (req, res) => {
+router.post('/:slug/import/preview', requireAuth, requireModuleAccess, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const rule = ruleFor(schema, req.user.role);
   if (rule && !rule.create) return res.status(403).json({ error: 'Non hai i permessi per creare record' });
@@ -631,7 +631,7 @@ router.post('/:slug/import/preview', requireAuth, (req, res) => {
   });
 });
 
-router.post('/:slug/import', requireAuth, (req, res) => {
+router.post('/:slug/import', requireAuth, requireModuleAccess, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const rule = ruleFor(schema, req.user.role);
   if (rule && !rule.create) return res.status(403).json({ error: 'Non hai i permessi per creare record' });
@@ -668,7 +668,7 @@ router.post('/:slug/import', requireAuth, (req, res) => {
   res.json({ created, skipped, errors });
 });
 
-router.get('/:slug/:id', requireAuth, (req, res) => {
+router.get('/:slug/:id', requireAuth, requireModuleAccess, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const record = db.prepare('SELECT * FROM records WHERE id = ? AND module_slug = ?').get(req.params.id, req.params.slug);
   if (!record) return res.status(404).json({ error: 'Record non trovato' });
@@ -680,7 +680,7 @@ router.get('/:slug/:id', requireAuth, (req, res) => {
   res.json(attachComputedFields(parsed, schema, req.params.slug));
 });
 
-router.get('/:slug/:id/history', requireAuth, (req, res) => {
+router.get('/:slug/:id/history', requireAuth, requireModuleAccess, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const rule = ruleFor(schema, req.user.role);
   if (rule && !rule.view) return res.status(403).json({ error: 'Non hai i permessi' });
@@ -692,7 +692,7 @@ router.get('/:slug/:id/history', requireAuth, (req, res) => {
   })));
 });
 
-router.post('/:slug', requireAuth, (req, res) => {
+router.post('/:slug', requireAuth, requireModuleAccess, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const rule = ruleFor(schema, req.user.role);
   if (rule && !rule.create) return res.status(403).json({ error: 'Non hai i permessi per creare record in questo modulo' });
@@ -716,7 +716,7 @@ router.post('/:slug', requireAuth, (req, res) => {
 // relazione che ha originato la richiesta abbia davvero quick_create abilitato per
 // il ruolo di chi chiama — l'opzione "+ Nuovo" nel form è solo UI, qui è enforcement
 // reale, altrimenti un utente senza permesso potrebbe chiamare l'endpoint a mano.
-router.post('/:slug/quick-create', requireAuth, (req, res) => {
+router.post('/:slug/quick-create', requireAuth, requireModuleAccess, (req, res) => {
   const { via_module, via_relation, data } = req.body;
   if (!via_module || !via_relation) {
     return res.status(400).json({ error: 'via_module e via_relation sono obbligatori' });
@@ -771,7 +771,7 @@ function findApiSource(slug, key) {
   return { schema, src };
 }
 
-router.post('/:slug/sources/:key/search', requireAuth, async (req, res) => {
+router.post('/:slug/sources/:key/search', requireAuth, requireModuleAccess, async (req, res) => {
   const { schema, src } = findApiSource(req.params.slug, req.params.key);
   if (!src) return res.status(404).json({ error: 'Fonte non trovata' });
   if (src.enabled === false) return res.status(400).json({ error: 'Questa fonte è disattivata' });
@@ -790,7 +790,7 @@ router.post('/:slug/sources/:key/search', requireAuth, async (req, res) => {
   res.json({ results: results.slice(0, 25), logs: run.logs });
 });
 
-router.post('/:slug/sources/:key/import', requireAuth, async (req, res) => {
+router.post('/:slug/sources/:key/import', requireAuth, requireModuleAccess, async (req, res) => {
   const { schema, src } = findApiSource(req.params.slug, req.params.key);
   if (!src) return res.status(404).json({ error: 'Fonte non trovata' });
   if (src.enabled === false) return res.status(400).json({ error: 'Questa fonte è disattivata' });
@@ -824,7 +824,7 @@ router.post('/:slug/sources/:key/import', requireAuth, async (req, res) => {
   res.json(attached);
 });
 
-router.put('/:slug/:id', requireAuth, (req, res) => {
+router.put('/:slug/:id', requireAuth, requireModuleAccess, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const existing = db.prepare('SELECT * FROM records WHERE id = ? AND module_slug = ?').get(req.params.id, req.params.slug);
   if (!existing) return res.status(404).json({ error: 'Record non trovato' });
@@ -937,12 +937,12 @@ function runTransition(user, slug, id, to) {
   return { status: 200, body: attached };
 }
 
-router.post('/:slug/:id/transition', requireAuth, (req, res) => {
+router.post('/:slug/:id/transition', requireAuth, requireModuleAccess, (req, res) => {
   const out = runTransition(req.user, req.params.slug, req.params.id, (req.body || {}).to);
   res.status(out.status).json(out.body);
 });
 
-router.delete('/:slug/:id', requireAuth, async (req, res) => {
+router.delete('/:slug/:id', requireAuth, requireModuleAccess, async (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const existing = db.prepare('SELECT * FROM records WHERE id = ? AND module_slug = ?').get(req.params.id, req.params.slug);
   if (!existing) return res.status(404).json({ error: 'Record non trovato' });
@@ -980,7 +980,7 @@ function loadRecordOr404(slug, id, res) {
   return record;
 }
 
-router.get('/:slug/:id/attachments', requireAuth, (req, res) => {
+router.get('/:slug/:id/attachments', requireAuth, requireModuleAccess, (req, res) => {
   const record = loadRecordOr404(req.params.slug, req.params.id, res);
   if (!record) return;
   const schema = getModuleSchema(req.params.slug) || {};
@@ -997,7 +997,7 @@ router.get('/:slug/:id/attachments', requireAuth, (req, res) => {
   res.json(rows);
 });
 
-router.post('/:slug/:id/attachments', requireAuth, (req, res) => {
+router.post('/:slug/:id/attachments', requireAuth, requireModuleAccess, (req, res) => {
   const record = loadRecordOr404(req.params.slug, req.params.id, res);
   if (!record) return;
   const schema = getModuleSchema(req.params.slug) || {};
@@ -1025,7 +1025,7 @@ router.post('/:slug/:id/attachments', requireAuth, (req, res) => {
   res.json({ id: result.lastInsertRowid, upload_id, tipo });
 });
 
-router.delete('/:slug/:id/attachments/:attId', requireAuth, async (req, res) => {
+router.delete('/:slug/:id/attachments/:attId', requireAuth, requireModuleAccess, async (req, res) => {
   const record = loadRecordOr404(req.params.slug, req.params.id, res);
   if (!record) return;
   const schema = getModuleSchema(req.params.slug) || {};

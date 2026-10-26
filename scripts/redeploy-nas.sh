@@ -42,7 +42,7 @@ $D ps --format '{{.Names}}\t{{.Status}}' | grep -E \"^$name\""
 
 if has backend; then
   build super-admin/backend/Dockerfile super-admin-backend
-  swap super-admin-backend "--network platform_platform --restart unless-stopped -v platform-data:/data -v platform-nginx-config:/etc/nginx-shared -v /volume1/Dati/Backup/Platform:/offsite-backups --env-file $SECRETS/super-admin-backend.env -e DB_PATH=/data/super-admin-01.db" super-admin-backend:0.1
+  swap super-admin-backend "--network platform_platform --restart unless-stopped -v platform-data:/data -v platform-nginx-config:/etc/nginx-shared -v /volume1/Dati/Backup/Platform:/offsite-backups --env-file $SECRETS/super-admin-backend.env -e DB_PATH=/data/super-admin.db" super-admin-backend:0.1
 fi
 if has frontend; then
   build super-admin/frontend/Dockerfile super-admin-frontend

@@ -7,7 +7,7 @@ const { status: budgetStatus } = require('../lib/ai-budget');
 const { redact } = require('../lib/ai-redact');
 const reportAi = require('../lib/ai-report');
 const askAi = require('../lib/ai-ask');
-const { requireInternalSecret } = require('../../../../shared/internal-secret.js');
+const { requireTenantOrSharedSecret } = require('../lib/tenant-auth');
 const botAi = require('../lib/ai-bot');
 const receiptAi = require('../lib/ai-receipt');
 const payslipImageAi = require('../lib/ai-payslip-image');
@@ -15,21 +15,29 @@ const payslipImageAi = require('../lib/ai-payslip-image');
 const suggestionAi = require('../lib/ai-suggestion');
 const router = express.Router();
 
+// Sostituisce requireInternalSecret (26/10/2026, chiusura di un gap reale —
+// vedi lib/tenant-auth.js): queste rotte decidono QUALE tenant leggere/
+// addebitare in base a tenant_slug, quindi devono sapere con certezza chi sta
+// chiamando, non solo "qualcuno con il segreto condiviso".
+const slugParam = (req) => (req.body && req.body.tenant_slug) || req.query.tenant_slug;
+const requireTenant = requireTenantOrSharedSecret(['tenant-ai'], slugParam);
+
 // Stato del tetto di spesa del mese (lo mostra la pagina delle impostazioni del tenant).
-router.get('/budget', requireInternalSecret, (req, res) => {
-  res.json(budgetStatus(new Date(), req.query.tenant_slug || null));
+router.get('/budget', requireTenant, (req, res) => {
+  res.json(budgetStatus(new Date(), req.tenantSlug || null));
 });
 
 // ─── Chiave Mistral del tenant ────────────────────────────────────────────────
 // Il tenant la inserisce dalle sue impostazioni; qui resta cifrata e non viene mai restituita.
 const tenantExists = (slug) => !!slug && !!db.prepare('SELECT 1 FROM tenants WHERE slug = ?').get(slug);
 
-router.get('/key', requireInternalSecret, (req, res) => {
-  res.json(aiKey.keyStatus(req.query.tenant_slug || null));
+router.get('/key', requireTenant, (req, res) => {
+  res.json(aiKey.keyStatus(req.tenantSlug || null));
 });
 
-router.put('/key', requireInternalSecret, async (req, res) => {
-  const { tenant_slug, key } = req.body || {};
+router.put('/key', requireTenant, async (req, res) => {
+  const { key } = req.body || {};
+  const tenant_slug = req.tenantSlug;
   if (!tenantExists(tenant_slug)) return res.status(404).json({ error: 'Tenant sconosciuto' });
   const k = String(key || '').trim();
   if (k.length < 16 || /\s/.test(k)) return res.status(400).json({ error: 'La chiave non sembra valida (troppo corta o con spazi).' });
@@ -40,8 +48,8 @@ router.put('/key', requireInternalSecret, async (req, res) => {
   res.json(aiKey.keyStatus(tenant_slug));
 });
 
-router.delete('/key', requireInternalSecret, (req, res) => {
-  const slug = (req.body && req.body.tenant_slug) || req.query.tenant_slug;
+router.delete('/key', requireTenant, (req, res) => {
+  const slug = req.tenantSlug;
   if (!tenantExists(slug)) return res.status(404).json({ error: 'Tenant sconosciuto' });
   aiKey.clearTenantKey(slug);
   logAudit('tenant:' + slug, 'ai.key.clear', slug, null);
@@ -90,8 +98,9 @@ function sanitizeBillSuggestion(raw, moduli, moduloAttuale, indizio, senzaProve)
   return { modulo, categoria, fornitore, importo, scadenza, confidenza };
 }
 
-router.post('/classify-bill', requireInternalSecret, async (req, res) => {
-  const { tenant_slug, data } = req.body || {};
+router.post('/classify-bill', requireTenant, async (req, res) => {
+  const { data } = req.body || {};
+  const tenant_slug = req.tenantSlug;
   if (!tenant_slug || !data || typeof data !== 'object') {
     return res.status(400).json({ error: 'tenant_slug e data sono obbligatori' });
   }
@@ -153,8 +162,9 @@ function sanitizePayslip(raw) {
   };
 }
 
-router.post('/payslip', requireInternalSecret, async (req, res) => {
-  const { tenant_slug, data } = req.body || {};
+router.post('/payslip', requireTenant, async (req, res) => {
+  const { data } = req.body || {};
+  const tenant_slug = req.tenantSlug;
   if (!tenant_slug || !data || typeof data !== 'object') return res.status(400).json({ error: 'tenant_slug e data sono obbligatori' });
   const daFoto = typeof data.image_base64 === 'string' && data.image_base64;
   if (!daFoto && (typeof data.testo !== 'string' || !data.testo.trim())) {
@@ -201,8 +211,9 @@ function sanitizePayslipExplain(data) {
     voci: redact(String(data.voci || '').slice(0, 4000)),
   } };
 }
-router.post('/payslip-explain', requireInternalSecret, async (req, res) => {
-  const { tenant_slug, data } = req.body || {};
+router.post('/payslip-explain', requireTenant, async (req, res) => {
+  const { data } = req.body || {};
+  const tenant_slug = req.tenantSlug;
   if (!tenant_slug) return res.status(400).json({ error: 'tenant_slug obbligatorio' });
   const s = sanitizePayslipExplain(data);
   if (s.error) return res.status(400).json({ error: s.error });
@@ -226,8 +237,9 @@ router.post('/payslip-explain', requireInternalSecret, async (req, res) => {
 // Il tenant manda solo totali per gruppo. 'commento' = una frase breve per il messaggio
 // WhatsApp mensile; 'spiegazione' = qualche riga per chi guarda il report. Il testo torna al
 // tenant solo se ogni numero scritto dal modello esiste nei dati forniti.
-router.post('/explain-report', requireInternalSecret, async (req, res) => {
-  const { tenant_slug, modo, data } = req.body || {};
+router.post('/explain-report', requireTenant, async (req, res) => {
+  const { modo, data } = req.body || {};
+  const tenant_slug = req.tenantSlug;
   if (!tenant_slug || !reportAi.PROMPTS[modo]) return res.status(400).json({ error: 'tenant_slug e modo (commento | spiegazione) sono obbligatori' });
   const s = reportAi.sanitizeReport(data);
   if (s.error) return res.status(400).json({ error: s.error });
@@ -247,8 +259,9 @@ router.post('/explain-report', requireInternalSecret, async (req, res) => {
 // ─── "Come sta andando" ──────────────────────────────────────────────────────
 // Il tenant manda il riepilogo di un mese già calcolato (solo totali). Stesse garanzie delle altre
 // rotte: istruzioni sul server, tetto di spesa per tenant, ogni numero del testo verificato.
-router.post('/explain-insights', requireInternalSecret, async (req, res) => {
-  const { tenant_slug, data } = req.body || {};
+router.post('/explain-insights', requireTenant, async (req, res) => {
+  const { data } = req.body || {};
+  const tenant_slug = req.tenantSlug;
   if (!tenant_slug) return res.status(400).json({ error: 'tenant_slug obbligatorio' });
   const isYear = data && data.period === 'anno';
   const s = isYear ? reportAi.sanitizeInsightsYear(data) : reportAi.sanitizeInsights(data);
@@ -269,8 +282,9 @@ router.post('/explain-insights', requireInternalSecret, async (req, res) => {
 // ─── "Chiedi ai tuoi dati" ───────────────────────────────────────────────────────
 // Il tenant manda la domanda e il catalogo dei moduli (mai record). Torna una query strutturata, validata qui contro il catalogo;
 // il tenant la rivalida e la esegue con il suo codice.
-router.post('/ask-data', requireInternalSecret, async (req, res) => {
-  const { tenant_slug, data } = req.body || {};
+router.post('/ask-data', requireTenant, async (req, res) => {
+  const { data } = req.body || {};
+  const tenant_slug = req.tenantSlug;
   if (!tenant_slug) return res.status(400).json({ error: 'tenant_slug obbligatorio' });
   const s = askAi.sanitizeAsk(data);
   if (s.error) return res.status(400).json({ error: s.error });
@@ -288,8 +302,9 @@ router.post('/ask-data', requireInternalSecret, async (req, res) => {
 });
 
 // ─── Suggerimenti di miglioramento del tenant: «spiega e proponi» su una singola osservazione ──────────────────────────────
-router.post('/suggestion', requireInternalSecret, async (req, res) => {
-  const { tenant_slug, data } = req.body || {};
+router.post('/suggestion', requireTenant, async (req, res) => {
+  const { data } = req.body || {};
+  const tenant_slug = req.tenantSlug;
   if (!tenant_slug) return res.status(400).json({ error: 'tenant_slug obbligatorio' });
   const s = suggestionAi.sanitizeSuggestion(data);
   if (s.error) return res.status(400).json({ error: s.error });
@@ -307,8 +322,9 @@ router.post('/suggestion', requireInternalSecret, async (req, res) => {
 
 // ─── Bot Telegram: da una frase a UNA azione scelta da un elenco chiuso ────────────────────────────────────────────────
 // Il tenant manda la frase e i moduli di spesa (mai record). Torna l'intento validato; il tenant lo rivalida, risolve la riga e chiede conferma per ogni scrittura.
-router.post('/bot-intent', requireInternalSecret, async (req, res) => {
-  const { tenant_slug, data } = req.body || {};
+router.post('/bot-intent', requireTenant, async (req, res) => {
+  const { data } = req.body || {};
+  const tenant_slug = req.tenantSlug;
   if (!tenant_slug) return res.status(400).json({ error: 'tenant_slug obbligatorio' });
   const s = botAi.sanitizeBot(data);
   if (s.error) return res.status(400).json({ error: s.error });
@@ -327,8 +343,9 @@ router.post('/bot-intent', requireInternalSecret, async (req, res) => {
 
 // ─── Bot Telegram: foto di uno scontrino → pochi campi validati ──────────────────────────────────────────────────────────
 // Il tenant manda l'immagine (max 3 MB) e le categorie ammesse. Torna la ricevuta validata; il tenant la rivalida e chiede conferma. L'immagine non si salva qui.
-router.post('/receipt', requireInternalSecret, async (req, res) => {
-  const { tenant_slug, data } = req.body || {};
+router.post('/receipt', requireTenant, async (req, res) => {
+  const { data } = req.body || {};
+  const tenant_slug = req.tenantSlug;
   if (!tenant_slug) return res.status(400).json({ error: 'tenant_slug obbligatorio' });
   const s = receiptAi.sanitizeReceipt(data);
   if (s.error) return res.status(400).json({ error: s.error });

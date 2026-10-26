@@ -1,6 +1,6 @@
 'use strict';
 const express = require('express');
-const { requireAuth, requireAdmin } = require('./auth');
+const { requireAuth, requireAdmin, requireModuleAccess } = require('./auth');
 const moduleAi = require('../module-ai');
 const { logAudit } = require('../audit-log');
 const db = require('../db');
@@ -8,7 +8,7 @@ const db = require('../db');
 const router = express.Router();
 
 // Quali potenziamenti sono accesi su un modulo, per chiunque sia collegato (serve alle pagine per mostrare i pulsanti giusti).
-router.get('/:slug/enabled', requireAuth, (req, res) => {
+router.get('/:slug/enabled', requireAuth, requireModuleAccess, (req, res) => {
   res.json({ features: moduleAi.KEYS.filter((k) => moduleAi.can(req.params.slug, k)) });
 });
 

@@ -5,6 +5,15 @@ const { requireAuth, requireQueryToken } = require('./auth');
 const { logAudit } = require('../audit-log');
 const { mintTenantAdminToken, installModulesByIds } = require('./tenants');
 const { requireInternalSecret } = require('../../../../shared/internal-secret.js');
+const { requireTenantOrSharedSecret } = require('../lib/tenant-auth');
+
+// Solo /public/proposals usa l'identità vera del tenant (26/10/2026, chiusura
+// di un gap: con solo il segreto condiviso, un tenant poteva leggere/scrivere
+// le proposte modulo di un altro dichiarando il suo slug). Le altre rotte
+// 'public' (verticals/modules/refresh/install) restano sul segreto condiviso
+// apposta — non espongono dati specifici di un tenant, uno slug falsificato lì
+// forgia solo l'attore nel log, non un dato reale.
+const requireTenant = requireTenantOrSharedSecret(['registry'], (req) => (req.body && req.body.tenant_slug) || req.query.tenant_slug);
 
 // La Libreria: i moduli che costruisco, salvati con una versione, da installare in
 // qualunque tenant. Installare = copiare: il tenant ne riceve una copia sua, che può
@@ -101,9 +110,9 @@ const riassunto = (schemaJson) => {
   catch (e) { return { campi: [], stati: [], relazioni: [] }; }
 };
 
-router.post('/public/proposals', requireInternalSecret, (req, res) => {
+router.post('/public/proposals', requireTenant, (req, res) => {
   const b = req.body || {}, m = b.module || {};
-  const tenant = String(b.tenant_slug || '');
+  const tenant = String(req.tenantSlug || '');
   if (!db.prepare("SELECT 1 FROM tenants WHERE slug = ? AND status != 'deleted'").get(tenant)) return res.status(404).json({ error: 'Tenant sconosciuto' });
   if (!/^[a-z0-9][a-z0-9_-]{0,60}$/i.test(String(m.slug || '')) || !String(m.name || '').trim()) return res.status(400).json({ error: 'Modulo non valido' });
   const schemaJson = typeof m.schema_json === 'string' ? m.schema_json : JSON.stringify(m.schema_json || {});
@@ -120,8 +129,8 @@ router.post('/public/proposals', requireInternalSecret, (req, res) => {
   res.json({ id, status: 'pending', sostituita: !!pending });
 });
 
-router.get('/public/proposals', requireInternalSecret, (req, res) => {
-  res.json(db.prepare('SELECT id, slug, name, status, reason, created_at, decided_at, registry_module_id FROM registry_proposals WHERE tenant_slug = ? ORDER BY id DESC LIMIT 100').all(String(req.query.tenant_slug || '')));
+router.get('/public/proposals', requireTenant, (req, res) => {
+  res.json(db.prepare('SELECT id, slug, name, status, reason, created_at, decided_at, registry_module_id FROM registry_proposals WHERE tenant_slug = ? ORDER BY id DESC LIMIT 100').all(String(req.tenantSlug || '')));
 });
 
 router.get('/proposals', requireAuth, (req, res) => {

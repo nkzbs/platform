@@ -1,5 +1,6 @@
 'use strict';
 const { internalSecret } = require('../../../shared/internal-secret.js');
+const { signTenantRequest } = require('./lib/tenant-request-token');
 // Assistente AI per lo smistamento delle bollette. L'AI PROPONE (categoria, importo, scadenza,
 // fornitore), non scrive mai da sola: la proposta resta in `ai_suggestions` finché non la
 // si accetta o la si ignora. Il tenant non parla mai con Mistral: chiede a Super Admin, che
@@ -51,7 +52,7 @@ async function classify({ mittente, oggetto, testo, rilevato, moduloAttuale, all
   try {
     const res = await fetch(SUPER_ADMIN_URL + '/api/tenant-ai/classify-bill', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET },
+      headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET, 'Authorization': 'Bearer ' + signTenantRequest('tenant-ai') },
       body: JSON.stringify({ tenant_slug: process.env.TENANT_SLUG, data: { mittente, oggetto, testo, rilevato, modulo_attuale: moduloAttuale, moduli, allegati: allegati || undefined, indizio_energia: indizioEnergia || undefined } }),
       signal: AbortSignal.timeout(30000),
     });
@@ -228,7 +229,7 @@ function overview() {
 
 async function budget() {
   try {
-    const res = await fetch(SUPER_ADMIN_URL + '/api/tenant-ai/budget?tenant_slug=' + encodeURIComponent(process.env.TENANT_SLUG || ''), { headers: { 'x-internal-secret': INTERNAL_SECRET }, signal: AbortSignal.timeout(4000) });
+    const res = await fetch(SUPER_ADMIN_URL + '/api/tenant-ai/budget?tenant_slug=' + encodeURIComponent(process.env.TENANT_SLUG || ''), { headers: { 'x-internal-secret': INTERNAL_SECRET, 'Authorization': 'Bearer ' + signTenantRequest('tenant-ai') }, signal: AbortSignal.timeout(4000) });
     return res.ok ? await res.json() : null;
   } catch (e) { return null; }
 }

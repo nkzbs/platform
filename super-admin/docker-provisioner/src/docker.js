@@ -71,15 +71,36 @@ function containerName(slug) {
   return 'platform-' + slug;
 }
 
-// Stessa identica forma di HostConfig/ExposedPorts di tenants.js createContainer/
-// redeployTenant — invariata, solo spostata. DATA_VOLUME/TENANT_NETWORK letti
-// dall'ambiente DI QUESTO servizio (iniettati da docker-compose.yml), non dal
-// chiamante: il chiamante manda solo `env` (l'array di variabili specifiche del
-// tenant, che già assembla oggi) e `port`.
-function tenantHostConfig(port) {
+// DATA_VOLUME/TENANT_NETWORK letti dall'ambiente DI QUESTO servizio (iniettati
+// da docker-compose.yml), non dal chiamante: il chiamante manda solo `env`
+// (l'array di variabili specifiche del tenant, che già assembla oggi), `port`
+// e `slug`.
+//
+// Niente più `PortBindings` (26/10/2026, chiusura di un gap di sicurezza reale
+// — docs/DECISIONI.md: "le porte dei tenant sono pubblicate sull'host: dalla
+// rete di casa si raggiungono senza passare da nginx", quindi senza Cloudflare
+// né le protezioni di platform-nginx davanti). platform-nginx instrada già per
+// nome container sulla rete Docker interna (infra/nginx/nginx.conf, resolver
+// 127.0.0.11; mappa generata da nginx-domain-sync.js, porta interna 80 fissa,
+// mai la porta pubblicata) — togliere la pubblicazione non tocca il routing
+// reale. `port` resta nella firma/nel record del tenant solo perché altri
+// punti (collision-check in RegisterExistingModal, tenant-import) lo
+// confrontano ancora; non viene più passato a Docker.
+//
+// `Binds` non è più l'intero volume condiviso (26/10/2026, stesso giro —
+// prima ogni container tenant vedeva TUTTI gli altri tenant più il registro
+// di Super Admin con le chiavi di ognuno: un container compromesso arrivava
+// ovunque). Risolto il vero percorso host del volume (`docker volume
+// inspect`, non assunto) e montata solo la sottocartella `/<slug>` di
+// quel tenant — stesso principio di containerName() sopra: anche un
+// chiamante compromesso agisce solo sulla propria fetta, mai su quella di
+// un altro. Docker crea da sé la sottocartella host mancante (comportamento
+// consolidato per una directory in Binds) — nessun mkdir esplicito qui.
+async function tenantHostConfig(slug, port) {
+  const volumeName = process.env.DATA_VOLUME || 'platform_platform-data';
+  const vol = await docker.getVolume(volumeName).inspect();
   return {
-    PortBindings: { '80/tcp': [{ HostPort: String(port) }] },
-    Binds: [(process.env.DATA_VOLUME || 'platform_platform-data') + ':/data'],
+    Binds: [vol.Mountpoint + '/' + slug + ':/data'],
     NetworkMode: process.env.TENANT_NETWORK || 'platform_platform',
     RestartPolicy: { Name: 'unless-stopped' },
   };
@@ -91,7 +112,7 @@ async function createTenantContainer(slug, { env, port }) {
     Image: IMAGE_NAME,
     name,
     Env: env,
-    HostConfig: tenantHostConfig(port),
+    HostConfig: await tenantHostConfig(slug, port),
     ExposedPorts: { '80/tcp': {} },
   });
   await container.start();
@@ -188,7 +209,7 @@ async function redeployTenant(slug, { env, port }) {
     Image: IMAGE_NAME,
     name,
     Env: env,
-    HostConfig: tenantHostConfig(port),
+    HostConfig: await tenantHostConfig(slug, port),
     ExposedPorts: { '80/tcp': {} },
   });
   await container.start();

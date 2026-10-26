@@ -156,7 +156,10 @@ router.post('/register', requireAuth, (req, res) => {
   if (db.prepare('SELECT 1 FROM tenants WHERE slug = ?').get(slug)) return res.status(400).json({ error: 'Slug "' + slug + '" già in uso' });
   if (db.prepare('SELECT 1 FROM tenants WHERE port = ?').get(portNum)) return res.status(400).json({ error: 'La porta ' + portNum + ' è già usata da un altro tenant' });
 
-  const dbPath = (db_path && String(db_path).trim()) || '/data/' + slug + '.db';
+  // Default coerente con la sottocartella per-tenant (26/10/2026, vedi
+  // createTenant in tenants.js) — un db_path esplicito nel payload (tenant già
+  // registrato con un percorso suo) resta intoccato.
+  const dbPath = (db_path && String(db_path).trim()) || '/data/' + slug + '/' + slug + '.db';
   const cleanDomain = domain ? String(domain).trim().toLowerCase() : null;
   // Senza JWT_SECRET originale le sessioni già aperte decadono (si rifà il login):
   // innocuo, a differenza della chiave di cifratura.

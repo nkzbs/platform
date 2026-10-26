@@ -94,6 +94,25 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+// Chiusura di un gap reale (26/10/2026, docs/DECISIONI.md): nascondere un
+// modulo dal menu (user_modules, vedi getVisibleInstalledModules in
+// routes/modules.js) filtrava solo il menu — chi restava loggato poteva
+// comunque chiamare le API del modulo direttamente. Stessi identici
+// comportamenti del filtro menu, replicati qui apposta per non introdurre una
+// seconda semantica: admin bypassa sempre; un utente SENZA righe in
+// user_modules non ha restrizioni (compatibilità con ogni tenant esistente,
+// mai configurato finora); 'dashboard' è sempre implicitamente permesso.
+function requireModuleAccess(req, res, next) {
+  if (req.user.role === 'admin') return next();
+  const slug = req.params.slug;
+  const hasAnyRow = db.prepare('SELECT 1 FROM user_modules WHERE user_id = ?').get(req.user.id);
+  if (!hasAnyRow) return next();
+  if (slug === 'dashboard') return next();
+  const allowed = db.prepare('SELECT 1 FROM user_modules WHERE user_id = ? AND module_slug = ?').get(req.user.id, slug);
+  if (!allowed) return res.status(403).json({ error: 'Modulo non visibile per questo utente' });
+  next();
+}
+
 // Forma unica della risposta "user", usata da /login e /login/2fa-verify.
 function serializeUser(user) {
   return {
@@ -267,6 +286,7 @@ router.get('/me', requireAuth, (req, res) => {
 module.exports = router;
 module.exports.requireAuth = requireAuth;
 module.exports.requireAdmin = requireAdmin;
+module.exports.requireModuleAccess = requireModuleAccess;
 // Riusate da routes/webauthn.js — stessa identica sessione di un login con
 // password, una passkey verificata non deve crearne una "diversa".
 module.exports.signSessionToken = signSessionToken;

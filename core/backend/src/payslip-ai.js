@@ -6,6 +6,7 @@
 const SUPER_ADMIN_URL = process.env.SUPER_ADMIN_URL || 'http://super-admin-backend:3000';
 const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'changeme_internal';
 const moduleAi = require('./module-ai');
+const { signTenantRequest } = require('./lib/tenant-request-token');
 
 async function proposeFromPayslip({ moduleSlug, filename, bytes }) {
   if (!moduleAi.can(moduleSlug, 'payslip')) return { error: 'La lettura della busta paga non è accesa su questo modulo.', status: 403 };
@@ -15,7 +16,7 @@ async function proposeFromPayslip({ moduleSlug, filename, bytes }) {
   try {
     const res = await fetch(SUPER_ADMIN_URL + '/api/tenant-ai/payslip', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET },
+      headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET, 'Authorization': 'Bearer ' + signTenantRequest('tenant-ai') },
       body: JSON.stringify({ tenant_slug: process.env.TENANT_SLUG, data: { testo: pdf.slice(0, 4000) } }),
       signal: AbortSignal.timeout(30000),
     });
@@ -34,7 +35,7 @@ async function proposeFromPayslipPhoto({ moduleSlug, bytes, mime }) {
   try {
     const res = await fetch(SUPER_ADMIN_URL + '/api/tenant-ai/payslip', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET },
+      headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET, 'Authorization': 'Bearer ' + signTenantRequest('tenant-ai') },
       body: JSON.stringify({ tenant_slug: process.env.TENANT_SLUG, data: { image_base64: 'data:' + mime + ';base64,' + bytes.toString('base64') } }),
       signal: AbortSignal.timeout(40000),
     });

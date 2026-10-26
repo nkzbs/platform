@@ -271,7 +271,18 @@ async function createTenant({ name, slug, domain, actor, isSandbox, skipDefaults
   }
 
   const port = getNextPort();
-  const dbPath = '/data/' + slug + '.db';
+  // Biforcazione introdotta il 26/10/2026 (chiusura del gap "ogni tenant vede
+  // l'intero volume condiviso", vedi tenantHostConfig in docker-provisioner):
+  // containerDbPath è ciò che il CONTAINER del tenant vede dentro il proprio
+  // /data (ora la sua sottocartella scoped, non più la radice del volume) —
+  // resta '/data/<slug>.db' per sempre, non cambia mai. hostDbPath è ciò che
+  // SUPER ADMIN vede sul proprio mount (l'intero volume, invariato) — include
+  // la sottocartella del tenant, ed è quello che va nella colonna db_path.
+  // Confondere i due (mandare hostDbPath al container, o viceversa) rompe
+  // silenziosamente ogni redeploy successivo — stesso tipo di incidente della
+  // "finance.db sbagliata" di stanotte, ma auto-inflitto.
+  const containerDbPath = '/data/' + slug + '.db';
+  const hostDbPath = '/data/' + slug + '/' + slug + '.db';
   const cleanDomain = domain ? String(domain).trim().toLowerCase() : null;
   // Password vera, generata qui, MAI una costante fissa uguale per ogni tenant —
   // prima ogni tenant nasceva con admin/platform2024 scritto nel codice, chiunque
@@ -303,7 +314,7 @@ async function createTenant({ name, slug, domain, actor, isSandbox, skipDefaults
   // dell'INSERT stesso.
   let insertedOwnRow = false;
   try {
-    db.prepare('INSERT INTO tenants (name, slug, port, db_path, status, domain, encryption_key, jwt_secret, is_sandbox, provisioning_step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(name, slug, port, dbPath, 'creating', cleanDomain, encryptionKey, jwtSecret, isSandbox ? 1 : 0, 'creating_container');
+    db.prepare('INSERT INTO tenants (name, slug, port, db_path, status, domain, encryption_key, jwt_secret, is_sandbox, provisioning_step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(name, slug, port, hostDbPath, 'creating', cleanDomain, encryptionKey, jwtSecret, isSandbox ? 1 : 0, 'creating_container');
     insertedOwnRow = true;
 
     // L'array Env resta assemblato QUI (con tutti i secret del tenant appena
@@ -316,7 +327,7 @@ async function createTenant({ name, slug, domain, actor, isSandbox, skipDefaults
       port,
       env: [
         'PORT=3000',
-        'DB_PATH=' + dbPath,
+        'DB_PATH=' + containerDbPath,
         'JWT_SECRET=' + jwtSecret,
         'TENANT_SLUG=' + slug,
         'TENANT_NAME=' + name,
@@ -353,7 +364,7 @@ async function createTenant({ name, slug, domain, actor, isSandbox, skipDefaults
       ? cloudflare.upsertSubdomain(slug).catch((e) => ({ error: e.message }))
       : Promise.resolve(null);
     step('database');
-    await waitForTenantDb(dbPath);
+    await waitForTenantDb(hostDbPath);
     step('moduli_default');
     const cloneResult = skipDefaults ? null : await installDefaultModules(slug);
 
@@ -501,7 +512,14 @@ async function redeployTenant(tenant, { force, actor, log }) {
     port: tenant.port,
     env: [
       'PORT=3000',
-      'DB_PATH=' + tenant.db_path,
+      // NON tenant.db_path: quella colonna è la vista di SUPER ADMIN sul dato
+      // (include la sottocartella del tenant, vedi createTenant più sopra), il
+      // container deve sempre e solo vedere '/data/<slug>.db' dentro il proprio
+      // /data scoped. Ricostruito qui, mai riletto dalla colonna — il punto più
+      // delicato di tutta la migrazione al volume per-tenant (26/10/2026): un
+      // redeploy che rimandasse la colonna grezza cercherebbe il database nel
+      // posto sbagliato e non lo troverebbe, in silenzio.
+      'DB_PATH=/data/' + tenant.slug + '.db',
       'JWT_SECRET=' + tenant.jwt_secret,
       'TENANT_SLUG=' + tenant.slug,
       'TENANT_NAME=' + tenant.name,
@@ -642,12 +660,14 @@ async function deleteTenantBySlug(slug, actor) {
   // restava lì per sempre. Se poi si ricreava un tenant con lo stesso slug, il nuovo
   // container si riconnetteva al vecchio database invece di ripartire pulito: è
   // probabilmente la causa di più di un "non vedo i cambiamenti" di questa sessione.
+  // Dal 26/10/2026 il .db (+ -wal/-shm) e la cartella upload del tenant stanno
+  // nella sua stessa sottocartella per-tenant del volume (vedi tenantHostConfig
+  // in docker-provisioner) — rimuoverla tutta intera invece di un unlink del
+  // solo .db e un rm separato della vecchia cartella upload piatta copre
+  // entrambi insieme, senza lasciare nulla orfano.
   if (tenant && tenant.db_path) {
-    try { fs.unlinkSync(tenant.db_path); } catch (e) {} // file già assente: va bene così
+    try { fs.rmSync(path.dirname(tenant.db_path), { recursive: true, force: true }); } catch (e) {} // già assente: va bene così
   }
-  // Cartella upload dedicata al tenant (vedi core/backend/routes/uploads.js) — prima
-  // restava orfana per sempre, ora sparisce insieme al resto quando si elimina il tenant.
-  try { fs.rmSync('/data/uploads/' + slug, { recursive: true, force: true }); } catch (e) {}
   // Rimuove anche il record DNS Cloudflare, se questo tenant ne aveva uno assegnato
   // in automatico (vedi cloudflare.js) — best effort, un tenant senza sottodominio
   // nostro (dominio custom del cliente) semplicemente non ha nulla da rimuovere.
@@ -893,6 +913,41 @@ async function mintTenantAdminToken(slug, credentials) {
   if (!r.ok) throw Object.assign(new Error(data.error || 'Il tenant ha rifiutato la richiesta di token'), { status: credentials ? 400 : 502 });
   return data.token;
 }
+
+// Proxy "Apri →" per un tenant SENZA dominio ancora assegnato (appena creato, o
+// un sandbox che non ne avrà mai uno) — introdotto il 26/10/2026 insieme alla
+// chiusura delle porte tenant pubblicate sull'host (vedi tenantHostConfig in
+// docker-provisioner): prima il link apriva direttamente host:porta dal browser
+// dell'admin, bypassando nginx/Cloudflare; ora quella porta non è più
+// raggiungibile da fuori Docker, quindi questo endpoint fa da tramite sulla
+// rete interna (Super Admin ci è già sopra) — stesso principio di
+// mintTenantAdminToken sopra (fetch diretto a 'http://platform-<slug>:80'),
+// solo che qui si inoltra una richiesta GENERICA, non una chiamata API fissa.
+// Nessuna lettura di contenuto da parte di Super Admin: i byte passano, non
+// vengono interpretati — stesso principio dei bridge già esistenti
+// (open-session sopra), Super Admin non deve mai leggere cosa c'è dentro.
+router.all('/:slug/preview/*', requireAuth, requireTenantScope, async (req, res) => {
+  const suffix = req.params[0] || '';
+  const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+  const target = 'http://platform-' + req.tenant.slug + ':80/' + suffix + qs;
+  const forwardHeaders = Object.assign({}, req.headers);
+  delete forwardHeaders.host;
+  delete forwardHeaders['content-length'];
+  try {
+    const upstream = await fetch(target, {
+      method: req.method,
+      headers: forwardHeaders,
+      body: ['GET', 'HEAD'].includes(req.method) ? undefined : JSON.stringify(req.body || {}),
+    });
+    res.status(upstream.status);
+    const ct = upstream.headers.get('content-type');
+    if (ct) res.setHeader('content-type', ct);
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    res.send(buf);
+  } catch (e) {
+    res.status(502).json({ error: 'Tenant non raggiungibile (container fermo?)' });
+  }
+});
 
 router.post('/:slug/builder-token', requireAuth, requireTenantScope, async (req, res) => {
   const tenant = req.tenant;

@@ -7,6 +7,7 @@
 const crypto = require('crypto');
 const db = require('./db');
 const { internalSecret } = require('../../../shared/internal-secret.js');
+const { signTenantRequest } = require('./lib/tenant-request-token');
 
 // La vista è quella PERSONALE ("io"): stipendi meno spese personali (comprese le quote versate alla casa,
 // categoria 'Contributo Casa'). Le spese di casa e i contributi alla casa registrati come entrate stanno nel
@@ -334,7 +335,7 @@ async function explain(snap, { refresh = false } = {}) {
   if (!refresh) { const c = cachedExplanation(key, snap); if (c && !c.stale) return { text: c.text, cached: true }; }
   try {
     const res = await fetch(SUPER_ADMIN_URL + '/api/tenant-ai/explain-insights', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET },
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET, 'Authorization': 'Bearer ' + signTenantRequest('tenant-ai') },
       body: JSON.stringify({ tenant_slug: process.env.TENANT_SLUG, data: { ...snap, limiti: undefined } }),
       signal: AbortSignal.timeout(30000),
     });

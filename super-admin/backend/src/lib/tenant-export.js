@@ -18,7 +18,10 @@ const { logAudit } = require('../audit-log');
 
 const PROVISIONER_URL = process.env.PROVISIONER_URL || 'http://docker-provisioner:4000';
 const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || 'changeme_internal';
-const UPLOADS_ROOT = process.env.UPLOADS_ROOT || '/data/uploads';
+// Radice del mount di Super Admin sull'intero volume (mai cambiata dal
+// 26/10/2026 in poi — solo il CONTENUTO sotto è passato a sottocartelle
+// per-tenant, vedi tenantHostConfig in docker-provisioner).
+const DATA_ROOT = process.env.DATA_ROOT || '/data';
 const MIN_FREE_MB = Number(process.env.EXPORT_MIN_FREE_MB) || 3000;
 const ARCH_IMMAGINE = process.env.EXPORT_IMAGE_ARCH || 'x86_64';
 
@@ -40,9 +43,12 @@ const deps = {
     return tmp;
   },
   // Gli allegati del tenant come tar.gz in streaming, o null se non ce ne sono.
+  // Lo stesso albero che il container vede come '/data/uploads/<slug>' sta,
+  // da qui (Super Admin, mount intero), a '<DATA_ROOT>/<slug>/uploads/<slug>'.
   allegati: (slug) => {
-    if (!fs.existsSync(path.join(UPLOADS_ROOT, slug))) return null;
-    const p = spawn('tar', ['czf', '-', '-C', UPLOADS_ROOT, slug]);
+    const uploadsDir = path.join(DATA_ROOT, slug, 'uploads');
+    if (!fs.existsSync(path.join(uploadsDir, slug))) return null;
+    const p = spawn('tar', ['czf', '-', '-C', uploadsDir, slug]);
     return p.stdout;
   },
 };

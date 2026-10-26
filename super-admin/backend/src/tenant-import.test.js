@@ -184,12 +184,15 @@ async function main() {
     assertTrue(/porta/i.test(body.error));
   });
 
-  await test('registrazione valida: tenant fermo, db_path di default /data/<slug>.db, jwt generato se manca', async () => {
+  // db_path di default sotto la sottocartella per-tenant (26/10/2026, isolamento
+  // del volume dati — vedi tenantHostConfig in docker-provisioner), non più
+  // '/data/<slug>.db' piatto.
+  await test('registrazione valida: tenant fermo, db_path di default /data/<slug>/<slug>.db, jwt generato se manca', async () => {
     const res = await manual({ name: 'Casa', slug: 'casa', port: 41002, encryption_key: 'una-chiave-lunga' });
     assertEq(res.status, 200);
     const row = db.prepare("SELECT * FROM tenants WHERE slug = 'casa'").get();
     assertEq(row.status, 'stopped');
-    assertEq(row.db_path, '/data/casa.db');
+    assertEq(row.db_path, '/data/casa/casa.db');
     assertEq(row.encryption_key, 'una-chiave-lunga');
     assertTrue(row.jwt_secret && row.jwt_secret.length >= 32, 'jwt_secret generato');
   });

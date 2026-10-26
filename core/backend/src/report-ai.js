@@ -4,6 +4,7 @@
 // al tetto di spesa e restituisce il testo solo se ogni numero scritto esiste nei dati.
 const db = require('./db');
 const { internalSecret } = require('../../../shared/internal-secret.js');
+const { signTenantRequest } = require('./lib/tenant-request-token');
 
 const SUPER_ADMIN_URL = process.env.SUPER_ADMIN_URL || 'http://super-admin-backend:3000';
 const INTERNAL_SECRET = internalSecret();
@@ -23,7 +24,7 @@ async function explain(modo, data) {
   try {
     const res = await fetch(SUPER_ADMIN_URL + '/api/tenant-ai/explain-report', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET },
+      headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET, 'Authorization': 'Bearer ' + signTenantRequest('tenant-ai') },
       body: JSON.stringify({ tenant_slug: process.env.TENANT_SLUG, modo, data }),
       signal: AbortSignal.timeout(30000),
     });
