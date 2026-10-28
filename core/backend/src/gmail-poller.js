@@ -263,6 +263,14 @@ async function processaMessaggio(accessToken, msgId, rule) {
   // direttamente sul DB invece di passare dall'API. Bug reale, non solo mancanza.
   try { fireTrigger(moduleSlug, 'nuovo_record', dataRecord, recordId, {}); } catch (e) { console.error('[gmail-poller] fireTrigger fallito:', e.message); }
 
+  // Il PDF/allegato resta collegato alla riga come sempre (record_attachments: ciò che ai-suggestions.js legge per rileggere
+  // il PDF in una richiesta successiva e per il pulsante "Apri PDF" nella fonte dell'AI) E, se il modulo ha dichiarato
+  // "Documenti" (Builder → Ruoli del modulo), diventa ANCHE un record in quel modulo — stesso upload, non uno scaricato due
+  // volte — con titolo, cartella (tipo) e la relazione che lo riporta a questa riga: così si vede e si apre da un archivio
+  // con le cartelle, non solo come allegato generico (che richiede pure il blocco "Allegati tipizzati" sul modulo, spesso
+  // non acceso). Senza questa dichiarazione, resta solo il vecchio allegato generico di sempre.
+  const docCfg = mr.get(moduleSlug).documenti;
+  const docModuleOk = docCfg.modulo && docCfg.campo_file && db.prepare('SELECT 1 FROM modules WHERE slug = ? AND installed = 1').get(docCfg.modulo);
   for (const att of allegatiScaricati) {
     try {
       const storedName = await saveUploadBuffer(att.bytes, att.filename, att.mimeType);
@@ -271,6 +279,15 @@ async function processaMessaggio(accessToken, msgId, rule) {
       ).run(att.filename, storedName, att.mimeType || 'application/octet-stream', att.bytes.length, null);
       db.prepare('INSERT INTO record_attachments (module_slug, record_id, upload_id, tipo) VALUES (?, ?, ?, ?)')
         .run(moduleSlug, recordId, uploadResult.lastInsertRowid, 'gmail');
+      if (docModuleOk) {
+        const docData = { [docCfg.campo_file]: { id: uploadResult.lastInsertRowid, name: att.filename, size: att.bytes.length, mime_type: att.mimeType || 'application/octet-stream' } };
+        if (docCfg.campo_titolo) docData[docCfg.campo_titolo] = rule.descrizione || subject;
+        if (docCfg.campo_tipo && docCfg.valore_bolletta && !semplice) docData[docCfg.campo_tipo] = docCfg.valore_bolletta;
+        if (docCfg.campo_data) docData[docCfg.campo_data] = dataSpesa;
+        if (docCfg.relazione) docData[docCfg.relazione] = recordId;
+        db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)')
+          .run(docCfg.modulo, require('./record-owner').ownerFor(recordId, docCfg.modulo), JSON.stringify(docData));
+      }
     } catch (e) {
       console.error('[gmail-poller] allegato non salvato per messaggio', msgId, ':', e.message);
     }

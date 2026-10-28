@@ -27,9 +27,15 @@ const DEFAULT_PIANO = { modulo: '', campi: { nome: '', importo_totale: '', n_rat
 // propri (si abbinano ai giri interni, non alle spese), `registra` = qui si registrano le uscite dell'estratto che non hanno ancora una riga, `categoria_default`
 // = categoria di una riga registrata dall'estratto se non se ne sceglie un'altra.
 // versione della dichiarazione: ogni salvataggio scrive la corrente; i valori di partenza nuovi (ruoli aggiunti dopo) si completano una volta sola, sulle dichiarazioni più vecchie
-const SCHEMA_V = 2;
+const SCHEMA_V = 3;
 const DEFAULT_ESTRATTO = { giro_categories: [], registra: false, categoria_default: '' };
 const DEFAULT_AVVISI = { states: { nuovo: '', da_fare: '', fatto: '' }, piano: DEFAULT_PIANO, nuovo: false, scadenze: false, tag: 'scadenza', label: '', noun_s: 'riga', noun_p: 'righe' };
+// Dove archiviare l'allegato di una riga arrivata dalla mail (es. il PDF della bolletta): un altro modulo (tipicamente un archivio
+// documenti con cartelle), i suoi campi titolo/tipo/data/file e, se presente, la relazione che lo riporta a questa riga.
+// `valore_bolletta` è il valore del campo tipo da usare per le bollette — l'unico caso che gmail-poller.js sa riconoscere oggi
+// (le ricevute di pagamento le carica a mano chi paga, non arrivano per mail). Dichiarato qui, non nel codice: nessun nome di
+// modulo/campo scritto in gmail-poller.js, che legge solo questa configurazione.
+const DEFAULT_DOCUMENTI = { modulo: '', campo_titolo: '', campo_tipo: '', valore_bolletta: '', campo_file: '', campo_data: '', relazione: '' };
 
 function parse(row) {
   if (!row) return null;
@@ -41,7 +47,8 @@ function parse(row) {
   return { module_slug: row.module_slug, kind: row.kind || null, uses, roles, owner_user_id: Number.isInteger(extra.owner_user_id) && extra.owner_user_id > 0 ? extra.owner_user_id : null,
     avvisi: { ...DEFAULT_AVVISI, ...av, states: { ...DEFAULT_AVVISI.states, ...(av.states || {}) }, piano: { ...DEFAULT_PIANO, ...(av.piano || {}), campi: { ...DEFAULT_PIANO.campi, ...((av.piano || {}).campi || {}) } } },
     riepiloghi: { ...DEFAULT_RIEPILOGHI, ...(extra.riepiloghi || {}) },
-    estratto: { ...DEFAULT_ESTRATTO, ...(extra.estratto || {}) } };
+    estratto: { ...DEFAULT_ESTRATTO, ...(extra.estratto || {}) },
+    documenti: { ...DEFAULT_DOCUMENTI, ...(extra.documenti || {}) } };
 }
 
 function get(slug) { return parse(db.prepare('SELECT * FROM module_roles WHERE module_slug = ?').get(slug)); }
@@ -79,16 +86,21 @@ function clean(input) {
   };
   const es = (input && input.estratto) || {};
   const estratto = { giro_categories: list(es.giro_categories), registra: !!es.registra, categoria_default: word(es.categoria_default, '', 60) };
+  const doc = (input && input.documenti) || {};
+  const documenti = {
+    modulo: stateKey(doc.modulo), campo_titolo: stateKey(doc.campo_titolo), campo_tipo: stateKey(doc.campo_tipo),
+    valore_bolletta: word(doc.valore_bolletta, '', 60), campo_file: stateKey(doc.campo_file), campo_data: stateKey(doc.campo_data), relazione: stateKey(doc.relazione),
+  };
   const ow = input && input.owner_user_id;
   const owner_user_id = ow === undefined ? undefined : (Number.isInteger(Number(ow)) && Number(ow) > 0 ? Number(ow) : null); // undefined = non indicato: si conserva quello che c'è
-  return { kind, uses, roles, avvisi, riepiloghi, estratto, owner_user_id };
+  return { kind, uses, roles, avvisi, riepiloghi, estratto, documenti, owner_user_id };
 }
 
 function set(slug, input) {
   const c = clean(input);
   if (c.owner_user_id === undefined) { const cur = get(slug); c.owner_user_id = cur ? cur.owner_user_id : null; }
   db.prepare('INSERT INTO module_roles (module_slug, kind, uses, roles, extra) VALUES (?, ?, ?, ?, ?) ON CONFLICT(module_slug) DO UPDATE SET kind = excluded.kind, uses = excluded.uses, roles = excluded.roles, extra = excluded.extra')
-    .run(slug, c.kind, JSON.stringify(c.uses), JSON.stringify(c.roles), JSON.stringify({ v: SCHEMA_V, owner_user_id: c.owner_user_id, avvisi: c.avvisi, riepiloghi: c.riepiloghi, estratto: c.estratto }));
+    .run(slug, c.kind, JSON.stringify(c.uses), JSON.stringify(c.roles), JSON.stringify({ v: SCHEMA_V, owner_user_id: c.owner_user_id, avvisi: c.avvisi, riepiloghi: c.riepiloghi, estratto: c.estratto, documenti: c.documenti }));
   return get(slug);
 }
 
@@ -121,7 +133,9 @@ function seedIfEmpty() {
     const vecchia = (parsed.v || 0) < SCHEMA_V;
     const nuoviRuoli = vecchia ? ['note', 'data_incerta', 'debito'].filter((k) => cfg.roles[k] && !cur.roles[k]) : [];
     const needRate = vecchia && cfg.riepiloghi && cfg.riepiloghi.rate_categories && parsed.riepiloghi && !('rate_categories' in parsed.riepiloghi);
-    if (!(needAvvisi || needRiep || needPiano || needEstratto || nuoviRuoli.length || needRate)) continue;
+    // dichiarato prima dell'archiviazione in Documenti: si aggiunge dove salvare gli allegati della mail
+    const needDocumenti = cfg.documenti && !parsed.documenti;
+    if (!(needAvvisi || needRiep || needPiano || needEstratto || nuoviRuoli.length || needRate || needDocumenti)) continue;
     let avvisi = needAvvisi ? cfg.avvisi : cur.avvisi, roles = cur.roles;
     if (needPiano) {
       avvisi = { ...avvisi, states: { ...avvisi.states, fatto: cfg.avvisi.states.fatto }, piano: cfg.avvisi.piano };
@@ -134,7 +148,7 @@ function seedIfEmpty() {
     for (const k of nuoviRuoli) roles = { ...roles, [k]: cfg.roles[k] };
     let riepiloghi = needRiep ? cfg.riepiloghi : cur.riepiloghi;
     if (needRate) riepiloghi = { ...riepiloghi, rate_categories: cfg.riepiloghi.rate_categories };
-    set(slug, { kind: cur.kind, uses, roles, avvisi, riepiloghi, estratto: needEstratto ? cfg.estratto : cur.estratto }); n++;
+    set(slug, { kind: cur.kind, uses, roles, avvisi, riepiloghi, estratto: needEstratto ? cfg.estratto : cur.estratto, documenti: needDocumenti ? cfg.documenti : cur.documenti }); n++;
   }
   return n;
 }

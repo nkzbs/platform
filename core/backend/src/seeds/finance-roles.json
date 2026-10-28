@@ -60,6 +60,15 @@
         "Rata"
       ],
       "savings_field": ""
+    },
+    "documenti": {
+      "modulo": "documenti",
+      "campo_titolo": "titolo",
+      "campo_tipo": "tipo",
+      "valore_bolletta": "Bolletta",
+      "campo_file": "file",
+      "campo_data": "data",
+      "relazione": "spesa_personale"
     }
   },
   "spese_casa": {
@@ -120,6 +129,15 @@
         "Rata"
       ],
       "savings_field": ""
+    },
+    "documenti": {
+      "modulo": "documenti",
+      "campo_titolo": "titolo",
+      "campo_tipo": "tipo",
+      "valore_bolletta": "Bolletta",
+      "campo_file": "file",
+      "campo_data": "data",
+      "relazione": "spesa_casa"
     }
   },
   "timbrature": {
