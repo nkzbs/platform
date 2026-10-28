@@ -82,6 +82,13 @@ if has core; then
   done
   [ -n "$TOKEN" ] || { echo "Login a Super Admin fallito"; exit 1; }
   api POST /tenants/redeploy-all '{}' | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const o=JSON.parse(s);for(const r of (o.results||o)) console.log('  ',r.slug,'->',r.ok?'aggiornato':('saltato: '+(r.skipped||r.error)))}catch(e){console.log(s.slice(0,300))}})"
+  # Ogni tenant "aggiornato" è un container NUOVO (IP diverso): senza questo reload, platform-nginx continua a
+  # parlare con l'IP vecchio finché non ci si inciampa da soli (visto dal vivo il 28/10: Finance a 502 per una
+  # manciata di secondi dopo un redeploy "core" lanciato da riga di comando, perché solo backend/frontend
+  # ricaricavano nginx). La richiesta di redeploy-all può restare in corso oltre il timeout di Cloudflare (524) e
+  # finire comunque sul NAS: il reload qui aspetta un momento per darle il tempo di completare lo swap.
+  sleep 5
+  nas "$D exec platform-nginx nginx -s reload 2>&1 | tail -1 || true"
 fi
 
 echo "== Verifica"
