@@ -10,6 +10,18 @@ function eur(n) {
   return (n || 0).toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 })
 }
 
+// Stessa coppia di stati A<->B già usata in PeriodView.jsx/ChecklistWidget.jsx (es. attivo<->saldato):
+// un piano può essere segnato "saldato" a mano (il bottone di workflow), indipendentemente da quante
+// rate abbia davvero marcate pagate una per una — serve per "IKEA" (segnalato dall'utente il 28/10:
+// saldato a mano ma non spariva, perché il calcolo guardava solo il residuo delle rate).
+function findTogglePair(workflow) {
+  if (!workflow || !workflow.transitions) return null
+  for (const t1 of workflow.transitions) {
+    if (workflow.transitions.some((t2) => t2.from === t1.to && t2.to === t1.from)) return { off: t1.from, on: t1.to }
+  }
+  return null
+}
+
 // Stesso calcolo di ModulePage/index.jsx (canDo('delete')): qui RecordDetailModal non lo riceveva affatto
 // (sempre "niente permesso", Elimina mai visibile neanche per admin — segnalato dall'utente il 28/10).
 function canDeleteOn(schema, user) {
@@ -67,7 +79,8 @@ function ParentChildrenView({ config, mod, schema, token, tableColumns, records,
   const titleKey = (tableColumns && tableColumns[0] && tableColumns[0].key)
     || (fields.find((f) => ['nome', 'name', 'titolo', 'descrizione'].includes(f.key)) || fields[0] || {}).key
 
-  const saldato = (p) => p.residuo <= 0 && p.n_children > 0
+  const togglePair = findTogglePair(schema && schema.workflow)
+  const saldato = (p) => (togglePair && recordById[p.__id] && recordById[p.__id].data._stato === togglePair.on) || (p.residuo <= 0 && p.n_children > 0)
   const nSaldati = data.rows.filter(saldato).length
   const visibleRows = mostraSaldati ? data.rows : data.rows.filter((p) => !saldato(p))
 
@@ -90,7 +103,7 @@ function ParentChildrenView({ config, mod, schema, token, tableColumns, records,
                   <div className="text-ink font-medium hover:text-accent transition">{rec && titleKey ? String(rec.data[titleKey] ?? '—') : '#' + p.__id}</div>
                   <div className="text-xs text-gray-500 mt-0.5">{rec && rec.data.creditore && rec.data.creditore !== rec.data[titleKey] ? rec.data.creditore + ' · ' : ''}{eur(p.totale)} totale · {p.n_done}/{p.n_children} completati</div>
                 </div>
-                {p.residuo <= 0 && p.n_children > 0 && <span className="text-xs text-green-400 flex-shrink-0">Saldato</span>}
+                {saldato(p) && <span className="text-xs text-green-400 flex-shrink-0">Saldato</span>}
               </div>
               <div className="h-1.5 rounded-full bg-gray-800 overflow-hidden mb-3">
                 <div className="h-full bg-green-500 rounded-full" style={{ width: p.pct + '%' }} />
