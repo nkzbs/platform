@@ -60,9 +60,11 @@ export default function RiepilogoMensile({ data, label, nomeMese }) {
       <style>{`
         @keyframes rm-su { from { opacity: 0; transform: translateY(10px) scale(.98) } to { opacity: 1; transform: none } }
         @keyframes rm-luce { 0%,100% { opacity: .55 } 50% { opacity: .9 } }
+        @keyframes rm-sforato { 0%,100% { opacity: 1 } 50% { opacity: .55 } }
         .rm-tile { animation: rm-su .55s cubic-bezier(.2,.8,.2,1) both }
         .rm-glow { animation: rm-luce 4s ease-in-out infinite }
-        @media (prefers-reduced-motion: reduce) { .rm-tile, .rm-glow { animation: none } }
+        .rm-sforato { animation: rm-sforato 1.8s ease-in-out infinite }
+        @media (prefers-reduced-motion: reduce) { .rm-tile, .rm-glow, .rm-sforato { animation: none } }
       `}</style>
       <div className="flex items-baseline justify-between mb-3 px-1">
         <div className="text-sm font-semibold text-ink">{label}</div>
@@ -89,14 +91,23 @@ export default function RiepilogoMensile({ data, label, nomeMese }) {
                 {usato === null ? 'Nessuna entrata registrata per questo mese' : ok ? 'Finora hai usato il ' + Math.round(usato * 100) + '% delle entrate' : 'Sei oltre le entrate del ' + Math.round((usato - 1) * 100) + '%'}
               </div>
             </div>
-            <svg viewBox="0 0 110 110" className="w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 -rotate-90 text-ink" aria-hidden="true">
-              <circle cx="55" cy="55" r={R} fill="none" stroke="currentColor" strokeWidth="9" className="text-gray-500/20" />
-              <circle cx="55" cy="55" r={R} fill="none" stroke={usato !== null && usato > 1 ? ROSSO : col} strokeWidth="9" strokeLinecap="round"
-                strokeDasharray={C} strokeDashoffset={montato ? C * (1 - frac) : C} style={{ transition: 'stroke-dashoffset 1.1s cubic-bezier(.2,.8,.2,1) .2s' }} />
-              <text x="55" y="55" textAnchor="middle" dominantBaseline="central" className="rotate-90" style={{ transformOrigin: '55px 55px', fill: 'currentColor', fontSize: 20, fontWeight: 700 }}>
-                {usato === null ? '–' : Math.round(usato * 100) + '%'}
-              </text>
-            </svg>
+            {/* Oltre il 100% l'anello resta volutamente pieno (non può disegnare "più di un giro" in modo
+               leggibile) — ma un anello pieno fermo, col solo numero a dirlo, sembrava rotto piuttosto che
+               "hai sforato" (segnalato dall'utente il 28/10). Pulsa ed esce un'etichetta "sforato" sotto il
+               numero: lo stesso numero (es. 248%) ora si legge come uno stato voluto, non un errore. */}
+            <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0">
+              <svg viewBox="0 0 110 110" className="w-full h-full -rotate-90 text-ink" aria-hidden="true">
+                <circle cx="55" cy="55" r={R} fill="none" stroke="currentColor" strokeWidth="9" className="text-gray-500/20" />
+                <circle cx="55" cy="55" r={R} fill="none" stroke={usato !== null && usato > 1 ? ROSSO : col} strokeWidth="9" strokeLinecap="round"
+                  strokeDasharray={C} strokeDashoffset={montato ? C * (1 - frac) : C}
+                  className={usato !== null && usato > 1 ? 'rm-sforato' : ''}
+                  style={{ transition: 'stroke-dashoffset 1.1s cubic-bezier(.2,.8,.2,1) .2s' }} />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center leading-none" style={{ color: 'currentColor' }}>
+                <span style={{ fontSize: 20, fontWeight: 700 }}>{usato === null ? '–' : Math.round(usato * 100) + '%'}</span>
+                {usato !== null && usato > 1 && <span className="text-[9px] font-semibold uppercase tracking-wide mt-0.5" style={{ color: ROSSO }}>sforato</span>}
+              </div>
+            </div>
           </div>
         </Tile>
 
