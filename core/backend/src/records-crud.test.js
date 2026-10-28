@@ -173,6 +173,40 @@ async function main() {
     assertEq(res.status, 404);
   });
 
+  // ─── Cancellare un piano a rate (Vista genitore-figli) in cascata, solo le rate NON pagate ──────────────
+  console.log('\n--- DELETE in cascata delle righe collegate (piano a rate, Vista genitore-figli) ---');
+  const PARENT_SLUG = 'crud_test_piano';
+  const CHILD_SLUG = 'crud_test_rata';
+  db.prepare('INSERT INTO modules (name, slug, icon, color, installed, sort_order, schema_json) VALUES (?, ?, ?, ?, 1, 98, ?)').run(
+    'Piano Test', PARENT_SLUG, 'box', '#2563EB',
+    JSON.stringify({ fields: [{ key: 'nome', type: 'text', label: 'Nome' }], parent_children_views: [{ key: 'rate', label: 'Rate', children_module: CHILD_SLUG, children_relation: 'piano', children_status_field: 'stato', children_status_done_value: 'pagata', amount_field: 'nome', child_amount_field: 'importo' }] })
+  );
+  db.prepare('INSERT INTO modules (name, slug, icon, color, installed, sort_order, schema_json) VALUES (?, ?, ?, ?, 1, 97, ?)').run(
+    'Rata Test', CHILD_SLUG, 'box', '#2563EB',
+    JSON.stringify({ fields: [{ key: 'importo', type: 'number', label: 'Importo' }, { key: 'stato', type: 'select', label: 'Stato', options: ['da_pagare', 'pagata'] }], relations: [{ key: 'piano', label: 'Piano', type: 'many_to_one', target_module: PARENT_SLUG }] })
+  );
+  let pianoId, rataNonPagataId, rataPagataId;
+  await test('setup: creo il piano e due rate, una pagata una no', async () => {
+    const p = await (await fetch(BASE + '/api/records/' + PARENT_SLUG, { method: 'POST', headers: auth, body: JSON.stringify({ nome: 'Piano A' }) })).json();
+    pianoId = p.id;
+    const r1 = await (await fetch(BASE + '/api/records/' + CHILD_SLUG, { method: 'POST', headers: auth, body: JSON.stringify({ importo: 100, stato: 'da_pagare', piano: pianoId }) })).json();
+    rataNonPagataId = r1.id;
+    const r2 = await (await fetch(BASE + '/api/records/' + CHILD_SLUG, { method: 'POST', headers: auth, body: JSON.stringify({ importo: 100, stato: 'pagata', piano: pianoId }) })).json();
+    rataPagataId = r2.id;
+    assertTrue(typeof pianoId === 'number' && typeof rataNonPagataId === 'number' && typeof rataPagataId === 'number');
+  });
+
+  await test('DELETE del piano elimina anche la rata non pagata collegata, non quella pagata', async () => {
+    const res = await fetch(BASE + '/api/records/' + PARENT_SLUG + '/' + pianoId, { method: 'DELETE', headers: auth });
+    const body = await res.json();
+    assertEq(res.status, 200);
+    assertEq(body.righe_collegate_eliminate, 1, 'deve eliminare esattamente 1 riga collegata (quella non pagata)');
+    const getNonPagata = await fetch(BASE + '/api/records/' + CHILD_SLUG + '/' + rataNonPagataId, { headers: auth });
+    assertEq(getNonPagata.status, 404, 'la rata non pagata deve essere stata eliminata');
+    const getPagata = await fetch(BASE + '/api/records/' + CHILD_SLUG + '/' + rataPagataId, { headers: auth });
+    assertEq(getPagata.status, 200, 'la rata già pagata NON deve essere toccata');
+  });
+
   console.log(`\n${'='.repeat(60)}`);
   console.log(passed + ' passati, ' + failed + ' falliti su ' + (passed + failed) + ' test.');
   if (failed > 0) console.log('Falliti: ' + failures.join(', '));

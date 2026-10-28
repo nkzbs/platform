@@ -328,7 +328,9 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
   }
 
   const remove = async (id) => {
-    await api.del('/records/' + mod.slug + '/' + id)
+    const res = await api.del('/records/' + mod.slug + '/' + id)
+    const n = res.data && res.data.righe_collegate_eliminate
+    if (n) toast('Eliminato anche ' + n + ' record' + (n === 1 ? '' : 'i') + ' collegat' + (n === 1 ? 'o' : 'i') + ' non ancora completat' + (n === 1 ? 'o' : 'i'))
     loadRecords()
   }
 

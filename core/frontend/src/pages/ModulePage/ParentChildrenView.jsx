@@ -24,6 +24,10 @@ function ParentChildrenView({ config, mod, schema, token, tableColumns, records,
   const api = useApi(token)
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState(null)
+  // Un piano saldato (tutte le rate pagate) resta nel suo modulo — non si cancella da solo, è storico — ma
+  // di default non ingombra più questa lista: "archiviato", non sparito (un link lo riporta a vista).
+  // Richiesto dall'utente il 28/10.
+  const [mostraSaldati, setMostraSaldati] = useState(false)
   const [detailId, setDetailId] = useState(null)
   const [childDetailId, setChildDetailId] = useState(null)
   const [childMod, setChildMod] = useState(null)
@@ -63,10 +67,21 @@ function ParentChildrenView({ config, mod, schema, token, tableColumns, records,
   const titleKey = (tableColumns && tableColumns[0] && tableColumns[0].key)
     || (fields.find((f) => ['nome', 'name', 'titolo', 'descrizione'].includes(f.key)) || fields[0] || {}).key
 
+  const saldato = (p) => p.residuo <= 0 && p.n_children > 0
+  const nSaldati = data.rows.filter(saldato).length
+  const visibleRows = mostraSaldati ? data.rows : data.rows.filter((p) => !saldato(p))
+
   return (
     <div>
+      {nSaldati > 0 && (
+        <div className="mb-3">
+          <button type="button" onClick={() => setMostraSaldati((v) => !v)} className="text-xs text-gray-500 hover:text-accent transition">
+            {mostraSaldati ? 'Nascondi i saldati' : 'Mostra anche i ' + nSaldati + ' saldati'}
+          </button>
+        </div>
+      )}
       <div className="space-y-3">
-        {data.rows.map((p) => {
+        {visibleRows.map((p) => {
           const rec = recordById[p.__id]
           return (
             <div key={p.__id} className="bg-surface-card rounded-md border border-gray-800 p-5">
@@ -92,7 +107,7 @@ function ParentChildrenView({ config, mod, schema, token, tableColumns, records,
             </div>
           )
         })}
-        {data.rows.length === 0 && <div className="text-sm text-gray-600">Nessun elemento.</div>}
+        {visibleRows.length === 0 && <div className="text-sm text-gray-600">{data.rows.length === 0 ? 'Nessun elemento.' : 'Tutto saldato.'}</div>}
       </div>
 
       {detailId && mod && schema && (

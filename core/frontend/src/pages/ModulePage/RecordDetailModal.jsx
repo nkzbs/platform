@@ -310,7 +310,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
     return (
       <input
         type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : f.type === 'time' ? 'time' : 'text'}
-        className="w-full bg-surface-input text-ink px-2 py-1 rounded text-xs outline-none border border-gray-700 focus:border-accent"
+        className="w-full min-w-0 max-w-full bg-surface-input text-ink px-2 py-1 rounded text-xs outline-none border border-gray-700 focus:border-accent"
         placeholder={f.label}
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value)}
@@ -414,7 +414,9 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   // apposta), a differenza del cestino al volo nell'elenco.
   const remove = async () => {
     if (!window.confirm('Eliminare questo record? Non si può annullare.')) return
-    await api.del('/records/' + mod.slug + '/' + recordId)
+    const res = await api.del('/records/' + mod.slug + '/' + recordId)
+    const n = res.data && res.data.righe_collegate_eliminate
+    if (n) toast('Eliminato anche ' + n + ' record' + (n === 1 ? '' : 'i') + ' collegat' + (n === 1 ? 'o' : 'i') + ' non ancora completat' + (n === 1 ? 'o' : 'i'))
     onClose()
     if (onDeleted) onDeleted()
   }
@@ -846,7 +848,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                                   ) : (
                                     <input
                                       type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : f.type === 'time' ? 'time' : 'text'}
-                                      className="w-full bg-surface-input text-ink px-2 py-1 rounded text-xs outline-none border border-gray-700 focus:border-green-500"
+                                      className="w-full min-w-0 max-w-full bg-surface-input text-ink px-2 py-1 rounded text-xs outline-none border border-gray-700 focus:border-green-500"
                                       placeholder={f.label}
                                       value={addForm[f.key] || ''}
                                       onChange={(e) => setChildAddForms((p) => ({ ...p, [c.module_slug]: { ...(p[c.module_slug] || {}), [f.key]: e.target.value } }))}

@@ -942,6 +942,33 @@ router.post('/:slug/:id/transition', requireAuth, requireModuleAccess, (req, res
   res.status(out.status).json(out.body);
 });
 
+// Cancellare un piano a rate (debiti_casa/debiti_personali, dichiarato con una scheda "Piani rateali" — Builder →
+// Vista genitore-figli) lasciava le rate già generate come righe di spesa orfane, collegate a un piano che non
+// esiste più: bisognava poi cercarle e cancellarle una per una a mano (segnalato dall'utente il 28/10). Qui si
+// cancellano IN CASCATA, ma solo quelle NON ancora pagate (children_status_field diverso da children_status_done_value):
+// le rate già pagate restano, sono storico di un pagamento reale già avvenuto. Generico: legge solo la dichiarazione
+// del modulo (parent_children_views / vista "children"), nessun nome di modulo o di campo scritto qui.
+async function cascadeDeleteUnpaidChildren(schema, parentId, actor) {
+  const views = [...(schema.parent_children_views || []), ...((schema.views || []).filter((v) => v.mode === 'children'))];
+  let n = 0;
+  for (const cfg of views) {
+    if (!cfg.children_module || !cfg.children_relation || !cfg.children_status_field) continue;
+    const children = db.prepare('SELECT id, data FROM records WHERE module_slug = ?').all(cfg.children_module);
+    for (const row of children) {
+      let data; try { data = JSON.parse(row.data || '{}'); } catch (e) { continue; }
+      if (data[cfg.children_relation] !== parentId) continue;
+      if (data[cfg.children_status_field] === cfg.children_status_done_value) continue; // già pagata: non si tocca
+      const attachments = db.prepare('SELECT upload_id FROM record_attachments WHERE module_slug = ? AND record_id = ?').all(cfg.children_module, row.id);
+      db.prepare('DELETE FROM record_attachments WHERE module_slug = ? AND record_id = ?').run(cfg.children_module, row.id);
+      for (const att of attachments) { try { await deleteUploadById(att.upload_id); } catch (e) {} }
+      logHistory(cfg.children_module, row.id, actor, 'delete', data, null);
+      db.prepare('DELETE FROM records WHERE id = ? AND module_slug = ?').run(row.id, cfg.children_module);
+      n++;
+    }
+  }
+  return n;
+}
+
 router.delete('/:slug/:id', requireAuth, requireModuleAccess, async (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const existing = db.prepare('SELECT * FROM records WHERE id = ? AND module_slug = ?').get(req.params.id, req.params.slug);
@@ -962,8 +989,9 @@ router.delete('/:slug/:id', requireAuth, requireModuleAccess, async (req, res) =
   }
   logHistory(req.params.slug, req.params.id, req.user.username, 'delete', JSON.parse(existing.data), null);
   db.prepare('DELETE FROM records WHERE id = ? AND module_slug = ?').run(req.params.id, req.params.slug);
-  logAudit(req.user.username, 'record.delete', req.params.slug + '#' + req.params.id, null);
-  res.json({ ok: true });
+  const righeCollegate = await cascadeDeleteUnpaidChildren(schema, parseInt(req.params.id, 10), req.user.username);
+  logAudit(req.user.username, 'record.delete', req.params.slug + '#' + req.params.id, righeCollegate ? { righe_collegate_eliminate: righeCollegate } : null);
+  res.json({ ok: true, righe_collegate_eliminate: righeCollegate });
 });
 
 // ─── ALLEGATI TIPIZZATI ──────────────────────────────────────────────────────
