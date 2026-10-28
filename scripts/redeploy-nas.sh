@@ -81,7 +81,11 @@ if has core; then
     sleep 2
   done
   [ -n "$TOKEN" ] || { echo "Login a Super Admin fallito"; exit 1; }
-  api POST /tenants/redeploy-all '{}' | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const o=JSON.parse(s);for(const r of (o.results||o)) console.log('  ',r.slug,'->',r.ok?'aggiornato':('saltato: '+(r.skipped||r.error)))}catch(e){console.log(s.slice(0,300))}})"
+  # force:true — qui è sempre un'azione umana ed esplicita (chi lancia questo script lo sta facendo apposta,
+  # ora), non il giro automatico notturno: senza, /redeploy-all salta il tenant se qualcuno lo ha usato negli
+  # ultimi 3 minuti (sessions.last_active_at) — e chi lancia un redeploy subito dopo aver cambiato qualcosa
+  # è quasi sempre proprio quel "qualcuno" (visto dal vivo il 28/10: saltato in silenzio più volte di fila).
+  api POST /tenants/redeploy-all '{"force":true}' | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const o=JSON.parse(s);for(const r of (o.results||o)) console.log('  ',r.slug,'->',r.ok?'aggiornato':('saltato: '+(r.skipped||r.error)))}catch(e){console.log(s.slice(0,300))}})"
   # Ogni tenant "aggiornato" è un container NUOVO (IP diverso): senza questo reload, platform-nginx continua a
   # parlare con l'IP vecchio finché non ci si inciampa da soli (visto dal vivo il 28/10: Finance a 502 per una
   # manciata di secondi dopo un redeploy "core" lanciato da riga di comando, perché solo backend/frontend
