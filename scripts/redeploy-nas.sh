@@ -69,7 +69,9 @@ if has core; then
   # il redeploy di tutti i tenant da riga di comando.
   echo "== Ricreo i tenant (la build dell'immagine la fa /redeploy-all da sé)"
   PW=$(cat "$BK/nas-super-admin-password.txt")
-  api() { curl -s -X "$1" -H 'Host: admin.platform-core.it' -H 'Content-Type: application/json' ${TOKEN:+-H "Authorization: Bearer $TOKEN"} ${3:+-d "$3"} "http://192.168.1.2:4000/api$2"; }
+  # https://admin.platform-core.it, non più http://192.168.1.2:4000 (rotto dal vivo il 28/10: da quando Cloudflare
+  # è Full-strict, la porta 4000 rifiuta la richiesta in chiaro — "400 plain HTTP request sent to HTTPS port").
+  api() { curl -s -X "$1" -H 'Content-Type: application/json' ${TOKEN:+-H "Authorization: Bearer $TOKEN"} ${3:+-d "$3"} "https://admin.platform-core.it/api$2"; }
   for i in $(seq 1 15); do
     RESP=$(api POST /auth/login "{\"username\":\"admin\",\"password\":\"$PW\"}")
     TOKEN=$(printf '%s' "$RESP" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{process.stdout.write(JSON.parse(s).token||'')}catch(e){}})")
