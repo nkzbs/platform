@@ -467,7 +467,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                 const { anno, mese } = meseScelto((w.config || {}).giorno_cutoff)
                 return <RiepilogoMensile data={data} label={w.label} nomeMese={new Date(anno, mese, 1).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })} />
               })()}
-              {w.type === 'coda' && <QueueWidget token={token} onNavigate={onNavigate} modules={modules} />}
+              {w.type === 'coda' && <QueueWidget token={token} onNavigate={onNavigate} modules={modules} user={user} />}
               {w.type === 'timbrature_rapide' && <TimbratureWidget token={token} user={user} onNavigate={onNavigate} />}
               {w.type === 'come_sta_andando' && <InsightsCard token={token} widgetId={w.id} title={w.label} onNavigate={features.movimenti ? onNavigate : undefined} />}
               {w.type === 'checklist' && (
@@ -697,12 +697,12 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="text-xs text-gray-400 block mb-1">Dal</label>
-                        <input type="date" className="w-full bg-surface-page text-ink px-3 py-2.5 rounded-lg outline-none border border-gray-800 focus:border-accent transition"
+                        <input type="date" className="w-full min-w-0 max-w-full bg-surface-page text-ink px-3 py-2.5 rounded-lg outline-none border border-gray-800 focus:border-accent transition"
                           value={checklistConfig.from} onChange={(e) => setChecklistConfig((c) => ({ ...c, from: e.target.value }))} />
                       </div>
                       <div>
                         <label className="text-xs text-gray-400 block mb-1">Al</label>
-                        <input type="date" className="w-full bg-surface-page text-ink px-3 py-2.5 rounded-lg outline-none border border-gray-800 focus:border-accent transition"
+                        <input type="date" className="w-full min-w-0 max-w-full bg-surface-page text-ink px-3 py-2.5 rounded-lg outline-none border border-gray-800 focus:border-accent transition"
                           value={checklistConfig.to} onChange={(e) => setChecklistConfig((c) => ({ ...c, to: e.target.value }))} />
                       </div>
                     </div>

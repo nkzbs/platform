@@ -10,7 +10,7 @@ const fmt = (iso) => String(iso || '').split('-').reverse().join('/')
 const addMonths = (iso, k) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() + k); return d.toISOString().slice(0, 10) }
 const today = () => new Date().toISOString().slice(0, 10)
 
-export default function SmistaPanel({ token, q, row, modules, onClose, onDone }) {
+export default function SmistaPanel({ token, q, row, modules, canDelete, onClose, onDone }) {
   const api = useApi(token)
   const d = row.data
   const mod = (modules || []).find((m) => m.slug === q.module_slug)
@@ -57,9 +57,22 @@ export default function SmistaPanel({ token, q, row, modules, onClose, onDone })
   if (q.rate) scelte.push(['rate', 'Dividi in rate', 'Crea un piano a rate: le rate sostituiscono questa riga.'])
   if (dest.length) scelte.push(['sposta', 'Sposta in un altro modulo', 'La riga cambia modulo e resta «da smistare» lì.'])
   if (q.fatto) scelte.push(['pagata', 'Già pagata', 'La riga passa direttamente a «' + q.fatto.replace(/_/g, ' ') + '».'])
+  // Scartare una riga arrivata per errore (es. mail smistata nel modulo sbagliato, spam) — prima bisognava
+  // uscire da qui e andare a cercarla nell'elenco del modulo per usare il cestino lì (segnalato dall'utente).
+  if (canDelete) scelte.push(['elimina', 'Elimina', 'Scarta la riga: non diventa una spesa, non si può annullare.'])
   const manca = modo === 'rate' && !(imp > 0)
 
   const conferma = async () => {
+    if (modo === 'elimina') {
+      if (!window.confirm('Eliminare questa riga? Non diventerà una spesa e non si può annullare.')) return
+      setBusy(true); setErr('')
+      const res = await api.del('/records/' + q.module_slug + '/' + row.id)
+      setBusy(false)
+      if (!res.ok) { setErr((res.data && res.data.error) || 'Non sono riuscito a eliminare questa riga.'); return }
+      window.dispatchEvent(new CustomEvent('platform:toast', { detail: { message: 'Riga eliminata', type: 'success' } }))
+      onDone('Riga eliminata.')
+      return
+    }
     setBusy(true); setErr('')
     const body = { suggestion_id: ai && ai.suggestion_id, modo, importo: importo === '' ? undefined : imp, scadenza: scadenza || undefined, categoria: categoria || undefined }
     if (modo === 'rate') { body.n_rate = n; body.data_prima_rata = prima }
@@ -106,7 +119,7 @@ export default function SmistaPanel({ token, q, row, modules, onClose, onDone })
 
         <div className="space-y-2 mb-4">
           {scelte.map(([k, titolo, desc]) => (
-            <label key={k} className={'flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition ' + (modo === k ? 'border-accent bg-accent/5' : 'border-gray-800 hover:border-gray-700')}>
+            <label key={k} className={'flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition ' + (modo === k ? (k === 'elimina' ? 'border-red-500/60 bg-red-900/10' : 'border-accent bg-accent/5') : 'border-gray-800 hover:border-gray-700')}>
               <input type="radio" name="smista-modo" className="mt-1" checked={modo === k} onChange={() => setModo(k)} />
               <span className="flex-1">
                 <span className="block text-sm text-ink font-medium">{titolo}</span>
@@ -136,11 +149,11 @@ export default function SmistaPanel({ token, q, row, modules, onClose, onDone })
           ))}
         </div>
 
-        {!(imp > 0) && modo !== 'rate' && modo !== 'sposta' && <div className="text-xs text-amber-400 mb-3">L'importo è 0 o mancante: controllalo nella bolletta prima di confermare.</div>}
+        {!(imp > 0) && modo !== 'rate' && modo !== 'sposta' && modo !== 'elimina' && <div className="text-xs text-amber-400 mb-3">L'importo è 0 o mancante: controllalo nella bolletta prima di confermare.</div>}
         {err && <div className="text-sm text-red-400 bg-red-900/20 border border-red-900/40 rounded-lg p-3 mb-3">{err}</div>}
         <div className="flex gap-3">
           <button type="button" onClick={onClose} className="flex-1 bg-gray-800 hover:bg-gray-700 text-ink py-2.5 rounded-lg text-sm transition">Annulla</button>
-          <button type="button" onClick={conferma} disabled={busy || manca} className="flex-1 bg-accent hover:opacity-90 disabled:opacity-50 text-white py-2.5 rounded-lg text-sm font-medium transition">{busy ? 'Un momento…' : 'Conferma'}</button>
+          <button type="button" onClick={conferma} disabled={busy || manca} className={'flex-1 disabled:opacity-50 text-white py-2.5 rounded-lg text-sm font-medium transition ' + (modo === 'elimina' ? 'bg-red-600 hover:opacity-90' : 'bg-accent hover:opacity-90')}>{busy ? 'Un momento…' : modo === 'elimina' ? 'Elimina' : 'Conferma'}</button>
         </div>
       </div>
     </div>
