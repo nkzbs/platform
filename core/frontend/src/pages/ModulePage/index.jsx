@@ -790,7 +790,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
       )}
 
       {schema && schema.view_tabs && schema.view_tabs.tabs && schema.view_tabs.tabs.length > 0 ? (
-        <ViewTabs tabs={schema.view_tabs.tabs} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} />
+        <ViewTabs tabs={schema.view_tabs.tabs} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} user={user} />
       ) : schema && schema.parent_children_views && schema.parent_children_views.length > 0 ? (
         <ParentChildrenView config={schema.parent_children_views[0]} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} user={user} />
       ) : schema && schema.period_views && schema.period_views.length > 0 ? (

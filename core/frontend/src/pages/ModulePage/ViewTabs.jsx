@@ -16,7 +16,7 @@ const BLOCK_ARRAY = {
   view: 'views',
 }
 
-function ViewTabs({ tabs, mod, schema, token, tableColumns, records }) {
+function ViewTabs({ tabs, mod, schema, token, tableColumns, records, user }) {
   const api = useApi(token)
   const [activeIdx, setActiveIdx] = useState(0)
   const [sourceCache, setSourceCache] = useState({}) // slug -> { mod, schema }
@@ -61,8 +61,8 @@ function ViewTabs({ tabs, mod, schema, token, tableColumns, records }) {
         const srcTableColumns = isOwn ? tableColumns : []
         const srcRecords = isOwn ? records : []
 
-        if (activeTab.block_type === 'period_view') return <PeriodView config={config} mod={srcMod} schema={srcSchema} token={token} tableColumns={srcTableColumns} records={srcRecords} />
-        if (activeTab.block_type === 'parent_children_view') return <ParentChildrenView config={config} mod={srcMod} schema={srcSchema} token={token} tableColumns={srcTableColumns} records={srcRecords} />
+        if (activeTab.block_type === 'period_view') return <PeriodView config={config} mod={srcMod} schema={srcSchema} token={token} tableColumns={srcTableColumns} records={srcRecords} user={user} />
+        if (activeTab.block_type === 'parent_children_view') return <ParentChildrenView config={config} mod={srcMod} schema={srcSchema} token={token} tableColumns={srcTableColumns} records={srcRecords} user={user} />
         if (activeTab.block_type === 'view') return <GenericView step={config} mod={srcMod} schema={srcSchema} token={token} tableColumns={srcTableColumns} records={srcRecords} defaultModuleSlug={srcMod.slug} />
         return null
       })()}
