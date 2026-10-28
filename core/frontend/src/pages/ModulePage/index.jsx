@@ -516,7 +516,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
                 {child.fields.map((f) => (
                   <div key={f.key} className="flex-1 min-w-[90px]">
                     <label className="text-[10px] text-gray-600 block mb-0.5">{f.label}</label>
-                    <input className="w-full bg-surface-card text-ink px-2 py-1.5 rounded text-xs outline-none border border-gray-700 focus:border-accent transition"
+                    <input className="w-full min-w-0 max-w-full bg-surface-card text-ink px-2 py-1.5 rounded text-xs outline-none border border-gray-700 focus:border-accent transition"
                       type={(f.type === 'number' || f.type === 'currency') ? 'number' : f.type === 'date' ? 'date' : f.type === 'time' ? 'time' : 'text'}
                       value={row.data[f.key] || ''} onChange={(e) => updateEmbeddedRow(child.module_slug, row._tmpId, f.key, e.target.value)} />
                   </div>
@@ -790,9 +790,9 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
       {schema && schema.view_tabs && schema.view_tabs.tabs && schema.view_tabs.tabs.length > 0 ? (
         <ViewTabs tabs={schema.view_tabs.tabs} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} />
       ) : schema && schema.parent_children_views && schema.parent_children_views.length > 0 ? (
-        <ParentChildrenView config={schema.parent_children_views[0]} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} />
+        <ParentChildrenView config={schema.parent_children_views[0]} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} user={user} />
       ) : schema && schema.period_views && schema.period_views.length > 0 ? (
-        <PeriodView config={schema.period_views[0]} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} />
+        <PeriodView config={schema.period_views[0]} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} user={user} />
       ) : schema && schema.views && schema.views.find((v) => v.placement === 'replace') ? (
         <GenericView step={schema.views.find((v) => v.placement === 'replace')} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} defaultModuleSlug={mod.slug} />
       ) : mod.list_view === 'archive' ? (
@@ -1262,7 +1262,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
               ) : quickCreateTargetFields.map((f) => (
                 <div key={f.key}>
                   <label className="text-xs text-gray-400 block mb-1">{f.label}{f.required && ' *'}</label>
-                  <input className="w-full bg-surface-page text-ink px-3 py-2.5 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition"
+                  <input className="w-full min-w-0 max-w-full bg-surface-page text-ink px-3 py-2.5 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition"
                     type={f.type === 'date' ? 'date' : f.type === 'time' ? 'time' : (f.type === 'number' || f.type === 'currency') ? 'number' : 'text'}
                     value={quickCreateForm[f.key] || ''} onChange={(e) => setQuickCreateForm({ ...quickCreateForm, [f.key]: e.target.value })} />
                 </div>

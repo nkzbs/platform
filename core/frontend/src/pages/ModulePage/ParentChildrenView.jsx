@@ -10,7 +10,17 @@ function eur(n) {
   return (n || 0).toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 })
 }
 
-function ParentChildrenView({ config, mod, schema, token, tableColumns, records }) {
+// Stesso calcolo di ModulePage/index.jsx (canDo('delete')): qui RecordDetailModal non lo riceveva affatto
+// (sempre "niente permesso", Elimina mai visibile neanche per admin — segnalato dall'utente il 28/10).
+function canDeleteOn(schema, user) {
+  const rules = schema && schema.permissions && schema.permissions.rules
+  if (!Array.isArray(rules) || rules.length === 0) return true
+  const rule = rules.find((r) => r.role === (user && user.role))
+  if (rule) return !!rule.delete
+  return (user && user.role) === 'admin'
+}
+
+function ParentChildrenView({ config, mod, schema, token, tableColumns, records, user }) {
   const api = useApi(token)
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState(null)
@@ -86,12 +96,12 @@ function ParentChildrenView({ config, mod, schema, token, tableColumns, records 
       </div>
 
       {detailId && mod && schema && (
-        <RecordDetailModal mod={mod} schema={schema} recordId={detailId} relatedCache={{}} token={token}
-          onClose={() => setDetailId(null)} onSaved={() => { setDetailId(null); load() }} />
+        <RecordDetailModal mod={mod} schema={schema} recordId={detailId} relatedCache={{}} token={token} user={user} canDelete={canDeleteOn(schema, user)}
+          onClose={() => setDetailId(null)} onSaved={() => { setDetailId(null); load() }} onDeleted={() => { setDetailId(null); load() }} />
       )}
       {childDetailId && childMod && childSchema && (
-        <RecordDetailModal mod={childMod} schema={childSchema} recordId={childDetailId} relatedCache={{}} token={token}
-          onClose={() => setChildDetailId(null)} onSaved={() => { setChildDetailId(null); load() }} />
+        <RecordDetailModal mod={childMod} schema={childSchema} recordId={childDetailId} relatedCache={{}} token={token} user={user} canDelete={canDeleteOn(childSchema, user)}
+          onClose={() => setChildDetailId(null)} onSaved={() => { setChildDetailId(null); load() }} onDeleted={() => { setChildDetailId(null); load() }} />
       )}
     </div>
   )

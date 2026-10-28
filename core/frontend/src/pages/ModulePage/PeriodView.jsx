@@ -33,7 +33,17 @@ function formatValue(value, format) {
   return n.toLocaleString('it-IT', { maximumFractionDigits: 2 })
 }
 
-function PeriodView({ config, mod, schema, token, tableColumns, records }) {
+// Stesso calcolo di ModulePage/index.jsx (canDo('delete')): qui RecordDetailModal non lo riceveva affatto
+// (sempre "niente permesso", Elimina mai visibile neanche per admin — segnalato dall'utente il 28/10).
+function canDeleteOn(schema, user) {
+  const rules = schema && schema.permissions && schema.permissions.rules
+  if (!Array.isArray(rules) || rules.length === 0) return true
+  const rule = rules.find((r) => r.role === (user && user.role))
+  if (rule) return !!rule.delete
+  return (user && user.role) === 'admin'
+}
+
+function PeriodView({ config, mod, schema, token, tableColumns, records, user }) {
   const api = useApi(token)
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState(null)
@@ -146,8 +156,8 @@ function PeriodView({ config, mod, schema, token, tableColumns, records }) {
       </div>
 
       {detailId && mod && schema && (
-        <RecordDetailModal mod={mod} schema={schema} recordId={detailId} relatedCache={{}} token={token}
-          onClose={() => setDetailId(null)} onSaved={() => { setDetailId(null); load(period) }} />
+        <RecordDetailModal mod={mod} schema={schema} recordId={detailId} relatedCache={{}} token={token} user={user} canDelete={canDeleteOn(schema, user)}
+          onClose={() => setDetailId(null)} onSaved={() => { setDetailId(null); load(period) }} onDeleted={() => { setDetailId(null); load(period) }} />
       )}
     </div>
   )

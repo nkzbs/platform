@@ -75,6 +75,21 @@ function formatAmount(n) {
   return n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
 }
 
+// Stesso calcolo di ModulePage/index.jsx (canDo('delete')) e di QueueWidget.jsx: qui serve perché
+// RecordDetailModal, aperto da questo widget, non lo riceveva affatto (sempre "niente permesso",
+// Elimina mai visibile neanche per admin — segnalato dall'utente il 28/10).
+function canDeleteFor(modules, slug, user) {
+  const mod = (modules || []).find((m) => m.slug === slug)
+  if (!mod) return true
+  let schema
+  try { schema = parseSchemaFrontend(mod.schema_json) } catch (e) { return true }
+  const rules = schema && schema.permissions && schema.permissions.rules
+  if (!Array.isArray(rules) || rules.length === 0) return true
+  const rule = rules.find((r) => r.role === (user && user.role))
+  if (rule) return !!rule.delete
+  return (user && user.role) === 'admin'
+}
+
 function ChecklistWidget({ config, token, label, color, modules, user, onMese }) {
   const api = useApi(token)
   const [rows, setRows] = useState([])
@@ -282,8 +297,10 @@ function ChecklistWidget({ config, token, label, color, modules, user, onMese })
             relatedCache={{}}
             token={token}
             user={user}
+            canDelete={canDeleteFor(modules, detail.module_slug, user)}
             onClose={() => setDetail(null)}
             onSaved={() => { setDetail(null); load() }}
+            onDeleted={() => { setDetail(null); load() }}
           />
         )
       })()}
