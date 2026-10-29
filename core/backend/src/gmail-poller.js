@@ -190,6 +190,18 @@ function titoloRiga(rule, subject, dataSpesa) {
   return (rule.descrizione || rule.mittente) + (data ? ' — ' + data : '');
 }
 
+// Nome del file salvato (locale o Drive): prima restava quello originale dell'allegato — spesso
+// un codice illeggibile del fornitore (es. "526514425373_2026_s.pdf") o, per una foto inoltrata da
+// telefono, un nome tipo "2026:160.jpg" che su Drive si vede uguale, fuori contesto (segnalato
+// dall'utente il 29/10). Stesso titolo già calcolato per la riga, con la data per intero (non solo
+// giorno/mese come nel titolo breve) e un indice se la mail ha più di un allegato.
+function nomeFileAllegato(rule, subject, dataSpesa, nomeOriginale, indice, totale) {
+  const ext = (String(nomeOriginale || '').match(/\.[a-zA-Z0-9]{1,6}$/) || [''])[0];
+  const base = titoloRiga(rule, subject, dataSpesa).replace(/\s+—\s+\d{2}\/\d{2}$/, '') + (dataSpesa ? ' - ' + dataSpesa : '');
+  const sicuro = base.replace(/[\/\\:*?"<>|]/g, '-').trim().slice(0, 100);
+  return sicuro + (totale > 1 ? ' (' + indice + ')' : '') + ext;
+}
+
 function costruisciRiga({ rule, declared, subject, importo, scadenza, dataSpesa }) {
   const semplice = rule.tipo === 'semplice';
   if (!declared || !declared.roles) return null;
@@ -283,16 +295,19 @@ async function processaMessaggio(accessToken, msgId, rule) {
   // non acceso). Senza questa dichiarazione, resta solo il vecchio allegato generico di sempre.
   const docCfg = mr.get(moduleSlug).documenti;
   const docModuleOk = docCfg.modulo && docCfg.campo_file && db.prepare('SELECT 1 FROM modules WHERE slug = ? AND installed = 1').get(docCfg.modulo);
+  let indiceAllegato = 0;
   for (const att of allegatiScaricati) {
+    indiceAllegato++;
     try {
-      const storedName = await saveUploadBuffer(att.bytes, att.filename, att.mimeType);
+      const nomeFile = nomeFileAllegato(rule, subject, dataSpesa, att.filename, indiceAllegato, allegatiScaricati.length);
+      const storedName = await saveUploadBuffer(att.bytes, nomeFile, att.mimeType);
       const uploadResult = db.prepare(
         'INSERT INTO uploads (original_name, stored_name, mime_type, size, uploaded_by) VALUES (?, ?, ?, ?, ?)'
-      ).run(att.filename, storedName, att.mimeType || 'application/octet-stream', att.bytes.length, null);
+      ).run(nomeFile, storedName, att.mimeType || 'application/octet-stream', att.bytes.length, null);
       db.prepare('INSERT INTO record_attachments (module_slug, record_id, upload_id, tipo) VALUES (?, ?, ?, ?)')
         .run(moduleSlug, recordId, uploadResult.lastInsertRowid, 'gmail');
       if (docModuleOk) {
-        const docData = { [docCfg.campo_file]: { id: uploadResult.lastInsertRowid, name: att.filename, size: att.bytes.length, mime_type: att.mimeType || 'application/octet-stream' } };
+        const docData = { [docCfg.campo_file]: { id: uploadResult.lastInsertRowid, name: nomeFile, size: att.bytes.length, mime_type: att.mimeType || 'application/octet-stream' } };
         if (docCfg.campo_titolo) docData[docCfg.campo_titolo] = titoloRiga(rule, subject, dataSpesa);
         if (docCfg.campo_tipo && docCfg.valore_bolletta && !semplice) docData[docCfg.campo_tipo] = docCfg.valore_bolletta;
         if (docCfg.campo_data) docData[docCfg.campo_data] = dataSpesa;
@@ -376,4 +391,4 @@ function startGmailPoller() {
   setInterval(pollGmail, 15 * 60 * 1000);
 }
 
-module.exports = { startGmailPoller, pollGmail, estraiImporto, estraiScadenzaGenerica, costruisciRiga };
+module.exports = { startGmailPoller, pollGmail, estraiImporto, estraiScadenzaGenerica, costruisciRiga, nomeFileAllegato };

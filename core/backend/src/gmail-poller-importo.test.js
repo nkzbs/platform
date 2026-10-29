@@ -10,7 +10,7 @@ process.env.UPLOAD_DIR = require('fs').mkdtempSync(path.join(os.tmpdir(), 'polle
 let passed = 0, failed = 0;
 function test(name, fn) { try { fn(); console.log('  ✓ ' + name); passed++; } catch (e) { console.error('  ✗ ' + name + '\n    ' + e.message); failed++; } }
 function assertEq(a, e, msg) { if (a !== e) throw new Error(`${msg || ''}: atteso ${JSON.stringify(e)}, ottenuto ${JSON.stringify(a)}`); }
-const { estraiImporto, estraiScadenzaGenerica, costruisciRiga } = require('./gmail-poller');
+const { estraiImporto, estraiScadenzaGenerica, costruisciRiga, nomeFileAllegato } = require('./gmail-poller');
 
 console.log('\n--- importo da una bolletta ---');
 test('un consumo di gas "44,000000 Smc" non è letto come 44 euro', () => {
@@ -70,6 +70,13 @@ test('senza un oggetto utile, il titolo è l\'etichetta della regola (o il mitte
   assertEq(d1.descrizione, 'A2A — 20/09');
   const { data: d2 } = costruisciRiga({ rule: { ...R, descrizione: '' }, declared: SPESA, subject: '', importo: 44, scadenza: null, dataSpesa: '2026-09-20' });
   assertEq(d2.descrizione, 'a@b.it — 20/09', 'senza etichetta della regola si ripiega sul mittente');
+});
+test('il file salvato prende un nome leggibile, non quello originale dell\'allegato', () => {
+  assertEq(nomeFileAllegato(R, 'Bolletta', '2026-09-20', '526514425373_2026_s.pdf', 1, 1), 'Bolletta - 2026-09-20.pdf');
+  assertEq(nomeFileAllegato(R, '(senza oggetto)', '2026-09-20', '2026:160.jpg', 1, 1), 'A2A - 2026-09-20.jpg', 'senza oggetto usa comunque l\'etichetta della regola, non il nome originale');
+  assertEq(nomeFileAllegato(R, 'Bolletta', '2026-09-20', 'a.pdf', 1, 2), 'Bolletta - 2026-09-20 (1).pdf');
+  assertEq(nomeFileAllegato(R, 'Bolletta', '2026-09-20', 'a.pdf', 2, 2), 'Bolletta - 2026-09-20 (2).pdf');
+  assertEq(nomeFileAllegato(R, 'Bolletta/Luce: urgente?', '2026-09-20', 'a.pdf', 1, 1), 'Bolletta-Luce- urgente- - 2026-09-20.pdf', 'caratteri non ammessi nei nomi file sostituiti');
 });
 test('bolletta senza importo letto: lo dice nelle note, importo 0', () => {
   const { data } = costruisciRiga({ rule: R, declared: SPESA, subject: 'Bolletta', importo: null, scadenza: null, dataSpesa: '2026-09-20' });
