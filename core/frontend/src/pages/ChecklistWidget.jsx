@@ -97,6 +97,12 @@ function ChecklistWidget({ config, token, label, color, modules, user, onMese })
   const [savingId, setSavingId] = useState(null)
   const [detail, setDetail] = useState(null) // { module_slug, recordId } — riga aperta nel modal
   const [monthOffset, setMonthOffset] = useState(0) // frecce del mese: 0 = quello di partenza, -1 = il precedente...
+  // Il campo giusto per il titolo di ogni riga (quello dichiarato come "descrizione" — Builder → Ruoli del
+  // modulo), non indovinato: "la prima stringa che trovo nell'oggetto" prendeva qualunque campo capitasse
+  // prima in ordine (es. la Scadenza, se il record è stato modificato e le chiavi si sono riordinate) —
+  // caso reale trovato dall'utente il 29/10, una riga mostrava la data invece della descrizione.
+  const [descrizioneFieldBySlug, setDescrizioneFieldBySlug] = useState({})
+  useEffect(() => { api.get('/module-roles/queues').then((qs) => { if (Array.isArray(qs)) setDescrizioneFieldBySlug(Object.fromEntries(qs.map((q) => [q.module_slug, q.descrizione]).filter(([, v]) => v))) }) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const sources = config?.sources || []
   const period = config?.period || 'tutti'
@@ -235,7 +241,12 @@ function ChecklistWidget({ config, token, label, color, modules, user, onMese })
           // Prima proprietà "leggibile" del record diversa da importo/stato/data, per
           // dare un'etichetta minima alla riga senza richiedere una configurazione
           // aggiuntiva di quale sia il "titolo" — pragmatico, non perfetto.
-          const titleKey = Object.keys(r.data).find((k) => ![amount_field, status_field, date_field].includes(k) && typeof r.data[k] === 'string')
+          // Prima il campo dichiarato per questo modulo; se non è dichiarato (un modulo senza avvisi), si
+          // ripiega sulla prima stringa trovata che non sembri una data (yyyy-mm-dd) — non perfetto come il
+          // campo dichiarato, ma non prende più per sbagliato un campo data/scadenza.
+          const descField = descrizioneFieldBySlug[module_slug]
+          const titleKey = descField && typeof r.data[descField] === 'string' ? descField
+            : Object.keys(r.data).find((k) => ![amount_field, status_field, date_field].includes(k) && typeof r.data[k] === 'string' && !/^\d{4}-\d{2}-\d{2}/.test(r.data[k]))
           const title = titleKey ? r.data[titleKey] : 'Spesa #' + r.id
           // Stesso cerchio colorato per urgenza già usato in ModulePage, riusato qui
           // solo per le sorgenti a workflow (_stato) — le altre restano un checkbox
