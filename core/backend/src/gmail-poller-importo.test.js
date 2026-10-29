@@ -57,13 +57,19 @@ test('bolletta: importo, scadenza e stato "nuovo" del modulo', () => {
 test('un modulo con altri nomi di campo e un altro stato "nuovo" (ordini)', () => {
   const ORD = { roles: { importo: 'totale', data: 'giorno', descrizione: 'cliente', stato: 'fase' }, avvisi: { states: { nuovo: 'ricevuto' } } };
   const { data, campi } = costruisciRiga({ rule: { mittente: 'x@y.it', descrizione: 'Rossi', tipo: 'bolletta' }, declared: ORD, subject: 'Ordine 12', importo: 120, scadenza: '2026-11-02', dataSpesa: '2026-10-03' });
-  assertEq(data.totale, 120); assertEq(data.giorno, '2026-10-03'); assertEq(data.cliente, 'Rossi'); assertEq(data.fase, 'ricevuto');
+  assertEq(data.totale, 120); assertEq(data.giorno, '2026-10-03'); assertEq(data.cliente, 'Ordine 12', 'con un oggetto utile il titolo è l\'oggetto, non l\'etichetta della regola'); assertEq(data.fase, 'ricevuto');
   assertEq('importo' in data || 'scadenza' in data || 'categoria' in data || 'fisso' in data, false, 'un campo senza ruolo non si scrive');
   assertEq(campi.stato, 'fase');
 });
 test('semplice: importo e scadenza restano vuoti anche se nel testo ci sarebbero', () => {
   const { data } = costruisciRiga({ rule: { ...R, tipo: 'semplice' }, declared: SPESA, subject: 'Contratto', importo: 99, scadenza: '2026-10-01', dataSpesa: '2026-09-20' });
-  assertEq('importo' in data, false); assertEq('scadenza' in data, false); assertEq(data.descrizione, 'A2A'); assertEq(/importo non rilevato/.test(data.note), false);
+  assertEq('importo' in data, false); assertEq('scadenza' in data, false); assertEq(data.descrizione, 'Contratto'); assertEq(/importo non rilevato/.test(data.note), false);
+});
+test('senza un oggetto utile, il titolo è l\'etichetta della regola (o il mittente) più la data', () => {
+  const { data: d1 } = costruisciRiga({ rule: R, declared: SPESA, subject: '(senza oggetto)', importo: 44, scadenza: null, dataSpesa: '2026-09-20' });
+  assertEq(d1.descrizione, 'A2A — 20/09');
+  const { data: d2 } = costruisciRiga({ rule: { ...R, descrizione: '' }, declared: SPESA, subject: '', importo: 44, scadenza: null, dataSpesa: '2026-09-20' });
+  assertEq(d2.descrizione, 'a@b.it — 20/09', 'senza etichetta della regola si ripiega sul mittente');
 });
 test('bolletta senza importo letto: lo dice nelle note, importo 0', () => {
   const { data } = costruisciRiga({ rule: R, declared: SPESA, subject: 'Bolletta', importo: null, scadenza: null, dataSpesa: '2026-09-20' });

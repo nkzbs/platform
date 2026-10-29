@@ -178,13 +178,25 @@ function raffinaCategoria(subject, categoriaRegola) {
 // La riga da creare per una mail. Funzione pura: i campi da scrivere sono quelli che il modulo ha dichiarato (module-roles.js), e un
 // campo senza ruolo non si scrive. Un modulo non dichiarato non riceve righe (ritorna null: nessun nome di campo è scritto nel codice). Lo stato "nuovo" è quello dichiarato dal modulo.
 // Ritorna { data: i dati della riga, campi: la mappa ruolo → campo }.
+// Titolo della riga: l'oggetto della mail è quasi sempre il più specifico ("Bolletta luce scaduta" dice più
+// di "A2A Energia" ripetuto identico su ogni bolletta) — ma spesso non c'è ("(senza oggetto)", mail
+// automatiche) o è inutile. Lì si ripiega su mittente/etichetta della regola + la data, mai un oggetto vuoto
+// lasciato così com'è (richiesto dall'utente il 29/10, visto dal vivo su una bolletta A2A senza oggetto).
+function titoloRiga(rule, subject, dataSpesa) {
+  const utile = subject && subject.trim() && !/^\(senza oggetto\)$/i.test(subject.trim());
+  if (utile) return subject.trim();
+  const [y, m, g] = String(dataSpesa || '').split('-');
+  const data = y && m && g ? g + '/' + m : '';
+  return (rule.descrizione || rule.mittente) + (data ? ' — ' + data : '');
+}
+
 function costruisciRiga({ rule, declared, subject, importo, scadenza, dataSpesa }) {
   const semplice = rule.tipo === 'semplice';
   if (!declared || !declared.roles) return null;
   const F = { stato: '_stato', ...declared.roles };
   const nuovo = declared.avvisi && declared.avvisi.states.nuovo;
   const d = {};
-  if (F.descrizione) d[F.descrizione] = rule.descrizione || subject;
+  if (F.descrizione) d[F.descrizione] = titoloRiga(rule, subject, dataSpesa);
   if (F.importo && !semplice) d[F.importo] = importo || 0;
   if (F.data) d[F.data] = dataSpesa;
   if (F.categoria) d[F.categoria] = raffinaCategoria(subject, rule.categoria || 'Altro');
@@ -281,7 +293,7 @@ async function processaMessaggio(accessToken, msgId, rule) {
         .run(moduleSlug, recordId, uploadResult.lastInsertRowid, 'gmail');
       if (docModuleOk) {
         const docData = { [docCfg.campo_file]: { id: uploadResult.lastInsertRowid, name: att.filename, size: att.bytes.length, mime_type: att.mimeType || 'application/octet-stream' } };
-        if (docCfg.campo_titolo) docData[docCfg.campo_titolo] = rule.descrizione || subject;
+        if (docCfg.campo_titolo) docData[docCfg.campo_titolo] = titoloRiga(rule, subject, dataSpesa);
         if (docCfg.campo_tipo && docCfg.valore_bolletta && !semplice) docData[docCfg.campo_tipo] = docCfg.valore_bolletta;
         if (docCfg.campo_data) docData[docCfg.campo_data] = dataSpesa;
         if (docCfg.relazione) docData[docCfg.relazione] = recordId;

@@ -111,6 +111,19 @@ async function main() {
     assertEq((await api('GET', `/${listId}`)).status, 404);
   });
 
+  console.log('\n--- un modulo salvato in v2 "classico" (fields[] piatto, come lo riscrive il Builder) ---');
+  await test('una lista si collega e si propaga anche a un campo di un modulo v2, non solo v3', async () => {
+    db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES (?, ?, 'box', '#000', 1, 1, 70, ?)")
+      .run('v2_test', 'v2_test', JSON.stringify({ fields: [{ key: 'categoria', label: 'Categoria', type: 'select', options: ['Luce'], list_id: null }] }));
+    const create = await api('POST', '', { name: 'Categoria v2' });
+    const lid = (await create.json()).id;
+    const campoV2 = () => JSON.parse(db.prepare('SELECT schema_json FROM modules WHERE slug = ?').get('v2_test').schema_json).fields.find((f) => f.key === 'categoria');
+    db.prepare('UPDATE modules SET schema_json = ? WHERE slug = ?').run(JSON.stringify({ fields: [{ ...campoV2(), list_id: lid }] }), 'v2_test');
+    const r = await api('POST', `/${lid}/items`, { value: 'Gas' });
+    assertEq(r.status, 200); const j = await r.json(); assertEq(j.moduli_aggiornati, 1, 'il modulo v2 deve risultare collegato, non saltato');
+    assertEq(campoV2().options, ['Luce', 'Gas']);
+  });
+
   console.log('\n--- autenticazione ---');
   await test('senza token: 401', async () => {
     assertEq((await fetch(BASE + '/api/option-lists')).status, 401);

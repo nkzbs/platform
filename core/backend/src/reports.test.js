@@ -82,7 +82,7 @@ global.fetch = async (url) => {
     ok(r.text.includes('*Da pagare* · fino al 26/11'), r.text);
     ok(r.text.includes('*844,17 €*'), r.text); // 550 + 200 + 44 + 50,17
     ok(r.text.includes('casa 594 €') && r.text.includes('pers. 250,17 €'), r.text);
-    ok(r.text.includes('⚠ *Scadute 50,17 €* — 1 voce dal 20/10') && r.text.includes('«Voci scadute»'), r.text);
+    ok(r.text.includes('⚠ Attenzione, *50,17 €* è già scaduto — 1 voce dal 20/10') && r.text.includes('«Voci scadute»'), r.text);
     ['Già pagata', 'Troppo avanti', 'Residuo antico', 'Bolletta nuova'].forEach((x) => ok(!r.text.includes(x), 'non deve esserci ' + x));
     eq(r.counts.scadute, 1);
   });
@@ -97,7 +97,7 @@ global.fetch = async (url) => {
     ok(t.includes('• *20/10*  Scaduta di recente — 50,17 €') && !t.includes('«Voci scadute»'), t);
   });
   await test('«ultimo stipendio → ti restano»: lo stipendio meno il totale; spegnibile; se manca lo stipendio la riga non c\'è', () => {
-    ok(R.build('pagare', IL27).text.includes('💰 Stipendio 1.799,58 € → restano *955,41 €*'));
+    ok(R.build('pagare', IL27).text.includes('💰 Con lo stipendio di 1.799,58 € ti restano *955,41 €* liberi'));
     R.saveSettings('pagare', { stipendio: false }); ok(!R.build('pagare', IL27).text.includes('💰 Stipendio')); R.saveSettings('pagare', { stipendio: true });
     db.prepare("DELETE FROM records WHERE module_slug = 'entrate'").run(); ok(!R.build('pagare', IL27).text.includes('💰 Stipendio'));
   });

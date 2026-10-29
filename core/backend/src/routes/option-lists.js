@@ -28,36 +28,45 @@ function citaValore(node, valore) {
   return node === valore;
 }
 
+// I campi di un modulo, in QUALUNQUE forma sia salvato il suo schema — v3 (steps[], solo i block_type
+// 'field'/'computed') o v2 "classico" (fields[] piatto, come lo riscrive il Builder a ogni pubblicazione:
+// vedi builder.js, "downgrade silenzioso"). Prima qui si leggeva solo v3: una lista condivisa collegata a un
+// campo di un modulo pubblicato dal Builder classico (la quasi totalità, in pratica) non trovava mai quel
+// campo — "collegato" restava sempre vuoto, l'aggiunta di una voce non arrivava mai lì (segnalato dall'utente
+// il 29/10, già un limite noto prima d'ora: stesso di field-options.js).
+function fieldsOf(s) {
+  if (Array.isArray(s.steps)) return s.steps.filter((st) => st.block_type === 'field' || st.block_type === 'computed');
+  if (Array.isArray(s.fields)) return s.fields;
+  return null;
+}
+
 // Ogni campo (in QUALUNQUE modulo installato) che ha field.list_id === listId, con il
-// modulo a cui appartiene e il suo schema v3 già parsato — stesso limite di
-// field-options.js (richiede lo schema in forma v3/steps, non v2).
+// modulo a cui appartiene.
 function findLinkedFields(listId) {
   const mods = db.prepare('SELECT * FROM modules WHERE installed = 1').all();
   const out = [];
   for (const mod of mods) {
     let s;
     try { s = JSON.parse(mod.schema_json); } catch (e) { continue; }
-    const steps = Array.isArray(s.steps) ? s.steps : null;
-    if (!steps) continue;
-    for (const step of steps) {
-      if (step.block_type === 'field' && step.list_id === listId && Array.isArray(step.options)) {
-        out.push({ mod, fieldKey: step.key });
-      }
+    const fields = fieldsOf(s);
+    if (!fields) continue;
+    for (const f of fields) {
+      if (f.list_id === listId && Array.isArray(f.options)) out.push({ mod, fieldKey: f.key });
     }
   }
   return out;
 }
 
-// Applica `change(fieldStep)` al field `fieldKey` dentro lo schema v3 (stringa JSON) e
+// Applica `change(field)` al campo `fieldKey` dentro lo schema (stringa JSON, v2 o v3) e
 // ritorna { json, options } — stesso schema di field-options.js#applyToSchema.
 function applyToSchema(raw, fieldKey, change) {
   let s;
   try { s = JSON.parse(raw); } catch (e) { return { error: 'Schema non leggibile' }; }
-  const steps = Array.isArray(s.steps) ? s.steps : null;
-  if (!steps) return { error: 'Schema non nel formato atteso' };
-  const f = steps.find((b) => b.block_type === 'field' && b.key === fieldKey);
+  const fields = fieldsOf(s);
+  if (!fields) return { error: 'Schema non nel formato atteso' };
+  const f = fields.find((b) => b.key === fieldKey);
   if (!f) return { error: 'Campo non trovato' };
-  change(f, steps);
+  change(f, fields);
   return { json: JSON.stringify(s), options: (f.options || []).map(optValue) };
 }
 

@@ -260,11 +260,14 @@ function buildRiepilogo(d, now = new Date(), scope = null) {
   // Una riga per voce, con la data in grassetto come "chiave" (si legge a colpo d'occhio scorrendo
   // l'elenco) e un punto elenco — stessa lettura di buildCoda() qui sotto, non un concetto nuovo.
   const riga = (x) => '• *' + shortDate(x.due) + '*  ' + x.descrizione + (x.importo == null ? '' : ' — ' + fmtCompact(x.importo));
-  const parts = [intest, '*' + fmtEur(totale) + '*' + (Object.keys(perModulo).length > 1 ? '  (' + Object.entries(perModulo).map(([l, v]) => l + ' ' + fmtCompact(v)).join(' · ') + ')' : '')];
+  // Tono più colloquiale (richiesto dall'utente il 29/10: "report sì, ma fatto meglio") — stessi numeri e
+  // stessa struttura di prima (titolo, totale per modulo, scadute, elenco, stipendio), frasi intere invece
+  // di etichetta+numero affiancati a freddo.
+  const parts = [intest, 'Ti restano *' + fmtEur(totale) + '*' + (Object.keys(perModulo).length > 1 ? ' (' + Object.entries(perModulo).map(([l, v]) => l + ' ' + fmtCompact(v)).join(' · ') + ')' : '') + ' da pagare.'];
   if (scadute.length) {
     // le scadute le elenca il report «in ritardo», se ce n'è uno acceso: qui basta il totale (non si ripetono due volte)
     const altro = cfg.definizioni.find((x) => x.tipo === 'in_ritardo' && x.enabled && x.stato === d.stato);
-    parts.push('⚠ *Scadute ' + fmtCompact(tot(scadute)) + '* — ' + scadute.length + (scadute.length === 1 ? ' voce' : ' voci') + ' dal ' + shortDate(scadute[0].due)
+    parts.push('⚠ Attenzione, *' + fmtCompact(tot(scadute)) + '* ' + (scadute.length === 1 ? 'è già scaduto' : 'sono già scaduti') + ' — ' + scadute.length + (scadute.length === 1 ? ' voce' : ' voci') + ' dal ' + shortDate(scadute[0].due)
       + (altro ? '\n→ l\'elenco è nel messaggio «' + altro.nome + '»' : ''));
     if (!altro) parts.push(scadute.slice(0, d.max_righe).map(riga).join('\n'));
   }
@@ -275,7 +278,7 @@ function buildRiepilogo(d, now = new Date(), scope = null) {
   }
   if (d.stipendio) {
     const st = ultimoStipendio(scope);
-    if (st) { const resto = st.importo - totale; parts.push('💰 Stipendio ' + fmtCompact(st.importo) + ' → ' + (resto >= 0 ? 'restano *' + fmtCompact(resto) + '*' : 'mancano *' + fmtCompact(-resto) + '*')); }
+    if (st) { const resto = st.importo - totale; parts.push('💰 Con lo stipendio di ' + fmtCompact(st.importo) + (resto >= 0 ? ' ti restano *' + fmtCompact(resto) + '* liberi' : ' ti mancano *' + fmtCompact(-resto) + '*')); }
   }
   return { text: parts.join('\n\n'), counts: { voci: nel.length, scadute: scadute.length, totale } };
 }
