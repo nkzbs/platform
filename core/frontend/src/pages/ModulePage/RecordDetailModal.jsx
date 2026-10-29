@@ -809,7 +809,15 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                             return (
                               <tr key={cr.id} className="border-b border-gray-800/50 last:border-0 hover:bg-gray-900/30 group">
                                 {displayFields.map((f) => (
-                                  <td key={f.key} className="px-3 py-2 text-gray-300">{cr.data[f.key] !== undefined && cr.data[f.key] !== null ? String(cr.data[f.key]) : ''}</td>
+                                  <td key={f.key} className="px-3 py-2 text-gray-300">
+                                    {f.type === 'file'
+                                      ? (cr.data[f.key] && cr.data[f.key].id
+                                          ? <button onClick={() => openUploadedFile(cr.data[f.key], token)} className="text-accent hover:opacity-80 transition flex items-center gap-1"><Icon name="file" size={11} />{cr.data[f.key].name}</button>
+                                          : '')
+                                      : f.type === 'boolean' || f.type === 'checkbox'
+                                      ? (cr.data[f.key] ? <Icon name="check" size={12} /> : '')
+                                      : (cr.data[f.key] !== undefined && cr.data[f.key] !== null ? String(cr.data[f.key]) : '')}
+                                  </td>
                                 ))}
                                 {cRelations.slice(0, 2).map((r) => (
                                   <td key={r.key} className="px-3 py-2 text-gray-500 text-[10px]">{cr.data[r.key] ? '#' + cr.data[r.key] : ''}</td>
