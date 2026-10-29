@@ -179,6 +179,21 @@ router.post('/:slug/:id', requireAuth, (req, res) => {
     const tx = db.transaction(() => {
       db.prepare('UPDATE records SET module_slug = ?, data = ?, user_id = COALESCE(user_id, ?), updated_at = CURRENT_TIMESTAMP WHERE id = ? AND module_slug = ?').run(verso, JSON.stringify(encryptFields(m.data, ts.fields)), req.user.id, row.id, slug);
       db.prepare('UPDATE record_attachments SET module_slug = ? WHERE module_slug = ? AND record_id = ?').run(verso, slug, row.id);
+      // Gli allegati che hanno messo radici in Documenti (module-roles.js → documenti) puntano alla riga tramite
+      // una relazione col nome del modulo DI PARTENZA (es. "spesa_personale"): spostando la riga restava lì,
+      // orfana rispetto al nuovo modulo — il file c'era ma il record non lo vedeva più tra i suoi "Documenti
+      // collegati" (bug reale, trovato dal vivo il 29/10 su una bolletta A2A smistata da Personale a Casa).
+      // Si ripunta solo se entrambi i moduli archiviano nello STESSO modulo Documenti.
+      const docSrc = decl.documenti, docDst = td.documenti;
+      if (docSrc.modulo && docSrc.relazione && docDst.modulo && docDst.relazione && docSrc.modulo === docDst.modulo) {
+        for (const r of db.prepare('SELECT id, data FROM records WHERE module_slug = ?').all(docSrc.modulo)) {
+          let dd; try { dd = JSON.parse(r.data || '{}'); } catch (e) { continue; }
+          if (dd[docSrc.relazione] !== row.id) continue;
+          delete dd[docSrc.relazione];
+          dd[docDst.relazione] = row.id;
+          db.prepare('UPDATE records SET data = ? WHERE id = ?').run(JSON.stringify(dd), r.id);
+        }
+      }
       try { db.prepare("UPDATE ai_suggestions SET status = 'dismissed', decided_at = CURRENT_TIMESTAMP WHERE module_slug = ? AND record_id = ? AND status = 'pending'").run(slug, row.id); } catch (e) { /* tabella non pronta */ }
     });
     tx();

@@ -168,8 +168,12 @@ function FieldEditorInput({ f, value, onChange, uploading, onUploadFile, placeho
     )
   }
   const ph = placeholderProp || f.placeholder || ''
+  // min-w-0/max-w-full (26/10/2026, segnalato dal vivo): su iOS Safari il controllo
+  // nativo di un <input type="date"> ha una larghezza intrinseca propria che può
+  // superare quella del contenitore — "w-full" da solo non basta a farla rispettare,
+  // il campo Data sfondava il bordo destro dello schermo su telefono.
   return (
-    <input className="w-full bg-surface-page text-ink px-4 py-3 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition placeholder-gray-600"
+    <input className="w-full min-w-0 max-w-full bg-surface-page text-ink px-4 py-3 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition placeholder-gray-600"
       type={f.type === 'date' ? 'date' : f.type === 'datetime' ? 'datetime-local' : f.type === 'time' ? 'time' : (f.type === 'number' || f.type === 'currency') ? 'number' : f.type === 'email' ? 'email' : f.type === 'phone' ? 'tel' : f.type === 'url' ? 'url' : 'text'}
       placeholder={ph} value={value || ''} onChange={(e) => onChange(e.target.value)} />
   )

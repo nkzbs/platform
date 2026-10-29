@@ -141,6 +141,29 @@ async function main() {
     assertEq(q.find((x) => x.module_slug === 'costi').ai, true); assertEq(q.find((x) => x.module_slug === 'senza_piano').ai, false);
   });
 
+  console.log('\n--- sposta in un altro modulo: gli allegati in Documenti seguono la riga ---');
+  const DOCUMENTI = { version: 3, steps: [
+    F('titolo', 'Titolo', 'text'), F('file', 'File', 'file'),
+    { id: 'rc1', block_type: 'relation', key: 'rel_costi', label: 'Costi collegati', type: 'many_to_one', target_module: 'costi' },
+    { id: 'rc2', block_type: 'relation', key: 'rel_costi2', label: 'Costi2 collegati', type: 'many_to_one', target_module: 'costi2' },
+  ] };
+  add('documenti_test', DOCUMENTI);
+  add('costi2', SPESE);
+  roles.set('costi2', { kind: 'spesa', uses: ['avvisi'], roles: R, avvisi: { states: { nuovo: 'da_smistare', da_fare: 'da_pagare', fatto: 'pagato' }, nuovo: true },
+    documenti: { modulo: 'documenti_test', campo_titolo: 'titolo', campo_file: 'file', relazione: 'rel_costi2' } });
+  roles.set('costi', { kind: 'spesa', uses: ['avvisi'], roles: R, avvisi: { states: { nuovo: 'da_smistare', da_fare: 'da_pagare', fatto: 'pagato' }, piano: { modulo: 'piani', campi }, nuovo: true, scadenze: true },
+    documenti: { modulo: 'documenti_test', campo_titolo: 'titolo', campo_file: 'file', relazione: 'rel_costi' } });
+
+  await test('un documento collegato via "rel_costi" ripunta a "rel_costi2" dopo lo spostamento', async () => {
+    const id = newRow('costi');
+    const docId = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, NULL, ?)').run('documenti_test', JSON.stringify({ titolo: 'Bolletta', rel_costi: id })).lastInsertRowid;
+    const r = await post('costi', id, { modo: 'sposta', verso: 'costi2' });
+    assertEq(r.status, 200, JSON.stringify(await r.json()));
+    const doc = data(docId);
+    assertEq(doc.rel_costi, undefined, 'la vecchia relazione deve sparire');
+    assertEq(doc.rel_costi2, id, 'la nuova relazione deve puntare alla stessa riga');
+  });
+
   console.log('\n--- i casi in cui si rifiuta ---');
   await test('una riga già smistata non si smista due volte (409)', async () => {
     const id = newRow(); await post('costi', id, { modo: 'uno' });
