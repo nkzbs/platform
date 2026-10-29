@@ -824,73 +824,80 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                               </tr>
                             )
                           })}
-                          {isAddingRow && (
-                            <tr className="border-t border-green-800/40 bg-green-950/20">
-                              {displayFields.map((f) => (
-                                <td key={f.key} className="px-1.5 py-1.5">
-                                  {f.type === 'select' ? (
-                                    <Select
-                                      value={addForm[f.key] || ''}
-                                      onChange={(v) => setChildAddForms((p) => ({ ...p, [c.module_slug]: { ...(p[c.module_slug] || {}), [f.key]: v } }))}
-                                      options={(f.options || []).map((o) => (typeof o === 'object' ? o : { value: o, label: o }))}
-                                    />
-                                  ) : f.type === 'boolean' || f.type === 'checkbox' ? (
-                                    <input type="checkbox" checked={!!addForm[f.key]} onChange={(e) => setChildAddForms((p) => ({ ...p, [c.module_slug]: { ...(p[c.module_slug] || {}), [f.key]: e.target.checked } }))} className="ml-1" />
-                                  ) : f.type === 'file' ? (
-                                    <div>
-                                      <input type="file" className="w-full text-[10px] text-gray-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-gray-800 file:text-gray-300 file:text-[10px] hover:file:bg-gray-700 file:cursor-pointer cursor-pointer"
-                                        onChange={(e) => uploadChildFile(c.module_slug, f.key, e.target.files[0])} />
-                                      {childUploading[c.module_slug + '.' + f.key] && <div className="text-[10px] text-gray-500 mt-0.5">Caricamento...</div>}
-                                      {addForm[f.key] && !childUploading[c.module_slug + '.' + f.key] && (
-                                        <div className="text-[10px] text-green-400 mt-0.5 flex items-center gap-1 truncate"><Icon name="check" size={10} />{addForm[f.key].name}</div>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <input
-                                      type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : f.type === 'time' ? 'time' : 'text'}
-                                      className="w-full min-w-0 max-w-full bg-surface-input text-ink px-2 py-1 rounded text-xs outline-none border border-gray-700 focus:border-green-500"
-                                      placeholder={f.label}
-                                      value={addForm[f.key] || ''}
-                                      onChange={(e) => setChildAddForms((p) => ({ ...p, [c.module_slug]: { ...(p[c.module_slug] || {}), [f.key]: e.target.value } }))}
-                                    />
-                                  )}
-                                </td>
-                              ))}
-                              {cRelations.slice(0, 2).map((r) => {
-                                const relData = childRelatedRecs[r.target_module]
-                                return (
-                                  <td key={r.key} className="px-1.5 py-1.5">
-                                    {relData ? (
-                                      <Select
-                                        value={addForm[r.key] || ''}
-                                        onChange={(v) => setChildAddForms((p) => ({ ...p, [c.module_slug]: { ...(p[c.module_slug] || {}), [r.key]: v } }))}
-                                        placeholder={r.label + '...'}
-                                        options={relData.records.map((rec) => ({ value: rec.id, label: relData.byId[rec.id] || '#' + rec.id }))}
-                                      />
-                                    ) : (
-                                      <input
-                                        type="text"
-                                        className="w-full bg-surface-input text-ink px-2 py-1 rounded text-xs outline-none border border-gray-700 focus:border-green-500"
-                                        placeholder={r.label}
-                                        value={addForm[r.key] || ''}
-                                        onChange={(e) => setChildAddForms((p) => ({ ...p, [c.module_slug]: { ...(p[c.module_slug] || {}), [r.key]: e.target.value } }))}
-                                      />
-                                    )}
-                                  </td>
-                                )
-                              })}
-                              {computedFields.map((f) => <td key={f.key} className="px-1.5 py-1.5" />)}
-                              <td className="px-1.5 py-1.5">
-                                <button onClick={() => saveChildRow(c)} disabled={isSaving} className="text-green-400 hover:text-green-300 disabled:opacity-50 transition"><Icon name="check" size={13} /></button>
-                              </td>
-                            </tr>
-                          )}
                         </tbody>
                       </table>
                       </div>
                     )}
                     {rows.length === 0 && !isAddingRow && (
                       <div className="text-xs text-gray-600 p-3">Nessuna riga — usa &quot;Aggiungi riga&quot; per iniziare</div>
+                    )}
+                    {/* "Aggiungi riga" a schede impilate (un campo per riga, etichetta sopra), non più dentro la
+                       tabella: su mobile, con 4-5 colonne, una riga di <td> stretti schiacciava i controlli l'uno
+                       sull'altro (il menu "Seleziona..." del Tipo copriva il resto del form) — segnalato
+                       dall'utente il 29/10 ("allegare un file è complicato"). Stesso identico stato/logica di
+                       prima, solo il contenitore cambia. */}
+                    {isAddingRow && (
+                      <div className="p-3 border-t border-green-800/40 bg-green-950/20 space-y-2.5">
+                        {displayFields.map((f) => (
+                          <div key={f.key}>
+                            <label className="text-[10px] text-gray-500 block mb-1">{f.label}</label>
+                            {f.type === 'select' ? (
+                              <Select
+                                value={addForm[f.key] || ''}
+                                onChange={(v) => setChildAddForms((p) => ({ ...p, [c.module_slug]: { ...(p[c.module_slug] || {}), [f.key]: v } }))}
+                                options={(f.options || []).map((o) => (typeof o === 'object' ? o : { value: o, label: o }))}
+                              />
+                            ) : f.type === 'boolean' || f.type === 'checkbox' ? (
+                              <input type="checkbox" checked={!!addForm[f.key]} onChange={(e) => setChildAddForms((p) => ({ ...p, [c.module_slug]: { ...(p[c.module_slug] || {}), [f.key]: e.target.checked } }))} className="ml-1" />
+                            ) : f.type === 'file' ? (
+                              <div>
+                                <input type="file" className="w-full text-xs text-gray-400 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-gray-800 file:text-gray-300 file:text-xs hover:file:bg-gray-700 file:cursor-pointer cursor-pointer"
+                                  onChange={(e) => uploadChildFile(c.module_slug, f.key, e.target.files[0])} />
+                                {childUploading[c.module_slug + '.' + f.key] && <div className="text-[10px] text-gray-500 mt-0.5">Caricamento...</div>}
+                                {addForm[f.key] && !childUploading[c.module_slug + '.' + f.key] && (
+                                  <div className="text-xs text-green-400 mt-0.5 flex items-center gap-1 truncate"><Icon name="check" size={10} />{addForm[f.key].name}</div>
+                                )}
+                              </div>
+                            ) : (
+                              <input
+                                type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : f.type === 'time' ? 'time' : 'text'}
+                                className="w-full min-w-0 max-w-full bg-surface-input text-ink px-2 py-1.5 rounded text-xs outline-none border border-gray-700 focus:border-green-500"
+                                placeholder={f.label}
+                                value={addForm[f.key] || ''}
+                                onChange={(e) => setChildAddForms((p) => ({ ...p, [c.module_slug]: { ...(p[c.module_slug] || {}), [f.key]: e.target.value } }))}
+                              />
+                            )}
+                          </div>
+                        ))}
+                        {cRelations.slice(0, 2).map((r) => {
+                          const relData = childRelatedRecs[r.target_module]
+                          return (
+                            <div key={r.key}>
+                              <label className="text-[10px] text-gray-500 block mb-1">{r.label}</label>
+                              {relData ? (
+                                <Select
+                                  value={addForm[r.key] || ''}
+                                  onChange={(v) => setChildAddForms((p) => ({ ...p, [c.module_slug]: { ...(p[c.module_slug] || {}), [r.key]: v } }))}
+                                  placeholder={r.label + '...'}
+                                  options={relData.records.map((rec) => ({ value: rec.id, label: relData.byId[rec.id] || '#' + rec.id }))}
+                                />
+                              ) : (
+                                <input
+                                  type="text"
+                                  className="w-full bg-surface-input text-ink px-2 py-1.5 rounded text-xs outline-none border border-gray-700 focus:border-green-500"
+                                  placeholder={r.label}
+                                  value={addForm[r.key] || ''}
+                                  onChange={(e) => setChildAddForms((p) => ({ ...p, [c.module_slug]: { ...(p[c.module_slug] || {}), [r.key]: e.target.value } }))}
+                                />
+                              )}
+                            </div>
+                          )
+                        })}
+                        <div className="flex gap-2 pt-1">
+                          <button onClick={() => setChildAddingRow((p) => ({ ...p, [c.module_slug]: false }))} className="flex-1 bg-gray-800 hover:bg-gray-700 text-ink py-1.5 rounded text-xs transition">Annulla</button>
+                          <button onClick={() => saveChildRow(c)} disabled={isSaving} className="flex-1 bg-green-600 hover:opacity-90 disabled:opacity-50 text-white py-1.5 rounded text-xs font-medium transition">{isSaving ? 'Salvo...' : 'Salva'}</button>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
