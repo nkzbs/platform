@@ -19,6 +19,14 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
   // da sola appena il mouse esce, nessuno stato da ricordare.
   const [hovered, setHovered] = useState(false)
   const expanded = !collapsed || hovered
+  // Ritardo d'intenzione (180ms) prima di espandersi: senza, anche solo
+  // attraversare la fascia stretta col mouse per arrivare altrove (es. alla
+  // colonna "Struttura" del Builder, che inizia appena a destra) la fa
+  // scattare e coprire il contenuto per un istante. Si richiude invece
+  // sempre subito al mouse-leave, nessun ritardo in uscita.
+  const hoverTimer = useRef(null)
+  const handleMouseEnter = () => { hoverTimer.current = setTimeout(() => setHovered(true), 180) }
+  const handleMouseLeave = () => { clearTimeout(hoverTimer.current); setHovered(false) }
   // Tema chiaro/scuro — persistito per utente del browser (non per tenant/account),
   // "per comodità" come richiesto: resta possibile tornare al tema scuro in un click.
   // Applicato via attributo su <html> così ogni classe gray-*/surface-*/text-ink
@@ -156,7 +164,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
       {mobileOpen && (
         <div className="fixed inset-0 bg-black/60 z-30 md:hidden" onClick={onMobileClose} />
       )}
-      <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+      <div onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}
         className={(expanded ? 'w-56' : 'w-14') + ' bg-surface-card border-r border-gray-800 flex flex-col fixed inset-y-0 left-0 z-40 transition-[width,transform] duration-150 md:translate-x-0 ' + (expanded ? 'shadow-2xl' : '') + ' ' + (mobileOpen ? 'translate-x-0' : '-translate-x-full')}>
       <div className={(expanded ? 'px-5' : 'px-3') + ' py-5 border-b border-gray-800'} style={{ paddingTop: 'max(1.25rem, env(safe-area-inset-top))' }}>
         <div className="flex items-center gap-2.5">
@@ -180,7 +188,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
                   sidebar di Super Admin. Nascosto insieme al nome quando il tenant
                   ha attivato hide_platform_name: è comunque testo "Platform" rivolto
                   all'utente del tenant white-label. */}
-              {!hidePlatformName && <div className="text-xs text-gray-500">Platform 0.3.26</div>}
+              {!hidePlatformName && <div className="text-xs text-gray-500">Platform 0.3.27</div>}
             </div>
           )}
         </div>

@@ -10,8 +10,11 @@ import ModuleAiSection from './ModuleAiSection'
 // fisso, nessun campo nuovo inventato: ogni toggle scrive una colonna reale
 // già esistente su modules (vedi PATCH /modules/:slug). "Moduli correlati" è
 // calcolato da fieldCache (stessa fonte di ModelCanvas), zero nuove chiamate.
-function PropertiesPanel({ token, baseUrl, mod, schema, fieldCache, allModules, onUpdate, onSelectModule, showIconPicker, setShowIconPicker, history, restoreVersion, tab, setTab }) {
+const SUBTABS = [['aspetto', 'Aspetto'], ['ruoli', 'Ruoli'], ['automazioni', 'Automazioni']]
+
+function PropertiesPanel({ token, baseUrl, mod, schema, fieldCache, allModules, onUpdate, onSelectModule, showIconPicker, setShowIconPicker, history, restoreVersion, tab, setTab, subTab, setSubTab }) {
   if (!mod) return null
+  const st = subTab || 'aspetto'
 
   const related = []
   const ownRels = (fieldCache.find((m) => m.slug === mod.slug)?.relations || [])
@@ -51,98 +54,120 @@ function PropertiesPanel({ token, baseUrl, mod, schema, fieldCache, allModules, 
         </div>
 
         {tab === 'proprieta' ? (
-          <div className="p-4 space-y-4 max-h-[75vh] overflow-y-auto">
-            <div className="relative">
-              <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Icona e colore</div>
-              <button onClick={() => setShowIconPicker((s) => !s)}
-                className="w-9 h-9 rounded-lg flex items-center justify-center hover:ring-2 hover:ring-gray-700 transition"
-                style={{ backgroundColor: (mod.color || '#2563EB') + '22', color: mod.color || '#2563EB' }}>
-                <Icon name={mod.icon || 'box'} size={16} />
-              </button>
-              {showIconPicker && (
-                <div className="absolute top-11 left-0 z-30 bg-surface-page border border-gray-700 rounded-xl p-3 shadow-xl w-56">
-                  <div className="grid grid-cols-6 gap-1.5 mb-3">
-                    {MODULE_ICON_CHOICES.map((ic) => (
-                      <button key={ic} type="button" onClick={() => onUpdate({ icon: ic })}
-                        className={'w-7 h-7 rounded-lg flex items-center justify-center transition border ' + (mod.icon === ic ? 'border-accent bg-accent/20 text-accent' : 'border-gray-800 bg-gray-800/50 text-gray-500 hover:text-gray-300')}>
-                        <Icon name={ic} size={13} />
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {MODULE_COLOR_CHOICES.map((c) => (
-                      <button key={c} type="button" onClick={() => onUpdate({ color: c })}
-                        className={'w-6 h-6 rounded-lg transition border-2 ' + (mod.color === c ? 'border-white' : 'border-transparent')}
-                        style={{ backgroundColor: c }} />
-                    ))}
+          <div>
+            <div className="flex border-b border-gray-800 bg-surface-page/40">
+              {SUBTABS.map(([v, l]) => (
+                <button key={v} onClick={() => setSubTab(v)}
+                  className={'flex-1 text-[10.5px] font-medium py-1.5 transition ' + (st === v ? 'text-ink border-b-2 border-accent -mb-px' : 'text-gray-500 hover:text-gray-300')}>{l}</button>
+              ))}
+            </div>
+            <div className="p-4 space-y-4 max-h-[75vh] overflow-y-auto">
+            {st === 'aspetto' && (
+              <>
+                <div className="relative">
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Icona e colore</div>
+                  <button onClick={() => setShowIconPicker((s) => !s)}
+                    className="w-9 h-9 rounded-lg flex items-center justify-center hover:ring-2 hover:ring-gray-700 transition"
+                    style={{ backgroundColor: (mod.color || '#2563EB') + '22', color: mod.color || '#2563EB' }}>
+                    <Icon name={mod.icon || 'box'} size={16} />
+                  </button>
+                  {showIconPicker && (
+                    <div className="absolute top-11 left-0 z-30 bg-surface-page border border-gray-700 rounded-xl p-3 shadow-xl w-56">
+                      <div className="grid grid-cols-6 gap-1.5 mb-3">
+                        {MODULE_ICON_CHOICES.map((ic) => (
+                          <button key={ic} type="button" onClick={() => onUpdate({ icon: ic })}
+                            className={'w-7 h-7 rounded-lg flex items-center justify-center transition border ' + (mod.icon === ic ? 'border-accent bg-accent/20 text-accent' : 'border-gray-800 bg-gray-800/50 text-gray-500 hover:text-gray-300')}>
+                            <Icon name={ic} size={13} />
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {MODULE_COLOR_CHOICES.map((c) => (
+                          <button key={c} type="button" onClick={() => onUpdate({ color: c })}
+                            className={'w-6 h-6 rounded-lg transition border-2 ' + (mod.color === c ? 'border-white' : 'border-transparent')}
+                            style={{ backgroundColor: c }} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 block">Sezione menu</label>
+                  <input className="w-full bg-surface-page text-ink px-2.5 py-1.5 rounded-lg text-xs outline-none border border-gray-800 focus:border-accent transition"
+                    placeholder="es. CRM & Vendite" defaultValue={mod.group_name || ''} key={'group_' + mod.slug}
+                    onBlur={(e) => { if (e.target.value !== (mod.group_name || '')) onUpdate({ group_name: e.target.value }) }} />
+                </div>
+
+                <div className="border-t border-gray-800 pt-3">
+                  <Toggle checked={mod.active !== 0} onChange={(v) => onUpdate({ active: v })} label="Visibile in sidebar" />
+                  <Toggle checked={mod.quick_toggle !== 0} onChange={(v) => onUpdate({ quick_toggle: v })} label="Cerchio rapido in tabella" hint="Utile per pagamenti/scadenze, fuorviante su workflow generici." />
+                  <div className="py-2">
+                    <label className="text-xs text-gray-400 block mb-1">Come si vede l'elenco</label>
+                    <select value={mod.list_view === 'card_grid' || mod.list_view === 'archive' ? mod.list_view : 'table'} onChange={(e) => onUpdate({ list_view: e.target.value })}
+                      className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent">
+                      <option value="table">Tabella</option>
+                      <option value="card_grid">Card colorate</option>
+                      <option value="archive">Archivio (cartelle e anteprima file)</option>
+                    </select>
+                    {mod.list_view === 'archive' && <div className="text-[11px] text-gray-500 mt-1">Cartelle = il primo campo «scelta»; i file = il primo campo «file» del modulo.</div>}
                   </div>
                 </div>
-              )}
-            </div>
 
-            <div>
-              <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 block">Sezione menu</label>
-              <input className="w-full bg-surface-page text-ink px-2.5 py-1.5 rounded-lg text-xs outline-none border border-gray-800 focus:border-accent transition"
-                placeholder="es. CRM & Vendite" defaultValue={mod.group_name || ''} key={'group_' + mod.slug}
-                onBlur={(e) => { if (e.target.value !== (mod.group_name || '')) onUpdate({ group_name: e.target.value }) }} />
-            </div>
-
-            <div className="border-t border-gray-800 pt-3">
-              <Toggle checked={mod.active !== 0} onChange={(v) => onUpdate({ active: v })} label="Visibile in sidebar" />
-              <Toggle checked={mod.quick_toggle !== 0} onChange={(v) => onUpdate({ quick_toggle: v })} label="Cerchio rapido in tabella" hint="Utile per pagamenti/scadenze, fuorviante su workflow generici." />
-              <div className="py-2">
-                <label className="text-xs text-gray-400 block mb-1">Come si vede l'elenco</label>
-                <select value={mod.list_view === 'card_grid' || mod.list_view === 'archive' ? mod.list_view : 'table'} onChange={(e) => onUpdate({ list_view: e.target.value })}
-                  className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent">
-                  <option value="table">Tabella</option>
-                  <option value="card_grid">Card colorate</option>
-                  <option value="archive">Archivio (cartelle e anteprima file)</option>
-                </select>
-                {mod.list_view === 'archive' && <div className="text-[11px] text-gray-500 mt-1">Cartelle = il primo campo «scelta»; i file = il primo campo «file» del modulo.</div>}
-              </div>
-            </div>
-
-            {fileFields.length > 0 && (
-              <div className="border-t border-gray-800 pt-3">
-                <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 block">Upload batch</label>
-                <select value={mod.batch_upload_field || ''} onChange={(e) => onUpdate({ batch_upload_field: e.target.value || null })}
-                  className="w-full bg-surface-page text-ink px-2.5 py-1.5 rounded-lg text-xs outline-none border border-gray-800 focus:border-accent transition mb-2">
-                  <option value="">Disattivo</option>
-                  {fileFields.map((f) => <option key={f.key} value={f.key}>Su "{f.label}"</option>)}
-                </select>
-                {mod.batch_upload_field && selectFields.length > 0 && (
-                  <select value={mod.batch_upload_category_field || ''} onChange={(e) => onUpdate({ batch_upload_category_field: e.target.value || null })}
-                    className="w-full bg-surface-page text-ink px-2.5 py-1.5 rounded-lg text-xs outline-none border border-gray-800 focus:border-accent transition">
-                    <option value="">Nessuna categoria richiesta</option>
-                    {selectFields.map((f) => <option key={f.key} value={f.key}>Chiedi "{f.label}"</option>)}
-                  </select>
+                {fileFields.length > 0 && (
+                  <div className="border-t border-gray-800 pt-3">
+                    <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 block">Upload batch</label>
+                    <select value={mod.batch_upload_field || ''} onChange={(e) => onUpdate({ batch_upload_field: e.target.value || null })}
+                      className="w-full bg-surface-page text-ink px-2.5 py-1.5 rounded-lg text-xs outline-none border border-gray-800 focus:border-accent transition mb-2">
+                      <option value="">Disattivo</option>
+                      {fileFields.map((f) => <option key={f.key} value={f.key}>Su "{f.label}"</option>)}
+                    </select>
+                    {mod.batch_upload_field && selectFields.length > 0 && (
+                      <select value={mod.batch_upload_category_field || ''} onChange={(e) => onUpdate({ batch_upload_category_field: e.target.value || null })}
+                        className="w-full bg-surface-page text-ink px-2.5 py-1.5 rounded-lg text-xs outline-none border border-gray-800 focus:border-accent transition">
+                        <option value="">Nessuna categoria richiesta</option>
+                        {selectFields.map((f) => <option key={f.key} value={f.key}>Chiedi "{f.label}"</option>)}
+                      </select>
+                    )}
+                  </div>
                 )}
-              </div>
+
+                <div className="border-t border-gray-800 pt-3">
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Moduli correlati ({relatedUnique.length})</div>
+                  {relatedUnique.length === 0 ? (
+                    <div className="text-[11px] text-gray-600">Nessuna relazione ancora.</div>
+                  ) : (
+                    <div className="space-y-1">
+                      {relatedUnique.map((r) => {
+                        const rm = allModules.find((m) => m.slug === r.slug)
+                        return (
+                          <button key={r.slug} onClick={() => onSelectModule(r.slug)}
+                            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/[0.04] transition text-left">
+                            <span className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: (rm?.color || '#2563EB') + '22', color: rm?.color || '#2563EB' }}>
+                              <Icon name={rm?.icon || 'box'} size={11} />
+                            </span>
+                            <span className="text-xs text-gray-300 truncate">{rm?.name || r.slug}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </>
             )}
 
-            <ModuleRolesSection token={token} baseUrl={baseUrl} slug={mod.slug} fields={(schema?.steps || []).filter((s) => s.block_type === 'field')} states={(schema?.steps || []).filter((s) => s.block_type === 'workflow_state')} allModules={allModules} fieldCache={fieldCache} />
-            <ModuleAiSection token={token} baseUrl={baseUrl} slug={mod.slug} />
+            {st === 'ruoli' && (
+              <ModuleRolesSection section="ruoli" token={token} baseUrl={baseUrl} slug={mod.slug} fields={(schema?.steps || []).filter((s) => s.block_type === 'field')} states={(schema?.steps || []).filter((s) => s.block_type === 'workflow_state')} allModules={allModules} fieldCache={fieldCache} />
+            )}
 
-            <div className="border-t border-gray-800 pt-3">
-              <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Moduli correlati ({relatedUnique.length})</div>
-              {relatedUnique.length === 0 ? (
-                <div className="text-[11px] text-gray-600">Nessuna relazione ancora.</div>
-              ) : (
-                <div className="space-y-1">
-                  {relatedUnique.map((r) => {
-                    const rm = allModules.find((m) => m.slug === r.slug)
-                    return (
-                      <button key={r.slug} onClick={() => onSelectModule(r.slug)}
-                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/[0.04] transition text-left">
-                        <span className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: (rm?.color || '#2563EB') + '22', color: rm?.color || '#2563EB' }}>
-                          <Icon name={rm?.icon || 'box'} size={11} />
-                        </span>
-                        <span className="text-xs text-gray-300 truncate">{rm?.name || r.slug}</span>
-                      </button>
-                    )
-                  })}
+            {st === 'automazioni' && (
+              <>
+                <ModuleRolesSection section="automazioni" token={token} baseUrl={baseUrl} slug={mod.slug} fields={(schema?.steps || []).filter((s) => s.block_type === 'field')} states={(schema?.steps || []).filter((s) => s.block_type === 'workflow_state')} allModules={allModules} fieldCache={fieldCache} />
+                <div className="border-t border-gray-800 pt-3">
+                  <ModuleAiSection token={token} baseUrl={baseUrl} slug={mod.slug} />
                 </div>
-              )}
+              </>
+            )}
             </div>
           </div>
         ) : (

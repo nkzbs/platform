@@ -13,20 +13,21 @@ const PIANO0 = { modulo: '', campi: { nome: '', importo_totale: '', n_rate: '', 
 const PIANO_CAMPI = [['nome', 'Nome'], ['importo_totale', 'Importo totale'], ['n_rate', 'Numero di rate'], ['importo_rata', 'Importo di una rata'], ['data_prima_rata', 'Data della prima rata']]
 const ES0 = { giro_categories: [], registra: false, categoria_default: '' }
 const AV0 = { states: { nuovo: '', da_fare: '', fatto: '' }, piano: PIANO0, nuovo: false, scadenze: false, tag: 'scadenza', label: '', noun_s: 'riga', noun_p: 'righe' }
+const DOC0 = { modulo: '', campo_titolo: '', campo_tipo: '', valore_bolletta: '', campo_file: '', campo_data: '', relazione: '' }
 const txt = 'w-full bg-surface-page text-ink px-2.5 py-1.5 rounded-lg text-xs outline-none border border-gray-800 focus:border-accent placeholder-gray-600'
 
-export default function ModuleRolesSection({ token, baseUrl, slug, fields, states, allModules = [], fieldCache = [] }) {
+export default function ModuleRolesSection({ token, baseUrl, slug, fields, states, allModules = [], fieldCache = [], section = 'ruoli' }) {
   const api = useApi(token, baseUrl)
   const [cfg, setCfg] = useState(null)
   const [saved, setSaved] = useState(false)
   const [utenti, setUtenti] = useState([])
   useEffect(() => { api.get('/record-owner').then((d) => d && Array.isArray(d.utenti) && setUtenti(d.utenti)) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { setCfg(null); api.get('/module-roles/' + slug).then((d) => setCfg(d && d.module_slug ? { ...d, riepiloghi: { ...RP0, ...(d.riepiloghi || {}) }, estratto: { ...ES0, ...(d.estratto || {}) }, avvisi: { ...AV0, ...(d.avvisi || {}), states: { ...AV0.states, ...((d.avvisi || {}).states || {}) }, piano: { ...PIANO0, ...((d.avvisi || {}).piano || {}), campi: { ...PIANO0.campi, ...(((d.avvisi || {}).piano || {}).campi || {}) } } } } : { kind: null, uses: [], roles: {}, avvisi: AV0, riepiloghi: RP0, estratto: ES0 })) }, [slug]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setCfg(null); api.get('/module-roles/' + slug).then((d) => setCfg(d && d.module_slug ? { ...d, riepiloghi: { ...RP0, ...(d.riepiloghi || {}) }, estratto: { ...ES0, ...(d.estratto || {}) }, documenti: { ...DOC0, ...(d.documenti || {}) }, avvisi: { ...AV0, ...(d.avvisi || {}), states: { ...AV0.states, ...((d.avvisi || {}).states || {}) }, piano: { ...PIANO0, ...((d.avvisi || {}).piano || {}), campi: { ...PIANO0.campi, ...(((d.avvisi || {}).piano || {}).campi || {}) } } } } : { kind: null, uses: [], roles: {}, avvisi: AV0, riepiloghi: RP0, estratto: ES0, documenti: DOC0 })) }, [slug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async (next) => {
     setCfg(next); setSaved(false)
-    const res = await api.put('/module-roles/' + slug, { kind: next.kind || null, uses: next.uses, roles: next.roles, avvisi: next.avvisi, riepiloghi: next.riepiloghi, estratto: next.estratto, owner_user_id: next.owner_user_id || null })
+    const res = await api.put('/module-roles/' + slug, { kind: next.kind || null, uses: next.uses, roles: next.roles, avvisi: next.avvisi, riepiloghi: next.riepiloghi, estratto: next.estratto, documenti: next.documenti, owner_user_id: next.owner_user_id || null })
     if (res.ok) setSaved(true)
   }
   if (!cfg) return null
@@ -36,18 +37,172 @@ export default function ModuleRolesSection({ token, baseUrl, slug, fields, state
   const setEs = (patch) => save({ ...cfg, estratto: { ...cfg.estratto, ...patch } })
   const setAv = (patch) => save({ ...cfg, avvisi: { ...cfg.avvisi, ...patch } })
   const setAvState = (k, v) => save({ ...cfg, avvisi: { ...cfg.avvisi, states: { ...cfg.avvisi.states, [k]: v } } })
+  const setDoc = (patch) => save({ ...cfg, documenti: { ...cfg.documenti, ...patch } })
   const stateOpts = (states || []).map((st) => [st.key, st.label || st.key])
   const toggleUse = (u) => save({ ...cfg, uses: cfg.uses.includes(u) ? cfg.uses.filter((x) => x !== u) : [...cfg.uses, u] })
+  const docTargetFields = (fieldCache.find((m) => m.slug === cfg.documenti.modulo) || {}).fields || []
+  const docTargetRelations = ((fieldCache.find((m) => m.slug === cfg.documenti.modulo) || {}).relations || []).filter((r) => r.target_module === slug)
+
+  if (section === 'automazioni') return (
+    <div className="space-y-0.5">
+      {cfg.kind && cfg.uses.includes('riepiloghi') && cfg.kind === 'entrata' && (
+        <div className="pt-2">
+          <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Criteri dei riepiloghi</div>
+          <div className="text-[10.5px] text-gray-600 mb-1.5">Elenchi separati da virgola. Cosa non conta come entrata, cosa è stipendio, cosa è risparmio.</div>
+          {[['exclude_categories', 'Categorie escluse'], ['exclude_groups', 'Gruppi esclusi'], ['exclude_descriptions', 'Descrizioni escluse'], ['salary_categories', 'Categorie stipendio'], ['savings_categories', 'Categorie di risparmio']].map(([k, l]) => (
+            <div key={k} className="mb-1.5">
+              <div className="text-[11px] text-gray-500 mb-0.5">{l}</div>
+              <input className={txt} placeholder="es. Risparmi, Fondo" defaultValue={(cfg.riepiloghi[k] || []).join(', ')} key={slug + k} onBlur={(e) => setRp({ [k]: e.target.value })} />
+            </div>
+          ))}
+          <div className="text-[11px] text-gray-500 mb-0.5">Campo con l'accantonamento suggerito</div>
+          <select className={sel} value={cfg.riepiloghi.savings_field || ''} onChange={(e) => setRp({ savings_field: e.target.value })}>
+            <option value="">—</option>
+            {(fields || []).map((f) => <option key={f.key} value={f.key}>{f.label || f.key}</option>)}
+          </select>
+        </div>
+      )}
+      {cfg.kind && cfg.uses.includes('riepiloghi') && cfg.kind === 'spesa' && (
+        <div className="pt-2">
+          <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Criteri dei riepiloghi</div>
+          <div className="text-[11px] text-gray-500 mb-0.5">Categorie che sono rate (elenco separato da virgola)</div>
+          <input className={txt} placeholder="es. Rata" defaultValue={(cfg.riepiloghi.rate_categories || []).join(', ')} key={slug + 'rc'} onBlur={(e) => setRp({ rate_categories: e.target.value })} />
+        </div>
+      )}
+      {cfg.kind && (
+        <div className="pt-2 border-t border-gray-800 first:border-t-0 first:pt-0">
+          <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Proprietario delle righe automatiche</div>
+          <div className="text-[10.5px] text-gray-600 mb-1">Le righe create senza una persona (mail, estratto conto, rate, importazioni) in questo modulo sono di:</div>
+          <select className={sel} value={cfg.owner_user_id || ''} onChange={(e) => save({ ...cfg, owner_user_id: e.target.value ? parseInt(e.target.value, 10) : null })}>
+            <option value="">Il proprietario del progetto (Impostazioni → Utenti)</option>
+            {utenti.map((u) => <option key={u.id} value={u.id}>{u.display_name || u.username}</option>)}
+          </select>
+        </div>
+      )}
+      {cfg.kind && cfg.uses.includes('estratto') && cfg.kind === 'spesa' && (
+        <div className="pt-2 border-t border-gray-800">
+          <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Estratto conto</div>
+          <div className="text-[11px] text-gray-500 mb-0.5">Categorie che sono un giro tra conti tuoi</div>
+          <input className={txt} placeholder="es. Contributo Casa" defaultValue={(cfg.estratto.giro_categories || []).join(', ')} key={slug + 'gc'} onBlur={(e) => setEs({ giro_categories: e.target.value.split(',').map((x) => x.trim()).filter(Boolean) })} />
+          <label className="flex items-start gap-2 py-1 mt-1.5 cursor-pointer text-[11px] text-gray-300 leading-tight"><input type="checkbox" className="mt-0.5" checked={!!cfg.estratto.registra} onChange={() => setEs({ registra: !cfg.estratto.registra })} />Qui si registrano le uscite dell'estratto che non hanno ancora una riga</label>
+          {cfg.estratto.registra && (
+            <>
+              <div className="text-[11px] text-gray-500 mb-0.5 mt-1.5">Categoria se non ne scegli una</div>
+              <input className={txt} placeholder="es. Altro" defaultValue={cfg.estratto.categoria_default || ''} key={slug + 'cd'} onBlur={(e) => setEs({ categoria_default: e.target.value })} />
+            </>
+          )}
+        </div>
+      )}
+      {cfg.kind && cfg.uses.includes('avvisi') && (
+        <div className="pt-2 border-t border-gray-800">
+          <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Avvisi WhatsApp</div>
+          {[['nuovo', 'Stato "nuovo" (da smistare)'], ['da_fare', 'Stato "da fare" (da pagare)'], ['fatto', 'Stato "fatto" (pagato), per «già pagata»']].map(([k, l]) => (
+            <div key={k} className="mb-1.5">
+              <div className="text-[11px] text-gray-500 mb-0.5">{l}</div>
+              {stateOpts.length > 0 ? (
+                <select className={sel} value={cfg.avvisi.states[k] || ''} onChange={(e) => setAvState(k, e.target.value)}>
+                  <option value="">—</option>
+                  {stateOpts.map(([v, lab]) => <option key={v} value={v}>{lab}</option>)}
+                </select>
+              ) : (
+                <input className={txt} placeholder="valore dello stato" defaultValue={cfg.avvisi.states[k] || ''} key={slug + k} onBlur={(e) => setAvState(k, e.target.value)} />
+              )}
+            </div>
+          ))}
+          <div className="mt-2 mb-1.5 pt-2 border-t border-gray-800">
+            <div className="text-[11px] text-gray-500 mb-0.5">Piano a rate (per «Dividi in rate»)</div>
+            <select className={sel} value={cfg.avvisi.piano.modulo || ''} onChange={(e) => setAv({ piano: { modulo: e.target.value, campi: { ...PIANO0.campi } } })}>
+              <option value="">Nessuno: non si divide in rate</option>
+              {allModules.filter((m) => m.slug !== slug && m.slug !== 'dashboard').map((m) => <option key={m.slug} value={m.slug}>{m.name}</option>)}
+            </select>
+            {cfg.avvisi.piano.modulo && (
+              <div className="mt-1.5 space-y-1">
+                <div className="text-[10.5px] text-gray-600">Quali campi di quel modulo sono: (le righe delle rate le genera la sua automazione)</div>
+                {PIANO_CAMPI.map(([k, l]) => (
+                  <div key={k} className="flex items-center gap-2">
+                    <span className="text-[11px] text-gray-500 w-24 flex-shrink-0">{l}</span>
+                    <select className={sel} value={cfg.avvisi.piano.campi[k] || ''} onChange={(e) => setAv({ piano: { ...cfg.avvisi.piano, campi: { ...cfg.avvisi.piano.campi, [k]: e.target.value } } })}>
+                      <option value="">—</option>
+                      {((fieldCache.find((m) => m.slug === cfg.avvisi.piano.modulo) || {}).fields || []).map((f) => <option key={f.key} value={f.key}>{f.label || f.key}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <label className="flex items-start gap-2 py-1 cursor-pointer text-[11px] text-gray-300 leading-tight"><input type="checkbox" className="mt-0.5" checked={cfg.avvisi.nuovo} onChange={() => setAv({ nuovo: !cfg.avvisi.nuovo })} />Avvisa quando arriva una riga nuova</label>
+          <label className="flex items-start gap-2 py-1 cursor-pointer text-[11px] text-gray-300 leading-tight"><input type="checkbox" className="mt-0.5" checked={cfg.avvisi.scadenze} onChange={() => setAv({ scadenze: !cfg.avvisi.scadenze })} />Mette le scadenze nel riepilogo del mattino</label>
+          <div className="grid grid-cols-2 gap-1.5 mt-1.5">
+            <input className={txt} placeholder="Una riga (es. bolletta)" defaultValue={cfg.avvisi.noun_s} key={slug + 'ns'} onBlur={(e) => setAv({ noun_s: e.target.value })} />
+            <input className={txt} placeholder="Più righe (es. bollette)" defaultValue={cfg.avvisi.noun_p} key={slug + 'np'} onBlur={(e) => setAv({ noun_p: e.target.value })} />
+            <input className={txt} placeholder="Etichetta breve (es. casa)" defaultValue={cfg.avvisi.label} key={slug + 'lb'} onBlur={(e) => setAv({ label: e.target.value })} />
+            <input className={txt} placeholder="Tag destinatari" defaultValue={cfg.avvisi.tag} key={slug + 'tg'} onBlur={(e) => setAv({ tag: e.target.value })} />
+          </div>
+        </div>
+      )}
+      {cfg.kind && cfg.uses.includes('mail') && (
+        <div className="pt-2 border-t border-gray-800">
+          <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Documenti</div>
+          <div className="text-[10.5px] text-gray-600 mb-1.5">Dove archiviare l'allegato di una riga arrivata dalla mail (es. il PDF della bolletta) — un modulo archivio con cartelle, oltre al solito allegato. Lasciare vuoto per restare solo allegato generico.</div>
+          <select className={sel} value={cfg.documenti.modulo || ''} onChange={(e) => setDoc({ modulo: e.target.value, campo_titolo: '', campo_tipo: '', valore_bolletta: '', campo_file: '', campo_data: '', relazione: '' })}>
+            <option value="">Nessuno: solo allegato generico</option>
+            {allModules.filter((m) => m.slug !== slug && m.slug !== 'dashboard').map((m) => <option key={m.slug} value={m.slug}>{m.name}</option>)}
+          </select>
+          {cfg.documenti.modulo && (
+            <div className="mt-1.5 space-y-1.5">
+              <div>
+                <span className="text-[11px] text-gray-500 mb-0.5 block">Campo file (obbligatorio)</span>
+                <select className={sel} value={cfg.documenti.campo_file || ''} onChange={(e) => setDoc({ campo_file: e.target.value })}>
+                  <option value="">—</option>
+                  {docTargetFields.filter((f) => f.type === 'file').map((f) => <option key={f.key} value={f.key}>{f.label || f.key}</option>)}
+                </select>
+              </div>
+              <div>
+                <span className="text-[11px] text-gray-500 mb-0.5 block">Campo titolo</span>
+                <select className={sel} value={cfg.documenti.campo_titolo || ''} onChange={(e) => setDoc({ campo_titolo: e.target.value })}>
+                  <option value="">—</option>
+                  {docTargetFields.filter((f) => f.type === 'text').map((f) => <option key={f.key} value={f.key}>{f.label || f.key}</option>)}
+                </select>
+              </div>
+              <div>
+                <span className="text-[11px] text-gray-500 mb-0.5 block">Campo cartella/tipo</span>
+                <select className={sel} value={cfg.documenti.campo_tipo || ''} onChange={(e) => setDoc({ campo_tipo: e.target.value })}>
+                  <option value="">—</option>
+                  {docTargetFields.filter((f) => f.type === 'select').map((f) => <option key={f.key} value={f.key}>{f.label || f.key}</option>)}
+                </select>
+                {cfg.documenti.campo_tipo && (
+                  <input className={txt + ' mt-1'} placeholder="Valore per le bollette (es. Fattura)" defaultValue={cfg.documenti.valore_bolletta || ''} key={slug + 'vb'} onBlur={(e) => setDoc({ valore_bolletta: e.target.value })} />
+                )}
+              </div>
+              <div>
+                <span className="text-[11px] text-gray-500 mb-0.5 block">Campo data</span>
+                <select className={sel} value={cfg.documenti.campo_data || ''} onChange={(e) => setDoc({ campo_data: e.target.value })}>
+                  <option value="">—</option>
+                  {docTargetFields.filter((f) => f.type === 'date').map((f) => <option key={f.key} value={f.key}>{f.label || f.key}</option>)}
+                </select>
+              </div>
+              <div>
+                <span className="text-[11px] text-gray-500 mb-0.5 block">Relazione che lo riporta a questa riga</span>
+                <select className={sel} value={cfg.documenti.relazione || ''} onChange={(e) => setDoc({ relazione: e.target.value })}>
+                  <option value="">—</option>
+                  {docTargetRelations.map((r) => <option key={r.key} value={r.key}>{r.label || r.key}</option>)}
+                </select>
+                {docTargetRelations.length === 0 && <div className="text-[10px] text-gray-600 mt-0.5">"{(allModules.find((m) => m.slug === cfg.documenti.modulo) || {}).name}" non ha ancora una relazione verso questo modulo — aggiungine una (blocco Relazione) per collegare il documento alla riga.</div>}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {!cfg.kind && <div className="text-[11px] text-gray-600">Imposta prima "A cosa serve" nella scheda Ruoli.</div>}
+    </div>
+  )
 
   return (
-    <div className="border-t border-gray-800 pt-3">
-      <div className="flex items-center justify-between mb-1.5">
-        <div className="text-[10px] text-gray-500 uppercase tracking-wide">Ruoli del modulo</div>
-        {saved && <span className="text-[10px] text-green-500">Salvato</span>}
-      </div>
+    <div>
       <select className={sel} value={cfg.kind || ''} onChange={(e) => save({ ...cfg, kind: e.target.value || null })}>
         {KINDS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
       </select>
+      {saved && <span className="text-[10px] text-green-500 block mt-1">Salvato</span>}
       {cfg.kind && (
         <>
           {cfg.kind === 'presenze' && <div className="mt-2 text-[10.5px] text-gray-500 leading-snug">Il bot Telegram usa questi campi per timbrare («sono entrata», «uscita alle 12:30») e dire le ore lavorate. Indica la data e i due campi orario.</div>}
@@ -70,99 +225,6 @@ export default function ModuleRolesSection({ token, baseUrl, slug, fields, state
               </div>
             ))}
           </div>
-          {cfg.uses.includes('riepiloghi') && cfg.kind === 'entrata' && (
-            <div className="mt-3 pt-2 border-t border-gray-800">
-              <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Criteri dei riepiloghi</div>
-              <div className="text-[10.5px] text-gray-600 mb-1.5">Elenchi separati da virgola. Cosa non conta come entrata, cosa è stipendio, cosa è risparmio.</div>
-              {[['exclude_categories', 'Categorie escluse'], ['exclude_groups', 'Gruppi esclusi'], ['exclude_descriptions', 'Descrizioni escluse'], ['salary_categories', 'Categorie stipendio'], ['savings_categories', 'Categorie di risparmio']].map(([k, l]) => (
-                <div key={k} className="mb-1.5">
-                  <div className="text-[11px] text-gray-500 mb-0.5">{l}</div>
-                  <input className={txt} placeholder="es. Risparmi, Fondo" defaultValue={(cfg.riepiloghi[k] || []).join(', ')} key={slug + k} onBlur={(e) => setRp({ [k]: e.target.value })} />
-                </div>
-              ))}
-              <div className="text-[11px] text-gray-500 mb-0.5">Campo con l'accantonamento suggerito</div>
-              <select className={sel} value={cfg.riepiloghi.savings_field || ''} onChange={(e) => setRp({ savings_field: e.target.value })}>
-                <option value="">—</option>
-                {(fields || []).map((f) => <option key={f.key} value={f.key}>{f.label || f.key}</option>)}
-              </select>
-            </div>
-          )}
-          {cfg.uses.includes('riepiloghi') && cfg.kind === 'spesa' && (
-            <div className="mt-3 pt-2 border-t border-gray-800">
-              <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Criteri dei riepiloghi</div>
-              <div className="text-[11px] text-gray-500 mb-0.5">Categorie che sono rate (elenco separato da virgola)</div>
-              <input className={txt} placeholder="es. Rata" defaultValue={(cfg.riepiloghi.rate_categories || []).join(', ')} key={slug + 'rc'} onBlur={(e) => setRp({ rate_categories: e.target.value })} />
-            </div>
-          )}
-          <div className="mt-3 pt-2 border-t border-gray-800">
-            <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Proprietario delle righe automatiche</div>
-            <div className="text-[10.5px] text-gray-600 mb-1">Le righe create senza una persona (mail, estratto conto, rate, importazioni) in questo modulo sono di:</div>
-            <select className={sel} value={cfg.owner_user_id || ''} onChange={(e) => save({ ...cfg, owner_user_id: e.target.value ? parseInt(e.target.value, 10) : null })}>
-              <option value="">Il proprietario del progetto (Impostazioni → Utenti)</option>
-              {utenti.map((u) => <option key={u.id} value={u.id}>{u.display_name || u.username}</option>)}
-            </select>
-          </div>
-          {cfg.uses.includes('estratto') && cfg.kind === 'spesa' && (
-            <div className="mt-3 pt-2 border-t border-gray-800">
-              <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Estratto conto</div>
-              <div className="text-[11px] text-gray-500 mb-0.5">Categorie che sono un giro tra conti tuoi</div>
-              <input className={txt} placeholder="es. Contributo Casa" defaultValue={(cfg.estratto.giro_categories || []).join(', ')} key={slug + 'gc'} onBlur={(e) => setEs({ giro_categories: e.target.value.split(',').map((x) => x.trim()).filter(Boolean) })} />
-              <label className="flex items-start gap-2 py-1 mt-1.5 cursor-pointer text-[11px] text-gray-300 leading-tight"><input type="checkbox" className="mt-0.5" checked={!!cfg.estratto.registra} onChange={() => setEs({ registra: !cfg.estratto.registra })} />Qui si registrano le uscite dell'estratto che non hanno ancora una riga</label>
-              {cfg.estratto.registra && (
-                <>
-                  <div className="text-[11px] text-gray-500 mb-0.5 mt-1.5">Categoria se non ne scegli una</div>
-                  <input className={txt} placeholder="es. Altro" defaultValue={cfg.estratto.categoria_default || ''} key={slug + 'cd'} onBlur={(e) => setEs({ categoria_default: e.target.value })} />
-                </>
-              )}
-            </div>
-          )}
-          {cfg.uses.includes('avvisi') && (
-            <div className="mt-3 pt-2 border-t border-gray-800">
-              <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Avvisi WhatsApp</div>
-              {[['nuovo', 'Stato "nuovo" (da smistare)'], ['da_fare', 'Stato "da fare" (da pagare)'], ['fatto', 'Stato "fatto" (pagato), per «già pagata»']].map(([k, l]) => (
-                <div key={k} className="mb-1.5">
-                  <div className="text-[11px] text-gray-500 mb-0.5">{l}</div>
-                  {stateOpts.length > 0 ? (
-                    <select className={sel} value={cfg.avvisi.states[k] || ''} onChange={(e) => setAvState(k, e.target.value)}>
-                      <option value="">—</option>
-                      {stateOpts.map(([v, lab]) => <option key={v} value={v}>{lab}</option>)}
-                    </select>
-                  ) : (
-                    <input className={txt} placeholder="valore dello stato" defaultValue={cfg.avvisi.states[k] || ''} key={slug + k} onBlur={(e) => setAvState(k, e.target.value)} />
-                  )}
-                </div>
-              ))}
-              <div className="mt-2 mb-1.5 pt-2 border-t border-gray-800">
-                <div className="text-[11px] text-gray-500 mb-0.5">Piano a rate (per «Dividi in rate»)</div>
-                <select className={sel} value={cfg.avvisi.piano.modulo || ''} onChange={(e) => setAv({ piano: { modulo: e.target.value, campi: { ...PIANO0.campi } } })}>
-                  <option value="">Nessuno: non si divide in rate</option>
-                  {allModules.filter((m) => m.slug !== slug && m.slug !== 'dashboard').map((m) => <option key={m.slug} value={m.slug}>{m.name}</option>)}
-                </select>
-                {cfg.avvisi.piano.modulo && (
-                  <div className="mt-1.5 space-y-1">
-                    <div className="text-[10.5px] text-gray-600">Quali campi di quel modulo sono: (le righe delle rate le genera la sua automazione)</div>
-                    {PIANO_CAMPI.map(([k, l]) => (
-                      <div key={k} className="flex items-center gap-2">
-                        <span className="text-[11px] text-gray-500 w-24 flex-shrink-0">{l}</span>
-                        <select className={sel} value={cfg.avvisi.piano.campi[k] || ''} onChange={(e) => setAv({ piano: { ...cfg.avvisi.piano, campi: { ...cfg.avvisi.piano.campi, [k]: e.target.value } } })}>
-                          <option value="">—</option>
-                          {((fieldCache.find((m) => m.slug === cfg.avvisi.piano.modulo) || {}).fields || []).map((f) => <option key={f.key} value={f.key}>{f.label || f.key}</option>)}
-                        </select>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <label className="flex items-start gap-2 py-1 cursor-pointer text-[11px] text-gray-300 leading-tight"><input type="checkbox" className="mt-0.5" checked={cfg.avvisi.nuovo} onChange={() => setAv({ nuovo: !cfg.avvisi.nuovo })} />Avvisa quando arriva una riga nuova</label>
-              <label className="flex items-start gap-2 py-1 cursor-pointer text-[11px] text-gray-300 leading-tight"><input type="checkbox" className="mt-0.5" checked={cfg.avvisi.scadenze} onChange={() => setAv({ scadenze: !cfg.avvisi.scadenze })} />Mette le scadenze nel riepilogo del mattino</label>
-              <div className="grid grid-cols-2 gap-1.5 mt-1.5">
-                <input className={txt} placeholder="Una riga (es. bolletta)" defaultValue={cfg.avvisi.noun_s} key={slug + 'ns'} onBlur={(e) => setAv({ noun_s: e.target.value })} />
-                <input className={txt} placeholder="Più righe (es. bollette)" defaultValue={cfg.avvisi.noun_p} key={slug + 'np'} onBlur={(e) => setAv({ noun_p: e.target.value })} />
-                <input className={txt} placeholder="Etichetta breve (es. casa)" defaultValue={cfg.avvisi.label} key={slug + 'lb'} onBlur={(e) => setAv({ label: e.target.value })} />
-                <input className={txt} placeholder="Tag destinatari" defaultValue={cfg.avvisi.tag} key={slug + 'tg'} onBlur={(e) => setAv({ tag: e.target.value })} />
-              </div>
-            </div>
-          )}
         </>
       )}
     </div>

@@ -237,6 +237,12 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
   const [published, setPublished] = useState(false)
   const [history, setHistory] = useState([])
   const [showPreview, setShowPreview] = useState(false)
+  const [previewRole, setPreviewRole] = useState('')
+  // Ricerca dentro il modulo (2026-10-30) — un modulo con tante card (Spese Casa ne ha
+  // già una dozzina) si scorre tutto per trovarne una; filtra per label/chiave/tipo,
+  // stesso pattern già in uso per il filtro per categoria (tab): idx resta quello vero,
+  // si salta solo il render.
+  const [blockSearch, setBlockSearch] = useState('')
   // Card collassate di default (canvas a griglia, 2026-08-16) — mappa id->bool,
   // le card non ancora toccate sono implicitamente collassate (vedi `?? false`
   // nel .map dei blocchi), non serve seminare la mappa all'apertura del modulo.
@@ -245,6 +251,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
   const [bottomTab, setBottomTab] = useState('validazioni')
   const [bottomCollapsed, setBottomCollapsed] = useState(false)
   const [propTab, setPropTab] = useState('proprieta')
+  const [propSubTab, setPropSubTab] = useState('aspetto')
   const [moduleSearch, setModuleSearch] = useState('')
   const [newModuleName, setNewModuleName] = useState('')
   const [newModuleIcon, setNewModuleIcon] = useState('box')
@@ -706,14 +713,40 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
   // automazioni...) perdeva il lavoro senza modo di recuperarlo se non ricaricando
   // l'ultima bozza salvata. Un blocco appena aggiunto e ancora senza etichetta/chiave
   // non chiede conferma — non c'è ancora nulla da perdere.
-  const removeStep = (idx) => setSchema((p) => {
-    const step = p.steps[idx]
+  // Avviso di dipendenza (2026-10-30): prima si chiedeva solo "sei sicuro?" — se il
+  // campo era già usato da un'automazione, una formula, un workflow o dichiarato come
+  // "importo"/"scadenza"/... nei Ruoli del modulo, lo scoprivi solo DOPO, quando quella
+  // cosa smetteva di funzionare. Ora, eliminando un Campo o una Relazione, si scansionano
+  // gli altri blocchi dello stesso modulo (match testuale sulla chiave: generico, non
+  // deve conoscere la forma esatta di ogni tipo di blocco) e si interroga /module-roles
+  // (i Ruoli vivono fuori dallo schema, lato backend) — l'avviso li elenca per nome,
+  // la scelta di procedere resta sempre dell'utente.
+  const USAGE_SCAN_TYPES = ['automation', 'workflow_transition', 'validazione_creazione', 'report_aggregate', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'period_view', 'parent_children_view', 'view_tabs', 'view', 'permissions']
+  const removeStep = (idx) => {
+    const step = schema.steps[idx]
     const hasContent = !!(step && (step.label || step.key || step.from))
-    if (hasContent && !window.confirm(`Eliminare "${step.label || step.key || step.block_type}"? Non c'è undo — se hai già configurato questo blocco, la modifica è persa finché non ricarichi l'ultima bozza salvata.`)) return p
-    const steps = [...p.steps]
-    steps.splice(idx, 1)
-    return { ...p, steps }
-  })
+    const doRemove = () => setSchema((p) => { const steps = [...p.steps]; steps.splice(idx, 1); return { ...p, steps } })
+    if (!hasContent) { doRemove(); return }
+    const confirmAndRemove = (extra) => {
+      const msg = extra ? `Eliminare "${step.label || step.key || step.block_type}"? È usato da: ${extra.join(', ')}. Se procedi, quelle configurazioni smettono di funzionare finché non le aggiusti — non c'è undo.`
+        : `Eliminare "${step.label || step.key || step.block_type}"? Non c'è undo — se hai già configurato questo blocco, la modifica è persa finché non ricarichi l'ultima bozza salvata.`
+      if (window.confirm(msg)) doRemove()
+    }
+    if ((step.block_type === 'field' || step.block_type === 'relation') && step.key) {
+      const key = step.key
+      const usages = []
+      schema.steps.forEach((s, i) => {
+        if (i === idx || !USAGE_SCAN_TYPES.includes(s.block_type)) return
+        if (JSON.stringify(s).includes('"' + key + '"')) usages.push(s.label || BLOCK_TYPE_LABEL[s.block_type] || s.block_type)
+      })
+      api.get('/module-roles/' + selected).then((cfg) => {
+        if (cfg && cfg.roles && Object.values(cfg.roles).includes(key)) usages.push('Ruoli del modulo')
+        confirmAndRemove(usages.length ? usages : null)
+      }).catch(() => confirmAndRemove(usages.length ? usages : null))
+      return
+    }
+    confirmAndRemove(null)
+  }
 
   // Riordino drag & drop — ora un unico array (steps), quindi il riordino è libero tra
   // QUALUNQUE tipo di blocco (Campo sopra Relazione, Relazione sopra Workflow, ecc.):
@@ -1031,6 +1064,11 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
               {tab !== 'Tutti' && (
                 <button onClick={() => setTab('Tutti')} className="text-gray-600 hover:text-gray-400 transition ml-1">— vedi tutti i blocchi</button>
               )}
+              <div className="relative ml-auto w-44">
+                <div className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none"><Icon name="search" size={10} /></div>
+                <input value={blockSearch} onChange={(e) => setBlockSearch(e.target.value)} placeholder="Cerca in questo modulo..."
+                  className="w-full bg-surface-page text-ink pl-6 pr-2 py-1 rounded-lg text-[11px] outline-none border border-gray-800 focus:border-accent transition" />
+              </div>
             </div>
 
             {/* Filtro per categoria — SOLO visuale: nasconde le card che non appartengono
@@ -1054,7 +1092,15 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                 // Filtro tab: idx resta quello vero nell'array completo, si salta solo
                 // il render — vedi commento sopra la barra dei tab.
                 if (tab !== 'Tutti' && categoryOf(step.block_type) !== tab) return null
-                const expanded = expandedSteps[step.id] ?? false
+                if (blockSearch.trim()) {
+                  const q = blockSearch.trim().toLowerCase()
+                  const haystack = [step.label, step.key, BLOCK_TYPE_LABEL[step.block_type]].filter(Boolean).join(' ').toLowerCase()
+                  if (!haystack.includes(q)) return null
+                }
+                // Con una ricerca attiva le card trovate si aprono subito — altrimenti
+                // "cercare" equivarrebbe comunque a dover cliccare ogni risultato per
+                // vederne il contenuto, vanificando lo scopo.
+                const expanded = blockSearch.trim() ? true : (expandedSteps[step.id] ?? false)
                 // Corpo di editing completo del blocco — invariato per tipo, solo ora
                 // "montato" solo quando la card è espansa (vedi collapse più sotto).
                 const rendered = (() => {
@@ -2906,11 +2952,47 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                   Nessun blocco ancora — inizia aggiungendone uno.
                 </div>
               )}
+
+              {schema.steps.length > 0 && blockSearch.trim() && schema.steps.every((step) => {
+                if (tab !== 'Tutti' && categoryOf(step.block_type) !== tab) return true
+                const q = blockSearch.trim().toLowerCase()
+                const haystack = [step.label, step.key, BLOCK_TYPE_LABEL[step.block_type]].filter(Boolean).join(' ').toLowerCase()
+                return !haystack.includes(q)
+              }) && (
+                <div className="col-span-full border border-dashed border-gray-800 rounded-xl text-center py-8 text-gray-600 text-sm">
+                  Nessun blocco trovato per "{blockSearch}".
+                </div>
+              )}
             </div>
 
             {showPreview && (
               <div className="w-full lg:w-[380px] flex-shrink-0 sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto bg-surface-card rounded-md border border-gray-800 p-4">
                 <div className="text-sm font-medium text-ink mb-3 flex items-center gap-1.5"><Icon name="eye" size={14} />Anteprima live</div>
+                {/* "Vedi come questo ruolo" (2026-10-30) — non un login impersonato (nessuna
+                    nuova rotta backend, nessun dato reale caricato): rilegge la stessa regola
+                    che il blocco Permessi calcola già per quel ruolo e la traduce in una
+                    frase, per capire cosa vedrebbe un ruolo senza disconnettersi e rifare
+                    login con un altro utente. */}
+                <div className="mb-3 pb-3 border-b border-gray-800">
+                  <label className="text-[10px] text-gray-500 uppercase tracking-wide mb-1 block">Vedi come questo ruolo</label>
+                  <select value={previewRole} onChange={(e) => setPreviewRole(e.target.value)}
+                    className="w-full bg-surface-page text-ink px-2.5 py-1.5 rounded-lg text-xs outline-none border border-gray-800 focus:border-accent transition">
+                    <option value="">— Nessuno (vista admin) —</option>
+                    {allRoles.map((r) => <option key={r.name} value={r.name}>{r.label}</option>)}
+                  </select>
+                  {previewRole && (() => {
+                    const permStep = schema.steps.find((s) => s.block_type === 'permissions')
+                    const rule = (permStep?.rules || []).find((r) => r.role === previewRole)
+                      || { view: true, view_own_only: false, owner_field: '', create: true, edit: true, delete: true }
+                    if (!rule.view) return <div className="text-[11px] text-amber-400 mt-2">Non vede questo modulo: non compare nella sua sidebar.</div>
+                    return (
+                      <div className="text-[11px] text-gray-400 mt-2 space-y-1">
+                        <div>{rule.label_override ? `Nel menu si chiama "${rule.label_override}". ` : ''}Vede {rule.view_own_only ? (rule.owner_field ? `solo i record collegati a lui tramite "${rule.owner_field}"` : 'solo i record creati da lui') : 'tutti i record'}.</div>
+                        <div>{['create', 'edit', 'delete'].filter((a) => rule[a]).map((a) => ({ create: 'creare', edit: 'modificare', delete: 'eliminare' }[a])).join(', ') || 'Non può creare, modificare o eliminare'}{['create', 'edit', 'delete'].some((a) => rule[a]) ? ' righe.' : ''}</div>
+                      </div>
+                    )
+                  })()}
+                </div>
                 <BuilderPreviewPanel schema={schema} />
               </div>
             )}
@@ -2927,7 +3009,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
           onUpdate={(patch) => updateModuleIconColor(selected, patch)}
           onSelectModule={(slug) => { setShowCanvas(false); selectModule(slug) }}
           showIconPicker={showIconPicker} setShowIconPicker={setShowIconPicker}
-          history={history} restoreVersion={restoreVersion} tab={propTab} setTab={setPropTab} />
+          history={history} restoreVersion={restoreVersion} tab={propTab} setTab={setPropTab} subTab={propSubTab} setSubTab={setPropSubTab} />
       )}
 
       {showNewModule && (
