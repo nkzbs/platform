@@ -83,6 +83,26 @@ async function main() {
     assertEq((await call('doc', { action: 'remove', value: 'Assicurazioni' })).status, 200); assertEq(opts('doc').includes('Assicurazioni'), false);
   });
 
+  console.log('\n--- cartelle annidate ---');
+  await test('aggiungere una sottocartella ("Bollette/2026") funziona come un valore qualunque', async () => {
+    assertEq((await call('doc', { action: 'add', value: 'Bollette' })).status, 200);
+    assertEq((await call('doc', { action: 'add', value: 'Bollette/2026' })).status, 200);
+    assertEq((await call('doc', { action: 'add', value: 'Bollette/2027' })).status, 200);
+    assertTrue(opts('doc').includes('Bollette/2026') && opts('doc').includes('Bollette/2027'));
+  });
+  await test('rinominare una cartella rinomina anche le sue sottocartelle, e le righe di entrambe', async () => {
+    const a = riga('doc', 'Bollette/2026'), b = riga('doc', 'Bollette/2027'), c = riga('doc', 'Bollette');
+    const r = await call('doc', { action: 'rename', from: 'Bollette', to: 'Fatture' });
+    assertEq(r.status, 200); const j = await r.json(); assertEq(j.righe, 3);
+    assertTrue(opts('doc').includes('Fatture') && opts('doc').includes('Fatture/2026') && opts('doc').includes('Fatture/2027'));
+    assertTrue(!opts('doc').includes('Bollette') && !opts('doc').includes('Bollette/2026'));
+    assertEq([tipoDi(a), tipoDi(b), tipoDi(c)], ['Fatture/2026', 'Fatture/2027', 'Fatture']);
+  });
+  await test('togliere una cartella con sottocartelle si rifiuta, anche se vuota lei stessa', async () => {
+    const r = await call('doc', { action: 'remove', value: 'Fatture' });
+    assertEq(r.status, 409); assertTrue(/sottocartelle/.test((await r.json()).error));
+  });
+
   console.log('\n--- chi può ---');
   await test('senza accesso 401; campo che non è una scelta 422; azione sconosciuta 400', async () => {
     assertEq((await fetch(BASE + '/api/field-options/doc/tipo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).status, 401);

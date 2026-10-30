@@ -4,6 +4,12 @@
 // Rinominare cambia il nome nello schema pubblicato (con una riga di cronologia, come una pubblicazione dal Builder) e in tutte le righe che lo usano,
 // in un'unica transazione. Si rifiuta se il nome è già preso, o se il vecchio nome compare in altre regole del modulo (condizioni, automazioni):
 // cambiarlo lì in silenzio le romperebbe. Togliere è possibile solo se nessuna riga lo usa. Chi può farlo: chi ha il permesso di modifica sul modulo.
+//
+// Cartelle annidate (30/10/2026, richiesto dall'utente: "vere sottocartelle"): un valore con
+// "/" dentro è un percorso (es. "Bollette/2026") — ArchiveView.jsx lo interpreta come un
+// albero, qui serve solo trattare bene i discendenti di un percorso: rinominare "Bollette" in
+// "Fatture" deve rinominare anche "Bollette/2026" in "Fatture/2026" (e le righe che la usano),
+// eliminare deve rifiutarsi se esistono sottocartelle (anche vuote), non solo se ci sono righe.
 const express = require('express');
 const db = require('../db');
 const { requireAuth, requireModuleAccess } = require('./auth');
@@ -54,11 +60,15 @@ router.post('/:slug/:fieldKey', requireAuth, requireModuleAccess, (req, res) => 
   const cur = applyToSchema(mod.schema_json, fieldKey, () => {});
   if (cur.error) return fail(res, 422, cur.error);
 
-  let change, audit;
+  const figli = (v) => cur.options.filter((o) => o !== v && o.startsWith(v + '/'));
+
+  let change, audit, coppie = [];
   if (action === 'add') {
     const v = clean(b.value);
     if (!v) return fail(res, 400, 'Scrivi il nome della cartella.');
-    if (v.length > 60) return fail(res, 400, 'Il nome è troppo lungo (massimo 60 caratteri).');
+    const segmenti = v.split('/');
+    if (segmenti.some((s) => s.length > 60)) return fail(res, 400, 'Il nome è troppo lungo (massimo 60 caratteri).');
+    if (v.length > 240) return fail(res, 400, 'Il percorso della cartella è troppo lungo.');
     if (cur.options.some((o) => String(o).toLowerCase() === v.toLowerCase())) return fail(res, 409, 'Esiste già una cartella con questo nome.');
     change = (f) => { f.options.push(typeof f.options[0] === 'object' && f.options[0] ? { value: v, label: v } : v); };
     audit = { action: 'add', value: v };
@@ -66,17 +76,23 @@ router.post('/:slug/:fieldKey', requireAuth, requireModuleAccess, (req, res) => 
     const from = String(b.from == null ? '' : b.from), to = clean(b.to);
     if (!cur.options.includes(from)) return fail(res, 404, 'Cartella non trovata.');
     if (!to) return fail(res, 400, 'Scrivi il nuovo nome.');
-    if (to.length > 60) return fail(res, 400, 'Il nome è troppo lungo (massimo 60 caratteri).');
+    const nomeSegmento = to.slice(to.lastIndexOf('/') + 1);
+    if (nomeSegmento.length > 60) return fail(res, 400, 'Il nome è troppo lungo (massimo 60 caratteri).');
     if (to !== from && cur.options.some((o) => String(o).toLowerCase() === to.toLowerCase())) return fail(res, 409, 'Esiste già una cartella con questo nome.');
     if (to === from) return res.json({ ok: true, options: cur.options, righe: 0 });
     // il vecchio nome in altre parti dello schema (condizioni, automazioni…): non si cambia in silenzio
     const probe = applyToSchema(mod.schema_json, fieldKey, (f) => { f.options = []; });
     if (citaValore(JSON.parse(probe.json), from)) return fail(res, 409, 'Il nome «' + from + '» è usato anche in altre regole di questo modulo (condizioni o automazioni): rinominarlo da qui le romperebbe. Cambialo dal Builder.');
-    change = (f) => { f.options = f.options.map((o) => (optValue(o) === from ? (typeof o === 'string' ? to : { ...o, value: to, label: to }) : o)); };
+    // Rinominare una cartella rinomina anche ogni sua sottocartella: "Bollette" -> "Fatture"
+    // porta con sé "Bollette/2026" -> "Fatture/2026", righe comprese.
+    coppie = [[from, to], ...figli(from).map((o) => [o, to + o.slice(from.length)])];
+    const daCoppia = new Map(coppie);
+    change = (f) => { f.options = f.options.map((o) => { const nuovo = daCoppia.get(optValue(o)); if (nuovo == null) return o; return typeof o === 'string' ? nuovo : { ...o, value: nuovo, label: nuovo }; }); };
     audit = { action: 'rename', from, to };
   } else if (action === 'remove') {
     const v = String(b.value == null ? '' : b.value);
     if (!cur.options.includes(v)) return fail(res, 404, 'Cartella non trovata.');
+    if (figli(v).length > 0) return fail(res, 409, 'La cartella contiene altre sottocartelle: elimina prima quelle.');
     const n = used(v);
     if (n > 0) return fail(res, 409, 'La cartella non è vuota: contiene ' + n + (n === 1 ? ' documento' : ' documenti') + '. Spostali prima in un\'altra.');
     change = (f) => { f.options = f.options.filter((o) => optValue(o) !== v); };
@@ -94,7 +110,9 @@ router.post('/:slug/:fieldKey', requireAuth, requireModuleAccess, (req, res) => 
     db.prepare('INSERT INTO modules_schema_history (module_id, schema_json, version, published_by) VALUES (?, ?, ?, ?)').run(mod.id, mod.schema_json, mod.schema_version, req.user.id);
     db.prepare('UPDATE modules SET schema_json = ?, schema_json_draft = ?, schema_version = schema_version + 1, published_at = CURRENT_TIMESTAMP WHERE slug = ?')
       .run(nuovo.json, mod.schema_json_draft ? (bozza || mod.schema_json_draft) : null, slug);
-    if (audit.action === 'rename') righe = db.prepare("UPDATE records SET data = json_set(data, '$.' || ?, ?), updated_at = CURRENT_TIMESTAMP WHERE module_slug = ? AND json_extract(data, '$.' || ?) = ?").run(fieldKey, audit.to, slug, fieldKey, audit.from).changes;
+    if (audit.action === 'rename') {
+      for (const [da, a] of coppie) righe += db.prepare("UPDATE records SET data = json_set(data, '$.' || ?, ?), updated_at = CURRENT_TIMESTAMP WHERE module_slug = ? AND json_extract(data, '$.' || ?) = ?").run(fieldKey, a, slug, fieldKey, da).changes;
+    }
   })();
   logAudit(req.user.username, 'module.field_option.' + audit.action, slug + '.' + fieldKey, { ...audit, righe });
   res.json({ ok: true, options: nuovo.options, righe });
