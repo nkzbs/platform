@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.33 — 30 ottobre 2026
+
+**Fix: la scheda "Modulo mancante" (0.3.32) usava `cp-primary`**, un colore che esiste solo nel frontend di Super Admin — nel tenant restava senza stile (bordo e icona piatti). Corretto con `accent`, il token vero di quel frontend; icona diversa per tipo di proposta (freccia di download per "installa", bacchetta per "crea un modulo nuovo"), etichetta "MODULO MANCANTE" con l'accento del colore del tenant, motivo con un filo laterale invece del corsivo.
+
 ## 0.3.32 — 30 ottobre 2026
 
 **«Ti manca un modulo?»**, dentro ogni tenant (Impostazioni → Suggerimenti). Oltre alle osservazioni giornaliere già esistenti (campo poco usato, righe ferme...), una volta alla settimana — e sempre su richiesta col pulsante "Mi manca un modulo?" — l'AI guarda l'insieme dei moduli installati (mai i valori delle righe, solo struttura e qualche indizio già calcolato in locale) e propone UNA cosa: installare un modulo già pronto in Libreria (un tocco, usa la rotta d'installazione già esistente) o costruirne uno nuovo (apre il Builder sul nuovo modulo, con nome e descrizione proposti già scritti). Se non c'è niente di concreto, l'AI risponde "nessuna" — meglio di un suggerimento a sensazione. Mai un'installazione o una scrittura automatica: propone e basta, un tocco decide.

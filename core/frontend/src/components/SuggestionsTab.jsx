@@ -59,18 +59,21 @@ export default function SuggestionsTab({ token, onOpenInBuilder, onCreateNewModu
     const R = REGOLA[it.rule_key] || { etichetta: it.rule_key, icona: 'info' }
     if (it.rule_key === 'modulo_mancante') {
       const d = it.data || {}
+      const icona = d.tipo === 'crea' ? 'wand' : 'download'
       return (
-        <section key={it.id} className={'bg-surface-card border rounded-xl p-4 ' + (it.status === 'dismissed' ? 'opacity-60 border-gray-800' : 'border-cp-primary/40')}>
+        <section key={it.id} className={'bg-surface-card border rounded-xl p-4 ' + (it.status === 'dismissed' ? 'opacity-60 border-gray-800' : 'border-accent/40')}>
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-cp-primary/15 border border-cp-primary/30 flex items-center justify-center text-cp-primary flex-shrink-0"><Icon name={R.icona} size={14} /></div>
+            <div className="w-9 h-9 rounded-full bg-accent/15 border border-accent/30 flex items-center justify-center text-accent flex-shrink-0"><Icon name={icona} size={15} /></div>
             <div className="min-w-0 flex-1">
-              <div className="text-[11px] uppercase tracking-wide text-gray-500">{R.etichetta}</div>
-              <div className="text-sm text-ink mt-0.5">{it.title}</div>
-              {d.descrizione && <div className="text-xs text-gray-400 mt-1">{d.descrizione}</div>}
-              {d.motivo && <div className="text-xs text-gray-500 mt-1 italic">{d.motivo}</div>}
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] uppercase tracking-wide text-accent font-semibold flex items-center gap-1"><Icon name="sparkles" size={10} />{R.etichetta}</span>
+              </div>
+              <div className="text-sm text-ink font-medium mt-1">{it.title}</div>
+              {d.descrizione && <div className="text-xs text-gray-400 mt-1.5">{d.descrizione}</div>}
+              {d.motivo && <div className="text-xs text-gray-500 mt-2 border-l-2 border-gray-800 pl-2">{d.motivo}</div>}
               <div className="flex flex-wrap gap-2 mt-3">
-                {it.status === 'open' && d.tipo === 'installa' && <button onClick={() => installa(it)} disabled={!!busy} className="text-xs bg-cp-primary hover:bg-cp-primary-hover disabled:opacity-50 text-white px-3 py-1.5 rounded-lg font-medium">{busy === 'i' + it.id ? 'Installo…' : 'Installa «' + d.nome + '»'}</button>}
-                {it.status === 'open' && d.tipo === 'crea' && onCreateNewModule && <button onClick={onCreateNewModule} className="text-xs bg-cp-primary hover:bg-cp-primary-hover text-white px-3 py-1.5 rounded-lg font-medium">Apri il Builder per costruirlo</button>}
+                {it.status === 'open' && d.tipo === 'installa' && <button onClick={() => installa(it)} disabled={!!busy} className="text-xs bg-accent hover:opacity-90 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5"><Icon name="download" size={12} />{busy === 'i' + it.id ? 'Installo…' : 'Installa «' + d.nome + '»'}</button>}
+                {it.status === 'open' && d.tipo === 'crea' && onCreateNewModule && <button onClick={onCreateNewModule} className="text-xs bg-accent hover:opacity-90 text-white px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5"><Icon name="wand" size={12} />Apri il Builder per costruirlo</button>}
                 {it.status === 'open' ? <button onClick={() => stato(it, 'dismissed')} className="text-xs text-gray-500 hover:text-ink px-2 py-1.5">Ignora</button> : <button onClick={() => stato(it, 'open')} className="text-xs text-gray-400 hover:text-ink px-2 py-1.5">Riapri</button>}
               </div>
             </div>
