@@ -638,7 +638,21 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
                 </button>
               ))
             ) : canCreate && (
-              <button onClick={() => { setShowNew(true); setMostraCollegamenti(false); const ff = mod.list_view === 'archive' ? fields.find((f) => f.type === 'select') : null; setForm({ ...(workflow && workflow.states && workflow.states.length > 0 ? { _stato: workflow.states[0].key } : {}), ...(ff && cartellaCorrente ? { [ff.key]: cartellaCorrente } : {}) }) }} className="bg-accent hover:opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+              // In un archivio (es. Documenti), allegare a mano un file manualmente a mano chiedeva
+              // di compilare ANCHE la data a mano, anche se nel 99% dei casi è "oggi" (il titolo si
+              // auto-compila già dal nome del file, vedi uploadFile sopra — qui lo stesso principio
+              // per la data: un valore di partenza sensato invece di un campo vuoto da pensare).
+              <button onClick={() => {
+                setShowNew(true); setMostraCollegamenti(false)
+                const arch = mod.list_view === 'archive'
+                const ff = arch ? fields.find((f) => f.type === 'select') : null
+                const df = arch ? fields.find((f) => f.type === 'date' && !f.scadenza) : null
+                setForm({
+                  ...(workflow && workflow.states && workflow.states.length > 0 ? { _stato: workflow.states[0].key } : {}),
+                  ...(ff && cartellaCorrente ? { [ff.key]: cartellaCorrente } : {}),
+                  ...(df ? { [df.key]: todayStr } : {}),
+                })
+              }} className="bg-accent hover:opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
                 <Icon name="plus" size={14} />Nuovo
               </button>
             )}
