@@ -235,5 +235,5 @@ app.listen(PORT, () => {
   startDrivePoller();
   startAuditRetentionScheduler();
   startSuggestions(); // una volta al giorno, solo se la funzione «suggerimenti» è accesa
-  require('./one-off-2026-10-30-report-ambigue').run(); // una tantum, solo log — vedi il file
+  require('./one-off-2026-10-30-match-by-month').run(); // una tantum, idempotente — vedi il file
 });

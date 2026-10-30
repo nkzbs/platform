@@ -34,7 +34,7 @@ function candidati(sourceSlug, importo) {
       let d; try { d = JSON.parse(r.data); } catch (e) { continue; }
       if (d[m.relationKey]) continue; // già collegata
       const imp = Number(d.importo);
-      if (!Number.isFinite(imp) || Math.abs(imp - importo) >= 0.01) continue;
+      if (!Number.isFinite(imp) || Math.round(imp * 100) !== Math.round(importo * 100)) continue;
       out.push({ slug: m.slug, id: r.id, descrizione: d.descrizione, importo: imp, data: d.data, scadenza: d.scadenza });
     }
   }
