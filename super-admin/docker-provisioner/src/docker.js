@@ -94,10 +94,33 @@ function containerName(slug) {
 // inspect`, non assunto) e montata solo la sottocartella `/<slug>` di
 // quel tenant — stesso principio di containerName() sopra: anche un
 // chiamante compromesso agisce solo sulla propria fetta, mai su quella di
-// un altro. Docker crea da sé la sottocartella host mancante (comportamento
-// consolidato per una directory in Binds) — nessun mkdir esplicito qui.
+// un altro.
+//
+// Il commento originale qui diceva "Docker crea da sé la sottocartella host
+// mancante" — FALSO sul Docker Engine di Synology (bug reale trovato dal
+// vivo il 30/10 creando un tenant mai esistito prima, es. "agente": 500
+// "Bind mount failed: ... does not exists"). A differenza di un volume
+// nominato, un `Binds` su un path host arbitrario non viene auto-creato;
+// qui funzionava solo per i tenant già migrati il 26/10 (la cartella
+// esisteva già). Creiamo la sottocartella da soli con un container
+// usa-e-getta che monta il volume per intero (stesso pattern già validato
+// in provisioner.test.js) — nessun accesso diretto al filesystem host da
+// questo servizio, solo via Docker stesso.
+async function ensureTenantDataDir(slug, volumeName) {
+  await new Promise((resolve, reject) => {
+    docker.run(IMAGE_NAME, ['mkdir', '-p', '/mnt/' + slug], undefined, {
+      HostConfig: { Binds: [volumeName + ':/mnt'], AutoRemove: true },
+    }, (err, data) => {
+      if (err) return reject(err);
+      if (data && data.StatusCode !== 0) return reject(new Error('Creazione cartella dati tenant fallita (exit ' + data.StatusCode + ')'));
+      resolve();
+    });
+  });
+}
+
 async function tenantHostConfig(slug, port) {
   const volumeName = process.env.DATA_VOLUME || 'platform_platform-data';
+  await ensureTenantDataDir(slug, volumeName);
   const vol = await docker.getVolume(volumeName).inspect();
   return {
     Binds: [vol.Mountpoint + '/' + slug + ':/data'],
