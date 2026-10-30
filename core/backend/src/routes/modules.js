@@ -503,6 +503,58 @@ router.post('/internal/apply-workflow-config-batch', requireInternalSecret, (req
   res.json({ results });
 });
 
+// Chiamata da Super Admin (lib/tenant-config-from-analysis.js, 30/10/2026) quando
+// un'Analisi propone relazioni NUOVE tra moduli di verticali diverse — i moduli
+// scelti dalla Libreria per processi distinti non hanno quasi mai relazioni
+// reciproche già scritte (vengono da tenant/verticali diversi), anche quando il
+// racconto dell'attività le implica chiaramente (es. "Immobili" e "Appuntamenti").
+// Stesso identico principio di apply-workflow-config-batch sopra — non
+// sovrascrive mai, aggiunge solo relazioni che ancora non ci sono, una per
+// coppia modulo→bersaglio (mai duplicata, mai verso se stesso).
+router.post('/internal/apply-relations-batch', requireInternalSecret, (req, res) => {
+  const { relations } = req.body || {};
+  if (!Array.isArray(relations) || relations.length === 0) return res.status(400).json({ error: 'relations obbligatorio (array non vuoto)' });
+  const { genId } = require('../../../../shared/schema-v3-core.js');
+
+  const results = relations.map(({ registry_module_id, target_registry_module_id, label }) => {
+    if (!registry_module_id || !target_registry_module_id) return { registry_module_id, configured: false, reason: 'dati_mancanti' };
+    if (registry_module_id === target_registry_module_id) return { registry_module_id, configured: false, reason: 'relazione_verso_se_stesso' };
+
+    const moduleRow = db.prepare('SELECT id, slug, schema_json FROM modules WHERE registry_module_id = ?').get(registry_module_id);
+    const targetRow = db.prepare('SELECT slug FROM modules WHERE registry_module_id = ?').get(target_registry_module_id);
+    if (!moduleRow) return { registry_module_id, configured: false, reason: 'modulo_non_trovato_sul_tenant' };
+    if (!targetRow) return { registry_module_id, configured: false, reason: 'modulo_bersaglio_non_trovato_sul_tenant' };
+    if (moduleRow.slug === targetRow.slug) return { registry_module_id, configured: false, reason: 'relazione_verso_se_stesso' };
+
+    let schema;
+    try { schema = JSON.parse(moduleRow.schema_json || '{}'); } catch (e) { schema = {}; }
+    const v3 = isV3(schema) ? schema : toV3(schema);
+    if (v3.steps.some((s) => s.block_type === 'relation' && s.target_module === targetRow.slug)) {
+      return { registry_module_id, configured: false, reason: 'relazione_gia_presente' };
+    }
+
+    const usedKeys = new Set(v3.steps.filter((s) => s.key).map((s) => s.key));
+    let key = targetRow.slug.replace(/[^a-z0-9_]/gi, '_'), n = 2;
+    while (usedKeys.has(key)) { key = targetRow.slug + '_' + n; n++; }
+
+    const newStep = { id: genId('rel'), block_type: 'relation', key, label: label || targetRow.slug, type: 'many_to_one', target_module: targetRow.slug };
+    const finalSchema = { version: 3, steps: [...v3.steps, newStep] };
+    try { parseSchemaNormalized(JSON.stringify(finalSchema)); } catch (e) {
+      return { registry_module_id, configured: false, reason: 'schema_non_valido: ' + e.message };
+    }
+    db.prepare('UPDATE modules SET schema_json = ? WHERE id = ?').run(JSON.stringify(finalSchema), moduleRow.id);
+    return { registry_module_id, target_registry_module_id, configured: true, key };
+  });
+
+  const configured = results.filter((r) => r.configured);
+  if (configured.length > 0) {
+    logAudit('platform:provisioning', 'modules.relations_applied_batch', configured.length + ' relazioni', {
+      coppie: configured.map((r) => r.registry_module_id + '->' + r.target_registry_module_id),
+    });
+  }
+  res.json({ results });
+});
+
 // Fase 12.5 — B2c: gemella di install-batch, ma per il caso "un solo modulo, crea O
 // aggiorna per slug" — usato sia da Super Builder AI (/deploy, bozza generata
 // dall'AI verso il proprio sandbox) sia dall'anteprima di una pubblicazione ancora

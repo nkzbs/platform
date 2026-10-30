@@ -185,10 +185,30 @@ async function applyAnalysisConfigToTenant({ tenantSlug, processi, installedRegi
     }
   }
 
-  if (result.roles_created.length > 0 || result.modules_configured.length > 0) {
+  // 3) Relazioni nuove tra moduli di verticali diverse (30/10/2026, richiesto
+  // dall'utente: un'analisi ricca installava moduli "muti", senza relazioni tra
+  // loro, perché vengono dalla Libreria da tenant diversi — withDependencies
+  // sopra porta dentro solo le relazioni che un modulo scelto GIÀ aveva, mai ne
+  // crea di nuove). L'AI propone leggendo i processi, apply-relations-batch (su
+  // core/backend) valida e scrive — mai sovrascrive una relazione già presente.
+  result.relations_created = [];
+  try {
+    const relazioni = await require('./analysis').proponiRelazioni(processi, installedRegistryModuleIds);
+    if (relazioni.length > 0) {
+      const relResult = await callTenantAPI(tenantSlug, 'POST', '/api/modules/internal/apply-relations-batch', {
+        relations: relazioni.map((r) => ({ registry_module_id: r.da, target_registry_module_id: r.verso })),
+      });
+      result.relations_created = (relResult.results || []).filter((r) => r.configured);
+    }
+  } catch (e) {
+    result.relations_error = e.message;
+  }
+
+  if (result.roles_created.length > 0 || result.modules_configured.length > 0 || result.relations_created.length > 0) {
     logAudit(actor || 'sistema', 'analysis.tenant_config_applied', tenantSlug, {
       roles_created: result.roles_created,
       modules_configured: result.modules_configured.map((m) => m.registry_module_id),
+      relations_created: result.relations_created.map((r) => r.registry_module_id + '->' + r.target_registry_module_id),
     });
   }
   return result;

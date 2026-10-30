@@ -190,6 +190,43 @@ async function main() {
     eq(r.blueprint.moduli_ids.sort(), [idA, idB].sort()); eq(r.blueprint.manca, [{ processo: 'Preventivare mario@rossi.it', voci: ['Firma digitale'] }]);
   });
 
+  console.log('\n--- relazioni nuove tra moduli (30/10/2026) ---');
+  // Un test precedente (riga ~70) sostituisce A.deps.callAI con una versione che non
+  // traccia i prompt in `prompts` (bug preesistente della suite, mai notato perché
+  // nessun test dopo quel punto controllava il CONTENUTO del prompt, solo l'assenza
+  // di dati personali — vera anche su un array vuoto). Ripristinato qui.
+  A.deps.callAI = async (prov, { system, user }) => { prompts.push(user); return JSON.stringify(risposta); };
+  await test('meno di 2 moduli: niente da collegare, l\'AI non viene nemmeno chiamata', async () => {
+    prompts = [];
+    eq(await A.proponiRelazioni([{ nome: 'X', registry_module_id: idA }], [idA]), []);
+    eq(prompts.length, 0);
+    eq(await A.proponiRelazioni([], []), []);
+  });
+  await test('propone una relazione vera tra due moduli scelti, leggendo scopo/input/output dei processi (dati personali ripuliti)', async () => {
+    prompts = []; risposta = { relazioni: [{ da: idA, verso: idB, motivo: 'l\'output di uno è l\'input dell\'altro' }] };
+    const processi = [
+      { nome: 'Preventivare mario@rossi.it', registry_module_id: idA, scopo: 'x', input: 'cliente tel 333 1234567', output: 'preventivo pronto' },
+      { nome: 'Chiudere', registry_module_id: idB, scopo: 'y', input: 'preventivo pronto', output: 'lavoro chiuso' },
+    ];
+    const r = await A.proponiRelazioni(processi, [idA, idB]);
+    eq(r, [{ da: idA, verso: idB, motivo: 'l\'output di uno è l\'input dell\'altro' }]);
+    ok(!prompts.join('').includes('mario@rossi.it') && !prompts.join('').includes('1234567'), 'nessun dato personale al modello');
+    ok(/Ordini di lavoro/.test(prompts[0]) && /Preventivi/.test(prompts[0]), 'il modello vede solo i moduli scelti per questa analisi');
+  });
+  await test('scarta: id inventato, relazione verso se stesso, duplicati', async () => {
+    risposta = { relazioni: [
+      { da: idA, verso: idB }, { da: idA, verso: idB }, // duplicata
+      { da: idA, verso: idA }, // verso se stesso
+      { da: idA, verso: 424242 }, // id inventato
+      { da: 'boh', verso: idB }, // non un numero
+    ] };
+    eq(await A.proponiRelazioni([{ registry_module_id: idA }], [idA, idB]), [{ da: idA, verso: idB, motivo: '' }]);
+  });
+  await test('nessuna relazione proposta: array vuoto, non un errore', async () => {
+    risposta = { relazioni: [] };
+    eq(await A.proponiRelazioni([], [idA, idB]), []);
+  });
+
   console.log('\n--- correggi a parole ---');
   await test('le operazioni: solo da una lista chiusa, processi e moduli veri, tetto di 12; l\'aggiunta ripulita', () => {
     const procs = [{ nome: 'Uno' }, { nome: 'Due' }], valid = new Set([idA, idB]);

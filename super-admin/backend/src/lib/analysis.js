@@ -94,7 +94,8 @@ Rispondi SOLO con un oggetto JSON in questa forma esatta, senza testo prima o do
 {"nome_attivita": "nome breve per questa attività, massimo 4 parole (es. Officina Rossi, Studio dentistico)", "processi": [{"nome": "Nome breve", "reparto": "Reparto plausibile", "scopo": "una frase", "registry_module_id": numero oppure null, "registry_module_reasoning": "una frase"}]}
 
 Regole:
-- Da 4 a 8 processi, i più concreti per QUESTA attività: non processi generici che andrebbero bene per qualunque attività.
+- Un processo per ogni attività distinta che la descrizione nomina esplicitamente o fa capire chiaramente: NON un numero fisso. Un'attività raccontata in poche righe avrà pochi processi (4-6); una raccontata in dettaglio, con fasi distinte, interlocutori diversi o adempimenti specifici, può averne 10, 15 o più. Non accorpare due attività distinte per stare sotto un tetto, ma non inventare nemmeno processi che l'attività non ha davvero.
+- Processi concreti per QUESTA attività: non processi generici che andrebbero bene per qualunque attività.
 - Non proporre due processi troppo simili.
 - "registry_module_id" DEVE essere uno degli id dell'elenco dei moduli forniti, oppure null: non inventare mai un id.`;
 
@@ -125,14 +126,14 @@ function applicaSuggerimento(p, s) {
 // Dalla descrizione: il nome dell'attività e i processi proposti (una chiamata). `suggestProcessi` ne ritorna solo l'elenco.
 async function analizzaAttivita({ descrizione }) {
   const mods = libraryModules();
-  const out = await ask(MULTI_SPEC, 'Descrizione dell\'attività: ' + redact(t(descrizione, 1500)) + '\n\nModuli disponibili:\n' + (moduleList(mods) || '(nessun modulo disponibile)'), 2200);
+  const out = await ask(MULTI_SPEC, 'Descrizione dell\'attività: ' + redact(t(descrizione, 2500)) + '\n\nModuli disponibili:\n' + (moduleList(mods) || '(nessun modulo disponibile)'), 4000);
   return { nome: t(out && out.nome_attivita, 60), processi: sanitizeProcessi(out && out.processi, new Set(mods.map((m) => m.id))) };
 }
 
 // Più processi da una descrizione: bozze «leggere» da accettare una per una.
 async function suggestProcessi({ descrizione }) {
   const mods = libraryModules();
-  const out = await ask(MULTI_SPEC, 'Descrizione dell\'attività: ' + redact(t(descrizione, 1500)) + '\n\nModuli disponibili:\n' + (moduleList(mods) || '(nessun modulo disponibile)'), 2200);
+  const out = await ask(MULTI_SPEC, 'Descrizione dell\'attività: ' + redact(t(descrizione, 2500)) + '\n\nModuli disponibili:\n' + (moduleList(mods) || '(nessun modulo disponibile)'), 4000);
   return sanitizeProcessi(out && out.processi, new Set(mods.map((m) => m.id)));
 }
 
@@ -282,6 +283,45 @@ function withDependencies(ids) {
   return out;
 }
 
+// ── relazioni nuove tra moduli di verticali diverse ──────────────────────────────────────────────────────────────────
+// I moduli scelti per processi distinti vengono spesso dalla Libreria, da tenant/verticali
+// diversi tra loro: non hanno quasi mai relazioni reciproche già scritte, anche quando il
+// racconto dell'attività lo richiede chiaramente (es. l'output di "Profilazione immobile" è
+// l'input di "Gestione appuntamenti"). `withDependencies` (sotto) porta dentro solo le
+// relazioni che un modulo scelto GIÀ aveva — qui invece se ne propongono di nuove, lette dai
+// processi stessi. L'AI propone, `applyAnalysisConfigToTenant` scrive (via
+// apply-relations-batch su core/backend, mai qui: l'AI non tocca mai un tenant).
+const RELAZIONI_SPEC = `Sei un consulente software. Ti do i processi di un'attività (scopo, input, output) e l'elenco dei moduli scelti per gestirla. Alcuni vengono da parti diverse di una libreria di moduli e potrebbero non essere ancora collegati tra loro, anche quando il racconto lo richiede chiaramente (l'output di un processo è l'input di un altro, o un modulo è chiaramente "sotto" un altro nel racconto).
+
+Rispondi SOLO con un oggetto JSON in questa forma esatta, senza testo prima o dopo e senza blocchi markdown:
+{"relazioni": [{"da": numero modulo, "verso": numero modulo, "motivo": "una frase breve: perché devono essere collegati"}]}
+
+Regole:
+- "da" e "verso" DEVONO essere id dell'elenco dei moduli forniti: non inventare mai un id.
+- Una relazione "da" X "verso" Y significa: un record di X può puntare a UN record di Y (es. un Appuntamento "verso" un Cliente, una Pratica "verso" un Immobile).
+- Proponi una relazione solo se i processi la richiedono davvero: non collegare due moduli solo perché compaiono nella stessa attività.
+- Niente relazioni duplicate, niente relazione di un modulo verso se stesso.
+- Se davvero non serve nessuna relazione nuova, rispondi con "relazioni": [].`;
+
+// moduleIds: gli id Registro scelti per QUESTA analisi (installedRegistryModuleIds in
+// tenant-config-from-analysis.js) — mai l'intera Libreria, altrimenti l'AI proporrebbe
+// relazioni verso moduli che il tenant non ha nemmeno installato.
+async function proponiRelazioni(processi, moduleIds) {
+  const ids = [...new Set((moduleIds || []).filter(Boolean))];
+  if (ids.length < 2) return [];
+  const mods = db.prepare(`SELECT id, name, description FROM registry_modules WHERE id IN (${ids.map(() => '?').join(',')})`).all(...ids);
+  if (mods.length < 2) return [];
+  const riepilogoProcessi = (processi || []).filter((p) => p.registry_module_id && ids.includes(p.registry_module_id))
+    .map((p, i) => (i + 1) + '. ' + redact(t(p.nome, 80)) + (p.scopo ? ' — ' + redact(t(p.scopo, 160)) : '') + (p.input ? ' | input: ' + redact(t(p.input, 160)) : '') + (p.output ? ' | output: ' + redact(t(p.output, 160)) : '')).join('\n');
+  const out = await ask(RELAZIONI_SPEC, 'Processi:\n' + (riepilogoProcessi || '(nessuno)') + '\n\nModuli scelti:\n' + moduleList(mods), 2000);
+  const validIds = new Set(ids), seen = new Set();
+  return (Array.isArray(out && out.relazioni) ? out.relazioni : [])
+    .map((r) => ({ da: Number(r && r.da), verso: Number(r && r.verso), motivo: t(r && r.motivo, 200) }))
+    .filter((r) => Number.isInteger(r.da) && Number.isInteger(r.verso) && r.da !== r.verso && validIds.has(r.da) && validIds.has(r.verso))
+    .filter((r) => { const k = r.da + '>' + r.verso; if (seen.has(k)) return false; seen.add(k); return true; })
+    .slice(0, 30);
+}
+
 // ── proposte di report e di AI, dalle dichiarazioni dei moduli scelti (nessun nome di settore: guardano solo i ruoli dichiarati) ───────────────────
 const dichiarazione = (r) => { try { return r && r.ruoli ? JSON.parse(r.ruoli) : null; } catch (e) { return null; } };
 function moduliDichiarati(ids) {
@@ -334,4 +374,4 @@ function blueprint(processi) {
   return { processi: processi.length, ...c, proposte: proposte(moduliIds), moduli_ids: moduliIds, moduli_collegati: nomi(moduliIds.filter((id) => !diretti.includes(id))), ruoli_utente: ruoli.size, da_costruire: processi.filter((p) => p.copertura === 'da_costruire').map((p) => p.nome), manca: processi.filter((p) => (p.manca || []).length).map((p) => ({ processo: p.nome, voci: p.manca })) };
 }
 
-module.exports = { deps, applicaSuggerimento, proponiCorrezioni, applicaCorrezioni, controllaCorrezioni, approfondisci, applicaApprofondimento, analizzaAttivita, withDependencies, proposte, pacchettoTenant, libraryModules, sanitizeProcesso, sanitizeProcessi, sanitizeProfilo, suggestProcesso, suggestProcessi, blueprint, COPERTURE };
+module.exports = { deps, applicaSuggerimento, proponiCorrezioni, applicaCorrezioni, controllaCorrezioni, approfondisci, applicaApprofondimento, proponiRelazioni, analizzaAttivita, withDependencies, proposte, pacchettoTenant, libraryModules, sanitizeProcesso, sanitizeProcessi, sanitizeProfilo, suggestProcesso, suggestProcessi, blueprint, COPERTURE };
