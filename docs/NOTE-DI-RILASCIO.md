@@ -2,6 +2,16 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.28 — 30 ottobre 2026
+
+**Creazione di un tenant mai esistito prima falliva** ("Bind mount failed"): il Docker Engine del NAS (a differenza di Docker Desktop) non crea da sé la sottocartella dati mancante per un volume isolato per tenant — funzionava solo per i tenant già migrati il 26/10. Ora la sottocartella si crea esplicitamente prima di avviare il container.
+
+**Fix di sicurezza reale**: un allegato collegato solo tramite il campo File di un record (non tramite la tabella `record_attachments`) era illeggibile da chiunque non lo avesse caricato personalmente, admin incluso — bug introdotto dal fix IDOR del 14/10, mai notato perché finora ogni allegato veniva sempre aperto da chi lo aveva caricato. Trovato dal vivo (una bolletta importata da Drive, "Non hai i permessi"). 17 test di sicurezza (12 esistenti + 5 nuovi) confermano che le protezioni del 14/10 restano intatte.
+
+**Archivio: vere cartelle annidate** (richiesto dall'utente dopo aver visto la divisione automatica per anno su "Bolletta": "voglio vere sottocartelle"). Il valore di una cartella è ora un percorso ("Bollette/2026", "/" come separatore) sullo stesso campo piatto di sempre — nessuna migrazione dati, una cartella esistente senza "/" resta identica a prima. "Nuova cartella" ora compare anche dentro una cartella reale; rinominare una cartella rinomina in cascata anche le sue sottocartelle (e le righe che le usano); eliminare si rifiuta se la cartella ha sottocartelle.
+
+**Collegamento ricevute↔spese** (richiesto dall'utente dopo l'import massivo di bollette/ricevute da Drive): l'abbinamento automatico per solo importo si è rivelato troppo ambiguo su dati reali (lo stesso importo ricorre su decine di spese non collegate tra loro) — niente link scritti alla cieca. Aggiunta una relazione "Ricevuta/Bolletta collegata" su Spese Casa/Personali e una vista di revisione (**Impostazioni → Dati e sicurezza → "Rivedi collegamenti"**) dove ogni proposta letta dall'AI si conferma o si scarta con un clic. Dei ~440 documenti: 211 collegati in automatico (candidata unica per importo, o per importo+data/mese quando una spesa ricorrente mensile lo permetteva), il resto resta per la revisione a mano (file non ancora leggibili — immagini/email — o importi genuinamente ambigui).
+
 ## 0.3.16 — 25 ottobre 2026
 
 Chiusura dell'arco "bot + app alla pari" su busta paga e contributi casa, più la risposta a "Platoform è la base, BOT è opzionale" (richiesto dall'utente): tutto ciò che il bot sa fare su questi temi ora esiste anche come vista nell'app, non solo come conversazione.
