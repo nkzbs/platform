@@ -455,16 +455,21 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
             <section className={card}>
               <h2 className="text-sm font-semibold text-ink mb-1">Report e AI per questo tenant</h2>
               <p className="text-xs text-gray-500 mb-3">Dedotti da ciò che i moduli scelti dichiarano. I report nascono <b>spenti</b> (li accendi tu, con orario e destinatari); i potenziamenti AI restano fermi finché non accendi l'AI e inserisci una chiave nel tenant. Togli quello che non ti serve.</p>
-              {[['Report', b.proposte.report], ['Potenziamenti AI', b.proposte.ai]].filter(([, l]) => l.length > 0).map(([titolo, l]) => (
-                <div key={titolo} className="mb-2">
-                  <div className="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-1">{titolo}</div>
-                  <div className="divide-y divide-gray-800">
+              {[['Report', b.proposte.report, 'bar-chart'], ['Potenziamenti AI', b.proposte.ai, 'zap']].filter(([, l]) => l.length > 0).map(([titolo, l, icon]) => (
+                <div key={titolo} className="mb-3 last:mb-0">
+                  <div className="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-1.5">{titolo}</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {l.map((x) => {
                       const esc = (a.scelte && a.scelte.escludi) || []
+                      const attivo = !esc.includes(x.key)
                       return (
-                        <label key={x.key} className="flex items-start gap-2.5 py-2 cursor-pointer">
-                          <input type="checkbox" className="mt-1" checked={!esc.includes(x.key)} onChange={(e) => change({ scelte: { escludi: e.target.checked ? esc.filter((k) => k !== x.key) : [...esc, x.key] } })} />
-                          <span className="text-sm"><span className="text-ink">{x.nome || (x.modulo + ' · ' + ({ triage: 'Smistare', explain: 'Spiegare', import: 'Importare' }[x.feature] || x.feature))}</span><span className="block text-xs text-gray-500">{x.perche}</span></span>
+                        <label key={x.key} className={'flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition ' + (attivo ? 'border-cp-primary/40 bg-cp-primary/5' : 'border-gray-800 opacity-60')}>
+                          <span className={'w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ' + (attivo ? 'bg-cp-primary/20 text-cp-primary' : 'bg-gray-800 text-gray-500')}><Icon name={icon} size={13} /></span>
+                          <span className="min-w-0 flex-1">
+                            <span className="text-sm text-ink block truncate">{x.nome || (x.modulo + ' · ' + ({ triage: 'Smistare', explain: 'Spiegare', import: 'Importare' }[x.feature] || x.feature))}</span>
+                            <span className="block text-xs text-gray-500 line-clamp-2">{x.perche}</span>
+                          </span>
+                          <input type="checkbox" className="mt-1 flex-shrink-0" checked={attivo} onChange={(e) => change({ scelte: { escludi: e.target.checked ? esc.filter((k) => k !== x.key) : [...esc, x.key] } })} />
                         </label>
                       )
                     })}

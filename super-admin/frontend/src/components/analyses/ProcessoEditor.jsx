@@ -205,6 +205,7 @@ export default function ProcessoEditor({ processo, onChange, onRemove, modules, 
     <div className="bg-surface-card rounded-lg border border-gray-800 overflow-hidden">
       <div className="flex items-center flex-wrap gap-1.5 p-2">
         <button type="button" onClick={() => setOpen((x) => !x)} aria-label={open ? 'Chiudi' : 'Apri'} className="text-gray-500 hover:text-ink transition flex-shrink-0"><Icon name={open ? 'chevron-down' : 'chevron-right'} size={14} /></button>
+        <span className={'w-2 h-2 rounded-full flex-shrink-0 ' + (copertura === 'coperto' ? 'bg-green-500' : copertura === 'da_costruire' ? 'bg-red-500' : 'bg-gray-600')} title={COPERTURA.find((c) => c.value === copertura).label} />
         <input placeholder="Nome del processo (es. Accettazione)" className={'flex-1 min-w-[160px] ' + inputClass} value={p.nome || ''} onChange={(e) => onChange({ nome: e.target.value })} />
         <span className={'text-[11px] px-2 py-1 rounded flex-shrink-0 ' + badge}>{COPERTURA.find((c) => c.value === copertura).label}</span>
         <IconButton icon="x" danger onClick={onRemove} title="Togli il processo" />

@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.31 — 30 ottobre 2026
+
+**Analisi: gli ultimi due punti rimasti "a righe".** I report e i potenziamenti AI proposti per il tenant diventano schede selezionabili (icona, bordo acceso quando inclusi); ogni processo nell'elenco ha ora un pallino colorato (verde coperto, rosso da costruire, grigio da valutare) accanto al nome, coerente con gli stessi colori usati nelle schede.
+
 ## 0.3.30 — 30 ottobre 2026
 
 **Analisi: anche le proposte dell'AI e l'elenco dei processi come schede.** Dopo lo stepper (0.3.29), la stessa cura sulle due liste rimaste a semplici righe di testo: le "Proposte dell'AI" e i processi del riepilogo finale sono ora schede affiancate, col modulo trovato come bordo/badge verde e "da costruire"/"da valutare" in grigio.
