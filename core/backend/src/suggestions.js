@@ -83,7 +83,8 @@ function scansiona(oggi = new Date()) {
       else if (e.status === 'resolved') db.prepare("UPDATE suggestions SET status = 'open', resolved_at = NULL, title = ?, data = ?, last_seen = CURRENT_TIMESTAMP WHERE id = ?").run(x.title, JSON.stringify(x.data), e.id);
       else db.prepare('UPDATE suggestions SET title = ?, data = ?, last_seen = CURRENT_TIMESTAMP WHERE id = ?').run(x.title, JSON.stringify(x.data), e.id); // anche «ignorata»: si aggiorna ma non si riapre
     }
-    for (const e of db.prepare("SELECT id, rule_key, module_slug, target FROM suggestions WHERE status = 'open'").all()) {
+    // rule_key 'modulo_mancante' non è di questa scansione (la gestisce module-gap.js, una volta alla settimana): non va mai chiuso da qui.
+    for (const e of db.prepare("SELECT id, rule_key, module_slug, target FROM suggestions WHERE status = 'open' AND rule_key != 'modulo_mancante'").all()) {
       if (!viste.has(chiave(e))) { db.prepare("UPDATE suggestions SET status = 'resolved', resolved_at = CURRENT_TIMESTAMP WHERE id = ?").run(e.id); risolte++; }
     }
   })();

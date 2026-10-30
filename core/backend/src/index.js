@@ -58,6 +58,7 @@ const setupWizardRoutes = require('./routes/setup-wizard');
 const exportServerRoutes = require('./routes/export-server');
 const inviteRoutes = require('./routes/invites');
 const { startSuggestions } = require('./suggestions');
+const { startModuleGap } = require('./module-gap');
 const { startReports } = require('./reports');
 const { startAvvisi } = require('./avvisi');
 const { startMonitor } = require('./monitor');
@@ -156,7 +157,7 @@ app.use('/__root_public', rootPublicRouter);
 
 app.get('/health', (req, res) => res.json({
   status: 'ok',
-  version: '0.3.31',
+  version: '0.3.32',
   tenant: process.env.TENANT_SLUG || 'unknown',
   name: process.env.TENANT_NAME || 'Platform Core'
 }));
@@ -235,4 +236,5 @@ app.listen(PORT, () => {
   startDrivePoller();
   startAuditRetentionScheduler();
   startSuggestions(); // una volta al giorno, solo se la funzione «suggerimenti» è accesa
+  startModuleGap(); // una volta alla settimana, stessa funzione, solo se l'AI è accesa e configurata
 });

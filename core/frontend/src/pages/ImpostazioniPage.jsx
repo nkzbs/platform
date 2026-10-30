@@ -354,7 +354,7 @@ const SETTINGS_GROUPS = [
   ] },
 ]
 
-function ImpostazioniPage({ token, user, initialTab, features = {}, modules = [], onFeaturesChanged, onOpenInBuilder }) {
+function ImpostazioniPage({ token, user, initialTab, features = {}, modules = [], onFeaturesChanged, onOpenInBuilder, onCreateNewModule }) {
   const isAdmin = user && user.role === 'admin'
   const [tab, setTab] = useState(initialTab || (isAdmin ? 'utenti' : 'account'))
   // Navigazione ripetuta verso il tab "Il mio account" (click sul proprio nome in
@@ -400,7 +400,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
 
           {tab === 'funzioni' && <FeaturesTab token={token} onChanged={onFeaturesChanged} />}
           {tab === 'aspetto' && <AspettoTab token={token} />}
-          {tab === 'suggerimenti' && features.suggerimenti && <SuggestionsTab token={token} onOpenInBuilder={onOpenInBuilder} />}
+          {tab === 'suggerimenti' && features.suggerimenti && <SuggestionsTab token={token} onOpenInBuilder={onOpenInBuilder} onCreateNewModule={onCreateNewModule} />}
           {tab === 'notifiche' && <ReportsSettingsTab token={token} user={user} features={features} />}
 
           {tab === 'assistente' && <AiSettingsPage token={token} onChanged={onFeaturesChanged} />}

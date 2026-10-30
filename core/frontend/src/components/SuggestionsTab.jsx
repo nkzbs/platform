@@ -9,10 +9,11 @@ const REGOLA = {
   testo_da_strutturare: { etichetta: 'Potrebbe essere una scelta', icona: 'list' },
   righe_ferme: { etichetta: 'Righe ferme', icona: 'clock' },
   stato_mai_usato: { etichetta: 'Passaggio mai usato', icona: 'git-branch' },
+  modulo_mancante: { etichetta: 'Modulo mancante', icona: 'box' },
 }
 const AZIONE = { rendi_scelta: 'Trasformare in una scelta', togli_campo: 'Togliere o nascondere il campo', sblocca_righe: 'Sbloccare le righe ferme', aggiungi_passaggio: 'Aggiungere un passaggio', togli_passaggio: 'Togliere il passaggio', altro: 'Da valutare' }
 
-export default function SuggestionsTab({ token, onOpenInBuilder }) {
+export default function SuggestionsTab({ token, onOpenInBuilder, onCreateNewModule }) {
   const api = useApi(token)
   const [data, setData] = useState(null) // { items, ai_accesa }
   const [busy, setBusy] = useState('')
@@ -28,6 +29,12 @@ export default function SuggestionsTab({ token, onOpenInBuilder }) {
     setBusy('')
     if (r.ok) { setData((d) => ({ ...d, items: r.data.items })); setMsg({ ok: true, text: r.data.nuove ? r.data.nuove + ' nuove osservazioni.' : 'Nessuna novità.' }) } else setMsg({ ok: false, text: (r.data && r.data.error) || 'Non riuscito.' })
   }
+  const controllaModulo = async () => {
+    setBusy('gap'); setMsg(null)
+    const r = await api.post('/suggestions/gap-scan', {})
+    setBusy('')
+    if (r.ok) { setData((d) => ({ ...d, items: r.data.items })); setMsg({ ok: true, text: r.data.proposta ? 'Trovato un suggerimento.' : 'Niente da proporre per ora.' }) } else setMsg({ ok: false, text: (r.data && r.data.error) || 'Non riuscito.' })
+  }
   const stato = async (it, status) => { await api.patch('/suggestions/' + it.id, { status }); load() }
   const proponi = async (it) => {
     setBusy('p' + it.id); setMsg(null)
@@ -35,11 +42,42 @@ export default function SuggestionsTab({ token, onOpenInBuilder }) {
     setBusy('')
     if (r.ok) load(); else setMsg({ ok: false, text: (r.data && r.data.error) || 'L\'AI non risponde.' })
   }
+  const installa = async (it) => {
+    setBusy('i' + it.id); setMsg(null)
+    const r = await api.post('/modules/registry/' + it.data.registry_module_id + '/install', {})
+    setBusy('')
+    if (!r.ok) { setMsg({ ok: false, text: (r.data && r.data.error) || 'Installazione non riuscita.' }); return }
+    await api.patch('/suggestions/' + it.id, { status: 'dismissed' })
+    setMsg({ ok: true, text: '«' + it.data.nome + '» installato.' })
+    load()
+    if (onOpenInBuilder && r.data && r.data.slug) onOpenInBuilder(r.data.slug)
+  }
 
   if (!data) return <div className="max-w-2xl text-sm text-gray-500">Caricamento…</div>
   const aperti = data.items.filter((i) => i.status === 'open'), ignorati = data.items.filter((i) => i.status === 'dismissed')
   const card = (it) => {
     const R = REGOLA[it.rule_key] || { etichetta: it.rule_key, icona: 'info' }
+    if (it.rule_key === 'modulo_mancante') {
+      const d = it.data || {}
+      return (
+        <section key={it.id} className={'bg-surface-card border rounded-xl p-4 ' + (it.status === 'dismissed' ? 'opacity-60 border-gray-800' : 'border-cp-primary/40')}>
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-cp-primary/15 border border-cp-primary/30 flex items-center justify-center text-cp-primary flex-shrink-0"><Icon name={R.icona} size={14} /></div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] uppercase tracking-wide text-gray-500">{R.etichetta}</div>
+              <div className="text-sm text-ink mt-0.5">{it.title}</div>
+              {d.descrizione && <div className="text-xs text-gray-400 mt-1">{d.descrizione}</div>}
+              {d.motivo && <div className="text-xs text-gray-500 mt-1 italic">{d.motivo}</div>}
+              <div className="flex flex-wrap gap-2 mt-3">
+                {it.status === 'open' && d.tipo === 'installa' && <button onClick={() => installa(it)} disabled={!!busy} className="text-xs bg-cp-primary hover:bg-cp-primary-hover disabled:opacity-50 text-white px-3 py-1.5 rounded-lg font-medium">{busy === 'i' + it.id ? 'Installo…' : 'Installa «' + d.nome + '»'}</button>}
+                {it.status === 'open' && d.tipo === 'crea' && onCreateNewModule && <button onClick={onCreateNewModule} className="text-xs bg-cp-primary hover:bg-cp-primary-hover text-white px-3 py-1.5 rounded-lg font-medium">Apri il Builder per costruirlo</button>}
+                {it.status === 'open' ? <button onClick={() => stato(it, 'dismissed')} className="text-xs text-gray-500 hover:text-ink px-2 py-1.5">Ignora</button> : <button onClick={() => stato(it, 'open')} className="text-xs text-gray-400 hover:text-ink px-2 py-1.5">Riapri</button>}
+              </div>
+            </div>
+          </div>
+        </section>
+      )
+    }
     return (
       <section key={it.id} className={'bg-surface-card border border-gray-800 rounded-xl p-4 ' + (it.status === 'dismissed' ? 'opacity-60' : '')}>
         <div className="flex items-start gap-3">
@@ -67,8 +105,11 @@ export default function SuggestionsTab({ token, onOpenInBuilder }) {
   return (
     <div className="max-w-2xl space-y-3">
       <div className="flex items-start justify-between gap-3 flex-wrap">
-        <p className="text-sm text-gray-500 max-w-md">Come usi i tuoi moduli: campi mai compilati, righe ferme, passaggi mai usati. Sono osservazioni sui numeri, non giudizi: servono a chiedersi se qualcosa serve ancora. Si aggiornano ogni giorno.</p>
-        <button onClick={scansiona} disabled={!!busy} className="text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-200 px-3 py-2 rounded-lg flex-shrink-0">{busy === 'scan' ? 'Controllo…' : 'Controlla adesso'}</button>
+        <p className="text-sm text-gray-500 max-w-md">Come usi i tuoi moduli: campi mai compilati, righe ferme, passaggi mai usati, e (una volta alla settimana) se ti manca un modulo intero. Sono osservazioni sui numeri, non giudizi.</p>
+        <div className="flex gap-2 flex-shrink-0">
+          <button onClick={scansiona} disabled={!!busy} className="text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-200 px-3 py-2 rounded-lg">{busy === 'scan' ? 'Controllo…' : 'Controlla adesso'}</button>
+          <button onClick={controllaModulo} disabled={!!busy || !data.ai_accesa} title={data.ai_accesa ? '' : 'Accendi l\'AI in Impostazioni → AI'} className="text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-200 px-3 py-2 rounded-lg flex items-center gap-1.5"><Icon name="sparkles" size={12} />{busy === 'gap' ? 'Penso…' : 'Mi manca un modulo?'}</button>
+        </div>
       </div>
       {msg && <div className={'text-xs ' + (msg.ok ? 'text-green-400' : 'text-amber-400')}>{msg.text}</div>}
       {aperti.length === 0 && <div className="bg-surface-card border border-gray-800 rounded-xl p-5 text-sm text-gray-400">Nessun suggerimento: i tuoi moduli sono usati come previsto, oppure hanno ancora poche righe per dire qualcosa (servono almeno 20 righe).</div>}

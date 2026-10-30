@@ -13,6 +13,7 @@ const receiptAi = require('../lib/ai-receipt');
 const payslipImageAi = require('../lib/ai-payslip-image');
 
 const suggestionAi = require('../lib/ai-suggestion');
+const moduleGapAi = require('../lib/ai-module-gap');
 const router = express.Router();
 
 // Sostituisce requireInternalSecret (26/10/2026, chiusura di un gap reale —
@@ -313,6 +314,32 @@ router.post('/suggestion', requireTenant, async (req, res) => {
     const text = await callAI('mistral', { system: suggestionAi.SUGGESTION_PROMPT, user: JSON.stringify(s.payload), maxTokens: 500, tenantSlug: tenant_slug });
     const raw = parseJsonObject(text);
     const v = suggestionAi.validateSuggestion(raw);
+    if (v.error) return res.status(502).json({ error: v.error });
+    res.json({ proposta: v.proposta });
+  } catch (e) {
+    res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
+  }
+});
+
+// ─── «Ti manca un modulo?»: una volta alla settimana, guarda l'insieme dei moduli installati ────────────────────────────
+// (mai i valori delle righe) e propone UNA cosa tra: installa un modulo già pronto in Libreria, costruiscine uno nuovo,
+// o niente. Il catalogo della Libreria lo legge il server (mai il tenant), così non si può proporre un id inventato né
+// un modulo che il tenant ha già — installedRegistryIds, mandato dal tenant, lo esclude dal catalogo mandato all'AI.
+router.post('/module-gap', requireTenant, async (req, res) => {
+  const { data } = req.body || {};
+  const tenant_slug = req.tenantSlug;
+  if (!tenant_slug) return res.status(400).json({ error: 'tenant_slug obbligatorio' });
+  const s = moduleGapAi.sanitizeModuleGap(data);
+  if (s.error) return res.status(400).json({ error: s.error });
+  if (!isProviderConfigured('mistral', tenant_slug)) return res.status(503).json({ error: 'Nessuna chiave Mistral: inseriscila in Impostazioni → AI.', code: 'ai_not_configured' });
+  const gia = new Set((Array.isArray(data.installed_registry_ids) ? data.installed_registry_ids : []).map(Number).filter(Number.isInteger));
+  const libreria = require('../lib/analysis').libraryModules().filter((m) => !gia.has(m.id));
+  if (!libreria.length) return res.json({ proposta: { tipo: 'nessuna', motivo: '' } }); // niente da proporre: tutta la libreria è già installata
+  const payload = { ...s.payload, libreria: libreria.map((m) => ({ id: m.id, nome: m.name, descrizione: m.description })) };
+  try {
+    const text = await callAI('mistral', { system: moduleGapAi.MODULE_GAP_PROMPT, user: JSON.stringify(payload), maxTokens: 350, tenantSlug: tenant_slug });
+    const raw = parseJsonObject(text);
+    const v = moduleGapAi.validateModuleGap(raw, libreria);
     if (v.error) return res.status(502).json({ error: v.error });
     res.json({ proposta: v.proposta });
   } catch (e) {

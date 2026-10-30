@@ -23,6 +23,16 @@ router.get('/', (req, res) => res.json({ items: sug.elenco(), ai_accesa: moduleA
 
 router.post('/scan', (req, res) => { const r = sug.scansiona(); logAudit(req.user.username, 'suggerimenti.scan', null, r); res.json({ ...r, items: sug.elenco() }); });
 
+// Controllo «ti manca un modulo?» su richiesta: a differenza di /scan (gratis, locale) questa chiama l'AI, quindi non è automatico ad ogni visita della pagina.
+router.post('/gap-scan', async (req, res) => {
+  if (!moduleAi.masterOn()) return res.status(400).json({ error: 'L\'AI non è accesa (Impostazioni → AI).', code: 'ai_off' });
+  try {
+    const r = await require('../module-gap').controlla();
+    logAudit(req.user.username, 'suggerimenti.gap_scan', null, r);
+    res.json({ ...r, items: sug.elenco() });
+  } catch (e) { res.status(e.status || 502).json({ error: e.message || 'L\'AI non è raggiungibile.', code: e.code }); }
+});
+
 router.patch('/:id', (req, res) => {
   const st = req.body && req.body.status;
   if (st !== 'dismissed' && st !== 'open') return res.status(400).json({ error: 'Stato non valido' });

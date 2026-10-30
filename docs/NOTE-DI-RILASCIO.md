@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.32 — 30 ottobre 2026
+
+**«Ti manca un modulo?»**, dentro ogni tenant (Impostazioni → Suggerimenti). Oltre alle osservazioni giornaliere già esistenti (campo poco usato, righe ferme...), una volta alla settimana — e sempre su richiesta col pulsante "Mi manca un modulo?" — l'AI guarda l'insieme dei moduli installati (mai i valori delle righe, solo struttura e qualche indizio già calcolato in locale) e propone UNA cosa: installare un modulo già pronto in Libreria (un tocco, usa la rotta d'installazione già esistente) o costruirne uno nuovo (apre il Builder sul nuovo modulo, con nome e descrizione proposti già scritti). Se non c'è niente di concreto, l'AI risponde "nessuna" — meglio di un suggerimento a sensazione. Mai un'installazione o una scrittura automatica: propone e basta, un tocco decide.
+
 ## 0.3.31 — 30 ottobre 2026
 
 **Analisi: gli ultimi due punti rimasti "a righe".** I report e i potenziamenti AI proposti per il tenant diventano schede selezionabili (icona, bordo acceso quando inclusi); ogni processo nell'elenco ha ora un pallino colorato (verde coperto, rosso da costruire, grigio da valutare) accanto al nome, coerente con gli stessi colori usati nelle schede.
