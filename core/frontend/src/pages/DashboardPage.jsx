@@ -367,7 +367,12 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
   const selectedFields = selectedSchema.fields || []
 
   return (
-    <div>
+    <div className="relative">
+      {/* "Liquid Glass" (2026-10-30): lo sfondo sfumato dietro i pannelli di vetro della
+          griglia — vedi .glass-mesh-bg/.glass-panel in index.css. Introdotto qui soltanto
+          (non un retheme dell'app) per validare la direzione prima di estenderla altrove. */}
+      <div className="glass-mesh-bg" aria-hidden="true" />
+      <div className="relative z-10">
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-lg font-bold text-ink tracking-[-0.35px]">{page === 'report' ? 'Report' : 'Dashboard'}</h1>
@@ -395,7 +400,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
 
 
       {widgets.length === 0 && (
-        <div className="bg-surface-card rounded-md p-12 text-center border border-gray-800 border-dashed">
+        <div className="glass-panel p-12 text-center">
           <div className="text-gray-500 mb-2">{page === 'report' ? 'Report vuoto' : 'Dashboard vuota'}</div>
           <div className="text-gray-600 text-sm mb-4">
             {user && user.role === 'admin' ? 'Aggiungi widget per visualizzare i tuoi dati' : 'Nessun widget configurato — chiedi a un admin di aggiungerne.'}
@@ -417,7 +422,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
           // rounded-xl border p-5), niente doppia cornice qui, solo 'relative' per
           // ancorare i controlli di editMode.
           return (
-            <div key={w.id} className={(!isAperto(w) ? 'max-lg:[&>*:not(.wbar)]:hidden ' : '') + (['yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'come_sta_andando'].includes(w.type) ? 'relative' : 'bg-surface-card rounded-md border border-gray-800 overflow-hidden relative') + (['checklist', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? ' col-span-full' : ['coda'].includes(w.type) ? ' col-span-full' : ['come_sta_andando', 'riepilogo_mensile'].includes(w.type) ? ' col-span-full sm:col-span-1 lg:col-span-3' : ' lg:col-span-2')}>
+            <div key={w.id} className={(!isAperto(w) ? 'max-lg:[&>*:not(.wbar)]:hidden ' : '') + (['yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'come_sta_andando'].includes(w.type) ? 'relative' : 'glass-panel overflow-hidden relative') + (['checklist', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? ' col-span-full' : ['coda'].includes(w.type) ? ' col-span-full' : ['come_sta_andando', 'riepilogo_mensile'].includes(w.type) ? ' col-span-full sm:col-span-1 lg:col-span-3' : ' lg:col-span-2')}>
               {['come_sta_andando', 'checklist', 'coda', 'riepilogo_mensile'].includes(w.type) && !editMode && (
                 <button type="button" onClick={() => toggleAperto(w)} className={'wbar lg:hidden w-full flex items-center justify-between text-sm ' + (isAperto(w) ? 'justify-end px-1 py-1 text-xs text-gray-500' : 'px-4 py-3 font-medium text-ink bg-surface-card rounded-md border border-gray-800')}>
                   {isAperto(w) ? null : <span>{w.label}</span>}
@@ -515,6 +520,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
             </div>
           )
         })}
+      </div>
       </div>
 
       {showAdd && (

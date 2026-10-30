@@ -53,6 +53,19 @@
   --accent: 91 141 239;         /* #5b8def — prima 8 123 255 (#087bff). Resta il
      default: un tenant con un proprio colore la sovrascrive a runtime via
      App.jsx, invariato. */
+
+  /* "Liquid Glass" (2026-10-30) — pannelli di vetro satinato, pensati per stare
+     SOPRA uno sfondo sfumato colorato (.glass-mesh-bg), mai sopra un piatto
+     --surface-page: senza qualcosa da sfocare l'effetto vetro sparisce. In
+     scuro il pannello resta quasi trasparente (il contrasto lo dà lo sfondo
+     scuro dietro); in chiaro va molto più opaco o il testo perde leggibilità
+     — vedi l'override sotto. Introdotto su un'area sola (Dashboard) per
+     validare la direzione, non ancora un retheme dell'app: vedi .glass-panel. */
+  --glass-tint: 255 255 255;
+  --glass-bg-alpha: 0.07;
+  --glass-border-alpha: 0.14;
+  --glass-highlight-alpha: 0.38;
+  --glass-shadow: 0 20px 50px rgb(0 0 0 / 0.35);
 }
 
 /* Tema chiaro — valori sostituiti il 2026-10-18 con quelli del mockup
@@ -91,6 +104,14 @@
   --cp-warning-bg: 254 243 199;
   --cp-danger: 185 28 28;
   --cp-danger-bg: 254 226 226;
+
+  /* Vetro in chiaro: molto più opaco che in scuro (0.55 contro 0.07) — su uno
+     sfondo chiaro un pannello quasi trasparente perde leggibilità subito; qui
+     a reggere il contrasto è il pannello stesso, non lo sfondo dietro. */
+  --glass-bg-alpha: 0.55;
+  --glass-border-alpha: 0.5;
+  --glass-highlight-alpha: 0.75;
+  --glass-shadow: 0 16px 40px rgb(20 20 40 / 0.1);
 }
 
 @tailwind base;
@@ -155,4 +176,56 @@ body {
      viewport, transizione) — sfondo esplicito qui, stesso principio già
      richiesto per le pagine Artifact. */
   background-color: rgb(var(--surface-page));
+}
+
+/* "Liquid Glass" (2026-10-30) — introdotto su un'area sola (Dashboard) per
+   validare la direzione prima di estenderla. Un pannello di vetro ha bisogno
+   di qualcosa da sfocare dietro: .glass-mesh-bg è lo sfondo sfumato pensato
+   per starci dietro, .glass-panel il pannello stesso (sostituisce
+   "bg-surface-card border border-gray-800" dove si vuole l'effetto). */
+.glass-panel {
+  position: relative;
+  background: rgb(var(--glass-tint) / var(--glass-bg-alpha));
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid rgb(var(--glass-tint) / var(--glass-border-alpha));
+  border-top-color: rgb(var(--glass-tint) / var(--glass-highlight-alpha));
+  box-shadow: var(--glass-shadow), inset 0 1px 0 rgb(var(--glass-tint) / var(--glass-highlight-alpha));
+  border-radius: 20px;
+}
+
+/* Sfondo sfumato dietro i pannelli — chiazze di colore sfocate, diverse per
+   tema (in chiaro, sature ma su base chiara: colori pieni scurirebbero
+   troppo lo sfondo e abbasserebbero il contrasto dei pannelli sopra). */
+.glass-mesh-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.glass-mesh-bg::before,
+.glass-mesh-bg::after {
+  content: '';
+  position: absolute;
+  width: 56vw;
+  height: 56vw;
+  max-width: 640px;
+  max-height: 640px;
+  border-radius: 50%;
+  opacity: 0.4;
+}
+.glass-mesh-bg::before {
+  top: -18%;
+  left: -12%;
+  background: radial-gradient(circle at 35% 35%, rgb(var(--accent)), transparent 70%);
+}
+.glass-mesh-bg::after {
+  bottom: -22%;
+  right: -10%;
+  background: radial-gradient(circle at 60% 40%, #35D0A6, transparent 70%);
+}
+:root[data-theme="light"] .glass-mesh-bg::before,
+:root[data-theme="light"] .glass-mesh-bg::after {
+  opacity: 0.22;
 }
