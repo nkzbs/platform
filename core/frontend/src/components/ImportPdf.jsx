@@ -48,7 +48,7 @@ export default function ImportPdf({ token, mod, onCreated }) {
     window.dispatchEvent(new CustomEvent('platform:toast', { detail: { message: r.data.message, type: 'success' } }))
     reset(); if (onCreated) onCreated()
   }
-  const inp = 'w-full bg-surface-page text-ink px-3 py-2 rounded-lg outline-none border border-gray-800 focus:border-accent text-sm'
+  const inp = 'w-full min-w-0 max-w-full bg-surface-page text-ink px-3 py-2 rounded-lg outline-none border border-gray-800 focus:border-accent text-sm'
 
   return (
     <>

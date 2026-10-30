@@ -1,6 +1,6 @@
 {
   "name": "platform-docker-provisioner",
-  "version": "0.3.26",
+  "version": "0.3.27",
   "main": "src/index.js",
   "engines": {
     "node": "22.x"
