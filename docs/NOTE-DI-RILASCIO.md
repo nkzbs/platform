@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.29 — 30 ottobre 2026
+
+**Movimenti spostato dentro Impostazioni**, allo stesso livello di "Rivedi collegamenti": entrambe le voci portano la targhetta (TMP), in attesa di trovare una collocazione definitiva.
+
+**Analisi → Tenant: niente più tetto fisso di 8 processi.** L'AI proponeva al massimo 8 processi indipendentemente da quanto l'attività raccontata fosse ricca di dettagli (un caso reale: una mediazione immobiliare descritta in profondità ne otteneva comunque solo 8, con moduli installati senza nessuna relazione tra loro). Ora il numero segue la descrizione — poche righe restano poche, una descrizione articolata può arrivare a 10-15 processi — e una nuova fase AI propone relazioni reali tra i moduli scelti (letti i processi, non solo quelle che un modulo portava già da sé): mai sovrascrive una relazione esistente.
+
+**Analisi: wizard più chiaro da vedere.** Il racconto testuale delle fasi ("…Cerco i processi", "✓ Ho trovato N processi") diventa uno stepper visivo a cerchi collegati — usato sia per orientarsi nei dettagli dell'analisi (Racconta → Processi → Libreria → Tenant) sia per seguire un avanzamento reale (creazione del tenant, compilazione automatica con "Fai tutto").
+
 ## 0.3.28 — 30 ottobre 2026
 
 **Creazione di un tenant mai esistito prima falliva** ("Bind mount failed"): il Docker Engine del NAS (a differenza di Docker Desktop) non crea da sé la sottocartella dati mancante per un volume isolato per tenant — funzionava solo per i tenant già migrati il 26/10. Ora la sottocartella si crea esplicitamente prima di avviare il container.

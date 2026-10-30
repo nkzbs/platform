@@ -6,6 +6,7 @@ import Manuale from '../components/analyses/Manuale'
 import Guida from '../components/analyses/Guida'
 import InviteTenantModal from '../components/InviteTenantModal'
 import CorreggiAParole from '../components/analyses/CorreggiAParole'
+import Stepper from '../components/analyses/Stepper'
 import { STAMPA_CSS } from '../components/analyses/stampa'
 
 // Analisi dei processi: racconti un'attività, l'AI propone i processi (mai salvati da soli), li rifinisci, vedi cosa copre la Libreria e cosa va costruito,
@@ -16,7 +17,20 @@ const btn = 'bg-cp-primary hover:bg-cp-primary-hover disabled:opacity-50 text-wh
 const ghost = 'px-4 py-2 rounded-lg text-sm bg-surface-page hover:bg-gray-800 text-gray-300 transition border border-gray-800 disabled:opacity-50'
 const slugify = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30)
 const csv = (v) => String(v || '').split(',').map((x) => x.trim()).filter(Boolean)
-const FASI_UI = [['container', 'Avvio il container'], ['database', 'Preparo il database'], ['dominio', 'Collego il dominio'], ['moduli', 'Installo i moduli'], ['ruoli', 'Creo ruoli e stati del flusso']]
+const FASI_UI = [
+  { key: 'container', label: 'Avvio il container', icon: 'box' },
+  { key: 'database', label: 'Preparo il database', icon: 'database' },
+  { key: 'dominio', label: 'Collego il dominio', icon: 'globe' },
+  { key: 'moduli', label: 'Installo i moduli', icon: 'grid' },
+  { key: 'ruoli', label: 'Creo ruoli e stati del flusso', icon: 'users' },
+]
+// Le 4 tappe dell'analisi, mostrate come indice visivo in cima ai dettagli — non bloccano la navigazione, servono solo a orientarsi.
+const TAPPE = [
+  { key: 'racconta', label: 'Racconta', icon: 'message-circle' },
+  { key: 'processi', label: 'Processi', icon: 'list' },
+  { key: 'libreria', label: 'Libreria', icon: 'database' },
+  { key: 'tenant', label: 'Tenant', icon: 'building' },
+]
 const nuovoProcesso = (extra) => ({ nome: '', reparto: '', scopo: '', evento_innesco: '', input: '', output: '', ruoli_coinvolti: [], passaggi: [], eccezioni: [], documenti_collegati: [], sistemi_coinvolti: [], kpi: [], callout: [], registry_module_id: null, registry_module_reasoning: '', copertura: 'da_valutare', ...extra })
 
 export default function AnalisiPage({ token, onNavigate, onBuild }) {
@@ -206,20 +220,14 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
   const b = a.blueprint, pr = a.profilo || {}
   const setProfilo = (patch) => change({ profilo: { ...pr, ...patch } })
   // Il pannello «Crea il tenant»: lo stesso nel riepilogo e nei dettagli (una funzione che ritorna JSX, non un componente: i campi non perdono il fuoco).
-  const creaPanel = (num) => (
+  const creaPanel = () => (
             <section className={card}>
-              <h2 className="text-sm font-semibold text-ink mb-1">{num}Crea il tenant</h2>
+              <h2 className="text-sm font-semibold text-ink mb-1">Crea il tenant</h2>
               {cr && cr.fase && cr.fase !== 'finita' && cr.fase !== 'errore' ? (
                 <div>
-                  <p className="text-sm text-ink mb-2">Creo il tenant <b>{cr.nome || tf.name}</b>… {Math.max(0, Math.round((now - cr.inizio) / 1000))} secondi</p>
-                  <div className="space-y-1.5">
-                    {FASI_UI.map(([k, l]) => {
-                      const idx = FASI_UI.findIndex(([x]) => x === (cr.fase === 'moduli_default' ? 'database' : cr.fase)), mio = FASI_UI.findIndex(([x]) => x === k)
-                      const fatto = mio < idx, corrente = mio === idx
-                      return <div key={k} className={'text-sm flex items-center gap-2 ' + (fatto ? 'text-green-400' : corrente ? 'text-ink' : 'text-gray-600')}><span className="w-4 text-center">{fatto ? '✓' : corrente ? '…' : '·'}</span>{l}</div>
-                    })}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-3">Puoi lasciare la pagina: la creazione continua e la ritrovi qui.</p>
+                  <p className="text-sm text-ink mb-4">Creo il tenant <b>{cr.nome || tf.name}</b>… {Math.max(0, Math.round((now - cr.inizio) / 1000))} secondi</p>
+                  <Stepper steps={FASI_UI} activeIndex={FASI_UI.findIndex((f) => f.key === (cr.fase === 'moduli_default' ? 'database' : cr.fase))} />
+                  <p className="text-xs text-gray-500 mt-4">Puoi lasciare la pagina: la creazione continua e la ritrovi qui.</p>
                 </div>
               ) : a.tenant_slug ? (
                 <div>
@@ -228,7 +236,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
                     <div className="mt-3 bg-green-900/20 border border-green-900/40 rounded-lg p-3 text-sm text-green-300">
                       <div className="font-medium mb-1">Tenant creato in {cr.secondi} secondi</div>
                       <div className="text-xs text-green-400/80">Moduli installati: {cr.moduli_installati} · ruoli creati: {cr.ruoli_creati} · moduli configurati: {cr.moduli_configurati}{cr.moduli_dichiarati != null ? ' · ruoli dichiarati: ' + cr.moduli_dichiarati + ' · report creati (spenti): ' + cr.report_creati : ''}</div>
-                      {cr.tempi && <div className="text-xs text-green-400/60 mt-1">Dove è andato il tempo: {FASI_UI.filter(([k]) => cr.tempi[k] != null).map(([k, l]) => l + ' ' + cr.tempi[k] + ' s').join(' · ')}</div>}
+                      {cr.tempi && <div className="text-xs text-green-400/60 mt-1">Dove è andato il tempo: {FASI_UI.filter((f) => cr.tempi[f.key] != null).map((f) => f.label + ' ' + cr.tempi[f.key] + ' s').join(' · ')}</div>}
                       {(cr.avvisi || []).map((v, i) => <div key={i} className="text-xs text-amber-300 mt-1">{v}</div>)}
                       {credenziali && <div className="text-xs mt-2">Accesso admin (si vede una volta sola): <span className="font-mono">{credenziali.username}</span> / <span className="font-mono">{credenziali.password}</span></div>}
                       {a.tenant_slug && <button type="button" className={ghost + ' mt-2'} onClick={() => setInvito({ slug: a.tenant_slug, name: a.name })}>Invita il cliente (consigliato: sceglie lui la password)</button>}
@@ -255,16 +263,19 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
   // In compilazione: si vede cosa sta facendo, con i processi che compaiono man mano.
   if (autoAttivo) {
     const au = a.auto, sec = Math.max(0, Math.round((now - au.inizio) / 1000))
+    const FASI_AUTO_UI = [
+      { key: 'processi', label: 'Trovo i processi', icon: 'sparkles' },
+      { key: 'completamento', label: 'Completo i processi', icon: 'list' },
+      { key: 'approfondimento', label: 'Controllo cosa manca', icon: 'search' },
+    ]
+    const dettaglio = { processi: 'Cerco i processi dell\'attività…', completamento: 'Completo i processi: ' + au.fatti + ' di ' + au.totale, approfondimento: 'Controllo cosa serve davvero a ogni processo…' }[au.fase]
     return (
       <div className="max-w-3xl">
         <h1 className="text-lg font-bold text-ink tracking-[-0.35px] mb-1">{a.name}</h1>
         <p className="text-gray-500 text-sm mb-5">Sto compilando l'analisi… {sec} secondi. Puoi lasciare la pagina: continua da sola e la ritrovi qui.</p>
         <div className={card}>
-          <div className="space-y-1.5 text-sm">
-            <div className={au.fase === 'processi' ? 'text-ink' : 'text-green-400'}>{au.fase === 'processi' ? '… Cerco i processi dell\'attività' : '✓ Ho trovato ' + a.processi.length + ' processi'}</div>
-            <div className={au.fase === 'completamento' ? 'text-ink' : 'text-gray-600'}>{au.fase === 'completamento' ? '… Completo i processi: ' + au.fatti + ' di ' + au.totale : '· Completo i processi'}</div>
-            <div className={au.fase === 'approfondimento' ? 'text-ink' : 'text-gray-600'}>{au.fase === 'approfondimento' ? '… Controllo cosa serve davvero a ogni processo' : '· Controllo cosa serve davvero a ogni processo'}</div>
-          </div>
+          <Stepper steps={FASI_AUTO_UI} activeIndex={FASI_AUTO_UI.findIndex((f) => f.key === au.fase)} />
+          <p className="text-sm text-ink mt-4">{dettaglio}</p>
           {a.processi.length > 0 && <div className="mt-4 flex flex-wrap gap-1.5">{a.processi.map((p, i) => <span key={i} className={'text-xs px-2.5 py-1 rounded-lg border ' + (needsEnrichment(p) ? 'border-gray-800 text-gray-500' : 'border-green-900/50 text-green-400')}>{p.nome}</span>)}</div>}
         </div>
       </div>
@@ -330,6 +341,11 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
         <button type="button" onClick={remove} aria-label="Elimina l'analisi" title="Elimina l'analisi" className="p-2 text-gray-500 hover:text-red-400 transition"><Icon name="trash" size={16} /></button>
       </div>
       {msg && <div className={'text-sm mb-3 ' + (msg.ok ? 'text-green-400' : 'text-amber-400')}>{msg.text}</div>}
+      {!guida && !showManuale && (
+        <div className="mb-5 px-1">
+          <Stepper steps={TAPPE} activeIndex={a.tenant_slug ? 3 : a.processi.length > 0 ? 2 : a.descrizione.trim() ? 1 : 0} />
+        </div>
+      )}
 
       {guida ? (
         <>
@@ -344,7 +360,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
       ) : (
         <>
           <section className={card}>
-            <h2 className="text-sm font-semibold text-ink mb-1">1. Racconta l'attività</h2>
+            <h2 className="text-sm font-semibold text-ink mb-1">Racconta l'attività</h2>
             <p className="text-xs text-gray-500 mb-3">Come funziona, chi fa cosa, dove si inceppa. I dati personali (email, telefoni, IBAN) vengono tolti prima di mandare il testo all'AI.</p>
             <textarea className={input + ' min-h-[110px] leading-relaxed'} placeholder="Es. Siamo un'officina con 6 meccanici. Il cliente porta l'auto, la accettiamo e facciamo un preventivo…" value={a.descrizione} onChange={(e) => change({ descrizione: e.target.value })} />
             <div className="flex items-center gap-2 mt-3 flex-wrap">
@@ -385,7 +401,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
           )}
 
           <section className={card}>
-            <h2 className="text-sm font-semibold text-ink mb-1">2. I processi</h2>
+            <h2 className="text-sm font-semibold text-ink mb-1">I processi</h2>
             <p className="text-xs text-gray-500 mb-3">Apri un processo per scrivere ruoli e passaggi, o fallo compilare all'AI dal nome. Scegli il modulo che lo copre: se nessuno lo copre, segnalo «da costruire».</p>
             <div className="space-y-2">
               {a.processi.map((p, i) => (
@@ -403,7 +419,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
 
           {a.processi.length > 0 && (
             <section className={card}>
-              <h2 className="text-sm font-semibold text-ink mb-3">3. Cosa copre la Libreria</h2>
+              <h2 className="text-sm font-semibold text-ink mb-3">Cosa copre la Libreria</h2>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3">
                 {[['Processi', b.processi], ['Coperti', b.coperto], ['Da valutare', b.da_valutare], ['Da costruire', b.da_costruire.length]].map(([l, v]) => (
                   <div key={l} className="bg-surface-page rounded-lg p-3 border border-gray-800"><div className="text-[11px] text-gray-500">{l}</div><div className="text-xl font-semibold text-ink">{v}</div></div>
@@ -419,7 +435,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
 
           {!a.tenant_slug && b.proposte && (b.proposte.report.length > 0 || b.proposte.ai.length > 0) && (
             <section className={card}>
-              <h2 className="text-sm font-semibold text-ink mb-1">4. Report e AI per questo tenant</h2>
+              <h2 className="text-sm font-semibold text-ink mb-1">Report e AI per questo tenant</h2>
               <p className="text-xs text-gray-500 mb-3">Dedotti da ciò che i moduli scelti dichiarano. I report nascono <b>spenti</b> (li accendi tu, con orario e destinatari); i potenziamenti AI restano fermi finché non accendi l'AI e inserisci una chiave nel tenant. Togli quello che non ti serve.</p>
               {[['Report', b.proposte.report], ['Potenziamenti AI', b.proposte.ai]].filter(([, l]) => l.length > 0).map(([titolo, l]) => (
                 <div key={titolo} className="mb-2">
@@ -440,7 +456,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
             </section>
           )}
 
-          {a.processi.length > 0 && creaPanel('5. ')}
+          {a.processi.length > 0 && creaPanel('')}
         </>
       )}
     </div>
