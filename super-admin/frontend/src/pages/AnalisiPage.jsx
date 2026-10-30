@@ -307,13 +307,22 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
           </div>
           {incompleti > 0 && <p className="text-xs text-amber-400 mb-2">{incompleti} {incompleti === 1 ? 'processo non è completo' : 'processi non sono completi'}: aprili dai dettagli e premi «Completa tutti i processi».</p>}
           {b.da_costruire.length > 0 && <p className="text-xs text-gray-500 mb-2">Nessun modulo copre: {b.da_costruire.join(', ')}. Si costruiscono nel Super Builder dai dettagli.</p>}
-          <div className="divide-y divide-gray-800 mt-2">
-            {a.processi.map((p, i) => (
-              <div key={i} className="py-2 flex items-start justify-between gap-3">
-                <div className="min-w-0"><div className="text-sm text-ink">{p.nome}{p.reparto ? <span className="text-gray-500"> · {p.reparto}</span> : null}</div>{p.scopo && <div className="text-xs text-gray-500 truncate">{p.scopo}</div>}</div>
-                <span className={'text-[11px] px-2 py-1 rounded flex-shrink-0 ' + (p.registry_module_id ? 'bg-green-900/30 text-green-400' : 'bg-gray-800 text-gray-400')}>{p.registry_module_id ? nomeMod(p.registry_module_id) : 'da costruire'}</span>
-              </div>
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2">
+            {a.processi.map((p, i) => {
+              const mod = p.registry_module_id ? nomeMod(p.registry_module_id) : null
+              return (
+                <div key={i} className={'bg-surface-page rounded-lg border p-3 ' + (mod ? 'border-green-900/50' : 'border-gray-800')}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-sm text-ink font-medium truncate">{p.nome}</div>
+                      {p.reparto && <div className="text-xs text-gray-500">{p.reparto}</div>}
+                    </div>
+                    <span className={'text-[11px] px-2 py-1 rounded flex-shrink-0 ' + (mod ? 'bg-green-900/30 text-green-400' : 'bg-gray-800 text-gray-400')}>{mod || 'da costruire'}</span>
+                  </div>
+                  {p.scopo && <div className="text-xs text-gray-500 mt-1 line-clamp-2">{p.scopo}</div>}
+                </div>
+              )
+            })}
           </div>
           {(report.length > 0 || ai.length > 0) && (
             <div className="mt-3 text-xs text-gray-500 space-y-1">
@@ -387,15 +396,24 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
                 <h2 className="text-sm font-semibold text-ink">Proposte dell'AI</h2>
                 <div className="flex gap-2"><button type="button" className={btn} onClick={() => aggiungi(proposte)}>Aggiungi tutte</button><button type="button" className={ghost} onClick={() => setProposte([])}>Scarta</button></div>
               </div>
-              <div className="divide-y divide-gray-800">
-                {proposte.map((p, i) => (
-                  <div key={i} className="py-2.5 flex items-start justify-between gap-3">
-                    <div className="min-w-0"><div className="text-sm text-ink font-medium">{p.nome}{p.reparto ? <span className="text-gray-500 font-normal"> · {p.reparto}</span> : null}</div>
-                      {p.scopo && <div className="text-xs text-gray-500 mt-0.5">{p.scopo}</div>}
-                      <div className="text-xs mt-1 text-gray-500">{p.registry_module_id ? 'Modulo: ' + ((modules.find((m) => m.id === p.registry_module_id) || {}).name || '') : (p.registry_module_reasoning || 'Nessun modulo adatto trovato')}</div></div>
-                    <button type="button" className={ghost + ' flex-shrink-0'} onClick={() => aggiungi([p])}>Aggiungi</button>
-                  </div>
-                ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {proposte.map((p, i) => {
+                  const mod = p.registry_module_id ? ((modules.find((m) => m.id === p.registry_module_id) || {}).name || '') : null
+                  return (
+                    <div key={i} className={'bg-surface-page rounded-lg border p-3 flex flex-col gap-1.5 ' + (mod ? 'border-green-900/50' : 'border-gray-800')}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="text-sm text-ink font-medium truncate">{p.nome}</div>
+                          {p.reparto && <div className="text-xs text-gray-500">{p.reparto}</div>}
+                        </div>
+                        <span className={'text-[11px] px-2 py-1 rounded flex-shrink-0 ' + (mod ? 'bg-green-900/30 text-green-400' : 'bg-gray-800 text-gray-400')}>{mod || 'da valutare'}</span>
+                      </div>
+                      {p.scopo && <div className="text-xs text-gray-500 line-clamp-2">{p.scopo}</div>}
+                      {!mod && p.registry_module_reasoning && <div className="text-xs text-gray-600 italic line-clamp-2">{p.registry_module_reasoning}</div>}
+                      <button type="button" className={ghost + ' self-start mt-auto'} onClick={() => aggiungi([p])}>Aggiungi</button>
+                    </div>
+                  )
+                })}
               </div>
             </section>
           )}
