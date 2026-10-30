@@ -18,6 +18,7 @@ import TelegramCard from '../components/TelegramCard'
 import SitoWebPage from './SitoWebPage'
 import SicurezzaTab from '../components/SicurezzaTab'
 import ReviewMatchesTab from '../components/ReviewMatchesTab'
+import MovimentiPage from './MovimentiPage'
 import ListePage from './ListePage'
 import AspettoTab from './AspettoTab'
 
@@ -345,7 +346,11 @@ const SETTINGS_GROUPS = [
   { label: 'Dati & Sicurezza', items: [
     { key: 'export_dati', icon: 'download', label: 'Dati' },
     { key: 'sicurezza', icon: 'shield', label: 'Sicurezza' },
-    { key: 'collegamenti', icon: 'link', label: 'Rivedi collegamenti' },
+    // (TMP) — 30/10/2026, richiesto dall'utente: entrambe pagine di lavoro
+    // temporanee (una revisione da chiudere, uno strumento di debug), non
+    // funzioni stabili del prodotto — la targhetta lo dice a chi le apre.
+    { key: 'collegamenti', icon: 'link', label: 'Rivedi collegamenti (TMP)' },
+    { key: 'movimenti', icon: 'credit-card', label: 'Movimenti (TMP)' },
   ] },
 ]
 
@@ -361,7 +366,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
   // e, se non è un agente, l'export dei dati. Filtro per voce dentro ogni gruppo, poi tolgo i gruppi rimasti vuoti.
   const canExport = user && user.role !== 'agente'
   const itemAllowed = (key) => {
-    if (isAdmin) return key === 'sito_web' ? features.sito_web : key === 'notifiche' ? features.riepilogo_mattino : key === 'suggerimenti' ? features.suggerimenti : true
+    if (isAdmin) return key === 'sito_web' ? features.sito_web : key === 'notifiche' ? features.riepilogo_mattino : key === 'suggerimenti' ? features.suggerimenti : key === 'movimenti' ? features.movimenti : true
     return key === 'account' || (key === 'export_dati' && canExport)
   }
   const visibleGroups = SETTINGS_GROUPS
@@ -402,6 +407,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
 
           {tab === 'sicurezza' && <SicurezzaTab token={token} />}
           {tab === 'collegamenti' && <ReviewMatchesTab token={token} />}
+          {tab === 'movimenti' && <MovimentiPage token={token} />}
 
           {tab === 'export_dati' && canExport && (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-w-5xl">

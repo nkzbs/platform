@@ -132,7 +132,10 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
   // falliscono silenziosamente sulle chiamate API (403) — nessuna fuga di dati, ma un
   // menu che promette funzioni a cui l'utente non ha davvero accesso.
   if (user && user.role === 'admin') {
-    if (features.movimenti) systemItems.push({ slug: 'movimenti', name: 'Movimenti', icon: 'credit-card' })
+    // Movimenti non è più una voce a sé (30/10/2026, richiesto dall'utente) —
+    // vive come tab (TMP) dentro Impostazioni, stesso livello di "Rivedi
+    // collegamenti": entrambe pagine di lavoro temporanee, non funzioni
+    // stabili che meritano un posto fisso nel menu principale.
     systemItems.push({ slug: 'libreria', name: 'Libreria', icon: 'store' })
     systemItems.push({ slug: 'builder', name: 'Builder', icon: 'tool' })
     // Sito Web nestato dentro Impostazioni (2026-10-01, richiesto

@@ -7,7 +7,6 @@ import Icon from './components/Icon'
 import AskData from './components/AskData'
 import DashboardPage from './pages/DashboardPage'
 import LibreriaPage from './pages/LibreriaPage'
-import MovimentiPage from './pages/MovimentiPage'
 import BuilderPage from './pages/BuilderPage'
 import SetupWizard from './components/SetupWizard'
 import ProductTour from './components/ProductTour'
@@ -253,7 +252,6 @@ export default function App() {
         <div className="p-4 md:p-8">
         {currentPage === 'dashboard' && <DashboardPage user={user} modules={installedModules} token={token} features={features} onNavigate={setCurrentPage} />}
         {currentPage === 'report' && <DashboardPage user={user} modules={installedModules} token={token} page="report" />}
-        {currentPage === 'movimenti' && user && user.role === 'admin' && features.movimenti && <MovimentiPage token={token} />}
         {currentPage === 'libreria' && user && user.role === 'admin' && <LibreriaPage token={token} onFeaturesChanged={loadTenantName} onRefresh={loadModules} onOpenInBuilder={openInBuilder} onCreateNewModule={openBuilderNewModule} />}
         {currentPage === 'builder' && user && user.role === 'admin' && <BuilderPage token={token} allModules={allModulesForBuilder} onModulesChanged={loadModules} preselectSlug={builderPreselect} onPreselectHandled={() => setBuilderPreselect(null)} openNewModule={builderOpenNew} onNewModuleHandled={() => setBuilderOpenNew(false)} />}
         {currentPage === 'guida' && <GuidaPage modules={installedModules} token={token} onStartTour={() => setShowTour(true)} />}
@@ -272,7 +270,7 @@ export default function App() {
             nuovo esplicitamente dall'utente, stavolta come scelta definitiva.
             'sito_web' qui sotto instrada sullo stesso meccanismo di 'account'
             sopra, solo con un tab diverso. */}
-        {(currentPage === 'impostazioni' || currentPage === 'account' || currentPage === 'sito_web' || currentPage === 'export_dati' || currentPage === 'connessioni') && user &&
+        {(currentPage === 'impostazioni' || currentPage === 'account' || currentPage === 'sito_web' || currentPage === 'export_dati' || currentPage === 'connessioni' || currentPage === 'movimenti') && user &&
           <ImpostazioniPage token={token} user={user} features={features} modules={installedModules} onOpenInBuilder={openInBuilder} onFeaturesChanged={loadTenantName} initialTab={currentPage === 'impostazioni' ? undefined : currentPage} />}
         {currentModule && !['dashboard', 'utenti', 'report'].includes(currentPage) && <ModulePage module={currentModule} token={token} user={user} onNavigate={setCurrentPage} />}
         </div>
