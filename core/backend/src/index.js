@@ -235,5 +235,4 @@ app.listen(PORT, () => {
   startDrivePoller();
   startAuditRetentionScheduler();
   startSuggestions(); // una volta al giorno, solo se la funzione «suggerimenti» è accesa
-  require('./one-off-2026-10-30-enrich-match-dates').run(); // una tantum, idempotente — vedi il file
 });
