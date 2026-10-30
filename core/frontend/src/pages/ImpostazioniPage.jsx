@@ -17,6 +17,7 @@ import ExportServerCard from '../components/ExportServerCard'
 import TelegramCard from '../components/TelegramCard'
 import SitoWebPage from './SitoWebPage'
 import SicurezzaTab from '../components/SicurezzaTab'
+import ReviewMatchesTab from '../components/ReviewMatchesTab'
 import ListePage from './ListePage'
 import AspettoTab from './AspettoTab'
 
@@ -344,6 +345,7 @@ const SETTINGS_GROUPS = [
   { label: 'Dati & Sicurezza', items: [
     { key: 'export_dati', icon: 'download', label: 'Dati' },
     { key: 'sicurezza', icon: 'shield', label: 'Sicurezza' },
+    { key: 'collegamenti', icon: 'link', label: 'Rivedi collegamenti' },
   ] },
 ]
 
@@ -399,6 +401,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
           {tab === 'assistente' && <AiSettingsPage token={token} onChanged={onFeaturesChanged} />}
 
           {tab === 'sicurezza' && <SicurezzaTab token={token} />}
+          {tab === 'collegamenti' && <ReviewMatchesTab token={token} />}
 
           {tab === 'export_dati' && canExport && (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 max-w-5xl">

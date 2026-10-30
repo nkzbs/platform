@@ -373,6 +373,23 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(package_slug, snapshot_date)
   );
+
+  -- Proposte di collegamento tra un record "allegato" (es. un documento) e un
+  -- altro record a cui potrebbe appartenere, lette una volta con l'AI e
+  -- riviste a mano (routes/receipt-match.js) — generica, non sa nulla di
+  -- "Documenti" o "Spese": source_* è il record di partenza (il documento),
+  -- target_* quello proposto come destinazione una volta confermato.
+  CREATE TABLE IF NOT EXISTS match_proposals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_slug TEXT NOT NULL,
+    source_id INTEGER NOT NULL,
+    proposta_json TEXT NOT NULL DEFAULT '{}',
+    reviewed INTEGER NOT NULL DEFAULT 0,
+    target_slug TEXT,
+    target_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(source_slug, source_id)
+  );
 `);
 
 // Migrazione idempotente: aggiunge colonne mancanti su tabelle già esistenti.

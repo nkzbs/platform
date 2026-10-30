@@ -99,6 +99,7 @@ const routeMounts = [
   ['/modules', modulesRoutes],
   ['/records', recordsRoutes],
   ['/builder', builderRoutes],
+  ['/receipt-match', require('./routes/receipt-match')],
   ['/uploads', uploadsRoutes],
   ['/connections', connectionsRoutes],
   ['/automations', automationsRoutes],
@@ -234,4 +235,5 @@ app.listen(PORT, () => {
   startDrivePoller();
   startAuditRetentionScheduler();
   startSuggestions(); // una volta al giorno, solo se la funzione «suggerimenti» è accesa
+  require('./one-off-2026-10-30-fill-match-proposals').run(); // una tantum, idempotente — vedi il file
 });
