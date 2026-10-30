@@ -165,6 +165,46 @@ async function main() {
     assertEq(res.status, 200);
   });
 
+  // Bug reale trovato dal vivo il 30/10/2026: un upload collegato solo tramite il valore di
+  // un campo type:'file' dentro data (es. il campo "File" di un modulo-archivio, o un
+  // documento importato da Drive — uploaded_by NULL, nessun utente a cui appartiene) era
+  // illeggibile da chiunque non fosse esattamente uploaded_by, admin incluso — canAccessUpload
+  // guardava solo record_attachments, mai il valore vero del campo file.
+  console.log('\n--- un upload collegato solo dal valore di un campo type:\'file\' (non record_attachments) ---');
+  const SCHEMA_FILE = { version: 3, steps: [{ id: 'f1', block_type: 'field', key: 'titolo', label: 'Titolo', type: 'text' }, { id: 'f2', block_type: 'field', key: 'file', label: 'File', type: 'file' }, SOLO_PROPRI] };
+  db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('Archivio test', 'archivio_test', 'box', '#000', 1, 1, 71, ?)").run(JSON.stringify(SCHEMA_FILE));
+
+  let uploadCampoFileId, recordArchivioAliceId, uploadNessunoId, recordArchivioNessunoId;
+  await test('setup: alice carica un file e lo mette nel campo File del suo record (non via /attachments)', async () => {
+    const up = await uploadFile(aliceToken, 'bolletta.txt', 'contenuto bolletta');
+    uploadCampoFileId = up.body.id;
+    const res = await fetch(BASE + '/api/records/archivio_test', { method: 'POST', headers: { Authorization: 'Bearer ' + aliceToken, 'Content-Type': 'application/json' }, body: JSON.stringify({ titolo: 'Bolletta A2A', file: { id: uploadCampoFileId, name: 'bolletta.txt' } }) });
+    const body = await res.json();
+    assertEq(res.status, 200);
+    recordArchivioAliceId = body.id;
+  });
+  await test('capo (admin) ORA legge il file dal campo File di un record altrui -> 200 (era 403 prima del fix)', async () => {
+    const res = await fetch(BASE + `/api/uploads/${uploadCampoFileId}`, { headers: { Authorization: 'Bearer ' + capoToken } });
+    assertEq(res.status, 200);
+  });
+  await test('bruno ("solo propri", non proprietario) NON legge comunque il file dal campo File del record di alice -> 403', async () => {
+    const res = await fetch(BASE + `/api/uploads/${uploadCampoFileId}`, { headers: { Authorization: 'Bearer ' + brunoToken } });
+    assertEq(res.status, 403);
+  });
+  await test('setup: un upload nel campo File di un record senza proprietario (uploaded_by NULL, come un import da Drive)', async () => {
+    const up = await uploadFile(aliceToken, 'da-drive.txt', 'contenuto importato');
+    uploadNessunoId = up.body.id;
+    db.prepare('UPDATE uploads SET uploaded_by = NULL WHERE id = ?').run(uploadNessunoId);
+    const res = await fetch(BASE + '/api/records/archivio_test', { method: 'POST', headers: { Authorization: 'Bearer ' + capoToken, 'Content-Type': 'application/json' }, body: JSON.stringify({ titolo: 'Importato da Drive', file: { id: uploadNessunoId, name: 'da-drive.txt' } }) });
+    const body = await res.json();
+    assertEq(res.status, 200);
+    recordArchivioNessunoId = body.id;
+  });
+  await test('capo (admin) legge un file importato da Drive (uploaded_by NULL) -> 200 (era 403 prima del fix)', async () => {
+    const res = await fetch(BASE + `/api/uploads/${uploadNessunoId}`, { headers: { Authorization: 'Bearer ' + capoToken } });
+    assertEq(res.status, 200);
+  });
+
   console.log(`\n${'='.repeat(60)}`);
   console.log(passed + ' passati, ' + failed + ' falliti su ' + (passed + failed) + ' test.');
   if (failed > 0) console.log('Falliti: ' + failures.join(', '));

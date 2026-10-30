@@ -72,9 +72,36 @@ function getModuleSchema(slug) {
   if (!mod) return null;
   return parseSchemaNormalized(mod.schema_json);
 }
+// Un campo di tipo 'file' (es. il File di un documento in Documenti, o di
+// qualunque altro modulo-archivio) salva il riferimento all'upload dentro
+// data[chiave] = {id, ...} del record stesso — un collegamento reale quanto
+// record_attachments, solo mai controllato qui sotto fino al 30/10/2026 (bug
+// trovato dal vivo: un documento importato da Drive, caricato da nessun
+// utente specifico, era illeggibile da chiunque, "Non hai i permessi" anche
+// per l'admin). Cerca fra i moduli installati con almeno un campo file
+// quello/i record il cui campo file punta a QUESTO upload.
+function collegamentiDaCampoFile(uploadId) {
+  const moduli = db.prepare('SELECT slug, schema_json FROM modules WHERE installed = 1').all();
+  const out = [];
+  for (const m of moduli) {
+    let schema; try { schema = parseSchemaNormalized(m.schema_json); } catch (e) { continue; }
+    const campiFile = (schema.fields || []).filter((f) => f.type === 'file').map((f) => f.key);
+    if (!campiFile.length) continue;
+    const righe = db.prepare('SELECT id, data FROM records WHERE module_slug = ?').all(m.slug);
+    for (const r of righe) {
+      let d; try { d = JSON.parse(r.data); } catch (e) { continue; }
+      if (campiFile.some((k) => d[k] && d[k].id === uploadId)) out.push({ module_slug: m.slug, record_id: r.id });
+    }
+  }
+  return out;
+}
+
 function canAccessUpload(req, row, action) { // action: 'view' | 'edit'
   if (row.uploaded_by === req.user.id) return true;
-  const links = db.prepare('SELECT module_slug, record_id FROM record_attachments WHERE upload_id = ?').all(row.id);
+  const links = [
+    ...db.prepare('SELECT module_slug, record_id FROM record_attachments WHERE upload_id = ?').all(row.id),
+    ...collegamentiDaCampoFile(row.id),
+  ];
   if (links.length === 0) return false;
   return links.every((link) => {
     const record = db.prepare('SELECT * FROM records WHERE id = ? AND module_slug = ?').get(link.record_id, link.module_slug);
