@@ -133,14 +133,42 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
   // restano nella stessa famiglia visiva dei pin colorati invece di spiccare in blu pieno.
   // hover:scale-110 + transition-all danno la continuità/fluidità mancante tra un'icona e
   // l'altra, stessa animazione già usata nella griglia del pannello "Altro".
-  const DockIcon = ({ slug, name, icon, color, active, onClick, badge }) => (
-    <button key={slug} data-tour={slug ? 'sidebar-' + slug : undefined} onClick={onClick || (() => handleNavigate(slug))} title={name}
+  const DockIcon = ({ slug, dockKey, name, icon, color, active, onClick, badge }) => (
+    <button key={slug} data-tour={slug ? 'sidebar-' + slug : undefined} data-dock-key={dockKey} onClick={onClick || (() => handleNavigate(slug))} title={name}
       className={'relative flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ease-out hover:scale-110 ' + (active ? 'bg-accent text-white shadow-md' : '')}
       style={!active ? { backgroundColor: color ? color + '22' : 'rgb(var(--accent) / 0.16)', color: color || 'rgb(var(--accent))' } : undefined}>
       <Icon name={icon} size={17} />
       {badge > 0 && <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-accent text-white text-[8px] rounded-full flex items-center justify-center font-bold leading-none border border-surface-card">{badge > 9 ? '9+' : badge}</span>}
     </button>
   )
+
+  // Indicatore che SCORRE da un'icona all'altra invece di comparire/sparire di colpo —
+  // segnalato dal vivo ("se mi sposto di voce non vedo lo scorrere"): prima il cambio di
+  // voce attiva era solo un cambio di colore istantaneo, nessun movimento visibile tra una
+  // voce e l'altra. Un alone dietro l'icona attiva, stessa forma/misura del bottone: si
+  // sovrappone perfettamente da fermo (invisibile, perché sotto l'icona già colorata) e si
+  // vede SOLO mentre scorre in transizione da una posizione all'altra — misurato dal vivo
+  // (data-dock-key su ogni bottone) invece che calcolato a mano, così resta corretto anche
+  // se l'ordine o il numero delle voci appuntate cambia.
+  const navRef = useRef(null)
+  const [indicator, setIndicator] = useState(null) // { left, width } oppure null (nessuna voce attiva da evidenziare)
+  const activeDockKey = currentPage === 'account' ? 'account'
+    : pinned.some((m) => m.slug === currentPage) ? currentPage
+    : (altroOpen || pageInOverflow) ? 'altro'
+    : null
+  useEffect(() => {
+    const measure = () => {
+      if (!navRef.current || !activeDockKey) { setIndicator(null); return }
+      const el = navRef.current.querySelector('[data-dock-key="' + activeDockKey + '"]')
+      if (!el) { setIndicator(null); return }
+      const navRect = navRef.current.getBoundingClientRect()
+      const elRect = el.getBoundingClientRect()
+      setIndicator({ left: elRect.left - navRect.left, width: elRect.width })
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [activeDockKey, pinned.map((m) => m.slug).join(',')])
 
   // Griglia di icone invece della lista (2026-10-31, richiesto dal vivo dopo aver visto un
   // launcher macOS) — stessa logica di navigazione di prima, solo icona sopra + etichetta
@@ -175,7 +203,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
             {logoUrl ? <img src={logoUrl} alt="" className="w-[24px] h-[24px] rounded-md object-contain flex-shrink-0" /> : <PlatformLogo size={24} letter={hidePlatformName && tenantName ? tenantName.trim()[0] : undefined} />}
             <div className="min-w-0">
               <div className="text-sm text-ink font-bold truncate">{hidePlatformName && tenantName ? tenantName : 'Platform' + (tenantName ? ' ' + tenantName : '')}</div>
-              {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.3.48</div>}
+              {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.3.49</div>}
             </div>
           </div>
           {/* Ricerca in cima al pannello, stile launcher — spostata qui dalla testa della
@@ -228,9 +256,12 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
         </div>
       )}
 
-      <nav aria-label="Navigazione principale" className="glass-pill fixed left-1/2 z-40 flex items-center gap-1" style={{ transform: 'translateX(-50%)', bottom: 'calc(18px + env(safe-area-inset-bottom))', padding: '8px 10px' }}>
+      <nav ref={navRef} aria-label="Navigazione principale" className="glass-pill fixed left-1/2 z-40 flex items-center gap-1" style={{ transform: 'translateX(-50%)', bottom: 'calc(18px + env(safe-area-inset-bottom))', padding: '8px 10px' }}>
+        {indicator && (
+          <div className="absolute top-1.5 bottom-1.5 rounded-full bg-accent/20 pointer-events-none transition-all duration-300 ease-out" style={{ left: indicator.left, width: indicator.width }} />
+        )}
         {pinned.map((m) => (
-          <DockIcon key={m.slug} slug={m.slug} name={m.name} icon={m.icon} color={m.color} active={currentPage === m.slug} />
+          <DockIcon key={m.slug} slug={m.slug} dockKey={m.slug} name={m.name} icon={m.icon} color={m.color} active={currentPage === m.slug} />
         ))}
         {(overflowSenzaGruppo.length > 0 || overflowConGruppo.length > 0 || systemItems.length > 0) && (
           <>
@@ -239,7 +270,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
               {/* "grid" invece di "menu" (hamburger) — segnalato dal vivo ("hamburger non mi
                   convince"): l'hamburger legge come "apri la navigazione", confonde qui dove
                   la navigazione principale è già il dock stesso; la griglia dice "altre voci". */}
-              <DockIcon name="Altro" icon="grid" active={altroOpen || pageInOverflow} onClick={() => setAltroOpen((x) => !x)} />
+              <DockIcon dockKey="altro" name="Altro" icon="grid" active={altroOpen || pageInOverflow} onClick={() => setAltroOpen((x) => !x)} />
             </div>
           </>
         )}
@@ -279,12 +310,12 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
             DockIcon come ogni altra voce (stesso chip tinto), per non reintrodurre
             l'irregolarità appena corretta sopra con un cerchio di stile diverso. */}
         {user && user.avatar_url ? (
-          <button onClick={() => handleNavigate('account')} title={user.display_name || 'Il mio account'}
+          <button data-dock-key="account" onClick={() => handleNavigate('account')} title={user.display_name || 'Il mio account'}
             className={'relative flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ease-out hover:scale-110 ' + (currentPage === 'account' ? 'ring-2 ring-accent' : '')}>
             <Avatar user={user} size={36} />
           </button>
         ) : (
-          <DockIcon slug="account" name={(user && user.display_name) || 'Il mio account'} icon="user" active={currentPage === 'account'} />
+          <DockIcon slug="account" dockKey="account" name={(user && user.display_name) || 'Il mio account'} icon="user" active={currentPage === 'account'} />
         )}
       </nav>
 

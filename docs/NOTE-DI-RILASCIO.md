@@ -2,6 +2,11 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.49 — 31 ottobre 2026
+
+- **Fix reale: upload della foto profilo falliva ("Errore nel caricamento")** — il nginx esterno (`infra/nginx/nginx.conf`, il primo hop di ogni richiesta: Cloudflare → questo → il nginx del tenant) non aveva mai un `client_max_body_size` proprio, restava sul default di nginx (1MB) — troppo poco per una foto da iPhone. `core/nginx.conf` (dentro ogni container tenant) l'aveva già corretto per lo stesso sintomo sul Sito Web il 2026-09-06, ma essendo un hop più a monte questo primo nginx respingeva la richiesta PRIMA ancora che quel fix potesse avere effetto. Alzato a 20MB (stesso limite di `uploads.js`). Applicato anche live sul nginx del NAS (backup della config precedente, test sintassi, reload).
+- **Indicatore del dock che scorre tra le voci** — segnalato dal vivo ("se mi sposto di voce non vedo lo scorrere"): il cambio di voce attiva era solo un cambio di colore istantaneo. Ora un alone della stessa forma/misura dell'icona si sposta con una transizione animata da una posizione all'altra (misurata dal vivo via `data-dock-key`, non calcolata a mano) — invisibile da fermo (perfettamente sovrapposto all'icona già colorata), visibile solo mentre scorre.
+
 ## 0.3.48 — 31 ottobre 2026
 
 - **Icone del dock uniformate**: segnalato dal vivo come "irregolare, poca fluidità tra una voce e l'altra" — i moduli appuntati usavano icone piatte colorate senza sfondo, mentre Altro/Notifiche/Account erano cerchi blu pieni (solo se attivi) o grigi. Ora ogni icona del dock è un "chip" tondo tinto allo stesso modo (sfondo colore+alpha, come già nei risultati di ricerca), colorato di accent per le voci di sistema senza colore proprio, pieno solo quando attivo — più un leggero ingrandimento al passaggio del mouse per dare continuità tra un'icona e l'altra.
