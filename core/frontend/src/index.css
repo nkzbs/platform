@@ -236,3 +236,16 @@ body {
 :root[data-theme="light"] .glass-mesh-bg::after {
   opacity: 0.22;
 }
+
+/* Il marchio Platform dentro la chiazza in basso a destra — grande, molto sfumato: resta
+   parte dello sfondo (leggibilità del contenuto sopra mai in discussione), non un timbro. */
+.glass-mesh-logo {
+  position: absolute;
+  bottom: -9%;
+  right: -7%;
+  opacity: 0.22;
+  filter: blur(6px);
+}
+:root[data-theme="light"] .glass-mesh-logo {
+  opacity: 0.16;
+}

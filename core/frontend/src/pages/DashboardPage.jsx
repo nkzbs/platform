@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import RiepilogoMensile from '../components/RiepilogoMensile'
 import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
+import PlatformLogo from '../components/PlatformLogo'
 import { parseSchemaFrontend } from '../lib/schema-v3-frontend'
 import ChecklistWidget from './ChecklistWidget'
 import InsightsCard from '../components/InsightsCard'
@@ -371,7 +372,14 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
       {/* "Liquid Glass" (2026-10-30): lo sfondo sfumato dietro i pannelli di vetro della
           griglia — vedi .glass-mesh-bg/.glass-panel in index.css. Introdotto qui soltanto
           (non un retheme dell'app) per validare la direzione prima di estenderla altrove. */}
-      <div className="glass-mesh-bg" aria-hidden="true" />
+      <div className="glass-mesh-bg" aria-hidden="true">
+        {/* Il marchio Platform nella chiazza in basso a destra, al posto del semplice colore
+            sfumato — richiesto dall'utente ("mettiamo il logo?"). Grande, molto sfumato e
+            sfocato: resta parte dello sfondo, non un timbro leggibile sopra i contenuti. */}
+        <div className="glass-mesh-logo">
+          <PlatformLogo size={520} />
+        </div>
+      </div>
       <div className="relative z-10">
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
