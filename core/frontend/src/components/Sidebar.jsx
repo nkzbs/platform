@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Icon from './Icon'
 import PlatformLogo from './PlatformLogo'
+import GlobalSearch from './GlobalSearch'
 import { API, notifyUnauthorized } from '../lib/api'
 
 // Dock orizzontale flottante in "vetro" (2026-10-31, richiesto esplicitamente dall'utente
@@ -18,11 +19,16 @@ const PIN_COUNT = 4
 function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName, logoUrl, hidePlatformName, features = {}, token, mobileOpen, onMobileClose, collapsed }) {
   const handleNavigate = (slug) => {
     onNavigate(slug)
-    setAltroOpen(false)
+    closeAltro()
     if (onMobileClose) onMobileClose()
   }
 
   const [altroOpen, setAltroOpen] = useState(false)
+  // Filtro per nome dentro il pannello "Altro" — stile launcher macOS (richiesto dal vivo:
+  // "ricerca in alto, togliendola dalla testa della pagina"): riempito da GlobalSearch mentre
+  // si scrive, filtra la griglia sotto; si svuota ogni volta che il pannello si chiude.
+  const [navFilter, setNavFilter] = useState('')
+  const closeAltro = () => { setAltroOpen(false); setNavFilter('') }
   // L'hamburger in App.jsx (solo mobile) apriva il drawer di prima — qui apre il pannello "Altro".
   useEffect(() => { if (mobileOpen) setAltroOpen(true) }, [mobileOpen])
 
@@ -62,7 +68,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
   useEffect(() => {
     const handler = (e) => {
       if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false)
-      if (panelRef.current && !panelRef.current.contains(e.target) && !e.target.closest('[data-dock-altro]')) setAltroOpen(false)
+      if (panelRef.current && !panelRef.current.contains(e.target) && !e.target.closest('[data-dock-altro]')) closeAltro()
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -126,46 +132,66 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
     </button>
   )
 
-  const overflowItem = (m) => (
+  // Griglia di icone invece della lista (2026-10-31, richiesto dal vivo dopo aver visto un
+  // launcher macOS) — stessa logica di navigazione di prima, solo icona sopra + etichetta
+  // sotto invece di una riga.
+  const gridTile = (m) => (
     <button key={m.slug} data-tour={'sidebar-' + m.slug} onClick={() => handleNavigate(m.slug)}
-      className={'w-full flex items-center gap-3 py-2.5 px-3.5 rounded-xl text-sm transition ' + (currentPage === m.slug ? 'bg-accent/20 text-accent' : 'text-gray-300 hover:text-ink hover:bg-white/5')}>
-      <span style={{ color: currentPage === m.slug ? undefined : m.color }}><Icon name={m.icon} size={16} /></span>
-      {m.name}
+      className={'flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-2xl text-center transition ' + (currentPage === m.slug ? 'bg-accent/20' : 'hover:bg-white/8')}>
+      <span className={'w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 ' + (currentPage === m.slug ? 'bg-accent text-white' : 'bg-white/8')} style={currentPage === m.slug ? undefined : { color: m.color }}>
+        <Icon name={m.icon} size={19} />
+      </span>
+      <span className={'text-[11px] leading-tight line-clamp-2 ' + (currentPage === m.slug ? 'text-accent font-medium' : 'text-gray-300')}>{m.name}</span>
     </button>
   )
+  const filtro = navFilter.trim().toLowerCase()
+  const passaFiltro = (m) => !filtro || m.name.toLowerCase().includes(filtro)
+  const overflowSenzaGruppoF = overflowSenzaGruppo.filter(passaFiltro)
+  const overflowConGruppoF = overflowConGruppo.filter(passaFiltro)
+  const systemItemsF = systemItems.filter(passaFiltro)
+  const nessunRisultato = filtro && !overflowSenzaGruppoF.length && !overflowConGruppoF.length && !systemItemsF.length
 
   return (
     <>
-      {altroOpen && <div className="fixed inset-0 bg-black/30 z-30" onClick={() => { setAltroOpen(false); if (onMobileClose) onMobileClose() }} />}
+      {altroOpen && <div className="fixed inset-0 bg-black/30 z-30" onClick={() => { closeAltro(); if (onMobileClose) onMobileClose() }} />}
 
       {altroOpen && (overflowSenzaGruppo.length > 0 || overflowConGruppo.length > 0 || systemItems.length > 0) && (
-        <div ref={panelRef} className="glass-panel fixed left-1/2 z-40 overflow-y-auto" style={{ transform: 'translateX(-50%)', bottom: 'calc(90px + env(safe-area-inset-bottom))', width: 'min(360px, calc(100vw - 32px))', maxHeight: '64vh', padding: '14px' }}>
-          <div className="flex items-center gap-2.5 px-1.5 pb-3 mb-1 border-b border-white/10">
+        <div ref={panelRef} className="glass-panel fixed left-1/2 z-40 flex flex-col" style={{ transform: 'translateX(-50%)', bottom: 'calc(90px + env(safe-area-inset-bottom))', width: 'min(400px, calc(100vw - 32px))', maxHeight: '70vh', padding: '14px' }}>
+          <div className="flex items-center gap-2.5 px-1.5 pb-3 flex-shrink-0">
             {logoUrl ? <img src={logoUrl} alt="" className="w-[24px] h-[24px] rounded-md object-contain flex-shrink-0" /> : <PlatformLogo size={24} letter={hidePlatformName && tenantName ? tenantName.trim()[0] : undefined} />}
             <div className="min-w-0">
               <div className="text-sm text-ink font-bold truncate">{hidePlatformName && tenantName ? tenantName : 'Platform' + (tenantName ? ' ' + tenantName : '')}</div>
-              {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.3.44</div>}
+              {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.3.45</div>}
             </div>
           </div>
-          <div className="space-y-0.5">
-            {overflowSenzaGruppo.map(overflowItem)}
+          {/* Ricerca in cima al pannello, stile launcher — spostata qui dalla testa della
+              pagina (vedi App.jsx): filtra la griglia sotto mentre si scrive E cerca nei
+              record di tutti i moduli (stessa identica GlobalSearch di sempre). */}
+          <div className="px-0.5 pb-3 flex-shrink-0">
+            <GlobalSearch token={token} onNavigate={handleNavigate} panel onQueryChange={setNavFilter} />
+          </div>
+          <div className="overflow-y-auto flex-1 min-h-0 border-t border-white/10 pt-3">
+            {nessunRisultato && <div className="text-center text-sm text-gray-500 py-6">Nessuna voce per "{navFilter}"</div>}
+            {overflowSenzaGruppoF.length > 0 && (
+              <div className="grid grid-cols-4 gap-1">{overflowSenzaGruppoF.map(gridTile)}</div>
+            )}
             {gruppi.map((g) => {
-              const items = overflowConGruppo.filter((m) => m.group_name === g)
+              const items = overflowConGruppoF.filter((m) => m.group_name === g)
               if (!items.length) return null
               return (
-                <div key={g} className="mt-1.5">
-                  <div className="px-3.5 pt-2 pb-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{g}</div>
-                  {items.map(overflowItem)}
+                <div key={g} className="mt-2">
+                  <div className="px-1.5 pb-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{g}</div>
+                  <div className="grid grid-cols-4 gap-1">{items.map(gridTile)}</div>
                 </div>
               )
             })}
-            {systemItems.length > 0 && (
-              <div className="mt-1.5 pt-2 border-t border-white/10">
-                {systemItems.map(overflowItem)}
+            {systemItemsF.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-white/10">
+                <div className="grid grid-cols-4 gap-1">{systemItemsF.map(gridTile)}</div>
               </div>
             )}
           </div>
-          <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between px-1">
+          <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between px-1 flex-shrink-0">
             <button onClick={() => handleNavigate('account')} className={'text-left hover:opacity-80 transition rounded-lg px-2 py-1 -mx-2 ' + (currentPage === 'account' ? 'bg-accent/20' : '')} title="Il mio account">
               <div className="text-sm text-ink font-medium">{user && user.display_name}</div>
               <div className="text-xs text-gray-500">{user && user.role}</div>

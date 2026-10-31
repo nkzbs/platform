@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.45 — 31 ottobre 2026
+
+**Il pannello "Altro" diventa un vero launcher** (richiesto dall'utente dopo aver visto un app-launcher macOS): ricerca in cima al pannello invece che nella testa della pagina, griglia di icone al posto della lista. Digitare filtra la griglia sotto per nome E cerca contemporaneamente nei record di tutti i moduli — stessa identica ricerca di sempre (`GlobalSearch.jsx`, ora un componente a sé, usato sia qui che sulla pillola di vetro di Dashboard/Report), solo spostata e doppiamente utile. La testa della pagina non ha più il campo di ricerca.
+
 ## 0.3.44 — 31 ottobre 2026
 
 Tre rifiniture segnalate dal vivo sul dock e sul vetro:
