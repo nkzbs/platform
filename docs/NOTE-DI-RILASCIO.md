@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.47 — 31 ottobre 2026
+
+**Fix reale: un pannello di dettaglio aperto da un widget della Dashboard "apriva male"** — segnalato dal vivo con screenshot (Checklist → click su una riga). Causa: per specifica CSS, un `backdrop-filter` su un antenato (i pannelli di vetro, `.glass-panel`) crea un nuovo "containing block" per i discendenti `position: fixed` — il pannello di dettaglio (`FormDrawer.jsx`), aperto da dentro una card di vetro, restava intrappolato nei confini di quella card invece di coprire tutta la pagina, invece di sembrare "rotto" sembrava solo uno sfondo piatto scollegato dal resto. Risolto spostando `FormDrawer` fuori dall'albero React con un portale (`createPortal` verso `document.body`, stesso pattern già usato da `Select.jsx`) — vale per qualunque pagina, non solo la Dashboard.
+
 ## 0.3.46 — 31 ottobre 2026
 
 Quattro rifiniture sul dock, segnalate dal vivo:
