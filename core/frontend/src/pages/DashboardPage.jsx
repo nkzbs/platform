@@ -429,7 +429,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                    (bg-surface-card) che la copriva per intero, annullando l'effetto — da mobile,
                    dove i widget sono chiusi di default, era l'unica cosa visibile. Niente sfondo
                    proprio: lascia vedere il vetro del genitore anche chiusa. */
-                <button type="button" onClick={() => toggleAperto(w)} className={'wbar lg:hidden w-full flex items-center justify-between text-sm ' + (isAperto(w) ? 'justify-end px-1 py-1 text-xs text-gray-500' : 'px-4 py-3 font-medium text-ink')}>
+                <button type="button" onClick={() => toggleAperto(w)} className={'wbar lg:hidden w-full flex items-center justify-between text-sm ' + (isAperto(w) ? 'justify-end px-4 py-3 text-xs text-gray-500' : 'px-4 py-3 font-medium text-ink')}>
                   {isAperto(w) ? null : <span>{w.label}</span>}
                   <span className="flex items-center gap-1">{isAperto(w) ? 'Riduci' : ''}<Icon name={isAperto(w) ? 'chevron-up' : 'chevron-down'} size={14} /></span>
                 </button>
