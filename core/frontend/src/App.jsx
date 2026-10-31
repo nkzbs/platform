@@ -51,7 +51,7 @@ function ToastContainer() {
 }
 
 // ─── GLOBAL SEARCH ────────────────────────────────────────────────────────────
-function GlobalSearch({ token, modules, onNavigate }) {
+function GlobalSearch({ token, modules, onNavigate, glass }) {
   const [q, setQ] = React.useState('')
   const [results, setResults] = React.useState([])
   const [open, setOpen] = React.useState(false)
@@ -78,7 +78,7 @@ function GlobalSearch({ token, modules, onNavigate }) {
 
   return (
     <div className="relative flex-1 min-w-0 md:flex-none" ref={ref}>
-      <div className="flex items-center gap-2 bg-surface-card border border-gray-800 rounded-lg px-3 py-1.5 w-full md:w-56 focus-within:border-blue-500 transition">
+      <div className={'flex items-center gap-2 px-3.5 py-1.5 w-full md:w-56 transition ' + (glass ? 'glass-pill focus-within:border-accent' : 'bg-surface-card border border-gray-800 rounded-lg focus-within:border-blue-500')}>
         <Icon name="search" size={13} className="text-gray-600 flex-shrink-0" />
         <input className="bg-transparent text-sm text-ink outline-none w-full placeholder-gray-600"
           placeholder="Cerca in tutti i moduli..." value={q} onChange={(e) => search(e.target.value)}
@@ -254,7 +254,7 @@ export default function App() {
           </button>
           <div className="flex items-center gap-4">
             {aiOn && user && user.role === 'admin' && <AskData token={token} />}
-            <GlobalSearch token={token} modules={installedModules} onNavigate={setCurrentPage} />
+            <GlobalSearch token={token} modules={installedModules} onNavigate={setCurrentPage} glass={['dashboard', 'report'].includes(currentPage)} />
           </div>
         </div>
         <div className="p-4 md:p-8">

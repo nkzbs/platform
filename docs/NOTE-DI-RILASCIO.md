@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.41 — 31 ottobre 2026
+
+**Fix: la pillola di ricerca "fa pena"** — segnalato dal vivo con screenshot. Da quando (0.3.39) la barra sticky in alto ha perso il suo sfondo su Dashboard/Report, la ricerca restava l'unica cosa "piatta" (bordo quadrato, sfondo opaco a blocco) in un contesto tutto di vetro. Nuova classe `.glass-pill` (stesso trattamento di `.glass-panel`, angoli a pillola) applicata alla ricerca solo su quelle due pagine. Sulle altre pagine resta quadrata, come sempre.
+
 ## 0.3.40 — 31 ottobre 2026
 
 **Il marchio Platform nello sfondo della Dashboard** (richiesto dall'utente): la chiazza di colore in basso a destra, dietro i pannelli di vetro, ora ha il logo vero e proprio — grande, molto sfumato e sfocato, resta parte dello sfondo e non un timbro sopra i contenuti. Theme-aware (più tenue in chiaro).

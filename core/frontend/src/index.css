@@ -194,6 +194,21 @@ body {
   border-radius: 20px;
 }
 
+/* Stesso trattamento di .glass-panel ma a pillola, per i controlli piccoli che
+   galleggiano sopra il vetro (es. la ricerca su Dashboard) — da sola, col solo
+   sfondo flat di prima, restava l'unica cosa "piatta" in un contesto di vetro:
+   segnalato dal vivo ("il box ricerca fa pena"). */
+.glass-pill {
+  position: relative;
+  background: rgb(var(--glass-tint) / var(--glass-bg-alpha));
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgb(var(--glass-tint) / var(--glass-border-alpha));
+  border-top-color: rgb(var(--glass-tint) / var(--glass-highlight-alpha));
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.25), inset 0 1px 0 rgb(var(--glass-tint) / var(--glass-highlight-alpha));
+  border-radius: 9999px;
+}
+
 /* Sfondo sfumato dietro i pannelli — chiazze di colore sfocate, diverse per
    tema (in chiaro, sature ma su base chiara: colori pieni scurirebbero
    troppo lo sfondo e abbasserebbero il contrasto dei pannelli sopra).
