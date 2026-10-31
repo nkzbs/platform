@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.38 — 31 ottobre 2026
+
+**Fix: un taglio netto sopra la Dashboard** — segnalato dal vivo con screenshot reale. La barra di ricerca sticky in alto (condivisa da tutta l'app) aveva un bordo netto e uno sfondo quasi opaco, che tagliava bruscamente contro lo sfondo sfumato del vetro appena sotto: una cucitura visibile, non un bordo voluto. Solo su Dashboard/Report quella barra ora è più trasparente, più sfocata e senza bordo — si fonde invece di tagliare. Sulle altre pagine resta identica a sempre.
+
 ## 0.3.37 — 31 ottobre 2026
 
 **Rifinitura: spazio tra bordo e "Riduci"** — segnalato dal vivo, la barra di un widget aperto aveva solo 4px di margine dal bordo arrotondato della card (`px-1 py-1`), troppo stretto. Portato allo stesso respiro della barra chiusa (`px-4 py-3`), coerente nei due stati.
