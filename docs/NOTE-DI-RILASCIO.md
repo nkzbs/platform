@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.46 — 31 ottobre 2026
+
+Quattro rifiniture sul dock, segnalate dal vivo:
+
+- **Icone del pannello "Altro" più grandi** (44px → 64px, griglia a 3 colonne invece di 4) con un effetto di ingrandimento al passaggio del mouse, stile dock macOS — interpretazione migliore da un video di riferimento che non ho potuto riprodurre direttamente: da confermare o rifinire.
+- **L'hamburger in alto a sinistra è sparito da mobile**: era ridondante col pulsante "Altro" del dock, che apre lo stesso pannello (lo apre ancora anche il tour guidato quando serve).
+- **Spazio recuperato in cima alla pagina**: la barra in testa ora compare solo quando c'è davvero qualcosa da mostrarci ("Chiedi ai dati", solo admin con AI accesa) — altrimenti non occupa più spazio. Lo spazio per la notch (dispositivi con tacca) si riserva una volta sola su `<main>`, non più nella barra.
+
 ## 0.3.45 — 31 ottobre 2026
 
 **Il pannello "Altro" diventa un vero launcher** (richiesto dall'utente dopo aver visto un app-launcher macOS): ricerca in cima al pannello invece che nella testa della pagina, griglia di icone al posto della lista. Digitare filtra la griglia sotto per nome E cerca contemporaneamente nei record di tutti i moduli — stessa identica ricerca di sempre (`GlobalSearch.jsx`, ora un componente a sé, usato sia qui che sulla pillola di vetro di Dashboard/Report), solo spostata e doppiamente utile. La testa della pagina non ha più il campo di ricerca.

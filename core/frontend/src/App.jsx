@@ -187,7 +187,10 @@ export default function App() {
         mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)} collapsed />
       {/* "Liquid Glass" (2026-10-31): la sidebar non è più una rail fissa a sinistra (il dock
           flottante in basso non riserva spazio), tolto md:ml-14 di prima. */}
-      <main className="flex-1 min-w-0">
+      {/* env(safe-area-inset-top) qui, sempre (0 su desktop/senza notch, innocuo) — prima
+          viveva solo nel padding della barra sticky sopra: ora che quella barra può non
+          esserci affatto, lo spazio per la notch va garantito indipendentemente da lei. */}
+      <main className="flex-1 min-w-0" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         {/* "Liquid Glass" (2026-10-31) — su Dashboard/Report questa barra sticky creava una
             cucitura visibile contro lo sfondo sfumato sotto: tolto il bordo e abbassata
             l'opacità non è bastato (segnalato dal vivo due volte, "impresentabile questa
@@ -196,16 +199,20 @@ export default function App() {
             su queste due pagine resta solo un contenitore per gli elementi (la ricerca ha già
             il suo sfondo a pillola), il vetro sotto non incontra nessun bordo. Sulle altre
             pagine resta come sempre. */}
-        <div className={'sticky top-0 z-20 px-4 md:px-8 py-3 flex items-center justify-between md:justify-end gap-3 ' + (['dashboard', 'report'].includes(currentPage) ? '' : 'bg-surface-page/90 backdrop-blur-sm border-b border-gray-800/50')} style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
-          <button onClick={() => setMobileNavOpen(true)} className="md:hidden text-gray-400 hover:text-ink transition flex-shrink-0" title="Apri menu">
-            <Icon name="menu" size={20} />
-          </button>
-          {/* La ricerca vive ora nel pannello "Altro" del dock (vedi Sidebar.jsx), non più
-              qui — richiesto dall'utente dopo aver visto un launcher macOS. */}
-          <div className="flex items-center gap-4">
-            {aiOn && user && user.role === 'admin' && <AskData token={token} glass={['dashboard', 'report'].includes(currentPage)} />}
+        {/* L'hamburger è sparito (richiesto dal vivo, "non voglio vedere le linee in alto a
+            sinistra da mobile"): era ridondante col pulsante "Altro" del dock, che apre lo
+            stesso pannello. La ricerca vive nel pannello "Altro" (Sidebar.jsx), non più qui.
+            Niente più barra sticky quando non c'è nulla da mostrarci (solo "Chiedi ai dati",
+            admin+AI accesa) — recupera lo spazio vuoto segnalato in cima alla pagina; lo
+            spazio per la notch (safe-area-inset-top) si sposta sul contenuto sotto, così resta
+            protetto anche senza la barra. */}
+        {aiOn && user && user.role === 'admin' && (
+          /* Niente più safe-area qui dentro: la riserva lo spazio della notch, una volta
+             sola, <main> stesso adesso (sopra) — altrimenti si sommerebbe due volte. */
+          <div className={'sticky top-0 z-20 px-4 md:px-8 py-3 flex items-center justify-end gap-3 ' + (['dashboard', 'report'].includes(currentPage) ? '' : 'bg-surface-page/90 backdrop-blur-sm border-b border-gray-800/50')}>
+            <AskData token={token} glass={['dashboard', 'report'].includes(currentPage)} />
           </div>
-        </div>
+        )}
         {/* pb-28: il dock flottante in basso non deve coprire l'ultimo pezzo di pagina. */}
         <div className="p-4 md:p-8 pb-28">
         {currentPage === 'dashboard' && <DashboardPage user={user} modules={installedModules} token={token} features={features} onNavigate={setCurrentPage} />}
