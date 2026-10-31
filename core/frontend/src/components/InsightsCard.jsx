@@ -35,10 +35,11 @@ export default function InsightsCard({ token, onNavigate, widgetId, title }) {
 
   if (vista === 'anno') {
     return (
-      // "Liquid Glass" (2026-10-31): questa card gestisce il proprio sfondo (non passa dal
-      // wrapper generico della griglia dei widget in DashboardPage.jsx) — segnalata dal vivo
-      // come rimasta indietro ("non si è aggiornato").
-      <section className="glass-panel p-5 mb-6">
+      // Lo sfondo di vetro (.glass-panel) ora è sul wrapper in DashboardPage.jsx, non più
+      // qui (2026-10-31, bug reale: con lo sfondo raddoppiato su due riquadri separati la
+      // barra "Riduci" del wrapper restava fuori dalla card vera, sopra di essa invece che
+      // dentro — segnalato dal vivo: "il riduci... è fuori"). Qui resta solo il padding.
+      <section className="p-5">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
           <div className="flex items-center gap-2"><Icon name="bar-chart" size={16} className="text-accent" /><h2 className="text-sm font-semibold text-ink">{title || 'Come sta andando'}</h2></div>
           {vistaToggle}
@@ -63,7 +64,7 @@ export default function InsightsCard({ token, onNavigate, widgetId, title }) {
   const cur = new Date().toISOString().slice(0, 7)
 
   return (
-    <section className="glass-panel p-5 mb-6">
+    <section className="p-5">
       <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
         <div className="flex items-center gap-2">
           <Icon name="bar-chart" size={16} className="text-accent" />

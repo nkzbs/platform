@@ -161,7 +161,7 @@ app.use('/__root_public', rootPublicRouter);
 
 app.get('/health', (req, res) => res.json({
   status: 'ok',
-  version: '0.3.49',
+  version: '0.3.50',
   tenant: process.env.TENANT_SLUG || 'unknown',
   name: process.env.TENANT_NAME || 'Platform Core'
 }));

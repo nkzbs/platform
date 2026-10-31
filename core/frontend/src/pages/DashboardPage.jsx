@@ -428,9 +428,14 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
           // CategoryPivotView/WeeklyBreakdownView così come sono (stesso componente già
           // usato sulla pagina di un modulo) — hanno già la propria card (bg-surface-card
           // rounded-xl border p-5), niente doppia cornice qui, solo 'relative' per
-          // ancorare i controlli di editMode.
+          // ancorare i controlli di editMode. come_sta_andando (InsightsCard) NON è più
+          // qui dentro (2026-10-31, bug reale segnalato dal vivo: "il riduci... è fuori")
+          // — senza glass-panel sul wrapper, la barra "Riduci" sopra restava fuori dalla
+          // card di vetro che InsightsCard disegnava per conto suo più sotto, due riquadri
+          // slegati invece di uno. Ora il wrapper porta il vetro (come checklist/coda/
+          // riepilogo_mensile) e InsightsCard non disegna più un proprio sfondo.
           return (
-            <div key={w.id} className={(!isAperto(w) ? 'max-lg:[&>*:not(.wbar)]:hidden ' : '') + (['yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'come_sta_andando'].includes(w.type) ? 'relative' : 'glass-panel overflow-hidden relative') + (['checklist', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? ' col-span-full' : ['coda'].includes(w.type) ? ' col-span-full' : ['come_sta_andando', 'riepilogo_mensile'].includes(w.type) ? ' col-span-full sm:col-span-1 lg:col-span-3' : ' lg:col-span-2')}>
+            <div key={w.id} className={(!isAperto(w) ? 'max-lg:[&>*:not(.wbar)]:hidden ' : '') + (['yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? 'relative' : 'glass-panel overflow-hidden relative') + (['checklist', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? ' col-span-full' : ['coda'].includes(w.type) ? ' col-span-full' : ['come_sta_andando', 'riepilogo_mensile'].includes(w.type) ? ' col-span-full sm:col-span-1 lg:col-span-3' : ' lg:col-span-2')}>
               {['come_sta_andando', 'checklist', 'coda', 'riepilogo_mensile'].includes(w.type) && !editMode && (
                 /* "Liquid Glass" (2026-10-31) — questa barra, da chiusa, sta DENTRO la card già
                    di vetro (.glass-panel sul wrapper, sopra): prima aveva un suo sfondo opaco

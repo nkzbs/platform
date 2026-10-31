@@ -2,6 +2,11 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.50 — 31 ottobre 2026
+
+- **Fix reale: "Riduci" di "Come sta andando" restava fuori dalla card** — segnalato dal vivo con screenshot. Causa: `come_sta_andando` era l'unico tipo con la barra "Riduci" MA senza lo sfondo di vetro sul wrapper condiviso (quello lo disegnava da sé `InsightsCard.jsx`, più sotto) — due riquadri slegati invece di uno, la barra sopra restava visivamente fuori dalla card vera. Ora il wrapper porta il vetro come già per checklist/coda/riepilogo mensile, e `InsightsCard` non disegna più un proprio sfondo.
+- **Troppo spazio vuoto nel pannello "Altro"** — segnalato dal vivo su iPhone, non riproducibile su Chrome: un bug noto di Safari/WebKit fa crescere un figlio con `flex-grow` fino a riempire il `max-height` del genitore anche quando il contenuto reale è molto più corto. Sostituito con un `max-height` proprio sulla griglia scorrevole, indipendente dal flex-grow — si adatta sempre al contenuto reale.
+
 ## 0.3.49 — 31 ottobre 2026
 
 - **Fix reale: upload della foto profilo falliva ("Errore nel caricamento")** — il nginx esterno (`infra/nginx/nginx.conf`, il primo hop di ogni richiesta: Cloudflare → questo → il nginx del tenant) non aveva mai un `client_max_body_size` proprio, restava sul default di nginx (1MB) — troppo poco per una foto da iPhone. `core/nginx.conf` (dentro ogni container tenant) l'aveva già corretto per lo stesso sintomo sul Sito Web il 2026-09-06, ma essendo un hop più a monte questo primo nginx respingeva la richiesta PRIMA ancora che quel fix potesse avere effetto. Alzato a 20MB (stesso limite di `uploads.js`). Applicato anche live sul nginx del NAS (backup della config precedente, test sintassi, reload).

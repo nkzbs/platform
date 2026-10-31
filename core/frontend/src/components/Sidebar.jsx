@@ -203,7 +203,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
             {logoUrl ? <img src={logoUrl} alt="" className="w-[24px] h-[24px] rounded-md object-contain flex-shrink-0" /> : <PlatformLogo size={24} letter={hidePlatformName && tenantName ? tenantName.trim()[0] : undefined} />}
             <div className="min-w-0">
               <div className="text-sm text-ink font-bold truncate">{hidePlatformName && tenantName ? tenantName : 'Platform' + (tenantName ? ' ' + tenantName : '')}</div>
-              {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.3.49</div>}
+              {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.3.50</div>}
             </div>
           </div>
           {/* Ricerca in cima al pannello, stile launcher — spostata qui dalla testa della
@@ -212,7 +212,15 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
           <div className="px-0.5 pb-3 flex-shrink-0">
             <GlobalSearch token={token} onNavigate={handleNavigate} panel onQueryChange={setNavFilter} />
           </div>
-          <div className="overflow-y-auto flex-1 min-h-0 border-t border-white/10 pt-3">
+          {/* maxHeight fisso invece di flex-1 (2026-10-31, segnalato dal vivo: "troppo spazio
+              libero nel launcher") — Safari/WebKit ha un bug noto: flex-grow su un figlio
+              dentro un contenitore flex-column il cui UNICO vincolo di altezza è max-height
+              (come qui, il pannello sopra) lo fa crescere fino a riempire quel max-height
+              anche quando il contenuto reale è molto più corto, lasciando un vuoto enorme
+              prima del footer — non riproducibile su Chrome (motore diverso), solo dal vivo
+              su iPhone. Un max-height proprio, indipendente dal flex-grow, si adatta sempre
+              al contenuto reale e scrolla solo se davvero serve. */}
+          <div className="overflow-y-auto border-t border-white/10 pt-3" style={{ maxHeight: 'min(46vh, 380px)' }}>
             {nessunRisultato && <div className="text-center text-sm text-gray-500 py-6">Nessuna voce per "{navFilter}"</div>}
             {overflowSenzaGruppoF.length > 0 && (
               <div className="grid grid-cols-3 gap-1">{overflowSenzaGruppoF.map(gridTile)}</div>
