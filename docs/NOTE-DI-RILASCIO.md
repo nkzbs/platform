@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.44 — 31 ottobre 2026
+
+Tre rifiniture segnalate dal vivo sul dock e sul vetro:
+
+- **"Chiedi ai dati"** era rimasto testo nudo accanto alla pillola di vetro della ricerca — ora è una pillola di vetro anche lei, su Dashboard/Report.
+- **"Come sta andando"** non aveva mai preso il vetro: gestisce il proprio sfondo internamente (non passa dal wrapper generico della griglia). Corretto alla fonte in `InsightsCard.jsx`.
+- **L'icona "Altro" nel dock** era un hamburger (≡), che legge come "apri la navigazione" — confuso qui dove la navigazione è già il dock. Cambiata in una griglia.
+
 ## 0.3.43 — 31 ottobre 2026
 
 **Fix: il marchio nello sfondo era troppo "incollato" da vicino** — segnalato dal vivo con uno zoom reale: a 6px di sfocatura restava una forma dai contorni netti (il rettangolo arrotondato e il riquadro interno si leggevano chiaramente), più un timbro che una texture di sfondo. Sfocatura portata a 40px: ora si scioglie in una macchia di luce, resta solo il tocco di colore.

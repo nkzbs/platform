@@ -7,7 +7,7 @@ import Icon from './Icon'
 const eur = (n) => Number(n || 0).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })
 const ESEMPI = ['Quanto ho speso in totale lo scorso anno?', 'Quanto ho speso di luce nel 2025?', 'Qual è la spesa più alta di quest\'anno?']
 
-export default function AskData({ token }) {
+export default function AskData({ token, glass }) {
   const api = useApi(token)
   const [open, setOpen] = useState(false)
   const [domanda, setDomanda] = useState('')
@@ -32,7 +32,11 @@ export default function AskData({ token }) {
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="flex items-center gap-1.5 text-sm text-accent hover:underline flex-shrink-0" title="Chiedi ai tuoi dati">
+      {/* "Chiedi ai dati" restava testo nudo accanto alla pillola di vetro della ricerca —
+          segnalato dal vivo ("si vede male"): l'unico elemento ancora senza un suo sfondo in
+          un contesto tutto di vetro. Stessa pillola della ricerca su Dashboard/Report. */}
+      <button type="button" onClick={() => setOpen(true)} title="Chiedi ai tuoi dati"
+        className={'flex items-center gap-1.5 text-sm flex-shrink-0 transition ' + (glass ? 'glass-pill px-3.5 py-1.5 text-accent' : 'text-accent hover:underline')}>
         <Icon name="wand" size={14} /><span className="hidden sm:inline">Chiedi ai dati</span>
       </button>
       {open && (

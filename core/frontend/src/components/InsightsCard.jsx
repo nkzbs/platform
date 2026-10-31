@@ -35,7 +35,10 @@ export default function InsightsCard({ token, onNavigate, widgetId, title }) {
 
   if (vista === 'anno') {
     return (
-      <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mb-6">
+      // "Liquid Glass" (2026-10-31): questa card gestisce il proprio sfondo (non passa dal
+      // wrapper generico della griglia dei widget in DashboardPage.jsx) — segnalata dal vivo
+      // come rimasta indietro ("non si è aggiornato").
+      <section className="glass-panel p-5 mb-6">
         <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
           <div className="flex items-center gap-2"><Icon name="bar-chart" size={16} className="text-accent" /><h2 className="text-sm font-semibold text-ink">{title || 'Come sta andando'}</h2></div>
           {vistaToggle}
@@ -60,7 +63,7 @@ export default function InsightsCard({ token, onNavigate, widgetId, title }) {
   const cur = new Date().toISOString().slice(0, 7)
 
   return (
-    <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mb-6">
+    <section className="glass-panel p-5 mb-6">
       <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
         <div className="flex items-center gap-2">
           <Icon name="bar-chart" size={16} className="text-accent" />

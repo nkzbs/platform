@@ -255,7 +255,7 @@ export default function App() {
             <Icon name="menu" size={20} />
           </button>
           <div className="flex items-center gap-4">
-            {aiOn && user && user.role === 'admin' && <AskData token={token} />}
+            {aiOn && user && user.role === 'admin' && <AskData token={token} glass={['dashboard', 'report'].includes(currentPage)} />}
             <GlobalSearch token={token} modules={installedModules} onNavigate={setCurrentPage} glass={['dashboard', 'report'].includes(currentPage)} />
           </div>
         </div>

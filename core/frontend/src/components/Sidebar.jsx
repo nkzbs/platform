@@ -144,7 +144,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
             {logoUrl ? <img src={logoUrl} alt="" className="w-[24px] h-[24px] rounded-md object-contain flex-shrink-0" /> : <PlatformLogo size={24} letter={hidePlatformName && tenantName ? tenantName.trim()[0] : undefined} />}
             <div className="min-w-0">
               <div className="text-sm text-ink font-bold truncate">{hidePlatformName && tenantName ? tenantName : 'Platform' + (tenantName ? ' ' + tenantName : '')}</div>
-              {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.3.43</div>}
+              {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.3.44</div>}
             </div>
           </div>
           <div className="space-y-0.5">
@@ -193,7 +193,10 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
           <>
             <div className="w-px h-6 bg-white/15 mx-1 flex-shrink-0" />
             <div data-dock-altro>
-              <DockIcon name="Altro" icon="menu" active={altroOpen || pageInOverflow} onClick={() => setAltroOpen((x) => !x)} />
+              {/* "grid" invece di "menu" (hamburger) — segnalato dal vivo ("hamburger non mi
+                  convince"): l'hamburger legge come "apri la navigazione", confonde qui dove
+                  la navigazione principale è già il dock stesso; la griglia dice "altre voci". */}
+              <DockIcon name="Altro" icon="grid" active={altroOpen || pageInOverflow} onClick={() => setAltroOpen((x) => !x)} />
             </div>
           </>
         )}
