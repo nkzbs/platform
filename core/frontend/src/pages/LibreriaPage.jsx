@@ -7,6 +7,7 @@ import CollegaModuli from '../components/CollegaModuli'
 import VerticaliLibreria from '../components/VerticaliLibreria'
 import ProponiAllaLibreriaModal from '../components/ProponiAllaLibreria'
 import { parseSchemaFrontend, getAutomationSteps, getRequiredConnectors } from '../lib/schema-v3-frontend'
+import GlassPageBackground from '../components/GlassPageBackground'
 
 // La Libreria del tenant: i moduli che ho già (installati) e quelli salvati nella Libreria di
 // Super Admin che posso installare. Installare = copiare: il modulo diventa mio, modificabile
@@ -275,7 +276,7 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
     const update = installed ? updateFor(m) : null
     return (
       <div key={(m._kind || 'own') + '-' + m.id} id={'module-card-' + m.slug}
-        className="bg-surface-card rounded-xl border border-gray-800 hover:border-gray-700 transition p-4 flex flex-col cursor-pointer" onClick={() => openDetail(m)}>
+        className="glass-panel hover:bg-white/5 transition p-4 flex flex-col cursor-pointer" onClick={() => openDetail(m)}>
         <div className="flex items-center gap-2.5 mb-2">
           {!installed && m._kind === 'registry' && (
             <input type="checkbox" className="flex-shrink-0 w-4 h-4 accent-[var(--accent)]" checked={selezione.includes(m.id)} onClick={(e) => e.stopPropagation()} onChange={() => spunta(m.id)} title="Scegli per installare più moduli insieme" />
@@ -324,7 +325,7 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
     <div className="mb-8">
       <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">{title} <span className="text-gray-600 font-normal normal-case">({list.length})</span></div>
       {list.length === 0 ? (
-        <div className="bg-surface-card rounded-xl p-5 text-center border border-gray-800 border-dashed text-sm text-gray-600">{emptyText}</div>
+        <div className="glass-panel p-5 text-center text-sm text-gray-600">{emptyText}</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">{list.map((m) => renderCard(m, installed))}</div>
       )}
@@ -332,12 +333,12 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
   )
 
   return (
-    <div>
+    <GlassPageBackground>
       <h1 className="text-lg font-bold text-ink tracking-[-0.35px] mb-1">Libreria</h1>
       <p className="text-gray-500 text-sm mb-6">I tuoi moduli e quelli salvati nella Libreria, in un unico posto. <button onClick={() => setCollega(true)} className="text-accent hover:underline">Collega i moduli</button></p>
 
       {onCreateNewModule && (
-        <div data-tour="libreria-nuovo" className="flex items-center justify-between gap-4 flex-wrap bg-surface-card border border-gray-800 rounded-xl p-4 mb-5">
+        <div data-tour="libreria-nuovo" className="flex items-center justify-between gap-4 flex-wrap glass-panel p-4 mb-5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-accent/15 text-accent flex items-center justify-center flex-shrink-0"><Icon name="tool" size={18} /></div>
             <div>
@@ -352,7 +353,7 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
       )}
 
       {registryUnavailable && (
-        <div className="bg-surface-card rounded-xl p-4 mb-5 text-center border border-gray-800 border-dashed">
+        <div className="glass-panel p-4 mb-5 text-center">
           <div className="text-gray-500 text-sm">La Libreria non è raggiungibile al momento: vedi solo i moduli di questo tenant. Riprova più tardi.</div>
         </div>
       )}
@@ -375,7 +376,7 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
 
 
       {bulk.esito && (
-        <div className="bg-surface-card border border-gray-800 rounded-xl p-3.5 mb-4 text-sm flex items-start justify-between gap-3">
+        <div className="glass-panel p-3.5 mb-4 text-sm flex items-start justify-between gap-3">
           <div>
             <div className="text-ink">{bulk.esito.installati.length} moduli installati{bulk.esito.saltati.length > 0 ? ', ' + bulk.esito.saltati.length + ' c\'erano già' : ''}. Ora puoi collegarli tra loro.</div>
             {bulk.esito.falliti.length > 0 && <div className="text-xs text-amber-400 mt-1">Non installati: {bulk.esito.falliti.join(', ')}.</div>}
@@ -404,7 +405,7 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
           <h2 className="text-sm font-semibold text-ink mb-2">Proposte inviate alla Libreria</h2>
           <div className="space-y-1.5">
             {proposte.slice(0, 8).map((p) => (
-              <div key={p.id} className="bg-surface-card border border-gray-800 rounded-lg px-3.5 py-2.5 flex items-center justify-between gap-3 text-sm">
+              <div key={p.id} className="glass-panel px-3.5 py-2.5 flex items-center justify-between gap-3 text-sm">
                 <div className="min-w-0"><div className="text-ink truncate">{p.name}</div>{p.status === 'rejected' && p.reason && <div className="text-xs text-gray-500">Motivo: {p.reason}</div>}</div>
                 <span className={'text-[11px] px-2 py-1 rounded flex-shrink-0 ' + (p.status === 'approved' ? 'bg-green-900/30 text-green-400' : p.status === 'rejected' ? 'bg-red-900/30 text-red-400' : 'bg-amber-900/30 text-amber-400')}>{p.status === 'approved' ? 'Approvata' : p.status === 'rejected' ? 'Rifiutata' : 'In attesa'}</span>
               </div>
@@ -414,7 +415,7 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
       )}
 
       {selezione.length > 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-surface-card border border-gray-700 shadow-xl rounded-xl px-4 py-3 flex items-center gap-3 max-w-[92vw]">
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 glass-panel px-4 py-3 flex items-center gap-3 max-w-[92vw]">
           <span className="text-sm text-ink">{selezione.length} selezionat{selezione.length === 1 ? 'o' : 'i'}</span>
           {bulk.errore && <span className="text-xs text-amber-400">{bulk.errore}</span>}
           <button onClick={() => setSelezione([])} disabled={bulk.busy} className="text-xs text-gray-400 hover:text-ink">Annulla</button>
@@ -641,7 +642,7 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
           </div>
         </div>
       )}
-    </div>
+    </GlassPageBackground>
   )
 }
 

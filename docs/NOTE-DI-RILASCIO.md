@@ -2,6 +2,16 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.55 — 31 ottobre 2026
+
+**Liquid Glass esteso oltre la Dashboard** (richiesto dall'utente: "aggiornare al liquid glass anche il resto della piattaforma, coprendo il 100% delle pagine") — prima tranche, le pagine principali:
+
+- Nuovo `GlassPageBackground.jsx` — lo sfondo sfumato (prima duplicato dentro DashboardPage.jsx) estratto in un componente condiviso, così ogni pagina lo richiama in un punto solo.
+- Convertite: Log attività, Guida (tutte e tre le schede), Libreria, Builder (solo l'ambiente attorno — i pannelli di `shared/frontend/builder/` restano come sono, condivisi con Super Admin), la pagina di ogni modulo (lista, tabella, calendario, stati vuoti — la vista più usata di tutte), Impostazioni (guscio + schede Connessioni e Moduli, incluse qui) e Il mio account.
+- `Tile.jsx` (usato in 40+ punti nelle schede di Impostazioni) ora è di vetro — si propaga automaticamente ovunque è già in uso.
+- Verificato dal vivo in chiaro e scuro: nessuna card doppiata, nessun modale finito nei guai del `backdrop-filter` (quelli restano appositamente opachi, come già per Sidebar/FormDrawer).
+- Ancora da convertire: Utenti & Ruoli, Sito Web, Funzioni, Aspetto, Report, AI, Sicurezza, Dati/Backup, le viste avanzate di un modulo (Archivio, tabelle periodo/gerarchia) — prossima tranche.
+
 ## 0.3.54 — 31 ottobre 2026
 
 Tre rifiniture sul launcher "Altro", segnalate dal vivo di seguito:

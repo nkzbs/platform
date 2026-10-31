@@ -13,7 +13,7 @@ import Icon from './Icon'
 // invariato, grigio monocromatico com'era prima).
 function Tile({ icon, label, value, sub, active, onClick, color }) {
   return (
-    <button onClick={onClick} className={'text-left bg-surface-page rounded-xl border p-3 transition w-full ' + (active ? 'border-accent' : 'border-gray-800 hover:border-gray-700')}>
+    <button onClick={onClick} className={'text-left glass-panel p-3 transition w-full ' + (active ? 'ring-1 ring-accent' : 'hover:bg-white/5')}>
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-1.5 min-w-0" style={color ? { color } : undefined}>
           <Icon name={icon} size={13} className={'flex-shrink-0' + (color ? '' : ' text-gray-500')} />

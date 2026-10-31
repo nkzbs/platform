@@ -7,7 +7,7 @@ function GuidedPath() {
   return (
     <div className="flex gap-10 items-start">
       <div className="flex-1 max-w-3xl min-w-0">
-        <div className="bg-surface-card border border-gray-800 rounded-xl p-5 mb-5">
+        <div className="glass-panel p-5 mb-5">
           <div className="text-ink font-semibold text-sm mb-1">Costruisci un tenant da zero</div>
           <p className="text-xs text-gray-500">Segui questi passi nell'ordine — alla fine avrai un modulo vero, con una relazione, un workflow e una formula che funzionano davvero, non solo mostrati in uno schema.</p>
         </div>

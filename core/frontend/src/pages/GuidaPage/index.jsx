@@ -4,6 +4,7 @@ import GuidedPath from './GuidedPath'
 import ModuleGuide from './ModuleGuide'
 import RichText from '../../components/RichText'
 import Icon from '../../components/Icon'
+import GlassPageBackground from '../../components/GlassPageBackground'
 
 function GuidaPage({ modules, token, onStartTour }) {
   const [tab, setTab] = useState('percorso')
@@ -28,7 +29,7 @@ function GuidaPage({ modules, token, onStartTour }) {
   const nextTopic = currentIdx >= 0 && currentIdx < flatTopics.length - 1 ? flatTopics[currentIdx + 1] : null
 
   return (
-    <div>
+    <GlassPageBackground>
       <div className="flex items-start justify-between gap-4 flex-wrap mb-1">
         <h1 className="text-lg font-bold text-ink tracking-[-0.35px]">Guida</h1>
         {onStartTour && (
@@ -62,7 +63,7 @@ function GuidaPage({ modules, token, onStartTour }) {
             <input value={query} onChange={(e) => { setQuery(e.target.value); setOpenTopic(null) }} placeholder="Cerca nella guida…"
               className="w-full bg-surface-page text-ink pl-8 pr-3 py-2.5 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition" />
           </div>
-          <div className="bg-surface-card border border-gray-800 rounded-xl divide-y divide-gray-800/70 max-h-[70vh] overflow-y-auto">
+          <div className="glass-panel divide-y divide-gray-800/70 max-h-[70vh] overflow-y-auto">
             {filteredSections.map((s) => (
               <div key={s.title}>
                 <button onClick={() => setOpenSection(openSection === s.title ? null : s.title)}
@@ -101,7 +102,7 @@ function GuidaPage({ modules, token, onStartTour }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {filteredSections.map((s) => (
                   <button key={s.title} onClick={() => { setOpenSection(s.title); setOpenTopic({ section: s.title, title: s.topics[0].title }) }}
-                    className="text-left bg-surface-card border border-gray-800 hover:border-gray-700 rounded-xl p-4 transition group">
+                    className="text-left glass-panel hover:bg-white/5 p-4 transition group">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: s.color + '22', color: s.color }}>
                         <Icon name={s.icon} size={16} />
@@ -114,7 +115,7 @@ function GuidaPage({ modules, token, onStartTour }) {
               </div>
             </div>
           ) : (
-            <div className="bg-surface-card border border-gray-800 rounded-xl overflow-hidden max-w-2xl">
+            <div className="glass-panel overflow-hidden max-w-2xl">
               <div className="h-1.5" style={{ backgroundColor: currentSection?.color || '#2563EB' }} />
               <div className="p-6">
                 <button onClick={() => setOpenTopic(null)} className="text-xs text-gray-600 hover:text-gray-400 transition mb-2 flex items-center gap-1">
@@ -149,7 +150,7 @@ function GuidaPage({ modules, token, onStartTour }) {
         </div>
       </div>
       )}
-    </div>
+    </GlassPageBackground>
   )
 }
 

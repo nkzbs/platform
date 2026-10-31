@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
+import GlassPageBackground from '../components/GlassPageBackground'
 
 const ESITO_STYLE = {
   ok: 'bg-green-900/30 text-green-400',
@@ -83,10 +84,10 @@ function AuditPage({ token }) {
   }
 
   return (
-    <div>
+    <GlassPageBackground>
       <h1 className="text-lg font-bold text-ink tracking-[-0.35px] mb-1">Log attività</h1>
       <p className="text-gray-500 text-sm mb-6">Azioni amministrative fatte in questa istanza — moduli, utenti, connessioni, record eliminati.</p>
-      <div className="bg-surface-card rounded-md border border-gray-800 divide-y divide-gray-800/70">
+      <div className="glass-panel overflow-hidden divide-y divide-gray-800/70">
         {log.length === 0 && <div className="text-gray-600 text-sm p-6">Nessuna attività registrata ancora.</div>}
         {log.map((l) => (
           <div key={l.id} className="p-3.5 flex items-start justify-between text-sm flex-wrap gap-x-3 gap-y-1">
@@ -107,7 +108,7 @@ function AuditPage({ token }) {
           Log automazioni ({autoLogTotal} totali, da tutti i moduli)
         </button>
         {showAutoLog && (
-          <div className="bg-surface-card rounded-md border border-gray-800 divide-y divide-gray-800/70">
+          <div className="glass-panel overflow-hidden divide-y divide-gray-800/70">
             {autoLog.length === 0 && <div className="text-gray-600 text-sm p-4">Nessuna esecuzione ancora — scatterà qualcosa qui appena un'automazione di un modulo si attiva.</div>}
             {autoLog.map((l) => (
               <div key={l.id} className="p-3 flex items-start justify-between text-sm flex-wrap gap-x-3 gap-y-1">
@@ -127,7 +128,7 @@ function AuditPage({ token }) {
           </div>
         )}
       </div>
-    </div>
+    </GlassPageBackground>
   )
 }
 

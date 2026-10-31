@@ -165,7 +165,7 @@ function AccountPage({ token, user, onUserUpdate }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-4xl items-start">
       <div className="lg:col-span-2 text-[11px] font-semibold uppercase tracking-wide text-gray-600 -mb-1">Profilo</div>
-      <div className="bg-surface-card rounded-md p-6 border border-gray-800">
+      <div className="glass-panel p-6">
         <div className="flex items-center gap-4 mb-5">
           <div className="relative flex-shrink-0 group">
             <Avatar user={user} size={56} />
@@ -189,7 +189,7 @@ function AccountPage({ token, user, onUserUpdate }) {
         <div className="text-sm text-ink font-mono">{(user && user.username) || '—'}</div>
       </div>
 
-      <div className="bg-surface-card rounded-md p-6 border border-gray-800">
+      <div className="glass-panel p-6">
         <div className="text-ink font-medium mb-1">Password</div>
         <div className="text-sm text-gray-500 mb-4">Minimo 8 caratteri.</div>
         {pwMsg && <div className={'text-sm p-3 rounded-lg mb-3 border ' + (pwMsg.ok ? 'bg-green-900/20 text-green-400 border-green-900/40' : 'bg-red-900/30 text-red-400 border-red-900/50')}>{pwMsg.text}</div>}
@@ -201,7 +201,7 @@ function AccountPage({ token, user, onUserUpdate }) {
       </div>
 
       <div className="lg:col-span-2 text-[11px] font-semibold uppercase tracking-wide text-gray-600 mt-2 -mb-1">Sicurezza</div>
-      <div className="bg-surface-card rounded-md p-6 border border-gray-800 lg:col-span-2">
+      <div className="glass-panel p-6 lg:col-span-2">
         <div className="flex items-start gap-4 mb-5">
           <div className="w-10 h-10 rounded-lg bg-cp-purple/20 flex items-center justify-center flex-shrink-0">
             <Icon name="shield" size={20} className="text-cp-purple" />
@@ -271,7 +271,7 @@ function AccountPage({ token, user, onUserUpdate }) {
       </div>
 
       {browserSupportsWebAuthn() && (
-        <div className="bg-surface-card rounded-md p-6 border border-gray-800 lg:col-span-2">
+        <div className="glass-panel p-6 lg:col-span-2">
           <div className="flex items-start gap-4 mb-5">
             <div className="w-10 h-10 rounded-lg bg-cp-purple/20 flex items-center justify-center flex-shrink-0">
               <Icon name="key" size={20} className="text-cp-purple" />
@@ -311,7 +311,7 @@ function AccountPage({ token, user, onUserUpdate }) {
         </div>
       )}
 
-      <div className="bg-surface-card rounded-md p-6 border border-gray-800 lg:col-span-2">
+      <div className="glass-panel p-6 lg:col-span-2">
         <div className="flex items-start gap-4 mb-5">
           <div className="w-10 h-10 rounded-lg bg-cp-purple/20 flex items-center justify-center flex-shrink-0">
             <Icon name="plug" size={20} className="text-cp-purple" />

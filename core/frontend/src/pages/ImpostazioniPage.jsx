@@ -21,6 +21,7 @@ import ReviewMatchesTab from '../components/ReviewMatchesTab'
 import MovimentiPage from './MovimentiPage'
 import ListePage from './ListePage'
 import AspettoTab from './AspettoTab'
+import GlassPageBackground from '../components/GlassPageBackground'
 
 // "Il mio account" unito qui (2026-08-29, richiesto esplicitamente dall'utente) —
 // prima era una pagina a sé raggiunta dal proprio nome in fondo alla Sidebar.
@@ -96,7 +97,7 @@ function ConnessioniTab({ token, user, features = {} }) {
       <p className="text-sm text-gray-500 mb-4">Account e servizi esterni collegati a questa istanza — usati dai moduli che ne hanno bisogno (es. Gmail).</p>
       <div className="space-y-2">
         {rows.map((row) => (
-          <div key={row.id} className="bg-surface-card border border-gray-800 rounded-lg p-3">
+          <div key={row.id} className="glass-panel p-3">
             <button onClick={() => toggle(row.id)} className="flex items-center gap-1.5 w-full text-left">
               <Icon name="plug" size={13} className={row.connected ? 'text-green-400' : 'text-amber-400'} />
               <span className="text-sm text-ink font-medium">{row.name}</span>
@@ -250,7 +251,7 @@ function ModuliTab({ token }) {
       <p className="text-sm text-gray-500 mb-4">Ordine e visibilità nella sidebar — un modulo nascosto resta installato con i suoi dati, solo non compare nel menu.</p>
       <div className="space-y-1.5">
         {modules.map((m, i) => (
-          <div key={m.slug} className="flex items-center gap-3 bg-surface-card border border-gray-800 rounded-lg px-3 py-2.5">
+          <div key={m.slug} className="flex items-center gap-3 glass-panel px-3 py-2.5">
             <div className="flex flex-col flex-shrink-0">
               <button onClick={() => move(m.slug, -1)} disabled={i === 0} className="text-gray-600 hover:text-ink disabled:opacity-20 disabled:cursor-not-allowed transition">
                 <Icon name="chevron-up" size={13} />
@@ -301,7 +302,7 @@ function SettingsNav({ groups, active, onChange }) {
               {g.items.map((it) => (
                 <button key={it.key} onClick={() => onChange(it.key)}
                   className={'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-left transition ' +
-                    (active === it.key ? 'bg-accent/20 text-accent font-medium' : 'text-gray-400 hover:text-ink hover:bg-surface-card')}>
+                    (active === it.key ? 'bg-accent/20 text-accent font-medium' : 'text-gray-400 hover:text-ink hover:bg-white/8')}>
                   <Icon name={it.icon} size={15} />
                   {it.label}
                 </button>
@@ -375,7 +376,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
   const visibleCount = visibleGroups.reduce((n, g) => n + g.items.length, 0)
 
   return (
-    <div>
+    <GlassPageBackground>
       {/* Un non-admin ha una sola voce possibile (Il mio account) — niente titolo/nav
          "Impostazioni" ridondante sopra, va dritto al contenuto (che ha già il suo h1). */}
       {(isAdmin || visibleCount > 1) && (
@@ -418,7 +419,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
           )}
         </div>
       </div>
-    </div>
+    </GlassPageBackground>
   )
 }
 

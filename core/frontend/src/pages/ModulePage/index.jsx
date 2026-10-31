@@ -27,6 +27,7 @@ import ViewTabs from './ViewTabs'
 import ArchiveView from './ArchiveView'
 import FormulaEditor from '@shared/builder/FormulaEditor.jsx'
 import { StepChainEditor } from '@shared/builder/StepChainEditor.jsx'
+import GlassPageBackground from '../../components/GlassPageBackground'
 
 function ModulePage({ module: mod, token, user, onNavigate }) {
   const api = useApi(token)
@@ -580,7 +581,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
   }
 
   return (
-    <div>
+    <GlassPageBackground>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: mod.color + '22', color: mod.color }}>
@@ -662,7 +663,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
 
 
       {requiredConnectors.includes('google') && (
-        <div className={'mb-6 border rounded-lg px-4 py-3 ' + (connectorStatus.google ? 'bg-surface-card border-gray-800' : 'bg-amber-900/20 border-amber-900/40')}>
+        <div className={'mb-6 px-4 py-3 ' + (connectorStatus.google ? 'glass-panel' : 'border rounded-lg bg-amber-900/20 border-amber-900/40')}>
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className={'flex items-center gap-2 text-sm ' + (connectorStatus.google ? 'text-gray-300' : 'text-amber-400')}>
               <Icon name="plug" size={15} className="flex-shrink-0" />
@@ -758,7 +759,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
       {workflow && (
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           {workflow.states.map((s) => (
-            <div key={s.key} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-card border border-gray-800">
+            <div key={s.key} className="flex items-center gap-1.5 px-3 py-1.5 glass-pill">
               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
               <span className="text-xs text-gray-400">{s.label}</span>
               <span className="text-xs text-gray-600">{records.filter((r) => r.data._stato === s.key).length}</span>
@@ -815,7 +816,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
         <ArchiveView mod={mod} schema={schema} records={displayRecords} token={token} canEdit={canDo('edit')} onOpen={(id) => setDetailId(id)} onChanged={loadRecords} onCartella={setCartellaCorrente} onSchemaChanged={async () => { await loadSchema(); await loadRecords() }} searching={search.trim() !== ''} />
       ) : mod.list_view === 'card_grid' ? (
         displayRecords.length === 0 ? (
-          <div className="bg-surface-card rounded-md p-12 text-center border border-gray-800">
+          <div className="glass-panel p-12 text-center">
             <div className="text-gray-500">{records.length === 0 ? 'Nessun record ancora' : `Nessun risultato per "${search}"`}</div>
           </div>
         ) : (
@@ -901,7 +902,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
         })
         const today = new Date()
         return (
-          <div className="bg-surface-card rounded-md border border-gray-800 overflow-x-auto">
+          <div className="glass-panel overflow-hidden overflow-x-auto">
             <div className="min-w-[560px] sm:min-w-0">
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
                 <button onClick={() => setCalMonth(({ y, m }) => m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 })} className="text-gray-400 hover:text-ink transition"><Icon name="chevron-left" size={18} /></button>
@@ -945,20 +946,20 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
           </div>
         )
       })() : fields.length === 0 ? (
-        <div className="bg-surface-card rounded-md p-12 text-center border border-gray-800">
+        <div className="glass-panel p-12 text-center">
           <div className="text-gray-500 mb-2">Modulo senza campi configurati</div>
           <div className="text-gray-600 text-sm">Vai nel Builder per aggiungere campi a questo modulo</div>
         </div>
       ) : records.length === 0 ? (
-        <div className="bg-surface-card rounded-md p-12 text-center border border-gray-800">
+        <div className="glass-panel p-12 text-center">
           <div className="text-gray-500">Nessun record ancora</div>
         </div>
       ) : displayRecords.length === 0 ? (
-        <div className="bg-surface-card rounded-md p-12 text-center border border-gray-800">
+        <div className="glass-panel p-12 text-center">
           <div className="text-gray-500">Nessun risultato per "{search}"</div>
         </div>
       ) : (
-        <div className="bg-surface-card rounded-md border border-gray-800 overflow-x-auto">
+        <div className="glass-panel overflow-hidden overflow-x-auto">
           {/* Mobile: una scheda per riga (la tabella larga costringeva a scorrere di lato e si vedeva solo la prima colonna). */}
           <div className="md:hidden divide-y divide-gray-800/60">
             {pagedRecords.map((r) => {
@@ -1295,7 +1296,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
           </div>
         </div>
       )}
-    </div>
+    </GlassPageBackground>
   )
 }
 
