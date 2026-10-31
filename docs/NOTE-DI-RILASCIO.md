@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.52 — 31 ottobre 2026
+
+- **Fix reale: il dettaglio di un record aperto da mobile risultava "sfalsato"** — segnalato dal vivo con screenshot (campo Data e un campo di relazione tagliati sul bordo destro). Su iOS Safari un `<input type="date">` può avere una larghezza intrinseca propria che ignora anche `min-w-0`/`max-w-full` sul campo stesso (fix già tentato il 26/10, insufficiente) — quel singolo campo troppo largo rendeva scorrevole ORIZZONTALMENTE l'intero form, spingendo fuori schermo anche i campi sotto. `FormDrawer.jsx` (il pannello di dettaglio/modifica usato da ogni modulo) ora contiene qualunque figlio troppo largo invece di lasciarlo allargare il contenitore — vale ovunque nell'app, non solo per questo campo.
+
 ## 0.3.51 — 31 ottobre 2026
 
 - **Launcher "Altro": icone più grandi, griglia a 2 colonne** (prima 3, 64px) — segnalato dal vivo dopo il fix dello spazio vuoto: "ancora troppo spazio, puoi ingrandire le icone?". Con i 5-8 voci tipiche, 2 colonne più grandi riempiono lo stesso spazio con meno righe vuote E icone più leggibili.

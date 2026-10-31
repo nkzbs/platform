@@ -29,7 +29,15 @@ function FormDrawer({ title, onClose, children, footer, wide, headerExtra }) {
             <button onClick={onClose} className="text-gray-500 hover:text-ink transition"><Icon name="x" size={18} /></button>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
+        {/* overflow-x-hidden (2026-10-31, bug reale segnalato dal vivo: "il dettaglio aperto
+            da mobile risulta sfalsato") — un <input type="date"> su iOS Safari ha una
+            larghezza intrinseca propria che a volte ignora anche min-w-0/max-w-full sul
+            campo stesso (vedi FieldEditorInput.jsx); senza un argine qui, quel singolo
+            campo troppo largo rende scorrevole ORIZZONTALMENTE l'intero form, spingendo
+            fuori dallo schermo anche i campi sotto che da soli starebbero benissimo. Questo
+            contiene qualunque figlio troppo largo invece di lasciarlo allargare il
+            contenitore — vale per ogni FormDrawer dell'app, non solo per la data. */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-5">{children}</div>
         {footer && <div className="px-6 py-4 border-t border-gray-800 flex-shrink-0">{footer}</div>}
       </div>
     </div>,
