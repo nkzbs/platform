@@ -131,7 +131,7 @@ export default function ReportsSettingsTab({ token, user, features = {} }) {
   if (!data) return <div className="max-w-2xl text-sm text-gray-500">Caricamento…</div>
   return (
     <div className="max-w-2xl space-y-4">
-      <section className="bg-surface-card border border-gray-800 rounded-xl p-5">
+      <section className="glass-panel p-5">
         <h2 className="text-sm font-semibold text-ink mb-1">Dove arrivano i report</h2>
         <p className="text-xs text-gray-500 mb-3">Telegram parte solo se il bot è collegato e c'è almeno un telefono collegato. Ogni telefono riceve la sua versione: solo ciò che vede nell'app.</p>
         <div className="flex items-center gap-6 flex-wrap">
@@ -146,7 +146,7 @@ export default function ReportsSettingsTab({ token, user, features = {} }) {
       <p className="text-xs text-gray-500">Per collegare il bot Telegram: <b className="text-gray-300">Impostazioni → Connessioni → Telegram</b>. Ogni report ha anche il suo comando nel bot (<span className="font-mono">/nome</span>) e <span className="font-mono">/report</span> li elenca.</p>
 
       {features.whatsapp && (
-        <section className="bg-surface-card border border-gray-800 rounded-xl p-5">
+        <section className="glass-panel p-5">
           <WhatsAppRecipientsPanel token={token} nested />
           <WhatsAppLogPanel token={token} refreshKey={JSON.stringify(result)} />
         </section>
@@ -156,7 +156,7 @@ export default function ReportsSettingsTab({ token, user, features = {} }) {
         const T = data.tipi[d.tipo]
         const has = (k) => T.parametri.includes(k)
         return (
-          <section key={d.id} className="bg-surface-card border border-gray-800 rounded-xl p-5">
+          <section key={d.id} className="glass-panel p-5">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3 min-w-0">
                 <div className="w-9 h-9 rounded-lg bg-surface-page border border-gray-800 flex items-center justify-center text-accent flex-shrink-0"><Icon name={ICONA[d.tipo] || 'bell'} size={16} /></div>
@@ -206,7 +206,7 @@ export default function ReportsSettingsTab({ token, user, features = {} }) {
         )
       })}
 
-      <section className="bg-surface-card border border-dashed border-gray-800 rounded-xl p-5">
+      <section className="glass-panel p-5">
         <h2 className="text-sm font-semibold text-ink mb-1">Aggiungi un report</h2>
         <p className="text-xs text-gray-500 mb-3">Scegli di che tipo è: nasce spento, lo configuri e lo accendi.</p>
         <div className="flex items-center gap-2 flex-wrap">

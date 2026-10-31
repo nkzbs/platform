@@ -81,7 +81,7 @@ function BackupPage({ token }) {
   const btnSecondary = 'w-full bg-gray-800 hover:bg-gray-700 text-ink py-2.5 rounded-lg transition font-medium flex items-center justify-center gap-2 text-sm cursor-pointer'
   return (
     <>
-      <div className="bg-surface-card rounded-md p-5 border border-gray-800 flex flex-col">
+      <div className="glass-panel p-5 flex flex-col">
         <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-lg bg-accent/15 flex items-center justify-center flex-shrink-0"><Icon name="file" size={18} className="text-accent" /></div>
             <div>
@@ -96,7 +96,7 @@ function BackupPage({ token }) {
         </div>
       </div>
 
-      <div className="bg-surface-card rounded-md p-5 border border-gray-800 flex flex-col">
+      <div className="glass-panel p-5 flex flex-col">
         <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-lg bg-accent/15 flex items-center justify-center flex-shrink-0"><Icon name="upload" size={18} className="text-accent" /></div>
             <div>

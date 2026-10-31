@@ -54,7 +54,7 @@ export default function MovimentiPage({ token }) {
   const ignore = async (m) => { await api.post('/bank/movements/' + m.id + '/ignore', {}); load() }
 
   const tile = (label, value, sub, tone) => (
-    <div className="bg-surface-card border border-gray-800 rounded-lg p-3 min-w-[150px] flex-1">
+    <div className="glass-panel p-3 min-w-[150px] flex-1">
       <div className="text-[11px] uppercase tracking-wide text-gray-500">{label}</div>
       <div className={'text-lg font-semibold font-mono mt-0.5 ' + (tone || 'text-ink')}>{value}</div>
       {sub && <div className="text-[11px] text-gray-500 mt-0.5">{sub}</div>}
@@ -67,7 +67,7 @@ export default function MovimentiPage({ token }) {
       <h1 className="text-lg font-bold text-ink tracking-[-0.35px]">Movimenti bancari</h1>
       <p className="text-gray-500 text-sm mt-0.5 mb-5">Carica l'estratto conto in PDF: vedi cosa succede davvero sul conto e completi le spese che non hai registrato. Il PDF non viene conservato, restano solo i movimenti.</p>
 
-      <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mb-5">
+      <section className="glass-panel p-5 mb-5">
         <div className="flex items-center gap-3 flex-wrap">
           <input ref={fileRef} type="file" accept="application/pdf,.pdf" multiple onChange={(e) => upload(e.target.files)} disabled={uploading}
             className="text-sm text-gray-400 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-accent file:text-white file:text-sm file:font-medium file:cursor-pointer" />
@@ -92,7 +92,7 @@ export default function MovimentiPage({ token }) {
         <button type="button" onClick={() => setMonth(shift(month, 1))} className="px-2 py-1 rounded hover:bg-gray-800" aria-label="Mese successivo"><Icon name="chevron-right" size={14} /></button>
       </div>
 
-      {!has && summary && <div className="text-sm text-gray-500 py-8 text-center bg-surface-card border border-gray-800 rounded-xl">Nessun movimento per questo mese. Carica un estratto che lo comprenda.</div>}
+      {!has && summary && <div className="text-sm text-gray-500 py-8 text-center glass-panel">Nessun movimento per questo mese. Carica un estratto che lo comprenda.</div>}
       {has && (
         <>
           <div className="flex gap-3 flex-wrap mb-3">
@@ -106,7 +106,7 @@ export default function MovimentiPage({ token }) {
               <button key={k} type="button" onClick={() => setFilter(k)} className={'px-3 py-1 rounded-full text-xs border transition ' + (filter === k ? 'bg-accent/15 border-accent text-accent' : 'border-gray-700 text-gray-400 hover:border-gray-500')}>{label}</button>
             ))}
           </div>
-          <div className="bg-surface-card border border-gray-800 rounded-xl divide-y divide-gray-800">
+          <div className="glass-panel divide-y divide-gray-800">
             {rows === null && <div className="p-4 text-xs text-gray-600">Caricamento…</div>}
             {rows && rows.length === 0 && <div className="p-4 text-sm text-gray-500">{filter === 'da_registrare' ? 'Niente da registrare in questo mese: tutto ciò che è uscito è già in Finance.' : 'Nessun movimento.'}</div>}
             {rows && rows.map((m) => (

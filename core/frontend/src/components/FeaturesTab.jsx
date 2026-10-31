@@ -21,7 +21,7 @@ export default function FeaturesTab({ token, onChanged }) {
     <div className="max-w-2xl">
       <p className="text-sm text-gray-500 mb-4">Accendi solo ciò che ti serve. Spegnere una funzione non cancella i dati: la nasconde e la ferma.</p>
       {errore && <div className="text-xs text-amber-400 mb-3">{errore}</div>}
-      <div className="divide-y divide-gray-800 bg-surface-card border border-gray-800 rounded-xl">
+      <div className="divide-y divide-gray-800 glass-panel">
         {lista.map((f) => (
           <div key={f.key} className="flex items-start justify-between gap-4 p-4">
             <div className="min-w-0"><div className="text-ink text-sm font-medium">{f.label}</div><div className="text-xs text-gray-500 mt-0.5">{f.description}</div></div>

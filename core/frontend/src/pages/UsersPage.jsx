@@ -154,7 +154,7 @@ function UsersPage({ token }) {
 
       <div className="space-y-2 mb-8">
         {users.map((u) => (
-          <div key={u.id} className="bg-surface-card rounded-md border border-gray-800 overflow-hidden">
+          <div key={u.id} className="glass-panel overflow-hidden">
             <div className="px-5 py-4 flex items-center justify-between flex-wrap gap-3">
               <div>
                 <div className="text-ink font-medium">{u.display_name}</div>
@@ -247,7 +247,7 @@ function UsersPage({ token }) {
       </div>
       <div className="flex flex-wrap gap-2 mb-6">
         {roles.map((r) => (
-          <div key={r.name} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-card border border-gray-800">
+          <div key={r.name} className="flex items-center gap-2 px-3 py-2 glass-pill">
             <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ backgroundColor: r.color }} />
             <span className="text-sm text-gray-300">{r.label}</span>
             <span className="text-xs text-gray-600 font-mono">{r.name}</span>

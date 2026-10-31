@@ -98,7 +98,7 @@ function ListePage({ token }) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-4">
-      <div className="bg-surface-card rounded-md border border-gray-800 p-4">
+      <div className="glass-panel p-4">
         <div className="text-xs font-semibold text-gray-500 mb-3">LISTE CONDIVISE</div>
         {lists === null ? (
           <div className="text-sm text-gray-600">Caricamento...</div>
@@ -124,7 +124,7 @@ function ListePage({ token }) {
         </div>
       </div>
 
-      <div className="bg-surface-card rounded-md border border-gray-800 p-5">
+      <div className="glass-panel p-5">
         {!selectedId ? (
           <div className="text-sm text-gray-600 py-8 text-center">Seleziona una lista, o creane una nuova.</div>
         ) : loadingDetail || !detail ? (

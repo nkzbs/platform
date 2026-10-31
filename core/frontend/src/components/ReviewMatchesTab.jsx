@@ -35,10 +35,10 @@ export default function ReviewMatchesTab({ token }) {
     <div className="max-w-3xl space-y-4">
       <p className="text-sm text-gray-500">Proposte di collegamento tra un documento (ricevuta/bolletta) e la spesa a cui potrebbe appartenere, lette con l'AI. Niente viene collegato senza una conferma qui. {items.length} da rivedere.</p>
 
-      {items.length === 0 && <div className="text-sm text-gray-600 bg-surface-card border border-gray-800 rounded-xl p-6 text-center">Nessuna proposta in sospeso.</div>}
+      {items.length === 0 && <div className="text-sm text-gray-600 glass-panel p-6 text-center">Nessuna proposta in sospeso.</div>}
 
       {items.map((it) => (
-        <div key={it.id} className="bg-surface-card border border-gray-800 rounded-xl p-4">
+        <div key={it.id} className="glass-panel p-4">
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="min-w-0">
               <div className="text-sm font-medium text-ink truncate">{it.titolo || ('Documento #' + it.source_id)}</div>

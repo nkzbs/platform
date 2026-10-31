@@ -2,6 +2,16 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.56 — 31 ottobre 2026
+
+**Liquid Glass, seconda tranche** — tutte le schede restanti di Impostazioni, più Sito Web (solo l'ambiente editor, i blocchi della pagina del tenant restano come sono: è il sito del tenant, non l'interfaccia di Platform):
+
+- Utenti & Ruoli, Liste, Funzioni, Aspetto, Report (notifiche), AI, Sicurezza, Dati (export/backup), Collegamenti, Movimenti.
+- `RecordOwnerCard.jsx` (usata in Utenti & Ruoli) e i pannelli admin del Sito Web (Cronologia, Popup, Valori dinamici, Tema).
+- Verificato dal vivo ogni scheda, build di produzione pulita.
+- Modali di conferma (es. elimina lista/tenant) restano opachi apposta, come già per ogni altro modale della piattaforma.
+- Resta da fare: le viste avanzate di modulo (Archivio, tabelle periodo/gerarchia/ViewTabs) — ultima tranche prima della 0.4.0.
+
 ## 0.3.55 — 31 ottobre 2026
 
 **Liquid Glass esteso oltre la Dashboard** (richiesto dall'utente: "aggiornare al liquid glass anche il resto della piattaforma, coprendo il 100% delle pagine") — prima tranche, le pagine principali:

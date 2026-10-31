@@ -54,14 +54,14 @@ export default function SicurezzaTab({ token }) {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-        <div className="bg-surface-card border border-gray-800 rounded-lg p-3">
+        <div className="glass-panel p-3">
           <div className="flex items-center justify-between gap-2 mb-1">
             <span className="text-xs text-gray-500">Due fattori</span>
             <StatusBadge tone={tfaAll ? 'green' : tfaNone ? 'red' : 'amber'}>{u.with_2fa}/{u.total}</StatusBadge>
           </div>
           <div className="text-[11px] text-gray-600">Utenti attivi con 2FA</div>
         </div>
-        <div className="bg-surface-card border border-gray-800 rounded-lg p-3">
+        <div className="glass-panel p-3">
           <div className="flex items-center justify-between gap-2 mb-1">
             <span className="text-xs text-gray-500">Passkey</span>
             <StatusBadge tone={pkAll ? 'green' : 'gray'}>{u.with_passkey}/{u.total}</StatusBadge>
@@ -74,7 +74,7 @@ export default function SicurezzaTab({ token }) {
         <div className="text-xs font-semibold text-gray-400 mb-2">Limiti ai tentativi (anti brute-force)</div>
         <div className="space-y-1">
           {status.rate_limits.map((rl) => (
-            <div key={rl.name} className="flex items-center justify-between text-xs text-gray-500 bg-surface-card border border-gray-800 rounded-lg px-3 py-2">
+            <div key={rl.name} className="flex items-center justify-between text-xs text-gray-500 glass-panel px-3 py-2">
               <span>{rl.name}</span>
               <span className="text-gray-400">max {rl.max} ogni {rl.window}</span>
             </div>
@@ -87,7 +87,7 @@ export default function SicurezzaTab({ token }) {
         {status.recent_suspicious_events.length === 0 && <div className="text-xs text-gray-600">Nessuno negli ultimi eventi registrati.</div>}
         <div className="space-y-1">
           {status.recent_suspicious_events.map((e, i) => (
-            <div key={i} className="flex items-center justify-between gap-3 text-xs bg-surface-card border border-gray-800 rounded-lg px-3 py-2">
+            <div key={i} className="flex items-center justify-between gap-3 text-xs glass-panel px-3 py-2">
               <span className="text-gray-300 truncate">{ACTION_LABELS[e.action] || e.action}{e.target ? ' — ' + e.target : ''}</span>
               <span className="text-gray-600 flex-shrink-0">{new Date(e.created_at).toLocaleString('it-IT')}</span>
             </div>

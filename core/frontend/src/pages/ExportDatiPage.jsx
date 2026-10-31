@@ -80,7 +80,7 @@ function ExportDatiPage({ token, modules, user }) {
   }
 
   return (
-    <div className="bg-surface-card rounded-md p-5 border border-gray-800 flex flex-col">
+    <div className="glass-panel p-5 flex flex-col">
       <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-lg bg-accent/15 flex items-center justify-center flex-shrink-0"><Icon name="download" size={18} className="text-accent" /></div>
             <div>

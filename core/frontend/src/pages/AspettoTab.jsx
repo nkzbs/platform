@@ -36,7 +36,7 @@ export default function AspettoTab({ token }) {
     <div className="max-w-2xl">
       <p className="text-sm text-gray-500 mb-4">Il colore principale dell'app — anche nell'icona se la salvi sul dock come app. Utile per distinguere due verticali diverse a colpo d'occhio.</p>
       {errore && <div className="text-xs text-amber-400 mb-3">{errore}</div>}
-      <div className="bg-surface-card border border-gray-800 rounded-xl p-4 flex items-center justify-between gap-4">
+      <div className="glass-panel p-4 flex items-center justify-between gap-4">
         <div>
           <div className="text-ink text-sm font-medium">Colore dell'app</div>
           <div className="text-xs text-gray-500 mt-0.5">{colore.toUpperCase()}</div>

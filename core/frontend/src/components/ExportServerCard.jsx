@@ -53,7 +53,7 @@ export default function ExportServerCard({ token }) {
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
 
   return (
-    <div className="bg-surface-card border border-gray-800 rounded-xl p-5 flex flex-col md:col-span-2 xl:col-span-3">
+    <div className="glass-panel p-5 flex flex-col md:col-span-2 xl:col-span-3">
       <button type="button" onClick={() => setAperto(!aperto)} className="flex items-center justify-between gap-3 text-left w-full">
         <div className="flex items-center gap-3"><div className="w-9 h-9 rounded-lg bg-accent/15 text-accent flex items-center justify-center flex-shrink-0"><Icon name="upload" size={16} /></div>
           <div><div className="text-ink font-medium text-sm">Distacca su un tuo server</div><div className="text-gray-500 text-xs mt-0.5">Una copia che funziona da sola, su un server Linux tuo, via SSH.</div></div></div>

@@ -857,7 +857,7 @@ function BlockEditor({ block, onChange, moduleFieldsBySlug, installedModules }) 
             </div>
             <div className="space-y-2 mb-2">
               {(col.blocks || []).map((cb, bi) => (
-                <div key={bi} className="border border-gray-800 rounded p-2 bg-surface-card">
+                <div key={bi} className="glass-panel p-2">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-[11px] text-gray-400 truncate">{CHILD_BLOCK_TYPES.find((t) => t.type === cb.type)?.label || cb.type}</span>
                     <div className="flex gap-1 flex-shrink-0">
@@ -1478,7 +1478,7 @@ function PageEditor({ token, pageId, onBack, installedModules, api }) {
           title/blocks_json, persiste solo al "Salva" della pagina (nessun
           salvataggio a parte, coerente col resto dell'editor). */}
       {openPanel === 'popup' && (
-        <div className="bg-surface-card border border-gray-800 rounded-md mb-4 p-4">
+        <div className="glass-panel mb-4 p-4">
           <PopupEditor popup={page.popup_json} onChange={(p) => setPage({ ...page, popup_json: p })} />
         </div>
       )}
@@ -1490,7 +1490,7 @@ function PageEditor({ token, pageId, onBack, installedModules, api }) {
           cursore/selezione per ognuno dei moltissimi campi di questo
           editor, sproporzionato per il valore che aggiungerebbe. */}
       {openPanel === 'binding' && (
-        <div className="bg-surface-card border border-gray-800 rounded-md mb-4 p-4">
+        <div className="glass-panel mb-4 p-4">
           <div className="text-sm font-semibold text-ink mb-1">Valori dinamici</div>
           <p className="text-[11px] text-gray-500 mb-3">Incolla il token copiato in QUALSIASI campo di testo (titolo, testo, ecc.) — verrà sostituito col dato reale e sempre aggiornato di quel record, non una copia congelata.</p>
           <div className="grid sm:grid-cols-2 gap-2 mb-2">
@@ -1531,7 +1531,7 @@ function PageEditor({ token, pageId, onBack, installedModules, api }) {
           nessun avviso "azione irreversibile" qui — solo la conferma sulla
           bozza locale non salvata, l'unica cosa che davvero si perderebbe. */}
       {openPanel === 'cronologia' && (
-        <div className="bg-surface-card border border-gray-800 rounded-md mb-4 overflow-hidden">
+        <div className="glass-panel overflow-hidden mb-4">
           <div className="px-4 py-2 border-b border-gray-800">
             <span className="text-xs font-semibold text-ink">Cronologia delle revisioni</span>
           </div>
@@ -1554,7 +1554,7 @@ function PageEditor({ token, pageId, onBack, installedModules, api }) {
       )}
 
       {showPreview && (
-        <div className="bg-surface-card border border-gray-800 rounded-md mb-4 overflow-hidden">
+        <div className="glass-panel mb-4 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2 border-b border-gray-800">
             <span className="text-xs font-semibold text-ink">Anteprima live — bozza non salvata</span>
             <div className="flex items-center gap-2">
@@ -1655,12 +1655,12 @@ function PageEditor({ token, pageId, onBack, installedModules, api }) {
         </div>
       )}
 
-      <div className="bg-surface-card border border-gray-800 rounded-md p-4 mb-4">
+      <div className="glass-panel p-4 mb-4">
         <div className="text-xs font-semibold text-ink mb-3">SEO</div>
         <Field label="Meta description (mostrata nei risultati di ricerca)" value={page.meta_description} onChange={(v) => setPage({ ...page, meta_description: v })} textarea />
       </div>
 
-      <div className="bg-surface-card border border-gray-800 rounded-md p-4 mb-4">
+      <div className="glass-panel p-4 mb-4">
         <div className="text-xs font-semibold text-ink mb-3">Aspetto</div>
         <div className="flex items-end gap-4 flex-wrap">
           <label className="block">
@@ -1829,7 +1829,7 @@ function ThemeEditor({ api, onBack }) {
       </h1>
       <p className="text-gray-500 text-sm mb-6">Header, footer e colori condivisi da tutte le pagine — cambiarli qui li aggiorna ovunque, senza doverli modificare pagina per pagina.</p>
 
-      <div className="bg-surface-card border border-gray-800 rounded-md p-4 mb-4">
+      <div className="glass-panel p-4 mb-4">
         <div className="text-sm font-semibold text-ink mb-1">Colori del Tema</div>
         <p className="text-[11px] text-gray-500 mb-3">Riutilizzabili da qualunque blocco (pulsanti "usa un colore del Tema" nello stile di un blocco) — cambiare un colore qui lo aggiorna ovunque sia stato usato, senza cercarlo blocco per blocco.</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -1844,7 +1844,7 @@ function ThemeEditor({ api, onBack }) {
         </div>
       </div>
 
-      <div className="bg-surface-card border border-gray-800 rounded-md p-4 mb-4">
+      <div className="glass-panel p-4 mb-4">
         <div className="text-sm font-semibold text-ink mb-1">Effetti</div>
         <label className="flex items-center gap-1.5 text-xs text-gray-400 mb-2">
           <input type="checkbox" checked={!!theme.scroll_progress} onChange={(e) => setTheme({ ...theme, scroll_progress: e.target.checked })} />
@@ -1860,7 +1860,7 @@ function ThemeEditor({ api, onBack }) {
         </label>
       </div>
 
-      <div className="bg-surface-card border border-gray-800 rounded-md p-4 mb-4">
+      <div className="glass-panel p-4 mb-4">
         <div className="flex items-center justify-between mb-3">
           <div className="text-sm font-semibold text-ink">Intestazione (header)</div>
           <label className="flex items-center gap-1.5 text-xs text-gray-400">
@@ -1873,7 +1873,7 @@ function ThemeEditor({ api, onBack }) {
           : <div className="text-[11px] text-gray-600">Nessun header condiviso — attivalo qui sopra, oppure adottane uno già scritto in una pagina qui sotto.</div>}
       </div>
 
-      <div className="bg-surface-card border border-gray-800 rounded-md p-4 mb-4">
+      <div className="glass-panel p-4 mb-4">
         <div className="flex items-center justify-between mb-3">
           <div className="text-sm font-semibold text-ink">Piè di pagina (footer)</div>
           <label className="flex items-center gap-1.5 text-xs text-gray-400">
@@ -1887,7 +1887,7 @@ function ThemeEditor({ api, onBack }) {
       </div>
 
       {pages.length > 0 && (
-        <div className="bg-surface-card border border-gray-800 rounded-md p-4 mb-4">
+        <div className="glass-panel p-4 mb-4">
           <div className="text-xs font-semibold text-ink mb-1">Adotta da una pagina esistente</div>
           <p className="text-[11px] text-gray-500 mb-2">Se una pagina ha già un header/footer scritto a mano, copialo qui come Tema condiviso — verrà rimosso da quella pagina (e da ogni altra) una volta adottato.</p>
           <div className="flex flex-wrap gap-2">
@@ -1999,7 +1999,7 @@ function SitoWebPage({ token }) {
           invece di stare in fondo sotto tre card di impostazioni
           secondarie senza nessuna etichetta a separarle. */}
       <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Pagine</div>
-      <div className="bg-surface-card border border-gray-800 rounded-md divide-y divide-gray-800/70 mb-2">
+      <div className="glass-panel divide-y divide-gray-800/70 mb-2">
         {pages && pages.length === 0 && <div className="text-gray-600 text-sm p-6">Nessuna pagina ancora — creane una qui sotto.</div>}
         {pages && pages.map((p) => (
           <div key={p.id} className="p-3.5 flex items-center justify-between gap-3">
@@ -2015,7 +2015,7 @@ function SitoWebPage({ token }) {
         ))}
       </div>
 
-      <div className="bg-surface-card border border-gray-800 rounded-md p-4 mb-6">
+      <div className="glass-panel p-4 mb-6">
         <div className="text-xs font-semibold text-ink mb-3">Nuova pagina</div>
         {error && <div className="text-xs text-red-400 mb-2">{error}</div>}
         <div className="flex items-end gap-2 flex-wrap">
@@ -2037,7 +2037,7 @@ function SitoWebPage({ token }) {
           niente più tre card sempre distese una sotto l'altra). */}
       <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Personalizzazione e richieste</div>
       <button onClick={() => setOpenTheme(true)}
-        className="w-full bg-surface-card border border-gray-800 hover:border-gray-700 rounded-md p-4 mb-3 flex items-center justify-between gap-3 transition text-left">
+        className="w-full glass-panel hover:bg-white/5 p-4 mb-3 flex items-center justify-between gap-3 transition text-left">
         <span className="flex items-center gap-2 text-sm font-semibold text-ink"><Icon name="layout-template" size={15} />Tema — header/footer condivisi tra le pagine</span>
         <Icon name="chevron-right" size={14} className="text-gray-500" />
       </button>
@@ -2050,7 +2050,7 @@ function SitoWebPage({ token }) {
       <p className="text-xs text-gray-500 -mt-1 mb-3">L'email a cui arrivano le notifiche dei moduli di contatto si imposta in <span className="text-gray-300">Impostazioni → Connessioni</span>.</p>
 
       {openTile === 'richieste' && (
-        <div className="bg-surface-card border border-gray-800 rounded-md mb-4 overflow-hidden">
+        <div className="glass-panel mb-4 overflow-hidden">
           {(!leads || leads.length === 0) && <div className="text-gray-600 text-sm p-6">Nessuna richiesta ricevuta ancora.</div>}
           {leads && leads.length > 0 && (
             <div className="divide-y divide-gray-800/70">
