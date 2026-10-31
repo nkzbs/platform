@@ -2,6 +2,12 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.42 — 31 ottobre 2026
+
+**La sidebar diventa un dock orizzontale flottante** (richiesto dall'utente dopo aver visto due proposte di vetro per la navigazione — preferito il dock in stile barra di WhatsApp/iOS alla sidebar verticale di sempre). Sostituisce la rail fissa a sinistra: dock di vetro centrato in basso, le prime 4 voci fisse, il resto (altri moduli raggruppati come prima, Libreria/Builder/Log/Impostazioni/Guida, account/notifiche/tema/password/esci) dietro un pulsante "Altro" che apre un pannello di vetro sopra il dock. Stessa identica logica di prima sotto (notifiche, cambio password, tema, logout), cambia solo la presentazione — e ora desktop e mobile condividono lo stesso componente (prima erano due: rail + drawer off-canvas).
+
+**Fix reale durante la costruzione**: `.glass-panel`/`.glass-pill` impostavano `position: relative` nel CSS — per ordine di sorgente (stessa specificità, regola dopo nel foglio) vinceva su `fixed`/`absolute` di Tailwind applicati dal chiamante, mandando il dock nel flusso normale della pagina invece che ancorato in basso. Tolto: chi usa la classe porta sempre il proprio posizionamento.
+
 ## 0.3.41 — 31 ottobre 2026
 
 **Fix: la pillola di ricerca "fa pena"** — segnalato dal vivo con screenshot. Da quando (0.3.39) la barra sticky in alto ha perso il suo sfondo su Dashboard/Report, la ricerca restava l'unica cosa "piatta" (bordo quadrato, sfondo opaco a blocco) in un contesto tutto di vetro. Nuova classe `.glass-pill` (stesso trattamento di `.glass-panel`, angoli a pillola) applicata alla ricerca solo su quelle due pagine. Sulle altre pagine resta quadrata, come sempre.

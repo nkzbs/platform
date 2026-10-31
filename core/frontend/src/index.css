@@ -182,9 +182,13 @@ body {
    validare la direzione prima di estenderla. Un pannello di vetro ha bisogno
    di qualcosa da sfocare dietro: .glass-mesh-bg è lo sfondo sfumato pensato
    per starci dietro, .glass-panel il pannello stesso (sostituisce
-   "bg-surface-card border border-gray-800" dove si vuole l'effetto). */
+   "bg-surface-card border border-gray-800" dove si vuole l'effetto).
+   NIENTE "position" qui apposta (bug reale, 2026-10-31): un valore qui vinceva per
+   ordine di sorgente su "fixed"/"absolute" di Tailwind applicati dal chiamante (stessa
+   specificità, questa regola viene dopo in foglio) — il dock in basso finiva nel
+   flusso normale della pagina invece che ancorato. Chi usa la classe aggiunge sempre
+   il proprio posizionamento (relative/fixed/absolute) via Tailwind. */
 .glass-panel {
-  position: relative;
   background: rgb(var(--glass-tint) / var(--glass-bg-alpha));
   backdrop-filter: blur(22px) saturate(160%);
   -webkit-backdrop-filter: blur(22px) saturate(160%);
@@ -199,7 +203,6 @@ body {
    sfondo flat di prima, restava l'unica cosa "piatta" in un contesto di vetro:
    segnalato dal vivo ("il box ricerca fa pena"). */
 .glass-pill {
-  position: relative;
   background: rgb(var(--glass-tint) / var(--glass-bg-alpha));
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);

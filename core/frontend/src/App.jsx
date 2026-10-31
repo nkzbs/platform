@@ -239,7 +239,9 @@ export default function App() {
     <div className="flex min-h-screen bg-surface-page">
       <Sidebar modules={installedModules} currentPage={currentPage} onNavigate={setCurrentPage} user={user} onLogout={logout} tenantName={tenantName} logoUrl={tenantLogoUrl} hidePlatformName={hidePlatformName} features={features} token={token}
         mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)} collapsed />
-      <main className="md:ml-14 flex-1 min-w-0">
+      {/* "Liquid Glass" (2026-10-31): la sidebar non è più una rail fissa a sinistra (il dock
+          flottante in basso non riserva spazio), tolto md:ml-14 di prima. */}
+      <main className="flex-1 min-w-0">
         {/* "Liquid Glass" (2026-10-31) — su Dashboard/Report questa barra sticky creava una
             cucitura visibile contro lo sfondo sfumato sotto: tolto il bordo e abbassata
             l'opacità non è bastato (segnalato dal vivo due volte, "impresentabile questa
@@ -257,7 +259,8 @@ export default function App() {
             <GlobalSearch token={token} modules={installedModules} onNavigate={setCurrentPage} glass={['dashboard', 'report'].includes(currentPage)} />
           </div>
         </div>
-        <div className="p-4 md:p-8">
+        {/* pb-28: il dock flottante in basso non deve coprire l'ultimo pezzo di pagina. */}
+        <div className="p-4 md:p-8 pb-28">
         {currentPage === 'dashboard' && <DashboardPage user={user} modules={installedModules} token={token} features={features} onNavigate={setCurrentPage} />}
         {currentPage === 'report' && <DashboardPage user={user} modules={installedModules} token={token} page="report" />}
         {currentPage === 'libreria' && user && user.role === 'admin' && <LibreriaPage token={token} onFeaturesChanged={loadTenantName} onRefresh={loadModules} onOpenInBuilder={openInBuilder} onCreateNewModule={openBuilderNewModule} />}
