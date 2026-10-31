@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.1 — 31 ottobre 2026
+
+- **Anche la pagina di login è ora "Liquid Glass"** — richiesto dal vivo: "anche la pagina di login la voglio vedere più bella". Stesso sfondo sfumato + card di vetro del resto della piattaforma, niente illustrazioni (un tentativo precedente il 14/10 era stato bocciato e tolto lo stesso giorno — la fonte dell'immagine era troppo degradata). Verificato dal vivo chiaro/scuro, login funzionante.
+
 ## 0.4.0 — 31 ottobre 2026
 
 **Liquid Glass completato — 100% delle pagine.** Terza e ultima tranche, le viste avanzate di modulo e le rifiniture rimaste:

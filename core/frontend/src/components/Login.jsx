@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { API, setAuth } from '../lib/api'
 import PlatformLogo from './PlatformLogo'
+import GlassPageBackground from './GlassPageBackground'
 import { startAuthentication, browserSupportsWebAuthn } from '@simplewebauthn/browser'
 
 function Login({ onLogin, tenantName, logoUrl, hidePlatformName }) {
@@ -138,12 +139,22 @@ function Login({ onLogin, tenantName, logoUrl, hidePlatformName }) {
   // schermata, a dettare un login diverso dal resto dell'app. Tolto il ramo
   // di codice invece di cancellare quel valore a mano sul database (2026-10-14,
   // segnalato dall'utente dal vivo — "questo login non mi piace").
+  //
+  // "Liquid Glass" anche qui (2026-10-31, richiesto dal vivo: "anche la pagina
+  // di login la voglio vedere più bella") — stesso sfondo sfumato + card di
+  // vetro di tutto il resto della piattaforma ormai al 100%, non un retema a
+  // sé. Niente illustrazioni: un tentativo precedente (14/10) era stato
+  // bocciato e tolto lo stesso giorno ("fanno cagare") — la fonte dell'immagine
+  // era troppo degradata per rendere bene; il linguaggio vetro è già pronto e
+  // già approvato altrove, nessun asset nuovo da azzeccare.
   return (
-    <div className="min-h-screen bg-surface-page flex items-center justify-center">
-      <div className="bg-surface-card p-8 rounded-xl w-full max-w-sm border border-gray-800">
-        {brandHeader}
-        {formBlock}
-      </div>
+    <div className="min-h-screen bg-surface-page flex items-center justify-center p-4">
+      <GlassPageBackground>
+        <div className="glass-panel p-8 w-full" style={{ width: 'min(24rem, 100%)' }}>
+          {brandHeader}
+          {formBlock}
+        </div>
+      </GlassPageBackground>
     </div>
   )
 }
