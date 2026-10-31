@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.54 — 31 ottobre 2026
+
+Tre rifiniture sul launcher "Altro", segnalate dal vivo di seguito:
+
+- **Griglia più fitta**: 4 colonne invece di 2, icone 56px invece di 80px, pochissimo padding — "troppo spazio tra le icone", richiesto più volte.
+- **Etichetta vera al passaggio del mouse**, non solo il `title` nativo del browser (troppo lento/invisibile per essere utile): appare subito sopra o sotto l'icona via `group-hover`.
+- **Stato attivo meno invadente**: niente più rettangolo pieno attorno all'icona selezionata ("anche quando selezionata la pagina è bruttissima da vedere") — resta solo il riempimento pieno della sola icona, proporzionato.
+
 ## 0.3.53 — 31 ottobre 2026
 
 - **Launcher "Altro": solo icona, niente etichetta sotto** — richiesto dal vivo. Il nome resta leggibile al passaggio/pressione lunga (`title`) e filtrando dalla ricerca sopra la griglia.

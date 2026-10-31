@@ -177,18 +177,27 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
       macOS (richiesto dal vivo con un video di riferimento che non riesco a riprodurre
       direttamente — questa è la mia migliore interpretazione: l'icona cresce e si solleva
       con un'ombra, non solo uno sfondo che cambia). */}
-  // Icone più grandi, griglia a 2 colonne invece di 3 (2026-10-31, segnalato dal vivo:
-  // "troppo spazio libero nel launcher, puoi ingrandire le icone?") — con solo 5-8 voci
-  // tipiche, 3 colonne piccole lasciavano molto vuoto; 2 colonne più grandi riempiono lo
-  // stesso spazio con meno righe vuote E icone più leggibili, stesso effetto richiesto.
-  // Solo icona, niente etichetta sotto (2026-10-31, richiesto dal vivo: "se togli le
-  // etichette sotto?") — il nome resta leggibile al passaggio/pressione lunga via title,
-  // e nel risultato di ricerca se si digita il nome nel campo sopra la griglia.
+  // Griglia più fitta — 4 colonne, icone 56px invece di 80px, pochissimo padding attorno
+  // (2026-10-31, richiesto dal vivo ripetutamente: "troppo spazio tra le icone") — senza
+  // etichetta sotto le celle non hanno più bisogno di essere larghe. Un'etichetta vera al
+  // passaggio del mouse (non solo il title nativo del browser, troppo lento/invisibile per
+  // essere utile: "se passo sopra con il mouse voglio che mi esca l'etichetta") appare
+  // subito sopra l'icona via group-hover, sparisce altrettanto in fretta.
+  // Niente sfondo attivo sul bottone intero (2026-10-31, segnalato dal vivo: "anche quando
+  // selezionata la pagina è bruttissima da vedere") — un rettangolo pieno attorno a
+  // un'icona piccola, sproporzionato e brutto. Il riempimento pieno della sola icona
+  // (sotto) basta da solo a dire "questa è la pagina attuale".
   const gridTile = (m) => (
     <button key={m.slug} data-tour={'sidebar-' + m.slug} title={m.name} onClick={() => handleNavigate(m.slug)}
-      className={'group flex items-center justify-center p-2 rounded-2xl transition ' + (currentPage === m.slug ? 'bg-accent/20' : 'hover:bg-white/8')}>
-      <span className={'w-20 h-20 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform duration-150 ease-out group-hover:scale-110 group-hover:shadow-lg ' + (currentPage === m.slug ? 'bg-accent text-white' : 'bg-white/8')} style={currentPage === m.slug ? undefined : { color: m.color }}>
-        <Icon name={m.icon} size={34} />
+      className="group relative flex items-center justify-center p-1 rounded-xl transition hover:bg-white/8">
+      <span className={'w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-150 ease-out group-hover:scale-110 group-hover:shadow-lg ' + (currentPage === m.slug ? 'bg-accent text-white' : 'bg-white/8')} style={currentPage === m.slug ? undefined : { color: m.color }}>
+        <Icon name={m.icon} size={22} />
+      </span>
+      {/* Sotto l'icona, non sopra — sopra veniva tagliata dalla prima riga della griglia
+          scorrevole (il suo contenitore inizia subito dopo la ricerca, niente margine per
+          farcela stare sopra). */}
+      <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black/90 text-white text-[11px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-10">
+        {m.name}
       </span>
     </button>
   )
@@ -209,7 +218,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
             {logoUrl ? <img src={logoUrl} alt="" className="w-[24px] h-[24px] rounded-md object-contain flex-shrink-0" /> : <PlatformLogo size={24} letter={hidePlatformName && tenantName ? tenantName.trim()[0] : undefined} />}
             <div className="min-w-0">
               <div className="text-sm text-ink font-bold truncate">{hidePlatformName && tenantName ? tenantName : 'Platform' + (tenantName ? ' ' + tenantName : '')}</div>
-              {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.3.53</div>}
+              {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.3.54</div>}
             </div>
           </div>
           {/* Ricerca in cima al pannello, stile launcher — spostata qui dalla testa della
@@ -229,7 +238,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
           <div className="overflow-y-auto border-t border-white/10 pt-3" style={{ maxHeight: 'min(46vh, 380px)' }}>
             {nessunRisultato && <div className="text-center text-sm text-gray-500 py-6">Nessuna voce per "{navFilter}"</div>}
             {overflowSenzaGruppoF.length > 0 && (
-              <div className="grid grid-cols-2 gap-1">{overflowSenzaGruppoF.map(gridTile)}</div>
+              <div className="grid grid-cols-4 gap-1">{overflowSenzaGruppoF.map(gridTile)}</div>
             )}
             {gruppi.map((g) => {
               const items = overflowConGruppoF.filter((m) => m.group_name === g)
@@ -237,13 +246,13 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
               return (
                 <div key={g} className="mt-2">
                   <div className="px-1.5 pb-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{g}</div>
-                  <div className="grid grid-cols-2 gap-1">{items.map(gridTile)}</div>
+                  <div className="grid grid-cols-4 gap-1">{items.map(gridTile)}</div>
                 </div>
               )
             })}
             {systemItemsF.length > 0 && (
               <div className="mt-2 pt-2 border-t border-white/10">
-                <div className="grid grid-cols-2 gap-1">{systemItemsF.map(gridTile)}</div>
+                <div className="grid grid-cols-4 gap-1">{systemItemsF.map(gridTile)}</div>
               </div>
             )}
           </div>
