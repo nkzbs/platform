@@ -177,13 +177,17 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
       macOS (richiesto dal vivo con un video di riferimento che non riesco a riprodurre
       direttamente — questa è la mia migliore interpretazione: l'icona cresce e si solleva
       con un'ombra, non solo uno sfondo che cambia). */}
+  // Icone più grandi, griglia a 2 colonne invece di 3 (2026-10-31, segnalato dal vivo:
+  // "troppo spazio libero nel launcher, puoi ingrandire le icone?") — con solo 5-8 voci
+  // tipiche, 3 colonne piccole lasciavano molto vuoto; 2 colonne più grandi riempiono lo
+  // stesso spazio con meno righe vuote E icone più leggibili, stesso effetto richiesto.
   const gridTile = (m) => (
     <button key={m.slug} data-tour={'sidebar-' + m.slug} onClick={() => handleNavigate(m.slug)}
-      className={'group flex flex-col items-center gap-2 py-3 px-1 rounded-2xl text-center transition ' + (currentPage === m.slug ? 'bg-accent/20' : 'hover:bg-white/8')}>
-      <span className={'w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform duration-150 ease-out group-hover:scale-110 group-hover:shadow-lg ' + (currentPage === m.slug ? 'bg-accent text-white' : 'bg-white/8')} style={currentPage === m.slug ? undefined : { color: m.color }}>
-        <Icon name={m.icon} size={27} />
+      className={'group flex flex-col items-center gap-2.5 py-4 px-1 rounded-2xl text-center transition ' + (currentPage === m.slug ? 'bg-accent/20' : 'hover:bg-white/8')}>
+      <span className={'w-20 h-20 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform duration-150 ease-out group-hover:scale-110 group-hover:shadow-lg ' + (currentPage === m.slug ? 'bg-accent text-white' : 'bg-white/8')} style={currentPage === m.slug ? undefined : { color: m.color }}>
+        <Icon name={m.icon} size={34} />
       </span>
-      <span className={'text-[11px] leading-tight line-clamp-2 ' + (currentPage === m.slug ? 'text-accent font-medium' : 'text-gray-300')}>{m.name}</span>
+      <span className={'text-xs leading-tight line-clamp-2 ' + (currentPage === m.slug ? 'text-accent font-medium' : 'text-gray-300')}>{m.name}</span>
     </button>
   )
   const filtro = navFilter.trim().toLowerCase()
@@ -203,7 +207,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
             {logoUrl ? <img src={logoUrl} alt="" className="w-[24px] h-[24px] rounded-md object-contain flex-shrink-0" /> : <PlatformLogo size={24} letter={hidePlatformName && tenantName ? tenantName.trim()[0] : undefined} />}
             <div className="min-w-0">
               <div className="text-sm text-ink font-bold truncate">{hidePlatformName && tenantName ? tenantName : 'Platform' + (tenantName ? ' ' + tenantName : '')}</div>
-              {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.3.50</div>}
+              {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.3.51</div>}
             </div>
           </div>
           {/* Ricerca in cima al pannello, stile launcher — spostata qui dalla testa della
@@ -223,7 +227,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
           <div className="overflow-y-auto border-t border-white/10 pt-3" style={{ maxHeight: 'min(46vh, 380px)' }}>
             {nessunRisultato && <div className="text-center text-sm text-gray-500 py-6">Nessuna voce per "{navFilter}"</div>}
             {overflowSenzaGruppoF.length > 0 && (
-              <div className="grid grid-cols-3 gap-1">{overflowSenzaGruppoF.map(gridTile)}</div>
+              <div className="grid grid-cols-2 gap-1">{overflowSenzaGruppoF.map(gridTile)}</div>
             )}
             {gruppi.map((g) => {
               const items = overflowConGruppoF.filter((m) => m.group_name === g)
@@ -231,13 +235,13 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
               return (
                 <div key={g} className="mt-2">
                   <div className="px-1.5 pb-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{g}</div>
-                  <div className="grid grid-cols-3 gap-1">{items.map(gridTile)}</div>
+                  <div className="grid grid-cols-2 gap-1">{items.map(gridTile)}</div>
                 </div>
               )
             })}
             {systemItemsF.length > 0 && (
               <div className="mt-2 pt-2 border-t border-white/10">
-                <div className="grid grid-cols-3 gap-1">{systemItemsF.map(gridTile)}</div>
+                <div className="grid grid-cols-2 gap-1">{systemItemsF.map(gridTile)}</div>
               </div>
             )}
           </div>

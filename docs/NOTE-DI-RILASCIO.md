@@ -2,6 +2,11 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.51 — 31 ottobre 2026
+
+- **Launcher "Altro": icone più grandi, griglia a 2 colonne** (prima 3, 64px) — segnalato dal vivo dopo il fix dello spazio vuoto: "ancora troppo spazio, puoi ingrandire le icone?". Con i 5-8 voci tipiche, 2 colonne più grandi riempiono lo stesso spazio con meno righe vuote E icone più leggibili.
+- **Fix reale: la foto profilo caricata da un dispositivo non si vedeva su un altro (mobile sì, web Mac no)** — causa: `user` (avatar incluso) viene scritto in `localStorage` SOLO al login, per quel browser/dispositivo; un browser con una sessione già aperta non lo rifà mai, quindi non impara mai di un cambiamento fatto altrove. Nuova rotta `GET /users/me` (profilo fresco dal database, non dal JWT) chiamata da `App.jsx` a ogni avvio per riallineare lo stato locale — un dispositivo con sessione aperta vede ora la foto caricata da un altro entro il prossimo refresh, senza dover rifare login.
+
 ## 0.3.50 — 31 ottobre 2026
 
 - **Fix reale: "Riduci" di "Come sta andando" restava fuori dalla card** — segnalato dal vivo con screenshot. Causa: `come_sta_andando` era l'unico tipo con la barra "Riduci" MA senza lo sfondo di vetro sul wrapper condiviso (quello lo disegnava da sé `InsightsCard.jsx`, più sotto) — due riquadri slegati invece di uno, la barra sopra restava visivamente fuori dalla card vera. Ora il wrapper porta il vetro come già per checklist/coda/riepilogo mensile, e `InsightsCard` non disegna più un proprio sfondo.

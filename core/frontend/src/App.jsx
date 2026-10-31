@@ -178,6 +178,18 @@ export default function App() {
   // AccountPage (foto profilo) senza dover rifare login/refresh — stesso oggetto
   // che Sidebar legge per il cerchio del dock e il pannello "Altro".
   const updateUser = (patch) => setUser((prev) => { const next = { ...prev, ...patch }; setAuth(token, next); return next })
+  // Riallinea lo user in cache al vero stato sul server a ogni avvio (2026-10-30, bug reale
+  // segnalato dal vivo: "la foto da mobile c'è ma non da web Mac") — 'user' viene scritto in
+  // localStorage SOLO al login, per QUEL browser/dispositivo; senza questo, un browser con
+  // una sessione già aperta non impara mai di una foto (o altro) cambiata da un altro
+  // dispositivo finché non rifà login lì.
+  useEffect(() => {
+    if (!token) return
+    fetch(API + '/users/me', { headers: { Authorization: 'Bearer ' + token } })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((me) => { if (me) updateUser(me) })
+      .catch(() => {})
+  }, [token])
 
 
   if (!token) return <Login onLogin={onLogin} tenantName={tenantName} logoUrl={tenantLogoUrl} hidePlatformName={hidePlatformName} />

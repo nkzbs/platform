@@ -18,6 +18,18 @@ router.get('/', requireAuth, requireAdmin, (req, res) => {
   res.json(users.map((u) => ({ ...u, avatar_url: avatarUrlFor(u.avatar_path), avatar_path: undefined })));
 });
 
+// Profilo fresco dal database, non dal JWT (2026-10-30, bug reale segnalato dal vivo: "la
+// foto da mobile c'è ma non da web Mac") — il login scrive l'oggetto 'user' (avatar_url
+// incluso) in localStorage UNA VOLTA, per QUEL browser/dispositivo; un altro browser con
+// una sessione già aperta non la rifà mai, quindi non impara mai di un cambiamento fatto
+// altrove (come una foto caricata dal telefono) finché non si rifà login lì. App.jsx chiama
+// questa rotta a ogni avvio per riallineare lo stato locale al vero stato sul server.
+router.get('/me', requireAuth, (req, res) => {
+  const u = db.prepare('SELECT id, username, display_name, role, linked_module_slug, linked_record_id, avatar_path FROM users WHERE id = ?').get(req.user.id);
+  if (!u) return res.status(404).json({ error: 'Utente non trovato' });
+  res.json({ ...u, avatar_url: avatarUrlFor(u.avatar_path), avatar_path: undefined });
+});
+
 router.post('/', requireAuth, requireAdmin, (req, res) => {
   const { username, password, display_name, role, linked_module_slug, linked_record_id } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Username e password obbligatori' });
