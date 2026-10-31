@@ -210,15 +210,15 @@ async function creaTenantInBackground({ id, name, slug, domain, actor, processi,
     segna('moduli');
     let installed = await installModulesByIds(tenant.slug, moduleIds);
     if (moduleIds.length && (!installed || installed.modules !== moduleIds.length)) installed = await installModulesByIds(tenant.slug, moduleIds); // il tenant a volte non è ancora in ascolto: un secondo giro
-    if (moduleIds.length && (!installed || installed.modules !== moduleIds.length)) avvisi.push('Installati ' + (installed ? installed.modules : 0) + ' moduli su ' + moduleIds.length + ': i mancanti si aggiungono dalla Libreria.');
+    if (moduleIds.length && (!installed || installed.modules !== moduleIds.length)) avvisi.push({ tipo: 'moduli', testo: 'Installati ' + (installed ? installed.modules : 0) + ' moduli su ' + moduleIds.length + ': i mancanti si aggiungono dalla Libreria.' });
     segna('ruoli');
     let config = null;
     try { config = await analysis.deps.applyConfig({ tenantSlug: tenant.slug, processi, installedRegistryModuleIds: moduleIds, actor }); }
-    catch (e) { console.error('[analyses] ruoli e stati non applicati (non bloccante):', e.message); avvisi.push('Ruoli e stati del flusso non applicati: si impostano dal Builder.'); }
+    catch (e) { console.error('[analyses] ruoli e stati non applicati (non bloccante):', e.message); avvisi.push({ tipo: 'config', testo: 'Ruoli e stati del flusso non applicati: ' + e.message + '. Si impostano dal Builder, o riprova qui sotto.' }); }
     // ruoli dei moduli, report (spenti) e potenziamenti AI proposti, tranne quelli tolti: il tenant li completa senza sovrascrivere nulla
     let setup = null;
     try { setup = await analysis.deps.setupTenant(tenant.slug, analysis.pacchettoTenant(moduleIds, escludi)); }
-    catch (e) { console.error('[analyses] ruoli dei moduli, report e AI non applicati (non bloccante):', e.message); avvisi.push('Ruoli dei moduli, report e AI non applicati: si impostano dal Builder e da Impostazioni → Report.'); }
+    catch (e) { console.error('[analyses] ruoli dei moduli, report e AI non applicati (non bloccante):', e.message); avvisi.push({ tipo: 'setup', testo: 'Ruoli dei moduli, report e AI non applicati: ' + e.message + '. Si impostano dal Builder e da Impostazioni → Report, o riprova qui sotto.' }); }
     segni.push({ fase: 'fine', t: Date.now() });
     const t = tempi(); delete t.fine;
     setCreazione(id, { fase: 'finita', fine: Date.now(), secondi: Math.round((Date.now() - t0) / 100) / 10, tempi: t, moduli_installati: installed ? installed.modules : 0, report_creati: setup ? setup.reports.length : 0, moduli_dichiarati: setup ? setup.module_roles.length : 0, ruoli_creati: config ? config.roles_created.length : 0, moduli_configurati: config ? config.modules_configured.length : 0, avvisi });
@@ -251,6 +251,41 @@ router.get('/:id/creazione', requireAuth, (req, res) => {
   const out = { ...c, in_corso: inCorso(c), tenant_slug: r.tenant_slug };
   if (c.fase === 'finita' && credenziali.has(r.id)) { out.credenziali = credenziali.get(r.id); credenziali.delete(r.id); }
   res.json(out);
+});
+
+// Riprova SOLO ruoli/stati del flusso e/o ruoli dei moduli+report+AI, sul tenant GIÀ
+// creato — non ricrea container/database/moduli (quelli, se sono andati a buon fine,
+// restano). Risolve il punto debole segnalato dal vivo: prima, se queste due chiamate
+// fallivano (es. il tenant non ancora del tutto pronto nel momento esatto in cui
+// arrivano, o un errore transitorio), l'unico modo era sistemare tutto a mano nel
+// Builder — nessun modo di far ritentare SOLO quel passo da qui.
+router.post('/:id/retry-config', requireAuth, async (req, res) => {
+  const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
+  if (!r.tenant_slug) return res.status(400).json({ error: 'Nessun tenant ancora creato da questa analisi.' });
+  const valid = new Set(analysis.libraryModules().map((m) => m.id));
+  const processi = analysis.sanitizeProcessi(json(r.processi, []), valid);
+  const escludi = (json(r.scelte, {}).escludi) || [];
+  const moduleIds = analysis.withDependencies([...new Set(processi.flatMap((p) => [p.registry_module_id, ...(p.moduli_extra || [])]).filter(Boolean))]);
+  const avvisi = [];
+  let config = null, setup = null;
+  try { config = await analysis.deps.applyConfig({ tenantSlug: r.tenant_slug, processi, installedRegistryModuleIds: moduleIds, actor: req.user.username }); }
+  catch (e) { avvisi.push({ tipo: 'config', testo: 'Ancora non riuscito — ruoli e stati del flusso: ' + e.message + '.' }); }
+  try { setup = await analysis.deps.setupTenant(r.tenant_slug, analysis.pacchettoTenant(moduleIds, escludi)); }
+  catch (e) { avvisi.push({ tipo: 'setup', testo: 'Ancora non riuscito — ruoli dei moduli/report/AI: ' + e.message + '.' }); }
+  const c = creazioneDi(r) || {};
+  // Gli avvisi vecchi su config/setup si tolgono (hanno appena riprovato, qualunque esito);
+  // "moduli" (se c'era, un'installazione parziale) resta: questa rotta non reinstalla nulla.
+  const vecchiAltri = (c.avvisi || []).filter((a) => typeof a === 'object' && a.tipo === 'moduli');
+  const nuoviAvvisi = [...vecchiAltri, ...avvisi];
+  setCreazione(r.id, {
+    avvisi: nuoviAvvisi,
+    ruoli_creati: config ? config.roles_created.length : c.ruoli_creati,
+    moduli_configurati: config ? config.modules_configured.length : c.moduli_configurati,
+    report_creati: setup ? setup.reports.length : c.report_creati,
+    moduli_dichiarati: setup ? setup.module_roles.length : c.moduli_dichiarati,
+  });
+  logAudit(req.user.username, 'analysis.retry_config', r.tenant_slug, { analysis_id: r.id, riuscito: avvisi.length === 0 });
+  res.json({ ok: true, avvisi: nuoviAvvisi, riuscito: avvisi.length === 0 });
 });
 
 module.exports = router;

@@ -64,6 +64,37 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
   const [tf, setTf] = useState({ name: '', slug: '' })
   const [cr, setCr] = useState(null) // avanzamento della creazione del tenant: { fase, inizio, tempi, ... }
   const [credenziali, setCredenziali] = useState(null) // l'accesso admin: si vede una volta
+  // Recupero credenziali (2026-11-01, bug reale: l'accesso admin iniziale vive solo in
+  // memoria sul server — vedi analyses.js — e si perde per sempre se il processo riparte
+  // prima che l'utente le legga, o se semplicemente ricarica la pagina). Stesso endpoint
+  // già usato da TenantsPage.jsx per "Reset credenziali": non invento nulla di nuovo, lo
+  // richiamo da qui per non dover andare a cercarlo altrove.
+  const [resetCredBusy, setResetCredBusy] = useState(false)
+  const rigeneraCredenziali = async () => {
+    if (!a.tenant_slug) return
+    if (!window.confirm('Generare nuove credenziali admin per «' + a.tenant_slug + '»? La password attuale smetterà subito di funzionare.')) return
+    setResetCredBusy(true)
+    const res = await fetch(API + '/tenants/' + a.tenant_slug + '/reset-credentials', { method: 'POST', headers })
+    const data = await res.json().catch(() => ({}))
+    setResetCredBusy(false)
+    if (!res.ok) { setMsg({ ok: false, text: data.error || 'Reset non riuscito.' }); return }
+    setCredenziali({ username: data.username, password: data.password })
+  }
+
+  // Riprova SOLO ruoli/stati/report/AI sul tenant già creato (2026-11-01, bug reale:
+  // prima un avviso dopo la creazione era un vicolo cieco — si sistemava solo a mano nel
+  // Builder, nessun modo di far ritentare da qui lo stesso passo che era fallito).
+  const [retryBusy, setRetryBusy] = useState(false)
+  const retryConfig = async () => {
+    setRetryBusy(true)
+    const r = await req('POST', '/' + a.id + '/retry-config')
+    if (r.ok) {
+      const g = await req('GET', '/' + a.id + '/creazione') // riprende i conteggi aggiornati, stesso endpoint del polling
+      if (g.ok) setCr(g.data)
+      setMsg({ ok: r.data.riuscito, text: r.data.riuscito ? 'Fatto: ora è tutto applicato.' : 'Ancora qualcosa non è andato — vedi sotto.' })
+    } else setMsg({ ok: false, text: (r.data && r.data.error) || 'Non riuscito.' })
+    setRetryBusy(false)
+  }
   const [completa, setCompleta] = useState(null) // { fatti, totale, errori } mentre «Completa tutti» lavora
   const [now, setNow] = useState(Date.now())
   const [autoText, setAutoText] = useState('') // il racconto per «Fai tutto»
@@ -240,8 +271,19 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
                       <div className="font-medium mb-1">Tenant creato in {cr.secondi} secondi</div>
                       <div className="text-xs text-green-400/80">Moduli installati: {cr.moduli_installati} · ruoli creati: {cr.ruoli_creati} · moduli configurati: {cr.moduli_configurati}{cr.moduli_dichiarati != null ? ' · ruoli dichiarati: ' + cr.moduli_dichiarati + ' · report creati (spenti): ' + cr.report_creati : ''}</div>
                       {cr.tempi && <div className="text-xs text-green-400/60 mt-1">Dove è andato il tempo: {FASI_UI.filter((f) => cr.tempi[f.key] != null).map((f) => f.label + ' ' + cr.tempi[f.key] + ' s').join(' · ')}</div>}
-                      {(cr.avvisi || []).map((v, i) => <div key={i} className="text-xs text-amber-300 mt-1">{v}</div>)}
-                      {credenziali && <div className="text-xs mt-2">Accesso admin (si vede una volta sola): <span className="font-mono">{credenziali.username}</span> / <span className="font-mono">{credenziali.password}</span></div>}
+                      {(cr.avvisi || []).map((v, i) => <div key={i} className="text-xs text-amber-300 mt-1">{typeof v === 'string' ? v : v.testo}</div>)}
+                      {(cr.avvisi || []).some((v) => typeof v === 'object' && (v.tipo === 'config' || v.tipo === 'setup')) && (
+                        <button type="button" onClick={retryConfig} disabled={retryBusy} className="text-xs text-cp-primary hover:opacity-80 disabled:opacity-50 transition mt-1.5 block">
+                          {retryBusy ? 'Riprovo…' : 'Riprova'}
+                        </button>
+                      )}
+                      {credenziali ? (
+                        <div className="text-xs mt-2">Accesso admin (si vede una volta sola): <span className="font-mono">{credenziali.username}</span> / <span className="font-mono">{credenziali.password}</span></div>
+                      ) : (
+                        <button type="button" onClick={rigeneraCredenziali} disabled={resetCredBusy} className="text-xs text-cp-primary hover:opacity-80 disabled:opacity-50 transition mt-2">
+                          {resetCredBusy ? 'Genero…' : 'Non hai più le credenziali? Genera una nuova password'}
+                        </button>
+                      )}
                       {a.tenant_slug && <button type="button" className={ghost + ' mt-2'} onClick={() => setInvito({ slug: a.tenant_slug, name: a.name })}>Invita il cliente (consigliato: sceglie lui la password)</button>}
                     </div>
                   )}

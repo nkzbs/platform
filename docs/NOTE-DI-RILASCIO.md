@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.3 — 1 novembre 2026
+
+**Analisi tenant: due correzioni reali, due proposte già risolte.** Richiesto dal vivo: "Migliora l'analisi. Fammi delle proposte" (poi chiarito: l'Analisi per creare tenant, non il widget di Finance). Di 4 proposte iniziali, 2 erano già coperte da codice esistente non ancora tracciato in queste note (`proponiRelazioni` già richiamato da `applyConfig`, il retry di 18 tentativi già in `tenant-api-client.js`); le altre 2 erano reali:
+
+- **Credenziali admin perse** — prima non c'era modo di recuperarle dalla pagina Analisi dopo la creazione del tenant. Ora un bottone "Genera una nuova password" richiama l'endpoint di reset già esistente (`POST /tenants/:slug/reset-credentials`, lo stesso di Tenant → Reset credenziali) e mostra le nuove credenziali una volta sola.
+- **Errori di configurazione post-creazione muti** — se "ruoli e stati del flusso" o "ruoli dei moduli/report/AI" fallivano dopo la creazione del tenant, finivano in un avviso generico illeggibile. Ora l'avviso mostra il messaggio reale dell'errore e un bottone "Riprova" che rilancia solo quel passo (nuova route `POST /:id/retry-config`) senza ricreare il tenant.
+- Prossimo passo, non ancora iniziato: il wizard con assistente che guida l'analisi dei processi e la creazione dei moduli/tenant (intake conversazionale, narrazione durante "Fai tutto", "Correggi a parole" esteso oltre la correzione processi, domande di chiarimento dell'IA).
+
 ## 0.4.2 — 1 novembre 2026
 
 **Liquid Glass esteso a Super Admin** — richiesto dal vivo: "vorrei che anche super admin venga aggiornato al Liquid Glass".
