@@ -118,6 +118,12 @@ function serializeUser(user) {
   return {
     id: user.id, username: user.username, role: user.role, display_name: user.display_name,
     linked_module_slug: user.linked_module_slug, linked_record_id: user.linked_record_id,
+    // Foto profilo (2026-10-31) — mai nel JWT (vedi signSessionToken sotto: cambierebbe
+    // a ogni nuova foto senza che il token si rinnovi), solo qui nella risposta di
+    // login/2FA-verify. GET /auth/me resta invariato (decodifica solo il JWT): il
+    // frontend aggiorna avatar_url in locale subito dopo un upload/rimozione, non
+    // serve rileggerlo dal server a ogni refresh di pagina.
+    avatar_url: user.avatar_path ? '/api/avatars/' + user.avatar_path : null,
   };
 }
 

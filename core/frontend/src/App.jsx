@@ -174,6 +174,10 @@ export default function App() {
   }, [])
 
   const onLogin = (t, u) => { setToken(t); setUser(u) }
+  // Aggiorna lo user in stato E in localStorage dopo un cambiamento fatto da
+  // AccountPage (foto profilo) senza dover rifare login/refresh — stesso oggetto
+  // che Sidebar legge per il cerchio del dock e il pannello "Altro".
+  const updateUser = (patch) => setUser((prev) => { const next = { ...prev, ...patch }; setAuth(token, next); return next })
 
 
   if (!token) return <Login onLogin={onLogin} tenantName={tenantName} logoUrl={tenantLogoUrl} hidePlatformName={hidePlatformName} />
@@ -236,7 +240,7 @@ export default function App() {
             'sito_web' qui sotto instrada sullo stesso meccanismo di 'account'
             sopra, solo con un tab diverso. */}
         {(currentPage === 'impostazioni' || currentPage === 'account' || currentPage === 'sito_web' || currentPage === 'export_dati' || currentPage === 'connessioni' || currentPage === 'movimenti') && user &&
-          <ImpostazioniPage token={token} user={user} features={features} modules={installedModules} onOpenInBuilder={openInBuilder} onCreateNewModule={openBuilderNewModule} onFeaturesChanged={loadTenantName} initialTab={currentPage === 'impostazioni' ? undefined : currentPage} />}
+          <ImpostazioniPage token={token} user={user} features={features} modules={installedModules} onOpenInBuilder={openInBuilder} onCreateNewModule={openBuilderNewModule} onFeaturesChanged={loadTenantName} onUserUpdate={updateUser} initialTab={currentPage === 'impostazioni' ? undefined : currentPage} />}
         {currentModule && !['dashboard', 'utenti', 'report'].includes(currentPage) && <ModulePage module={currentModule} token={token} user={user} onNavigate={setCurrentPage} />}
         </div>
       </main>

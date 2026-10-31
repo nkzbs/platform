@@ -2,6 +2,11 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.48 — 31 ottobre 2026
+
+- **Icone del dock uniformate**: segnalato dal vivo come "irregolare, poca fluidità tra una voce e l'altra" — i moduli appuntati usavano icone piatte colorate senza sfondo, mentre Altro/Notifiche/Account erano cerchi blu pieni (solo se attivi) o grigi. Ora ogni icona del dock è un "chip" tondo tinto allo stesso modo (sfondo colore+alpha, come già nei risultati di ricerca), colorato di accent per le voci di sistema senza colore proprio, pieno solo quando attivo — più un leggero ingrandimento al passaggio del mouse per dare continuità tra un'icona e l'altra.
+- **Foto profilo (richiesta: "la mia Memoji come immagine profilo, cerchio accanto al nome")** — nuova colonna `users.avatar_path`, upload/rimozione da Impostazioni → Il mio account (PNG/JPG/WEBP/GIF, 5MB), servita pubblica via `/api/avatars/<file casuale>` (un `<img>` non manda l'header di autenticazione, e il nome file è un UUID, mai l'id utente). Il cerchio con la foto compare ovunque comparisse già l'iniziale colorata: pagina Account, icona "account" del dock, intestazione del pannello "Altro" — un solo componente condiviso (`Avatar.jsx`).
+
 ## 0.3.47 — 31 ottobre 2026
 
 **Fix reale: un pannello di dettaglio aperto da un widget della Dashboard "apriva male"** — segnalato dal vivo con screenshot (Checklist → click su una riga). Causa: per specifica CSS, un `backdrop-filter` su un antenato (i pannelli di vetro, `.glass-panel`) crea un nuovo "containing block" per i discendenti `position: fixed` — il pannello di dettaglio (`FormDrawer.jsx`), aperto da dentro una card di vetro, restava intrappolato nei confini di quella card invece di coprire tutta la pagina, invece di sembrare "rotto" sembrava solo uno sfondo piatto scollegato dal resto. Risolto spostando `FormDrawer` fuori dall'albero React con un portale (`createPortal` verso `document.body`, stesso pattern già usato da `Select.jsx`) — vale per qualunque pagina, non solo la Dashboard.

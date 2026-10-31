@@ -354,7 +354,7 @@ const SETTINGS_GROUPS = [
   ] },
 ]
 
-function ImpostazioniPage({ token, user, initialTab, features = {}, modules = [], onFeaturesChanged, onOpenInBuilder, onCreateNewModule }) {
+function ImpostazioniPage({ token, user, initialTab, features = {}, modules = [], onFeaturesChanged, onOpenInBuilder, onCreateNewModule, onUserUpdate }) {
   const isAdmin = user && user.role === 'admin'
   const [tab, setTab] = useState(initialTab || (isAdmin ? 'utenti' : 'account'))
   // Navigazione ripetuta verso il tab "Il mio account" (click sul proprio nome in
@@ -389,7 +389,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
 
         <div className="flex-1 min-w-0">
           {tab === 'utenti' && <UsersPage token={token} />}
-          {tab === 'account' && <AccountPage token={token} user={user} />}
+          {tab === 'account' && <AccountPage token={token} user={user} onUserUpdate={onUserUpdate} />}
 
           {tab === 'moduli' && <ModuliTab token={token} />}
           {tab === 'liste' && <ListePage token={token} />}

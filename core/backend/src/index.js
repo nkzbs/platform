@@ -144,6 +144,10 @@ app.use('/api', apiGlobalLimiter);
 for (const [path, routerModule] of routeMounts) {
   app.use('/api' + path, routerModule);
 }
+// Foto profilo (2026-10-31) — serviti come file statici pubblici, non da una route
+// autenticata: un <img src> non manda mai l'header Authorization, e il nome file è
+// un UUID casuale (mai l'id utente), quindi niente di enumerable da proteggere qui.
+app.use('/api/avatars', require('express').static(require('./lib/avatar-storage').AVATAR_DIR));
 
 // Sito Web pubblico (2026-09-04) — deliberatamente FUORI dal prefisso /api: un
 // visitatore/crawler non deve mai vedere /api nell'URL di una pagina pensata per
@@ -157,7 +161,7 @@ app.use('/__root_public', rootPublicRouter);
 
 app.get('/health', (req, res) => res.json({
   status: 'ok',
-  version: '0.3.47',
+  version: '0.3.48',
   tenant: process.env.TENANT_SLUG || 'unknown',
   name: process.env.TENANT_NAME || 'Platform Core'
 }));

@@ -829,6 +829,13 @@ ensureColumn('modules', 'registry_module_id', 'INTEGER');
 ensureColumn('modules', 'registry_source_tenant_slug', 'TEXT');
 ensureColumn('modules', 'registry_slug', 'TEXT');
 ensureColumn('modules', 'registry_version', 'INTEGER');
+// Foto profilo (2026-10-31, richiesto dall'utente: "la mia Memoji come immagine
+// profilo, cerchio accanto al nome"). Solo il nome del file su disco (vedi
+// lib/avatar-storage.js) — mai il percorso completo, che è un dettaglio di dove
+// gira QUESTO container, non un dato dell'utente. avatar_url (derivato in
+// routes/auth.js serializeUser e routes/users.js) è sempre null finché questa
+// colonna è vuota.
+ensureColumn('users', 'avatar_path', 'TEXT DEFAULT NULL');
 
 const existing = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
 if (!existing) {

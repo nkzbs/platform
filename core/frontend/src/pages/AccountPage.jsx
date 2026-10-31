@@ -1,7 +1,8 @@
 import TelegramCard from '../components/TelegramCard'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
+import Avatar from '../components/Avatar'
 import { startRegistration, browserSupportsWebAuthn } from '@simplewebauthn/browser'
 
 // ─── ACCOUNT — pagina self-service ──────────────────────────────────────────────
@@ -17,8 +18,38 @@ import { startRegistration, browserSupportsWebAuthn } from '@simplewebauthn/brow
 import { API } from '../lib/api'
 const ROLE_LABEL = { admin: 'Amministratore', user: 'Utente', agent: 'Agente' }
 
-function AccountPage({ token, user }) {
+function AccountPage({ token, user, onUserUpdate }) {
   const api = useApi(token)
+
+  // Foto profilo (2026-10-31, richiesto dal vivo: "la mia Memoji come immagine
+  // profilo, cerchio accanto al nome") — carica via POST multipart (Avatar.jsx la
+  // mostra poi ovunque: qui, nel dock, nel pannello "Altro"). onUserUpdate riporta
+  // il nuovo avatar_url ad App.jsx così il resto dell'app si aggiorna subito, senza
+  // un refresh di pagina o un nuovo login.
+  const avatarInputRef = useRef(null)
+  const [avatarBusy, setAvatarBusy] = useState(false)
+  const [avatarError, setAvatarError] = useState('')
+  const pickAvatar = () => avatarInputRef.current && avatarInputRef.current.click()
+  const uploadAvatar = async (e) => {
+    const file = e.target.files && e.target.files[0]
+    e.target.value = ''
+    if (!file) return
+    setAvatarBusy(true); setAvatarError('')
+    const body = new FormData()
+    body.append('file', file)
+    const res = await fetch(API + '/users/me/avatar', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body })
+    const data = await res.json().catch(() => ({}))
+    setAvatarBusy(false)
+    if (!res.ok) { setAvatarError(data.error || 'Errore nel caricamento'); return }
+    if (onUserUpdate) onUserUpdate({ avatar_url: data.avatar_url })
+  }
+  const removeAvatar = async () => {
+    setAvatarBusy(true); setAvatarError('')
+    await fetch(API + '/users/me/avatar', { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } })
+    setAvatarBusy(false)
+    if (onUserUpdate) onUserUpdate({ avatar_url: null })
+  }
+
   const [pw, setPw] = useState({ current_password: '', new_password: '' })
   const [pwBusy, setPwBusy] = useState(false)
   const [pwMsg, setPwMsg] = useState(null) // { ok, text }
@@ -136,14 +167,24 @@ function AccountPage({ token, user }) {
       <div className="lg:col-span-2 text-[11px] font-semibold uppercase tracking-wide text-gray-600 -mb-1">Profilo</div>
       <div className="bg-surface-card rounded-md p-6 border border-gray-800">
         <div className="flex items-center gap-4 mb-5">
-          <div className="w-12 h-12 rounded-full bg-accent/15 text-accent flex items-center justify-center text-lg font-semibold flex-shrink-0">
-            {((user && (user.display_name || user.username)) || '?').trim().charAt(0).toUpperCase()}
+          <div className="relative flex-shrink-0 group">
+            <Avatar user={user} size={56} />
+            <button onClick={pickAvatar} disabled={avatarBusy} title="Cambia foto profilo"
+              className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/50 flex items-center justify-center transition opacity-0 group-hover:opacity-100 disabled:opacity-100">
+              <Icon name={avatarBusy ? 'refresh' : 'camera'} size={16} className="text-white" />
+            </button>
+            <input ref={avatarInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={uploadAvatar} />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <div className="text-ink font-medium">{(user && user.display_name) || 'Utente'}</div>
             <div className="text-xs text-gray-500">{ROLE_LABEL[user && user.role] || (user && user.role) || ''}</div>
+            <div className="flex items-center gap-3 mt-1.5">
+              <button onClick={pickAvatar} disabled={avatarBusy} className="text-xs text-accent hover:underline disabled:opacity-50">{avatarBusy ? 'Caricamento...' : 'Cambia foto'}</button>
+              {user && user.avatar_url && <button onClick={removeAvatar} disabled={avatarBusy} className="text-xs text-gray-500 hover:text-red-400 transition disabled:opacity-50">Rimuovi</button>}
+            </div>
           </div>
         </div>
+        {avatarError && <div className="text-xs text-red-400 mb-4">{avatarError}</div>}
         <div className="text-xs text-gray-500 mb-1">Nome utente</div>
         <div className="text-sm text-ink font-mono">{(user && user.username) || '—'}</div>
       </div>

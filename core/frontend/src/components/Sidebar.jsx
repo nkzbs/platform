@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import Icon from './Icon'
 import PlatformLogo from './PlatformLogo'
 import GlobalSearch from './GlobalSearch'
+import Avatar from './Avatar'
 import { API, notifyUnauthorized } from '../lib/api'
 
 // Dock orizzontale flottante in "vetro" (2026-10-31, richiesto esplicitamente dall'utente
@@ -124,10 +125,19 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
   const overflowConGruppo = conGruppo.filter((m) => !pinnedSlugs.has(m.slug))
   const pageInOverflow = overflowSenzaGruppo.some((m) => m.slug === currentPage) || overflowConGruppo.some((m) => m.slug === currentPage) || systemItems.some((m) => m.slug === currentPage) || currentPage === 'account'
 
+  // Ogni icona del dock è un "chip" tondo tinto — stesso linguaggio dei risultati di
+  // GlobalSearch (sfondo colore+alpha, icona a tinta piena) — invece del vecchio miscuglio
+  // "icone colorate piatte senza sfondo" + "icone di sistema grigie o blu piene": segnalato
+  // dal vivo come "irregolare, poca fluidità tra una voce e l'altra" (2026-10-31). Le voci
+  // di sistema (Altro/Notifiche/Account) non hanno un colore proprio: usano l'accent, così
+  // restano nella stessa famiglia visiva dei pin colorati invece di spiccare in blu pieno.
+  // hover:scale-110 + transition-all danno la continuità/fluidità mancante tra un'icona e
+  // l'altra, stessa animazione già usata nella griglia del pannello "Altro".
   const DockIcon = ({ slug, name, icon, color, active, onClick, badge }) => (
     <button key={slug} data-tour={slug ? 'sidebar-' + slug : undefined} onClick={onClick || (() => handleNavigate(slug))} title={name}
-      className={'relative flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition ' + (active ? 'bg-accent/90 text-white border border-white/30' : 'text-gray-400 hover:text-ink hover:bg-white/10')}>
-      <span style={!active && color ? { color } : undefined}><Icon name={icon} size={17} /></span>
+      className={'relative flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ease-out hover:scale-110 ' + (active ? 'bg-accent text-white shadow-md' : '')}
+      style={!active ? { backgroundColor: color ? color + '22' : 'rgb(var(--accent) / 0.16)', color: color || 'rgb(var(--accent))' } : undefined}>
+      <Icon name={icon} size={17} />
       {badge > 0 && <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-accent text-white text-[8px] rounded-full flex items-center justify-center font-bold leading-none border border-surface-card">{badge > 9 ? '9+' : badge}</span>}
     </button>
   )
@@ -165,7 +175,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
             {logoUrl ? <img src={logoUrl} alt="" className="w-[24px] h-[24px] rounded-md object-contain flex-shrink-0" /> : <PlatformLogo size={24} letter={hidePlatformName && tenantName ? tenantName.trim()[0] : undefined} />}
             <div className="min-w-0">
               <div className="text-sm text-ink font-bold truncate">{hidePlatformName && tenantName ? tenantName : 'Platform' + (tenantName ? ' ' + tenantName : '')}</div>
-              {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.3.47</div>}
+              {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.3.48</div>}
             </div>
           </div>
           {/* Ricerca in cima al pannello, stile launcher — spostata qui dalla testa della
@@ -196,9 +206,12 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
             )}
           </div>
           <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between px-1 flex-shrink-0">
-            <button onClick={() => handleNavigate('account')} className={'text-left hover:opacity-80 transition rounded-lg px-2 py-1 -mx-2 ' + (currentPage === 'account' ? 'bg-accent/20' : '')} title="Il mio account">
-              <div className="text-sm text-ink font-medium">{user && user.display_name}</div>
-              <div className="text-xs text-gray-500">{user && user.role}</div>
+            <button onClick={() => handleNavigate('account')} className={'flex items-center gap-2.5 text-left hover:opacity-80 transition rounded-lg px-2 py-1 -mx-2 ' + (currentPage === 'account' ? 'bg-accent/20' : '')} title="Il mio account">
+              <Avatar user={user} size={28} />
+              <div className="min-w-0">
+                <div className="text-sm text-ink font-medium truncate">{user && user.display_name}</div>
+                <div className="text-xs text-gray-500">{user && user.role}</div>
+              </div>
             </button>
             <div className="flex items-center gap-3">
               <button onClick={toggleTheme} className="text-gray-400 hover:text-ink transition" title={theme === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'}>
@@ -261,7 +274,18 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
             </div>
           )}
         </div>
-        <DockIcon slug="account" name={(user && user.display_name) || 'Il mio account'} icon="user" active={currentPage === 'account'} />
+        {/* Foto profilo al posto dell'iconcina "user" quando c'è (2026-10-31,
+            richiesto dal vivo: "cerchio accanto al nome") — senza foto resta
+            DockIcon come ogni altra voce (stesso chip tinto), per non reintrodurre
+            l'irregolarità appena corretta sopra con un cerchio di stile diverso. */}
+        {user && user.avatar_url ? (
+          <button onClick={() => handleNavigate('account')} title={user.display_name || 'Il mio account'}
+            className={'relative flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ease-out hover:scale-110 ' + (currentPage === 'account' ? 'ring-2 ring-accent' : '')}>
+            <Avatar user={user} size={36} />
+          </button>
+        ) : (
+          <DockIcon slug="account" name={(user && user.display_name) || 'Il mio account'} icon="user" active={currentPage === 'account'} />
+        )}
       </nav>
 
       {pwOpen && (

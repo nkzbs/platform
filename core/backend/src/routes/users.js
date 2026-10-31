@@ -1,15 +1,21 @@
 const express = require('express');
+const multer = require('multer');
 const bcrypt = require('bcryptjs');
 const db = require('../db');
 const { requireAuth, requireAdmin } = require('./auth');
 const { logAudit } = require('../audit-log');
 const { generatePassword } = require('../../../../shared/generate-password.js');
+const { isAllowedAvatarMime, saveAvatar, deleteAvatar } = require('../lib/avatar-storage');
 
 const router = express.Router();
 
+function avatarUrlFor(avatarPath) {
+  return avatarPath ? '/api/avatars/' + avatarPath : null;
+}
+
 router.get('/', requireAuth, requireAdmin, (req, res) => {
-  const users = db.prepare('SELECT id, username, display_name, role, active, linked_module_slug, linked_record_id, created_at FROM users ORDER BY created_at DESC').all();
-  res.json(users);
+  const users = db.prepare('SELECT id, username, display_name, role, active, linked_module_slug, linked_record_id, avatar_path, created_at FROM users ORDER BY created_at DESC').all();
+  res.json(users.map((u) => ({ ...u, avatar_url: avatarUrlFor(u.avatar_path), avatar_path: undefined })));
 });
 
 router.post('/', requireAuth, requireAdmin, (req, res) => {
@@ -83,6 +89,40 @@ router.post('/me/change-password', requireAuth, (req, res) => {
   if (!bcrypt.compareSync(current_password, u.password_hash)) return res.status(400).json({ error: 'Password attuale non corretta' });
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(bcrypt.hashSync(new_password, 10), u.id);
   logAudit(u.username, 'user.change_password', u.username, null);
+  res.json({ ok: true });
+});
+
+// Foto profilo (2026-10-31, richiesto dall'utente: "la mia Memoji come immagine
+// profilo, cerchio accanto al nome"). Sempre in memoria come uploads.js (la
+// scelta disco-vs-Drive lì non si applica qui, vedi lib/avatar-storage.js) — solo
+// immagini, 5MB bastano e avanzano per una foto profilo.
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter(req, file, cb) {
+    if (!isAllowedAvatarMime(file.mimetype)) return cb(new Error('Formato non supportato — usa PNG, JPG, WEBP o GIF'));
+    cb(null, true);
+  },
+});
+
+router.post('/me/avatar', requireAuth, (req, res) => {
+  avatarUpload.single('file')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    if (!req.file) return res.status(400).json({ error: 'Nessun file ricevuto' });
+    const u = db.prepare('SELECT avatar_path FROM users WHERE id = ?').get(req.user.id);
+    const name = saveAvatar(req.file.buffer, req.file.mimetype);
+    db.prepare('UPDATE users SET avatar_path = ? WHERE id = ?').run(name, req.user.id);
+    if (u && u.avatar_path) deleteAvatar(u.avatar_path);
+    logAudit(req.user.username, 'user.avatar_update', req.user.username, null);
+    res.json({ avatar_url: avatarUrlFor(name) });
+  });
+});
+
+router.delete('/me/avatar', requireAuth, (req, res) => {
+  const u = db.prepare('SELECT avatar_path FROM users WHERE id = ?').get(req.user.id);
+  if (u && u.avatar_path) deleteAvatar(u.avatar_path);
+  db.prepare('UPDATE users SET avatar_path = NULL WHERE id = ?').run(req.user.id);
+  logAudit(req.user.username, 'user.avatar_remove', req.user.username, null);
   res.json({ ok: true });
 });
 
