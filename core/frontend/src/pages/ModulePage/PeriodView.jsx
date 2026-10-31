@@ -92,7 +92,7 @@ function PeriodView({ config, mod, schema, token, tableColumns, records, user })
         {data.metrics.map((m, i) => {
           const cmp = data.compareMetrics && data.compareMetrics[i]
           return (
-            <div key={m.key} className="bg-surface-card rounded-md border border-gray-800 p-5">
+            <div key={m.key} className="glass-panel p-5">
               <div className="text-xs text-gray-500 mb-2 uppercase tracking-wider">{m.label}</div>
               <div className="text-2xl font-bold text-ink tracking-[-0.7px]">{formatValue(m.value, m.format)}</div>
               {cmp && <div className="text-xs text-gray-500 mt-0.5">{data.compareLabel}: {formatValue(cmp.value, cmp.format)}</div>}
@@ -113,7 +113,7 @@ function PeriodView({ config, mod, schema, token, tableColumns, records, user })
         </div>
       )}
 
-      <div className="bg-surface-card rounded-md border border-gray-800 overflow-hidden">
+      <div className="glass-panel overflow-hidden">
         {visibleRows.length === 0 ? (
           <div className="p-8 text-center text-gray-600 text-sm">Nessun record in questo periodo.</div>
         ) : (

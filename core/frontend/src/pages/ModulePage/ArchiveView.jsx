@@ -224,7 +224,7 @@ export default function ArchiveView({ mod, schema, records, token, canEdit, onOp
       <div role="button" tabIndex={0} onClick={inModifica ? undefined : onClick} onKeyDown={(e) => { if (!inModifica && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick() } }}
         onDragOver={drop ? (e) => { e.preventDefault(); setDropSu(value) } : undefined} onDragLeave={drop ? () => setDropSu(null) : undefined}
         onDrop={drop ? (e) => { e.preventDefault(); setDropSu(null); const id = Number(e.dataTransfer.getData('text/plain')); const it = items.find((x) => x.id === id); if (it) sposta(it, value) } : undefined}
-        className={'group relative text-left rounded-2xl border p-4 transition cursor-pointer ' + (dropSu === value && drop ? 'border-accent border-dashed bg-accent/5' : n === 0 ? 'border-gray-800/70 bg-surface-card/50 hover:border-gray-700' : 'border-gray-800 bg-surface-card hover:border-gray-600 hover:-translate-y-0.5')}>
+        className={'group relative text-left p-4 transition cursor-pointer ' + (dropSu === value && drop ? 'rounded-2xl border-2 border-dashed border-accent bg-accent/5' : 'glass-panel hover:bg-white/5' + (n === 0 ? ' opacity-70' : ' hover:-translate-y-0.5'))}>
         {folder && canEdit && !inModifica && (
           <span className="absolute top-2 right-2 flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition">
             <button type="button" title="Rinomina" aria-label={'Rinomina ' + nome} onClick={(e) => { e.stopPropagation(); avviaRinomina(folder) }} className="w-7 h-7 rounded-lg bg-gray-800/80 hover:bg-gray-700 text-gray-300 flex items-center justify-center"><Icon name="edit" size={13} /></button>
@@ -279,14 +279,14 @@ export default function ArchiveView({ mod, schema, records, token, canEdit, onOp
         </div>
       </div>
       {ordinati.length === 0 ? (
-        <div className="bg-surface-card rounded-md p-12 text-center border border-gray-800 text-gray-500">Nessun documento qui.</div>
+        <div className="glass-panel p-12 text-center text-gray-500">Nessun documento qui.</div>
       ) : vista === 'schede' ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {ordinati.map((it) => {
             const ci = Math.max(0, folders.findIndex((f) => f.value === it.folderValue))
             return (
               <div key={it.id} draggable={canEdit && !!folderField} onDragStart={(e) => e.dataTransfer.setData('text/plain', String(it.id))} onClick={() => apri(it)}
-                className="bg-surface-card rounded-xl border border-gray-800 hover:border-gray-600 p-2.5 cursor-pointer transition">
+                className="glass-panel hover:bg-white/5 p-2.5 cursor-pointer transition">
                 <Thumb file={it.file} token={token} kind={it.kind} />
                 <div className="mt-2 px-0.5">
                   <div className="text-sm text-ink font-medium leading-snug break-words line-clamp-2" title={it.title}>{it.title}</div>
@@ -301,7 +301,7 @@ export default function ArchiveView({ mod, schema, records, token, canEdit, onOp
           })}
         </div>
       ) : (
-        <div className="bg-surface-card rounded-md border border-gray-800 divide-y divide-gray-800/60 overflow-hidden">
+        <div className="glass-panel overflow-hidden divide-y divide-gray-800/60">
           {ordinati.map((it) => {
             const st = KIND_STYLE[it.kind]
             return (

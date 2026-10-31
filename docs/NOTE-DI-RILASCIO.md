@@ -2,6 +2,17 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.0 — 31 ottobre 2026
+
+**Liquid Glass completato — 100% delle pagine.** Terza e ultima tranche, le viste avanzate di modulo e le rifiniture rimaste:
+
+- Viste avanzate: Archivio (cartelle, schede, elenco — restano opache solo l'anteprima file e la cartella-in-creazione, trattamenti attivi non neutri), Gerarchia (parent/children), Periodo, Mesi dell'anno / Per categoria / Per settimana — questi ultimi tre ora di vetro anche come widget Dashboard (prima esclusi apposta perché avevano una card propria opaca).
+- Rifiniture sparse trovate nel giro finale: pannello Report di un modulo, report Schema personalizzati, Suggerimenti IA, verticali della Libreria, il riepilogo di una Busta Paga.
+- **Deliberatamente lasciati opachi** (stesso principio di sempre, non dimenticati): ogni modale/dialogo di conferma, i pannelli di inserimento blocco/immagine del Sito Web, il contenuto pubblico delle pagine del tenant (non è interfaccia di Platform), la schermata di login, l'onboarding guidato, e alcuni pannelli di integrazione secondari annidati dentro schede già di vetro (Gmail, Telegram, WhatsApp, Smista) — rimandabili a un giro successivo se richiesto, impatto visivo minore essendo già dentro un contenitore di vetro.
+- Build di produzione pulita a ogni tranche, verificato dal vivo chiaro/scuro per ogni pagina toccata.
+
+Chiude l'estensione del linguaggio "vetro" oltre la Dashboard iniziata in 0.3.28 — tre tranche (0.3.55, 0.3.56, 0.4.0), nessun retema di Super Admin né del Builder condiviso (restano il loro linguaggio a sé).
+
 ## 0.3.56 — 31 ottobre 2026
 
 **Liquid Glass, seconda tranche** — tutte le schede restanti di Impostazioni, più Sito Web (solo l'ambiente editor, i blocchi della pagina del tenant restano come sono: è il sito del tenant, non l'interfaccia di Platform):

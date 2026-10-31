@@ -61,7 +61,7 @@ export default function SuggestionsTab({ token, onOpenInBuilder, onCreateNewModu
       const d = it.data || {}
       const icona = d.tipo === 'crea' ? 'wand' : 'download'
       return (
-        <section key={it.id} className={'bg-surface-card border rounded-xl p-4 ' + (it.status === 'dismissed' ? 'opacity-60 border-gray-800' : 'border-accent/40')}>
+        <section key={it.id} className={(it.status === 'dismissed' ? 'glass-panel opacity-60 ' : 'rounded-xl border border-accent/40 bg-surface-card ') + 'p-4'}>
           <div className="flex items-start gap-3">
             <div className="w-9 h-9 rounded-full bg-accent/15 border border-accent/30 flex items-center justify-center text-accent flex-shrink-0"><Icon name={icona} size={15} /></div>
             <div className="min-w-0 flex-1">
@@ -82,7 +82,7 @@ export default function SuggestionsTab({ token, onOpenInBuilder, onCreateNewModu
       )
     }
     return (
-      <section key={it.id} className={'bg-surface-card border border-gray-800 rounded-xl p-4 ' + (it.status === 'dismissed' ? 'opacity-60' : '')}>
+      <section key={it.id} className={'glass-panel p-4 ' + (it.status === 'dismissed' ? 'opacity-60' : '')}>
         <div className="flex items-start gap-3">
           <div className="w-8 h-8 rounded-lg bg-surface-page border border-gray-800 flex items-center justify-center text-accent flex-shrink-0"><Icon name={R.icona} size={14} /></div>
           <div className="min-w-0 flex-1">
@@ -115,7 +115,7 @@ export default function SuggestionsTab({ token, onOpenInBuilder, onCreateNewModu
         </div>
       </div>
       {msg && <div className={'text-xs ' + (msg.ok ? 'text-green-400' : 'text-amber-400')}>{msg.text}</div>}
-      {aperti.length === 0 && <div className="bg-surface-card border border-gray-800 rounded-xl p-5 text-sm text-gray-400">Nessun suggerimento: i tuoi moduli sono usati come previsto, oppure hanno ancora poche righe per dire qualcosa (servono almeno 20 righe).</div>}
+      {aperti.length === 0 && <div className="glass-panel p-5 text-sm text-gray-400">Nessun suggerimento: i tuoi moduli sono usati come previsto, oppure hanno ancora poche righe per dire qualcosa (servono almeno 20 righe).</div>}
       {aperti.map(card)}
       {ignorati.length > 0 && (
         <>

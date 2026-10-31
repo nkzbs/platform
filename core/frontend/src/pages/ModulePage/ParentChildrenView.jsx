@@ -97,7 +97,7 @@ function ParentChildrenView({ config, mod, schema, token, tableColumns, records,
         {visibleRows.map((p) => {
           const rec = recordById[p.__id]
           return (
-            <div key={p.__id} className="bg-surface-card rounded-md border border-gray-800 p-5">
+            <div key={p.__id} className="glass-panel p-5">
               <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                 <div className="min-w-0 cursor-pointer" onClick={() => setDetailId(p.__id)}>
                   <div className="text-ink font-medium hover:text-accent transition">{rec && titleKey ? String(rec.data[titleKey] ?? '—') : '#' + p.__id}</div>

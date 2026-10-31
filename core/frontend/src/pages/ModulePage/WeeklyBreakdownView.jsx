@@ -42,7 +42,7 @@ function WeeklyBreakdownView({ config, defaultModuleSlug, token }) {
   const maxVal = Math.max(1, ...data.weeks.map((w) => w.value), config.threshold != null ? Number(config.threshold) : 0)
 
   return (
-    <div className="bg-surface-card rounded-md border border-gray-800 p-5">
+    <div className="glass-panel p-5">
       <div className="flex items-center justify-between mb-4">
         <div className="text-sm font-medium text-ink">{config.label}</div>
         <div className="flex items-center gap-2">

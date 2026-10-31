@@ -29,7 +29,7 @@ function YearlyBreakdownView({ config, defaultModuleSlug, token }) {
   if (!data) return <div className="text-sm text-red-400 py-6 text-center">Impossibile calcolare questa vista.</div>
 
   return (
-    <div className="bg-surface-card rounded-md border border-gray-800 p-5">
+    <div className="glass-panel p-5">
       <div className="flex items-center justify-between mb-4">
         <div className="text-sm font-medium text-ink">{config.label}</div>
         <div className="flex items-center gap-2">

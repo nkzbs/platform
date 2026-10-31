@@ -49,7 +49,7 @@ export default function BustaPagaReportView({ token, mod }) {
   if (!saldi && righeConDati.length === 0) return null
 
   return (
-    <div className="bg-surface-card border border-gray-800 rounded-lg p-4 mb-6">
+    <div className="glass-panel p-4 mb-6">
       <div className="flex items-center gap-2 mb-3 text-sm font-medium text-ink">
         <Icon name="bar-chart" size={15} />Report busta paga
       </div>

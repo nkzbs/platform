@@ -27,7 +27,7 @@ function CategoryPivotView({ config, defaultModuleSlug, token }) {
   const maxVal = Math.max(1, ...data.categories.map((c) => c.values[0].value))
 
   return (
-    <div className="bg-surface-card rounded-md border border-gray-800 p-5">
+    <div className="glass-panel p-5">
       <div className="text-sm font-medium text-ink mb-4">{config.label}</div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">

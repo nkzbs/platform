@@ -68,7 +68,7 @@ function ReportPanel({ moduleSlug, fields, token }) {
 
   if (groupableFields.length === 0 || metricFields.length === 0) {
     return (
-      <div className="bg-surface-card rounded-md border border-gray-800 border-dashed p-8 text-center">
+      <div className="glass-panel p-8 text-center">
         <div className="text-gray-500 text-sm mb-1">Report non disponibile per questo modulo</div>
         <div className="text-gray-600 text-xs">Serve almeno un campo Selezione/Casella di spunta (per raggruppare) e un campo Numero/Valuta (da aggregare).</div>
       </div>
@@ -85,7 +85,7 @@ function ReportPanel({ moduleSlug, fields, token }) {
   }
 
   return (
-    <div className="bg-surface-card rounded-md border border-gray-800 p-6">
+    <div className="glass-panel p-6">
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <div className="flex items-center gap-2 text-sm text-gray-400">
           <Icon name="bar-chart" size={15} />

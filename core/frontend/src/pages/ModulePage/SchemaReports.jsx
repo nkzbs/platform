@@ -116,7 +116,7 @@ function SchemaReports({ aggregates, defaultModuleSlug, token }) {
         </div>
       )}
       {grouped.length > 0 && (
-        <div className="bg-surface-card rounded-md border border-gray-800 p-5">
+        <div className="glass-panel p-5">
           {grouped.length > 1 && (
             <div className="flex gap-1 mb-4 border-b border-gray-800 overflow-x-auto">
               {grouped.map((a, i) => (

@@ -69,7 +69,7 @@ export default function VerticaliLibreria({ token, installatiSlugs, onInstalled,
         {verticali.map((v) => {
           const presenti = v.moduli.filter((m) => installatiSlugs.has(m.slug)).length
           return (
-            <button key={v.id} onClick={() => apri(v)} className="bg-surface-card rounded-xl border border-gray-800 hover:border-gray-700 transition p-4 flex flex-col items-center text-center gap-2">
+            <button key={v.id} onClick={() => apri(v)} className="glass-panel hover:bg-white/5 transition p-4 flex flex-col items-center text-center gap-2">
               <div className="w-12 h-12 rounded-xl bg-accent/15 text-accent flex items-center justify-center"><Icon name={v.icon || 'box'} size={22} /></div>
               <div className="text-ink font-medium text-sm">{v.name}</div>
               <div className="text-[11px] text-gray-500">{v.moduli.length} moduli{presenti > 0 ? ' · ' + presenti + ' già installati' : ''}</div>
