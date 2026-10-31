@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.43 — 31 ottobre 2026
+
+**Fix: il marchio nello sfondo era troppo "incollato" da vicino** — segnalato dal vivo con uno zoom reale: a 6px di sfocatura restava una forma dai contorni netti (il rettangolo arrotondato e il riquadro interno si leggevano chiaramente), più un timbro che una texture di sfondo. Sfocatura portata a 40px: ora si scioglie in una macchia di luce, resta solo il tocco di colore.
+
 ## 0.3.42 — 31 ottobre 2026
 
 **La sidebar diventa un dock orizzontale flottante** (richiesto dall'utente dopo aver visto due proposte di vetro per la navigazione — preferito il dock in stile barra di WhatsApp/iOS alla sidebar verticale di sempre). Sostituisce la rail fissa a sinistra: dock di vetro centrato in basso, le prime 4 voci fisse, il resto (altri moduli raggruppati come prima, Libreria/Builder/Log/Impostazioni/Guida, account/notifiche/tema/password/esci) dietro un pulsante "Altro" che apre un pannello di vetro sopra il dock. Stessa identica logica di prima sotto (notifiche, cambio password, tema, logout), cambia solo la presentazione — e ora desktop e mobile condividono lo stesso componente (prima erano due: rail + drawer off-canvas).

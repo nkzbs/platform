@@ -261,9 +261,12 @@ body {
   position: absolute;
   bottom: -9%;
   right: -7%;
-  opacity: 0.22;
-  filter: blur(6px);
+  opacity: 0.3;
+  /* Prima 6px: da vicino restava una forma dai contorni netti, "incollata" invece che
+     parte dello sfondo (segnalato dal vivo, zoom reale). Molta più sfocatura: si scioglie
+     in una macchia di luce, non si legge più come un logo. */
+  filter: blur(40px);
 }
 :root[data-theme="light"] .glass-mesh-logo {
-  opacity: 0.16;
+  opacity: 0.22;
 }
