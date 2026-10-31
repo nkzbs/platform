@@ -196,9 +196,16 @@ body {
 
 /* Sfondo sfumato dietro i pannelli — chiazze di colore sfocate, diverse per
    tema (in chiaro, sature ma su base chiara: colori pieni scurirebbero
-   troppo lo sfondo e abbasserebbero il contrasto dei pannelli sopra). */
+   troppo lo sfondo e abbasserebbero il contrasto dei pannelli sopra).
+   position: fixed (non absolute) apposta — un pannello di vetro ha sempre
+   bisogno di qualcosa di colorato da sfocare sotto; con "absolute" lo sfondo
+   seguiva l'altezza del contenuto (ancorato agli angoli del blocco), e con
+   più widget impilati le card a metà pagina restavano lontane da entrambe le
+   chiazze — vetro piatto, senza colore, segnalato dal vivo su mobile con
+   molti widget. "fixed" lo ancora alla finestra: resta dietro qualunque card,
+   a qualunque altezza di scroll, come lo sfondo dietro un vetro vero. */
 .glass-mesh-bg {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 0;
   overflow: hidden;

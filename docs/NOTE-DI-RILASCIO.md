@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.35 — 31 ottobre 2026
+
+**Fix: il vetro diventava piatto sui widget lontani dall'alto** (segnalato dal vivo da mobile, con molti widget impilati: una card del tutto scura, senza colore né sfocatura). Causa reale: lo sfondo sfumato (`.glass-mesh-bg`) era `position: absolute`, ancorato all'altezza del blocco di contenuto — con una pagina lunga, i widget a metà/fondo pagina restavano lontani dalle due chiazze di colore negli angoli e la sfocatura campionava solo pixel scuri uniformi. Cambiato in `position: fixed`, ancorato alla finestra: ora qualunque card, a qualunque punto di scroll, ha sempre qualcosa di colorato sotto — come un vetro vero davanti a uno sfondo, non al contenuto.
+
 ## 0.3.34 — 30 ottobre 2026
 
 **Prima direzione "Liquid Glass"** (richiesta esplicitamente dall'utente, dopo un mockup di proposta): pannelli di vetro satinato — sfocatura dello sfondo, bordo con un filo di luce superiore, angoli molto arrotondati — su un'area sola, la Dashboard di Finance, per validare la direzione prima di estenderla. Nuove classi riusabili in `index.css` (`.glass-panel`, `.glass-mesh-bg`), theme-aware (il vetro in tema chiaro è molto più opaco di quello in scuro, altrimenti il testo perde leggibilità). Il resto dell'app (sidebar, le altre pagine, i moduli) resta invariato: non è un retheme completo, solo il primo passo.
