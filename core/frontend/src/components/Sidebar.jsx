@@ -191,7 +191,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
                   sidebar di Super Admin. Nascosto insieme al nome quando il tenant
                   ha attivato hide_platform_name: è comunque testo "Platform" rivolto
                   all'utente del tenant white-label. */}
-              {!hidePlatformName && <div className="text-xs text-gray-500">Platform 0.3.35</div>}
+              {!hidePlatformName && <div className="text-xs text-gray-500">Platform 0.3.36</div>}
             </div>
           )}
         </div>

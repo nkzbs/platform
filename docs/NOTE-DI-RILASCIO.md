@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.36 — 31 ottobre 2026
+
+**Fix: il vetro restava coperto dal basso, non solo dall'alto** — segnalato con screenshot reali, dark e light, da mobile. La barra "Riduci/Espandi" di un widget chiuso aveva un suo sfondo opaco (`bg-surface-card`) sopra la card già di vetro: da mobile, dove i widget sono chiusi di default, quello sfondo copriva per intero l'effetto — l'intera Dashboard sembrava piatta. Tolto lo sfondo proprio della barra: ora lascia vedere il vetro del genitore anche chiusa.
+
 ## 0.3.35 — 31 ottobre 2026
 
 **Fix: il vetro diventava piatto sui widget lontani dall'alto** (segnalato dal vivo da mobile, con molti widget impilati: una card del tutto scura, senza colore né sfocatura). Causa reale: lo sfondo sfumato (`.glass-mesh-bg`) era `position: absolute`, ancorato all'altezza del blocco di contenuto — con una pagina lunga, i widget a metà/fondo pagina restavano lontani dalle due chiazze di colore negli angoli e la sfocatura campionava solo pixel scuri uniformi. Cambiato in `position: fixed`, ancorato alla finestra: ora qualunque card, a qualunque punto di scroll, ha sempre qualcosa di colorato sotto — come un vetro vero davanti a uno sfondo, non al contenuto.

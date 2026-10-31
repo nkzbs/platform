@@ -424,7 +424,12 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
           return (
             <div key={w.id} className={(!isAperto(w) ? 'max-lg:[&>*:not(.wbar)]:hidden ' : '') + (['yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'come_sta_andando'].includes(w.type) ? 'relative' : 'glass-panel overflow-hidden relative') + (['checklist', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? ' col-span-full' : ['coda'].includes(w.type) ? ' col-span-full' : ['come_sta_andando', 'riepilogo_mensile'].includes(w.type) ? ' col-span-full sm:col-span-1 lg:col-span-3' : ' lg:col-span-2')}>
               {['come_sta_andando', 'checklist', 'coda', 'riepilogo_mensile'].includes(w.type) && !editMode && (
-                <button type="button" onClick={() => toggleAperto(w)} className={'wbar lg:hidden w-full flex items-center justify-between text-sm ' + (isAperto(w) ? 'justify-end px-1 py-1 text-xs text-gray-500' : 'px-4 py-3 font-medium text-ink bg-surface-card rounded-md border border-gray-800')}>
+                /* "Liquid Glass" (2026-10-31) — questa barra, da chiusa, sta DENTRO la card già
+                   di vetro (.glass-panel sul wrapper, sopra): prima aveva un suo sfondo opaco
+                   (bg-surface-card) che la copriva per intero, annullando l'effetto — da mobile,
+                   dove i widget sono chiusi di default, era l'unica cosa visibile. Niente sfondo
+                   proprio: lascia vedere il vetro del genitore anche chiusa. */
+                <button type="button" onClick={() => toggleAperto(w)} className={'wbar lg:hidden w-full flex items-center justify-between text-sm ' + (isAperto(w) ? 'justify-end px-1 py-1 text-xs text-gray-500' : 'px-4 py-3 font-medium text-ink')}>
                   {isAperto(w) ? null : <span>{w.label}</span>}
                   <span className="flex items-center gap-1">{isAperto(w) ? 'Riduci' : ''}<Icon name={isAperto(w) ? 'chevron-up' : 'chevron-down'} size={14} /></span>
                 </button>
