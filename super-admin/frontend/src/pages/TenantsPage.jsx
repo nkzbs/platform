@@ -8,6 +8,7 @@ import StatusDot from '../components/StatusDot'
 import StatusBadge from '../components/StatusBadge'
 import TenantCreatingOverlay from '../components/TenantCreatingOverlay'
 import RegisterExistingModal from '../components/RegisterExistingModal'
+import GlassPageBackground from '../components/GlassPageBackground'
 
 // F7 (PLATFORM-MASTER-ROADMAP.md) — Provisioning Engine: se un tenant resta
 // bloccato in status 'creating' (es. il processo Super Admin è stato riavviato
@@ -472,7 +473,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
   const pagedTenants = visibleTenants.slice((tenantsPageClamped - 1) * TENANTS_PAGE_SIZE, tenantsPageClamped * TENANTS_PAGE_SIZE)
 
   return (
-    <div>
+    <GlassPageBackground>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-lg font-bold text-ink tracking-[-0.35px]">Tenant</h1>
@@ -501,12 +502,12 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
       )}
 
       {tenants.length === 0 ? (
-        <div className="bg-surface-card rounded-md p-12 text-center border border-gray-800">
+        <div className="glass-panel p-12 text-center">
           <div className="text-gray-500 mb-1">Nessun tenant ancora</div>
           <div className="text-gray-600 text-sm">Crea il tuo primo tenant per iniziare</div>
         </div>
       ) : visibleTenants.length === 0 ? (
-        <div className="bg-surface-card rounded-md p-8 text-center border border-gray-800 border-dashed">
+        <div className="glass-panel p-8 text-center border-2 border-dashed border-gray-700">
           <div className="text-gray-500 text-sm">Nessun tenant corrisponde ai filtri scelti</div>
           <button onClick={() => { setSearchQuery(''); setTenantStatusFilter(''); setTenantsPage(1) }}
             className="text-cp-primary hover:opacity-80 text-sm transition mt-1">Azzera tutti i filtri</button>
@@ -517,7 +518,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
             const stats = statsBySlug[t.slug]
             const expanded = expandedSlug === t.slug
             return (
-            <div key={t.id} className="bg-surface-card rounded-md border border-gray-800 hover:border-gray-700 transition overflow-hidden">
+            <div key={t.id} className="glass-panel hover:bg-white/5 transition overflow-hidden">
               <div className="p-5 flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-4 min-w-0">
                   <StatusDot status={t.status} />
@@ -1091,7 +1092,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
         </div>
       )}
       {inviteTenant && <InviteTenantModal token={token} tenant={inviteTenant} onClose={() => setInviteTenant(null)} />}
-    </div>
+    </GlassPageBackground>
   )
 }
 

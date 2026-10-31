@@ -4,6 +4,7 @@ import Icon from '../components/Icon'
 import StatusBadge from '../components/StatusBadge'
 import UsersPage from './UsersPage'
 import { startRegistration, browserSupportsWebAuthn } from '@simplewebauthn/browser'
+import GlassPageBackground from '../components/GlassPageBackground'
 
 // PLATFORM-UI-REDESIGN-CATALOG.md #8 — unico pezzo mancante di questa pagina
 // (la navigazione a tile per sotto-sezioni esiste già): un indicatore di
@@ -49,7 +50,7 @@ function SettingsNav({ groups, active, onChange }) {
               {g.items.map((it) => (
                 <button key={it.key} onClick={() => onChange(it.key)}
                   className={'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-left transition ' +
-                    (active === it.key ? 'bg-cp-primary/20 text-cp-primary font-medium' : 'text-gray-400 hover:text-ink hover:bg-surface-card')}>
+                    (active === it.key ? 'bg-cp-primary/20 text-cp-primary font-medium' : 'text-gray-400 hover:text-ink hover:bg-white/8')}>
                   <Icon name={it.icon} size={15} />
                   {it.label}
                 </button>
@@ -220,7 +221,7 @@ function SettingsPage({ token, myId }) {
   )
 
   return (
-    <div>
+    <GlassPageBackground>
       <h1 className="text-lg font-bold text-ink tracking-[-0.35px] mb-1">Impostazioni</h1>
       <p className="text-gray-500 text-sm mb-6">Chi ha accesso a questo pannello, e il tuo accesso.</p>
 
@@ -234,7 +235,7 @@ function SettingsPage({ token, myId }) {
           password/2FA di un ALTRO admin non esistono: ognuno gestisce solo
           il proprio (vedi sezione Due fattori più sotto). */}
       {tab === 'utenti' && (
-      <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mb-4">
+      <section className="glass-panel p-5 mb-4">
         <SectionHead icon="users" title="Utenti Super Admin" sub="Chi ha accesso a questo pannello. Password e 2FA restano a chi accede, qui sotto — nessun admin può resettarli per un altro." />
         <UsersPage token={token} embedded myId={myId} />
       </section>
@@ -249,7 +250,7 @@ function SettingsPage({ token, myId }) {
           il giorno stesso): sono entrambe questioni di accesso/identità,
           "Chiavi AI" è un'altra categoria (configurazione di sistema). */}
       {tab === 'accesso' && (
-      <section className="bg-surface-card border border-gray-800 rounded-xl p-5 mb-4">
+      <section className="glass-panel p-5 mb-4">
         <SectionHead icon="user" title="Il tuo accesso" sub="Password, due fattori e passkey — solo tu li cambi, mai un altro admin al posto tuo." />
 
         {/* PASSWORD */}
@@ -394,7 +395,7 @@ function SettingsPage({ token, myId }) {
 
       {/* CHIAVI AI */}
       {tab === 'ai' && (
-      <section className="bg-surface-card border border-gray-800 rounded-xl p-5">
+      <section className="glass-panel p-5">
         <SectionHead icon="key" title="Chiavi AI" sub="La chiave di Super Admin è solo sua: serve a costruire i tenant e ad analizzare i processi. Non la usa mai un tenant." />
         {keys && (
           <div className="space-y-4">
@@ -426,7 +427,7 @@ function SettingsPage({ token, myId }) {
 
       {/* SICUREZZA DELLA PIATTAFORMA */}
       {tab === 'sicurezza' && (
-      <section className="bg-surface-card border border-gray-800 rounded-xl p-5">
+      <section className="glass-panel p-5">
         <SectionHead icon="shield" title="Sicurezza della piattaforma" sub="Stato attuale e ultimi eventi sospetti — solo i dati di Super Admin, mai quelli dentro un tenant." />
         {!secStatus && <div className="text-sm text-gray-600">Caricamento...</div>}
         {secStatus && (() => {
@@ -512,7 +513,7 @@ function SettingsPage({ token, myId }) {
 
         </div>
       </div>
-    </div>
+    </GlassPageBackground>
   )
 }
 

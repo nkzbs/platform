@@ -29,7 +29,7 @@ export function Kpi({ label, value, icon, delta, tone = 'blue', onClick, hint })
   const Tag = onClick ? 'button' : 'div'
   return (
     <Tag onClick={onClick} type={onClick ? 'button' : undefined}
-      className={'bg-surface-card rounded-xl border border-gray-800 p-4 text-left w-full min-h-[108px] flex flex-col justify-between transition hover:border-gray-700 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20' + (onClick ? ' cursor-pointer' : '')}>
+      className={'glass-panel p-4 text-left w-full min-h-[108px] flex flex-col justify-between transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20' + (onClick ? ' cursor-pointer' : '')}>
       <div className="text-xs text-gray-500 flex items-center gap-2">
         <span className={'w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ring-1 ring-inset ring-white/5 ' + (KPI_TONE[tone] || KPI_TONE.blue)}><Icon name={icon} size={13} /></span>
         <span className="leading-tight">{label}</span>

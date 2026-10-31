@@ -4,6 +4,7 @@ import Icon from '../components/Icon'
 import Select from '../components/Select'
 import VerticaliAdmin from '../components/VerticaliAdmin'
 import { parseSchemaFrontend, getAutomationSteps, getRequiredConnectors } from '../lib/schema-v3-frontend'
+import GlassPageBackground from '../components/GlassPageBackground'
 
 // La Libreria: i miei moduli, salvati con una versione, da installare in qualunque
 // tenant. Installare = copiare: il tenant ne riceve una copia sua e vede "disponibile
@@ -197,6 +198,7 @@ function LibreriaPage({ token }) {
   const spec = detail ? techSpec(detail) : null
 
   return (
+    <GlassPageBackground>
     <div className="max-w-5xl">
       <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
         <div>
@@ -262,13 +264,13 @@ function LibreriaPage({ token }) {
       {loading ? (
         <div className="text-sm text-gray-600">Caricamento...</div>
       ) : shown.length === 0 ? (
-        <div className="bg-surface-card border border-dashed border-gray-800 rounded-xl p-8 text-center text-sm text-gray-500">
+        <div className="glass-panel p-8 text-center text-sm text-gray-500">
           {modules.length === 0 ? 'La Libreria è vuota. Costruisci un modulo in un tenant e salvalo qui con "Salva un modulo".' : 'Nessun modulo corrisponde alla ricerca.'}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {shown.map((m) => (
-            <button key={m.id} onClick={() => openDetail(m)} className="text-left bg-surface-card border border-gray-800 hover:border-gray-600 rounded-xl p-4 transition flex flex-col">
+            <button key={m.id} onClick={() => openDetail(m)} className="text-left glass-panel hover:bg-white/5 p-4 transition flex flex-col">
               <div className="flex items-center gap-2.5 mb-2">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: (m.color || '#2563EB') + '22', color: m.color || '#2563EB' }}>
                   <Icon name={m.icon || 'box'} size={16} />
@@ -505,6 +507,7 @@ function LibreriaPage({ token }) {
         </Modal>
       )}
     </div>
+    </GlassPageBackground>
   )
 }
 

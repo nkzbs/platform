@@ -3,6 +3,7 @@ import { API } from '../lib/api'
 import Icon from '../components/Icon'
 import Select from '../components/Select'
 import AnalyticsPage from './AnalyticsPage'
+import GlassPageBackground from '../components/GlassPageBackground'
 
 // Log + Monitoring unificati in un solo feed — prima erano due pagine separate
 // (azioni amministrative da una parte, errori dall'altra) con descrizioni deboli
@@ -79,7 +80,7 @@ function ActivityPage({ token, initialTenantFilter }) {
     (active ? 'border-cp-primary text-ink font-medium' : 'border-transparent text-gray-500 hover:text-ink')
 
   return (
-    <div>
+    <GlassPageBackground>
       <h1 className="text-lg font-bold text-ink tracking-[-0.35px] mb-1">Attività</h1>
       <p className="text-gray-500 text-sm mb-4">Eventi: azioni di Super Admin ed errori tecnici dei tenant. Metriche: come cresce la piattaforma nel tempo. Cosa fanno gli utenti dentro un tenant non si vede da qui: sta nel registro del tenant.</p>
 
@@ -99,7 +100,7 @@ function ActivityPage({ token, initialTenantFilter }) {
               options={LIMIT_OPTIONS.map((n) => ({ value: n, label: n + ' per pagina' }))} />
           </div>
 
-          <div className="bg-surface-card rounded-md border border-gray-800 divide-y divide-gray-800/70">
+          <div className="glass-panel divide-y divide-gray-800/70">
             {filtered.length === 0 && <div className="text-gray-600 text-sm p-6">Nessuna attività registrata ancora.</div>}
             {filtered.map((e) => (
               <div key={e.id} className="p-3.5 text-sm">
@@ -132,7 +133,7 @@ function ActivityPage({ token, initialTenantFilter }) {
       )}
 
       {tab === 'metriche' && <AnalyticsPage token={token} embedded />}
-    </div>
+    </GlassPageBackground>
   )
 }
 

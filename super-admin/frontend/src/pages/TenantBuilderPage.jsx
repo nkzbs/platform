@@ -4,6 +4,7 @@ import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
 import Select from '../components/Select'
 import BuilderPage from './BuilderPage'
+import GlassPageBackground from '../components/GlassPageBackground'
 
 // "Super Builder": il Builder vero (stesso editor di ogni tenant, vedi
 // ./BuilderPage) integrato dentro Super Admin, con in più un assistente AI
@@ -213,7 +214,7 @@ function TenantBuilderPage({ token, initialPrompt, initialModuleName }) {
   const isRepublish = latestPriorVersion > 0
 
   return (
-    <div>
+    <GlassPageBackground>
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-ink flex items-center gap-2"><Icon name="sparkles" size={18} />Super Builder</h1>
@@ -234,7 +235,7 @@ function TenantBuilderPage({ token, initialPrompt, initialModuleName }) {
           Genera con AI {aiStatus && !aiStatus.configured && <span className="text-gray-600">(in pausa — nessuna API key configurata)</span>}
         </button>
         {showAi && (
-          <div className="bg-surface-card rounded-md p-5 border border-gray-800 mt-2">
+          <div className="glass-panel p-5 mt-2">
             {aiStatus && !aiStatus.configured && (
               <div className="bg-yellow-900/20 text-yellow-400 text-xs p-3 rounded-lg mb-4 border border-yellow-900/40">
                 Nessuna API key AI configurata (<span className="font-mono">ANTHROPIC_API_KEY</span> mancante sul backend di Super Admin) — la generazione non è ancora attiva.
@@ -304,7 +305,7 @@ function TenantBuilderPage({ token, initialPrompt, initialModuleName }) {
             Pubblica nello Store moduli
           </button>
           {showPublish && (
-            <div className="bg-surface-card rounded-md p-4 border border-gray-800 mt-2 space-y-2.5">
+            <div className="glass-panel p-4 mt-2 space-y-2.5">
               {publishResult && (
                 <div className={'text-xs p-2.5 rounded-lg ' + (publishResult.ok ? 'bg-green-900/20 text-green-400 border border-green-900/40' : 'bg-red-900/30 text-red-400 border border-red-900/50')}>
                   {publishResult.text}
@@ -356,7 +357,7 @@ function TenantBuilderPage({ token, initialPrompt, initialModuleName }) {
           onNewModuleHandled={() => setOpenNewModuleFlag(false)}
         />
       )}
-    </div>
+    </GlassPageBackground>
   )
 }
 

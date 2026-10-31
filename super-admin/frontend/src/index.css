@@ -50,6 +50,17 @@
      ridichiarata nel tema chiaro sotto apposta: la barra laterale resta scura
      in entrambi i temi, come nel mockup (--rail-bg sempre scuro anche nel suo
      :root chiaro). */
+
+  /* "Liquid Glass" (2026-11-01) — stessi token esatti di core/frontend/src/index.css
+     (vedi lì il commento esteso), portati qui per estendere lo stesso linguaggio
+     a Super Admin ("anche super admin aggiornato al Liquid Glass"). Unica
+     differenza: dove core usa --accent nello sfondo sfumato (.glass-mesh-bg), qui
+     si usa --cp-primary, il nome equivalente già in uso in questa app. */
+  --glass-tint: 255 255 255;
+  --glass-bg-alpha: 0.07;
+  --glass-border-alpha: 0.14;
+  --glass-highlight-alpha: 0.38;
+  --glass-shadow: 0 20px 50px rgb(0 0 0 / 0.35);
 }
 
 :root[data-theme="light"] {
@@ -85,6 +96,13 @@
   --cp-warning-bg: 254 243 199;
   --cp-danger: 185 28 28;
   --cp-danger-bg: 254 226 226;
+
+  /* Stessi override chiari di core/frontend/src/index.css — in chiaro il pannello
+     di vetro va molto più opaco o il testo perde leggibilità. */
+  --glass-bg-alpha: 0.55;
+  --glass-border-alpha: 0.5;
+  --glass-highlight-alpha: 0.75;
+  --glass-shadow: 0 16px 40px rgb(20 20 40 / 0.1);
 }
 
 @tailwind base;
@@ -161,4 +179,75 @@ h1, h2, h3, .font-display {
 }
 .font-mono, code, pre {
   font-family: ui-monospace, 'SFMono-Regular', monospace;
+}
+
+/* "Liquid Glass" (2026-11-01) — stesse classi esatte di core/frontend/src/index.css,
+   portate qui per estendere lo stesso linguaggio a Super Admin. .glass-mesh-bg è lo
+   sfondo sfumato da mettere dietro, .glass-panel/.glass-pill i pannelli di vetro —
+   NIENTE "position" su questi due apposta (stesso bug reale già risolto in core: un
+   valore qui vincerebbe per ordine di sorgente su "fixed"/"absolute" di Tailwind
+   applicati dal chiamante). */
+.glass-panel {
+  background: rgb(var(--glass-tint) / var(--glass-bg-alpha));
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid rgb(var(--glass-tint) / var(--glass-border-alpha));
+  border-top-color: rgb(var(--glass-tint) / var(--glass-highlight-alpha));
+  box-shadow: var(--glass-shadow), inset 0 1px 0 rgb(var(--glass-tint) / var(--glass-highlight-alpha));
+  border-radius: 20px;
+}
+
+.glass-pill {
+  background: rgb(var(--glass-tint) / var(--glass-bg-alpha));
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgb(var(--glass-tint) / var(--glass-border-alpha));
+  border-top-color: rgb(var(--glass-tint) / var(--glass-highlight-alpha));
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.25), inset 0 1px 0 rgb(var(--glass-tint) / var(--glass-highlight-alpha));
+  border-radius: 9999px;
+}
+
+.glass-mesh-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.glass-mesh-bg::before,
+.glass-mesh-bg::after {
+  content: '';
+  position: absolute;
+  width: 56vw;
+  height: 56vw;
+  max-width: 640px;
+  max-height: 640px;
+  border-radius: 50%;
+  opacity: 0.4;
+}
+.glass-mesh-bg::before {
+  top: -18%;
+  left: -12%;
+  background: radial-gradient(circle at 35% 35%, rgb(var(--cp-primary)), transparent 70%);
+}
+.glass-mesh-bg::after {
+  bottom: -22%;
+  right: -10%;
+  background: radial-gradient(circle at 60% 40%, #35D0A6, transparent 70%);
+}
+:root[data-theme="light"] .glass-mesh-bg::before,
+:root[data-theme="light"] .glass-mesh-bg::after {
+  opacity: 0.22;
+}
+
+/* Il marchio Platform dentro la chiazza in basso a destra — stesso trattamento di core. */
+.glass-mesh-logo {
+  position: absolute;
+  bottom: -9%;
+  right: -7%;
+  opacity: 0.3;
+  filter: blur(40px);
+}
+:root[data-theme="light"] .glass-mesh-logo {
+  opacity: 0.22;
 }

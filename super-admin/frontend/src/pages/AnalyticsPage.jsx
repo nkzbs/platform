@@ -62,7 +62,7 @@ function AnalyticsPage({ token, embedded }) {
       )}
 
       {!latest && (
-        <div className="bg-surface-card rounded-md border border-gray-800 p-6 text-sm text-gray-500 text-center">
+        <div className="glass-panel p-6 text-sm text-gray-500 text-center">
           Nessuna foto ancora registrata. Lo storico si costruisce da oggi in poi — premi "Cattura foto adesso" per iniziare subito.
         </div>
       )}
@@ -86,11 +86,11 @@ function AnalyticsPage({ token, embedded }) {
           </div>
 
           <div className="grid md:grid-cols-2 gap-4 mb-6">
-            <div className="bg-surface-card rounded-md border border-gray-800 p-5">
+            <div className="glass-panel p-5">
               <div className="text-xs font-semibold text-ink mb-3">Tenant nel tempo</div>
               <LineTrend points={points} series={[{ key: 'total_tenants', label: 'Tenant', color: 'rgb(8 123 255)' }]} />
             </div>
-            <div className="bg-surface-card rounded-md border border-gray-800 p-5">
+            <div className="glass-panel p-5">
               <div className="text-xs font-semibold text-ink mb-3">Moduli installati nel tempo</div>
               <LineTrend points={points} series={[{ key: 'total_modules_installed', label: 'Moduli', color: 'rgb(8 123 255)' }]} />
             </div>

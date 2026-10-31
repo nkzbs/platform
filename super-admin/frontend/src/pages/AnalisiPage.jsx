@@ -8,10 +8,11 @@ import InviteTenantModal from '../components/InviteTenantModal'
 import CorreggiAParole from '../components/analyses/CorreggiAParole'
 import Stepper from '../components/analyses/Stepper'
 import { STAMPA_CSS } from '../components/analyses/stampa'
+import GlassPageBackground from '../components/GlassPageBackground'
 
 // Analisi dei processi: racconti un'attività, l'AI propone i processi (mai salvati da soli), li rifinisci, vedi cosa copre la Libreria e cosa va costruito,
 // apri il manuale (stampabile) e, se vuoi, crei il tenant con i moduli, i ruoli e gli stati del flusso che ne derivano. Si salva da sola mentre scrivi.
-const card = 'bg-surface-card border border-gray-800 rounded-xl p-4 md:p-5 mb-4'
+const card = 'glass-panel p-4 md:p-5 mb-4'
 const input = 'w-full bg-surface-page text-ink px-3 py-2 rounded-lg outline-none border border-gray-800 focus:border-cp-primary transition text-sm placeholder-gray-600'
 const btn = 'bg-cp-primary hover:bg-cp-primary-hover disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition'
 const ghost = 'px-4 py-2 rounded-lg text-sm bg-surface-page hover:bg-gray-800 text-gray-300 transition border border-gray-800 disabled:opacity-50'
@@ -178,6 +179,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
   // ── elenco ──
   if (!a) {
     return (
+      <GlassPageBackground>
       <div className="max-w-3xl">
         <h1 className="text-lg font-bold text-ink tracking-[-0.35px] mb-1">Analisi dei processi</h1>
         <p className="text-gray-500 text-sm mb-6">Racconta come funziona un'attività: l'AI propone i processi, tu li rifinisci, e ne esce il manuale e, se vuoi, il tenant.</p>
@@ -201,7 +203,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
         {list && list.length === 0 && <div className="text-sm text-gray-500">Nessuna analisi ancora.</div>}
         <div className="space-y-2">
           {(list || []).map((x) => (
-            <div key={x.id} className="bg-surface-card border border-gray-800 hover:border-gray-600 rounded-xl transition flex items-center">
+            <div key={x.id} className="glass-panel hover:bg-white/5 transition flex items-center">
               <button type="button" onClick={() => open(x.id)} className="flex-1 min-w-0 text-left p-4 flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-sm font-semibold text-ink truncate">{x.name}</div>
@@ -214,6 +216,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
           ))}
         </div>
       </div>
+    </GlassPageBackground>
     )
   }
 
@@ -270,6 +273,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
     ]
     const dettaglio = { processi: 'Cerco i processi dell\'attività…', completamento: 'Completo i processi: ' + au.fatti + ' di ' + au.totale, approfondimento: 'Controllo cosa serve davvero a ogni processo…' }[au.fase]
     return (
+      <GlassPageBackground>
       <div className="max-w-3xl">
         <h1 className="text-lg font-bold text-ink tracking-[-0.35px] mb-1">{a.name}</h1>
         <p className="text-gray-500 text-sm mb-5">Sto compilando l'analisi… {sec} secondi. Puoi lasciare la pagina: continua da sola e la ritrovi qui.</p>
@@ -279,6 +283,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
           {a.processi.length > 0 && <div className="mt-4 flex flex-wrap gap-1.5">{a.processi.map((p, i) => <span key={i} className={'text-xs px-2.5 py-1 rounded-lg border ' + (needsEnrichment(p) ? 'border-gray-800 text-gray-500' : 'border-green-900/50 text-green-400')}>{p.nome}</span>)}</div>}
         </div>
       </div>
+    </GlassPageBackground>
     )
   }
 
@@ -289,6 +294,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
     const incompleti = a.processi.filter((p) => needsEnrichment(p)).length
     const nomeMod = (id) => (modules.find((m) => m.id === id) || {}).name || ''
     return (
+      <GlassPageBackground>
       <div className="max-w-3xl">
         <style>{STAMPA_CSS}</style>
         <div className="flex items-center gap-2 mb-4 flex-wrap">
@@ -336,11 +342,13 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
         </section>
         {a.processi.length > 0 && creaPanel('')}
       </div>
+    </GlassPageBackground>
     )
   }
 
   return (
-    <div className="max-w-3xl">
+    <GlassPageBackground>
+      <div className="max-w-3xl">
       <style>{STAMPA_CSS}</style>
       <div className="flex items-center gap-2 mb-4 flex-wrap">
         <button type="button" onClick={() => { setA(null); loadList() }} className="text-gray-500 hover:text-ink transition flex items-center gap-1 text-sm"><Icon name="chevron-left" size={14} />Analisi</button>
@@ -483,5 +491,6 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
         </>
       )}
     </div>
+    </GlassPageBackground>
   )
 }

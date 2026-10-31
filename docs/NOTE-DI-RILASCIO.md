@@ -2,6 +2,16 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.2 — 1 novembre 2026
+
+**Liquid Glass esteso a Super Admin** — richiesto dal vivo: "vorrei che anche super admin venga aggiornato al Liquid Glass".
+
+- Stessi token/classi di core (`.glass-panel`, `.glass-pill`, `.glass-mesh-bg`, `.glass-mesh-logo`) portati in `super-admin/frontend/src/index.css`, con `var(--cp-primary)` al posto di `var(--accent)` (nome equivalente già in uso qui).
+- Nuovo `GlassPageBackground.jsx` (copia di quello di core, sotto il `PlatformLogo` di questa app).
+- Convertite tutte le pagine: Dashboard, Tenant, Libreria, Analisi (tutte e 4 le schermate interne — elenco, "Fai tutto" in corso, riepilogo, dettaglio con stepper), Super Builder (solo l'ambiente — i pannelli di `shared/frontend/builder/` restano come sono, condivisi col Builder dei tenant), Attività (incluso il tab Metriche annidato), Impostazioni (incluso il tab Utenti Super Admin annidato), Guida.
+- **Deliberatamente lasciati come sono**: la barra laterale di navigazione (rail verticale fisso, non il dock di core — ridisegnarla è un cambio di impronta diverso, non chiesto), i menu a tendina/popover (Select, Topbar), ogni modale, la pagina di marketing pre-login (HomePage.jsx, un'altra cosa rispetto a una pagina di lavoro).
+- Verificato dal vivo chiaro/scuro su ogni pagina, build di produzione pulita.
+
 ## 0.4.1 — 31 ottobre 2026
 
 - **Anche la pagina di login è ora "Liquid Glass"** — richiesto dal vivo: "anche la pagina di login la voglio vedere più bella". Stesso sfondo sfumato + card di vetro del resto della piattaforma, niente illustrazioni (un tentativo precedente il 14/10 era stato bocciato e tolto lo stesso giorno — la fonte dell'immagine era troppo degradata). Verificato dal vivo chiaro/scuro, login funzionante.

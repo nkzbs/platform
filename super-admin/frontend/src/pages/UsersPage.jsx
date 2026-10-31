@@ -109,7 +109,7 @@ function UsersPage({ token, embedded, myId }) {
         {users.map((u) => {
           const isSelf = myId != null && Number(myId) === u.id
           return (
-            <div key={u.id} className="bg-surface-card rounded-md border border-gray-800 px-5 py-4">
+            <div key={u.id} className="glass-panel px-5 py-4">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -152,7 +152,7 @@ function UsersPage({ token, embedded, myId }) {
           )
         })}
         {users.length === 0 && (
-          <div className="bg-surface-card rounded-md border border-gray-800 border-dashed px-4 py-8 text-center text-sm text-gray-600">Nessun utente ancora</div>
+          <div className="glass-panel px-4 py-8 text-center text-sm text-gray-600">Nessun utente ancora</div>
         )}
       </div>
 

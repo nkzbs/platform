@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { API } from '../lib/api'
 import Icon from '../components/Icon'
 import { Kpi, LineTrend, Donut, HBar } from '../components/DashboardCharts'
+import GlassPageBackground from '../components/GlassPageBackground'
 
 // ─── DASHBOARD (Core) ───────────────────────────────────────────────────────
 // Redesign 2026-08-30 (PLATFORM-REDESIGN-CORE-PARTNER-TENANT, Fase 1) — dal
@@ -89,12 +90,12 @@ function DashboardPage({ token, onNavigate }) {
   const healthPct = overview && overview.tenants_total ? Math.round((overview.tenant_status.active || 0) / overview.tenants_total * 100) : null
 
   return (
-    <div>
+    <GlassPageBackground>
       <h1 className="text-lg font-bold text-ink tracking-[-0.35px] mb-1">Panoramica Ecosistema</h1>
       <p className="text-gray-500 text-sm mb-6">Vista globale della piattaforma — tenant, moduli, salute.</p>
 
       {!latest && (
-        <div className="bg-surface-card rounded-md border border-gray-800 p-6 text-sm text-gray-500 text-center">
+        <div className="glass-panel p-6 text-sm text-gray-500 text-center">
           Nessuna foto ancora registrata — vai in Analytics per catturarne una.
         </div>
       )}
@@ -110,13 +111,13 @@ function DashboardPage({ token, onNavigate }) {
           </div>
 
           <div className="grid md:grid-cols-3 gap-4 mb-4">
-            <div className="md:col-span-2 bg-surface-card rounded-md border border-gray-800 p-5">
+            <div className="md:col-span-2 glass-panel p-5">
               <div className="text-xs font-semibold text-ink mb-3">Tenant attivi nel tempo (ultimi 30 giorni)</div>
               <LineTrend points={last30} series={[
                 { key: 'total_tenants', label: 'Tenant attivi', color: 'rgb(134 87 236)' },
               ]} />
             </div>
-            <div className="bg-surface-card rounded-md border border-gray-800 p-5 flex flex-col">
+            <div className="glass-panel p-5 flex flex-col">
               <div className="text-xs font-semibold text-ink mb-3">Distribuzione tenant per stato</div>
               {overview && (
                 <div className="flex-1 flex items-center justify-center">
@@ -129,7 +130,7 @@ function DashboardPage({ token, onNavigate }) {
           </div>
 
           <div className="grid md:grid-cols-2 gap-4 mb-4">
-            <div className="bg-surface-card rounded-md border border-gray-800 p-5">
+            <div className="glass-panel p-5">
               <div className="text-xs font-semibold text-ink mb-3">Eventi critici</div>
               <div className="space-y-3">
                 {criticalEvents.length === 0 && <div className="text-xs text-gray-600">Nessun evento critico recente.</div>}
@@ -146,7 +147,7 @@ function DashboardPage({ token, onNavigate }) {
               )}
             </div>
 
-            <div className="bg-surface-card rounded-md border border-gray-800 p-5">
+            <div className="glass-panel p-5">
               <div className="text-xs font-semibold text-ink mb-3">Distribuzione moduli</div>
               {overview && <HBar rows={overview.module_distribution.map((m) => ({ label: m.category, value: m.count }))} />}
             </div>
@@ -157,7 +158,7 @@ function DashboardPage({ token, onNavigate }) {
               dice onestamente che il costo non è stimabile, invece di un 0€
               o una cifra inventata. */}
           {aiUsage && (
-            <div className="bg-surface-card rounded-md border border-gray-800 p-5 mt-4">
+            <div className="glass-panel p-5 mt-4">
               <div className="text-xs font-semibold text-ink mb-3 flex items-center gap-1.5">
                 <Icon name="sparkles" size={12} />Consumi API AI — tutti i tempi / ultimi 30 giorni
               </div>
@@ -185,7 +186,7 @@ function DashboardPage({ token, onNavigate }) {
           )}
         </>
       )}
-    </div>
+    </GlassPageBackground>
   )
 }
 

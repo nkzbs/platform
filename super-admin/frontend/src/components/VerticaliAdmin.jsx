@@ -35,7 +35,7 @@ export default function VerticaliAdmin({ token, modules }) {
   const input = 'w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-800 focus:border-cp-primary'
 
   return (
-    <section className="bg-surface-card border border-gray-800 rounded-xl p-4 mb-5">
+    <section className="glass-panel p-4 mb-5">
       <button type="button" onClick={() => setAperto(!aperto)} className="w-full flex items-center justify-between gap-3 text-left">
         <span className="text-sm font-semibold text-ink">Verticali ({lista.length})</span>
         <Icon name={aperto ? 'chevron-down' : 'chevron-right'} size={14} />
