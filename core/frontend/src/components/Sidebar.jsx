@@ -181,13 +181,15 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
   // "troppo spazio libero nel launcher, puoi ingrandire le icone?") — con solo 5-8 voci
   // tipiche, 3 colonne piccole lasciavano molto vuoto; 2 colonne più grandi riempiono lo
   // stesso spazio con meno righe vuote E icone più leggibili, stesso effetto richiesto.
+  // Solo icona, niente etichetta sotto (2026-10-31, richiesto dal vivo: "se togli le
+  // etichette sotto?") — il nome resta leggibile al passaggio/pressione lunga via title,
+  // e nel risultato di ricerca se si digita il nome nel campo sopra la griglia.
   const gridTile = (m) => (
-    <button key={m.slug} data-tour={'sidebar-' + m.slug} onClick={() => handleNavigate(m.slug)}
-      className={'group flex flex-col items-center gap-2.5 py-4 px-1 rounded-2xl text-center transition ' + (currentPage === m.slug ? 'bg-accent/20' : 'hover:bg-white/8')}>
+    <button key={m.slug} data-tour={'sidebar-' + m.slug} title={m.name} onClick={() => handleNavigate(m.slug)}
+      className={'group flex items-center justify-center p-2 rounded-2xl transition ' + (currentPage === m.slug ? 'bg-accent/20' : 'hover:bg-white/8')}>
       <span className={'w-20 h-20 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform duration-150 ease-out group-hover:scale-110 group-hover:shadow-lg ' + (currentPage === m.slug ? 'bg-accent text-white' : 'bg-white/8')} style={currentPage === m.slug ? undefined : { color: m.color }}>
         <Icon name={m.icon} size={34} />
       </span>
-      <span className={'text-xs leading-tight line-clamp-2 ' + (currentPage === m.slug ? 'text-accent font-medium' : 'text-gray-300')}>{m.name}</span>
     </button>
   )
   const filtro = navFilter.trim().toLowerCase()
@@ -207,7 +209,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
             {logoUrl ? <img src={logoUrl} alt="" className="w-[24px] h-[24px] rounded-md object-contain flex-shrink-0" /> : <PlatformLogo size={24} letter={hidePlatformName && tenantName ? tenantName.trim()[0] : undefined} />}
             <div className="min-w-0">
               <div className="text-sm text-ink font-bold truncate">{hidePlatformName && tenantName ? tenantName : 'Platform' + (tenantName ? ' ' + tenantName : '')}</div>
-              {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.3.52</div>}
+              {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.3.53</div>}
             </div>
           </div>
           {/* Ricerca in cima al pannello, stile launcher — spostata qui dalla testa della
