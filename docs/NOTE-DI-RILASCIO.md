@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.3.39 — 31 ottobre 2026
+
+**Fix definitivo: la riga sopra la Dashboard** — il tentativo precedente (0.3.38, bordo tolto, meno opacità) non bastava: qualunque sfondo proprio sulla barra sticky, per quanto tenue, segna comunque un confine nel punto esatto in cui finisce ("impresentabile questa linea", con screenshot). Tolto del tutto: su Dashboard/Report quella barra non ha più nessuno sfondo né sfocatura propria — la ricerca ha già la sua pillola opaca, resta leggibile lo stesso. Verificato anche durante lo scroll.
+
 ## 0.3.38 — 31 ottobre 2026
 
 **Fix: un taglio netto sopra la Dashboard** — segnalato dal vivo con screenshot reale. La barra di ricerca sticky in alto (condivisa da tutta l'app) aveva un bordo netto e uno sfondo quasi opaco, che tagliava bruscamente contro lo sfondo sfumato del vetro appena sotto: una cucitura visibile, non un bordo voluto. Solo su Dashboard/Report quella barra ora è più trasparente, più sfocata e senza bordo — si fonde invece di tagliare. Sulle altre pagine resta identica a sempre.

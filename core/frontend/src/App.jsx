@@ -240,13 +240,15 @@ export default function App() {
       <Sidebar modules={installedModules} currentPage={currentPage} onNavigate={setCurrentPage} user={user} onLogout={logout} tenantName={tenantName} logoUrl={tenantLogoUrl} hidePlatformName={hidePlatformName} features={features} token={token}
         mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)} collapsed />
       <main className="md:ml-14 flex-1 min-w-0">
-        {/* "Liquid Glass" (2026-10-31) — su Dashboard/Report questa barra sticky aveva un
-            bordo netto (border-b) che tagliava contro lo sfondo sfumato sotto, segnalato dal
-            vivo ("c'è un taglio sopra Dashboard"): la barra, opaca al 90%, bloccava il colore
-            dello sfondo fisso dietro, creando una cucitura visibile col vetro appena sotto.
-            Sulle due pagine col vetro niente bordo, sfocatura più forte, meno opaca: si fonde
-            invece di tagliare. Sulle altre pagine resta come sempre. */}
-        <div className={'sticky top-0 z-20 px-4 md:px-8 py-3 flex items-center justify-between md:justify-end gap-3 ' + (['dashboard', 'report'].includes(currentPage) ? 'bg-surface-page/40 backdrop-blur-xl' : 'bg-surface-page/90 backdrop-blur-sm border-b border-gray-800/50')} style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
+        {/* "Liquid Glass" (2026-10-31) — su Dashboard/Report questa barra sticky creava una
+            cucitura visibile contro lo sfondo sfumato sotto: tolto il bordo e abbassata
+            l'opacità non è bastato (segnalato dal vivo due volte, "impresentabile questa
+            linea") — qualunque sfondo proprio, per quanto tenue, segna comunque un confine
+            netto nel punto esatto in cui finisce. Niente sfondo e niente sfocatura propria:
+            su queste due pagine resta solo un contenitore per gli elementi (la ricerca ha già
+            il suo sfondo a pillola), il vetro sotto non incontra nessun bordo. Sulle altre
+            pagine resta come sempre. */}
+        <div className={'sticky top-0 z-20 px-4 md:px-8 py-3 flex items-center justify-between md:justify-end gap-3 ' + (['dashboard', 'report'].includes(currentPage) ? '' : 'bg-surface-page/90 backdrop-blur-sm border-b border-gray-800/50')} style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
           <button onClick={() => setMobileNavOpen(true)} className="md:hidden text-gray-400 hover:text-ink transition flex-shrink-0" title="Apri menu">
             <Icon name="menu" size={20} />
           </button>
