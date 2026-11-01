@@ -942,6 +942,53 @@ router.post('/:slug/:id/transition', requireAuth, requireModuleAccess, (req, res
   res.status(out.status).json(out.body);
 });
 
+// Valutazione di mercato di un Immobile via OpenAPI.it (2026-11-01, verticale Mediazione
+// immobiliare) — deliberatamente specifica a 'immobili', non un'azione generica su record:
+// le Source scriptabili (vedi /:slug/sources/:key/search sopra) servono solo a PROPORRE un
+// nuovo record da un'API esterna, non ad arricchirne uno già esistente con un connettore che
+// ha bisogno di credenziali sigillate (token OAuth, non un semplice fetch pubblico come fa
+// uno script Source). Un vero primitivo generico "azione esterna su un record esistente" non
+// esiste ancora in Platform — se servirà un secondo caso concreto, si generalizza allora;
+// inventarne uno ora per un solo caso sarebbe un'astrazione prematura.
+router.post('/immobili/:id/valuta', requireAuth, requireAdmin, async (req, res) => {
+  const schema = getModuleSchema('immobili');
+  if (!schema) return res.status(404).json({ error: 'Modulo Immobili non installato' });
+  const existing = db.prepare("SELECT * FROM records WHERE id = ? AND module_slug = 'immobili'").get(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Immobile non trovato' });
+  const data = JSON.parse(existing.data);
+  const indirizzo = [data.indirizzo, data.comune, data.provincia].filter(Boolean).join(', ');
+  if (!indirizzo.trim()) return res.status(400).json({ error: 'Serve almeno un indirizzo o un comune per valutare l\'immobile.' });
+
+  // Tipologia del modulo -> codice tipologia OpenAPI.it (vedi lib/openapi-it.js). Un
+  // fallback ragionevole (20, abitazioni civili) se la tipologia non è tra quelle mappate
+  // o non è stata scelta — non blocca la valutazione per questo.
+  const TYPE_MAP = { Appartamento: 20, Bilocale: 20, Trilocale: 20, Villa: 1, 'Casa indipendente': 1, Attico: 19, Ufficio: 6, Negozio: 5, 'Box/Garage': 13, Terreno: 20, Altro: 20 };
+  const type = TYPE_MAP[data.tipologia] || 20;
+
+  const openapiIt = require('../lib/openapi-it');
+  let result;
+  try {
+    result = await openapiIt.valoreAlMq({ address: indirizzo, forSale: true, type });
+  } catch (e) {
+    return res.status(e.status || 500).json({ error: e.message, code: e.code });
+  }
+  const dettaglio = result.data || {};
+  const q = dettaglio.quotazione || {};
+  const eurMq = parseFloat(String(q.med || '').replace(/[^0-9.]/g, '')) || null;
+  const superficie = parseFloat(data.superficie_mq) || null;
+  const stimaValore = eurMq && superficie ? Math.round(eurMq * superficie) : null;
+
+  // Scritto sul record (non solo ritornato) così resta visibile da subito, e soprattutto
+  // così in futuro — quando l'immobile passa a "Venduto" — si può confrontare questa stima
+  // col prezzo reale incassato: lo scarto tra le due, su più vendite vere, è l'inizio di un
+  // correttivo proprio di questo tenant, non un numero generico preso da fuori.
+  const next = { ...data, stima_valore: stimaValore, stima_eur_mq: eurMq, stima_data: new Date().toISOString().slice(0, 10), stima_fonte: 'OpenAPI.it — quotazioni di zona' };
+  db.prepare('UPDATE records SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify(next), existing.id);
+  const updated = db.prepare('SELECT * FROM records WHERE id = ?').get(existing.id);
+  logAudit(req.user.username, 'record.valuta_immobile', 'immobili#' + existing.id, { eur_mq: eurMq, stima_valore: stimaValore });
+  res.json({ ok: true, record: { ...updated, data: JSON.parse(updated.data) }, dettaglio });
+});
+
 // Cancellare un piano a rate (debiti_casa/debiti_personali, dichiarato con una scheda "Piani rateali" — Builder →
 // Vista genitore-figli) lasciava le rate già generate come righe di spesa orfane, collegate a un piano che non
 // esiste più: bisognava poi cercarle e cancellarle una per una a mano (segnalato dall'utente il 28/10). Qui si

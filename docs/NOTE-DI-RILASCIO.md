@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.8 — 1 novembre 2026
+
+**"Valuta con OpenAPI.it" — il primo bottone vero sul modulo Immobili.** Chiude il pezzo lasciato aperto in 0.4.7. Confermato dal vivo su zucca in sandbox (indirizzo di Desenzano → quotazione sandbox).
+
+- Nuova rotta `POST /records/immobili/:id/valuta`: legge indirizzo/comune/provincia e tipologia del record, chiama `lib/openapi-it.js` (`IT-sqm_value_start`), scrive sul record `stima_valore` (superficie × quotazione), `stima_eur_mq`, `stima_data`, `stima_fonte` — scritta sul record, non solo mostrata, così resta visibile anche dopo e si può confrontare in futuro col prezzo reale di vendita.
+- 4 campi nuovi sul modulo Immobili (`stima_valore`, `stima_eur_mq`, `stima_data`, `stima_fonte`) per mostrare la stima come un campo qualunque del record.
+- Bottone "Valuta con OpenAPI.it" nel dettaglio di un record Immobili (`RecordDetailModal.jsx`) — deliberatamente specifico a quel modulo, non un'azione generica: Platform non ha ancora un primitivo "azione esterna su un record esistente" (le Source scriptabili servono solo a crearne di nuovi), e inventarne uno per un solo caso sarebbe prematuro.
+- Non ancora fatto, prossimi passi su questo filone: il PDF scaricabile della valutazione, le fonti aggiuntive (comparabili, OMI, dati di zona dall'endpoint "advanced"), e — con qualche vendita vera registrata — un correttivo proprio del tenant tra stima e prezzo reale incassato.
+
 ## 0.4.7 — 1 novembre 2026
 
 **Connettore OpenAPI.it — ricerca immobili per CF, valutazioni di mercato.** Richiesto dal vivo dopo aver attivato un account sandbox: "come possiamo testare?". Verificata la documentazione reale della loro console (non indovinata): autenticazione a due passi — Basic Auth (email + API key) per ottenere un token con scope specifici, poi quel token autentica le chiamate vere su `realestate.openapi.com` e `catasto.openapi.com` (o i loro equivalenti sandbox `test.*`).

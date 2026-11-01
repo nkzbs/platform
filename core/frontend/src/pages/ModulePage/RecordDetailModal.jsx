@@ -421,6 +421,21 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
     if (onDeleted) onDeleted()
   }
 
+  // Valutazione di mercato (2026-11-01, verticale Mediazione immobiliare) — vedi il
+  // commento sulla rotta POST /records/immobili/:id/valuta: deliberatamente specifica a
+  // Immobili, non un bottone generico, finché non esiste un secondo caso che giustifichi
+  // un vero primitivo "azione esterna su un record esistente".
+  const [valutando, setValutando] = useState(false)
+  const valutaImmobile = async () => {
+    setValutando(true)
+    const res = await api.post('/records/immobili/' + recordId + '/valuta', {})
+    setValutando(false)
+    if (!res.ok) { toast((res.data && res.data.error) || 'Valutazione non riuscita', 'error'); return }
+    setRecord(res.data.record)
+    toast('Valutazione aggiornata')
+    if (onSaved) onSaved(res.data.record)
+  }
+
   return (
     <FormDrawer
       title={mod.name + ' — dettaglio'}
@@ -428,6 +443,11 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
       wide
       headerExtra={(
         <>
+          {!editing && record && mod.slug === 'immobili' && (
+            <button onClick={valutaImmobile} disabled={valutando} className="text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1">
+              <Icon name="sparkles" size={12} />{valutando ? 'Valuto…' : 'Valuta con OpenAPI.it'}
+            </button>
+          )}
           {!editing && record && <button onClick={startEditing} className="text-xs text-accent hover:opacity-80 transition flex items-center gap-1"><Icon name="edit" size={12} />Modifica</button>}
           {!editing && record && canDelete && <button onClick={remove} className="text-xs text-red-400/70 hover:text-red-400 transition flex items-center gap-1"><Icon name="trash" size={12} />Elimina</button>}
         </>

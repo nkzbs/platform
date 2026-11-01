@@ -173,7 +173,7 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
               {/* Numero di versione annotato a mano a ogni chiusura di fase — prima viveva
                   nell'intestazione del pannello "Altro" (tolta: troppo spazio per 3 sole voci,
                   segnalato dal vivo), qui è l'unico posto rimasto che ha senso mostrarla. */}
-              <div className="px-2.5 pt-1.5 mt-1 border-t border-white/10 text-[10px] text-gray-600">versione 0.4.7</div>
+              <div className="px-2.5 pt-1.5 mt-1 border-t border-white/10 text-[10px] text-gray-600">versione 0.4.8</div>
             </div>
           )}
         </div>
