@@ -104,9 +104,4 @@ Firma del cliente: ___________________________`;
   return { oggetto: 'Modulo antiriciclaggio da compilare e firmare — ' + (cliente.nome || 'cliente'), corpo };
 }
 
-function htmlDaTesto(testo) {
-  const righe = String(testo || '').split('\n').map((r) => r.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
-  return '<div style="font-family:system-ui,-apple-system,sans-serif;color:#1c1917;white-space:pre-wrap;line-height:1.6;max-width:640px">' + righe.join('<br>') + '</div>';
-}
-
-module.exports = { informativaPrivacyIncarico, informativaAntiriciclaggio, htmlDaTesto };
+module.exports = { informativaPrivacyIncarico, informativaAntiriciclaggio };

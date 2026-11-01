@@ -1062,8 +1062,7 @@ router.post('/clienti/:id/invia-documenti', requireAuth, requireAdmin, async (re
   if (!data.email) return res.status(400).json({ error: 'Il cliente non ha un indirizzo email' });
 
   const email = require('../lib/email');
-  const docCliente = require('../lib/doc-cliente');
-  const invio = await email.invia({ to: data.email, subject: oggetto || 'Documenti da firmare', html: docCliente.htmlDaTesto(corpo) });
+  const invio = await email.invia({ to: data.email, subject: oggetto || 'Documenti da firmare', html: email.htmlDaTesto(corpo) });
   if (!invio.ok) return res.status(502).json({ error: 'Invio non riuscito: ' + invio.motivo });
 
   logAudit(req.user.username, 'record.invia_documenti_cliente', 'clienti#' + existing.id, { email: data.email });
@@ -1073,6 +1072,43 @@ router.post('/clienti/:id/invia-documenti', requireAuth, requireAdmin, async (re
   // non valide da dove il record si trova già, qui si ignora silenziosamente quel caso.
   const transizione = runTransition(req.user, 'clienti', req.params.id, 'documenti_inviati');
   res.json({ ok: true, stato_aggiornato: transizione.status === 200 });
+});
+
+// Scheda Immobile: generazione e invio al proprietario (2026-11-01, stesso principio dei
+// documenti Cliente sopra — anteprima modificabile prima dell'invio). A differenza dei
+// documenti Cliente (che il cliente compila lui stesso), qui i dati li ha già inseriti
+// l'agente nel record: la scheda riporta quello che c'è già, non chiede al proprietario di
+// compilare da zero. Il destinatario è l'email del Cliente collegato come Proprietario
+// (relazione 'proprietario'), non un campo email sull'Immobile stesso — Platform non ne ha uno,
+// e non dovrebbe: l'email è un dato del cliente, non va duplicato sul record immobile.
+router.post('/immobili/:id/genera-scheda', requireAuth, requireAdmin, (req, res) => {
+  const existing = db.prepare("SELECT * FROM records WHERE id = ? AND module_slug = 'immobili'").get(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Immobile non trovato' });
+  const data = JSON.parse(existing.data);
+  const proprietario = data.proprietario ? db.prepare("SELECT data FROM records WHERE id = ? AND module_slug = 'clienti'").get(data.proprietario) : null;
+  const proprietarioData = proprietario ? JSON.parse(proprietario.data) : null;
+  const tenant = db.prepare('SELECT ragione_sociale, indirizzo, piva FROM tenant_settings WHERE id = 1').get();
+  const docImmobile = require('../lib/doc-immobile');
+  const { oggetto, corpo } = docImmobile.schedaImmobile(data, proprietarioData && proprietarioData.nome, tenant);
+  res.json({ oggetto, corpo, proprietario_email: proprietarioData && proprietarioData.email });
+});
+
+router.post('/immobili/:id/invia-scheda', requireAuth, requireAdmin, async (req, res) => {
+  const existing = db.prepare("SELECT * FROM records WHERE id = ? AND module_slug = 'immobili'").get(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Immobile non trovato' });
+  const data = JSON.parse(existing.data);
+  const { oggetto, corpo } = req.body || {};
+  if (!corpo || !corpo.trim()) return res.status(400).json({ error: 'Testo della scheda mancante' });
+  const proprietario = data.proprietario ? db.prepare("SELECT data FROM records WHERE id = ? AND module_slug = 'clienti'").get(data.proprietario) : null;
+  const proprietarioEmail = proprietario && JSON.parse(proprietario.data).email;
+  if (!proprietarioEmail) return res.status(400).json({ error: 'Il proprietario collegato non ha un indirizzo email' });
+
+  const email = require('../lib/email');
+  const invio = await email.invia({ to: proprietarioEmail, subject: oggetto || 'Scheda immobile', html: email.htmlDaTesto(corpo) });
+  if (!invio.ok) return res.status(502).json({ error: 'Invio non riuscito: ' + invio.motivo });
+
+  logAudit(req.user.username, 'record.invia_scheda_immobile', 'immobili#' + existing.id, { email: proprietarioEmail });
+  res.json({ ok: true });
 });
 
 // Cancellare un piano a rate (debiti_casa/debiti_personali, dichiarato con una scheda "Piani rateali" — Builder →

@@ -474,6 +474,28 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
     if (r.ok) { setRecord(r.data); if (onSaved) onSaved(r.data) }
   }
 
+  // Scheda Immobile — stesso principio di generaDocumenti/inviaDocumenti sopra, ma verso il
+  // proprietario collegato (non c'è uno stato da aggiornare: Immobili non ha un workflow
+  // "scheda inviata", a differenza di Clienti).
+  const [generandoScheda, setGenerandoScheda] = useState(false)
+  const [inviandoScheda, setInviandoScheda] = useState(false)
+  const [bozzaScheda, setBozzaScheda] = useState(null) // { oggetto, corpo, proprietario_email }
+  const generaScheda = async () => {
+    setGenerandoScheda(true)
+    const res = await api.post('/records/immobili/' + recordId + '/genera-scheda', {})
+    setGenerandoScheda(false)
+    if (!res.ok) { toast((res.data && res.data.error) || 'Generazione non riuscita', 'error'); return }
+    setBozzaScheda({ oggetto: res.data.oggetto, corpo: res.data.corpo, proprietario_email: res.data.proprietario_email })
+  }
+  const inviaScheda = async () => {
+    setInviandoScheda(true)
+    const res = await api.post('/records/immobili/' + recordId + '/invia-scheda', { oggetto: bozzaScheda.oggetto, corpo: bozzaScheda.corpo })
+    setInviandoScheda(false)
+    if (!res.ok) { toast((res.data && res.data.error) || 'Invio non riuscito', 'error'); return }
+    setBozzaScheda(null)
+    toast('Scheda inviata al proprietario')
+  }
+
   return (
     <FormDrawer
       title={mod.name + ' — dettaglio'}
@@ -484,6 +506,11 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
           {!editing && record && mod.slug === 'immobili' && (
             <button onClick={valutaImmobile} disabled={valutando} className="text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1">
               <Icon name="sparkles" size={12} />{valutando ? 'Valuto…' : 'Valuta con OpenAPI.it'}
+            </button>
+          )}
+          {!editing && record && mod.slug === 'immobili' && !bozzaScheda && (
+            <button onClick={generaScheda} disabled={generandoScheda} className="text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1">
+              <Icon name="file" size={12} />{generandoScheda ? 'Preparo…' : 'Scheda immobile'}
             </button>
           )}
           {!editing && record && mod.slug === 'clienti' && !bozzaDoc && (
@@ -555,6 +582,24 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                 <div className="flex gap-2">
                   <button onClick={() => setBozzaDoc(null)} className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg transition text-sm">Annulla</button>
                   <button onClick={inviaDocumenti} disabled={inviandoDoc || !record.data.email} className="flex-1 bg-accent hover:opacity-90 disabled:opacity-50 text-white py-2 rounded-lg transition text-sm font-medium">{inviandoDoc ? 'Invio…' : 'Invia al cliente via email'}</button>
+                </div>
+              </div>
+            )}
+            {mod.slug === 'immobili' && bozzaScheda && (
+              <div className="glass-panel p-4 mb-5 border-accent/30">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-xs font-semibold text-ink flex items-center gap-1.5"><Icon name="file" size={13} />Anteprima — rivedi o modifica prima di inviare</span>
+                </div>
+                <label className="text-xs text-gray-400 block mb-1">Oggetto</label>
+                <input value={bozzaScheda.oggetto} onChange={(e) => setBozzaScheda({ ...bozzaScheda, oggetto: e.target.value })}
+                  className="w-full bg-surface-page border border-gray-800 rounded-lg px-3 py-2 text-sm text-ink mb-3" />
+                <label className="text-xs text-gray-400 block mb-1">Testo della scheda</label>
+                <textarea value={bozzaScheda.corpo} onChange={(e) => setBozzaScheda({ ...bozzaScheda, corpo: e.target.value })} rows={14}
+                  className="w-full bg-surface-page border border-gray-800 rounded-lg px-3 py-2 text-xs text-gray-200 font-mono leading-relaxed mb-3" />
+                {!bozzaScheda.proprietario_email && <div className="text-xs text-red-400 mb-3">Il proprietario collegato non ha un indirizzo email (o nessun Proprietario è collegato): aggiungilo prima di inviare.</div>}
+                <div className="flex gap-2">
+                  <button onClick={() => setBozzaScheda(null)} className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg transition text-sm">Annulla</button>
+                  <button onClick={inviaScheda} disabled={inviandoScheda || !bozzaScheda.proprietario_email} className="flex-1 bg-accent hover:opacity-90 disabled:opacity-50 text-white py-2 rounded-lg transition text-sm font-medium">{inviandoScheda ? 'Invio…' : 'Invia al proprietario via email'}</button>
                 </div>
               </div>
             )}

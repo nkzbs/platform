@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.14 — 1 novembre 2026
+
+**Scheda Immobile completa, invio al proprietario.** Terzo e penultimo pezzo del workflow Clienti/Immobili/AML: Immobili estesa con la scheda reale a 3 pagine dell'agenzia (comproprietari, localizzazione/contesto, caratteristiche interne, serramenti/isolamento, impianti/certificazione energetica, catasto, spese condominiali/mutuo, valutazione/incarico, esigenze di riacquisto) — circa 55 nuovi campi.
+
+- Bottone "Scheda immobile" nel dettaglio di un Immobile: genera un riepilogo di tutto quanto già inserito (non chiede di ricompilare da zero, a differenza dei documenti Cliente), anteprima modificabile, invio via email al Proprietario collegato.
+- Checkbox-group del modulo cartaceo con una sola scelta possibile (es. "Infissi: Legno/PVC/Alluminio") diventano select; i gruppi dove più voci coesistono (es. accessori impianti) restano testo libero, più vicino a come si compila davvero un sopralluogo.
+- Comproprietari fino a 3 (anagrafica originale), con le rispettive quote di proprietà.
+- Resta da fare: la doppia fatturazione automatica delle Provvigioni (venditore + acquirente, salvo accordi diversi) quando una Trattativa arriva a un certo stato.
+
 ## 0.4.13 — 1 novembre 2026
 
 **Modulo Antiriciclaggio nel flusso documenti cliente.** Secondo documento del flusso "Genera e invia documenti" (0.4.12): il Modulo di Adeguata Verifica della Clientela (D.Lgs. 231/2007), confrontato con il questionario reale usato dallo studio legale che segue l'agenzia.
