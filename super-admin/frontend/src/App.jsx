@@ -126,11 +126,11 @@ export default function App() {
         </div>
       )}
       <Sidebar page={page} onNavigate={setPage} onLogout={logout} payload={payload} token={token} />
-      {/* Dock flottante in basso (2026-11-01, stesso linguaggio di core/frontend): non riserva
-          più spazio fisso a sinistra, tolto md:ml-14. pb-28 perché il dock non copra l'ultimo
-          pezzo di pagina, stessa misura di core. */}
-      <main className="flex-1 min-w-0" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-        <div className="p-4 md:p-8 pb-28">
+      {/* Rail laterale su desktop (md:ml-14 riserva lo spazio), dock flottante solo su mobile
+          (2026-11-01, stesso linguaggio di core/frontend): pb-28 solo sotto md perché il dock
+          non copra l'ultimo pezzo di pagina, md:pb-8 su desktop dove non c'è dock da schivare. */}
+      <main className="flex-1 min-w-0 md:ml-14" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        <div className="p-4 md:p-8 pb-28 md:pb-8">
           {page === 'dashboard' && <DashboardPage token={token} onNavigate={setPage} />}
           {page === 'tenants' && <TenantsPage token={token} onViewActivity={viewTenantActivity} onNavigate={setPage} />}
           {page === 'libreria' && <LibreriaPage token={token} />}

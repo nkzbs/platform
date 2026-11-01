@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.10 — 1 novembre 2026
+
+**Menù di nuovo laterale su PC/Mac, la pillola resta solo su mobile.** Richiesto dal vivo: "da pc/mac il menù debba essere ancora laterale, la pillola la terrei solo per la versione mobile — questa cosa tienila per tutti (admin, finance e zucca)". Il dock flottante in vetro, costruito prima in questa stessa sessione, tornava utile solo su schermi piccoli; su desktop occupava spazio senza il vantaggio per cui era nato (un pollice che raggiunge il basso dello schermo).
+
+- `core/frontend/src/components/Sidebar.jsx` e `super-admin/frontend/src/components/Sidebar.jsx`: un solo componente per app, stato condiviso (tema, notifiche, account, password), reso due volte e scelto via classi responsive Tailwind — `hidden md:flex` per la rail verticale, `md:hidden` per il dock — nessun listener di resize in JS. La rail è la vecchia implementazione pre-dock (stretta a riposo, si allarga al passaggio del mouse), riportata dalla cronologia git e adattata per condividere i popover di notifiche/account col dock invece di duplicarli.
+- `App.jsx` di entrambe le app: `md:ml-14` per riservare lo spazio della rail su desktop, `pb-28 md:pb-8` perché il dock resti con spazio sotto solo su mobile dove esiste davvero.
+- Finance e zucca condividono `core/frontend`, quindi ricevono la stessa rail automaticamente.
+
 ## 0.4.9 — 1 novembre 2026
 
 **Report di valutazione — comparabili, OMI, dati di zona.** Richiesto dal vivo dopo aver provato il bottone di 0.4.8: "aggiungi anche comparabili/OMI prima" del PDF. La valutazione ora usa l'endpoint "avanzato" di OpenAPI.it invece di quello base, più due chiamate aggiuntive dalle stesse coordinate.
