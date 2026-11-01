@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { API, openUploadedFile } from '../../lib/api'
 const toast = (message, type = 'success') => window.dispatchEvent(new CustomEvent('platform:toast', { detail: { message, type } }))
 import useApi from '../../lib/useApi'
@@ -426,12 +427,17 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   // Immobili, non un bottone generico, finché non esiste un secondo caso che giustifichi
   // un vero primitivo "azione esterna su un record esistente".
   const [valutando, setValutando] = useState(false)
+  // Report dell'ultima valutazione fatta in questa sessione (dettaglio/comparabili/OMI)
+  // — non salvato sul record (solo i 4 campi stima_* lo sono, vedi la rotta), vive solo
+  // qui finché non si richiude il dettaglio o non si rifà una valutazione.
+  const [reportValutazione, setReportValutazione] = useState(null)
   const valutaImmobile = async () => {
     setValutando(true)
     const res = await api.post('/records/immobili/' + recordId + '/valuta', {})
     setValutando(false)
     if (!res.ok) { toast((res.data && res.data.error) || 'Valutazione non riuscita', 'error'); return }
     setRecord(res.data.record)
+    setReportValutazione({ dettaglio: res.data.dettaglio, comparabili: res.data.comparabili, omi: res.data.omi })
     toast('Valutazione aggiornata')
     if (onSaved) onSaved(res.data.record)
   }
@@ -489,6 +495,9 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
           </>
         ) : (
           <>
+            {mod.slug === 'immobili' && reportValutazione && (
+              <ReportValutazione report={reportValutazione} titolo={record.data.titolo} indirizzo={[record.data.indirizzo, record.data.comune, record.data.provincia].filter(Boolean).join(', ')} />
+            )}
             <div className="space-y-2 mb-5">
               {fields.map((f) => (
                 <div key={f.key} className="flex items-center justify-between text-sm border-b border-gray-800/60 pb-2">
@@ -934,6 +943,94 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
           </>
         )}
     </FormDrawer>
+  )
+}
+
+// Report della valutazione appena fatta (2026-11-01) — un pannello a schermo con i dati
+// grezzi di OpenAPI.it messi in ordine, più una copia stampabile via window.print() dietro
+// un portal su document.body (stesso meccanismo già in uso per la Guida dei verticali in
+// components/VerticaliLibreria.jsx: solo quella porzione resta visibile quando si stampa).
+// Non il report multi-pagina con mappe/foto di un concorrente — solo i numeri che OpenAPI.it
+// restituisce davvero, onestamente presentati: niente inventato per sembrare più completo.
+function fmtEuro(n) { return (n || n === 0) ? Number(n).toLocaleString('it-IT', { maximumFractionDigits: 0 }) + ' €' : '—' }
+function ReportValutazione({ report, titolo, indirizzo }) {
+  const d = (report && report.dettaglio) || {}
+  const q = d.quotazione || {}
+  const med = parseFloat(String(q.med || '').replace(/[^0-9.]/g, '')) || null
+  const demo = d.demografico || {}
+  const comparabili = (report && report.comparabili) || []
+  const omiRow = report && report.omi
+  const dataOggi = new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })
+
+  const corpo = (perStampa) => (
+    <div style={perStampa ? { background: '#fff', color: '#1c1917', padding: 24, fontFamily: 'system-ui,-apple-system,sans-serif' } : undefined}>
+      <div className={perStampa ? '' : 'text-[11px] uppercase tracking-wide text-gray-500 font-semibold'} style={perStampa ? { fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: '#78716c', fontWeight: 700 } : undefined}>Report di valutazione · {dataOggi}</div>
+      <div className={perStampa ? '' : 'text-ink text-lg font-bold mt-0.5'} style={perStampa ? { fontSize: 22, margin: '2px 0 2px', fontWeight: 600 } : undefined}>{titolo || 'Immobile'}</div>
+      <div className={perStampa ? '' : 'text-xs text-gray-500 mb-3'} style={perStampa ? { fontSize: 12, color: '#78716c', marginBottom: 14 } : undefined}>{indirizzo || d.formatted}</div>
+
+      <div className={perStampa ? '' : 'grid grid-cols-3 gap-2 mb-3'} style={perStampa ? { display: 'flex', gap: 16, margin: '8px 0 16px', paddingBottom: 12, borderBottom: '1px solid #e7e5e4' } : undefined}>
+        {[['Minimo', q.min], ['Medio', med], ['Massimo', q.max]].map(([l, v]) => (
+          <div key={l} className={perStampa ? '' : 'bg-surface-page rounded-lg p-2.5 border border-gray-800 text-center'} style={perStampa ? { flex: 1 } : undefined}>
+            <div className={perStampa ? '' : 'text-[10px] text-gray-500'} style={perStampa ? { fontSize: 11, color: '#78716c' } : undefined}>{l} €/mq</div>
+            <div className={perStampa ? '' : 'text-ink font-semibold'} style={perStampa ? { fontSize: 18, fontWeight: 600 } : undefined}>{v != null ? Number(v).toLocaleString('it-IT', { maximumFractionDigits: 0 }) : '—'}</div>
+          </div>
+        ))}
+      </div>
+
+      {(demo.rischio_sismico || demo.pop) && (
+        <div className={perStampa ? '' : 'mb-3'} style={perStampa ? { marginBottom: 14 } : undefined}>
+          <div className={perStampa ? '' : 'text-xs font-semibold text-ink mb-1'} style={perStampa ? { fontWeight: 700, marginBottom: 4 } : undefined}>Zona</div>
+          <div className={perStampa ? '' : 'text-xs text-gray-400 space-y-0.5'} style={perStampa ? { fontSize: 12, color: '#44403c', lineHeight: 1.6 } : undefined}>
+            {demo.rischio_sismico && <div>Rischio sismico: <b>{demo.rischio_sismico}</b></div>}
+            {demo.pop && demo.pop.livello_disoccupazione && <div>Livello disoccupazione: {demo.pop.livello_disoccupazione} · Istruzione: {demo.pop.livello_istruzione || '—'}</div>}
+            {demo.stock && demo.stock.prc_abitazioni_di_proprieta && <div>Abitazioni di proprietà in zona: {demo.stock.prc_abitazioni_di_proprieta}%</div>}
+          </div>
+        </div>
+      )}
+
+      {omiRow && Array.isArray(omiRow.values) && omiRow.values.length > 0 && (
+        <div className={perStampa ? '' : 'mb-3'} style={perStampa ? { marginBottom: 14 } : undefined}>
+          <div className={perStampa ? '' : 'text-xs font-semibold text-ink mb-1'} style={perStampa ? { fontWeight: 700, marginBottom: 4 } : undefined}>Quotazioni OMI — zona {omiRow.omi_zone || ''} ({omiRow.zone && omiRow.zone.description})</div>
+          <div className={perStampa ? '' : 'text-xs text-gray-400 space-y-0.5'} style={perStampa ? { fontSize: 12, color: '#44403c', lineHeight: 1.6 } : undefined}>
+            {omiRow.values.slice(0, 4).map((v, i) => (
+              <div key={i}>{v.property_type}: {v.sale ? fmtEuro(v.sale.min) + ' – ' + fmtEuro(v.sale.max) + '/mq' : '—'}</div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {comparabili.length > 0 && (
+        <div>
+          <div className={perStampa ? '' : 'text-xs font-semibold text-ink mb-1'} style={perStampa ? { fontWeight: 700, marginBottom: 4 } : undefined}>Immobili comparabili nella zona ({comparabili.length})</div>
+          <div className={perStampa ? '' : 'text-xs text-gray-400 space-y-1'} style={perStampa ? { fontSize: 12, color: '#44403c', lineHeight: 1.6 } : undefined}>
+            {comparabili.slice(0, 6).map((c, i) => (
+              <div key={i}>{c.property_type || 'Immobile'} · {c.total_sqm || '—'} mq · {fmtEuro(c.price)}{c.price_per_sqm ? ' (' + Math.round(c.price_per_sqm) + ' €/mq)' : ''} — {c.municipality || ''}</div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!demo.rischio_sismico && !omiRow && comparabili.length === 0 && (
+        <div className={perStampa ? '' : 'text-xs text-gray-500'} style={perStampa ? { fontSize: 12, color: '#78716c' } : undefined}>Solo la quotazione di zona è disponibile per questo indirizzo — nessun dato aggiuntivo (OMI/comparabili) trovato per questa posizione.</div>
+      )}
+    </div>
+  )
+
+  return (
+    <div className="glass-panel p-4 mb-5 border-accent/30">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <span className="text-xs font-semibold text-ink flex items-center gap-1.5"><Icon name="sparkles" size={13} />Report di valutazione</span>
+        <button onClick={() => window.print()} className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 flex items-center gap-1.5"><Icon name="download" size={12} />Stampa o salva in PDF</button>
+      </div>
+      {corpo(false)}
+      {createPortal(
+        <div className="valutazione-stampa-portal" style={{ display: 'none' }}>
+          <style>{'@media print{body > *:not(.valutazione-stampa-portal){display:none!important}.valutazione-stampa-portal{display:block!important}@page{size:A4;margin:16mm 14mm}}'}</style>
+          {corpo(true)}
+        </div>,
+        document.body
+      )}
+    </div>
   )
 }
 

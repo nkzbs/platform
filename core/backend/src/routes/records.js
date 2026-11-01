@@ -968,7 +968,7 @@ router.post('/immobili/:id/valuta', requireAuth, requireAdmin, async (req, res) 
   const openapiIt = require('../lib/openapi-it');
   let result;
   try {
-    result = await openapiIt.valoreAlMq({ address: indirizzo, forSale: true, type });
+    result = await openapiIt.valoreAlMqAvanzato({ address: indirizzo, forSale: true, type });
   } catch (e) {
     return res.status(e.status || 500).json({ error: e.message, code: e.code });
   }
@@ -978,15 +978,29 @@ router.post('/immobili/:id/valuta', requireAuth, requireAdmin, async (req, res) 
   const superficie = parseFloat(data.superficie_mq) || null;
   const stimaValore = eurMq && superficie ? Math.round(eurMq * superficie) : null;
 
+  // Comparabili e OMI partono dalle coordinate che la valutazione avanzata ha già
+  // trovato — a differenza della quotazione, che si basa sull'indirizzo, queste due
+  // vogliono lat/lng. Nessuna delle due blocca la valutazione se fallisce (es. zona
+  // senza annunci comparabili vicini, o fuori da una zona OMI): un avviso basta,
+  // la stima principale resta comunque valida e già scritta.
+  let comparabili = null, omiZona = null;
+  const coord = dettaglio.coordinate;
+  if (coord && coord.lat && coord.lng) {
+    try { comparabili = (await openapiIt.comparabili({ lat: coord.lat, lng: coord.lng, forSale: true })).data || []; }
+    catch (e) { console.error('[valuta immobile] comparabili non riuscito:', e.message); }
+    try { omiZona = (await openapiIt.omi({ lat: coord.lat, lng: coord.lng })).data || null; }
+    catch (e) { console.error('[valuta immobile] OMI non riuscito:', e.message); }
+  }
+
   // Scritto sul record (non solo ritornato) così resta visibile da subito, e soprattutto
   // così in futuro — quando l'immobile passa a "Venduto" — si può confrontare questa stima
   // col prezzo reale incassato: lo scarto tra le due, su più vendite vere, è l'inizio di un
   // correttivo proprio di questo tenant, non un numero generico preso da fuori.
-  const next = { ...data, stima_valore: stimaValore, stima_eur_mq: eurMq, stima_data: new Date().toISOString().slice(0, 10), stima_fonte: 'OpenAPI.it — quotazioni di zona' };
+  const next = { ...data, stima_valore: stimaValore, stima_eur_mq: eurMq, stima_data: new Date().toISOString().slice(0, 10), stima_fonte: 'OpenAPI.it — quotazioni di zona (avanzata)' };
   db.prepare('UPDATE records SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify(next), existing.id);
   const updated = db.prepare('SELECT * FROM records WHERE id = ?').get(existing.id);
   logAudit(req.user.username, 'record.valuta_immobile', 'immobili#' + existing.id, { eur_mq: eurMq, stima_valore: stimaValore });
-  res.json({ ok: true, record: { ...updated, data: JSON.parse(updated.data) }, dettaglio });
+  res.json({ ok: true, record: { ...updated, data: JSON.parse(updated.data) }, dettaglio, comparabili, omi: omiZona });
 });
 
 // Cancellare un piano a rate (debiti_casa/debiti_personali, dichiarato con una scheda "Piani rateali" — Builder →

@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.9 — 1 novembre 2026
+
+**Report di valutazione — comparabili, OMI, dati di zona.** Richiesto dal vivo dopo aver provato il bottone di 0.4.8: "aggiungi anche comparabili/OMI prima" del PDF. La valutazione ora usa l'endpoint "avanzato" di OpenAPI.it invece di quello base, più due chiamate aggiuntive dalle stesse coordinate.
+
+- `lib/openapi-it.js`: nuove funzioni `valoreAlMqAvanzato` (quotazione + rischio sismico + composizione demografica + dinamicità del mercato — con un piccolo retry se la risposta arriva in modo asincrono, visto nella documentazione), `comparabili` (annunci simili vicini, da lat/lng) e `omi` (quotazioni ufficiali dell'Agenzia delle Entrate per la zona). Le due nuove chiamate partono dalle coordinate che la valutazione principale ha già trovato — se una delle due non trova nulla per quella posizione, non blocca la valutazione principale, che resta comunque scritta sul record.
+- La valutazione di un Immobile ora mostra un pannello "Report di valutazione" (quotazione min/med/max, rischio sismico, OMI di zona, fino a 6 comparabili) direttamente nel dettaglio del record, con un bottone "Stampa o salva in PDF" — stesso meccanismo già in uso per la Guida dei verticali (una copia nascosta della pagina, mostrata solo in stampa).
+- Resta vero quanto detto prima: mappa con area cerchiata, foto satellitare, qualità dell'aria e fotovoltaico restano integrazioni a parte (Google Maps/JRC PVGIS); il correttivo proprio del tenant (stima vs. prezzo reale di vendita) resta per quando ci saranno vendite vere registrate.
+
 ## 0.4.8 — 1 novembre 2026
 
 **"Valuta con OpenAPI.it" — il primo bottone vero sul modulo Immobili.** Chiude il pezzo lasciato aperto in 0.4.7. Confermato dal vivo su zucca in sandbox (indirizzo di Desenzano → quotazione sandbox).

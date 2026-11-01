@@ -69,12 +69,72 @@ async function chiamata(dominio, path, body, scope) {
   return data;
 }
 
+// Variante GET con query string — /IT-comparable e /IT-omi non prendono un indirizzo ma
+// lat/lng (nessun corpo POST, parametri nell'URL).
+async function chiamataGet(dominio, path, params, scope) {
+  const c = credenziali();
+  if (!c) throw Object.assign(new Error('OpenAPI.it non collegato: imposta email e API key in Impostazioni → Connessioni.'), { status: 503, code: 'not_connected' });
+  const d = domini(c.sandbox);
+  const token = await ottieniToken(c, [scope]);
+  const qs = Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
+  const res = await fetch('https://' + d[dominio] + path + (qs ? '?' + qs : ''), {
+    headers: { Authorization: 'Bearer ' + token },
+    signal: AbortSignal.timeout(20000),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw Object.assign(new Error((data && data.message) || 'Richiesta OpenAPI.it non riuscita (' + res.status + ')'), { status: res.status, data });
+  return data;
+}
+
 // Valutazione al mq da un indirizzo — POST /IT-sqm_value_start, risposta sincrona.
 // for: 'sale' | 'rent'. type: uno dei codici tipologia OpenAPI.it (20 = Abitazioni civili).
 async function valoreAlMq({ address, forSale = true, type = 20 }) {
   const d = credenziali() && domini(credenziali().sandbox);
   const scope = 'POST:' + (d ? d.realestate : 'realestate.openapi.com') + '/IT-sqm_value_start';
   return chiamata('realestate', '/IT-sqm_value_start', { address, for: forSale ? 'sale' : 'rent', type }, scope);
+}
+
+// Valutazione "avanzata" — stesso input di valoreAlMq, in più demografia della zona,
+// rischio sismico, dinamicità del mercato e tempi medi di permanenza sul mercato per
+// taglio. Secondo la documentazione può rispondere in modo asincrono (stato
+// "in_erogazione"): qui si riprova un paio di volte con una breve pausa prima di
+// arrendersi, invece di far fallire la valutazione per una risposta arrivata un attimo
+// dopo la prima richiesta — in sandbox risponde comunque subito nei test fatti.
+async function valoreAlMqAvanzato({ address, forSale = true, type = 20 }) {
+  const d = credenziali() && domini(credenziali().sandbox);
+  const scope = 'POST:' + (d ? d.realestate : 'realestate.openapi.com') + '/IT-sqm_value_advanced';
+  let out = await chiamata('realestate', '/IT-sqm_value_advanced', { address, for: forSale ? 'sale' : 'rent', type }, scope);
+  let tentativi = 0;
+  while (out && out.data && out.data.stato === 'in_erogazione' && tentativi < 3) {
+    await new Promise((r) => setTimeout(r, 2000));
+    out = await leggiAvanzata(out.data.id);
+    tentativi++;
+  }
+  return out;
+}
+
+async function leggiAvanzata(id) {
+  const c = credenziali();
+  const d = domini(c.sandbox);
+  const token = await ottieniToken(c, ['GET:' + d.realestate + '/IT-sqm_value_advanced']);
+  const res = await fetch('https://' + d.realestate + '/IT-sqm_value_advanced/' + id, { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(15000) });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw Object.assign(new Error((data && data.message) || 'Lettura esito non riuscita (' + res.status + ')'), { status: res.status, data });
+  return data;
+}
+
+// Annunci comparabili vicino a un punto — GET /IT-comparable (lat/lng, non un indirizzo).
+async function comparabili({ lat, lng, raggioMetri = 2000, limite = 6, forSale = true }) {
+  const d = credenziali() && domini(credenziali().sandbox);
+  const scope = 'GET:' + (d ? d.realestate : 'realestate.openapi.com') + '/IT-comparable';
+  return chiamataGet('realestate', '/IT-comparable', { latitude: lat, longitude: lng, search_radius: raggioMetri, limit: limite, type: forSale ? 'sale' : 'rent' }, scope);
+}
+
+// Quotazioni ufficiali dell'Osservatorio del Mercato Immobiliare (Agenzia delle Entrate) per la zona — GET /IT-omi (lat/lng).
+async function omi({ lat, lng }) {
+  const d = credenziali() && domini(credenziali().sandbox);
+  const scope = 'GET:' + (d ? d.realestate : 'realestate.openapi.com') + '/IT-omi';
+  return chiamataGet('realestate', '/IT-omi', { latitude: lat, longitude: lng }, scope);
 }
 
 // Ricerca immobili per codice fiscale/partita IVA — POST /ipotecarie-ispezione_nazionale.
@@ -96,4 +156,4 @@ async function esitoRicerca(id) {
   return data;
 }
 
-module.exports = { credenziali, valoreAlMq, ricercaPerCF, esitoRicerca };
+module.exports = { credenziali, valoreAlMq, valoreAlMqAvanzato, comparabili, omi, ricercaPerCF, esitoRicerca };
