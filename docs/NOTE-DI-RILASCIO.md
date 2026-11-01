@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.12 — 1 novembre 2026
+
+**Clienti: anagrafica reale, workflow di verifica, modulo CRM, invio documenti.** Primo pezzo del workflow Clienti/Immobili/AML richiesto dal vivo dopo aver visto i moduli base ("i moduli impostati sono corretti con lo scope di zucca MA..."), confrontato con una scheda cliente e un questionario antiriciclaggio reali dello studio legale che segue l'agenzia.
+
+- Clienti (zucca): nuovi campi tipo soggetto (persona fisica/società), codice fiscale/P.IVA, tipo cliente (venditore/acquirente) e i campi di ricerca per chi compra (tipologia, budget, zona). Il workflow generico mai usato nello scopo reale è sostituito da quello descritto dal vivo: **verifica identità cliente → documenti inviati → cliente verificato**.
+- Nuovo modulo **Interazioni** (CRM): telefonate/email/visite collegate a un cliente, con un campo "prossimo contatto" per il planner — mancava un modulo del genere (Attività è una todo-list generica, senza relazione al cliente).
+- **Genera e invia documenti**: nel dettaglio di un Cliente, un bottone genera il testo di Informativa Privacy (GDPR) + Modulo Incarico, lo mostra in un'anteprima **modificabile dall'admin prima dell'invio** (mai spedito automaticamente), poi lo manda via email al cliente (stesso connettore Resend già in uso per il modulo di contatto del Sito Web) e aggiorna lo stato a "Documenti inviati". Testo generico, personalizzato solo coi dati del tenant (ragione sociale/indirizzo/P.IVA già in Impostazioni), nessun nome d'agenzia scritto nel codice.
+- Non ancora fatto in questo giro, prossimi passi dello stesso filone: il modulo Antiriciclaggio (il questionario è lungo e articolato — PEP, codici TAE, origine fondi: generato come documento da far firmare, non ancora una logica di compliance interattiva), l'estensione della Scheda Immobile con tutti i campi della scheda reale dell'agenzia (comproprietari, impianti, catasto, mutuo/spese, incarico), e la doppia fatturazione automatica delle Provvigioni (venditore+acquirente, salvo accordi diversi).
+
 ## 0.4.11 — 1 novembre 2026
 
 **Report di valutazione — fase 1 dell'arricchimento, persistente sul record.** Segnalato dal vivo confrontando con un report di valutazione professionale reale (Case&Co): il nostro era "molto scarno" al confronto. Fase 1: tutto il dato già pagato all'avanzata di OpenAPI.it ma finora scartato, più due fonti pubbliche gratuite, più un paragrafo generato dall'AI — mappe, vista satellitare, servizi di zona, redditi ISTAT e tempi di percorrenza restano una fase 2 esplicita (fattibili senza account a pagamento, con OpenStreetMap/Overpass/OSRM al posto di Google Maps).

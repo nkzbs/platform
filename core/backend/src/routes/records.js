@@ -1034,6 +1034,46 @@ router.post('/immobili/:id/valuta', requireAuth, requireAdmin, async (req, res) 
   res.json({ ok: true, record: { ...updated, data: JSON.parse(updated.data) }, dettaglio, comparabili, omi: omiZona, fotovoltaico, zonaSismicaUfficiale: zonaSismicaUff, considerazioni });
 });
 
+// Documenti cliente (Privacy+Incarico): generazione e invio (2026-11-01, verticale Mediazione
+// immobiliare, richiesto dal vivo — "prima di essere inviato dovrà essere mostrato a schermo
+// che verifica con possibilità di modifica da parte dell'utente admin"). Due rotte separate,
+// non una sola, apposta: genera-documenti non spedisce nulla (solo testo di bozza da
+// rivedere), invia-documenti manda esattamente il testo che l'admin ha approvato/modificato —
+// mai il testo generato automaticamente senza un giro per gli occhi di chi lo manda.
+// Specifica a 'clienti' per lo stesso motivo di /immobili/:id/valuta sopra: nessun primitivo
+// generico "genera e invia documento" esiste ancora in Platform.
+router.post('/clienti/:id/genera-documenti', requireAuth, requireAdmin, (req, res) => {
+  const existing = db.prepare("SELECT * FROM records WHERE id = ? AND module_slug = 'clienti'").get(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Cliente non trovato' });
+  const data = JSON.parse(existing.data);
+  const tenant = db.prepare('SELECT ragione_sociale, indirizzo, piva FROM tenant_settings WHERE id = 1').get();
+  const docCliente = require('../lib/doc-cliente');
+  const { oggetto, corpo } = docCliente.informativaPrivacyIncarico(data, tenant);
+  res.json({ oggetto, corpo });
+});
+
+router.post('/clienti/:id/invia-documenti', requireAuth, requireAdmin, async (req, res) => {
+  const existing = db.prepare("SELECT * FROM records WHERE id = ? AND module_slug = 'clienti'").get(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Cliente non trovato' });
+  const data = JSON.parse(existing.data);
+  const { oggetto, corpo } = req.body || {};
+  if (!corpo || !corpo.trim()) return res.status(400).json({ error: 'Testo del documento mancante' });
+  if (!data.email) return res.status(400).json({ error: 'Il cliente non ha un indirizzo email' });
+
+  const email = require('../lib/email');
+  const docCliente = require('../lib/doc-cliente');
+  const invio = await email.invia({ to: data.email, subject: oggetto || 'Documenti da firmare', html: docCliente.htmlDaTesto(corpo) });
+  if (!invio.ok) return res.status(502).json({ error: 'Invio non riuscito: ' + invio.motivo });
+
+  logAudit(req.user.username, 'record.invia_documenti_cliente', 'clienti#' + existing.id, { email: data.email });
+  // Transizione automatica dello stato, solo se il cliente è ancora in "verifica identità" —
+  // se è già oltre (es. "documenti inviati" per un secondo invio, o già verificato), l'invio
+  // dell'email riesce comunque ma lo stato non si tocca: runTransition rifiuta transizioni
+  // non valide da dove il record si trova già, qui si ignora silenziosamente quel caso.
+  const transizione = runTransition(req.user, 'clienti', req.params.id, 'documenti_inviati');
+  res.json({ ok: true, stato_aggiornato: transizione.status === 200 });
+});
+
 // Cancellare un piano a rate (debiti_casa/debiti_personali, dichiarato con una scheda "Piani rateali" — Builder →
 // Vista genitore-figli) lasciava le rate già generate come righe di spesa orfane, collegate a un piano che non
 // esiste più: bisognava poi cercarle e cancellarle una per una a mano (segnalato dall'utente il 28/10). Qui si

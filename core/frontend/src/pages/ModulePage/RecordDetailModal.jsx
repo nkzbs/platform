@@ -448,6 +448,32 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
     if (onSaved) onSaved(res.data.record)
   }
 
+  // Documenti cliente — Privacy+Incarico (2026-11-01, stesso principio di valutaImmobile sopra:
+  // deliberatamente specifico a Clienti). Due passi distinti perché il testo generato va
+  // rivisto PRIMA dell'invio ("mostrato a schermo che verifica con possibilità di modifica da
+  // parte dell'utente admin", richiesto dal vivo): genera riempie bozza, invia manda
+  // esattamente il testo nel textarea (che l'admin può aver modificato).
+  const [generandoDoc, setGenerandoDoc] = useState(false)
+  const [inviandoDoc, setInviandoDoc] = useState(false)
+  const [bozzaDoc, setBozzaDoc] = useState(null) // { oggetto, corpo } oppure null = pannello chiuso
+  const generaDocumenti = async () => {
+    setGenerandoDoc(true)
+    const res = await api.post('/records/clienti/' + recordId + '/genera-documenti', {})
+    setGenerandoDoc(false)
+    if (!res.ok) { toast((res.data && res.data.error) || 'Generazione non riuscita', 'error'); return }
+    setBozzaDoc({ oggetto: res.data.oggetto, corpo: res.data.corpo })
+  }
+  const inviaDocumenti = async () => {
+    setInviandoDoc(true)
+    const res = await api.post('/records/clienti/' + recordId + '/invia-documenti', bozzaDoc)
+    setInviandoDoc(false)
+    if (!res.ok) { toast((res.data && res.data.error) || 'Invio non riuscito', 'error'); return }
+    setBozzaDoc(null)
+    toast(res.data.stato_aggiornato ? 'Documenti inviati — stato aggiornato a "Documenti inviati"' : 'Documenti inviati')
+    const r = await api.get('/records/' + mod.slug + '/' + recordId)
+    if (r.ok) { setRecord(r.data); if (onSaved) onSaved(r.data) }
+  }
+
   return (
     <FormDrawer
       title={mod.name + ' — dettaglio'}
@@ -458,6 +484,11 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
           {!editing && record && mod.slug === 'immobili' && (
             <button onClick={valutaImmobile} disabled={valutando} className="text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1">
               <Icon name="sparkles" size={12} />{valutando ? 'Valuto…' : 'Valuta con OpenAPI.it'}
+            </button>
+          )}
+          {!editing && record && mod.slug === 'clienti' && !bozzaDoc && (
+            <button onClick={generaDocumenti} disabled={generandoDoc} className="text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1">
+              <Icon name="mail" size={12} />{generandoDoc ? 'Preparo…' : 'Genera documenti (Privacy + Incarico)'}
             </button>
           )}
           {!editing && record && <button onClick={startEditing} className="text-xs text-accent hover:opacity-80 transition flex items-center gap-1"><Icon name="edit" size={12} />Modifica</button>}
@@ -503,6 +534,24 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
           <>
             {mod.slug === 'immobili' && reportValutazione && (
               <ReportValutazione report={reportValutazione} titolo={record.data.titolo} indirizzo={[record.data.indirizzo, record.data.comune, record.data.provincia].filter(Boolean).join(', ')} />
+            )}
+            {mod.slug === 'clienti' && bozzaDoc && (
+              <div className="glass-panel p-4 mb-5 border-accent/30">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-xs font-semibold text-ink flex items-center gap-1.5"><Icon name="mail" size={13} />Anteprima — rivedi o modifica prima di inviare</span>
+                </div>
+                <label className="text-xs text-gray-400 block mb-1">Oggetto</label>
+                <input value={bozzaDoc.oggetto} onChange={(e) => setBozzaDoc({ ...bozzaDoc, oggetto: e.target.value })}
+                  className="w-full bg-surface-page border border-gray-800 rounded-lg px-3 py-2 text-sm text-ink mb-3" />
+                <label className="text-xs text-gray-400 block mb-1">Testo del documento</label>
+                <textarea value={bozzaDoc.corpo} onChange={(e) => setBozzaDoc({ ...bozzaDoc, corpo: e.target.value })} rows={14}
+                  className="w-full bg-surface-page border border-gray-800 rounded-lg px-3 py-2 text-xs text-gray-200 font-mono leading-relaxed mb-3" />
+                {!record.data.email && <div className="text-xs text-red-400 mb-3">Il cliente non ha un indirizzo email: aggiungilo da "Modifica" prima di inviare.</div>}
+                <div className="flex gap-2">
+                  <button onClick={() => setBozzaDoc(null)} className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg transition text-sm">Annulla</button>
+                  <button onClick={inviaDocumenti} disabled={inviandoDoc || !record.data.email} className="flex-1 bg-accent hover:opacity-90 disabled:opacity-50 text-white py-2 rounded-lg transition text-sm font-medium">{inviandoDoc ? 'Invio…' : 'Invia al cliente via email'}</button>
+                </div>
+              </div>
             )}
             <div className="space-y-2 mb-5">
               {fields.map((f) => (
