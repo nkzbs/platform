@@ -280,6 +280,26 @@ router.post('/explain-insights', requireTenant, async (req, res) => {
   }
 });
 
+// ─── Considerazioni del valutatore (report di valutazione Immobili) ─────────────
+router.post('/explain-valuation', requireTenant, async (req, res) => {
+  const { data } = req.body || {};
+  const tenant_slug = req.tenantSlug;
+  if (!tenant_slug) return res.status(400).json({ error: 'tenant_slug obbligatorio' });
+  const s = reportAi.sanitizeValutazione(data);
+  if (s.error) return res.status(400).json({ error: s.error });
+  if (!isProviderConfigured('mistral', tenant_slug)) return res.status(503).json({ error: 'Nessuna chiave Mistral: inseriscila in Impostazioni → Assistente AI.', code: 'ai_not_configured' });
+  try {
+    const raw = await callAI('mistral', { system: reportAi.PROMPTS.valutazione, user: JSON.stringify(s.payload), maxTokens: reportAi.LIMITS.valutazione.tokens, tenantSlug: tenant_slug });
+    const text = String(raw || '').replace(/\*\*|__|^#+\s*/gm, '').trim();
+    if (!text || text.length > reportAi.LIMITS.valutazione.chars) return res.status(502).json({ error: 'Risposta dell\'AI non utilizzabile' });
+    const check = reportAi.verifyNumbers(text, s.numeri);
+    if (!check.ok) return res.status(502).json({ error: 'Il testo conteneva un numero non presente nei dati (' + check.numero + '): scartato', code: 'ai_unverified' });
+    res.json({ text });
+  } catch (e) {
+    res.status(e.status || 502).json({ error: e.message || 'Chiamata AI fallita', code: e.code || undefined });
+  }
+});
+
 // ─── "Chiedi ai tuoi dati" ───────────────────────────────────────────────────────
 // Il tenant manda la domanda e il catalogo dei moduli (mai record). Torna una query strutturata, validata qui contro il catalogo;
 // il tenant la rivalida e la esegue con il suo codice.

@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.11 — 1 novembre 2026
+
+**Report di valutazione — fase 1 dell'arricchimento, persistente sul record.** Segnalato dal vivo confrontando con un report di valutazione professionale reale (Case&Co): il nostro era "molto scarno" al confronto. Fase 1: tutto il dato già pagato all'avanzata di OpenAPI.it ma finora scartato, più due fonti pubbliche gratuite, più un paragrafo generato dall'AI — mappe, vista satellitare, servizi di zona, redditi ISTAT e tempi di percorrenza restano una fase 2 esplicita (fattibili senza account a pagamento, con OpenStreetMap/Overpass/OSRM al posto di Google Maps).
+
+- Il report (dettaglio, comparabili, OMI) ora si **salva sul record** (`report_valutazione`, una chiave non dichiarata nello schema — non compare come campo) invece di vivere solo nella sessione: riaprendo il dettaglio in futuro il pannello resta disponibile, senza richiamare OpenAPI.it e senza consumarne credito.
+- Pannello arricchito con dati già nella risposta "avanzata" ma prima scartati: dinamicità del mercato per anno, tempi medi di vendita per taglio, ripartizione annunci per tipologia, distribuzione per superficie, quotazioni OMI complete (non più le prime 4).
+- Due fonti pubbliche gratuite, nessuna chiave da collegare: **zona sismica ufficiale** (ISPRA, classificazione 1-4) e **potenziale fotovoltaico** (JRC PVGIS, resa annua per kW installato) — `lib/rischi-territorio.js`.
+- Un paragrafo **"Considerazioni del valutatore"** generato dall'AI già configurata (Mistral) — stesso meccanismo di sicurezza già in uso per la Reportistica di Finance: ogni numero scritto dal modello è verificato contro i dati forniti, scartato se non trovato (`lib/ai-valutazione.js`, nuova rotta `/explain-valuation` su Super Admin).
+
 ## 0.4.10 — 1 novembre 2026
 
 **Menù di nuovo laterale su PC/Mac, la pillola resta solo su mobile.** Richiesto dal vivo: "da pc/mac il menù debba essere ancora laterale, la pillola la terrei solo per la versione mobile — questa cosa tienila per tutti (admin, finance e zucca)". Il dock flottante in vetro, costruito prima in questa stessa sessione, tornava utile solo su schermi piccoli; su desktop occupava spazio senza il vantaggio per cui era nato (un pollice che raggiunge il basso dello schermo).

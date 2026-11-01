@@ -184,7 +184,11 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
 
   useEffect(() => {
     let cancelled = false
-    api.get('/records/' + mod.slug + '/' + recordId).then((data) => { if (!cancelled && data) setRecord(data) })
+    api.get('/records/' + mod.slug + '/' + recordId).then((data) => {
+      if (cancelled || !data) return
+      setRecord(data)
+      if (data.data && data.data.report_valutazione) setReportValutazione(data.data.report_valutazione)
+    })
     api.get('/modules/' + mod.slug + '/children-modules').then((data) => { if (!cancelled && data) setChildren(data) })
     if (!cancelled && allegatiConfig) {
       api.get('/records/' + mod.slug + '/' + recordId + '/attachments').then((data) => { if (!cancelled && data) setAttachments(data) })
@@ -427,9 +431,11 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   // Immobili, non un bottone generico, finché non esiste un secondo caso che giustifichi
   // un vero primitivo "azione esterna su un record esistente".
   const [valutando, setValutando] = useState(false)
-  // Report dell'ultima valutazione fatta in questa sessione (dettaglio/comparabili/OMI)
-  // — non salvato sul record (solo i 4 campi stima_* lo sono, vedi la rotta), vive solo
-  // qui finché non si richiude il dettaglio o non si rifà una valutazione.
+  // Report dell'ultima valutazione (dettaglio/comparabili/OMI) — idratato da
+  // record.data.report_valutazione al caricamento (vedi la rotta: ora è salvato sul
+  // record, non solo i 4 campi stima_*), così riaprendo il dettaglio in futuro resta
+  // disponibile senza richiamare OpenAPI.it. Aggiornato in memoria dopo ogni nuova
+  // valutazione, che però lo riscrive anche sul record.
   const [reportValutazione, setReportValutazione] = useState(null)
   const valutaImmobile = async () => {
     setValutando(true)
@@ -437,7 +443,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
     setValutando(false)
     if (!res.ok) { toast((res.data && res.data.error) || 'Valutazione non riuscita', 'error'); return }
     setRecord(res.data.record)
-    setReportValutazione({ dettaglio: res.data.dettaglio, comparabili: res.data.comparabili, omi: res.data.omi })
+    setReportValutazione({ dettaglio: res.data.dettaglio, comparabili: res.data.comparabili, omi: res.data.omi, fotovoltaico: res.data.fotovoltaico, zonaSismicaUfficiale: res.data.zonaSismicaUfficiale, considerazioni: res.data.considerazioni })
     toast('Valutazione aggiornata')
     if (onSaved) onSaved(res.data.record)
   }
@@ -960,9 +966,24 @@ function ReportValutazione({ report, titolo, indirizzo }) {
   const demo = d.demografico || {}
   const comparabili = (report && report.comparabili) || []
   const omiRow = report && report.omi
+  const dinamicita = d.capoluoghi_vendite_zona && typeof d.capoluoghi_vendite_zona === 'object' ? Object.entries(d.capoluoghi_vendite_zona) : []
+  const tempiVendita = Array.isArray(d.tempistiche) && Array.isArray(d.tempistiche[0]) ? d.tempistiche[0] : []
+  const dimensioni = Array.isArray(d.dimensioni) ? d.dimensioni : []
+  const ripartizione = (d.ripartizione_annunci && d.ripartizione_annunci.vendita) || null
+  const fotovoltaico = report && report.fotovoltaico
+  const zonaSismicaUff = report && report.zonaSismicaUfficiale
+  const considerazioni = report && report.considerazioni
   const dataOggi = new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })
+  const haDatiAggiuntivi = demo.rischio_sismico || omiRow || comparabili.length > 0 || dinamicita.length > 0 || tempiVendita.length > 0 || dimensioni.length > 0 || ripartizione || fotovoltaico || zonaSismicaUff
 
-  const corpo = (perStampa) => (
+  const corpo = (perStampa) => {
+    const sez = (chiave, titoloSezione, contenuto) => (
+      <div key={chiave} className={perStampa ? '' : 'mb-3'} style={perStampa ? { marginBottom: 14 } : undefined}>
+        <div className={perStampa ? '' : 'text-xs font-semibold text-ink mb-1'} style={perStampa ? { fontWeight: 700, marginBottom: 4 } : undefined}>{titoloSezione}</div>
+        <div className={perStampa ? '' : 'text-xs text-gray-400 space-y-0.5'} style={perStampa ? { fontSize: 12, color: '#44403c', lineHeight: 1.6 } : undefined}>{contenuto}</div>
+      </div>
+    )
+    return (
     <div style={perStampa ? { background: '#fff', color: '#1c1917', padding: 24, fontFamily: 'system-ui,-apple-system,sans-serif' } : undefined}>
       <div className={perStampa ? '' : 'text-[11px] uppercase tracking-wide text-gray-500 font-semibold'} style={perStampa ? { fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: '#78716c', fontWeight: 700 } : undefined}>Report di valutazione · {dataOggi}</div>
       <div className={perStampa ? '' : 'text-ink text-lg font-bold mt-0.5'} style={perStampa ? { fontSize: 22, margin: '2px 0 2px', fontWeight: 600 } : undefined}>{titolo || 'Immobile'}</div>
@@ -977,44 +998,69 @@ function ReportValutazione({ report, titolo, indirizzo }) {
         ))}
       </div>
 
-      {(demo.rischio_sismico || demo.pop) && (
-        <div className={perStampa ? '' : 'mb-3'} style={perStampa ? { marginBottom: 14 } : undefined}>
-          <div className={perStampa ? '' : 'text-xs font-semibold text-ink mb-1'} style={perStampa ? { fontWeight: 700, marginBottom: 4 } : undefined}>Zona</div>
-          <div className={perStampa ? '' : 'text-xs text-gray-400 space-y-0.5'} style={perStampa ? { fontSize: 12, color: '#44403c', lineHeight: 1.6 } : undefined}>
-            {demo.rischio_sismico && <div>Rischio sismico: <b>{demo.rischio_sismico}</b></div>}
-            {demo.pop && demo.pop.livello_disoccupazione && <div>Livello disoccupazione: {demo.pop.livello_disoccupazione} · Istruzione: {demo.pop.livello_istruzione || '—'}</div>}
-            {demo.stock && demo.stock.prc_abitazioni_di_proprieta && <div>Abitazioni di proprietà in zona: {demo.stock.prc_abitazioni_di_proprieta}%</div>}
-          </div>
-        </div>
+      {(demo.rischio_sismico || zonaSismicaUff || demo.pop || demo.stock) && sez('zona', 'Zona', (
+        <>
+          {demo.rischio_sismico && <div>Rischio sismico (OpenAPI.it): <b>{demo.rischio_sismico}</b></div>}
+          {zonaSismicaUff && zonaSismicaUff.zona != null && <div>Zona sismica ufficiale (ISPRA): <b>{zonaSismicaUff.zona}</b> {zonaSismicaUff.zona === 1 ? '(sismicità alta)' : zonaSismicaUff.zona === 4 ? '(sismicità bassa)' : ''}</div>}
+          {demo.pop && demo.pop.livello_disoccupazione && <div>Livello disoccupazione: {demo.pop.livello_disoccupazione} · Istruzione: {demo.pop.livello_istruzione || '—'}</div>}
+          {demo.pop && demo.pop.media_componenti_famiglia && <div>Famiglie: {demo.pop.media_componenti_famiglia} componenti in media ({demo.pop.dimensione_nuclei_familiari || '—'})</div>}
+          {demo.stock && demo.stock.prc_abitazioni_di_proprieta && <div>Abitazioni di proprietà in zona: {demo.stock.prc_abitazioni_di_proprieta}% · superficie media {demo.stock.mq_abitazione_media || '—'} mq</div>}
+          {demo.stock && demo.stock.prc_abitazioni_vuote_o_2_case && <div>Abitazioni vuote o seconde case: {demo.stock.prc_abitazioni_vuote_o_2_case}%</div>}
+        </>
+      ))}
+
+      {fotovoltaico && fotovoltaico.kwh_per_kwp_anno && sez('fotovoltaico', 'Potenziale fotovoltaico (JRC PVGIS)', (
+        <>
+          <div>Resa stimata: <b>{fotovoltaico.kwh_per_kwp_anno} kWh/anno</b> per ogni kW installato</div>
+          {fotovoltaico.irraggiamento_kwh_mq_anno && <div>Irraggiamento medio: {fotovoltaico.irraggiamento_kwh_mq_anno} kWh/m²/anno</div>}
+        </>
+      ))}
+
+      {tempiVendita.length > 0 && sez('tempi', 'Tempi medi di vendita per taglio', (
+        <>{tempiVendita.map((t, i) => <div key={i}>{t.label}: <b>{t.media_giorni} giorni</b></div>)}</>
+      ))}
+
+      {dinamicita.length > 0 && sez('dinamicita', 'Dinamicità del mercato in zona (anni recenti)', (
+        <>{dinamicita.map(([anno, v]) => (
+          <div key={anno}>{anno}: {v.numero_abitazioni_vendute} vendute su {v.num_abitazioni_zona} ({v.perc_variazione_annuale > 0 ? '+' : ''}{v.perc_variazione_annuale}% sull'anno prima) — dinamicità {v.dinamicita_mercato_residenziale}</div>
+        ))}</>
+      ))}
+
+      {ripartizione && sez('ripartizione', 'Tipologie di annuncio più diffuse in zona (vendita)', (
+        <>{Object.values(ripartizione).sort((a, b) => b.percentuale - a.percentuale).slice(0, 5).map((r, i) => (
+          <div key={i}>{r.tipologia}: {r.percentuale}%</div>
+        ))}</>
+      ))}
+
+      {dimensioni.length > 0 && sez('dimensioni', 'Distribuzione annunci per superficie', (
+        <>{dimensioni.map((dm, i) => <div key={i}>{dm.label}: {dm.percentuale}%</div>)}</>
+      ))}
+
+      {omiRow && Array.isArray(omiRow.values) && omiRow.values.length > 0 && sez('omi', 'Quotazioni OMI — zona ' + (omiRow.omi_zone || '') + ' (' + (omiRow.zone && omiRow.zone.description) + ')', (
+        <>{omiRow.values.map((v, i) => (
+          <div key={i}>{v.property_type}: {v.sale ? fmtEuro(v.sale.min) + ' – ' + fmtEuro(v.sale.max) + '/mq' : '—'}</div>
+        ))}</>
+      ))}
+
+      {comparabili.length > 0 && sez('comparabili', 'Immobili comparabili nella zona (' + comparabili.length + ')', (
+        <>{comparabili.slice(0, 6).map((c, i) => (
+          <div key={i}>{c.property_type || 'Immobile'} · {c.total_sqm || '—'} mq · {fmtEuro(c.price)}{c.price_per_sqm ? ' (' + Math.round(c.price_per_sqm) + ' €/mq)' : ''} — {c.municipality || ''}</div>
+        ))}</>
+      ))}
+
+      {!haDatiAggiuntivi && (
+        <div className={perStampa ? '' : 'text-xs text-gray-500'} style={perStampa ? { fontSize: 12, color: '#78716c' } : undefined}>Solo la quotazione di zona è disponibile per questo indirizzo — nessun dato aggiuntivo (OMI/comparabili/mercato) trovato per questa posizione.</div>
       )}
 
-      {omiRow && Array.isArray(omiRow.values) && omiRow.values.length > 0 && (
-        <div className={perStampa ? '' : 'mb-3'} style={perStampa ? { marginBottom: 14 } : undefined}>
-          <div className={perStampa ? '' : 'text-xs font-semibold text-ink mb-1'} style={perStampa ? { fontWeight: 700, marginBottom: 4 } : undefined}>Quotazioni OMI — zona {omiRow.omi_zone || ''} ({omiRow.zone && omiRow.zone.description})</div>
-          <div className={perStampa ? '' : 'text-xs text-gray-400 space-y-0.5'} style={perStampa ? { fontSize: 12, color: '#44403c', lineHeight: 1.6 } : undefined}>
-            {omiRow.values.slice(0, 4).map((v, i) => (
-              <div key={i}>{v.property_type}: {v.sale ? fmtEuro(v.sale.min) + ' – ' + fmtEuro(v.sale.max) + '/mq' : '—'}</div>
-            ))}
-          </div>
+      {considerazioni && (
+        <div className={perStampa ? '' : 'mt-3 pt-3 border-t border-gray-800'} style={perStampa ? { marginTop: 16, paddingTop: 12, borderTop: '1px solid #e7e5e4' } : undefined}>
+          <div className={perStampa ? '' : 'text-xs font-semibold text-ink mb-1'} style={perStampa ? { fontWeight: 700, marginBottom: 4 } : undefined}>Considerazioni del valutatore</div>
+          <div className={perStampa ? '' : 'text-xs text-gray-400 italic'} style={perStampa ? { fontSize: 12, color: '#44403c', fontStyle: 'italic', lineHeight: 1.6 } : undefined}>{considerazioni}</div>
         </div>
-      )}
-
-      {comparabili.length > 0 && (
-        <div>
-          <div className={perStampa ? '' : 'text-xs font-semibold text-ink mb-1'} style={perStampa ? { fontWeight: 700, marginBottom: 4 } : undefined}>Immobili comparabili nella zona ({comparabili.length})</div>
-          <div className={perStampa ? '' : 'text-xs text-gray-400 space-y-1'} style={perStampa ? { fontSize: 12, color: '#44403c', lineHeight: 1.6 } : undefined}>
-            {comparabili.slice(0, 6).map((c, i) => (
-              <div key={i}>{c.property_type || 'Immobile'} · {c.total_sqm || '—'} mq · {fmtEuro(c.price)}{c.price_per_sqm ? ' (' + Math.round(c.price_per_sqm) + ' €/mq)' : ''} — {c.municipality || ''}</div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {!demo.rischio_sismico && !omiRow && comparabili.length === 0 && (
-        <div className={perStampa ? '' : 'text-xs text-gray-500'} style={perStampa ? { fontSize: 12, color: '#78716c' } : undefined}>Solo la quotazione di zona è disponibile per questo indirizzo — nessun dato aggiuntivo (OMI/comparabili) trovato per questa posizione.</div>
       )}
     </div>
-  )
+    )
+  }
 
   return (
     <div className="glass-panel p-4 mb-5 border-accent/30">

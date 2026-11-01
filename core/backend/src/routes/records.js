@@ -983,24 +983,55 @@ router.post('/immobili/:id/valuta', requireAuth, requireAdmin, async (req, res) 
   // vogliono lat/lng. Nessuna delle due blocca la valutazione se fallisce (es. zona
   // senza annunci comparabili vicini, o fuori da una zona OMI): un avviso basta,
   // la stima principale resta comunque valida e già scritta.
-  let comparabili = null, omiZona = null;
+  // fotovoltaico e zonaSismica (2026-11-01, fase 1 del report più ricco): due fonti
+  // pubbliche gratuite (JRC PVGIS, ISPRA), non OpenAPI.it — stesso principio di comparabili/
+  // OMI, nessuna blocca la valutazione principale se non risponde o non copre il punto.
+  const rischiTerritorio = require('../lib/rischi-territorio');
+  let comparabili = null, omiZona = null, fotovoltaico = null, zonaSismicaUff = null;
   const coord = dettaglio.coordinate;
   if (coord && coord.lat && coord.lng) {
     try { comparabili = (await openapiIt.comparabili({ lat: coord.lat, lng: coord.lng, forSale: true })).data || []; }
     catch (e) { console.error('[valuta immobile] comparabili non riuscito:', e.message); }
     try { omiZona = (await openapiIt.omi({ lat: coord.lat, lng: coord.lng })).data || null; }
     catch (e) { console.error('[valuta immobile] OMI non riuscito:', e.message); }
+    try { fotovoltaico = await rischiTerritorio.fotovoltaico({ lat: coord.lat, lng: coord.lng }); }
+    catch (e) { console.error('[valuta immobile] fotovoltaico (PVGIS) non riuscito:', e.message); }
+    try { zonaSismicaUff = await rischiTerritorio.zonaSismica({ lat: coord.lat, lng: coord.lng }); }
+    catch (e) { console.error('[valuta immobile] zona sismica (ISPRA) non riuscita:', e.message); }
   }
+
+  // Considerazioni del valutatore — paragrafo generato dall'AI già configurata (Mistral,
+  // Impostazioni → Assistente AI), best-effort: se non configurata o la chiamata fallisce,
+  // il report resta valido senza questo paragrafo (vedi lib/ai-valutazione.js).
+  const aiValutazione = require('../lib/ai-valutazione');
+  const demo = dettaglio.demografico || {};
+  const dinamicitaAnni = demo.capoluoghi_vendite_zona && typeof demo.capoluoghi_vendite_zona === 'object' ? Object.values(demo.capoluoghi_vendite_zona) : [];
+  const ultimaDinamicita = dinamicitaAnni.length ? dinamicitaAnni[dinamicitaAnni.length - 1].dinamicita_mercato_residenziale : null;
+  const tempiVendita = Array.isArray(dettaglio.tempistiche) && Array.isArray(dettaglio.tempistiche[0]) ? dettaglio.tempistiche[0] : [];
+  const tempoVenditaMedio = tempiVendita.length ? Math.round(tempiVendita.reduce((s, t) => s + (t.media_giorni || 0), 0) / tempiVendita.length) : null;
+  const considerazioni = await aiValutazione.considerazioni({
+    tipologia: data.tipologia, comune: data.comune, zona: dettaglio.nome,
+    superficie_mq: superficie, quotazione_min: q.min, quotazione_media: eurMq, quotazione_max: q.max, valore_stimato: stimaValore,
+    rischio_sismico: demo.rischio_sismico, zona_sismica_ufficiale: zonaSismicaUff && zonaSismicaUff.zona,
+    dinamicita_mercato: ultimaDinamicita, tempo_vendita_giorni: tempoVenditaMedio, comparabili_count: (comparabili || []).length,
+  });
 
   // Scritto sul record (non solo ritornato) così resta visibile da subito, e soprattutto
   // così in futuro — quando l'immobile passa a "Venduto" — si può confrontare questa stima
   // col prezzo reale incassato: lo scarto tra le due, su più vendite vere, è l'inizio di un
   // correttivo proprio di questo tenant, non un numero generico preso da fuori.
-  const next = { ...data, stima_valore: stimaValore, stima_eur_mq: eurMq, stima_data: new Date().toISOString().slice(0, 10), stima_fonte: 'OpenAPI.it — quotazioni di zona (avanzata)' };
+  //
+  // report_valutazione (2026-11-01, segnalato dal vivo: "non ti pare molto scarno?" — il
+  // pannello spariva riaprendo il record, perché solo i 4 campi stima_* sopra erano scritti):
+  // una chiave NON dichiarata nello schema del modulo, quindi non compare come campo nella
+  // lista/nel form — stessa tecnica di dati accessori già in uso altrove nel codice. Vive nel
+  // blob `data` del record così il pannello (e lo "Stampa o salva in PDF") restano disponibili
+  // riaprendo il dettaglio in futuro, senza richiamare OpenAPI.it (e senza consumarne credito).
+  const next = { ...data, stima_valore: stimaValore, stima_eur_mq: eurMq, stima_data: new Date().toISOString().slice(0, 10), stima_fonte: 'OpenAPI.it — quotazioni di zona (avanzata)', report_valutazione: { dettaglio, comparabili, omi: omiZona, fotovoltaico, zonaSismicaUfficiale: zonaSismicaUff, considerazioni } };
   db.prepare('UPDATE records SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify(next), existing.id);
   const updated = db.prepare('SELECT * FROM records WHERE id = ?').get(existing.id);
   logAudit(req.user.username, 'record.valuta_immobile', 'immobili#' + existing.id, { eur_mq: eurMq, stima_valore: stimaValore });
-  res.json({ ok: true, record: { ...updated, data: JSON.parse(updated.data) }, dettaglio, comparabili, omi: omiZona });
+  res.json({ ok: true, record: { ...updated, data: JSON.parse(updated.data) }, dettaglio, comparabili, omi: omiZona, fotovoltaico, zonaSismicaUfficiale: zonaSismicaUff, considerazioni });
 });
 
 // Cancellare un piano a rate (debiti_casa/debiti_personali, dichiarato con una scheda "Piani rateali" — Builder →
