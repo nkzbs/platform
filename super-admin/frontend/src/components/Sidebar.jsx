@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Icon from './Icon'
-import PlatformLogo from './PlatformLogo'
 import { API } from '../lib/api'
 import { NAV_ITEMS } from '../lib/nav-items'
 
@@ -99,32 +98,20 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
     </button>
   )
 
-  const gridTile = (item) => (
-    <button key={item.id} title={item.label} onClick={() => handleNavigate(item.id)}
-      className="group relative flex items-center justify-center p-1 rounded-xl transition hover:bg-white/8">
-      <span className={'w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-150 ease-out group-hover:scale-110 group-hover:shadow-lg ' + (page === item.id ? 'bg-cp-primary text-white' : 'bg-white/8')} style={page === item.id ? undefined : { color: item.color }}>
-        <Icon name={item.icon} size={22} />
-      </span>
-      <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black/90 text-white text-[11px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-10">
-        {item.label}
-      </span>
-    </button>
-  )
-
   return (
     <>
       {altroOpen && <div className="fixed inset-0 bg-black/30 z-30" onClick={() => setAltroOpen(false)} />}
 
+      {/* Solo 3 voci al massimo (lista fissa, non moduli di un tenant): niente bisogno del
+          pannello-griglia-con-intestazione di core (pensato per decine di moduli + ricerca) —
+          segnalato dal vivo come "troppo spazio" per così poche voci. Un'altra pillola di chip,
+          stessa identica DockIcon della riga sotto, appena sopra il dock: stesso linguaggio,
+          dimensione proporzionata al contenuto reale. */}
       {altroOpen && overflow.length > 0 && (
-        <div ref={panelRef} className="glass-panel fixed left-1/2 z-40 flex flex-col" style={{ transform: 'translateX(-50%)', bottom: 'calc(90px + env(safe-area-inset-bottom))', width: 'min(320px, calc(100vw - 32px))', padding: '14px' }}>
-          <div className="flex items-center gap-2.5 px-1.5 pb-3">
-            <PlatformLogo size={24} />
-            <div className="min-w-0">
-              <div className="text-sm text-ink font-bold truncate">Platform Admin</div>
-              <div className="text-[11px] text-gray-500">versione 0.4.5</div>
-            </div>
-          </div>
-          <div className="grid grid-cols-4 gap-1 border-t border-white/10 pt-3">{overflow.map(gridTile)}</div>
+        <div ref={panelRef} className="glass-pill fixed left-1/2 z-40 flex items-center gap-1" style={{ transform: 'translateX(-50%)', bottom: 'calc(72px + env(safe-area-inset-bottom))', padding: '8px 10px' }}>
+          {overflow.map((item) => (
+            <DockIcon key={item.id} name={item.label} icon={item.icon} color={item.color} active={page === item.id} onClick={() => handleNavigate(item.id)} />
+          ))}
         </div>
       )}
 
@@ -183,6 +170,10 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
               <button onClick={onLogout} className="w-full text-left px-2.5 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-ink rounded-lg transition flex items-center gap-2">
                 <Icon name="logout" size={14} />Esci
               </button>
+              {/* Numero di versione annotato a mano a ogni chiusura di fase — prima viveva
+                  nell'intestazione del pannello "Altro" (tolta: troppo spazio per 3 sole voci,
+                  segnalato dal vivo), qui è l'unico posto rimasto che ha senso mostrarla. */}
+              <div className="px-2.5 pt-1.5 mt-1 border-t border-white/10 text-[10px] text-gray-600">versione 0.4.6</div>
             </div>
           )}
         </div>

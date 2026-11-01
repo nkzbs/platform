@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.6 — 1 novembre 2026
+
+**Correzione: pannello "Altro" troppo grande.** Segnalato dal vivo con uno screenshot, subito dopo il rilascio del dock (0.4.5): "hai fatto un super launcher, c'è troppo spazio" — il pannello «Altro» (copiato dalla struttura di core, pensata per decine di moduli + ricerca) per sole 3 voci fisse (Attività, Impostazioni, Guida) mostrava un'intestazione con logo/versione e una griglia vuota sproporzionata.
+
+- Tolta l'intestazione e la griglia: ora è un'altra pillola di chip, identica a quelle del dock sotto, appena sopra — stessa dimensione proporzionata al contenuto reale, nessuno spazio vuoto.
+- Il numero di versione (prima nell'intestazione tolta) si è spostato nel menu dell'account, in fondo.
+
 ## 0.4.5 — 1 novembre 2026
 
 **Dock comune a tutta la piattaforma.** Richiesto dal vivo: "voglio una linea comune su tutta la piattaforma", dopo che core/frontend era passata al dock flottante il 31/10 (0.4.2) ma Super Admin era rimasta con la vecchia rail verticale a sinistra per scelta esplicita di quel giorno ("ridisegnarla è un cambio di impronta diverso, non chiesto" — richiesto ora davvero).
