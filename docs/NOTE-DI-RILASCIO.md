@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.4 — 1 novembre 2026
+
+**Il wizard con assistente per l'Analisi.** Richiesto dal vivo: "introdurrei un wizard con assistente che guida l'utente nell'analisi dei processi e nella creazione dei moduli e tenant". Tre pezzi, scelti per restare dentro al flusso già esistente invece di rifarlo:
+
+- **Chiarimenti prima di «Fai tutto»** — se il racconto è ambiguo (più servizi o reparti accennati senza dire quali, un passaggio decisivo non chiaro), l'AI fa fino a 3 domande mirate prima di proporre i processi, invece di tirare a indovinare e lasciare che se ne accorga solo dopo con «Cosa manca?». Si può sempre saltare («Salta, vai così»); un racconto già chiaro non fa domande e parte subito come prima.
+- **Narrazione durante «Fai tutto»** — la schermata di avanzamento non mostra più solo il nome della fase, ma cosa sta succedendo davvero: i processi trovati (coi nomi), quale processo sta completando in quel momento, cosa sta controllando nel passaggio finale.
+- **«Correggi a parole» esteso oltre i processi** — ora capisce anche richieste come «spegni i report automatici» o «non voglio l'AI per gli scontrini»: due nuove operazioni (accendi/spegni una proposta) agiscono sulle stesse proposte di report e potenziamenti AI già mostrate coi checkbox, stessa anteprima-prima-di-applicare delle altre operazioni.
+- Non fatto in questo giro (valutabile in seguito, se richiesto): un intake conversazionale multi-turno vero e proprio, e l'estensione di «Correggi a parole» alla configurazione del tenant già creato (oggi resta nel Builder, o nel nuovo «Riprova» di 0.4.3 per i soli errori).
+
 ## 0.4.3 — 1 novembre 2026
 
 **Analisi tenant: due correzioni reali, due proposte già risolte.** Richiesto dal vivo: "Migliora l'analisi. Fammi delle proposte" (poi chiarito: l'Analisi per creare tenant, non il widget di Finance). Di 4 proposte iniziali, 2 erano già coperte da codice esistente non ancora tracciato in queste note (`proponiRelazioni` già richiamato da `applyConfig`, il retry di 18 tentativi già in `tenant-api-client.js`); le altre 2 erano reali:

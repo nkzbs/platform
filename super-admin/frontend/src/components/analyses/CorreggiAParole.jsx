@@ -25,7 +25,7 @@ export default function CorreggiAParole({ analysisId, req, onApplied, btn, ghost
     <div>
       <div className="text-xs text-gray-500 mb-1.5">Correggi a parole</div>
       <div className="flex gap-2 flex-wrap">
-        <input className={input + ' flex-1 min-w-[220px]'} placeholder="Es. togli la fatturazione e aggiungi la gestione dei turni" value={testo} onChange={(e) => setTesto(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && testo.trim().length >= 5 && !busy) proponi() }} />
+        <input className={input + ' flex-1 min-w-[220px]'} placeholder="Es. togli la fatturazione, aggiungi i turni, spegni i report automatici" value={testo} onChange={(e) => setTesto(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && testo.trim().length >= 5 && !busy) proponi() }} />
         <button type="button" className={ghost} disabled={busy || testo.trim().length < 5} onClick={proponi}>{busy && !prop ? 'Penso…' : 'Proponi'}</button>
       </div>
       {msg && <div className="text-xs text-gray-400 mt-1.5">{msg}</div>}

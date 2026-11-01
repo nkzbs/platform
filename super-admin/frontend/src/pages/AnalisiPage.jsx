@@ -98,6 +98,18 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
   const [completa, setCompleta] = useState(null) // { fatti, totale, errori } mentre «Completa tutti» lavora
   const [now, setNow] = useState(Date.now())
   const [autoText, setAutoText] = useState('') // il racconto per «Fai tutto»
+  // Chiarimenti prima di «Fai tutto» (2026-11-01): se il racconto è ambiguo, l'AI fa fino a 3
+  // domande mirate invece di proporre processi a caso. null = non ancora chiesto; [] = non
+  // servivano; altrimenti [{domanda, risposta}] in attesa di risposta.
+  const [chiarimenti, setChiarimenti] = useState(null)
+  const [chiariBusy, setChiariBusy] = useState(false)
+  const avviaAuto = async (descrizioneFinale) => {
+    setMsg(null); setAvvio(true)
+    const r = await req('POST', '/auto', { descrizione: descrizioneFinale })
+    setAvvio(false)
+    if (r.ok) { setAutoText(''); setChiarimenti(null); await open(r.data.id); loadList() } else setMsg({ ok: false, text: r.data.error || 'Non riuscito.' })
+  }
+  const saltaChiarimenti = () => avviaAuto(autoText)
   const [vista, setVista] = useState('dettagli') // 'riepilogo' (per chi ha usato «Fai tutto») | 'dettagli'
   const [avvio, setAvvio] = useState(false)
   const poll = useRef(null)
@@ -165,10 +177,16 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
   useEffect(() => { if (!cr || !cr.fase || cr.fase === 'finita' || cr.fase === 'errore') return undefined; const i = setInterval(() => setNow(Date.now()), 500); return () => clearInterval(i) }, [cr && cr.fase])
   // «Fai tutto»: un racconto, e l'analisi si compila da sola (proposta dei processi + completamento di ognuno). Poi si arriva al riepilogo.
   const faiTutto = async () => {
-    setMsg(null); setAvvio(true)
-    const r = await req('POST', '/auto', { descrizione: autoText })
-    setAvvio(false)
-    if (r.ok) { setAutoText(''); await open(r.data.id); loadList() } else setMsg({ ok: false, text: r.data.error || 'Non riuscito.' })
+    if (chiarimenti && chiarimenti.length) {
+      const extra = chiarimenti.filter((c) => c.risposta.trim()).map((c) => '- ' + c.domanda + ' ' + c.risposta.trim()).join('\n')
+      await avviaAuto(autoText + (extra ? '\n\n' + extra : ''))
+      return
+    }
+    setMsg(null); setChiariBusy(true)
+    const r = await req('POST', '/chiarisci', { descrizione: autoText })
+    setChiariBusy(false)
+    if (r.ok && r.data.domande && r.data.domande.length) { setChiarimenti(r.data.domande.map((d) => ({ domanda: d, risposta: '' }))); return }
+    await avviaAuto(autoText)
   }
   const FASI_AUTO = ['processi', 'completamento', 'approfondimento']
   const autoAttivo = a && a.auto && FASI_AUTO.includes(a.auto.fase)
@@ -217,10 +235,21 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
         <div className={card + ' border-cp-primary/40'}>
           <h2 className="text-sm font-semibold text-ink mb-1">Racconta l'attività: al resto pensiamo noi</h2>
           <p className="text-xs text-gray-500 mb-3">Scrivi come funziona, anche in modo disordinato. L'AI trova i processi, li completa e sceglie i moduli, i report e le AI adatti. Alla fine vedi un riepilogo e crei il tenant con un tocco. I dati personali vengono tolti prima.</p>
-          <textarea className={input + ' min-h-[110px] leading-relaxed'} placeholder="Es. Siamo un'officina con 6 meccanici. Il cliente porta l'auto, la accettiamo e facciamo un preventivo. Se lo approva lavoriamo, a volte servono ricambi. Quando è pronta avvisiamo il cliente e fatturiamo…" value={autoText} onChange={(e) => setAutoText(e.target.value)} />
+          <textarea className={input + ' min-h-[110px] leading-relaxed'} placeholder="Es. Siamo un'officina con 6 meccanici. Il cliente porta l'auto, la accettiamo e facciamo un preventivo. Se lo approva lavoriamo, a volte servono ricambi. Quando è pronta avvisiamo il cliente e fatturiamo…" value={autoText} onChange={(e) => { setAutoText(e.target.value); if (chiarimenti) setChiarimenti(null) }} />
+          {chiarimenti && chiarimenti.length > 0 && (
+            <div className="mt-3 border border-cp-primary/30 rounded-lg p-3 space-y-2.5">
+              <div className="text-xs text-gray-400">Prima di partire, due o tre cose che cambiano l'analisi (puoi lasciarle in bianco):</div>
+              {chiarimenti.map((c, i) => (
+                <div key={i}>
+                  <div className="text-sm text-ink mb-1">{c.domanda}</div>
+                  <input className={input} value={c.risposta} onChange={(e) => setChiarimenti((cs) => cs.map((x, k) => (k === i ? { ...x, risposta: e.target.value } : x)))} />
+                </div>
+              ))}
+            </div>
+          )}
           <div className="mt-3 flex items-center gap-3 flex-wrap">
-            <button type="button" className={btn} onClick={faiTutto} disabled={avvio || autoText.trim().length < 20}><Icon name="sparkles" size={13} className="inline mr-1.5 -mt-0.5" />{avvio ? 'Avvio…' : 'Fai tutto'}</button>
-            <span className="text-xs text-gray-500">Circa un minuto.</span>
+            <button type="button" className={btn} onClick={faiTutto} disabled={avvio || chiariBusy || autoText.trim().length < 20}><Icon name="sparkles" size={13} className="inline mr-1.5 -mt-0.5" />{avvio ? 'Avvio…' : chiariBusy ? 'Leggo…' : chiarimenti && chiarimenti.length ? 'Continua' : 'Fai tutto'}</button>
+            {chiarimenti && chiarimenti.length > 0 ? <button type="button" className={ghost} onClick={saltaChiarimenti} disabled={avvio}>Salta, vai così</button> : <span className="text-xs text-gray-500">Circa un minuto.</span>}
           </div>
           {msg && <div className={'text-xs mt-2 ' + (msg.ok ? 'text-green-400' : 'text-amber-400')}>{msg.text}</div>}
         </div>
@@ -313,7 +342,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
       { key: 'completamento', label: 'Completo i processi', icon: 'list' },
       { key: 'approfondimento', label: 'Controllo cosa manca', icon: 'search' },
     ]
-    const dettaglio = { processi: 'Cerco i processi dell\'attività…', completamento: 'Completo i processi: ' + au.fatti + ' di ' + au.totale, approfondimento: 'Controllo cosa serve davvero a ogni processo…' }[au.fase]
+    const dettaglio = au.messaggio || { processi: 'Cerco i processi dell\'attività…', completamento: 'Completo i processi: ' + au.fatti + ' di ' + au.totale, approfondimento: 'Controllo cosa serve davvero a ogni processo…' }[au.fase]
     return (
       <GlassPageBackground>
       <div className="max-w-3xl">

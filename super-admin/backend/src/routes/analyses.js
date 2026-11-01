@@ -44,6 +44,14 @@ router.post('/suggest-processi', requireAuth, async (req, res) => {
   } catch (e) { aiError(res, e); }
 });
 
+// Prima di «Fai tutto»: se il racconto è ambiguo, l'AI può fare fino a 3 domande mirate invece di tirare a indovinare. Non bloccante: se l'AI non
+// risponde o non è configurata, si procede senza chiarimenti (li recupera comunque «Cosa manca?» dopo).
+router.post('/chiarisci', requireAuth, async (req, res) => {
+  const descrizione = String((req.body && req.body.descrizione) || '').trim();
+  if (descrizione.length < 20 || !analysis.deps.isConfigured()) return res.json({ domande: [] });
+  try { res.json({ domande: await analysis.chiarisci({ descrizione }) }); } catch (e) { res.json({ domande: [] }); }
+});
+
 router.post('/suggest-processo', requireAuth, async (req, res) => {
   const nome = String((req.body && req.body.nome) || '').trim();
   if (!nome) return res.status(400).json({ error: 'Scrivi il nome del processo.' });
@@ -62,15 +70,18 @@ const autoInCorso = (a) => !!a && (a.fase === 'processi' || a.fase === 'completa
 
 async function faiTuttoInBackground(id, descrizione, nomeDato) {
   try {
+    setAuto(id, { messaggio: 'Leggo il racconto e cerco i processi dell\'attività…' });
     const { nome, processi } = await analysis.analizzaAttivita({ descrizione });
     if (!processi.length) throw new Error('L\'AI non ha trovato processi: racconta qualcosa di più sull\'attività.');
     db.prepare('UPDATE process_analyses SET processi = ?' + (nomeDato ? '' : ', name = ?') + ' WHERE id = ?').run(...[JSON.stringify(processi), ...(nomeDato ? [] : [nome || 'Nuova attività']), id]);
-    setAuto(id, { fase: 'completamento', fatti: 0, totale: processi.length, errori: 0 });
+    const elenco = processi.slice(0, 6).map((p) => p.nome).join(', ') + (processi.length > 6 ? ' e altri ' + (processi.length - 6) : '');
+    setAuto(id, { fase: 'completamento', fatti: 0, totale: processi.length, errori: 0, messaggio: 'Trovati ' + processi.length + ' process' + (processi.length === 1 ? 'o' : 'i') + ': ' + elenco + '. Ora li completo uno per uno…' });
     let next = 0, errori = 0, fatti = 0;
     const valid = new Set(analysis.libraryModules().map((m) => m.id));
     const lavora = async () => {
       while (next < processi.length) {
         const nomeProc = processi[next++].nome;
+        setAuto(id, { messaggio: 'Completo «' + nomeProc + '»: ruoli, passaggi e il modulo giusto…' });
         try {
           const s = await analysis.suggestProcesso({ nome: nomeProc, reparto: (processi.find((x) => x.nome === nomeProc) || {}).reparto });
           const cur = json(row(id).processi, []);
@@ -82,16 +93,16 @@ async function faiTuttoInBackground(id, descrizione, nomeDato) {
     };
     await Promise.all([lavora(), lavora(), lavora()]);
     // secondo passaggio: i moduli in più che servono davvero a ogni processo e cosa manca. Se non riesce, l'analisi resta com'è (non è un errore dell'intera analisi).
-    setAuto(id, { fase: 'approfondimento' });
+    setAuto(id, { fase: 'approfondimento', messaggio: 'Controllo quali moduli in più servono a ogni processo e cosa non copre ancora nessuno…' });
     try {
       const cur = json(row(id).processi, []), prop = await analysis.approfondisci(cur);
       db.prepare('UPDATE process_analyses SET processi = ? WHERE id = ?').run(JSON.stringify(cur.map((p, i) => analysis.sanitizeProcesso(analysis.applicaApprofondimento(p, prop[i]), valid))), id);
     } catch (e) { errori++; console.error('[analyses] approfondimento non riuscito:', e.message); }
-    setAuto(id, { fase: 'finita', fine: Date.now(), errori });
+    setAuto(id, { fase: 'finita', fine: Date.now(), errori, messaggio: 'Fatto: ' + processi.length + ' process' + (processi.length === 1 ? 'o pronto' : 'i pronti') + (errori ? ', ' + errori + ' da controllare a mano.' : '.') });
     logAudit('analisi', 'analysis.fai_tutto', String(id), { processi: processi.length, errori });
   } catch (e) {
     console.error('[analyses] fai tutto non riuscito:', e.message);
-    setAuto(id, { fase: 'errore', errore: e.message });
+    setAuto(id, { fase: 'errore', errore: e.message, messaggio: null });
   }
 }
 
@@ -132,8 +143,9 @@ router.post('/:id/correggi', requireAuth, async (req, res) => {
 });
 router.post('/:id/correggi/applica', requireAuth, (req, res) => {
   const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
-  const nuovi = analysis.applicaCorrezioni(json(r.processi, []), req.body && req.body.operazioni);
-  db.prepare('UPDATE process_analyses SET processi = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify(nuovi), r.id);
+  const escludiAttuale = (json(r.scelte, {}).escludi) || [];
+  const { processi: nuovi, escludi } = analysis.applicaCorrezioni(json(r.processi, []), escludiAttuale, req.body && req.body.operazioni);
+  db.prepare('UPDATE process_analyses SET processi = ?, scelte = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify(nuovi), JSON.stringify({ escludi }), r.id);
   logAudit(req.user.username, 'analysis.correggi', String(r.id), { operazioni: ((req.body && req.body.operazioni) || []).length });
   res.json(full(row(r.id)));
 });

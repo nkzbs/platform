@@ -236,8 +236,18 @@ async function main() {
   });
   await test('applica: i numeri sono quelli di ora (togliere e aggiungere per identità), il principale si imposta e non si ripete negli altri', () => {
     const procs = [{ nome: 'Uno', registry_module_id: idA, moduli_extra: [idB] }, { nome: 'Due' }, { nome: 'Tre' }];
-    const r = A.applicaCorrezioni(procs, [{ op: 'rimuovi', n: 1 }, { op: 'rinomina', n: 3, nome: 'Terzo' }, { op: 'imposta_modulo', n: 2, registry_module_id: idB }, { op: 'aggiungi', processo: { nome: 'Nuovo' } }]);
-    eq(r.map((p) => p.nome), ['Due', 'Terzo', 'Nuovo']); eq(r[0].registry_module_id, idB); eq(r[2].copertura, 'da_costruire');
+    const r = A.applicaCorrezioni(procs, [], [{ op: 'rimuovi', n: 1 }, { op: 'rinomina', n: 3, nome: 'Terzo' }, { op: 'imposta_modulo', n: 2, registry_module_id: idB }, { op: 'aggiungi', processo: { nome: 'Nuovo' } }]);
+    eq(r.processi.map((p) => p.nome), ['Due', 'Terzo', 'Nuovo']); eq(r.processi[0].registry_module_id, idB); eq(r.processi[2].copertura, 'da_costruire');
+  });
+  await test('spegni/accendi proposta: solo key valide, scrive in escludi senza toccare i processi', () => {
+    const procs = [{ nome: 'Uno', registry_module_id: idA }];
+    const keys = A.proposte([idA]).report.map((x) => x.key).concat(A.proposte([idA]).ai.map((x) => x.key));
+    if (keys.length) {
+      const r = A.applicaCorrezioni(procs, [], [{ op: 'spegni_proposta', key: keys[0] }, { op: 'spegni_proposta', key: 'boh:inventata' }]);
+      eq(r.escludi, [keys[0]]); eq(r.processi.map((p) => p.nome), ['Uno']);
+      const r2 = A.applicaCorrezioni(procs, [keys[0]], [{ op: 'accendi_proposta', key: keys[0] }]);
+      eq(r2.escludi, []);
+    }
   });
   await test('propone SENZA scrivere, descrive in italiano; i dati personali non partono; poi si applica solo se confermato', async () => {
     const c = await (await api('POST', '', { name: 'Da correggere', descrizione: 'x' })).json();
