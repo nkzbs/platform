@@ -161,7 +161,7 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
             {railExpanded && (
               <div>
                 <div className="text-base text-ink tracking-tight"><span className="font-bold">Platform</span> <span className="font-normal">Admin</span></div>
-                <div className="text-xs text-gray-500">versione 0.4.12</div>
+                <div className="text-xs text-gray-500">versione 0.4.13</div>
               </div>
             )}
           </div>
@@ -279,7 +279,7 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
                 <button onClick={onLogout} className="w-full text-left px-2.5 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-ink rounded-lg transition flex items-center gap-2">
                   <Icon name="logout" size={14} />Esci
                 </button>
-                <div className="px-2.5 pt-1.5 mt-1 border-t border-white/10 text-[10px] text-gray-600">versione 0.4.12</div>
+                <div className="px-2.5 pt-1.5 mt-1 border-t border-white/10 text-[10px] text-gray-600">versione 0.4.13</div>
               </div>
             )}
           </div>

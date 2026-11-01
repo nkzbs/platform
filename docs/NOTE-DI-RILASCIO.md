@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.13 — 1 novembre 2026
+
+**Modulo Antiriciclaggio nel flusso documenti cliente.** Secondo documento del flusso "Genera e invia documenti" (0.4.12): il Modulo di Adeguata Verifica della Clientela (D.Lgs. 231/2007), confrontato con il questionario reale usato dallo studio legale che segue l'agenzia.
+
+- Nel dettaglio di un Cliente, due bottoni distinti ("Privacy + Incarico" e "Antiriciclaggio") invece di uno, stessa anteprima modificabile prima dell'invio.
+- Il testo prefilla solo ciò che Platform già sa del cliente (nome, codice fiscale/P.IVA, indirizzo); le domande proprie del cliente (PEP, origine fondi, settore professionale, cittadinanze) restano da compilare a mano, come nel modulo cartaceo — non dedotte né inventate.
+- Non riprodotte le tabelle di riferimento del modulo originale (elenco paesi a rischio, oltre 100 codici TAE): sono tabelle di consultazione, citate per nome, compilate con l'assistenza dell'agente.
+
 ## 0.4.12 — 1 novembre 2026
 
 **Clienti: anagrafica reale, workflow di verifica, modulo CRM, invio documenti.** Primo pezzo del workflow Clienti/Immobili/AML richiesto dal vivo dopo aver visto i moduli base ("i moduli impostati sono corretti con lo scope di zucca MA..."), confrontato con una scheda cliente e un questionario antiriciclaggio reali dello studio legale che segue l'agenzia.

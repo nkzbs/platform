@@ -456,9 +456,9 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   const [generandoDoc, setGenerandoDoc] = useState(false)
   const [inviandoDoc, setInviandoDoc] = useState(false)
   const [bozzaDoc, setBozzaDoc] = useState(null) // { oggetto, corpo } oppure null = pannello chiuso
-  const generaDocumenti = async () => {
+  const generaDocumenti = async (tipo) => {
     setGenerandoDoc(true)
-    const res = await api.post('/records/clienti/' + recordId + '/genera-documenti', {})
+    const res = await api.post('/records/clienti/' + recordId + '/genera-documenti', { tipo })
     setGenerandoDoc(false)
     if (!res.ok) { toast((res.data && res.data.error) || 'Generazione non riuscita', 'error'); return }
     setBozzaDoc({ oggetto: res.data.oggetto, corpo: res.data.corpo })
@@ -487,9 +487,14 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
             </button>
           )}
           {!editing && record && mod.slug === 'clienti' && !bozzaDoc && (
-            <button onClick={generaDocumenti} disabled={generandoDoc} className="text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1">
-              <Icon name="mail" size={12} />{generandoDoc ? 'Preparo…' : 'Genera documenti (Privacy + Incarico)'}
-            </button>
+            <>
+              <button onClick={() => generaDocumenti('privacy_incarico')} disabled={generandoDoc} className="text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1">
+                <Icon name="mail" size={12} />{generandoDoc ? 'Preparo…' : 'Privacy + Incarico'}
+              </button>
+              <button onClick={() => generaDocumenti('antiriciclaggio')} disabled={generandoDoc} className="text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1">
+                <Icon name="shield" size={12} />{generandoDoc ? 'Preparo…' : 'Antiriciclaggio'}
+              </button>
+            </>
           )}
           {!editing && record && <button onClick={startEditing} className="text-xs text-accent hover:opacity-80 transition flex items-center gap-1"><Icon name="edit" size={12} />Modifica</button>}
           {!editing && record && canDelete && <button onClick={remove} className="text-xs text-red-400/70 hover:text-red-400 transition flex items-center gap-1"><Icon name="trash" size={12} />Elimina</button>}

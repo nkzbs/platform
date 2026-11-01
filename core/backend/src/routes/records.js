@@ -1034,21 +1034,22 @@ router.post('/immobili/:id/valuta', requireAuth, requireAdmin, async (req, res) 
   res.json({ ok: true, record: { ...updated, data: JSON.parse(updated.data) }, dettaglio, comparabili, omi: omiZona, fotovoltaico, zonaSismicaUfficiale: zonaSismicaUff, considerazioni });
 });
 
-// Documenti cliente (Privacy+Incarico): generazione e invio (2026-11-01, verticale Mediazione
-// immobiliare, richiesto dal vivo — "prima di essere inviato dovrà essere mostrato a schermo
-// che verifica con possibilità di modifica da parte dell'utente admin"). Due rotte separate,
-// non una sola, apposta: genera-documenti non spedisce nulla (solo testo di bozza da
-// rivedere), invia-documenti manda esattamente il testo che l'admin ha approvato/modificato —
-// mai il testo generato automaticamente senza un giro per gli occhi di chi lo manda.
-// Specifica a 'clienti' per lo stesso motivo di /immobili/:id/valuta sopra: nessun primitivo
-// generico "genera e invia documento" esiste ancora in Platform.
+// Documenti cliente (Privacy+Incarico, Antiriciclaggio): generazione e invio (2026-11-01,
+// verticale Mediazione immobiliare, richiesto dal vivo — "prima di essere inviato dovrà
+// essere mostrato a schermo che verifica con possibilità di modifica da parte dell'utente
+// admin"). Due rotte separate, non una sola, apposta: genera-documenti non spedisce nulla
+// (solo testo di bozza da rivedere), invia-documenti manda esattamente il testo che l'admin
+// ha approvato/modificato — mai il testo generato automaticamente senza un giro per gli occhi
+// di chi lo manda. Specifica a 'clienti' per lo stesso motivo di /immobili/:id/valuta sopra:
+// nessun primitivo generico "genera e invia documento" esiste ancora in Platform.
 router.post('/clienti/:id/genera-documenti', requireAuth, requireAdmin, (req, res) => {
   const existing = db.prepare("SELECT * FROM records WHERE id = ? AND module_slug = 'clienti'").get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Cliente non trovato' });
   const data = JSON.parse(existing.data);
   const tenant = db.prepare('SELECT ragione_sociale, indirizzo, piva FROM tenant_settings WHERE id = 1').get();
   const docCliente = require('../lib/doc-cliente');
-  const { oggetto, corpo } = docCliente.informativaPrivacyIncarico(data, tenant);
+  const tipo = (req.body || {}).tipo === 'antiriciclaggio' ? 'antiriciclaggio' : 'privacy_incarico';
+  const { oggetto, corpo } = tipo === 'antiriciclaggio' ? docCliente.informativaAntiriciclaggio(data, tenant) : docCliente.informativaPrivacyIncarico(data, tenant);
   res.json({ oggetto, corpo });
 });
 
