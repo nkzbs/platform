@@ -61,6 +61,18 @@ const CATALOG = [
       { key: 'api_key', label: 'API Key', placeholder: 're_...' },
       { key: 'from_email', label: 'Indirizzo mittente (verificato su Resend)', placeholder: 'notifiche@tuodominio.it' },
     ] },
+  // 2026-11-01, verticale Mediazione immobiliare (zucca): ricerca immobili per codice
+  // fiscale, quotazioni di mercato e visure catastali — marketplace italiano di API,
+  // nessuna autenticazione OAuth, solo una chiave. Ambiente sandbox e produzione hanno
+  // basi URL diverse (vedi lib/openapi-it.js): il campo "ambiente" sceglie quale usare,
+  // così si può provare senza rischiare una chiamata vera a pagamento per sbaglio.
+  { id: 'openapi_it', name: 'OpenAPI.it — Immobili', desc: 'Ricerca immobili per CF, quotazioni di mercato, visure catastali', color: '#0EA5E9', icon: 'home',
+    actions: ['Ricerca immobili per codice fiscale', 'Quotazioni di mercato', 'Visura catastale'],
+    cred_fields: [
+      { key: 'email', label: 'Email dell\'account openapi.com', placeholder: 'tua@email.it' },
+      { key: 'api_key', label: 'API Key', placeholder: 'ottenuta dalla console openapi.com' },
+      { key: 'ambiente', label: 'Ambiente ("sandbox" o "produzione")', placeholder: 'sandbox' },
+    ] },
 ];
 
 // Mostra solo ciò che serve: le integrazioni già collegate e quelle richieste dai
@@ -123,6 +135,17 @@ router.post('/whatsapp_callmebot/test', requireAuth, requireAdmin, async (req, r
 // Ultimi invii WhatsApp, con l'esito vero per destinatario (per capire se un messaggio è davvero partito).
 router.get('/whatsapp_callmebot/log', requireAuth, requireAdmin, (req, res) => {
   res.json(whatsapp.recentLog(req.query.limit));
+});
+
+// Prova di collegamento OpenAPI.it — una vera chiamata (non un controllo finto), così
+// si vede subito se email/API key/ambiente sono giusti prima di usarli in un modulo.
+// Ricerca per CF separata (async: non si aspetta qui l'esito, solo che la richiesta parta).
+router.post('/openapi_it/test', requireAuth, requireAdmin, async (req, res) => {
+  const openapiIt = require('../lib/openapi-it');
+  try {
+    const out = await openapiIt.valoreAlMq({ address: (req.body && req.body.address) || 'Piazza del Duomo, Milano', forSale: true, type: 20 });
+    res.json({ ok: true, esempio: out.data });
+  } catch (e) { res.status(e.status || 500).json({ ok: false, error: e.message, code: e.code }); }
 });
 
 router.post('/:id/toggle', requireAuth, requireAdmin, (req, res) => {

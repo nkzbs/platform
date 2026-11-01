@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.7 — 1 novembre 2026
+
+**Connettore OpenAPI.it — ricerca immobili per CF, valutazioni di mercato.** Richiesto dal vivo dopo aver attivato un account sandbox: "come possiamo testare?". Verificata la documentazione reale della loro console (non indovinata): autenticazione a due passi — Basic Auth (email + API key) per ottenere un token con scope specifici, poi quel token autentica le chiamate vere su `realestate.openapi.com` e `catasto.openapi.com` (o i loro equivalenti sandbox `test.*`).
+
+- Nuova connessione "OpenAPI.it — Immobili" in Impostazioni → Connessioni (stesso meccanismo già in uso per Stripe/Mailchimp/Resend — credenziali sigillate nel database, mai in chiaro).
+- `core/backend/src/lib/openapi-it.js`: gestisce da solo il token (richiesto, messo in cache, rigenerato quando serve — mai copiato a mano), espone una valutazione al mq da indirizzo (`IT-sqm_value_start`) e la ricerca immobili per CF/P.IVA (`ipotecarie-ispezione_nazionale`, asincrona).
+- Una rotta di prova (`POST /connections/openapi_it/test`) fa una vera chiamata in sandbox per confermare che le credenziali inserite funzionino, prima di usarle in un modulo.
+- Non ancora collegato a un bottone nell'interfaccia di un modulo (es. Immobili) — il prossimo passo, una volta confermato che il collegamento funziona.
+
 ## 0.4.6 — 1 novembre 2026
 
 **Correzione: pannello "Altro" troppo grande.** Segnalato dal vivo con uno screenshot, subito dopo il rilascio del dock (0.4.5): "hai fatto un super launcher, c'è troppo spazio" — il pannello «Altro» (copiato dalla struttura di core, pensata per decine di moduli + ricerca) per sole 3 voci fisse (Attività, Impostazioni, Guida) mostrava un'intestazione con logo/versione e una griglia vuota sproporzionata.
