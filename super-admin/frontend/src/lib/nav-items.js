@@ -1,6 +1,6 @@
-// Elenco unico id→label/icona delle pagine di Super Admin — prima viveva solo
-// dentro Sidebar.jsx; estratto qui perché ora serve anche a Topbar.jsx per il
-// breadcrumb (mai due liste della stessa cosa che possono disallinearsi).
+// Elenco unico id→label/icona delle pagine di Super Admin — usato dal dock
+// (Sidebar.jsx): le prime PIN_COUNT restano appuntate, le altre vivono nel
+// pannello "Altro".
 //
 // Semplificazione 2026-09-27: Platform torna a essere un side project a uso
 // personale (un solo operatore, due tenant reali — Coffee e Finance). Il
@@ -9,9 +9,9 @@
 // alle pagine relative (partner-home, clienti, core-customers, partners,
 // fatture, licenze, aggiornamenti). Non c'è più una modalità 'partner': un
 // solo pannello, un solo utente, vede tutto — niente più Set di filtro.
-// 'guida' (2026-08-30): non più una voce a sé — unificata dentro 'supporto'
-// come tab interna (SupportSectionPage.jsx), richiesto dall'utente.
-export const MENU_HIDDEN = new Set(['guida'])
+// 'guida' (2026-11-01): torna a essere una voce a sé nel dock (prima nascosta
+// qui e raggiungibile solo dall'icona "info" di Topbar.jsx, ora rimossa col
+// passaggio al dock — vedi Sidebar.jsx).
 
 // 'analytics' e 'users' (2026-10-14, richiesto dall'utente dopo aver visto
 // il menu da telefono): non più voci a sé. 'analytics' è ora la scheda

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react'
 import { API } from './lib/api'
 import LoginModal from './components/Home/LoginModal'
 import Sidebar from './components/Sidebar'
-import Topbar from './components/Topbar'
 import Icon from './components/Icon'
 import DashboardPage from './pages/DashboardPage'
 import TenantsPage from './pages/TenantsPage'
@@ -59,7 +58,6 @@ export default function App() {
   }, [])
   const payload = token ? decodeJwtPayload(token) : null
   const [page, setPage] = useState(DEFAULT_PAGE)
-  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   // PLATFORM-UI-REDESIGN-CATALOG.md #27 — "vedi log attività di questo tenant"
   // da TenantsPage.jsx: naviga alla pagina Attività già esistente, pre-filtrata
   // sul suo `tenant_name`, invece di duplicare il feed dentro il pannello
@@ -127,12 +125,12 @@ export default function App() {
           {loadError}
         </div>
       )}
-      <Sidebar page={page} onNavigate={setPage} onLogout={logout}
-        mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)}
-        payload={payload} token={token} />
-      <main className="md:ml-14 flex-1 min-w-0">
-        <Topbar payload={payload} page={page} onNavigate={setPage} onLogout={logout} onOpenMobileMenu={() => setMobileNavOpen(true)} token={token} />
-        <div className="p-4 md:p-8">
+      <Sidebar page={page} onNavigate={setPage} onLogout={logout} payload={payload} token={token} />
+      {/* Dock flottante in basso (2026-11-01, stesso linguaggio di core/frontend): non riserva
+          più spazio fisso a sinistra, tolto md:ml-14. pb-28 perché il dock non copra l'ultimo
+          pezzo di pagina, stessa misura di core. */}
+      <main className="flex-1 min-w-0" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        <div className="p-4 md:p-8 pb-28">
           {page === 'dashboard' && <DashboardPage token={token} onNavigate={setPage} />}
           {page === 'tenants' && <TenantsPage token={token} onViewActivity={viewTenantActivity} onNavigate={setPage} />}
           {page === 'libreria' && <LibreriaPage token={token} />}

@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.5 — 1 novembre 2026
+
+**Dock comune a tutta la piattaforma.** Richiesto dal vivo: "voglio una linea comune su tutta la piattaforma", dopo che core/frontend era passata al dock flottante il 31/10 (0.4.2) ma Super Admin era rimasta con la vecchia rail verticale a sinistra per scelta esplicita di quel giorno ("ridisegnarla è un cambio di impronta diverso, non chiesto" — richiesto ora davvero).
+
+- Sidebar.jsx di Super Admin riscritta sullo stesso linguaggio del dock di core: chip tondi tinti, pillola di vetro flottante in basso, pannello "Altro" per le voci in eccedenza. Più semplice del dock di core perché le 8 pagine di Super Admin sono una lista fissa, non moduli dinamici di un tenant: 5 appuntate (Dashboard, Tenant, Libreria, Analisi, Super Builder), 3 in «Altro» (Attività, Impostazioni, Guida — prima raggiungibile solo dall'icona "i" di Topbar).
+- Topbar.jsx (la barra sticky in alto con notifiche e account) rimossa: notifiche e account vivono ora nel dock stesso, stesso posto del dock di core. La barra laterale non riserva più spazio fisso (tolto `md:ml-14`), stesso `pb-28` di core perché il dock non copra l'ultimo pezzo di pagina.
+- Non riportato dal dock di core: l'indicatore che scorre tra un'icona e l'altra (misurato dal vivo via DOM) — 8 voci fisse non ne hanno lo stesso bisogno, lo stato attivo resta leggibile dal riempimento pieno dell'icona.
+- Verificato dal vivo chiaro/scuro, dock/Altro/notifiche/account/tema, e a larghezza di telefono (375px, nessun overflow).
+
 ## 0.4.4 — 1 novembre 2026
 
 **Il wizard con assistente per l'Analisi.** Richiesto dal vivo: "introdurrei un wizard con assistente che guida l'utente nell'analisi dei processi e nella creazione dei moduli e tenant". Tre pezzi, scelti per restare dentro al flusso già esistente invece di rifarlo:

@@ -1,122 +1,192 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Icon from './Icon'
 import PlatformLogo from './PlatformLogo'
-import { NAV_ITEMS, MENU_HIDDEN } from '../lib/nav-items'
+import { API } from '../lib/api'
+import { NAV_ITEMS } from '../lib/nav-items'
 
-// Semplificazione 2026-09-27: rimossa la modalità 'partner' (side project a
-// uso personale, un solo pannello, un solo utente — vedi nav-items.js).
-function Sidebar({ page, onNavigate, onLogout, mobileOpen, onMobileClose, payload, token }) {
-  const items = NAV_ITEMS.filter((i) => !MENU_HIDDEN.has(i.id))
-  const brandLabel = 'Admin'
-  // Numero di versione annotato a mano a ogni chiusura di fase, non il version del package.json.
-  const brandSub = 'versione 0.4.4'
-  // Chiude subito l'espansione al click (2026-08-29, bug reale trovato dal
-  // vivo): senza, il cursore resta fermo sopra la voce appena cliccata e la
-  // sidebar resta espansa SOPRA il contenuto appena caricato (nessun reflow,
-  // vedi nota sopra su `expanded`) finché il mouse non si sposta davvero —
-  // titolo/prima colonna della pagina nuova restano coperti nel frattempo.
-  const handleNavigate = (id) => { setHovered(false); onNavigate(id); if (onMobileClose) onMobileClose() }
-  // Stretta a riposo (solo icone), si allarga al passaggio del mouse — stesso
-  // pattern già in uso nell'app tenant (core/frontend/Sidebar.jsx), richiesto
-  // dall'utente anche qui. Fixed, quindi l'espansione copre il contenuto
-  // (nessun reflow di <main>, che resta sempre a ml-14).
-  // Bug reale segnalato dall'utente ("l'hamburger in partner mostra Core"):
-  // su mobile `mobileOpen` apriva il pannello ma l'espansione dipendeva SOLO
-  // da `hovered`, che su touch non scatta mai — il menu aperto mostrava solo
-  // icone, mai le etichette (incluso il nome brand Core/Partner), leggibile
-  // solo passando davvero il mouse (desktop) o mai (touch). Aprire il menu
-  // mobile deve mostrare le etichette per definizione, non serve l'hover.
-  const [hovered, setHovered] = useState(false)
-  const expanded = hovered || mobileOpen
-  // Tema chiaro/scuro — stesso meccanismo dell'app tenant (core/frontend/Sidebar.jsx).
-  // PLATFORM-UI-RESKIN-PLAN.md, Fase 1 (2026-08-23): DEFAULT ora SCURO (era
-  // chiaro dal 2026-08-15) — il mockup di riferimento è solo scuro. Il chiaro
-  // resta scelto esplicitamente, invertito rispetto a prima. Applicato anche
-  // prima del mount in index.html (evita il lampo di tema sbagliato al refresh).
+// Dock orizzontale flottante in "vetro" (2026-11-01, richiesto dal vivo: "voglio una linea
+// comune su tutta la piattaforma" dopo aver visto che Super Admin era rimasta con la vecchia
+// rail verticale mentre core/frontend era già passata al dock il 31/10). Stesso linguaggio
+// visivo di core/frontend/src/components/Sidebar.jsx (chip tondi tinti, pillola di vetro
+// flottante in basso, pannello "Altro" per il resto) — qui molto più semplice perché le voci
+// di Super Admin sono una lista FISSA di 8 pagine di sistema, non moduli dinamici di un
+// tenant: niente ricerca, niente gruppi, niente logica di overflow per-utente. Notifiche e
+// account (prima in Topbar.jsx, ora rimosso: vedi App.jsx) vivono nel dock stesso, come in
+// core. L'indicatore che scorre da un'icona all'altra (core, misurato dal vivo col DOM) non
+// è stato riportato qui: 8 voci fisse non ne hanno lo stesso bisogno, e lo stato "attivo" resta
+// comunque leggibile dal solo riempimento pieno dell'icona.
+const PIN_COUNT = 5
+
+function timeAgo(iso) {
+  const diffMs = Date.now() - new Date(iso).getTime()
+  const min = Math.floor(diffMs / 60000)
+  if (min < 1) return 'adesso'
+  if (min < 60) return min + ' min fa'
+  const h = Math.floor(min / 60)
+  if (h < 24) return h + (h === 1 ? ' ora fa' : ' ore fa')
+  const d = Math.floor(h / 24)
+  return d + (d === 1 ? ' giorno fa' : ' giorni fa')
+}
+
+function Sidebar({ page, onNavigate, onLogout, payload, token }) {
+  const handleNavigate = (id) => { onNavigate(id); setAltroOpen(false) }
+
+  const [altroOpen, setAltroOpen] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const panelRef = useRef(null)
+  const accountRef = useRef(null)
+  const notifRef = useRef(null)
+
   const [theme, setTheme] = useState(() => localStorage.getItem('platform_theme') || 'dark')
   const toggleTheme = () => {
-    const next = theme === 'light' ? 'dark' : 'light'
+    const next = theme === 'dark' ? 'light' : 'dark'
     setTheme(next)
     localStorage.setItem('platform_theme', next)
     if (next === 'light') document.documentElement.setAttribute('data-theme', 'light')
     else document.documentElement.removeAttribute('data-theme')
   }
 
+  // Notifiche — stessa logica che prima viveva in Topbar.jsx (eventi reali da
+  // GET /monitoring/timeline, "letto" tracciato in localStorage), solo spostata qui.
+  const [events, setEvents] = useState([])
+  const [lastSeen, setLastSeen] = useState(() => localStorage.getItem('platform_notif_last_seen') || '')
+  useEffect(() => {
+    if (!token) return
+    const load = () => {
+      fetch(API + '/monitoring/timeline?limit=8', { headers: { Authorization: 'Bearer ' + token } })
+        .then((r) => (r.ok ? r.json() : { rows: [] }))
+        .then((d) => setEvents(d.rows || []))
+        .catch(() => {})
+    }
+    load()
+    const interval = setInterval(load, 30000)
+    return () => clearInterval(interval)
+  }, [token])
+  const combined = events.slice(0, 12)
+  const unreadCount = combined.filter((e) => (lastSeen ? e.created_at > lastSeen : true)).length
+  const markAllSeen = () => {
+    const now = events[0] ? events[0].created_at : new Date().toISOString()
+    localStorage.setItem('platform_notif_last_seen', now)
+    setLastSeen(now)
+  }
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (panelRef.current && !panelRef.current.contains(e.target) && !e.target.closest('[data-dock-altro]')) setAltroOpen(false)
+      if (accountRef.current && !accountRef.current.contains(e.target)) setAccountOpen(false)
+      if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const pinned = NAV_ITEMS.slice(0, PIN_COUNT)
+  const overflow = NAV_ITEMS.slice(PIN_COUNT)
+  const pageInOverflow = overflow.some((i) => i.id === page)
+
+  const username = (payload && payload.username) || ''
+  const initials = username ? username.trim().slice(0, 2).toUpperCase() : '?'
+
+  // Stesso "chip" tondo tinto del dock di core/frontend — icona a tinta piena su sfondo
+  // colore+alpha quando non attiva, pieno in accent quando attiva.
+  const DockIcon = ({ name, icon, color, active, onClick, badge }) => (
+    <button onClick={onClick} title={name}
+      className={'relative flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ease-out hover:scale-110 ' + (active ? 'bg-cp-primary text-white shadow-md' : '')}
+      style={!active ? { backgroundColor: color ? color + '22' : 'rgb(var(--cp-primary) / 0.16)', color: color || 'rgb(var(--cp-primary))' } : undefined}>
+      <Icon name={icon} size={17} />
+      {badge > 0 && <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-cp-primary text-white text-[8px] rounded-full flex items-center justify-center font-bold leading-none border border-surface-card">{badge > 9 ? '9+' : badge}</span>}
+    </button>
+  )
+
+  const gridTile = (item) => (
+    <button key={item.id} title={item.label} onClick={() => handleNavigate(item.id)}
+      className="group relative flex items-center justify-center p-1 rounded-xl transition hover:bg-white/8">
+      <span className={'w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-150 ease-out group-hover:scale-110 group-hover:shadow-lg ' + (page === item.id ? 'bg-cp-primary text-white' : 'bg-white/8')} style={page === item.id ? undefined : { color: item.color }}>
+        <Icon name={item.icon} size={22} />
+      </span>
+      <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black/90 text-white text-[11px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-10">
+        {item.label}
+      </span>
+    </button>
+  )
+
   return (
     <>
-      {mobileOpen && (
-        <div className="fixed inset-0 bg-black/60 z-30 md:hidden" onClick={onMobileClose} />
-      )}
-      {/* PLATFORM-UI-RESKIN-PLAN.md, Fase 2 — larghezza espansa passata a
-          w-36 (144px, il brief chiede 145px fisso) mantenendo però il
-          comportamento a riposo/hover già costruito su richiesta esplicita
-          dell'utente (non negoziabile romperlo per un cambio di stile): il
-          mockup non prevede un collasso, ma qui resta perché è una funzione
-          reale già in uso, non solo estetica. */}
-      <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-        className={(expanded ? 'w-56' : 'w-14') + ' bg-surface-card border-r border-gray-800 flex flex-col h-screen h-[100dvh] fixed left-0 top-0 z-40 transition-[width,transform] duration-150 md:translate-x-0 ' + (expanded ? 'shadow-2xl' : '') + ' ' + (mobileOpen ? 'translate-x-0' : '-translate-x-full')}>
-        <div className={(expanded ? 'px-5' : 'px-3') + ' py-5 border-b border-gray-800'}>
-          <div className="flex items-center gap-2.5">
-            <PlatformLogo size={28} />
-            {expanded && (
-              <div>
-                <div className="text-base text-ink tracking-tight"><span className="font-bold">Platform</span> <span className="font-normal">{brandLabel}</span></div>
-                <div className="text-xs text-gray-500">{brandSub}</div>
-              </div>
-            )}
-          </div>
-        </div>
-        <nav className="flex-1 overflow-y-auto py-3">
-          {items.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => handleNavigate(item.id)}
-              title={!expanded ? item.label : undefined}
-              className={
-                'w-full flex items-center gap-2.5 py-2.5 text-sm transition ' + (expanded ? 'px-3' : 'justify-center px-2') + ' ' +
-                (page === item.id
-                  // text-white fisso, non text-ink (2026-09-07, segnalato dall'utente
-                  // su schermata reale in tema chiaro): bg-cp-nav-active è lo stesso
-                  // blu navy scuro in ENTRAMBI i temi (mai swappato in
-                  // :root[data-theme="light"]), ma text-ink sì — in chiaro diventava
-                  // quasi nero su blu scuro, illeggibile. Stesso bug già corretto una
-                  // volta per i badge di stato (28/08), qui mancato.
-                  ? 'bg-cp-nav-active text-white'
-                  : 'text-gray-400 hover:text-ink hover:bg-white/5')
-              }
-            >
-              <span style={page === item.id ? undefined : { color: item.color }}><Icon name={item.icon} size={16} /></span>
-              {expanded && <span className="truncate">{item.label}</span>}
-            </button>
-          ))}
-        </nav>
-        <div className={(expanded ? 'px-4' : 'px-2') + ' py-4 border-t border-gray-800'} style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
-          <div className={!expanded ? 'flex flex-col items-center gap-3' : 'flex items-center justify-between'}>
-            {expanded && (
-              <button onClick={() => handleNavigate('impostazioni')} className="text-left hover:opacity-80 transition min-w-0" title="Il mio account">
-                <div className="text-xs text-ink font-medium truncate">{payload && payload.username}</div>
-                <div className="text-[10px] text-gray-500 truncate">{payload && payload.role}</div>
-              </button>
-            )}
-            {!expanded && (
-              <button onClick={() => handleNavigate('impostazioni')} className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-ink transition" title={(payload && payload.username) || 'Il mio account'}>
-                <Icon name="user" size={13} />
-              </button>
-            )}
-            <div className={!expanded ? 'flex flex-col items-center gap-3' : 'flex items-center gap-2.5 flex-shrink-0'}>
-              <button onClick={toggleTheme} className="text-gray-500 hover:text-ink transition" title={theme === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'}>
-                <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={14} />
-              </button>
-              <button onClick={() => handleNavigate('impostazioni')} className="text-gray-500 hover:text-ink transition" title="Password e sicurezza">
-                <Icon name="key" size={14} />
-              </button>
-              <button onClick={onLogout} className="text-gray-500 hover:text-ink transition" title="Esci">
-                <Icon name="logout" size={15} />
-              </button>
+      {altroOpen && <div className="fixed inset-0 bg-black/30 z-30" onClick={() => setAltroOpen(false)} />}
+
+      {altroOpen && overflow.length > 0 && (
+        <div ref={panelRef} className="glass-panel fixed left-1/2 z-40 flex flex-col" style={{ transform: 'translateX(-50%)', bottom: 'calc(90px + env(safe-area-inset-bottom))', width: 'min(320px, calc(100vw - 32px))', padding: '14px' }}>
+          <div className="flex items-center gap-2.5 px-1.5 pb-3">
+            <PlatformLogo size={24} />
+            <div className="min-w-0">
+              <div className="text-sm text-ink font-bold truncate">Platform Admin</div>
+              <div className="text-[11px] text-gray-500">versione 0.4.5</div>
             </div>
           </div>
+          <div className="grid grid-cols-4 gap-1 border-t border-white/10 pt-3">{overflow.map(gridTile)}</div>
         </div>
-      </div>
+      )}
+
+      <nav aria-label="Navigazione principale" className="glass-pill fixed left-1/2 z-40 flex items-center gap-1" style={{ transform: 'translateX(-50%)', bottom: 'calc(18px + env(safe-area-inset-bottom))', padding: '8px 10px' }}>
+        {pinned.map((item) => (
+          <DockIcon key={item.id} name={item.label} icon={item.icon} color={item.color} active={page === item.id} onClick={() => handleNavigate(item.id)} />
+        ))}
+        {overflow.length > 0 && (
+          <>
+            <div className="w-px h-6 bg-white/15 mx-1 flex-shrink-0" />
+            <div data-dock-altro>
+              <DockIcon name="Altro" icon="grid" active={altroOpen || pageInOverflow} onClick={() => setAltroOpen((x) => !x)} />
+            </div>
+          </>
+        )}
+
+        <div className="relative" ref={notifRef}>
+          <DockIcon name="Notifiche" icon="bell" active={notifOpen} badge={unreadCount} onClick={() => setNotifOpen((s) => !s)} />
+          {notifOpen && (
+            <div className="glass-panel absolute bottom-[52px] left-1/2 w-72 z-50 overflow-hidden" style={{ transform: 'translateX(-50%)' }}>
+              <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/10">
+                <span className="text-xs font-semibold text-ink">Notifiche</span>
+                {unreadCount > 0 && <button onClick={markAllSeen} className="text-[10px] text-cp-primary hover:opacity-80 transition">Segna tutte lette</button>}
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                {combined.length === 0 ? (
+                  <div className="text-xs text-gray-600 text-center py-6">Nessuna notifica</div>
+                ) : combined.map((e) => {
+                  const isRead = lastSeen && e.created_at <= lastSeen
+                  return (
+                    <div key={e.id} className={'px-3 py-2.5 border-b border-white/5 ' + (isRead ? 'opacity-50' : '')}>
+                      <div className={'text-xs leading-snug ' + (e.kind === 'error' ? 'text-red-400' : 'text-gray-300')}>{e.description}</div>
+                      <div className="text-[10px] text-gray-700 mt-0.5">{timeAgo(e.created_at)}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="relative" ref={accountRef}>
+          <button onClick={() => setAccountOpen((s) => !s)} title={username || 'Il mio account'}
+            className={'relative flex-shrink-0 w-10 h-10 rounded-full bg-cp-primary text-white text-xs font-semibold flex items-center justify-center transition-all duration-200 ease-out hover:scale-110 ' + (accountOpen ? 'ring-2 ring-cp-primary ring-offset-2 ring-offset-surface-page' : '')}>
+            {initials}
+          </button>
+          {accountOpen && (
+            <div className="glass-panel absolute bottom-[52px] right-0 w-56 z-50 overflow-hidden p-1.5">
+              {username && <div className="px-2.5 py-2 text-xs text-gray-500 border-b border-white/10 mb-1 truncate">{username}{payload && payload.role ? ' · ' + payload.role : ''}</div>}
+              <button onClick={toggleTheme} className="w-full text-left px-2.5 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-ink rounded-lg transition flex items-center gap-2">
+                <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={14} />{theme === 'dark' ? 'Tema chiaro' : 'Tema scuro'}
+              </button>
+              <button onClick={() => { setAccountOpen(false); handleNavigate('impostazioni') }} className="w-full text-left px-2.5 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-ink rounded-lg transition flex items-center gap-2">
+                <Icon name="settings" size={14} />Impostazioni
+              </button>
+              <button onClick={onLogout} className="w-full text-left px-2.5 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-ink rounded-lg transition flex items-center gap-2">
+                <Icon name="logout" size={14} />Esci
+              </button>
+            </div>
+          )}
+        </div>
+      </nav>
     </>
   )
 }
