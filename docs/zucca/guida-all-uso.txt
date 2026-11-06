@@ -9,17 +9,17 @@ Marchio: in Impostazioni, Aspetto, si carica il logo e si inseriscono ragione so
 Apri Clienti: premi «Nuovo» e compila nome, codice fiscale o partita IVA, tipo soggetto (persona fisica o società), tipo cliente (venditore o acquirente) e i dati anagrafici.
 Se è un acquirente: indica se ha già individuato l'immobile oppure lo cerca, e compila tipologia, budget massimo e zona.
 Il cliente nasce nello stato «verifica identità cliente».
-Allega le copie dei documenti che il cliente fornisce (documento di identità, attualità della residenza, atto di provenienza se vende).
+Allega le copie dei documenti che il cliente fornisce dal riquadro «Allegati» del dettaglio, scegliendo il tipo: documento di identità, codice fiscale, attualità della residenza, atto di provenienza (se vende), atto di matrimonio (se compra, facoltativo).
 
 2. DOCUMENTI DEL CLIENTE
 Privacy e incarico: dal dettaglio del cliente apri il documento, rileggi il testo a schermo, correggilo se serve e invialo per email. Non parte nulla senza la tua conferma.
 Antiriciclaggio: stessa procedura; il cliente lo restituisce firmato.
 Anagrafica e privacy (da firmare): scarica il PDF, fallo firmare, poi ricaricalo dallo stesso pannello. Spunta i consensi dati dal cliente (comunicazioni commerciali, comunicazione a partner e portali): vengono registrati sul record con data, versione e data di conservazione.
-Quando hai ricevuto i firmati, passa il cliente a «documenti inviati» e poi a «cliente verificato» con i pulsanti di stato.
+Quando ricevi i documenti firmati (privacy e incarico, antiriciclaggio), caricali dal riquadro «Allegati» con il tipo «firmato» corrispondente, poi passa il cliente a «documenti inviati» e a «cliente verificato» con i pulsanti di stato.
 
 3. NUOVO IMMOBILE
 Apri Immobili e premi «Nuovo»: scegli il proprietario (fino a tre comproprietari, con le quote) e compila la scheda, che segue le 11 sezioni del modulo dell'agenzia. Le voci con caselle si spuntano da un elenco.
-Lo stato di partenza è «da valutare». Un cliente può avere più immobili.
+Lo stato di partenza è «da valutare». Un cliente può avere più immobili. Nel riquadro «Allegati» dell'immobile carichi atto di provenienza, visura e planimetria catastale, APE, regolamento e verbali del condominio, certificazione impianti e foto.
 Apri il documento «Scheda di acquisizione (da firmare)»: vedi l'anteprima, scarica il PDF con il marchio, fallo firmare e ricarica l'originale firmato: resta archiviato nell'immobile.
 
 4. VALUTAZIONE DELL'IMMOBILE

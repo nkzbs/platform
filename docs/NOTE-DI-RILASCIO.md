@@ -2,6 +2,17 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.30 — 6 novembre 2026
+
+**Gli allegati dei documenti del cliente non si potevano caricare: corretto.** Scrivendo la relazione su zucca si è scoperto che nessun modulo del verticale aveva il riquadro «Allegati» (il blocco «Allegati tipizzati»): sul cliente non c'era modo di allegare copia del documento, attualità della residenza, atto di provenienza o i moduli firmati. L'unico allegato possibile era il firmato dei documenti da firmare.
+
+- **Clienti**: riquadro «Allegati» con i tipi documento di identità, codice fiscale, attualità della residenza, atto di provenienza (venditore), atto di matrimonio (acquirente, facoltativo), privacy e incarico firmato, antiriciclaggio firmato, altro.
+- **Immobili**: tipi della checklist della scheda (atto di provenienza e di successione, visura e planimetria catastale, APE, regolamento e verbali del condominio, certificazione impianti, foto, altro).
+- **Trattative**: proposta d'acquisto, contratto preliminare, atto di rogito, altro.
+- Arrivano su zucca con «Aggiorna», come le altre estensioni (una volta sola; se un modulo ha già il suo riquadro Allegati non si aggiunge un secondo). Test aggiornati.
+- **Non coperto**: l'avviso quando un allegato richiesto manca (il blocco elenca i tipi, non li rende obbligatori); l'upload del firmato di un documento spedito per email.
+- **Relazione e Guida** (`docs/zucca/`) corrette: la prima versione affermava che si poteva già allegare qualunque file al cliente, e non era vero.
+
 ## 0.4.29 — 6 novembre 2026
 
 **Relazione processi e Guida all'uso di zucca, aggiornate e con il marchio.** I due documenti che l'utente si aspettava in admin non erano allineati: l'analisi salvata in Super Admin è del 30 ottobre (8 processi generici, «Catalogazione immobili» ancora «da costruire») e non conosce i documenti, la scheda completa, l'abbinamento né le provvigioni a due parti.

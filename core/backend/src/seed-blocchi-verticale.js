@@ -77,6 +77,7 @@ function estensioneApplicabile(est, steps, moduliPerSlug) {
     if (!campi.every((c) => presenti.has(c))) return false;
   }
   for (const b of est.aggiungi || []) {
+    if (b.block_type === 'allegati' && steps.some((x) => x.block_type === 'allegati')) return false; // un modulo ha un solo riquadro Allegati
     if (b.block_type === 'relation' && !moduliPerSlug[b.target_module]) return false;
     if (b.key && steps.some((x) => x.key === b.key && (x.block_type !== b.block_type || (x.type || null) !== (b.type || null)))) return false;
   }

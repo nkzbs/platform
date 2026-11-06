@@ -61,7 +61,7 @@ async function main() {
   await test('le due estensioni si applicano nell\'ordine giusto (Provvigioni, poi Trattative) e passano dalla validazione', async () => {
     const esiti = await applicaSeed(seed, { tipo: 'estensione' });
     // Il seed ha anche le estensioni di Immobili e Clienti (scheda completa): qui il modulo Clienti c'è, Immobili no.
-    assertEq(esiti.filter((e) => ['provvigioni', 'trattative'].includes(e.slug)).map((e) => e.slug + ':' + e.esito), ['provvigioni:applicato', 'trattative:applicato']);
+    assertEq(esiti.filter((e) => ['provvigioni', 'trattative'].includes(e.slug) && e.key !== 'allegati').map((e) => e.slug + ':' + e.esito), ['provvigioni:applicato', 'trattative:applicato']);
     const prov = schemaDi('provvigioni').steps.filter((x) => x.block_type === 'field').map((x) => x.key);
     for (const k of ['parte', 'percentuale', 'base_imponibile', 'importo_netto', 'iva', 'totale', 'importo']) assertTrue(prov.includes(k), 'manca ' + k);
     const tr = schemaDi('trattative').steps;

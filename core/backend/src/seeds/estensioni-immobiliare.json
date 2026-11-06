@@ -203,6 +203,22 @@
           ]
         }
       ]
+    },
+    {
+      "key": "allegati",
+      "_nota": "Riquadro «Allegati» sulla trattativa: proposta, preliminare, rogito.",
+      "aggiungi": [
+        {
+          "block_type": "allegati",
+          "label": "Allegati",
+          "types": [
+            "Proposta d'acquisto",
+            "Contratto preliminare",
+            "Atto di rogito",
+            "Altro"
+          ]
+        }
+      ]
     }
   ],
   "immobili": [
@@ -423,6 +439,28 @@
           "type": "textarea"
         }
       ]
+    },
+    {
+      "key": "allegati",
+      "_nota": "Riquadro «Allegati» sull'immobile, con i documenti della checklist della scheda di acquisizione.",
+      "aggiungi": [
+        {
+          "block_type": "allegati",
+          "label": "Allegati",
+          "types": [
+            "Atto di provenienza",
+            "Atto di successione",
+            "Visura catastale storica",
+            "Planimetria catastale",
+            "Certificato APE",
+            "Regolamento condominio",
+            "Verbali condominio",
+            "Certificazione impianti",
+            "Foto",
+            "Altro"
+          ]
+        }
+      ]
     }
   ],
   "clienti": [
@@ -472,6 +510,26 @@
           "key": "pec",
           "label": "PEC",
           "type": "email"
+        }
+      ]
+    },
+    {
+      "key": "allegati",
+      "_nota": "Rende disponibile il riquadro «Allegati» nel dettaglio del cliente, con i tipi di documento che l'agenzia raccoglie. Prima nessun modulo del verticale aveva allegati tipizzati: i documenti del cliente non si potevano caricare dall'app.",
+      "aggiungi": [
+        {
+          "block_type": "allegati",
+          "label": "Allegati",
+          "types": [
+            "Documento di identità",
+            "Codice fiscale",
+            "Attualità della residenza",
+            "Atto di provenienza (venditore)",
+            "Atto di matrimonio (acquirente, facoltativo)",
+            "Privacy e incarico firmato",
+            "Antiriciclaggio firmato",
+            "Altro"
+          ]
         }
       ]
     }

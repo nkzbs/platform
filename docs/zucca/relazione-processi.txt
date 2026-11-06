@@ -3,16 +3,17 @@ MEDIAZIONE IMMOBILIARE — COPERTURA DEI PROCESSI
 SINTESI
 Processi esaminati: 13, dal documento dell'agenzia (Cliente, Immobile, Trattativa) e dall'analisi del 30 ottobre
 Coperti: il flusso operativo completo, dal cliente alla provvigione fatturata alle due parti
-Da completare o da fare: società e cessione di quote, planner delle visite, promemoria, allegati richiesti, valutazione con dati veri
+Da completare o da fare: società e cessione di quote, planner delle visite, promemoria, avviso sugli allegati mancanti, valutazione con dati veri
 Fonte dello stato: i moduli installati su zucca alla versione 0.4.28, controllati in sola lettura il 6 novembre 2026
 
 CLIENTE — ACQUISIZIONE E VERIFICA (Venditore o Acquirente, privato o società)
 Come funziona: la scheda Cliente raccoglie nome, codice fiscale o P.IVA, data e luogo di nascita, stato civile, regime patrimoniale, residenza, email, PEC e telefono. Il tipo soggetto è Persona fisica o Società; il tipo cliente è Venditore o Acquirente (per l'acquirente: ha già individuato l'immobile oppure lo cerca, con tipologia, budget e zona).
 Percorso di stato: verifica identità cliente, documenti inviati, cliente verificato (con la possibilità di tornare indietro se i documenti sono da rifare).
 Documenti dal sistema: Privacy e incarico (anteprima a schermo modificabile dall'admin, poi invio per email); Antiriciclaggio (email); Anagrafica e privacy (PDF da scaricare, firmare e ricaricare, con i consensi GDPR registrati sul record).
+Allegati: nel dettaglio del cliente c'è il riquadro «Allegati» con i tipi che l'agenzia raccoglie: documento di identità, codice fiscale, attualità della residenza, atto di provenienza (venditore), atto di matrimonio (acquirente, facoltativo), privacy e incarico firmato, antiriciclaggio firmato (dalla versione 0.4.30; prima non era disponibile).
 [X] Coperto il flusso base: scheda, tipologia, stati, tre documenti
-[ ] Da completare gli allegati richiesti per tipo
-Cosa manca: l'elenco degli allegati che il cliente deve fornire (copia documento, attualità della residenza, atto di provenienza per il venditore, atto di matrimonio opzionale per l'acquirente) con l'avviso se ne manca uno. Oggi si può allegare qualunque file al cliente, ma nessuno è richiesto.
+[ ] Da completare l'avviso sugli allegati mancanti
+Cosa manca: il sistema non segnala ancora quando un allegato richiesto per quel tipo di cliente (per esempio l'atto di provenienza del venditore) non è stato caricato: l'elenco dei tipi c'è, l'obbligo no.
 Cosa manca (2): Privacy e incarico e Antiriciclaggio partono solo per email; non hanno ancora il giro scarica, firma e ricarica. Il cambio di stato a «cliente verificato» è manuale.
 
 CLIENTE — SOCIETÀ E CESSIONE DI QUOTE
@@ -23,6 +24,7 @@ Cosa manca: il caso in cui si vendono le quote della società che detiene l'immo
 IMMOBILE — SCHEDA DI ACQUISIZIONE
 Come funziona: la scheda ha le 11 sezioni del modulo dell'agenzia: anagrafica fino a 3 comproprietari con le quote, localizzazione e contesto, caratteristiche interne, serramenti e finiture, impianti e certificazione energetica, catasto e documenti, spese e mutuo, valutazione economica e incarico, esigenze di riacquisto, note e punti di forza, privacy. Le voci con casella sono elenchi a scelta multipla. Un cliente può avere più immobili.
 Percorso di stato: da valutare, in mandato, in vendita, in trattativa, venduto (oppure ritirato dal mercato).
+Allegati: riquadro con i tipi della checklist della scheda (atto di provenienza, visura e planimetria catastale, APE, regolamento e verbali del condominio, certificazione impianti, foto).
 Documento dal sistema: Scheda di acquisizione da firmare, con anteprima, PDF con il marchio dell'agenzia, firma e caricamento dell'originale firmato.
 [X] Coperto: tutti i campi del modulo dell'agenzia, anteprima, firma, archivio
 [ ] Da completare il controllo automatico dei dati catastali
@@ -82,5 +84,5 @@ Come funziona: logo, colore e dati dell'azienda compaiono nell'intestazione di t
 Cosa manca: ragione sociale, indirizzo, partita IVA, logo e colore non sono ancora stati inseriti su zucca (Impostazioni, Aspetto).
 
 RISPOSTA ALLA DOMANDA: ABBIAMO COPERTO TUTTO?
-Risposta: il percorso operativo sì (cliente, documenti, immobile, valutazione, abbinamento, trattativa, provvigioni a due parti, registro dei contatti). Non ancora: società e cessione di quote, planner delle visite, promemoria, allegati richiesti per tipo di cliente, dati di valutazione reali, avvisi automatici, permessi per ruolo.
-Priorità consigliate: 1) impostare marchio e dati dell'agenzia; 2) allegati richiesti e firma dei documenti del cliente; 3) planner delle visite; 4) permessi per ruolo; 5) studio del caso società e quote.
+Risposta: il percorso operativo sì (cliente, documenti, immobile, valutazione, abbinamento, trattativa, provvigioni a due parti, registro dei contatti). Non ancora: società e cessione di quote, planner delle visite, promemoria, avviso sugli allegati mancanti, dati di valutazione reali, avvisi automatici, permessi per ruolo.
+Priorità consigliate: 1) impostare marchio e dati dell'agenzia; 2) firma dei documenti del cliente e avviso sugli allegati mancanti; 3) planner delle visite; 4) permessi per ruolo; 5) studio del caso società e quote.

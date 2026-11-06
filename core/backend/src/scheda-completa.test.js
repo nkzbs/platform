@@ -63,7 +63,7 @@ async function main() {
   let esiti;
   await test('si applica: nuovi campi del tipo giusto e caselle trasformate in elenchi a scelta multipla', async () => {
     esiti = await applicaSeed(estensioni, { tipo: 'estensione' });
-    assertEq(esiti.filter((e) => e.slug === 'immobili' || e.slug === 'clienti').map((e) => e.slug + ':' + e.esito), ['immobili:applicato', 'clienti:applicato']);
+    assertEq(esiti.filter((e) => (e.slug === 'immobili' || e.slug === 'clienti') && e.key !== 'allegati').map((e) => e.slug + ':' + e.esito), ['immobili:applicato', 'clienti:applicato']);
     assertEq(campo('immobili', 'data_sopralluogo').type, 'date');
     assertEq(campo('immobili', 'prezzo_consigliato').type, 'currency');
     assertEq(campo('immobili', 'valore_ipe').type, 'number');
@@ -91,6 +91,19 @@ async function main() {
     const prova = { altro: [{ key: 'x', converti: [{ key: 'pavimenti', type: 'multiselect', options: ['a'] }] }] };
     assertEq((await applicaSeed(prova, { tipo: 'estensione' })).map((e) => e.esito), ['non applicabile']);
     assertEq(campo('altro', 'pavimenti').type, 'number');
+  });
+
+  await test('allegati tipizzati: Clienti e Immobili ricevono il riquadro con i tipi di documento; un secondo riquadro non si aggiunge', async () => {
+    for (const slug of ['clienti', 'immobili']) {
+      const blocchi = schemaDi(slug).steps.filter((x) => x.block_type === 'allegati');
+      assertEq(blocchi.length, 1, slug);
+      assertTrue(blocchi[0].types.length >= 6, 'tipi di ' + slug);
+    }
+    assertTrue(schemaDi('clienti').steps.find((x) => x.block_type === 'allegati').types.includes('Attualità della residenza'), 'tipo richiesto dall\'agenzia');
+    mk('con_allegati', [F('nome'), { id: 'a1', block_type: 'allegati', label: 'Allegati', types: ['X'] }]);
+    const prova = { con_allegati: [{ key: 'a', aggiungi: [{ block_type: 'allegati', label: 'Allegati', types: ['Y'] }] }] };
+    assertEq((await applicaSeed(prova, { tipo: 'estensione' })).map((e) => e.esito), ['non applicabile']);
+    assertEq(schemaDi('con_allegati').steps.find((x) => x.block_type === 'allegati').types, ['X']);
   });
 
   console.log('\n--- documento «Scheda di acquisizione (da firmare)» ---');
