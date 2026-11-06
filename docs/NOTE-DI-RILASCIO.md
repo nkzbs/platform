@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.28 — 6 novembre 2026
+
+**Documenti impaginati con stile, e report nella UI con la stessa grafica.** Su indicazione dell'utente (mockup di riferimento): i PDF dei documenti non sono più testo in colonna ma schede.
+
+- **PDF dei documenti**: ricostruiti sul modello grafico fornito dall'utente (mockup «Anagrafica + privacy»): fascia sfumata con logo e «pillola» del tipo di documento con la data; titolo in serif con la parentesi più piccola, filetto azzurro e sottotitolo spaziato; ogni sezione è una **scheda** con ombra, intestazione azzurra sfumata, **icona** nel riquadro scuro e titolo in maiuscolo; i campi sono «Etichetta ______» con la riga su cui scrivere (più campi affiancati sulla stessa riga); le voci lunghe hanno **icona rotonda**, titoletto colorato e paragrafo, separate da un filetto; la scheda dei **consensi** ha la linguetta scura con taglio diagonale e le caselle grandi, con la dichiarazione finale in corsivo con la penna; «Luogo e data» e «Firma» hanno le loro icone; piè di pagina con il nome dell'azienda in corsivo e «Pagina N di M». Una scheda di soli campi seguita da una di voci si affiancano su **due colonne**; una scheda lunga continua nella pagina dopo con «(segue)». La regola di lettura del testo è nel commento di `lib/documento-pdf.js`.
+- **Report di valutazione nella UI**: stessi riquadri del PDF (minimo/medio/massimo, valore stimato in evidenza), considerazioni in citazione, schede con tabelle (OMI, comparabili) e **barre** (mercato, tempi di vendita, annunci per tipologia e superficie), territorio e zona. Mostra l'avviso se i dati sono di un altro comune. Le migliaia sono sempre separate dal punto (anche a 4 cifre), come nel PDF.
+- Pannello del testo di un documento: area più ampia e leggibile, con una riga che spiega come le righe diventano sezioni, campi e caselle.
+- **Non coperto**: il carattere del marchio (nei PDF si vede un serif standard, non Miller Banner); il documento dell'anagrafica occupa 2 pagine invece di 1 perché il testo dell'informativa è più lungo di quello del mockup (che ha una «sintesi»); le icone si scelgono dalle parole del titolo, non da una scelta esplicita. Il servizio pubblico di OpenStreetMap (Overpass) non rispondeva in tempo: la fase 2 del report (mappa, servizi, percorrenze) non è integrata e il codice di prova non è nel repository.
+
 ## 0.4.27 — 6 novembre 2026
 
 **La scheda di acquisizione dell'agenzia, per intero.** Il modulo che compilano gli agenti (11 sezioni) ora ha tutti i suoi campi, e il documento da firmare lo riproduce uguale. Confrontata voce per voce con il PDF di Zucca&Partners.

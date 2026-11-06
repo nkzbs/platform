@@ -1,718 +1,778 @@
-# Registro delle decisioni
+# Note di rilascio
 
-Cosa è stato tolto o deciso e perché, così tra un anno si sa perché una cosa non c'è. Ogni voce ha una data.
+Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
-## 2026-10-02 — Platform riparte da 0.1
-
-**Contesto.** Platform era diventata una piattaforma commerciale: livelli Core / Partner / Tenant, licenze,
-fatturazione, marketplace dei moduli, verticali, CRM dei clienti, federazione tra istanze, app mobile. Il
-bisogno vero era uno solo: gestire le proprie finanze (Finance). Dopo uno sguardo dal vivo a Super Admin è
-emerso che il problema non erano le singole funzioni ma la direzione: troppa infrastruttura per tenant
-ipotetici. Il vecchio repository (con tutta la storia) è stato archiviato come privato (`platform-old`) e il
-lavoro riparte da questo, con il codice potato e la versione 0.1.0.
+## 0.4.28 — 6 novembre 2026
 
-**Identità.** Platform è il coltello multiuso personale per i miei progetti, non un prodotto. Vedi
-[`PLATFORM-VISIONE.md`](../PLATFORM-VISIONE.md).
+**Documenti impaginati con stile, e report nella UI con la stessa grafica.** Su indicazione dell'utente (mockup di riferimento): i PDF dei documenti non sono più testo in colonna ma schede.
 
-**Regola contro l'eccesso.** Un pezzo nuovo entra solo se serve a un progetto reale che esiste oggi. "Potrebbe
-servire a un tenant futuro" non è un motivo.
+- **PDF dei documenti**: ricostruiti sul modello grafico fornito dall'utente (mockup «Anagrafica + privacy»): fascia sfumata con logo e «pillola» del tipo di documento con la data; titolo in serif con la parentesi più piccola, filetto azzurro e sottotitolo spaziato; ogni sezione è una **scheda** con ombra, intestazione azzurra sfumata, **icona** nel riquadro scuro e titolo in maiuscolo; i campi sono «Etichetta ______» con la riga su cui scrivere (più campi affiancati sulla stessa riga); le voci lunghe hanno **icona rotonda**, titoletto colorato e paragrafo, separate da un filetto; la scheda dei **consensi** ha la linguetta scura con taglio diagonale e le caselle grandi, con la dichiarazione finale in corsivo con la penna; «Luogo e data» e «Firma» hanno le loro icone; piè di pagina con il nome dell'azienda in corsivo e «Pagina N di M». Una scheda di soli campi seguita da una di voci si affiancano su **due colonne**; una scheda lunga continua nella pagina dopo con «(segue)». La regola di lettura del testo è nel commento di `lib/documento-pdf.js`.
+- **Report di valutazione nella UI**: stessi riquadri del PDF (minimo/medio/massimo, valore stimato in evidenza), considerazioni in citazione, schede con tabelle (OMI, comparabili) e **barre** (mercato, tempi di vendita, annunci per tipologia e superficie), territorio e zona. Mostra l'avviso se i dati sono di un altro comune. Le migliaia sono sempre separate dal punto (anche a 4 cifre), come nel PDF.
+- Pannello del testo di un documento: area più ampia e leggibile, con una riga che spiega come le righe diventano sezioni, campi e caselle.
+- **Non coperto**: il carattere del marchio (nei PDF si vede un serif standard, non Miller Banner); il documento dell'anagrafica occupa 2 pagine invece di 1 perché il testo dell'informativa è più lungo di quello del mockup (che ha una «sintesi»); le icone si scelgono dalle parole del titolo, non da una scelta esplicita. Il servizio pubblico di OpenStreetMap (Overpass) non rispondeva in tempo: la fase 2 del report (mappa, servizi, percorrenze) non è integrata e il codice di prova non è nel repository.
 
-### Tolto
+## 0.4.27 — 6 novembre 2026
 
-| Cosa | Perché |
-|---|---|
-| Partner, billing, licenze, prezzi, CRM dei clienti, fatture, supporto commerciale | Nessun cliente, nessun rivenditore: erano costi di manutenzione senza uso |
-| Verticali (modelli di tenant per settore) | Erano template commerciali; un tenant nuovo si costruisce o si riempie dalla Libreria |
-| Marketplace dei moduli: certificazione, autore, vendor, categorie, "in evidenza", screenshot, ciclo di vita, visibilità privata/pubblica, anteprima | Sono funzioni per un ente che approva moduli di terzi; qui c'è un solo autore. Sostituito dalla **Libreria** |
-| Federazione tra istanze (pairing, tenant esterni, migrazione verso altri server, import/export delle immagini) | Pensata per più "core" che si agganciano; non esiste più quella visione |
-| App mobile (SwiftUI e Capacitor iOS/Android), modalità offline e sincronizzazione, stampa Bluetooth | Nessun uso; avevano reso `api.js` e `useApi.js` più complicati |
-| Raccomandazioni e misurazioni da "analisi clienti" | Nate dal CRM dei clienti |
-| Pagina **Reportistica** (provvigioni degli agenti e margini sui prodotti, nata con Coffee) e la sua rotta AI | Compariva solo nei tenant con agenti, fatture e prodotti: Finance non l'ha mai vista. I riepiloghi veri stanno nei moduli di spesa e nella dashboard |
-| Tour guidato al primo accesso | Non serve a chi ha costruito il sistema |
-| Invito di un "cliente" via email e creazione utente dal link | Un solo operatore: gli utenti si creano a mano |
-| Integrazioni non usate (Fatture in Cloud, WhatsApp Business, Slack, Stripe, Mailchimp, Resend) dall'elenco | Restano visibili solo Google e WhatsApp (CallMeBot), le uniche usate. Ricompare un'integrazione se un modulo installato la richiede |
-| Password admin fissa scritta nel codice | Sostituita da una password casuale (o da variabile d'ambiente) |
-| ~25 colonne commerciali di `tenants`, ~20 tabelle inerti, la storia di migrazioni di `db.js` | Il database di Super Admin riparte da uno schema pulito di 12 tabelle |
-
-- **Update Manager** (13 ottobre): tolti la pagina, la coda per la propagazione notturna e il rollback/import/export dell'immagine. Con un solo tenant il pulsante **Aggiorna** sulla scheda del tenant basta. Restano `redeploy-all` e la tabella `update_manager` (inerte, non toccata).
-
-- **Privacy dell'Attività di Super Admin** (13 ottobre): Super Admin non legge più cosa fanno gli utenti dentro un tenant. Dal tenant esce solo l'elenco degli **errori tecnici** (`/api/audit-log/internal/monitoring-feed` risponde solo con `error_logs`); le azioni degli utenti e i movimenti dei record restano nel tenant, nel suo registro e nello storico di ogni riga. Nell'Attività di Super Admin restano le azioni di Super Admin stesso e gli errori dei tenant.
-
-- **Accesso di Super Admin ai tenant, da ridurre** (13 ottobre): «Apri →» **chiede le credenziali admin del tenant** (non entra da solo) e resta. Decisione di Nima: **in futuro Super Admin non dovrà avere ponti verso i dati dei tenant**. Oggi i ponti reali sono: «Reset credenziali» (imposta una nuova password admin del tenant), le chiavi del tenant (`jwt_secret`, `encryption_key`) conservate nel database di Super Admin e il controllo dei container. Niente di nuovo in Super Admin deve dipendere da questi: così toglierli sarà solo una cancellazione.
-
-- **Report come definizioni, proprietario per modulo** (13 ottobre): i tre report non sono più tre messaggi scritti a mano ma definizioni (tipo + parametri) con quattro tipi generici; il proprietario delle righe automatiche si sceglie per modulo (con ripiego sul predefinito del progetto). Motivo: «Platform sempre generico e configurabile» (vedi `PLATFORM-VISIONE.md`). Un tipo nuovo di report richiede ancora codice (una primitiva), un report nuovo di un tipo esistente no.
-
-- **Analisi dei processi tornata, senza la parte commerciale** (13 ottobre): ripresa dal vecchio Platform (processo con ruoli, passaggi e bivi, copertura della Libreria, manuale stampabile, creazione del tenant con ruoli e stati). Restano fuori clienti, partner, preventivi, prezzi e licenze, e la misurazione prima/dopo che leggeva i dati dei tenant. Un'analisi è un documento di Super Admin, collegabile al tenant che ne nasce.
-
-### Tenuto, anche se "non serve oggi"
-
-| Cosa | Perché |
-|---|---|
-| **Sito Web** (page builder del tenant) | È lavoro già fatto e testato che potrebbe servire; resta isolato e **spento di default** (`site_enabled = 0`). Unica eccezione alla regola sopra |
-| **Super Builder / Builder** | È il pezzo di maggior valore: dove nascono i moduli |
-| **Dominio pubblico automatico** (Cloudflare + nginx) | Un tenant nuovo deve essere raggiungibile subito |
-| **Statistiche tra tenant** e **API interna tra Super Admin e tenant** | Base per far "interrogare" più tenant tra loro |
-| **Backup, export, ripristino, 2FA** | Dati finanziari reali |
-
-### Cambiato
-
-| Prima | Dopo |
-|---|---|
-| "Store" / "Registro" con wizard di pubblicazione e installazione | **Libreria**: salvi un modulo da un tenant (nasce una versione), lo installi in un altro tenant come **copia**, e il tenant vede "Aggiorna" quando esce una versione nuova |
-| Dettaglio modulo con 8 schede (Panoramica, Versioni, Campi, Relazioni, Workflow, Permessi, Guida, Certificazione) | 3 schede: **Panoramica, Struttura, Versioni** |
-| Pagina Store nei tenant con tab, settori, categorie, copertine | **Libreria** a due sezioni, Installati e Disponibili |
-| Pulsante "Installa" nel tenant che andava in errore (`setLicenseKey` non esisteva più) | Corretto |
-
-### Difetti trovati e corretti durante la potatura
-
-- **Sottodomini mai creati**: `createTenant` chiamava `upsertSubdomain(autoDomainLabel)`, una variabile mai
-  definita (già nel codice originale). L'errore finiva solo nel registro attività. Corretto, con test e con un
-  avviso visibile in Super Admin.
-- **Segreti nelle API**: l'elenco dei tenant restituiva `encryption_key`, `jwt_secret` e le credenziali offsite
-  del backup. Ora vengono tolti, con un test.
-
-## 2026-10-02 — Assistente AI per Finance (fase 1)
-
-**Cosa.** Smistamento delle bollette in arrivo da Gmail: l'AI (Mistral, mistral-small) propone categoria, importo,
-scadenza e fornitore; l'utente accetta o ignora.
-
-**Scelte.**
-- L'AI **propone, non scrive**: nessuna modifica ai dati senza un'accettazione esplicita.
-- Il tenant non ha la chiave né parla con Mistral: tutto passa da Super Admin, dove stanno la pulizia dei dati
-  personali, il tetto di spesa e il controllo dell'output.
-- Il tetto è **in euro al mese** (10 € di default) e a tetto raggiunto le chiamate si fermano da sole.
-- **Spento di default.**
-- Ai modelli arrivano mittente, oggetto e le prime righe del testo, **senza** IBAN, telefoni, email, codici fiscali
-  e numeri lunghi.
-
-## 2026-10-02 — Notifiche WhatsApp con esito vero
-
-**Problema.** CallMeBot risponde HTTP 200 anche quando rifiuta un messaggio (chiave sbagliata, numero non
-attivato). L'invio partiva senza attendere la risposta e il registro scriveva "chiamata_reale" prima ancora di
-inviare: un messaggio mai arrivato non lasciava nessuna traccia.
-
-**Ora** (`core/backend/src/whatsapp.js`): si legge la risposta, si riprova per i problemi temporanei (rete, servizio
-occupato) ma non per quelli certi (chiave non valida), il registro riporta l'esito per destinatario
-(inviato / parziale / FALLITO + motivo), un messaggio non consegnato genera un avviso nell'app (uno all'ora per
-motivo) e gli invii escono uno alla volta con qualche secondo di distanza. In Impostazioni → Connessioni c'è
-"Invia messaggio di prova".
-
-## 2026-10-03 — Riepilogo del mattino
-
-**Problema.** Un messaggio WhatsApp per ogni riga in scadenza è rumoroso (CallMeBot limita anche la frequenza) e
-l'avviso "scadenza oggi" guardava solo il campo `scadenza`, che le righe di Finance usano poco: la data di
-scadenza sta di solito in `data`. Inoltre i lavori pianificati contano le ore in **UTC**: "ora: 8" significa le
-10 in estate e le 9 in inverno in Italia.
-
-**Ora** (`core/backend/src/daily-digest.js`): un solo messaggio al giorno, all'ora italiana scelta (default 08:00),
-con le spese da pagare *oggi*, *domani* e *in ritardo* (entro 45 giorni, per non trascinare residui vecchi),
-più il numero di bollette da smistare. La scadenza è `scadenza` se c'è, altrimenti `data`. Non manda nulla se
-non c'è niente da segnalare, e al massimo una volta al giorno.
-
-**Spento di default.** Quando è acceso, gli avvisi "scadenza oggi" per singola riga non partono più (verrebbero
-doppi); gli altri tag (bolletta, rata, report) non cambiano. Si accende da Impostazioni → Notifiche, dove ci sono
-anche l'anteprima e "Invia ora".
-
-## 2026-10-03 — Commento ai report e "Spiega questo report" (fasi 2 e 3)
-
-**Cosa.** Due usi dello stesso meccanismo: (2) il report mensile su WhatsApp si chiude con una frase di commento;
-(3) in ogni pagina Report, il pulsante «Spiega questo report» scrive qualche riga sui totali che stai guardando.
-Era previsto "Reportistica" come pagina, ma quella pagina non esiste più (vedi sopra): il pulsante sta nel
-pannello Report che ogni modulo con un campo numerico e uno a selezione già ha.
-
-**Scelte.**
-- All'AI vanno **solo i totali per gruppo** (le categorie, con il confronto col periodo prima), mai le righe né le descrizioni.
-- Le **variazioni percentuali le calcola il programma**: il modello non fa conti.
-- **Ogni numero** scritto dal modello deve esistere nei dati forniti (anche arrotondato o scritto all'italiana; le
-  percentuali devono essere una delle variazioni date). Altrimenti il testo è scartato e non arriva a nessuno.
-- Il commento WhatsApp è **spento di default** e **non blocca mai il report**: se l'AI non risponde, ha raggiunto il
-  tetto o sbaglia un numero, il report parte com'era. Non parte nulla all'anteprima delle automazioni.
-- «Spiega questo report» funziona anche con l'interruttore spento (è una richiesta esplicita) e rispetta lo stesso
-  tetto di spesa mensile.
-- Le istruzioni al modello stanno su Super Admin (`lib/ai-report.js`), insieme alla verifica dei numeri.
-
-## 2026-10-03 — Una chiave Mistral per ogni tenant
-
-**Scelta.** Ogni progetto (Finance, ...) ha la sua chiave Mistral e il suo tetto di spesa. Si inserisce da
-Impostazioni → Assistente AI del tenant. Il tenant la manda a Super Admin, che la controlla con Mistral (elenco
-modelli, nessun costo), la conserva **cifrata** nel registro e non la restituisce mai (le API mostrano solo
-"configurata" e le ultime 4 cifre). Il tenant non la tiene.
-
-**Perché a Super Admin e non nel tenant.** Le chiamate continuano a passare da Super Admin, che resta l'unico punto
-verso Mistral: pulizia dei dati personali, controllo dei numeri e tetto restano in un posto solo.
-
-- Il **tetto** (default 10 € al mese, `AI_MONTHLY_BUDGET_EUR`) vale **per tenant**: i consumi sono registrati con il tenant
-  che li ha fatti (`ai_usage_log.tenant_slug`) e gli avvisi dell'80% e del 100% sono separati per tenant.
-- `MISTRAL_API_KEY` dell'ambiente resta come **ripiego**: un tenant senza chiave sua la usa (e la spesa conta comunque
-  nel suo tetto). Senza né l'una né l'altra, l'assistente risponde "nessuna chiave" e non chiama nessuno.
-
-## 2026-10-03 — Regole Gmail e Destinatari WhatsApp: impostazioni del sistema, non moduli
-
-**Perché.** Non sono spese o entrate da consultare ma impostazioni: chi riceve quali messaggi, e quali mail diventano
-spese. Averli come moduli era un residuo di come erano nati.
-
-**Ora.** Hanno tabelle proprie (`whatsapp_recipients`, `gmail_rules`) e si gestiscono da Impostazioni: i destinatari in
-**Notifiche**, le regole Gmail in **Connessioni** (sotto Google). I moduli `whatsapp_destinatari` e `gmail_regole` non esistono
-più: né nel menu, né nella Libreria, né nel Builder. Il codice è in `core/backend/src/notification-settings.js`.
-
-**Migrazione** (`migrateLegacy()`, all'avvio e dopo ogni import di un backup): copia le righe rimaste in `records` nelle
-tabelle nuove e, nella stessa transazione, toglie righe, moduli e permessi vecchi. È idempotente. Una riga incompleta
-non viene persa: resta dov'è e il modulo non viene tolto finché c'è qualcosa da salvare. Provata su una copia dei dati
-reali di Finance (6 righe → 1 destinatario e 5 regole). I backup JSON includono le due tabelle; un backup vecchio
-(con i due moduli come righe) si importa lo stesso.
-
-### Corretto durante il lavoro
-
-- **Pile di righe sulla stessa data (importazione del 4/8/2026).** Serie mensili intere erano accatastate su una data sola (13/12/2025 o 18/04/2025):
-  gonfiavano singoli mesi (dicembre 2025 sembrava avere 8.263 € di spese, aprile 2025 ne aveva 16.414 €), riempivano di falsi "da pagare" e falsavano i confronti.
-  Riallineamento del 3/10/2026 (backup `finance-prima-riallineo-2026-10-03.json`):
-  - 46 copie tolte (le pile del 13/12/2025 erano doppioni di serie già presenti con le date giuste: Benzina + treno, Dazn Netflix Prime, iCloud + AC, Spese mese);
-  - 63 date ripristinate dalla vecchia app per le pile del 18/04/2025 (anche 22 che un mio errore dello script aveva annullato, poi rifatte);
-  - 34 righe "AE 4 n/66" tolte perché doppie delle rate collegate alla Quarta Cartella (le rate 37-48 create il 3/10 duplicavano quella serie);
-  - 37 righe ricategorizzate (Benzina → Auto & Benzina, Assicurazione Auto → Assicurazioni).
-  Le righe "da pagare" scadute da oltre 30 giorni sono passate da 32 a 4.
-  **Restano 35 righe impilate sul 18/04/2025** (circa 7.500 €: Iper Tosano ×17, Spese mese ×9, Cristian Bai, Michele Clerici, R.A.M. caldaia): non esistono nella vecchia app né
-  tra i movimenti del conto personale (probabilmente pagate dalla Prepagata), quindi la data vera non è recuperabile. Invece di inventare date, quelle 35 righe (7.509 €) sono marcate `data_incerta` con una nota e **escluse dai conti mensili**; la scheda "Come sta andando" lo dichiara ("Non contate in nessun mese: N spese…").
-  Lezione per gli script di scrittura: una riga si riscrive sempre partendo dalla copia più recente, mai da una letta all'inizio.
-
-- La **Checklist** in dashboard (periodo "questo mese") non permetteva di cambiare mese: ora ha le frecce avanti e indietro, il nome del
-  mese e "Torna a oggi" (`ChecklistWidget.jsx`).
-
-- **"Chiedi per le righe da smistare (N)" risaliva dopo ogni "Accetta".** Accettare applicava i campi ma lasciava la riga in "da smistare", che tornava tra
-  quelle da chiedere. Ora Accetta esegue anche la transizione già prevista dal flusso delle spese, "Conferma categorizzazione"
-  (da smistare → da pagare). Una riga già "da pagare" o "pagato" non cambia stato.
-
-- **Scadenza sbagliata (2028) sulle bollette.** `estraiScadenzaGenerica` sceglieva la data futura **più lontana** del testo, che in una
-  bolletta è la fine del contratto ("Data di scadenza del contratto: 30.04.2028"), non la scadenza del pagamento ("Rata unica entro il
-  08.09.2026", caso reale A2A). Ora: prima una data introdotta da "entro il / scadenza / rata unica", mai una data del contratto, di
-  rinnovo o di offerta; altrimenti la più **vicina** nei prossimi 90 giorni; altrimenti nessuna. Anche l'assistente scarta una scadenza
-  più lontana di ~13 mesi, e il pannello mostra sempre cosa ha capito (anche i campi già giusti, "già impostato").
-
-- **Luce o gas, controllato sui PDF veri.** La bolletta A2A da 201 € è luce (595 kWh); quella segnata "44 €" è **gas** e il 44 era il consumo
-  (44 Smc), non l'importo: il lettore delle email prendeva i consumi per euro. Ora `estraiImporto` scarta le quantità (Smc, kWh, mc, kW).
-  Inoltre, con un titolo "Gas/Luce" e **nessuna prova** (né PDF né kWh/Smc nel testo) il modello tirava a indovinare: ora la categoria di
-  energia resta vuota con confidenza bassa (la regola sta in Super Admin, `routes/tenant-ai.js`).
-
-- In Libreria compariva un modulo **"Sito Web" da installare**, mentre il Sito Web vero è una funzione delle Impostazioni (scheda Sito Web).
-  Erano due moduli segnaposto vuoti (`sito_web`, `sito_avanzato`: nessun campo, non installati) rimasti da una versione vecchia.
-  All'avvio `core/backend/src/legacy-cleanup.js` li toglie, ma solo se sono davvero vuoti (non installati, schema senza blocchi, nessun record).
-
-- **Luce o gas?** Una bolletta "A2A Energia Gas/Luce" arrivava all'assistente senza categoria: il titolo non basta, il tipo sta nel PDF
-  allegato. Ora il PDF si legge in locale (`core/backend/src/attachment-text.js`, `pdftotext`) e un programma calcola un **indizio**
-  (kWh, POD, "energia elettrica" = luce; Smc, PDR, "gas naturale" = gas; entrambi se ci sono segni di tutti e due). A Super Admin
-  escono solo l'indizio e un estratto delle righe utili (importi, scadenze, consumi, tipo di fornitura), **senza codici lunghi, IBAN né
-  l'intero PDF**. Se l'indizio dice chiaramente luce o gas, la categoria è quella, anche se il modello rispondeva altro o non sapeva;
-  se è ambiguo o il PDF non si legge, la proposta parte lo stesso, senza forzare niente.
-
-- Il riquadro delle **proposte dell'assistente** (bollette da smistare) stava sopra l'elenco di Spese Casa, e un riquadro uguale
-  sopra Spese Personali. Spostato in **dashboard**, in un elenco solo (`GET /api/ai/overview`): riguarda entrambi i moduli ed è
-  la prima cosa che si apre.
-
-- La scheda **Debiti** dentro Spese (e Spese Casa) mostrava solo "#3966" invece del nome del debito: quando una scheda legge un
-  altro modulo, la pagina non ha le righe di quel modulo e il titolo ripiegava sull'id. Ora `ParentChildrenView` carica le righe del
-  modulo dei debiti, usa il campo *nome* come titolo e aggiunge il creditore.
-
-- Il riepilogo del mattino **non è mai partito in produzione**: `startDailyDigest()` chiamava `.catch()` sul risultato di
-  `withLock()`, che è una funzione e non una promessa, e ogni minuto finiva in un `TypeError` nel registro. I test passavano perché
-  chiamavano `tick()` direttamente. Corretto, con un test che avvia il controllo come fa il server.
-
-- Il commit "Assistente AI, WhatsApp…" nel repository nuovo conteneva solo la parte `core/`: mancavano i file di Super Admin
-  (`lib/ai-budget.js`, `lib/ai-redact.js`, `routes/tenant-ai.js` con lo smistamento bollette, ecc.). Il NAS era a posto,
-  il repository no. Recuperati dalla cartella vecchia e committati.
-
-## 2026-10-03 — Piano AI per Finance: "Come sta andando" (fase 1)
-
-**Principio.** Il programma fa i conti, Mistral li racconta. All'AI arrivano solo totali già calcolati, mai righe né
-descrizioni; ogni numero del testo è controllato da Super Admin (cfr. "Commento ai report").
-
-**Scelte fatte** (dopo aver confrontato Finance con gli estratti conto del conto personale e del Conto Casa, 2020-2026, e con le
-indicazioni di Nima del 2026-10-03):
-- **Vista personale ("io").** Entrate = stipendi (il netto accreditato). Spese = **solo Spese Personali**, comprese le quote versate
-  alla casa (categoria *Contributo Casa*). Le **spese di casa non contano**: sono un registro condiviso, e in parte le paga
-  Federica (l'affitto, spesso direttamente al proprietario: dai movimenti, dal 2026 non passa più dal Conto Casa). Contarle tutte
-  gonfiava le spese personali. Fuori dalle entrate anche i contributi alla casa (gruppo *Casa*) e i riporti di saldo ("Saldo conto").
-- **Accantonamento.** Dal 2025-12 una parte dello stipendio (10% del lordo) è **trattenuta in busta** e va in un fondo/azioni: sul
-  conto arriva il netto, e il netto 2026 è circa 290 €/mese più basso (confermato dai dati: 2.184 € contro 1.894 € di media
-  gennaio-settembre). Le righe *Fondo* non sono entrate sul conto, ma sono **risparmio vero**: la scheda mostra "Entrate sul conto",
-  "accantonati" e il risparmio contando anche l'accantonato. Dove manca la riga con l'importo vero, si **stima** con il rapporto
-  mediano accantonato/netto degli altri mesi, e la scheda lo dichiara ("stima"). Gli estratti conto non contengono il lordo.
-- **Accordo sulla casa.** Di norma Nima versa **500 €/mese** al Conto Casa (causali "Budget mese X") e Federica 400 €. Se in un mese
-  Nima non versa (non ha budget), l'affitto da 550 € lo paga Federica, direttamente o dal Conto Casa. I versamenti di Nima sono in
-  Spese Personali con categoria *Contributo Casa*, con data e importo della banca (22 righe, 9.725 €, gennaio 2025-settembre 2026,
-  importate dagli estratti conto). La parte versata **in meno** dei 500 € è un debito verso Federica: da gennaio 2025 a ottobre
-  2026 sono 2.130 € nei mesi in meno e 1.355 € nei mesi in più, **775 € netti**; registrato in Debiti Personali (senza piano
-  rateale: la creazione del debito genera di norma le rate, qui tolte). Non è una spesa finché non lo restituisce.
-- **Pagamenti** e **Debiti** non contano come spese: le rate sono già dentro Spese Personali.
-- Le righe "da smistare" non sono spese finché non si smistano.
-- **Il mese di una spesa è il campo `data`** di Finance. Il confronto con le banche ha mostrato che le date delle spese NON sono
-  sfasate in modo fisso (Finance segna la scadenza, la banca il pagamento: scarto da -2 a 0 mesi), quindi nessuna correzione.
-- **Anomalia** = categoria con almeno +25% e +20 € rispetto alla media dei mesi precedenti (finestra di 6; la media conta solo
-  i mesi con spese registrate), oppure una categoria nuova da almeno 50 €. Soglia minima di saldo 300 € (per la futura previsione di cassa).
-- **Gli stipendi** erano sfasati di un mese (-1 da maggio 2021 a dicembre 2025, +1 nel 2026), con importi arrotondati e 12 mancanti:
-  allineati agli estratti conto (75 righe, data e importo al centesimo; lo stipendio arriva il 27, in passato intorno al 10 del mese).
-  La vecchia app ha date giuste ma importi arrotondati all'euro e in qualche mese diversi (es. 2025-09: 1860 contro 1.805,43 in banca):
-  si tengono gli importi della banca.
-
-**Limite dichiarato.** Finance non vede tutto: solo il 22-42% delle spese registrate compare sul conto personale e circa
-21.000 € l'anno di uscite (pagamenti con carta, prelievi, giri tra conti) non hanno una spesa corrispondente. La scheda lo dice
-("Cosa conta in questi numeri") e non pretende di essere il flusso di cassa completo.
-
-**Cosa c'è** (`core/backend/src/insights.js`, `routes/insights.js`, `components/InsightsCard.jsx`): in dashboard la scheda
-"Come sta andando" mostra entrate, spese, saldo, risparmio, confronto con il mese prima e con la media di 12 mesi, le categorie
-con la variazione e le anomalie. "Spiega con l'assistente" racconta i numeri; il testo si salva per mese e si riusa finché i
-numeri non cambiano (nessun costo a ogni apertura).
-
-## 2026-10-03 — Movimenti bancari (fase 1: conto personale)
-
-**Cosa.** In Finance c'è la pagina **Movimenti** (solo admin): carichi l'estratto conto in PDF e il programma ne legge i movimenti,
-li classifica, li abbina alle spese e alle entrate già registrate e ti mostra quelle che mancano. Il PDF **non si conserva**: si legge
-e si scarta, restano i movimenti (tabelle `bank_accounts` e `bank_movements`), con gli IBAN mascherati. Il server usa `pdftotext`
-(poppler-utils, aggiunto al `core/Dockerfile`).
-
-**Come funziona** (`core/backend/src/bank-import.js`, `routes/bank.js`, `pages/MovimentiPage.jsx`):
-- **Lettura** (`parseStatement`): formato "Estratto Conto Italia", un movimento per riga di importo; si ripuliscono intestazioni e piè di
-  pagina (le righe ripetute su ogni pagina) e si assegna a ogni importo il testo giusto anche quando è "centrato" tra due movimenti.
-  Provata su un anno vero (429 movimenti su 429 righe di importo). La data di un movimento è la **valuta** (per le carte è il giorno
-  dell'acquisto), la data contabile si conserva a parte.
-- **Classificazione**: stipendio, commissioni, carta (con esercente), utenza, prelievo, bonifico, **giro tra tuoi conti** (bonifico verso
-  l'intestatario, cointestato o "Conto Casa"; **ricarica della prepagata**). I giri non sono spese né entrate. Un bonifico a una persona
-  con lo stesso cognome ma nome diverso non è un giro.
-- **Doppioni**: caricare di nuovo lo stesso estratto, o uno che si sovrappone, non duplica niente; due movimenti identici nello stesso
-  giorno (due caffè uguali) restano due.
-- **Abbinamento**: un'uscita si abbina a una spesa di Finance con lo **stesso importo** e una data entro 75 giorni (stipendi alle entrate,
-  versamenti alla casa ai *Contributo Casa*); una riga di Finance si abbina a un solo movimento.
-- **"Da registrare"**: uscite (carta, utenze, bonifici, altro) senza spesa corrispondente. **Registra** crea una spesa personale già
-  pagata con la categoria suggerita da parole chiave (si può cambiare); **Ignora** la toglie dall'elenco.
-- La scheda "Come sta andando" mostra, per il mese, entrate e uscite reali in banca e quanto non è registrato in Finance.
-
-**Cosa si è visto sui dati veri.** Nel 2025 sul conto personale sono passati circa 14.600 € di **ricariche della prepagata**: la spesa
-vera di quel denaro si vedrà solo con l'estratto della prepagata. Fino a quel momento le uscite del conto personale sono sottostimate
-rispetto alle spese reali.
-
-**Non ancora fatto** (nell'ordine): estratti della **Prepagata** e del **Conto Casa** come conti a sé; categorie proposte da Mistral per
-i pagamenti con carta (oggi parole chiave); un elenco modificabile dei giri verso conti propri (es. Buddy Bank: da confermare se è un
-conto di risparmio).
-
-## 2026-10-03 — Funzioni facoltative per tenant (la modularità torna)
-
-**Problema.** Nel corso del lavoro sull'AI avevo messo nel nucleo circa 1.700 righe che conoscono Finance (movimenti bancari, analisi,
-smistamento bollette, riepilogo del mattino), presenti in **ogni** tenant: Timbrature vedeva "Movimenti" e il riquadro delle bollette.
-L'affermazione di `ARCHITETTURA.md` "non c'è codice specifico per un tenant" non era più vera.
-
-**Scelta.** Quattro **funzioni facoltative** attivabili per tenant (`movimenti`, `analisi`, `bollette_ai`, `riepilogo_mattino`), spente di default.
-Spente: niente voce di menu, niente riquadro, rotte 403, lo smistamento e il riepilogo non partono. Un tenant che usa già la finanza le trova
-accese al primo avvio: Finance non cambia. Si gestiscono da Impostazioni → Funzioni. Provato con un tenant senza moduli di finanza.
-
-**Cosa NON risolve.** Il codice resta nel nucleo e conosce i nomi dei moduli di Finance. È il primo tempo; il secondo è l'**AI nei moduli**:
-
-**Aggiornamento (stesso giorno).** Le funzioni sono diventate **capacità installabili dalla Libreria** (non un interruttore nelle Impostazioni: «installare» è il gesto
-del progetto che si costruisce da zero) e sono sette: a quelle di finanza si sono aggiunte WhatsApp, mail Gmail e Sito Web, che prima erano sempre presenti. Un progetto nuovo
-non ne ha nessuna. **Export dati** è tornato in Impostazioni, non più una voce di menu. Le schede delle Impostazioni mostrano solo ciò che è installato.
-
-### AI nei moduli (progettazione, non ancora costruito)
-
-L'idea (di Nima): abilitare l'AI su un tenant lo fa "evolvere" offrendo versioni potenziate dei moduli; la chiave si inserisce nel tenant
-(già così: cifrata in Super Admin, tetto per tenant). Un modulo **dichiara** nel suo schema cosa sa fare con l'AI, con blocchi nuovi come
-quelli esistenti per campi, workflow e automazioni:
-- `ai_triage`: "quando una riga arriva da smistare, proponi categoria, importo, scadenza"; dichiara il campo categoria e dove prende il testo
-  (email, allegati). Oggi è `ai-suggestions.js` con `spese_casa` e `spese_personali` scritti dentro.
-- `ai_explain`: "racconta questi totali"; oggi il commento ai report (già generico) e "Come sta andando".
-- `ai_import`: "leggi un estratto o un documento e proponi righe"; oggi `bank-import.js`.
-Nel nucleo restano pochi motori generici (smistare, spiegare, importare) e la parte di sicurezza (pulizia dei dati personali, tetto di spesa,
-controllo dei numeri), che sta già in Super Admin. Le versioni potenziate si pubblicano in Libreria come versione 2 del modulo; il tenant
-vede "disponibile v2 con AI" e aggiorna quando vuole (l'aggiornamento è già esplicito). Il Builder all'inizio mostra i blocchi in sola lettura.
-**Ordine:** `ai_triage` per primo (la prova più piccola), poi `ai_explain`, infine `ai_import`. Si parte quando nasce un secondo progetto che usa l'AI.
-
-## 2026-10-03 — Vista "Da inizio anno"
-
-La scheda "Come sta andando" ha ora due viste: **Mese** e **Da inizio anno** (`insights.js` → `buildYearSnapshot`, `components/InsightsYear.jsx`).
-Da gennaio all'ultimo mese concluso (un anno passato fino a dicembre), con le stesse regole del mese: stipendi, accantonato (registrato o stimato,
-dichiarato), quota alla casa, righe "da smistare" e senza data certa fuori. Mostra entrate, spese, saldo, risparmio vero, **come si dividono le spese**
-(rate = righe collegate a un debito o categoria Rata; fisse; variabili) con la quota già "impegnata", il confronto con **lo stesso periodo dell'anno
-prima** e le categorie con la variazione. "Spiega con l'assistente" racconta l'anno (istruzioni sue in Super Admin, cifre controllate; il testo si salva
-per anno, chiave `anno-AAAA`). Sostituisce nell'uso i riquadri sparsi del modulo Spese Personali ("Risparmio anno corrente", "Fondo cumulativo", "Indice
-di salute"), che restano nello schema ma contano diversamente (non includono l'accantonato in busta).
-
-### Da fare (nell'ordine deciso)
-
-1. **Movimenti bancari**, passi successivi (la lettura del conto personale c'è, vedi sopra): Prepagata e Conto Casa come conti a sé,
-   categorie proposte da Mistral per i pagamenti con carta (accetti o ignori; IBAN e nomi tolti prima dell'invio).
-2. **Previsione di cassa** (30/60/90 giorni) e **debiti e rate**: richiedono saldi dei conti aggiornati (oggi tutti a 0).
-3. **Pulizia delle categorie** (doppioni come *Benzina* e *Auto & Benzina*) e **budget** per categoria.
-4. **Domande libere** ("quanto ho speso di luce nel 2025?") tradotte in un filtro strutturato, mai SQL libero; poi gli allegati PDF.
-5. Backup su un dispositivo diverso dal NAS.
-
-## 2026-10-03 — Ruoli dei moduli e base per l'AI
-
-- **Nessuna funzione conosce nomi di moduli o di campi.** Ogni modulo dichiara nel Builder (Proprietà → "Ruoli del modulo") se è una spesa o un'entrata, a cosa serve (riepiloghi, avvisi, mail) e quali suoi campi sono importo, data, scadenza, categoria, descrizione, stato, gruppo, fisso. Tabella `module_roles`, rotte `/api/module-roles`, codice `module-roles.js`. Per Finance i valori di partenza sono i nomi di prima (nessun cambiamento visibile).
-- **Chi legge i ruoli:** "Come sta andando" (moduli e campi di entrate/spese), riepilogo del mattino (moduli "avvisi"), regole Gmail (modulo di destinazione scelto sulla regola, colonna `gmail_rules.modulo`; le regole vecchie sono agganciate al modulo che usavano).
-- **Impostazioni salvate a mano non congelano i ruoli:** `insights_config` salva solo ciò che è stato cambiato, il resto segue i ruoli.
-- **AI per modulo, non globale.** Ogni modulo accende da solo i potenziamenti (smistare, spiegare, importare) dal Builder (Proprietà → "Potenziamenti AI"). Tabella `module_ai`, rotte `/api/module-ai`, codice `module-ai.js`, unico punto che dice se un potenziamento è attivo (`can(slug, key)`: acceso + ruoli richiesti dichiarati). Un widget è "spiegabile" solo se lo dice la sua configurazione (`config.explainable`). Per ora si salvano solo gli interruttori: nessun potenziamento è ancora collegato.
-- **Finance senza AI** (decisione dello stesso giorno): via la sezione Capacità dalla Libreria, via la scheda "Assistente AI", via i pulsanti "spiega"; la capacità `bollette_ai` è spenta su Finance. Le bollette restano in "da smistare" con avviso WhatsApp (`smistare-notify.js`).
-
-## 2026-10-03 — Dal modulo all'avviso, al widget: la modularità completata
-
-Seguito del registro precedente, nell'ordine in cui è stato fatto. Tutto è online su Finance.
-
-- **Avvisi per modulo.** Il modulo dichiara quale valore dello stato è "nuovo" (da smistare) e quale "da fare" (da pagare), se avvisare per le righe nuove e se
-  mettere le scadenze nel riepilogo del mattino, come chiama le sue righe ("bolletta/bollette") e il tag dei destinatari. Il riepilogo e l'avviso (`avvisi.js`) non
-  hanno più parole o stati scritti nel codice. Il testo è neutro rispetto al genere ("Bolletta da smistare", "Ordine nuovo").
-- **Criteri dei riepiloghi nel modulo di entrate** (categorie escluse, gruppi esclusi, stipendio, risparmio, campo accantonamento): non più dentro `insights.js`.
-  Un modulo di entrate nuovo non eredita niente di Finance.
-- **Via i nomi di Finance dai valori di riserva** (riepilogo, insights, Gmail, capacità, frontend). Restano solo la migrazione `FINANCE` in `module-roles.js` e i
-  Movimenti bancari, che **non si rendono modulari perché non servono** (spenti su Finance). La migrazione scrive i valori una volta sola: chi ha spento tutto apposta non li ritrova.
-- **Regola Gmail con tipo** (*bolletta* o *semplice*) e modulo di destinazione; la riga usa campi e stato dichiarati dal modulo.
-- **Coda "Da smistare" in dashboard** con pulsante **Smista**: apre un pannello con tre scelte (un pagamento, in rate, già pagata) invece del clic cieco di prima; l'utente aveva chiesto di capire dove va la riga e come dividere il pagamento. Le rate usano il piano del modulo dei debiti (la sua automazione genera le righe), dichiarato dal modulo come "piano a rate". **L'AI non c'entra**: non legge e non smista. Se un modulo ha "Smistare"
-  acceso, l'AI propone solo nell'elenco del modulo, e "Accetta" non cambia lo stato.
-- **"Come sta andando" per vista**: un widget per Personale e uno per Casa. La vista (moduli, gruppi, accantonamento, **solo spese**) è nella configurazione del widget e la legge
-  il server. Casa è di sole spese: i contributi alla casa non servono come entrate, "in Spese casa io vedo le cose".
-- **AI per modulo e per widget**: "Smistare" e "Spiegare" collegati; "Importare" no. "Spiegare" sui widget si accende dal widget (`explainable`), sui report dal modulo.
-  Su Finance: "Smistare" spento, "Spiegare" acceso sui due "Come sta andando". Stile dei commenti riscritto (dai del tu, frasi brevi, niente giudizio bene/male per le sole spese).
-- **Registro degli invii WhatsApp** (`whatsapp_log`): ogni messaggio con l'esito vero per destinatario. Messaggio di prova: inviato.
-- **Impostazioni riordinate**: regole Gmail dentro Google, destinatari e invii dentro WhatsApp, **Dati** (Export CSV, backup `.db`, export/ripristino JSON) come unica voce con tre schede uniformi,
-  "Il mio account" con profilo, password e 2FA. Tolta la scheda Assistente AI e la sezione Capacità dalla Libreria.
-- **Timbrature**: il modulo `timbrature` è dentro Finance (non un progetto a parte, quello eliminato non esiste più). Aggiornato da uno zip Firestore (1.161 righe, 111 nuove, chiave data+entrata+uscita, date corrette di +2 ore).
-  Resta una riga a cavallo della mezzanotte (09/06/2023, 07:00–00:00) con durata calcolata negativa: la formula fa uscita meno entrata. Nel modulo c'è una bozza più vecchia della versione pubblicata: non va pubblicata.
-- **Accesso di Federica**: scelta moduli per utente (Utenti & Ruoli → "Moduli accessibili": Timbrature e Spese casa). Nasconde dal menu ma non blocca l'API; se non si spunta nulla l'utente vede tutto.
-  I widget della dashboard sono tutti solo admin.
-
-- **Widget generici e facili da usare**: l'elenco dei tipi è in gruppi con una riga di spiegazione, e i widget di finanza compaiono solo nei progetti che hanno spese o entrate ("deve essere generico e facile da usare"). Riepilogo mensile e Come sta andando restano widget di finanza, non resi configurabili fino a perdere il vocabolario.
-
-- **Due buchi degli avvisi chiusi**: (1) l'avviso sulle righe nuove non dipende più da come nascono ma da un controllo unico ogni minuto (`avvisi.js`), che copre anche automazioni e importazioni; (2) le mail che sembrano bollette ma da mittenti senza regola si mettono in lista e si segnalano con un messaggio (`gmail-unknown.js`), invece di perdersi in silenzio.
-
-- **"Power up" dell'AI**: Impostazioni → AI con interruttore generale (spento di default; su Finance l'AI è stata lasciata spenta perché Nima la accenda e veda l'effetto), «Accendi e potenzia», chiave
-  e spesa del mese. Con l'AI accesa: **Smista già compilato** dalla bolletta, **Spiega** acceso di default sui widget, **Importa da PDF**, **Chiedi ai dati** (query strutturata validata due volte, mai SQL) e **monitoraggio**
-  mensile su WhatsApp (acceso sui due widget di Finance: primo messaggio il 2 novembre alle 9). Ogni potenziamento usa i ruoli dichiarati dai moduli, senza nomi di Finance nel codice.
-
-- **Via i moduli di supporto** (richiesta di Nima: «non deve esistere modulo di supporto, ma solo moduli che tra di loro possono parlarsi»). Tolto il concetto da Builder (casella nel wizard e nelle proprietà, elenco "Supporto"),
-  menu, Store, Impostazioni, Guida e Utenti; la colonna è azzerata da un trigger. Su Finance, con copia dei dati prima (`finance-2026-10-04-prima-semplificazione-moduli.db` e `.json`, 2.076 righe): ritirati
-  **Pagamenti** (102 righe, calendari delle rate del vecchio sistema, in parte in contraddizione con le rate vere), **Ricorrenti casa** e **Ricorrenti personali** (0 righe) — disinstallati, le righe restano e si riattivano;
-  **Debiti casa e personali** e **Conti** (usato da 560 spese su 644 e dal Riepilogo mensile, era solo nascosto) sono ora moduli normali nel menu. Il menu di Finance ha 8 moduli più la dashboard.
-- **Idea per dopo**: un solo modulo "Spese" con un campo "Ambito" (Casa/Personale) al posto di due copie, e un solo "Debiti". Richiede prima nel Builder la **visibilità per valore di campo** nei permessi (un ruolo vede solo le righe
-  con Ambito = Casa, anche via API), che è anche ciò che serve per un'app più universale.
-
-### Stato alla fine della sessione (2026-10-04)
-
-Tutto è online su Finance e committato. **Finance ora va testato a mano** con `docs/TEST-FINANCE.md`. Nima crea gli utenti (Federica: Timbrature e Spese casa) e attiva il 2FA (vedi `docs/OPERAZIONI.md`).
-
-### Ancora aperto (non bloccante)
-
-- **Da provare dal vivo** (coperti dai test con servizi simulati, mai visti con dati veri): avviso WhatsApp su una bolletta vera, "Smista" in rate, "Importa da PDF", "Chiedi ai dati", proposte dell'AI con la fonte, mail non riconosciute.
-- **"Spiegare"** sugli altri widget (Riepilogo mensile, Checklist): non collegato.
-- **Pulizia del 04/10/2026**: corretta la scadenza A2A (30/04/2028 → 08/09/2026, dal PDF; copia del database prima). I presunti doppioni **non sono doppioni**: sono pagamenti con data incerta (import del 4/8), e restano.
-- **Dati di Finance** da pulire (elenco in `docs/TEST-FINANCE.md`): righe "da smistare" vecchie o a 0 €, settembre ancora "da pagare" (affitto, Spese Casa, rata PayPal), affitto registrato in un solo mese su sei,
-  righe scadute, Quarta Cartella marzo–maggio. Il riepilogo delle 8:00 e il messaggio mensile del 2 novembre sono rumorosi finché non si puliscono.
-- **Timbrature**: la formula della durata non gestisce i turni a cavallo della mezzanotte (esempio: 09/06/2023, 07:00–00:00).
-- **Sicurezza, a carico di Nima**: app Google in produzione (altrimenti il collegamento può scadere dopo circa 7 giorni e Gmail si ferma), password del NAS, 2FA del Super Admin e degli utenti.
-- **Movimenti bancari**: non modulari, spenti, non servono.
-- Un timeout verso Redis è comparso una volta all'avvio di un container e non si è ripresentato (rete e Redis a posto): niente da cambiare, ma va ricordato se torna.
-
-## 2026-10-04 — Primitive tolte perché non usate
-Il Builder resta completo (quello di Super Admin serve per gli altri tenant), ma si sono tolte le primitive che nessun modulo installato usava.
-- Blocchi: financial_statement, distance_buckets, reconciliation, document_template, form_step (e Wizard/PrintModal).
-- Azioni automazione: applica_prezzo_listino, aggiorna_figli, aggiorna_figli_via_router, libera_altri_con_stesso_valore, trova_o_crea_e_aggiorna, aggrega_in_record, crea_record_da_padre, storna_riferimento, registra_provvigione.
-- Restano: crea_record, crea_record_n_volte, notifica_interna, invia_notifica, invia_report_periodico, aggiorna_record.
-- Un blocco sconosciuto nei vecchi schemi viene ignorato (lenient), non rompe il modulo.
-
-## 2026-10-10 — Proprietario delle righe automatiche e "Sposta in…"
-- **Problema**: Spese Personali ha la regola "ognuno vede solo le proprie righe". Le righe che arrivano da Gmail, dall'estratto conto o dalle automazioni nascevano senza proprietario (e le 427 esistenti erano dell'admin): un utente normale non le vedeva, e Checklist/Riepilogo mostravano solo Casa.
-- **Scelta**: la regola resta (se un giorno Federica ha le Personali vede solo le sue). Le righe automatiche prendono un proprietario: quello della riga che le genera (le rate sono di chi ha creato il piano), altrimenti il "proprietario predefinito" scelto in Utenti (`tenant_settings.default_owner_user_id`, `core/backend/src/record-owner.js`). Le righe esistenti si riassegnano con un'azione esplicita dell'admin (Utenti → "Proprietario delle righe automatiche", con anteprima del numero), che cambia solo `records.user_id`.
-- **Sposta in…** (Smista): una riga "da smistare" può cambiare modulo di spesa (Casa ↔ Personale). Destinazioni = moduli con lo stesso `kind` e gli avvisi dichiarati. I campi si abbinano per ruolo, gli altri solo con stessa chiave e tipo; ciò che non passa viene mostrato prima e scritto nella cronologia. Stesso id, stessi allegati; se la riga non aveva proprietario diventa di chi la sposta.
-- Test: `core/backend/src/sposta-proprietario.test.js`.
-
-## 2026-10-10 — Vista ad archivio (Documenti)
-- Nuovo modo di vedere l'elenco di un modulo, accanto a Tabella e Card: **Archivio** (Builder → modulo → "Come si vede l'elenco"). Nessuna pagina su misura: vale per qualunque modulo con un campo «scelta» e un campo «file».
-- **Come un archivio (rifatto lo stesso giorno su richiesta)**: la radice mostra solo le cartelle (i valori del primo campo select, anche vuote, sbiadite), si entra per vedere i file, con le briciole «Archivio › cartella › anno». Una cartella con almeno 8 file e almeno 2 anni diversi si divide da sola in **sottocartelle per anno**; l'anno si legge dal titolo (es. `ClientStatements_20190830…`, `CU-2021…`) o, se manca, dalla data del record. Con una ricerca attiva si vede l'elenco piatto di tutto l'archivio.
-- File = primo campo file; titolo = primo campo di testo; data = primo campo data. Schede con icona per tipo (miniatura per le immagini), elenco alternativo, anteprima a schermo intero (immagini e PDF con il visualizzatore del browser; gli altri tipi si scaricano). Spostare un file di cartella = cambiare quel solo campo (trascinando su PC, dal menu "Cartella" nell'anteprima).
-- Non fatto: miniatura della prima pagina dei PDF (servirebbe pdf.js, peso notevole): le schede PDF mostrano l'icona.
-- Codice: `core/frontend/src/pages/ModulePage/ArchiveView.jsx`; `list_view = 'archive'` accettato da `routes/modules.js`.
-- **Cartelle modificabili** (stesso giorno): nell'archivio la matita rinomina una cartella, il cestino toglie quelle vuote, «Nuova cartella» ne aggiunge. Una cartella è un valore del campo «scelta», quindi `POST /api/field-options/:modulo/:campo` (`routes/field-options.js`, test `field-options.test.js`) cambia lo schema pubblicato (con una riga di cronologia) e tutte le righe che lo usano, in una transazione. Rifiuta nomi doppi (anche con maiuscole diverse), vuoti, oltre 60 caratteri; rifiuta di rinominare se il vecchio nome è citato in una regola del modulo (condizioni, automazioni) e di togliere una cartella non vuota. Possono usarlo gli utenti con permesso di modifica sul modulo, non solo l'admin.
-- Corretto un errore: il parametro `searching` dell'archivio (ricerca = elenco piatto) era stato collegato al componente sbagliato in `ModulePage/index.jsx`.
-- **Modulo «Nuovo» più semplice** (stesso giorno): i collegamenti facoltativi a altri moduli (per Documenti: spesa casa/personale, debito casa/personale) stanno chiusi in fondo sotto «Collegamenti (facoltativo)»; i campi obbligatori vengono prima. Nei moduli con vista ad archivio il **file è il primo campo**, il titolo si compila da solo dal nome del file (se vuoto) e il nuovo documento parte dalla **cartella aperta** (campo «Tipo» già scelto). Regola generica in `ModulePage/index.jsx`, nessun nome di modulo.
-
-## 2026-10-10 — Chiusura 0.1.1
-- La versione è unica per tutta la piattaforma e si cambia a mano a ogni chiusura di fase (sidebar, `/health`, `package.json`, `package-lock.json`, README). Le note di ogni versione stanno in [`NOTE-DI-RILASCIO.md`](NOTE-DI-RILASCIO.md): cosa c'è, cosa è **da verificare dal vivo** e cosa sapere.
-- Chiusa con tre cose dichiaratamente non provate in produzione (Gmail dopo il ricollegamento di Google, invio vero del backup via mail, archivio con i file veri su Drive): sono segnate nelle note e in `TEST-FINANCE.md` (6b, 6c), non nascoste.
-- Il deploy dei tenant con il 2FA attivo non si fa da script: l'immagine si costruisce da `redeploy-nas.sh` e il tenant si aggiorna dal pulsante **Aggiorna** in Super Admin.
-
-## 2026-10-11 — Report su WhatsApp: tre messaggi, tutti guardano lo stato di pagamento
-- **Problema** (segnalato da Nima): i report arrivavano ma contavano **tutte** le spese per data senza verificare se erano pagate (il settimanale diceva «−100% vs precedente»; il riepilogo del mattino ripeteva ogni giorno le stesse voci), e il mattino alle 08:00 non aveva senso.
-- **Scelta**: tre messaggi, ognuno con una sola domanda, che non partono se non c'è niente da dire: **da pagare** (ogni 27, venerdì prima se è weekend; dal 27 al 26 del mese dopo + scadute + «ultimo stipendio → ti restano»), **da smistare** (ogni sera, finché la coda non è vuota), **scadute** (lunedì sera). Tutti leggono lo **stato** dichiarato dai moduli, mai la sola data. Il riepilogo del mattino (`daily-digest.js`) è stato **tolto**, non convertito; la chiave tecnica `riepilogo_mattino` resta (è salvata nei tenant) ma accende i nuovi report.
-- **Limite dichiarato**: il report si fida di ciò che è segnato «pagato»; se paghi e non spunti, continua a dire «da pagare». La verifica automatica con la banca (movimenti) non c'è: `bank-import.js` è spento su Finance e non modulare. Il promemoria «scadute» lo rende visibile ogni lunedì.
-- Le automazioni vecchie dentro Spese Casa/Personali (report settimanale e mensile, «scadenza oggi» delle 08:00) restano nello schema finché l'admin non preme «Toglili dai moduli» nella scheda Report: rimozione esplicita, con cronologia, non un silenzio nascosto. Nel frattempo gli avvisi «scadenza» per riga restano muti, il report periodico no.
-- Test: `reports.test.js` (21), `reports-legacy.test.js` (5).
-- **Formato compatto** (stesso giorno, dopo aver visto i primi messaggi veri): troppo lunghi. Ora le scadute stanno in una riga nel messaggio del 27 (l'elenco è nel loro messaggio), «in arrivo» mostra al massimo 8 voci, importi senza centesimi inutili. Limite di CallMeBot: in fondo a ogni messaggio aggiunge «I need your support» (non si toglie). **Secondo destinatario**: oggi il sistema usa **una sola chiave CallMeBot** per tutti, ma la chiave è legata al numero di chi l'ha attivata, quindi a un secondo numero il messaggio non arriva; serviranno una chiave per persona e un filtro per modulo (Federica deve ricevere solo Casa). **Telegram o un bot** (formattazione vera, bottoni «Pagata», un solo bot per più persone, nessuna pubblicità) è stato proposto e **rimandato**: prima si guardano i report per un paio di settimane.
-
-## 2026-10-11 — Bot Telegram: canale a doppio senso, a gradini e senza scritture libere
-- **Perché Telegram e non WhatsApp**: CallMeBot spedisce soltanto, con una chiave per numero e una riga pubblicitaria in fondo; un bot vero su WhatsApp (Business Platform) vuole numero dedicato, account Meta, modelli approvati e costo a messaggio. Telegram è gratuito, ha bottoni e formattazione, e un solo bot serve più persone.
-- **Cosa fa (gradino 1)**: i report arrivano anche su Telegram, ognuno nella **versione dell'utente**, con «✅ Pagata» e «Apri l'app»; comandi fissi in sola lettura. **Cosa non fa**: nessuna domanda libera all'AI (gradino 2), nessun comando che scrive oltre al bottone (gradino 4), nessuna foto di bollette (gradino 3).
-- **Confini di sicurezza** (il bot non ha il 2FA): chat collegata a UN utente con codice monouso da loggato; ogni controllo dell'app riusato, non copiato (`runTransition` estratta da `routes/records.js`, `visibleSlugsFor` da `routes/modules.js`, `filterViewable`); webhook con segreto; token cifrato; solo chat private; 20 messaggi al minuto; ogni azione nel registro; il bottone è l'unico modo di scrivere. Prova «al contrario» fatta: togliendo il filtro per utente 3 test falliscono.
-- **Rimandato**: seconda persona su WhatsApp (richiederebbe una chiave CallMeBot per numero): con Telegram il problema non esiste.
-- Test: `telegram.test.js` (23, con Telegram simulato).
-
-## 2026-10-11 — Bot «full powered»: frasi libere e azioni, sempre con conferma
-- **Richiesta**: un bot che faccia (quasi) tutto ciò che si fa nell'app. **Scelta**: sì, ma l'AI **propone e non esegue**. Una frase diventa UNA azione di un elenco chiuso (`domanda`, `elenco`, `segna_pagata`, `riapri`, `smista`, `nuova_spesa`, `altro`), la riga la trova il tenant, ogni scrittura è una **proposta con bottone di conferma** (15 minuti, una volta sola, solo per chi l'ha originata), e l'esecuzione passa dall'**API dell'app come quell'utente** invece di una seconda copia della logica.
-- **Perché così**: il bot non ha il 2FA e parla con un modello: i due rischi sono «un telefono sbloccato» e «un modello che si sbaglia o viene manipolato». Il primo si limita con poche azioni e una conferma; il secondo con un elenco chiuso, doppia validazione (`shared/ai-bot-intent.js`), nessun record né id verso il modello, e nessun testo del modello che arrivi all'utente come descrizione dell'azione (la descrizione viene dai dati validati).
-- **Esclusi di proposito**: eliminare, modificare campi liberi, utenti, impostazioni, backup. **Rimandato**: leggere foto di scontrini (servirebbe un OCR/visione nel gateway AI; per ora solo PDF), conversazioni con memoria.
-- **Prove «al contrario»**: togliendo il controllo di proprietà della proposta, o il filtro per utente nella ricerca delle voci, due test falliscono.
-- Test: `telegram-bot.test.js` (22), `ai-bot.test.js` in Super Admin (11).
-
-## 2026-10-11 — Segreti cifrati a riposo e librerie aggiornate
-- **Problema** (domanda di Nima sulla sicurezza): nel database di Finance erano **in chiaro** i token e il segreto di Google (accesso a Gmail e Drive), la chiave di CallMeBot, il segreto del webhook Telegram e i **segreti del 2FA**; vale anche per i segreti 2FA di Super Admin. Chi avesse un file del database o un backup li leggeva.
-- **Scelta**: cifrarli con la chiave del progetto, tutto in un modulo (`secrets-at-rest.js`), con lettura retrocompatibile e migrazione all'avvio verificata. Prova «al contrario» fatta dai test: un valore manomesso o con chiave sbagliata diventa «assente», non un testo di errore.
-- **Trovato lungo la strada**: l'admin di Finance risultava **senza 2FA** (segreto avviato e mai confermato); e `/2fa/setup` poteva **sostituire il segreto di un utente con il 2FA già attivo** chiudendolo fuori: ora risponde 409 se il 2FA è già attivo.
-- **Librerie**: `npm audit fix` in Finance (era 1 critico e 3 moderati → 0) e in Super Admin; nodemailer 6 → 10 (API verificata con un trasporto di prova); nel provisioner (ha `docker.sock`) 1 critico e 1 alto corretti con `dockerode` 4.0.12. Restano 2 moderati su `uuid` (non raggiungibile da noi) che `npm audit fix` può chiudere solo riportando indietro `dockerode`: lasciati, annotato in ARCHITETTURA.
-- **Non fatto, di proposito**: cifrare le chiavi dei tenant nel registro di Super Admin (servono al ripristino; una chiave sullo stesso server non protegge da chi ha il server). **Da fare dal proprietario**: ruotare le password vecchie, ruotare i segreti già usciti in backup in chiaro (vedi OPERAZIONI), rilasciare il provisioner.
-- Test: `secrets-at-rest.test.js` in Finance (9) e in Super Admin (2).
-
-## 2026-10-11 — Foto di scontrini al bot
-- **Richiesta**: mandare la foto di uno scontrino e avere la spesa registrata. **Scelta**: lettura con un modello di visione di Mistral tramite Super Admin (stesso gateway, stesso tetto di spesa), risultato ridotto a pochi campi **validati due volte** (`shared/ai-receipt.js`), proposta con conferma, foto allegata, avviso di doppione. Nessuna scrittura senza il tocco; l'importo letto va **controllato dall'utente sullo scontrino** (il bot lo dice).
-- **Perché la conferma è obbligatoria anche qui**: un modello di visione sbaglia più di uno che legge testo (cifre simili, scontrini sgualciti): un totale sbagliato scritto in silenzio vale più di un tocco in più.
-- **Limiti dichiarati**: solo euro; foto JPEG/PNG/WebP (le HEIC vanno mandate come «foto» dal telefono, che le converte); non legge le singole voci dello scontrino (solo il totale); l'immagine arriva a Mistral e non si può oscurare; **mai provato con Mistral vero** (solo risposte simulate nei test): il primo scontrino reale dirà se il modello e la chiave in uso la leggono.
-- Test: `telegram-bot.test.js` (+10), `ai-receipt.test.js` in Super Admin (8).
-
-## 2026-10-13 — Un solo Builder
-I due Builder (tenant e Super Admin) erano copie sincronizzate a mano. Ora c'è un'unica implementazione in `shared/frontend/builder/`, con alias Vite `@shared`/`@app` e una render-prop `moduleActions` per le azioni di promozione del modulo (tenant: Proponi alla Libreria; Super Admin: Salva nella Libreria). Super Admin ha l'alias Tailwind `accent`.
-
-## 2026-10-13 — Il verticale lo costruisce l'utente del tenant
-Nessun verticale «curato» da Super Admin: chi costruisce il proprio gestionale spunta più moduli nello store e li installa insieme (`POST /api/modules/registry/bulk-install`: salta i presenti, installa le dipendenze, segnala i falliti), poi crea le relazioni nel Builder. Un primo tentativo con verticali gestiti da Super Admin è stato scartato.
-
-## 2026-10-13 — Collega i moduli e primi passi
-- **Collega i moduli** (`core/backend/src/module-links.js`): relazioni proposte da regole sui nomi (nome contenuto, campo che si chiama come un altro modulo), mai verso moduli di sistema; chi applica ricalcola tutto (chiave, etichetta, campo da mostrare), non duplica, scrive storia e versione come una pubblicazione.
-- **Primi passi** (`routes/setup-wizard.js`, `SetupWizard.jsx`): compare solo a un admin, se il tenant non ha nessuna riga e il percorso non è mai stato chiuso; quindi un tenant già in uso (Finance) non lo vede e uno creato dall'analisi lo chiude da solo. Lo stato dei passi si legge dai dati. Nel vecchio Platform esisteva un tour guidato con spotlight (ProductTour, sul Sito Web), non un percorso di configurazione: non è stato riportato.
-
-## 2026-10-13 — Verticali proposti come punti di partenza
-Un tenant vuoto vede in Libreria «Parti da un modello»: tessere di verticali (gruppi di moduli generici che funzionano insieme), da `super-admin/backend/src/seeds/verticali.json` (dati, non codice) risolti sui moduli che la Libreria ha davvero (`lib/verticali.js`, `GET /api/registry/public/verticals`). Si tolgono le spunte ai moduli che non servono e si installa col solito bulk-install; poi «Collega i moduli». Convive con la scelta libera di più moduli nello store. Corretto: l'installazione multipla non ricaricava il menu laterale.
-
-## 2026-10-13 — Distacco di un tenant su un server dell'utente
-Copia (non spostamento) via SSH, avviata dal tenant: `ssh2` in Super Admin, token firmato col segreto del tenant, impronta del server confermata e fissata, credenziali solo in memoria, destinazioni interne vietate. Il tenant copiato non ha più Super Admin (AI, Libreria e aggiornamenti non disponibili finché non esisterà una chiave AI propria del tenant). Super Admin non vede dati: copia un file di database che già custodisce nei backup.
-
-## 2026-10-13 — Inviti con link monouso
-Un invito è un link che porta a scegliere utente e password, non una password spedita. Consegna a scelta (copia, WhatsApp/Telegram con messaggio pronto, email da Super Admin): nessun invio automatico su WhatsApp/Telegram perché le piattaforme non permettono di scrivere per primi a persone nuove. Vale per il primo admin (da Super Admin) e per gli utenti (dall'admin del tenant).
-
-## 2026-10-16 — Controllo di sicurezza e pulizia
-
-**Corretto** (con test dove si può provare):
-- **2FA aggirabile in Super Admin**: i download con `?token=` (backup dei tenant, export dei moduli e dell'immagine) accettavano
-  il token "in attesa della 2FA" e gli utenti disabilitati. Con la sola password si scaricava il database di un tenant. Ora
-  passano dallo stesso controllo di `requireAuth`.
-- **Segreti con valore di riserva**: `INTERNAL_API_SECRET` (18 file) e `JWT_SECRET` ricadevano su `changeme_internal` /
-  `changeme`, valori scritti nel repository. Super Admin e provisioner non bloccano l'avvio senza segreti (non hanno
-  `NODE_ENV=production`), quindi una variabile mancante apriva le API interne e il provisioner (che ha `docker.sock`). Ora
-  nessun valore di riserva: senza variabile tutto viene rifiutato. Un solo modulo, `shared/internal-secret.js`.
-- **Utenti disabilitati nei tenant**: restavano dentro fino alla scadenza del token (24 ore), e un admin declassato restava
-  admin. Ora stato e ruolo si rileggono a ogni richiesta.
-- **Allegati**: gli allegati Gmail si salvano con il tipo dichiarato dal mittente (anche HTML) e si poteva caricare SVG. Aperti
-  dall'app eseguivano script con la sua origine. Ora si aprono nel browser solo PDF, immagini non SVG e testo; il resto si
-  scarica. Un nome con accenti o € faceva fallire il download.
-- **Dipendenze**: aggiornate `proxy-addr`, `qs`, `uuid`, `@grpc/grpc-js`, `nodemailer` (v10). Le immagini Docker ora usano il
-  lockfile (`npm ci`): prima `npm install` sceglieva versioni nuove a ogni build.
-- Super Admin non si può più aprire dentro un iframe di un altro sito.
-
-**Tolto perché non usato**: quattro rotte interne dei tenant senza chiamanti (`modules/internal/export`,
-`modules/internal/apply-workflow-config` — non la versione batch, ancora usata dall'Analisi, vedi sotto —
-`audit-log/internal/resolve-module`, `audit-log/internal/module-cycle-time`), gli script `export-schema`/`import-schema`
-(istanze standalone), tre Dockerfile e un nginx.conf mai usati, la vecchia pagina di login di Super Admin senza 2FA, qualche
-funzione morta. La Guida dell'app descriveva funzioni tolte (verticali, moduli di supporto, stampa, Store): riscritta sul
-codice di oggi.
-**Non tolto nonostante il sospetto iniziale**: `modules/internal/apply-workflow-config-batch` e `roles/internal/sync` sembravano
-senza chiamanti guardando il codice di qualche giorno prima, ma `super-admin/backend/src/lib/tenant-config-from-analysis.js`
-(l'Analisi dei processi, nata nel frattempo) li chiama davvero per configurare ruoli e workflow quando crea un tenant. Scoperto
-unendo questo ramo a `main` (erano rimasti indietro una settimana): corretti applicando comunque `requireInternalSecret` invece
-del controllo manuale, come alle altre.
-
-**Restano aperti** (decisioni da prendere, non corretti):
-- Ogni tenant riceve lo **stesso** `INTERNAL_API_SECRET` di Super Admin e del provisioner, e monta **tutto** il volume `/data`
-  (compreso il registro di Super Admin con le chiavi di tutti i tenant). Un tenant compromesso, per esempio dal Sito Web
-  pubblico o da un allegato, arriva a tutto: altri tenant, chiavi, `docker.sock`.
-- La scelta moduli per utente nasconde i moduli dal menu ma non blocca l'API, e ogni utente collegato può aprire qualunque
-  allegato per numero.
-- Le porte dei tenant sono pubblicate sull'host: dalla rete di casa si raggiungono senza passare da nginx.
-- Il limite ai tentativi di accesso conta l'IP del proxy, non quello vero: tutti condividono lo stesso contatore.
-- Le pagine dei tenant non hanno protezione anti-iframe, perché Super Admin le apre in un iframe (Builder integrato).
-- Cloudflare è ancora in modalità TLS "Flexible": il traffico tra Cloudflare e il NAS viaggia in chiaro. Visibile ora dal
-  pannello "Sicurezza della piattaforma" (15 ottobre) invece che solo nei commenti del codice; non ancora corretto.
-
-## 2026-10-18 — "Aggiorna" builda da sé, non dipende più da un passaggio manuale dal laptop
-
-**Il problema**: "Aggiorna" ricreava il container del tenant dall'immagine `platform-core:latest` già presente sul NAS, mai
-ricostruita da quella route — il build vero avveniva solo nello script `redeploy-nas.sh`, lanciato a mano dal Mac prima.
-Dimenticarlo (successo lo stesso pomeriggio, con la 0.3.0) faceva sembrare l'aggiornamento riuscito mentre serviva ancora
-codice vecchio — scoperto dal vivo controllando la versione mostrata da Finance dopo un "Aggiorna" apparentemente senza errori.
-
-**La scelta**: spostare il build dentro il `docker-provisioner` (unico servizio con `docker.sock`) — scarica il tarball del
-branch `main` da GitHub via HTTPS e builda lì, prima di ogni redeploy (singolo o `redeploy-all`, che builda una volta sola
-prima del giro). `git clone` è stato il primo tentativo e non funziona: il seccomp del Docker Engine del NAS (Synology,
-versione datata) blocca la syscall `getrandom()` che `git` usa per i file temporanei di un clone — un tarball HTTPS normale
-(Node/OpenSSL, che ripiegano su `/dev/urandom`) non ne risente. `redeploy-all` fallisce chiuso (nessun tenant toccato) se la
-build fallisce, invece di proseguire silenziosamente con l'immagine vecchia.
-
-**Incidente reale nello stesso cambio**: la variabile `DATA_VOLUME` data al `docker-provisioner` per questo nuovo
-meccanismo aveva il nome sbagliato (`platform_platform-data`, un volume quasi vuoto usato dai sandbox — esattamente
-l'errore che questo stesso file e `OPERAZIONI.md` avvisavano già di evitare, scritto lì da una sessione precedente e non
-controllato prima di scrivere di nuovo quel nome). Il primo "Aggiorna" di Finance col nuovo codice ha agganciato il
-container al volume vuoto, sembrando un reset completo dei dati (utenti, passkey, tutto). Non è stato perso nulla — il
-volume vero non è mai stato toccato, l'app semplicemente non lo stava più leggendo — ma ci sono volute diverse decine di
-minuti e due ripristini da backup sbagliati (letti dal volume giusto, quindi apparentemente plausibili, ma non quello
-che il container stava davvero servendo) prima di capire che il problema era il nome del volume, non i dati stessi.
-
-## 2026-10-26 — Cloudflare da Flexible a Full (strict): la porta "misteriosa" era una Origin Rule
-
-**Il problema**: `docs/OPERAZIONI.md` dice solo "Cloudflare punta alla porta 4000", senza spiegare perché — e la zona
-era rimasta in modalità TLS "Flexible" fin dall'inizio (gap noto, segnalato nel pannello "Sicurezza della piattaforma"
-dal 15 ottobre): il traffico tra Cloudflare e il NAS viaggiava in chiaro.
-
-**Cosa si è scoperto**: non è un comportamento di default di Cloudflare — è una Origin Rule della zona (creata il
-04/08/2026, "Cambia porta [Modello]") che riscrive la porta di destinazione a 4000 per ogni richiesta, a prescindere
-dal protocollo. Capirlo prima di agire ha evitato un lavoro inutile e rischioso: non serviva aprire una porta nuova né
-ricreare `platform-nginx` (l'unico ingresso condiviso da tutti i tenant e da Super Admin) per mappare una porta in più
-— al passaggio a Full (strict) Cloudflare continua a colpire la stessa porta 4000 di sempre, solo cifrata.
-
-**La scelta**: certificato Origin CA di Cloudflare (15 anni) generato dalla dashboard e installato su `platform-nginx`;
-la porta 80 del container (= 4000 dall'esterno) è passata da `listen 80;` a `listen 80 ssl;`. Nginx non può ascoltare
-in chiaro e in TLS sulla stessa porta insieme, quindi questo cambio e il click "Full (strict)" nella dashboard
-Cloudflare sono stati fatti nello stesso momento (reload nginx, non riavvio) per evitare una finestra in cui i due lati
-non si sarebbero capiti. Verificato subito dopo: Finance e Super Admin rispondevano entrambi, nessun errore nei log.
-
-**Risolto più tardi la stessa sera**: il permesso mancante era proprio "Zone Settings" (non "SSL and Certificates",
-primo tentativo sbagliato) — trovato guardando la UI nuova di Cloudflare (riorganizzata per categoria) invece di
-continuare a indovinare nomi vecchi. Aggiunto al token esistente, verificato (`GET /zones/:id/settings/ssl` → 200,
-`value:"strict"`). Il pannello "Sicurezza della piattaforma" mostra ora la modalità reale.
-
-## 2026-10-26 — Tre lacune di sicurezza reali, trovate rispondendo a "Platform è sicuro al 100%?"
-
-**Il contesto**: a fine serata, dopo aver chiuso il gap TLS sopra, l'utente ha chiesto se la piattaforma fosse sicura
-al 100%. La risposta onesta ha fatto emergere tre punti già scritti nella lista "restano aperti" più sopra (16/10/2026)
-ma mai affrontati: il segreto interno condiviso fra tutti i tenant più il volume dati condiviso, i permessi moduli
-solo estetici, le porte dei tenant esposte sull'host. L'utente ha scelto di affrontare tutti e tre, incluso isolare
-davvero il volume dati (non solo il segreto) — confermato anche dopo aver segnalato che quella parte avrebbe
-richiesto una migrazione dati reale su Finance (in uso quotidiano). Indagine fatta con 3 agenti di esplorazione + 2 di
-progettazione prima di scrivere una riga di codice, proprio perché il rischio reale era alto e la stessa serata aveva
-già avuto un incidente (database sbagliato montato su Finance).
-
-**Porte dei tenant**: tolta la pubblicazione sull'host (`PortBindings` in `tenantHostConfig`, docker-provisioner) —
-nginx instrada già per nome container sulla rete Docker interna, confermato leggendo il codice prima di toccare
-niente, non assunto. Il link "Apri →" per un tenant senza dominio ancora assegnato ora passa da un proxy interno di
-Super Admin (nuova rotta `/tenants/:slug/preview/*`) invece che da `host:porta` diretto dal browser dell'admin.
-
-**Permessi moduli**: `user_modules` (chi vede quale modulo) filtrava solo il menu, mai le chiamate dirette alle API.
-Nuova middleware `requireModuleAccess` (`core/backend/src/routes/auth.js`), stesso stile di `requireAdmin`, applicata
-a `records.js`/`field-options.js`/`module-ai.js` — stesso comportamento di compatibilità del filtro menu esistente
-(admin sempre libero, nessuna riga configurata = nessuna restrizione, mai rotto un tenant esistente).
-
-**Segreto interno condiviso**: `tenant-ai.js` e `registry.js` (proposte modulo) decidono quale tenant leggere/
-addebitare in base a un `tenant_slug` dichiarato dal chiamante, protetto solo dal segreto condiviso con TUTTI i
-tenant — un tenant poteva dichiarare lo slug di un altro e leggerne/cancellarne la chiave Mistral o consumarne il
-budget AI. Riusato il pattern già esistente per l'export/gli inviti (`tenant-export.js`/`tenant-invite.js`): il
-tenant firma con il PROPRIO `jwt_secret` (già generato per ognuno, mai condiviso), Super Admin verifica contro il
-secret di quello specifico tenant. Accettato ANCHE il vecchio segreto condiviso durante la transizione (ogni uso
-loggato in `audit_log` come `internal.auth.legacy_secret`) — tolto il ramo vecchio è un passo separato, da fare solo
-dopo che tutti i tenant attivi si sono ridistribuiti col nuovo codice (giorni, non una notte).
-
-**Isolamento del volume dati**: la parte più delicata — ogni container tenant montava l'INTERO volume condiviso
-`platform-data`, non solo il proprio file. Un tenant compromesso arrivava a tutti gli altri database più al registro
-di Super Admin (con le chiavi di ognuno). Scoperto in fase di analisi un punto critico non ovvio: `tenants.db_path`
-cambia significato (vista del container vs vista di Super Admin) — `redeployTenant` va corretto per ricostruire il
-path del container al volo, MAI rileggere la colonna grezza, altrimenti ogni redeploy di un tenant migrato cerca il
-database nel posto sbagliato in silenzio (stesso tipo di incidente della "finance.db sbagliata" della stessa sera,
-ma auto-inflitto). Codice pronto (`tenantHostConfig` monta la sottocartella del tenant, risolta via
-`docker volume inspect`, mai assunta) e test scritti (assert su `HostConfig.Binds`, isolamento reale fra container) —
-**migrazione completata la stessa notte**, non rimandata: tornato Docker Desktop disponibile (era proprio chiuso, non
-solo bloccato — bastava riaprirlo), i 17 test di `provisioner.test.js` sono passati tutti su Docker vero, isolamento
-incluso. Poi, nell'ordine previsto (ai-sandbox prima, Finance per ultimo): backup fresco verificato (`integrity_check:
-ok`, conteggio record confrontato) per ognuno, container fermato dalla rotta sanzionata, file copiati (mai spostati)
-nella sottocartella propria, copia verificata identica all'originale, `db_path` aggiornato, `docker-provisioner`
-distribuito con il nuovo `tenantHostConfig`, redeploy di ciascun tenant, verifica finale che `docker exec
-platform-<slug> ls /data` mostri SOLO i propri file (prova diretta che l'isolamento funziona, non solo che l'app è
-su) e che i dati veri tornino uguali (142 buste paga di Finance, stesso numero prima e dopo). I vecchi file piatti
-restano sul volume, intatti, come rete di sicurezza — nessuna cancellazione, nemmeno ora.
-
-Trovato e corretto lungo la strada: `scripts/redeploy-nas.sh` (lo script manuale che aggiorna Super Admin stesso, dato
-che non può ridistribuirsi da sé come fanno i tenant) aveva `DB_PATH=/data/super-admin-01.db` cablato — il database
-VECCHIO e incompleto, non quello vero in uso. Mai eseguito da quando la discrepanza esisteva (altrimenti Super Admin
-avrebbe perso ore di storia reale a ogni suo stesso aggiornamento), corretto prima che causasse danno.
-
-## 2026-11-01 — Rotte specifiche per Immobili e Clienti (eccezione alla regola "sempre generico") — AGGIORNATA il 06/11
-
-**Cosa era**: `POST /records/immobili/:id/valuta`, `.../clienti/:id/genera-documenti`, `.../invia-documenti`, `.../immobili/:id/genera-scheda`, `.../invia-scheda` legate agli slug `immobili` e `clienti`, con i bottoni in `RecordDetailModal.jsx` solo per quei moduli. **Perché**: Platform non aveva una primitiva "azione su un record esistente" e inventarne una per un solo caso sarebbe stato prematuro.
-**Cosa resta (06/11)**: solo la **valutazione** (`/immobili/:id/valuta`): ha un report su misura (comparabili, OMI, zona sismica, considerazioni AI) e dipende da un connettore; generalizzarla richiede un secondo caso di "azione su connettore" che oggi non esiste. I **documenti** sono stati generalizzati: vedi la voce del 06/11 «Documento da modello».
-**Regola che resta**: il testo di un documento al cliente non parte mai senza un'anteprima modificabile dall'admin (due rotte separate apposta: anteprima non spedisce).
-
-## 2026-11-06 — Ogni overlay a tutto schermo in un portale
-
-**Cosa**: nuovo `core/frontend/src/components/Portal.jsx`; tutti gli overlay `fixed inset-0` (18 file, circa 30 dialoghi) ora sono resi su `document.body`. Escluse: il backdrop del dock (non è un dialogo) e `ProductTour`.
-**Perché**: segnalato dal vivo con "Smista" aperto da un widget della Dashboard: il `backdrop-filter` di `.glass-panel` rende la card il contenitore dei `position: fixed`, quindi il dialogo restava confinato nella card (stessa causa del bug di `FormDrawer`, 31/10, risolto allora solo per quel componente). Correggerli a uno a uno quando li si incontrava era il modo per ripetere lo stesso bug; la regola ora è scritta in `ARCHITETTURA.md`.
-**Cosa non si è fatto**: non è stato provato a mano ogni dialogo; verificato dal vivo un caso (overlay figlio di `body` a tutta finestra).
-
-## 2026-11-06 — Le voci appuntate nel dock si scelgono, non si deducono
-
-**Cosa**: tasto *Modifica* nel pannello "Altro" (core e Super Admin): l'utente appunta fino a 4 voci, con *Ripristina*. Salvate in `localStorage` del dispositivo.
-**Perché**: alla domanda "come migliorare il menu" è stata scartata la variante che porta in alto le voci più usate: un dock che si riordina da solo sposta le icone sotto il pollice. Un controllo esplicito e sempre visibile è in linea con la scelta fatta per i widget di inserimento dati (plain controls, niente default "furbi").
-**Limite noto**: la scelta vale per dispositivo e utente, non segue l'utente da un telefono all'altro. Se serve, il passo successivo è una preferenza utente sul server.
-
-## 2026-11-06 — Tolti due script una tantum del 30/10
-
-**Cosa**: eliminati `one-off-2026-10-30-ricevute.js` e `one-off-2026-10-30-match-test.js`.
-**Perché**: contenevano i nomi `spese_personali`/`spese_casa` di Finance e facevano fallire `no-hardcoded-names` (l'unico test rosso su 80 suite). Già eseguiti e tolti dall'avvio; il lavoro che hanno fatto sta nei dati. Restano nella cronologia di git (`git log --diff-filter=D -- core/backend/src/one-off-2026-10-30-*`). Preferito l'eliminazione a una lista di eccezioni nel test: una lista di eccezioni cresce e indebolisce la regola.
-
-## 2026-11-06 — `/` dei tenant senza Cache-Control: l'utente vedeva la 0.4.14 dopo il deploy della 0.4.17
-
-**Cosa**: `core/nginx.conf` aveva `no-cache` solo su `location = /index.html` (corretto il 02/09 per lo stesso sintomo). La root `/` non ci passa — viene servita dal backend (`/__root_public`) o, se il Sito Web non è attivo, da `@spa_root` — quindi nessun `Cache-Control`: il browser applicava la cache euristica (da `Last-Modified`) e teneva un `index.html` vecchio.
-**Come si è visto**: `curl -sI https://<tenant>/` senza `cache-control`, mentre `/index.html` lo aveva; il bundle servito conteneva già la versione nuova. Super Admin non lo aveva (la sua `/` passa da `/index.html`).
-**Scelta**: `add_header Cache-Control "no-cache"` su entrambi i blocchi della root. Non `no-store`: il browser può comunque tenere la pagina, ma la rivalida a ogni apertura (costo: una richiesta condizionata, poche centinaia di byte).
-**Cosa NON risolve**: la copia già in cache sul telefono finché non viene rivalidata una volta (chiudere l'app dalla Home di iOS e riaprirla, o Impostazioni → Safari → Avanzate → Dati dei siti web).
-
-## 2026-11-06 — Documento da modello: la primitiva che mancava, al posto di quattro rotte cablate
-
-**Cosa**: nuovo blocco di schema `document_action` (Builder → Automazione → «Documento da modello»): oggetto e testo con segnaposto, destinatario, stato opzionale dopo l'invio; due rotte generiche (`anteprima` non spedisce, `invia` spedisce il testo approvato). Tolte le 4 rotte `genera-documenti`/`invia-documenti`/`genera-scheda`/`invia-scheda` e i file `lib/doc-cliente.js`, `lib/doc-immobile.js`. Dettagli in `ARCHITETTURA.md`.
-**Perché**: «Custom in platform non esiste»: se una cosa difficile da replicare serve, si costruisce la primitiva. Era il punto "azione su un record" dell'elenco sviluppi futuri; copre i 3 documenti esistenti e qualunque altro (preventivo, lettera, scheda) senza codice.
-**Scelte**: (1) **modello a segnaposto, non codice**: nessun `eval`, nessuna espressione; solo campi, `relazione.campo`, filtri e sezioni (il test della sicurezza ha scovato che `{{constructor}}` leggeva una proprietà ereditata: ora si leggono solo proprietà proprie). (2) **Il destinatario non arriva mai dalla richiesta**: lo ricava il server dal modello e dal record. (3) **Validazione alla pubblicazione**: un campo scritto male blocca, invece di dare «—» in un documento già inviato. (4) **Parità prima della cancellazione**: i modelli sono stati ricavati dai testi esistenti con uno script e confrontati al carattere (44 casi: 4 clienti × 4 tenant × 2 documenti, 3 immobili × 4 tenant), poi l'output vecchio è stato congelato in `fixtures/documenti-parita.json` e il codice vecchio cancellato. (5) **Seed una volta sola**: i documenti del verticale sono dati (`seeds/documenti-immobiliare.json`), applicati all'avvio con un marcatore (`seed_applicati`) e solo ai moduli che hanno tutti i campi citati; se qualcuno li toglie dal Builder non ricompaiono. Una scrittura diretta su `schema_json` è esclusa: si passa dalle rotte vere del Builder.
-**Cosa non è coperto**: la valutazione OpenAPI.it resta specifica (vedi voce del 01/11). Il Builder non ha ancora un selettore per l'icona del documento (si imposta nel seed o nello schema; di default `mail`). Non c'è un registro dei modelli condivisi tra tenant: il verticale viaggia come seed, non come modulo di Libreria (resta da fare: pubblicarli in Libreria insieme ai moduli).
-
-## 2026-11-06 — Abbinamento tra moduli (idea ricavata da Gestim): vincoli e affinità, mai punteggi dei soli vincoli
-
-**Da dove viene**: analizzando Gestim, Agente.Immobiliare/ai ed EsTimus è emerso che la funzione che un'agenzia usa di più e che a zucca mancava era l'«incrocio automatico tra immobili e richieste». I dati c'erano già (sul Cliente tipologia, budget e zona cercati; sull'Immobile tipologia, comune, prezzo, stato).
-**Cosa**: nuovo blocco di schema `match_view` (Builder → Layout form → «Abbinamento»), motore `lib/abbinamento.js`, rotta `GET /records/:slug/:id/abbinamenti/:key`, sezione nel dettaglio del record. Dettagli in `ARCHITETTURA.md`. Generico: nessun nome di modulo nel codice; i valori di zucca sono un seed (`seeds/abbinamenti-immobiliare.json`).
-**Scelte**: (1) **Una regola obbligatoria è un vincolo, non un punto.** Il primo disegno la contava nel punteggio: un cliente con 400.000 € di budget che cerca un attico a Milano compariva tra le «richieste compatibili» di una villa a Desenzano solo perché il budget bastava. Ora i vincoli escludono e basta; il punteggio lo fanno le affinità, e un candidato deve soddisfarne almeno una (scoperto dal test della direzione inversa). (2) **Un campo mio vuoto salta la regola**: un cliente senza budget non esclude nessuno e il criterio non conta né a favore né contro; un campo vuoto del candidato fa fallire la regola. (3) **I permessi sono quelli del modulo bersaglio**: non si può leggere, tramite un abbinamento, ciò che l'utente non vede (elenco vuoto, non un errore). (4) **Solo lettura**: un abbinamento non scrive, non notifica, non assegna. (5) **Testo «che si tocca»**, non uguaglianza: la tipologia cercata è testo libero («trilocale») e si confronta con tipologia e titolo dell'immobile; senza maiuscole né accenti.
-**Cosa non c'è** (volutamente): nessun avviso automatico quando arriva un immobile compatibile (si può fare con le automazioni, è il passo successivo); nessuna distanza geografica (la zona è testo, non coordinate); nessun peso diverso per criterio oltre obbligatorio/non obbligatorio; il confronto di testo non capisce sinonimi («bilocale» ≠ «appartamento 2 locali»). I risultati non si aprono con un clic dal dettaglio (si ritrovano dal loro modulo).
-
-## 2026-11-06 — Documento da firmare e ricaricare, con i consensi GDPR sul record (0.4.23)
-
-**Cosa**: il blocco `document_action` ha una seconda modalità, `delivery: 'firma'`: PDF da scaricare, firmare su carta e ricaricare; il firmato resta allegato al record e aggiorna consensi, data della firma, versione del testo e data fino a cui si conservano i dati. Primo uso: «Anagrafica + privacy (da firmare)» sui Clienti di zucca. Dettagli in `ARCHITETTURA.md`.
-**Perché**: richiesto dall'utente: la nuova anagrafica deve generare un documento da scaricare, firmare e ricaricare, e permettere la gestione dei dati in ottica GDPR. Era un'altra primitiva generica, non codice per zucca (regola «Custom in platform non esiste»).
-**Scelte**: (1) **Estendere `document_action`, non un blocco nuovo**: stesso testo con segnaposto, stessa anteprima, stessa validazione; cambia solo cosa fa il bottone. (2) **Il consenso lo dice chi ha il foglio in mano**: le caselle da spuntare nel pannello sono quelle del foglio firmato, non quelle del record: il PDF esce sempre con le caselle da barrare a penna e solo il firmato registrato fa diventare «vero» un consenso (un consenso mai chiesto non risulta dato). (3) **Si scrivono solo i campi dichiarati dal documento**: la richiesta non può toccare altro. (4) **Revoca = nuovo firmato**: stessa rotta, nuova copia allegata, consensi riscritti, storico nella cronologia e in Attività (nessuna rotta di «revoca» a parte). (5) **Il seed crea i campi che gli servono** (`aggiungi_campi`), ma se esiste un campo con la stessa chiave di tipo diverso il documento non si applica. (6) **`pdfkit` aggiunto** (puro JavaScript, nessun binario): una dipendenza in più sul backend del core, accettata perché un PDF vero è il punto della richiesta; il font è Helvetica integrato, quindi solo caratteri latini.
-**Cosa non c'è** (volutamente): firma elettronica o digitale (è carta scansionata); promemoria alla scadenza della conservazione; cancellazione/anonimizzazione automatica dei dati alla scadenza; registro dei trattamenti. Il testo dell'informativa è un modello da far rivedere a chi cura la privacy dell'agenzia. **Non provato dal vivo su zucca**: né il PDF con una ragione sociale vera né il caricamento di un firmato reale.
-
-## 2026-11-06 — Provvigione a due parti: un'estensione di moduli generata dal seed, non codice (0.4.24)
-
-**Cosa**: la Trattativa ha venditore, acquirente e una percentuale per parte; alla firma del preliminare l'automazione crea una riga di Provvigione per ogni parte, con importo netto, IVA 22% e totale calcolati. Dettagli in `ARCHITETTURA.md`.
-**Perché**: richiesto dall'utente («doppia fatturazione»: sia il venditore sia l'acquirente pagano la provvigione). Scelte confermate dall'utente («A per tutto»): relazioni separate per le due parti, percentuale per parte modificabile per trattativa, righe alla firma del preliminare, importo netto con IVA mostrata e fattura emessa fuori da Platform.
-**Scelte**: (1) **Nessuna modifica al motore**: campi calcolati, relazioni e un'automazione `cambio_stato` con `crea_record` bastano; il seed ha ora un tipo «estensione» (gruppo di blocchi con `richiede`/`aggiungi`) riusabile per altri verticali. (2) **Le righe vecchie restano valide**: `importo` non cambia tipo; `importo_netto` usa la percentuale se c'è, altrimenti `importo`. (3) **Una sola generazione**: un segno (`provvigioni_generate_il`) impedisce i duplicati quando si riapre e si rifirma, ma si scrive **solo se è nata almeno una riga** (se fosse scritto sempre, firmare prima di indicare le percentuali avrebbe bloccato la generazione per sempre). Il controllo usa un confronto con il nome stesso del campo come valore letterale, perché l'operando di una condizione che non trova la chiave restituisce il testo scritto: funziona ma è poco elegante.
-**Scostamento dalla scelta 3A**: avevo proposto che l'importo si aggiornasse da solo se cambia il prezzo finché la riga è «da fatturare». **Non è stato fatto**: il motore non ha un'azione «aggiorna i record collegati» e i campi calcolati non leggono un campo del record puntato; costruirla significa una nuova azione con il suo editor nel Builder. Per ora il prezzo è una copia (corregibile a mano). Resta nell'elenco dei raffinamenti.
-**Cosa non c'è**: aggiornamento automatico al cambio di prezzo; provvigione a scaglioni o con minimo garantito; scadenza o fattura emessa da Platform (resta «da fatturare → fatturata → incassata» a mano); compilazione automatica di venditore e acquirente dal cliente della trattativa; rigenerazione per una sola parte.
-
-## 2026-11-06 — PDF del report di valutazione: dal report salvato, solo testo
-
-**Scelta**: il PDF si compone sul server dal report già salvato sul record (`report_valutazione`), senza richiamare OpenAPI.it, e riusa il generatore PDF dei documenti (solo testo). Sostituisce la stampa dal browser.
-**Perché**: richiamare le fonti costa credito a ogni scarico, e il PDF deve poter essere rigenerato identico; la stampa dal browser dipendeva dalla pagina e non era un file vero da allegare o inviare.
-**Cosa non è coperto**: mappe, satellite, servizi di zona, redditi ISTAT e tempi di percorrenza (fase 2); tabelle e grafici (il generatore è di solo testo). Se il report e l'immobile non combaciano per comune il PDF lo scrive in cima invece di nasconderlo.
-
-## 2026-11-06 — Marchio dell'azienda nei PDF: dati e logo nelle impostazioni, non nel codice
-
-**Scelta**: il report di valutazione prende logo, colore e dati dell'azienda da `tenant_settings`, che si imposta da Impostazioni → Aspetto; il logo è un'immagine incorporata nel record (o un indirizzo https). Nessun nome o marchio nel codice.
-**Perché**: la regola «sempre generico e configurabile»; lo stesso logo servirà ai prossimi documenti; l'immagine incorporata non dipende da un sito esterno raggiungibile al momento dello scarico.
-**Conseguenza da sapere**: il logo e il colore valgono anche per l'interfaccia (barra laterale, accesso, icona PWA). **Non coperto**: carattere del marchio (Miller Banner, non incorporabile: si usa un serif standard), campi telefono/email/sito.
-
-## 2026-11-06 — Scheda di acquisizione: i campi seguono il modulo dell'agenzia, con elenchi a scelta multipla
-
-**Scelta**: ogni voce del modulo cartaceo ha un campo; le caselle da spuntare sono campi `multiselect` (non testo libero); la scheda da firmare è un documento nuovo `delivery: 'firma'` generato dallo stesso elenco di campi. Per trasformare campi già presenti in produzione si aggiunge al motore dei seed la chiave `converti` (solo da testo, area di testo o scelta singola; valori già scritti spezzati in elenco).
-**Perché**: il modulo lo compilano gli agenti e «deve esserci tutto»; il testo libero perde la struttura (non si filtra, non si abbina) e ognuno scrive a modo suo.
-**Scartato**: aggiungere campi nuovi accanto a quelli vecchi (duplicati e dati sparsi); riscrivere il documento «Scheda immobile» già applicato (un blocco applicato non si aggiorna dal seed: si aggiunge un documento nuovo).
-**Da sapere**: il vecchio documento via email resta con meno campi; la firma non cambia lo stato dell'immobile (nessun passaggio automatico a «in mandato»).
-
-## 2026-11-06 — Un'unica identità grafica per ogni PDF generato
-
-**Scelta**: ogni PDF che Platform genera passa da `lib/identita-pdf.js` (fascia con logo e colore dell'azienda, serif per i titoli, piè di pagina con dati e numero di pagina). Nessun generatore ha un proprio aspetto.
-**Perché**: richiesta esplicita dell'utente: tutta la documentazione deve avere l'identità del report di valutazione. Un solo modulo evita che un documento nuovo esca «spoglio».
-**Regola per il futuro**: un nuovo PDF si crea con `intestazione`, `titoloSezione` e `pieDiPagina` di quel modulo, non con pdfkit nudo.
-**Non coperto**: il font del marchio non è incorporabile senza i file; email in testo semplice e pagine stampate dal browser (Guida dei verticali, Analisi) non seguono questa identità.
+**La scheda di acquisizione dell'agenzia, per intero.** Il modulo che compilano gli agenti (11 sezioni) ora ha tutti i suoi campi, e il documento da firmare lo riproduce uguale. Confrontata voce per voce con il PDF di Zucca&Partners.
+
+- **Immobili — campi nuovi**: data sopralluogo, agente acquisitore (e suo telefono/email), stato interno, terrazzo (mq), portico (mq), pavimenti «altro», valore IPE (Eph), potenza batteria di accumulo (kW), altri documenti / note, prezzo consigliato di mercato, note e punti di forza.
+- **Immobili — caselle da spuntare**: le voci che nel modulo cartaceo sono caselle (composizione vani, sfogo esterno, pertinenze e box, posto auto, oscuranti e protezioni, pavimenti, diffusione e alimentazione del riscaldamento, accessori impianti, cosa comprendono le spese, checklist documenti) erano testo libero o scelta singola: ora sono **elenchi a scelta multipla**. I valori già scritti si convertono (zucca ha un solo immobile, senza questi valori).
+- **Clienti — campi nuovi** (servono per ogni comproprietario): luogo di nascita, stato civile, regime patrimoniale, residenza, PEC.
+- **Nuovo documento «Scheda di acquisizione (da firmare)»** sull'Immobile: le 11 sezioni, i dati dei 3 comproprietari (le righe vuote da compilare a mano), l'informativa privacy del modulo e le firme dei comproprietari e dell'agente. Si vede in anteprima, si scarica in PDF, si firma e si ricarica come gli altri documenti da firmare. Il vecchio «Scheda immobile» (invio per email) resta, ma ha meno campi.
+- **Motore dei seed**: nuova chiave `converti` nelle estensioni (un campo di testo o scelta diventa elenco a scelta multipla, con id ed etichetta invariati e i valori già scritti convertiti). Da tipi non compatibili (numero, data…) non si converte: l'estensione non si applica e il campo resta intatto.
+- Test `scheda-completa.test.js` (6) e `documento-da-modello.test.js` aggiornato.
+- **Identità grafica comune a tutti i PDF** (richiesta: «tutta la documentazione generata deve avere l'identità del report»): fascia con logo e colore dell'azienda, titoli con grazie, titoletti con barra colorata, firma e piè di pagina «Pagina N di M» con i dati dell'azienda. Vale per il report di valutazione e per tutti i documenti da modello e da firmare (privacy, antiriciclaggio, anagrafica, scheda). Codice in `lib/identita-pdf.js`; `documento-pdf.js` e `report-valutazione-pdf.js` lo usano; le rotte leggono logo e dati da Impostazioni → Aspetto.
+- **Non coperto**: il carattere del marchio (Miller Banner, Brandon Grotesque) non è incorporato: servono i file del font (OTF/TTF) e un posto dove caricarli; intanto si usa un serif standard per i titoli. La scheda non cambia in automatico lo stato dell'immobile alla firma. La fase 2 del report (mappa, servizi, percorrenze) non è ancora integrata: il servizio pubblico Overpass di OpenStreetMap oggi non risponde in tempo.
+
+## 0.4.26 — 6 novembre 2026
+
+**Report di valutazione con grafica e marchio dell'azienda.** Il PDF della 0.4.25 (solo testo) diventa un documento impaginato: fascia in alto con logo e colore dell'azienda, tre riquadri con minimo, medio e massimo €/mq, valore stimato in evidenza, tabelle (OMI, comparabili), barre per mercato, tempi di vendita e annunci, piè di pagina con i dati dell'azienda e «Pagina N di M». Titoli in carattere con grazie; il carattere del marchio Zucca&Partners (Miller Banner) non è incorporabile, quindi è una resa vicina, non identica.
+
+- **Dati azienda**: nuova scheda in Impostazioni → Aspetto con ragione sociale, indirizzo, partita IVA e logo (PNG, JPEG o WebP fino a ~650 KB, incorporato nel record). Il logo si accetta solo come immagine incorporata o indirizzo https (`PUT /settings/azienda` rifiuta il resto). **Attenzione**: il logo e il colore principale valgono anche per l'interfaccia dell'app (barra laterale, accesso, icona sul dock).
+- **Paragrafo «considerazioni» coerente**: usa la città trovata dal report, non il comune scritto sul record, così non mescola due luoghi.
+- Se il logo manca o non si legge, nella fascia compare il nome dell'azienda; senza nome, il titolo «Report di valutazione».
+- Rimosso il builder di solo testo (`lib/report-valutazione.js`): resta `lib/report-valutazione-pdf.js`. Test `valutazione-pdf.test.js` (7).
+- **Non coperto**: mappe e satellite, servizi di zona, redditi ISTAT, tempi di percorrenza (fase 2); telefono, email e sito dell'agenzia non hanno ancora un campo; il piè di pagina mostra nome, indirizzo e P.IVA.
+
+## 0.4.25 — 6 novembre 2026
+
+**PDF completo del report di valutazione.** Nel dettaglio di un Immobile valutato il bottone «Scarica PDF» (al posto di «Stampa o salva in PDF») scarica un PDF vero, su più pagine, con tutto quello che il report contiene: immobile, quotazione e valore stimato (media × superficie, con intervallo), considerazioni del valutatore, quotazioni OMI, comparabili, rischio sismico, fotovoltaico, andamento del mercato, tempi di vendita, annunci per tipologia e superficie, dati della zona, avvertenza.
+
+- Il PDF nasce dal report **già salvato** sul record: nessuna chiamata a OpenAPI.it, nessun credito consumato. Per rifare i dati si rilancia la valutazione.
+- Se i dati di mercato si riferiscono a un comune diverso da quello dell'immobile, il PDF lo dice in cima («ATTENZIONE…»); senza superficie spiega perché il valore stimato non c'è.
+- Nuova rotta `POST /records/immobili/:id/valutazione/pdf` (solo admin, tracciata nell'audit), `lib/report-valutazione.js` (testo), riuso di `lib/documento-pdf.js`. Test `valutazione-pdf.test.js` (4).
+- **Non coperto**: mappe e vista satellitare, servizi di zona, redditi ISTAT, tempi di percorrenza (fase 2); il PDF è solo testo, senza tabelle né grafici.
+
+## 0.4.24 — 6 novembre 2026
+
+**Provvigione a due parti: venditore e acquirente.** Alla firma del preliminare nascono due righe di provvigione, una per parte, con importo netto, IVA e totale già calcolati.
+
+- **Trattative**: nuovi campi «Venditore», «Acquirente», «Provvigione venditore (%)», «Provvigione acquirente (%)» e «Provvigioni generate il».
+- **Provvigioni**: nuovi campi «Parte», «Percentuale provvigione (%)», «Prezzo su cui si calcola» e i calcolati «Importo netto», «IVA 22%», «Totale con IVA». Le provvigioni già inserite con il solo importo continuano a funzionare.
+- **Automazione «Provvigioni alla firma del preliminare»** (si vede e si modifica dal Builder): una riga per ogni parte con percentuale, cliente della parte, scadenza al rogito, stato «da fatturare». Riaprire e rifirmare non duplica; senza percentuali non nasce nulla e si può rifare dopo.
+- **Come arriva su zucca**: al primo avvio dopo l'aggiornamento, dal seed (`estensioni-immobiliare.json`), solo se i moduli Provvigioni e Trattative hanno i campi attesi. Nuovo meccanismo riusabile: le «estensioni» di moduli.
+- **Da sapere**: il prezzo della provvigione è una copia fatta alla firma: se il prezzo concordato cambia dopo, la riga già generata non si aggiorna (si corregge a mano). La fattura si emette fuori da Platform; qui si segnano «fatturata» e «incassata». Se una parte aveva la percentuale vuota alla firma, quella riga va creata a mano.
+- **Test**: `provvigioni-due-parti.test.js` (8); suite del core 86.
+
+## 0.4.23 — 6 novembre 2026
+
+**Documento da firmare, ricaricare e gestire in ottica GDPR.** La nuova Anagrafica di un cliente genera un PDF da scaricare e far firmare; la copia firmata si ricarica sul record e registra consensi, data, versione e scadenza dei dati.
+
+- **Nuova modalità del «Documento da modello»** (Builder → «Cosa fa il bottone»): «Genera un PDF da scaricare, far firmare e ricaricare». Si sceglie il tipo dell'allegato firmato, lo stato dopo la firma, i consensi (campi spuntabili), dove scrivere data della firma, versione del testo e fino a quando si conservano i dati (data della firma + N mesi).
+- **Nel dettaglio del record**: anteprima modificabile, «Scarica PDF da firmare» (A4, caselle da barrare `[ ]`, riquadro Luogo e data / Firma, «Pagina N di M»), poi le copie già firmate, le caselle dei consensi del foglio e il caricamento del file (PDF o foto).
+- **Revoca**: ricaricare un nuovo firmato riscrive i consensi e aggiunge una copia; lo storico resta nella cronologia del record e in Attività.
+- **Per zucca**: «Anagrafica + privacy (da firmare)» sui Clienti, con consensi (comunicazioni commerciali, comunicazione a partner e portali) e conservazione 10 anni. Al primo avvio il seed crea da sé i 5 campi che servono; se il modulo ha già un campo con lo stesso nome ma di tipo diverso, il documento non si applica.
+- **Nuovo filtro** `{{campo|casella}}` nei modelli: `[X]` se spuntato, `[ ]` altrimenti.
+- **Da sapere**: non è firma elettronica (carta firmata e scansionata); il testo dell'informativa è un modello da far rivedere da chi cura la privacy; nessun promemoria alla scadenza della conservazione (si fa con le automazioni). Nuova dipendenza `pdfkit` nel backend del core.
+- **Test**: `documento-firma.test.js` (11) e seed in `documento-da-modello.test.js` (32); suite del core 85.
+
+## 0.4.22 — 6 novembre 2026
+
+**Abbinamento tra moduli: «Immobili adatti» su un cliente, «Richieste compatibili» su un immobile.** Idea ricavata dall'analisi di Gestim (l'incrocio automatico tra immobili e richieste è la funzione che un'agenzia usa di più), costruita come primitiva generica e non come codice per zucca.
+
+- **Nuovo blocco del Builder** (Layout form → «Abbinamento»): modulo in cui cercare, criteri tra un mio campo e uno (o più) del candidato con 4 operatori (`è simile a`, `è uguale a`, `del candidato ≤ mio`, `del candidato ≥ mio`), titolo e dettagli di ogni risultato, condizione sul mio record (es. solo gli acquirenti) e filtro per stato del candidato (es. solo gli immobili in vendita).
+- **Vincoli e affinità**: un criterio «Obbligatorio» esclude chi non lo soddisfa (es. prezzo ≤ budget); gli altri fanno il punteggio e il record deve soddisfarne almeno uno. Un campo vuoto sul mio record non esclude nessuno. Ordine per punteggio, poi il più recente; ogni risultato mostra cosa soddisfa e cosa manca.
+- **Nel dettaglio del record**: una sezione per ogni abbinamento, con percentuale, dettagli e le etichette dei criteri (verdi quelle soddisfatte, barrate quelle mancanti). Se la condizione non vale (un venditore) la sezione non compare. Rispetta i permessi del modulo bersaglio.
+- **Pubblicare con un campo scritto male non si può**: campi, operatori, modulo bersaglio, filtro e campi mostrati vengono controllati.
+- **Per zucca**: i due abbinamenti si applicano da soli al primo avvio dopo l'aggiornamento (budget = vincolo, tipologia e zona = affinità, solo acquirenti, solo immobili in mandato/in vendita), solo se i moduli hanno i campi giusti, e non ricompaiono se li togli dal Builder. Per questo `seed-azioni-documento.js` è diventato `seed-blocchi-verticale.js` e applica documenti e abbinamenti (stessi marcatori di prima: i documenti già applicati non si ripetono).
+- **Corretto di passaggio**: dopo l'invio di un documento il dettaglio non si ricaricava (il codice controllava `r.ok` ma `api.get` restituisce direttamente il record): lo stato del record non si aggiornava a schermo finché non lo si riapriva. Era già così prima della 0.4.21.
+- **Test**: 18 sul motore, 18 d'integrazione (rotta, permessi, validazione, seed), 4 sullo schema; core 84 suite, Super Admin 35, frontend 15. Verificato dal vivo in locale con dati veri e il seed vero: a una cliente compaiono i 2 immobili giusti (100% e 50%), quello fuori budget è escluso, per un cliente con budget basso nessuno; l'editor nel Builder si apre e mostra i criteri.
+- **Non coperto**: nessun avviso automatico quando arriva un immobile compatibile; la zona è testo (nessuna distanza); il confronto di testo non capisce sinonimi; i risultati non si aprono con un clic dal dettaglio.
+
+## 0.4.21 — 6 novembre 2026
+
+**«Documento da modello»: la primitiva «azione su un record» che mancava, al posto delle rotte cablate su Immobili e Clienti.** Era il primo punto degli sviluppi futuri («Custom in platform non esiste»).
+
+- **Nuovo blocco del Builder** (Automazione → «Documento da modello»): bottone sul record, testo con segnaposto (`{{campo}}`, `{{relazione.campo}}`, `{{@azienda}}`, `{{@oggi}}`, filtri `|linea` `|vuoto` `|minuscolo`, sezioni `{{#k}}…{{/k}}`), email di destinazione scelta tra i campi email del record o di un record collegato, e stato opzionale in cui portare il record dopo l'invio. Un selettore «Inserisci un campo…» scrive il segnaposto nel punto in cui si trova il cursore.
+- **Anteprima sempre modificabile, mai invio automatico**: `anteprima` non spedisce nulla; `invia` manda il testo approvato. **Il destinatario lo ricava il server**, non la richiesta; l'invio è tracciato in Attività; il secondo invio parte anche se lo stato non può più cambiare.
+- **Pubblicare con un campo scritto male non si può più**: segnaposto, destinatario, stato e chiave vengono controllati contro i campi veri del modulo e dei moduli collegati.
+- **Tolti** i 4 percorsi dedicati (`genera-documenti`, `invia-documenti`, `genera-scheda`, `invia-scheda`) e i file `lib/doc-cliente.js`, `lib/doc-immobile.js`. Resta specifica solo la **valutazione** (ha un report su misura).
+- **Per zucca**: i tre documenti (Privacy+Incarico, Antiriciclaggio, Scheda immobile) diventano blocchi dei moduli Clienti e Immobili, applicati **una sola volta** al primo avvio dopo l'aggiornamento (`seed-azioni-documento.js`, marcatore `seed_applicati`) dalle rotte vere del Builder, solo se i moduli hanno i campi giusti. I testi sono identici al carattere a quelli di prima: 44 casi di confronto, congelati in `fixtures/documenti-parita.json`. Se li togli dal Builder non ricompaiono.
+- **Sicurezza trovata dal test**: il motore leggeva anche proprietà ereditate (`{{constructor}}` stampava una funzione). Ora legge solo i campi propri del record.
+- **Test**: 71 per il motore (compresa la parità), 31 d'integrazione (anteprima, invio, errori, validazione, seed), 5 sullo schema; tutta la suite del core (82) e di Super Admin (35) passa. Verificato dal vivo in locale: bottone, anteprima, destinatario, errore chiaro se l'email non è configurata.
+- **Non coperto**: la valutazione OpenAPI.it resta legata a `immobili`; il Builder non ha un selettore dell'icona del documento; i documenti del verticale non sono ancora un modulo di Libreria.
+
+## 0.4.20 — 6 novembre 2026
+
+**Test del frontend, e lo stesso difetto dei dialoghi corretto anche in Super Admin.** Il frontend (22.000 righe) non aveva nessun test: regressioni come quella dei dialoghi si vedevano solo a occhio.
+
+- **Infrastruttura**: `vitest` + `jsdom` + Testing Library in `core/frontend` (`npm test`), agganciata a `scripts/verifica.sh`.
+- **Voci appuntate del dock**: la logica (cosa mostrare, cosa fa un tocco, il limite di 4) estratta in `shared/frontend/dock-pins.js` — prima ogni Sidebar ne teneva una copia — con 11 test (lista vuota = scelta valida, voci sparite scartate, doppioni, dock pieno non salva).
+- **Portale**: 2 test (i figli finiscono su `body`, fuori dalla card con `backdrop-filter`; sparisce allo smontaggio).
+- **Guardia contro il bug dei dialoghi**: un test controlla che in tenant e in Super Admin ogni overlay `fixed inset-0` sia in un portale (eccezioni elencate nel test, con il motivo). Verificata: aggiungendo un overlay finto il test fallisce e indica il file.
+- **Super Admin** aveva lo stesso difetto potenziale: 13 overlay senza portale (Tenant, Libreria, Utenti, creazione/registrazione tenant, Verticali, login...). Ora tutti in `components/Portal.jsx`. Verificato dal vivo: il dialogo "Nuovo tenant" è figlio di `body`, a tutta finestra.
+- 15 test frontend, tutti verdi; build e lint puliti.
+- Non coperto: nessun test dei componenti più grandi (Dashboard, Builder, pagine di modulo) né test nel browser vero (login, navigazione): il passo successivo, se serve.
+
+## 0.4.19 — 6 novembre 2026
+
+**Velocità: il codice si scarica a pezzi, non tutto insieme.** Richiesto: "si può fare qualcosa per la velocità di caricamento?". Il frontend dei tenant era un unico file JS da 1,09 MB (271 KB compressi), quello di Super Admin da 723 KB (180 KB), scaricati e analizzati a ogni apertura, anche da telefono.
+
+- Le pagine pesanti si caricano alla prima apertura (`React.lazy` + `Suspense`, con un "Caricamento…" breve): nei tenant Libreria, Builder, Impostazioni, Guida, Log attività e la pagina di un modulo; in Super Admin Tenant, Libreria, Analisi, Super Builder, Attività, Impostazioni, Guida. La Dashboard resta nel bundle iniziale (è la prima schermata).
+- JS iniziale compresso: **tenant da 271 a 115 KB (−58%)**, **Super Admin da 180 a 70 KB (−61%)**. I file hanno il nome con hash e restano in cache a lungo: la seconda visita non riscarica nulla di invariato.
+- Verificato dal vivo (locale): tutte le pagine di entrambe le app si aprono e mostrano il contenuto, nessuna risorsa fallita al caricamento dei tenant.
+- **Cosa non ha cambiato**: i secondi di attesa visti sulla *prima richiesta* a un tenant (7–20 s per il primo byte, poi ~0,1 s) non vengono dal frontend: dal NAS la risposta arriva in 1 ms. Diagnosi ancora aperta, vedi `docs/OPERAZIONI.md`.
+
+## 0.4.18 — 6 novembre 2026
+
+**Fix: dopo un deploy, un tenant poteva mostrare per ore la versione vecchia** (segnalato: "perché vedo la 0.4.14?" quando il server serviva già la 0.4.17). Causa: in `core/nginx.conf` solo `/index.html` aveva `Cache-Control: no-cache`; l'indirizzo base del dominio (`/`) passa dal ramo del Sito Web (`/__root_public`, poi `@spa_root`) e non riceveva l'intestazione, quindi il browser — soprattutto l'app aggiunta alla Home di iOS — riusava un `index.html` vecchio che puntava a un bundle vecchio.
+
+- `no-cache` aggiunto a `location = /` e a `@spa_root`. Super Admin non era toccato (la sua `/` passa da `/index.html`, che ce l'ha).
+- Sintassi nginx verificata (`nginx -t`). Il bundle JS resta in cache a lungo (nome con hash), solo l'`index.html` viene rivalidato a ogni apertura.
+- **Per vederlo funzionare serve Aggiorna sui tenant**; la prima apertura dopo l'aggiornamento può ancora mostrare la copia vecchia già in cache (una volta sola: da lì in poi si rivalida).
+
+## 0.4.17 — 6 novembre 2026
+
+**Menu "Altro" del dock mobile più leggibile, e voci appuntate scelte dall'utente** (core e Super Admin, insieme: i due dock condividono lo stesso stile). Segnalato con uno screenshot di Finance da iPhone: le icone della griglia non avevano nome (due triangoli di avviso e due carte quasi identiche) e il nome compariva solo al passaggio del mouse, che sul telefono non esiste.
+
+- Il nome sotto ogni icona, fino a due righe (prima solo un suggerimento al passaggio del mouse).
+- Pannello più compatto: icone 48px, margini ridotti; la versione non ha più una riga propria in testa ma sta accanto al ruolo in fondo.
+- **Voci appuntate scelte dall'utente**: tasto **Modifica** nel pannello. Con "Modifica" attivo la griglia mostra tutte le voci (anche quelle già nel dock) con un segno ✓ o +; un tocco appunta o toglie, massimo 4 come prima, con un avviso quando sono già 4; **Ripristina** torna alle prime 4 dell'elenco. In core si possono appuntare anche le voci di sistema (Libreria, Impostazioni, Guida...).
+- Salvate su questo dispositivo (`localStorage`, una chiave per utente in core), non sul server: una scelta di comodità, non un dato. Scelta esplicita e visibile, non un riordino automatico per uso.
+- Verificato dal vivo a 375px su entrambe le app: etichette, modalità Modifica, limite di 4, salvataggio e ripristino.
+
+### Documentazione, stesso giorno
+
+Nessun cambio di comportamento: `ARCHITETTURA.md` ora descrive vetro, rail/dock, portale degli overlay e il blocco Immobiliare (OpenAPI.it, valutazione, documenti cliente); `DECISIONI.md` registra l'eccezione delle rotte specifiche per Immobili/Clienti, la regola del portale, le voci appuntate scelte dall'utente e i due script eliminati; `OPERAZIONI.md` spiega l'errore `524` di `redeploy-nas.sh` sul passo dei tenant e che per i tenant si usa **Aggiorna**.
+
+## 0.4.16 — 6 novembre 2026
+
+**Il dock mobile di Super Admin diventa uguale a quello dei tenant.** Segnalato guardando i due menu da telefono: erano diversi in quattro punti. Richiesto lo stesso aspetto su entrambi.
+
+- Pannello "Altro": ora lo stesso pannello di vetro di core — logo e versione, campo di ricerca, griglia di icone a 4 colonne con etichetta al passaggio, in fondo account, tema e uscita (prima una seconda pillola con 3 sole icone, senza ricerca).
+- Indicatore che scorre tra le icone, misurato via DOM come in core (prima la voce attiva si vedeva solo dal riempimento).
+- Account: il cerchio con le iniziali porta a Impostazioni (come la foto profilo di core porta a "Il mio account"), niente più mini-menu a parte; il tema sta nel pannello "Altro" come nei tenant.
+- Appuntate 4 pagine invece di 5, come in core (Super Builder passa in "Altro"): con 5 il dock a 375px era più largo di quello dei tenant.
+- Non cambiato: la rail laterale su desktop; il cambio password resta dove stava (Impostazioni), il dock di Super Admin non ha la chiave del dock di core.
+- Verificato dal vivo a 375px: nessun overflow orizzontale, pannello e indicatore funzionanti.
+
+## 0.4.15 — 6 novembre 2026
+
+**Fix: i dialoghi aperti da dentro una card di vetro restavano intrappolati nella card.** Segnalato con uno screenshot: il dialogo "Smista" di un widget della Dashboard era confinato nei bordi del widget, con l'overlay scuro solo lì. Stessa causa della 0.3.47: un `backdrop-filter` su un antenato (`.glass-panel`) rende quell'antenato il contenitore degli elementi `position: fixed`.
+
+- Nuovo `components/Portal.jsx` (`createPortal` verso `document.body`); `SmistaPanel` usa direttamente `createPortal`.
+- Tutti gli altri overlay a tutto schermo senza portale ora ne sono avvolti (18 file: modali di Utenti, Libreria, Backup, Liste, Sito Web, Archivio, Dashboard, Modulo, import PDF/busta paga, invito, wizard, "Chiedi ai dati"...), invece di correggerli uno a uno quando qualcuno li incontra.
+- Lasciati com'erano: il backdrop del dock (non è un dialogo) e `ProductTour` (overlay di radice).
+- Verificato dal vivo: l'overlay di "Aggiungi widget" è figlio di `body` e copre tutta la finestra. Non provato a mano ogni singolo dialogo.
+
+## 0.4.14 — 1 novembre 2026
+
+**Scheda Immobile completa, invio al proprietario.** Terzo e penultimo pezzo del workflow Clienti/Immobili/AML: Immobili estesa con la scheda reale a 3 pagine dell'agenzia (comproprietari, localizzazione/contesto, caratteristiche interne, serramenti/isolamento, impianti/certificazione energetica, catasto, spese condominiali/mutuo, valutazione/incarico, esigenze di riacquisto) — circa 55 nuovi campi.
+
+- Bottone "Scheda immobile" nel dettaglio di un Immobile: genera un riepilogo di tutto quanto già inserito (non chiede di ricompilare da zero, a differenza dei documenti Cliente), anteprima modificabile, invio via email al Proprietario collegato.
+- Checkbox-group del modulo cartaceo con una sola scelta possibile (es. "Infissi: Legno/PVC/Alluminio") diventano select; i gruppi dove più voci coesistono (es. accessori impianti) restano testo libero, più vicino a come si compila davvero un sopralluogo.
+- Comproprietari fino a 3 (anagrafica originale), con le rispettive quote di proprietà.
+- Resta da fare: la doppia fatturazione automatica delle Provvigioni (venditore + acquirente, salvo accordi diversi) quando una Trattativa arriva a un certo stato.
+
+## 0.4.13 — 1 novembre 2026
+
+**Modulo Antiriciclaggio nel flusso documenti cliente.** Secondo documento del flusso "Genera e invia documenti" (0.4.12): il Modulo di Adeguata Verifica della Clientela (D.Lgs. 231/2007), confrontato con il questionario reale usato dallo studio legale che segue l'agenzia.
+
+- Nel dettaglio di un Cliente, due bottoni distinti ("Privacy + Incarico" e "Antiriciclaggio") invece di uno, stessa anteprima modificabile prima dell'invio.
+- Il testo prefilla solo ciò che Platform già sa del cliente (nome, codice fiscale/P.IVA, indirizzo); le domande proprie del cliente (PEP, origine fondi, settore professionale, cittadinanze) restano da compilare a mano, come nel modulo cartaceo — non dedotte né inventate.
+- Non riprodotte le tabelle di riferimento del modulo originale (elenco paesi a rischio, oltre 100 codici TAE): sono tabelle di consultazione, citate per nome, compilate con l'assistenza dell'agente.
+
+## 0.4.12 — 1 novembre 2026
+
+**Clienti: anagrafica reale, workflow di verifica, modulo CRM, invio documenti.** Primo pezzo del workflow Clienti/Immobili/AML richiesto dal vivo dopo aver visto i moduli base ("i moduli impostati sono corretti con lo scope di zucca MA..."), confrontato con una scheda cliente e un questionario antiriciclaggio reali dello studio legale che segue l'agenzia.
+
+- Clienti (zucca): nuovi campi tipo soggetto (persona fisica/società), codice fiscale/P.IVA, tipo cliente (venditore/acquirente) e i campi di ricerca per chi compra (tipologia, budget, zona). Il workflow generico mai usato nello scopo reale è sostituito da quello descritto dal vivo: **verifica identità cliente → documenti inviati → cliente verificato**.
+- Nuovo modulo **Interazioni** (CRM): telefonate/email/visite collegate a un cliente, con un campo "prossimo contatto" per il planner — mancava un modulo del genere (Attività è una todo-list generica, senza relazione al cliente).
+- **Genera e invia documenti**: nel dettaglio di un Cliente, un bottone genera il testo di Informativa Privacy (GDPR) + Modulo Incarico, lo mostra in un'anteprima **modificabile dall'admin prima dell'invio** (mai spedito automaticamente), poi lo manda via email al cliente (stesso connettore Resend già in uso per il modulo di contatto del Sito Web) e aggiorna lo stato a "Documenti inviati". Testo generico, personalizzato solo coi dati del tenant (ragione sociale/indirizzo/P.IVA già in Impostazioni), nessun nome d'agenzia scritto nel codice.
+- Non ancora fatto in questo giro, prossimi passi dello stesso filone: il modulo Antiriciclaggio (il questionario è lungo e articolato — PEP, codici TAE, origine fondi: generato come documento da far firmare, non ancora una logica di compliance interattiva), l'estensione della Scheda Immobile con tutti i campi della scheda reale dell'agenzia (comproprietari, impianti, catasto, mutuo/spese, incarico), e la doppia fatturazione automatica delle Provvigioni (venditore+acquirente, salvo accordi diversi).
+
+## 0.4.11 — 1 novembre 2026
+
+**Report di valutazione — fase 1 dell'arricchimento, persistente sul record.** Segnalato dal vivo confrontando con un report di valutazione professionale reale (Case&Co): il nostro era "molto scarno" al confronto. Fase 1: tutto il dato già pagato all'avanzata di OpenAPI.it ma finora scartato, più due fonti pubbliche gratuite, più un paragrafo generato dall'AI — mappe, vista satellitare, servizi di zona, redditi ISTAT e tempi di percorrenza restano una fase 2 esplicita (fattibili senza account a pagamento, con OpenStreetMap/Overpass/OSRM al posto di Google Maps).
+
+- Il report (dettaglio, comparabili, OMI) ora si **salva sul record** (`report_valutazione`, una chiave non dichiarata nello schema — non compare come campo) invece di vivere solo nella sessione: riaprendo il dettaglio in futuro il pannello resta disponibile, senza richiamare OpenAPI.it e senza consumarne credito.
+- Pannello arricchito con dati già nella risposta "avanzata" ma prima scartati: dinamicità del mercato per anno, tempi medi di vendita per taglio, ripartizione annunci per tipologia, distribuzione per superficie, quotazioni OMI complete (non più le prime 4).
+- Due fonti pubbliche gratuite, nessuna chiave da collegare: **zona sismica ufficiale** (ISPRA, classificazione 1-4) e **potenziale fotovoltaico** (JRC PVGIS, resa annua per kW installato) — `lib/rischi-territorio.js`.
+- Un paragrafo **"Considerazioni del valutatore"** generato dall'AI già configurata (Mistral) — stesso meccanismo di sicurezza già in uso per la Reportistica di Finance: ogni numero scritto dal modello è verificato contro i dati forniti, scartato se non trovato (`lib/ai-valutazione.js`, nuova rotta `/explain-valuation` su Super Admin).
+
+## 0.4.10 — 1 novembre 2026
+
+**Menù di nuovo laterale su PC/Mac, la pillola resta solo su mobile.** Richiesto dal vivo: "da pc/mac il menù debba essere ancora laterale, la pillola la terrei solo per la versione mobile — questa cosa tienila per tutti (admin, finance e zucca)". Il dock flottante in vetro, costruito prima in questa stessa sessione, tornava utile solo su schermi piccoli; su desktop occupava spazio senza il vantaggio per cui era nato (un pollice che raggiunge il basso dello schermo).
+
+- `core/frontend/src/components/Sidebar.jsx` e `super-admin/frontend/src/components/Sidebar.jsx`: un solo componente per app, stato condiviso (tema, notifiche, account, password), reso due volte e scelto via classi responsive Tailwind — `hidden md:flex` per la rail verticale, `md:hidden` per il dock — nessun listener di resize in JS. La rail è la vecchia implementazione pre-dock (stretta a riposo, si allarga al passaggio del mouse), riportata dalla cronologia git e adattata per condividere i popover di notifiche/account col dock invece di duplicarli.
+- `App.jsx` di entrambe le app: `md:ml-14` per riservare lo spazio della rail su desktop, `pb-28 md:pb-8` perché il dock resti con spazio sotto solo su mobile dove esiste davvero.
+- Finance e zucca condividono `core/frontend`, quindi ricevono la stessa rail automaticamente.
+
+## 0.4.9 — 1 novembre 2026
+
+**Report di valutazione — comparabili, OMI, dati di zona.** Richiesto dal vivo dopo aver provato il bottone di 0.4.8: "aggiungi anche comparabili/OMI prima" del PDF. La valutazione ora usa l'endpoint "avanzato" di OpenAPI.it invece di quello base, più due chiamate aggiuntive dalle stesse coordinate.
+
+- `lib/openapi-it.js`: nuove funzioni `valoreAlMqAvanzato` (quotazione + rischio sismico + composizione demografica + dinamicità del mercato — con un piccolo retry se la risposta arriva in modo asincrono, visto nella documentazione), `comparabili` (annunci simili vicini, da lat/lng) e `omi` (quotazioni ufficiali dell'Agenzia delle Entrate per la zona). Le due nuove chiamate partono dalle coordinate che la valutazione principale ha già trovato — se una delle due non trova nulla per quella posizione, non blocca la valutazione principale, che resta comunque scritta sul record.
+- La valutazione di un Immobile ora mostra un pannello "Report di valutazione" (quotazione min/med/max, rischio sismico, OMI di zona, fino a 6 comparabili) direttamente nel dettaglio del record, con un bottone "Stampa o salva in PDF" — stesso meccanismo già in uso per la Guida dei verticali (una copia nascosta della pagina, mostrata solo in stampa).
+- Resta vero quanto detto prima: mappa con area cerchiata, foto satellitare, qualità dell'aria e fotovoltaico restano integrazioni a parte (Google Maps/JRC PVGIS); il correttivo proprio del tenant (stima vs. prezzo reale di vendita) resta per quando ci saranno vendite vere registrate.
+
+## 0.4.8 — 1 novembre 2026
+
+**"Valuta con OpenAPI.it" — il primo bottone vero sul modulo Immobili.** Chiude il pezzo lasciato aperto in 0.4.7. Confermato dal vivo su zucca in sandbox (indirizzo di Desenzano → quotazione sandbox).
+
+- Nuova rotta `POST /records/immobili/:id/valuta`: legge indirizzo/comune/provincia e tipologia del record, chiama `lib/openapi-it.js` (`IT-sqm_value_start`), scrive sul record `stima_valore` (superficie × quotazione), `stima_eur_mq`, `stima_data`, `stima_fonte` — scritta sul record, non solo mostrata, così resta visibile anche dopo e si può confrontare in futuro col prezzo reale di vendita.
+- 4 campi nuovi sul modulo Immobili (`stima_valore`, `stima_eur_mq`, `stima_data`, `stima_fonte`) per mostrare la stima come un campo qualunque del record.
+- Bottone "Valuta con OpenAPI.it" nel dettaglio di un record Immobili (`RecordDetailModal.jsx`) — deliberatamente specifico a quel modulo, non un'azione generica: Platform non ha ancora un primitivo "azione esterna su un record esistente" (le Source scriptabili servono solo a crearne di nuovi), e inventarne uno per un solo caso sarebbe prematuro.
+- Non ancora fatto, prossimi passi su questo filone: il PDF scaricabile della valutazione, le fonti aggiuntive (comparabili, OMI, dati di zona dall'endpoint "advanced"), e — con qualche vendita vera registrata — un correttivo proprio del tenant tra stima e prezzo reale incassato.
+
+## 0.4.7 — 1 novembre 2026
+
+**Connettore OpenAPI.it — ricerca immobili per CF, valutazioni di mercato.** Richiesto dal vivo dopo aver attivato un account sandbox: "come possiamo testare?". Verificata la documentazione reale della loro console (non indovinata): autenticazione a due passi — Basic Auth (email + API key) per ottenere un token con scope specifici, poi quel token autentica le chiamate vere su `realestate.openapi.com` e `catasto.openapi.com` (o i loro equivalenti sandbox `test.*`).
+
+- Nuova connessione "OpenAPI.it — Immobili" in Impostazioni → Connessioni (stesso meccanismo già in uso per Stripe/Mailchimp/Resend — credenziali sigillate nel database, mai in chiaro).
+- `core/backend/src/lib/openapi-it.js`: gestisce da solo il token (richiesto, messo in cache, rigenerato quando serve — mai copiato a mano), espone una valutazione al mq da indirizzo (`IT-sqm_value_start`) e la ricerca immobili per CF/P.IVA (`ipotecarie-ispezione_nazionale`, asincrona).
+- Una rotta di prova (`POST /connections/openapi_it/test`) fa una vera chiamata in sandbox per confermare che le credenziali inserite funzionino, prima di usarle in un modulo.
+- Non ancora collegato a un bottone nell'interfaccia di un modulo (es. Immobili) — il prossimo passo, una volta confermato che il collegamento funziona.
+
+## 0.4.6 — 1 novembre 2026
+
+**Correzione: pannello "Altro" troppo grande.** Segnalato dal vivo con uno screenshot, subito dopo il rilascio del dock (0.4.5): "hai fatto un super launcher, c'è troppo spazio" — il pannello «Altro» (copiato dalla struttura di core, pensata per decine di moduli + ricerca) per sole 3 voci fisse (Attività, Impostazioni, Guida) mostrava un'intestazione con logo/versione e una griglia vuota sproporzionata.
+
+- Tolta l'intestazione e la griglia: ora è un'altra pillola di chip, identica a quelle del dock sotto, appena sopra — stessa dimensione proporzionata al contenuto reale, nessuno spazio vuoto.
+- Il numero di versione (prima nell'intestazione tolta) si è spostato nel menu dell'account, in fondo.
+
+## 0.4.5 — 1 novembre 2026
+
+**Dock comune a tutta la piattaforma.** Richiesto dal vivo: "voglio una linea comune su tutta la piattaforma", dopo che core/frontend era passata al dock flottante il 31/10 (0.4.2) ma Super Admin era rimasta con la vecchia rail verticale a sinistra per scelta esplicita di quel giorno ("ridisegnarla è un cambio di impronta diverso, non chiesto" — richiesto ora davvero).
+
+- Sidebar.jsx di Super Admin riscritta sullo stesso linguaggio del dock di core: chip tondi tinti, pillola di vetro flottante in basso, pannello "Altro" per le voci in eccedenza. Più semplice del dock di core perché le 8 pagine di Super Admin sono una lista fissa, non moduli dinamici di un tenant: 5 appuntate (Dashboard, Tenant, Libreria, Analisi, Super Builder), 3 in «Altro» (Attività, Impostazioni, Guida — prima raggiungibile solo dall'icona "i" di Topbar).
+- Topbar.jsx (la barra sticky in alto con notifiche e account) rimossa: notifiche e account vivono ora nel dock stesso, stesso posto del dock di core. La barra laterale non riserva più spazio fisso (tolto `md:ml-14`), stesso `pb-28` di core perché il dock non copra l'ultimo pezzo di pagina.
+- Non riportato dal dock di core: l'indicatore che scorre tra un'icona e l'altra (misurato dal vivo via DOM) — 8 voci fisse non ne hanno lo stesso bisogno, lo stato attivo resta leggibile dal riempimento pieno dell'icona.
+- Verificato dal vivo chiaro/scuro, dock/Altro/notifiche/account/tema, e a larghezza di telefono (375px, nessun overflow).
+
+## 0.4.4 — 1 novembre 2026
+
+**Il wizard con assistente per l'Analisi.** Richiesto dal vivo: "introdurrei un wizard con assistente che guida l'utente nell'analisi dei processi e nella creazione dei moduli e tenant". Tre pezzi, scelti per restare dentro al flusso già esistente invece di rifarlo:
+
+- **Chiarimenti prima di «Fai tutto»** — se il racconto è ambiguo (più servizi o reparti accennati senza dire quali, un passaggio decisivo non chiaro), l'AI fa fino a 3 domande mirate prima di proporre i processi, invece di tirare a indovinare e lasciare che se ne accorga solo dopo con «Cosa manca?». Si può sempre saltare («Salta, vai così»); un racconto già chiaro non fa domande e parte subito come prima.
+- **Narrazione durante «Fai tutto»** — la schermata di avanzamento non mostra più solo il nome della fase, ma cosa sta succedendo davvero: i processi trovati (coi nomi), quale processo sta completando in quel momento, cosa sta controllando nel passaggio finale.
+- **«Correggi a parole» esteso oltre i processi** — ora capisce anche richieste come «spegni i report automatici» o «non voglio l'AI per gli scontrini»: due nuove operazioni (accendi/spegni una proposta) agiscono sulle stesse proposte di report e potenziamenti AI già mostrate coi checkbox, stessa anteprima-prima-di-applicare delle altre operazioni.
+- Non fatto in questo giro (valutabile in seguito, se richiesto): un intake conversazionale multi-turno vero e proprio, e l'estensione di «Correggi a parole» alla configurazione del tenant già creato (oggi resta nel Builder, o nel nuovo «Riprova» di 0.4.3 per i soli errori).
+
+## 0.4.3 — 1 novembre 2026
+
+**Analisi tenant: due correzioni reali, due proposte già risolte.** Richiesto dal vivo: "Migliora l'analisi. Fammi delle proposte" (poi chiarito: l'Analisi per creare tenant, non il widget di Finance). Di 4 proposte iniziali, 2 erano già coperte da codice esistente non ancora tracciato in queste note (`proponiRelazioni` già richiamato da `applyConfig`, il retry di 18 tentativi già in `tenant-api-client.js`); le altre 2 erano reali:
+
+- **Credenziali admin perse** — prima non c'era modo di recuperarle dalla pagina Analisi dopo la creazione del tenant. Ora un bottone "Genera una nuova password" richiama l'endpoint di reset già esistente (`POST /tenants/:slug/reset-credentials`, lo stesso di Tenant → Reset credenziali) e mostra le nuove credenziali una volta sola.
+- **Errori di configurazione post-creazione muti** — se "ruoli e stati del flusso" o "ruoli dei moduli/report/AI" fallivano dopo la creazione del tenant, finivano in un avviso generico illeggibile. Ora l'avviso mostra il messaggio reale dell'errore e un bottone "Riprova" che rilancia solo quel passo (nuova route `POST /:id/retry-config`) senza ricreare il tenant.
+- Prossimo passo, non ancora iniziato: il wizard con assistente che guida l'analisi dei processi e la creazione dei moduli/tenant (intake conversazionale, narrazione durante "Fai tutto", "Correggi a parole" esteso oltre la correzione processi, domande di chiarimento dell'IA).
+
+## 0.4.2 — 1 novembre 2026
+
+**Liquid Glass esteso a Super Admin** — richiesto dal vivo: "vorrei che anche super admin venga aggiornato al Liquid Glass".
+
+- Stessi token/classi di core (`.glass-panel`, `.glass-pill`, `.glass-mesh-bg`, `.glass-mesh-logo`) portati in `super-admin/frontend/src/index.css`, con `var(--cp-primary)` al posto di `var(--accent)` (nome equivalente già in uso qui).
+- Nuovo `GlassPageBackground.jsx` (copia di quello di core, sotto il `PlatformLogo` di questa app).
+- Convertite tutte le pagine: Dashboard, Tenant, Libreria, Analisi (tutte e 4 le schermate interne — elenco, "Fai tutto" in corso, riepilogo, dettaglio con stepper), Super Builder (solo l'ambiente — i pannelli di `shared/frontend/builder/` restano come sono, condivisi col Builder dei tenant), Attività (incluso il tab Metriche annidato), Impostazioni (incluso il tab Utenti Super Admin annidato), Guida.
+- **Deliberatamente lasciati come sono**: la barra laterale di navigazione (rail verticale fisso, non il dock di core — ridisegnarla è un cambio di impronta diverso, non chiesto), i menu a tendina/popover (Select, Topbar), ogni modale, la pagina di marketing pre-login (HomePage.jsx, un'altra cosa rispetto a una pagina di lavoro).
+- Verificato dal vivo chiaro/scuro su ogni pagina, build di produzione pulita.
+
+## 0.4.1 — 31 ottobre 2026
+
+- **Anche la pagina di login è ora "Liquid Glass"** — richiesto dal vivo: "anche la pagina di login la voglio vedere più bella". Stesso sfondo sfumato + card di vetro del resto della piattaforma, niente illustrazioni (un tentativo precedente il 14/10 era stato bocciato e tolto lo stesso giorno — la fonte dell'immagine era troppo degradata). Verificato dal vivo chiaro/scuro, login funzionante.
+
+## 0.4.0 — 31 ottobre 2026
+
+**Liquid Glass completato — 100% delle pagine.** Terza e ultima tranche, le viste avanzate di modulo e le rifiniture rimaste:
+
+- Viste avanzate: Archivio (cartelle, schede, elenco — restano opache solo l'anteprima file e la cartella-in-creazione, trattamenti attivi non neutri), Gerarchia (parent/children), Periodo, Mesi dell'anno / Per categoria / Per settimana — questi ultimi tre ora di vetro anche come widget Dashboard (prima esclusi apposta perché avevano una card propria opaca).
+- Rifiniture sparse trovate nel giro finale: pannello Report di un modulo, report Schema personalizzati, Suggerimenti IA, verticali della Libreria, il riepilogo di una Busta Paga.
+- **Deliberatamente lasciati opachi** (stesso principio di sempre, non dimenticati): ogni modale/dialogo di conferma, i pannelli di inserimento blocco/immagine del Sito Web, il contenuto pubblico delle pagine del tenant (non è interfaccia di Platform), la schermata di login, l'onboarding guidato, e alcuni pannelli di integrazione secondari annidati dentro schede già di vetro (Gmail, Telegram, WhatsApp, Smista) — rimandabili a un giro successivo se richiesto, impatto visivo minore essendo già dentro un contenitore di vetro.
+- Build di produzione pulita a ogni tranche, verificato dal vivo chiaro/scuro per ogni pagina toccata.
+
+Chiude l'estensione del linguaggio "vetro" oltre la Dashboard iniziata in 0.3.28 — tre tranche (0.3.55, 0.3.56, 0.4.0), nessun retema di Super Admin né del Builder condiviso (restano il loro linguaggio a sé).
+
+## 0.3.56 — 31 ottobre 2026
+
+**Liquid Glass, seconda tranche** — tutte le schede restanti di Impostazioni, più Sito Web (solo l'ambiente editor, i blocchi della pagina del tenant restano come sono: è il sito del tenant, non l'interfaccia di Platform):
+
+- Utenti & Ruoli, Liste, Funzioni, Aspetto, Report (notifiche), AI, Sicurezza, Dati (export/backup), Collegamenti, Movimenti.
+- `RecordOwnerCard.jsx` (usata in Utenti & Ruoli) e i pannelli admin del Sito Web (Cronologia, Popup, Valori dinamici, Tema).
+- Verificato dal vivo ogni scheda, build di produzione pulita.
+- Modali di conferma (es. elimina lista/tenant) restano opachi apposta, come già per ogni altro modale della piattaforma.
+- Resta da fare: le viste avanzate di modulo (Archivio, tabelle periodo/gerarchia/ViewTabs) — ultima tranche prima della 0.4.0.
+
+## 0.3.55 — 31 ottobre 2026
+
+**Liquid Glass esteso oltre la Dashboard** (richiesto dall'utente: "aggiornare al liquid glass anche il resto della piattaforma, coprendo il 100% delle pagine") — prima tranche, le pagine principali:
+
+- Nuovo `GlassPageBackground.jsx` — lo sfondo sfumato (prima duplicato dentro DashboardPage.jsx) estratto in un componente condiviso, così ogni pagina lo richiama in un punto solo.
+- Convertite: Log attività, Guida (tutte e tre le schede), Libreria, Builder (solo l'ambiente attorno — i pannelli di `shared/frontend/builder/` restano come sono, condivisi con Super Admin), la pagina di ogni modulo (lista, tabella, calendario, stati vuoti — la vista più usata di tutte), Impostazioni (guscio + schede Connessioni e Moduli, incluse qui) e Il mio account.
+- `Tile.jsx` (usato in 40+ punti nelle schede di Impostazioni) ora è di vetro — si propaga automaticamente ovunque è già in uso.
+- Verificato dal vivo in chiaro e scuro: nessuna card doppiata, nessun modale finito nei guai del `backdrop-filter` (quelli restano appositamente opachi, come già per Sidebar/FormDrawer).
+- Ancora da convertire: Utenti & Ruoli, Sito Web, Funzioni, Aspetto, Report, AI, Sicurezza, Dati/Backup, le viste avanzate di un modulo (Archivio, tabelle periodo/gerarchia) — prossima tranche.
+
+## 0.3.54 — 31 ottobre 2026
+
+Tre rifiniture sul launcher "Altro", segnalate dal vivo di seguito:
+
+- **Griglia più fitta**: 4 colonne invece di 2, icone 56px invece di 80px, pochissimo padding — "troppo spazio tra le icone", richiesto più volte.
+- **Etichetta vera al passaggio del mouse**, non solo il `title` nativo del browser (troppo lento/invisibile per essere utile): appare subito sopra o sotto l'icona via `group-hover`.
+- **Stato attivo meno invadente**: niente più rettangolo pieno attorno all'icona selezionata ("anche quando selezionata la pagina è bruttissima da vedere") — resta solo il riempimento pieno della sola icona, proporzionato.
+
+## 0.3.53 — 31 ottobre 2026
+
+- **Launcher "Altro": solo icona, niente etichetta sotto** — richiesto dal vivo. Il nome resta leggibile al passaggio/pressione lunga (`title`) e filtrando dalla ricerca sopra la griglia.
+
+## 0.3.52 — 31 ottobre 2026
+
+- **Fix reale: il dettaglio di un record aperto da mobile risultava "sfalsato"** — segnalato dal vivo con screenshot (campo Data e un campo di relazione tagliati sul bordo destro). Su iOS Safari un `<input type="date">` può avere una larghezza intrinseca propria che ignora anche `min-w-0`/`max-w-full` sul campo stesso (fix già tentato il 26/10, insufficiente) — quel singolo campo troppo largo rendeva scorrevole ORIZZONTALMENTE l'intero form, spingendo fuori schermo anche i campi sotto. `FormDrawer.jsx` (il pannello di dettaglio/modifica usato da ogni modulo) ora contiene qualunque figlio troppo largo invece di lasciarlo allargare il contenitore — vale ovunque nell'app, non solo per questo campo.
+
+## 0.3.51 — 31 ottobre 2026
+
+- **Launcher "Altro": icone più grandi, griglia a 2 colonne** (prima 3, 64px) — segnalato dal vivo dopo il fix dello spazio vuoto: "ancora troppo spazio, puoi ingrandire le icone?". Con i 5-8 voci tipiche, 2 colonne più grandi riempiono lo stesso spazio con meno righe vuote E icone più leggibili.
+- **Fix reale: la foto profilo caricata da un dispositivo non si vedeva su un altro (mobile sì, web Mac no)** — causa: `user` (avatar incluso) viene scritto in `localStorage` SOLO al login, per quel browser/dispositivo; un browser con una sessione già aperta non lo rifà mai, quindi non impara mai di un cambiamento fatto altrove. Nuova rotta `GET /users/me` (profilo fresco dal database, non dal JWT) chiamata da `App.jsx` a ogni avvio per riallineare lo stato locale — un dispositivo con sessione aperta vede ora la foto caricata da un altro entro il prossimo refresh, senza dover rifare login.
+
+## 0.3.50 — 31 ottobre 2026
+
+- **Fix reale: "Riduci" di "Come sta andando" restava fuori dalla card** — segnalato dal vivo con screenshot. Causa: `come_sta_andando` era l'unico tipo con la barra "Riduci" MA senza lo sfondo di vetro sul wrapper condiviso (quello lo disegnava da sé `InsightsCard.jsx`, più sotto) — due riquadri slegati invece di uno, la barra sopra restava visivamente fuori dalla card vera. Ora il wrapper porta il vetro come già per checklist/coda/riepilogo mensile, e `InsightsCard` non disegna più un proprio sfondo.
+- **Troppo spazio vuoto nel pannello "Altro"** — segnalato dal vivo su iPhone, non riproducibile su Chrome: un bug noto di Safari/WebKit fa crescere un figlio con `flex-grow` fino a riempire il `max-height` del genitore anche quando il contenuto reale è molto più corto. Sostituito con un `max-height` proprio sulla griglia scorrevole, indipendente dal flex-grow — si adatta sempre al contenuto reale.
+
+## 0.3.49 — 31 ottobre 2026
+
+- **Fix reale: upload della foto profilo falliva ("Errore nel caricamento")** — il nginx esterno (`infra/nginx/nginx.conf`, il primo hop di ogni richiesta: Cloudflare → questo → il nginx del tenant) non aveva mai un `client_max_body_size` proprio, restava sul default di nginx (1MB) — troppo poco per una foto da iPhone. `core/nginx.conf` (dentro ogni container tenant) l'aveva già corretto per lo stesso sintomo sul Sito Web il 2026-09-06, ma essendo un hop più a monte questo primo nginx respingeva la richiesta PRIMA ancora che quel fix potesse avere effetto. Alzato a 20MB (stesso limite di `uploads.js`). Applicato anche live sul nginx del NAS (backup della config precedente, test sintassi, reload).
+- **Indicatore del dock che scorre tra le voci** — segnalato dal vivo ("se mi sposto di voce non vedo lo scorrere"): il cambio di voce attiva era solo un cambio di colore istantaneo. Ora un alone della stessa forma/misura dell'icona si sposta con una transizione animata da una posizione all'altra (misurata dal vivo via `data-dock-key`, non calcolata a mano) — invisibile da fermo (perfettamente sovrapposto all'icona già colorata), visibile solo mentre scorre.
+
+## 0.3.48 — 31 ottobre 2026
+
+- **Icone del dock uniformate**: segnalato dal vivo come "irregolare, poca fluidità tra una voce e l'altra" — i moduli appuntati usavano icone piatte colorate senza sfondo, mentre Altro/Notifiche/Account erano cerchi blu pieni (solo se attivi) o grigi. Ora ogni icona del dock è un "chip" tondo tinto allo stesso modo (sfondo colore+alpha, come già nei risultati di ricerca), colorato di accent per le voci di sistema senza colore proprio, pieno solo quando attivo — più un leggero ingrandimento al passaggio del mouse per dare continuità tra un'icona e l'altra.
+- **Foto profilo (richiesta: "la mia Memoji come immagine profilo, cerchio accanto al nome")** — nuova colonna `users.avatar_path`, upload/rimozione da Impostazioni → Il mio account (PNG/JPG/WEBP/GIF, 5MB), servita pubblica via `/api/avatars/<file casuale>` (un `<img>` non manda l'header di autenticazione, e il nome file è un UUID, mai l'id utente). Il cerchio con la foto compare ovunque comparisse già l'iniziale colorata: pagina Account, icona "account" del dock, intestazione del pannello "Altro" — un solo componente condiviso (`Avatar.jsx`).
+
+## 0.3.47 — 31 ottobre 2026
+
+**Fix reale: un pannello di dettaglio aperto da un widget della Dashboard "apriva male"** — segnalato dal vivo con screenshot (Checklist → click su una riga). Causa: per specifica CSS, un `backdrop-filter` su un antenato (i pannelli di vetro, `.glass-panel`) crea un nuovo "containing block" per i discendenti `position: fixed` — il pannello di dettaglio (`FormDrawer.jsx`), aperto da dentro una card di vetro, restava intrappolato nei confini di quella card invece di coprire tutta la pagina, invece di sembrare "rotto" sembrava solo uno sfondo piatto scollegato dal resto. Risolto spostando `FormDrawer` fuori dall'albero React con un portale (`createPortal` verso `document.body`, stesso pattern già usato da `Select.jsx`) — vale per qualunque pagina, non solo la Dashboard.
+
+## 0.3.46 — 31 ottobre 2026
+
+Quattro rifiniture sul dock, segnalate dal vivo:
+
+- **Icone del pannello "Altro" più grandi** (44px → 64px, griglia a 3 colonne invece di 4) con un effetto di ingrandimento al passaggio del mouse, stile dock macOS — interpretazione migliore da un video di riferimento che non ho potuto riprodurre direttamente: da confermare o rifinire.
+- **L'hamburger in alto a sinistra è sparito da mobile**: era ridondante col pulsante "Altro" del dock, che apre lo stesso pannello (lo apre ancora anche il tour guidato quando serve).
+- **Spazio recuperato in cima alla pagina**: la barra in testa ora compare solo quando c'è davvero qualcosa da mostrarci ("Chiedi ai dati", solo admin con AI accesa) — altrimenti non occupa più spazio. Lo spazio per la notch (dispositivi con tacca) si riserva una volta sola su `<main>`, non più nella barra.
+
+## 0.3.45 — 31 ottobre 2026
+
+**Il pannello "Altro" diventa un vero launcher** (richiesto dall'utente dopo aver visto un app-launcher macOS): ricerca in cima al pannello invece che nella testa della pagina, griglia di icone al posto della lista. Digitare filtra la griglia sotto per nome E cerca contemporaneamente nei record di tutti i moduli — stessa identica ricerca di sempre (`GlobalSearch.jsx`, ora un componente a sé, usato sia qui che sulla pillola di vetro di Dashboard/Report), solo spostata e doppiamente utile. La testa della pagina non ha più il campo di ricerca.
+
+## 0.3.44 — 31 ottobre 2026
+
+Tre rifiniture segnalate dal vivo sul dock e sul vetro:
+
+- **"Chiedi ai dati"** era rimasto testo nudo accanto alla pillola di vetro della ricerca — ora è una pillola di vetro anche lei, su Dashboard/Report.
+- **"Come sta andando"** non aveva mai preso il vetro: gestisce il proprio sfondo internamente (non passa dal wrapper generico della griglia). Corretto alla fonte in `InsightsCard.jsx`.
+- **L'icona "Altro" nel dock** era un hamburger (≡), che legge come "apri la navigazione" — confuso qui dove la navigazione è già il dock. Cambiata in una griglia.
+
+## 0.3.43 — 31 ottobre 2026
+
+**Fix: il marchio nello sfondo era troppo "incollato" da vicino** — segnalato dal vivo con uno zoom reale: a 6px di sfocatura restava una forma dai contorni netti (il rettangolo arrotondato e il riquadro interno si leggevano chiaramente), più un timbro che una texture di sfondo. Sfocatura portata a 40px: ora si scioglie in una macchia di luce, resta solo il tocco di colore.
+
+## 0.3.42 — 31 ottobre 2026
+
+**La sidebar diventa un dock orizzontale flottante** (richiesto dall'utente dopo aver visto due proposte di vetro per la navigazione — preferito il dock in stile barra di WhatsApp/iOS alla sidebar verticale di sempre). Sostituisce la rail fissa a sinistra: dock di vetro centrato in basso, le prime 4 voci fisse, il resto (altri moduli raggruppati come prima, Libreria/Builder/Log/Impostazioni/Guida, account/notifiche/tema/password/esci) dietro un pulsante "Altro" che apre un pannello di vetro sopra il dock. Stessa identica logica di prima sotto (notifiche, cambio password, tema, logout), cambia solo la presentazione — e ora desktop e mobile condividono lo stesso componente (prima erano due: rail + drawer off-canvas).
+
+**Fix reale durante la costruzione**: `.glass-panel`/`.glass-pill` impostavano `position: relative` nel CSS — per ordine di sorgente (stessa specificità, regola dopo nel foglio) vinceva su `fixed`/`absolute` di Tailwind applicati dal chiamante, mandando il dock nel flusso normale della pagina invece che ancorato in basso. Tolto: chi usa la classe porta sempre il proprio posizionamento.
+
+## 0.3.41 — 31 ottobre 2026
+
+**Fix: la pillola di ricerca "fa pena"** — segnalato dal vivo con screenshot. Da quando (0.3.39) la barra sticky in alto ha perso il suo sfondo su Dashboard/Report, la ricerca restava l'unica cosa "piatta" (bordo quadrato, sfondo opaco a blocco) in un contesto tutto di vetro. Nuova classe `.glass-pill` (stesso trattamento di `.glass-panel`, angoli a pillola) applicata alla ricerca solo su quelle due pagine. Sulle altre pagine resta quadrata, come sempre.
+
+## 0.3.40 — 31 ottobre 2026
+
+**Il marchio Platform nello sfondo della Dashboard** (richiesto dall'utente): la chiazza di colore in basso a destra, dietro i pannelli di vetro, ora ha il logo vero e proprio — grande, molto sfumato e sfocato, resta parte dello sfondo e non un timbro sopra i contenuti. Theme-aware (più tenue in chiaro).
+
+## 0.3.39 — 31 ottobre 2026
+
+**Fix definitivo: la riga sopra la Dashboard** — il tentativo precedente (0.3.38, bordo tolto, meno opacità) non bastava: qualunque sfondo proprio sulla barra sticky, per quanto tenue, segna comunque un confine nel punto esatto in cui finisce ("impresentabile questa linea", con screenshot). Tolto del tutto: su Dashboard/Report quella barra non ha più nessuno sfondo né sfocatura propria — la ricerca ha già la sua pillola opaca, resta leggibile lo stesso. Verificato anche durante lo scroll.
+
+## 0.3.38 — 31 ottobre 2026
+
+**Fix: un taglio netto sopra la Dashboard** — segnalato dal vivo con screenshot reale. La barra di ricerca sticky in alto (condivisa da tutta l'app) aveva un bordo netto e uno sfondo quasi opaco, che tagliava bruscamente contro lo sfondo sfumato del vetro appena sotto: una cucitura visibile, non un bordo voluto. Solo su Dashboard/Report quella barra ora è più trasparente, più sfocata e senza bordo — si fonde invece di tagliare. Sulle altre pagine resta identica a sempre.
+
+## 0.3.37 — 31 ottobre 2026
+
+**Rifinitura: spazio tra bordo e "Riduci"** — segnalato dal vivo, la barra di un widget aperto aveva solo 4px di margine dal bordo arrotondato della card (`px-1 py-1`), troppo stretto. Portato allo stesso respiro della barra chiusa (`px-4 py-3`), coerente nei due stati.
+
+## 0.3.36 — 31 ottobre 2026
+
+**Fix: il vetro restava coperto dal basso, non solo dall'alto** — segnalato con screenshot reali, dark e light, da mobile. La barra "Riduci/Espandi" di un widget chiuso aveva un suo sfondo opaco (`bg-surface-card`) sopra la card già di vetro: da mobile, dove i widget sono chiusi di default, quello sfondo copriva per intero l'effetto — l'intera Dashboard sembrava piatta. Tolto lo sfondo proprio della barra: ora lascia vedere il vetro del genitore anche chiusa.
+
+## 0.3.35 — 31 ottobre 2026
+
+**Fix: il vetro diventava piatto sui widget lontani dall'alto** (segnalato dal vivo da mobile, con molti widget impilati: una card del tutto scura, senza colore né sfocatura). Causa reale: lo sfondo sfumato (`.glass-mesh-bg`) era `position: absolute`, ancorato all'altezza del blocco di contenuto — con una pagina lunga, i widget a metà/fondo pagina restavano lontani dalle due chiazze di colore negli angoli e la sfocatura campionava solo pixel scuri uniformi. Cambiato in `position: fixed`, ancorato alla finestra: ora qualunque card, a qualunque punto di scroll, ha sempre qualcosa di colorato sotto — come un vetro vero davanti a uno sfondo, non al contenuto.
+
+## 0.3.34 — 30 ottobre 2026
+
+**Prima direzione "Liquid Glass"** (richiesta esplicitamente dall'utente, dopo un mockup di proposta): pannelli di vetro satinato — sfocatura dello sfondo, bordo con un filo di luce superiore, angoli molto arrotondati — su un'area sola, la Dashboard di Finance, per validare la direzione prima di estenderla. Nuove classi riusabili in `index.css` (`.glass-panel`, `.glass-mesh-bg`), theme-aware (il vetro in tema chiaro è molto più opaco di quello in scuro, altrimenti il testo perde leggibilità). Il resto dell'app (sidebar, le altre pagine, i moduli) resta invariato: non è un retheme completo, solo il primo passo.
+
+## 0.3.33 — 30 ottobre 2026
+
+**Fix: la scheda "Modulo mancante" (0.3.32) usava `cp-primary`**, un colore che esiste solo nel frontend di Super Admin — nel tenant restava senza stile (bordo e icona piatti). Corretto con `accent`, il token vero di quel frontend; icona diversa per tipo di proposta (freccia di download per "installa", bacchetta per "crea un modulo nuovo"), etichetta "MODULO MANCANTE" con l'accento del colore del tenant, motivo con un filo laterale invece del corsivo.
+
+## 0.3.32 — 30 ottobre 2026
+
+**«Ti manca un modulo?»**, dentro ogni tenant (Impostazioni → Suggerimenti). Oltre alle osservazioni giornaliere già esistenti (campo poco usato, righe ferme...), una volta alla settimana — e sempre su richiesta col pulsante "Mi manca un modulo?" — l'AI guarda l'insieme dei moduli installati (mai i valori delle righe, solo struttura e qualche indizio già calcolato in locale) e propone UNA cosa: installare un modulo già pronto in Libreria (un tocco, usa la rotta d'installazione già esistente) o costruirne uno nuovo (apre il Builder sul nuovo modulo, con nome e descrizione proposti già scritti). Se non c'è niente di concreto, l'AI risponde "nessuna" — meglio di un suggerimento a sensazione. Mai un'installazione o una scrittura automatica: propone e basta, un tocco decide.
+
+## 0.3.31 — 30 ottobre 2026
+
+**Analisi: gli ultimi due punti rimasti "a righe".** I report e i potenziamenti AI proposti per il tenant diventano schede selezionabili (icona, bordo acceso quando inclusi); ogni processo nell'elenco ha ora un pallino colorato (verde coperto, rosso da costruire, grigio da valutare) accanto al nome, coerente con gli stessi colori usati nelle schede.
+
+## 0.3.30 — 30 ottobre 2026
+
+**Analisi: anche le proposte dell'AI e l'elenco dei processi come schede.** Dopo lo stepper (0.3.29), la stessa cura sulle due liste rimaste a semplici righe di testo: le "Proposte dell'AI" e i processi del riepilogo finale sono ora schede affiancate, col modulo trovato come bordo/badge verde e "da costruire"/"da valutare" in grigio.
+
+## 0.3.29 — 30 ottobre 2026
+
+**Movimenti spostato dentro Impostazioni**, allo stesso livello di "Rivedi collegamenti": entrambe le voci portano la targhetta (TMP), in attesa di trovare una collocazione definitiva.
+
+**Analisi → Tenant: niente più tetto fisso di 8 processi.** L'AI proponeva al massimo 8 processi indipendentemente da quanto l'attività raccontata fosse ricca di dettagli (un caso reale: una mediazione immobiliare descritta in profondità ne otteneva comunque solo 8, con moduli installati senza nessuna relazione tra loro). Ora il numero segue la descrizione — poche righe restano poche, una descrizione articolata può arrivare a 10-15 processi — e una nuova fase AI propone relazioni reali tra i moduli scelti (letti i processi, non solo quelle che un modulo portava già da sé): mai sovrascrive una relazione esistente.
+
+**Analisi: wizard più chiaro da vedere.** Il racconto testuale delle fasi ("…Cerco i processi", "✓ Ho trovato N processi") diventa uno stepper visivo a cerchi collegati — usato sia per orientarsi nei dettagli dell'analisi (Racconta → Processi → Libreria → Tenant) sia per seguire un avanzamento reale (creazione del tenant, compilazione automatica con "Fai tutto").
+
+## 0.3.28 — 30 ottobre 2026
+
+**Creazione di un tenant mai esistito prima falliva** ("Bind mount failed"): il Docker Engine del NAS (a differenza di Docker Desktop) non crea da sé la sottocartella dati mancante per un volume isolato per tenant — funzionava solo per i tenant già migrati il 26/10. Ora la sottocartella si crea esplicitamente prima di avviare il container.
+
+**Fix di sicurezza reale**: un allegato collegato solo tramite il campo File di un record (non tramite la tabella `record_attachments`) era illeggibile da chiunque non lo avesse caricato personalmente, admin incluso — bug introdotto dal fix IDOR del 14/10, mai notato perché finora ogni allegato veniva sempre aperto da chi lo aveva caricato. Trovato dal vivo (una bolletta importata da Drive, "Non hai i permessi"). 17 test di sicurezza (12 esistenti + 5 nuovi) confermano che le protezioni del 14/10 restano intatte.
+
+**Archivio: vere cartelle annidate** (richiesto dall'utente dopo aver visto la divisione automatica per anno su "Bolletta": "voglio vere sottocartelle"). Il valore di una cartella è ora un percorso ("Bollette/2026", "/" come separatore) sullo stesso campo piatto di sempre — nessuna migrazione dati, una cartella esistente senza "/" resta identica a prima. "Nuova cartella" ora compare anche dentro una cartella reale; rinominare una cartella rinomina in cascata anche le sue sottocartelle (e le righe che le usano); eliminare si rifiuta se la cartella ha sottocartelle.
+
+**Collegamento ricevute↔spese** (richiesto dall'utente dopo l'import massivo di bollette/ricevute da Drive): l'abbinamento automatico per solo importo si è rivelato troppo ambiguo su dati reali (lo stesso importo ricorre su decine di spese non collegate tra loro) — niente link scritti alla cieca. Aggiunta una relazione "Ricevuta/Bolletta collegata" su Spese Casa/Personali e una vista di revisione (**Impostazioni → Dati e sicurezza → "Rivedi collegamenti"**) dove ogni proposta letta dall'AI si conferma o si scarta con un clic. Dei ~440 documenti: 211 collegati in automatico (candidata unica per importo, o per importo+data/mese quando una spesa ricorrente mensile lo permetteva), il resto resta per la revisione a mano (file non ancora leggibili — immagini/email — o importi genuinamente ambigui).
+
+## 0.3.16 — 25 ottobre 2026
+
+Chiusura dell'arco "bot + app alla pari" su busta paga e contributi casa, più la risposta a "Platoform è la base, BOT è opzionale" (richiesto dall'utente): tutto ciò che il bot sa fare su questi temi ora esiste anche come vista nell'app, non solo come conversazione.
+
+- Bot: registrare un'entrata a frase libera, timbrare entrata+uscita nello stesso messaggio, domande sugli straordinari, lettura busta paga da foto (oltre che da PDF).
+- Fix: una foto di busta paga oltre ~100KB veniva rifiutata dall'AI per un limite sul corpo della richiesta mai impostato.
+- Bot: domande sulla busta paga (ferie residue, ore di un mese, buste mancanti, ultima, spiegazione libera di una voce).
+- Bot: domande di confronto e proiezione sui dati ("rispetto al mese scorso?", "di questo passo quanto spenderò?").
+- Bot: "debito casa" — chi deve soldi a chi sui contributi all'affitto, da una quota fissa per persona (configurabile) confrontata coi versamenti reali del mese.
+- Bot: "le ore tornano con le timbrature?" (ore pagate in busta contro ore davvero timbrate, mese per mese) e "quanti giorni di ferie e permessi ho?" (ferie/permessi/ROL insieme).
+- Lo stesso report ore-pagate-vs-timbrate e gli stessi saldi ferie/permessi/ROL sono ora visibili anche DENTRO il modulo Busta Paga nell'app, non solo chiedendoli al bot — si mostra da solo quando il modulo dichiarato come "bustapaga" è quello che si sta guardando.
+- Fix reale trovato scrivendo il test di questa vista: il confronto "ore timbrate" sommava le timbrature di TUTTI gli utenti, non solo di chi stava chiedendo, sui moduli di presenze senza "solo propri" configurato (il caso di Finance) — non si notava dal bot perché finora l'unica persona testata dal vivo aveva timbrature proprie uniche nel periodo.
+- Le 140 buste paga con un allegato sono ora collegate anche a un record nel modulo Documenti (stesso file, nessun doppio caricamento su Drive), così si vedono anche da lì e non solo aprendo il record busta paga.
+- **Incidente reale durante il deploy**: la migrazione automatica "porta destinatari WhatsApp e regole Gmail nelle tabelle nuove" falliva per un vincolo del database mai gestito (un modulo pubblicato lascia una riga in `modules_schema_history`, mai ripulita prima di cancellarlo), bloccando l'avvio dell'intero tenant in un ciclo di crash. Trovato e corretto in diretta, con un test che riproduce l'errore reale.
+
+## 0.3.17 — 25 ottobre 2026
+
+**Drive bidirezionale** (richiesto dall'utente: "così carico i file da app Google drive"): finora Platform scriveva solo su Drive (gli allegati creati dall'app), non leggeva mai ciò che qualcuno aggiungeva direttamente da Drive stesso. Ora un poller, ogni 15 minuti, guarda la cartella Drive del tenant e per ogni file nuovo (non ancora conosciuto da Platform) crea un record nel modulo ad archivio (Documenti su Finance) col file già allegato — generico, nessun nome di modulo scritto nel codice, si attiva da solo se c'è esattamente un modulo del genere. Richiedeva lo scope Drive di sola lettura, già incluso nella richiesta di collegamento esistente: nessuna ri-autorizzazione necessaria.
+
+Trovato e corretto nello stesso giro: il salvataggio su Drive era silenziosamente spento (il collegamento Google aveva perso l'interruttore "salva su Drive" durante un ricollegamento precedente, probabilmente quando è stato aggiunto lo scope di sola lettura) — i nuovi file finivano sul disco locale invece che su Drive senza nessun avviso. Riacceso.
+
+## 0.3.18 — 25 ottobre 2026
+
+Due rifiniture a Drive, trovate/chieste dall'utente lo stesso giorno dello 0.3.17:
+
+- **Niente più cartelle doppie**: `ensureDriveFolder` creava una nuova cartella "Platform - Finance" ogni volta che l'id salvato andava perso (è già successo una volta in produzione) — l'utente l'ha segnalato prima che diventasse un problema vero ("non è che ricrea la cartella ogni volta che riconnetto Google?"). Ora cerca sempre prima per nome una cartella già esistente e la riusa; solo se davvero non c'è ne crea una.
+- **Sottocartelle Drive = cartelle dell'app** (richiesto: "vorrei vedere una cartella Finance e relative sottocartelle come le vedo in modulo documenti"): un file trovato dentro una sottocartella Drive che corrisponde a un valore vero del campo "tipo" prende quella cartella nel record che crea; e ogni record con cartella e file su Drive già assegnati viene spostato (o lasciato) nella sottocartella Drive giusta a ogni giro del poller — sia i 140 cedolini busta paga collegati a Documenti sia qualunque file caricato dall'app finiscono organizzati per tipo dentro Drive, non più tutti appiattiti in una cartella sola.
+
+## 0.3.19 — 25 ottobre 2026
+
+**Pulsante "Sincronizza Drive"** in Documenti (richiesto dall'utente dopo aver visto il poller in azione: "un tasto aggiorna nei documenti per forzare il sync"): non serve più aspettare il giro automatico di 15 minuti, un tocco controlla subito e dice quanti file nuovi ha trovato e quanti ha riordinato nella cartella giusta.
+
+Fix trovato provando il pulsante dal vivo prima di spedirlo: con un errore vero di Drive (token scaduto, collegamento rotto) il pulsante mostrava "nessuna novità" invece dell'errore — un fallimento reale sembrava un successo silenzioso. Ora un errore resta un errore in faccia a chi ha premuto il tasto.
+
+**Incidente reale, lo stesso giorno**: il container di Finance leggeva e scriveva su un file database sbagliato (`finance.db`, quasi vuoto — nessun modulo busta paga) invece di quello vero (`finance-01.db`, tutta la cronologia reale, rinominato poi semplicemente `finance.db`). La configurazione in Super Admin puntava al file sbagliato da un punto imprecisato della giornata; password e collegamento Google rifatti nel frattempo erano finiti lì e sono andati persi nel ripristino. Corretto: fermato il tenant dall'API ufficiale (mai un `docker stop` a mano), scambiati i file, riavviato — verificato 142 buste paga, 192 documenti, 2352 timbrature di nuovo al loro posto. Google e Client ID/Secret ricollegati sul file giusto.
+
+## 0.3.20 — 25 ottobre 2026
+
+Rifiniture a Drive bidirezionale e un fix reale sul report busta paga, tutti richiesti/trovati lo stesso giorno di 0.3.17-0.3.19:
+
+- **Cartelle vuote sincronizzate**: una sottocartella Drive creata senza niente dentro ("voglio anche le cartelle vuote syncate") ora diventa comunque una nuova opzione del campo "tipo" di Documenti — prima contava solo quando arrivava il primo file. Stessa rotta reale del Builder/ArchiveView per registrarla (`POST /field-options`, azione "add"), stessa cronologia di pubblicazione.
+- **File nella radice di Drive sistemati** ("in drive ci sono file nella root, vanno sistemati"): un documento con un file già su Drive ma senza cartella assegnata finisce in "Altro" (il catch-all già tra le opzioni — mai inventato un valore a caso se "Altro" non è dichiarato) e viene spostato lì, invece di restare per sempre nella radice.
+- **Fix reale nel report busta paga** (bug "i mesi sembrano sdoppiati"): chi guarda il report ore/timbrature vedendo più persone insieme (chi guarda non corrisponde a nessun "proprietario", es. l'admin) vedeva lo STESSO numero di ore timbrate ripetuto identico su righe di persone diverse — il confronto usava sempre le timbrature di chi guardava, mai quelle della persona a cui quella riga appartiene davvero. Ogni riga ora si confronta con le timbrature della persona giusta, e quando la vista mostra più persone insieme ciascuna riga dice anche di chi è (sia nel bot sia nell'app), così due mesi uguali di persone diverse non sembrano più un doppione.
+
+## 0.3.21 — 25 ottobre 2026
+
+**Server MCP** (richiesto dall'utente: «un MCP per platform, ha senso?»): un client locale (`mcp-server/`, non deployato sul NAS) che espone Platform come strumenti per Claude Code/Desktop — collegabile a qualunque tenant, non fisso a uno. Serviva prima un modo per autenticarsi senza login/2FA ogni volta: **token API personali**, nuovi in Impostazioni → Il mio account → Token API (self-service come passkey/2FA, uno o più, revocabili in qualunque momento, mai mostrati di nuovo dopo la creazione) — parte del codice di ogni tenant, non solo di Finance.
+
+Gli strumenti sono per lo più lettura/scrittura generica sugli stessi moduli dell'app (elenco moduli, schema, lista/leggi/crea/modifica record — mai "elimina") più le stesse risposte già costruite per il bot (chiedi ai dati, report busta paga, debito casa). Nessuna logica duplicata: ogni strumento chiama la stessa API reale di un browser collegato, stessi permessi dell'utente del token. Testato end-to-end per davvero: backend reale, token reale, server MCP avviato come processo a parte, client MCP reale — non un mock di nessuno dei tre pezzi.
+
+## 0.3.22 — 25 ottobre 2026
+
+**Controllo di integrità all'avvio** (richiesto dall'utente dopo l'incidente reale dello stesso giorno: un container montava un database sbagliato, quasi vuoto, senza il modulo busta paga — scoperto ore dopo per caso): `integrity-check.js`, generico, non specifico a nessun tenant. Confronta un'impronta minima del database appena montato (moduli installati + totale record) contro l'ultima nota, salvata ACCANTO al `.db` (mai dentro: scambiare il file sposterebbe anche il riferimento con sé). Un modulo sparito o un calo drastico dei record avvisa su tre canali — log, Log attività, WhatsApp/Telegram — ma non blocca mai l'avvio e non si auto-corregge mai: il riferimento si aggiorna solo con un'azione esplicita (Impostazioni → Sicurezza, dopo un ripristino voluto).
+
+**Guida del bot Telegram**: mancava del tutto nella Guida in-app — nuova sezione "Bot Telegram" (8 argomenti: collegarlo, comandi e menu, come funziona ogni scrittura, cosa sa fare per spese/dati/timbrature/busta paga/costi condivisi, cosa non fa di proposito, limiti). Anche come documento a sé, `docs/GUIDA-BOT.md`.
+
+## 0.3.23 — 26 ottobre 2026
+
+**Cloudflare: da "Flexible" a "Full (strict)"** (richiesto dall'utente: "il traffico tra Cloudflare e il NAS viaggia in chiaro"). Generato un certificato Origin CA di Cloudflare (15 anni, `*.platform-core.it` + `platform-core.it`) e installato su `platform-nginx`, l'unico ingresso condiviso da tutti i tenant e da Super Admin. Scoperta lungo la strada la vera ragione per cui Cloudflare raggiunge il NAS sulla porta 4000 (non 443): una Origin Rule della zona, esistente da prima e indipendente da questa modifica, riscrive la porta di destinazione a 4000 per ogni richiesta — quindi non è servito aprire nessuna porta nuova né toccare la mappatura Docker. L'unico cambio reale è stata la porta 80 (= 4000 dall'esterno) che ora parla TLS invece che in chiaro; applicato con un `reload` nginx (non un riavvio) fatto nello stesso momento del passaggio a Full (strict) in dashboard, per evitare la finestra in cui i due lati non si capirebbero. Verificato subito dopo: Finance e Super Admin rispondono entrambi, nessun errore nei log, container mai riavviato.
+
+## 0.3.24 — 26 ottobre 2026
+
+**"Aggiorna" di un tenant: niente più falso "Errore di rete"** (scoperto dal vivo: il redeploy di Finance da telefono mostrava "Errore di rete: Load failed" a metà del popup, ma sul server l'aggiornamento finiva comunque con successo pochi secondi dopo). La build dell'immagine e l'attesa che il tenant torni a rispondere possono restare silenziose per diversi minuti — Cloudflare chiude da sé una connessione proxy inattiva intorno ai 100 secondi, scambiando il silenzio per una connessione morta. Il popup di avanzamento ora manda un battito ogni 20 secondi (senza testo visibile, solo per tenere viva la connessione) per tutta la durata del redeploy.
+
+## 0.3.25 — 26 ottobre 2026
+
+**Tre lacune di sicurezza reali chiuse** (emerse rispondendo a "Platform è sicuro al 100%?" — documentate ma mai sistemate, `docs/DECISIONI.md` 16/10/2026):
+
+- **Porte dei tenant non più pubblicate sull'host**: prima raggiungibili dalla rete di casa senza passare da nginx/Cloudflare. platform-nginx instrada già per nome container sulla rete Docker interna — togliere la pubblicazione non cambia nulla del routing reale. Unico effetto collaterale: il link "Apri →" per un tenant senza dominio ancora assegnato ora passa da un proxy interno di Super Admin invece che da host:porta diretto.
+- **Permessi moduli fatti valere anche sulle API**, non solo sul menu: nascondere un modulo a un utente (`user_modules`) bloccava solo cosa vedeva nel menu — poteva comunque chiamare le API di quel modulo direttamente. Nuova `requireModuleAccess` (stesso stile di `requireAdmin`) su `records.js`/`field-options.js`/`module-ai.js`, con lo stesso identico comportamento di compatibilità già in uso per il menu (admin sempre libero, nessuna riga configurata = nessuna restrizione).
+- **Segreto interno condiviso → JWT per-tenant** sulle rotte dove conta sapere DAVVERO chi chiama (`tenant-ai.js`, `registry.js` proposte modulo): prima ogni tenant, conoscendo lo stesso segreto di tutti, poteva dichiarare lo slug di un altro tenant e leggerne/consumarne la chiave AI o il budget. Riusato il pattern già in produzione per l'export/gli inviti (il tenant firma con il proprio `jwt_secret`, mai condiviso). Finestra di transizione: il vecchio segreto condiviso resta accettato (e loggato) finché non tutti i tenant sono stati ridistribuiti col nuovo codice — la rimozione del ramo vecchio è un passo separato, non di questa versione.
+- **Isolamento del volume dati per tenant** — **completato la stessa notte**: ogni container tenant montava l'intero volume condiviso, vedendo i database di tutti gli altri tenant più il registro di Super Admin con le relative chiavi. Tornato Docker Desktop disponibile, 17 test di isolamento confermati su Docker vero, poi migrazione dal vivo di ai-sandbox e Finance (backup verificati, copia mai sposta, verifica dei dati prima e dopo ogni passo, mai un minuto di downtime inatteso): ogni tenant ora vede solo la propria sottocartella, confermato con `docker exec platform-<slug> ls /data`. I vecchi file piatti restano sul volume, intatti, come rete di sicurezza.
+
+Trovato e corretto lungo la strada: `scripts/redeploy-nas.sh` aveva un `DB_PATH` sbagliato cablato (puntava a un database vecchio e incompleto) — mai eseguito da quando la discrepanza esisteva, corretto prima che causasse danno.
+
+## 0.3.26 — 27 ottobre 2026
+
+**Nuovo tipo campo del Builder: `barcode`** (richiesto per archiviare oggetti in magazzino). Si comporta come un campo `text` — stesso salvataggio, stessa visualizzazione, nessuna modifica lato backend — con in più un pulsante che apre la fotocamera e legge il codice con l'API nativa del browser (`BarcodeDetector`, nessuna libreria esterna aggiunta). Dove la fotocamera non è disponibile o il browser non supporta la scansione, il campo resta comunque compilabile a mano: la scansione è una scorciatoia, non l'unico modo di usarlo. Verificato dal vivo nel browser: tipo selezionabile nel Builder, pulsante di scansione nel form "Nuovo record", errore corretto quando la fotocamera non è raggiungibile, salvataggio e visualizzazione in elenco identici a un campo di testo.
+
+## 0.3.27 — 27 ottobre 2026
+
+**Il campo Data sfondava lo schermo su iPhone** (segnalato dal vivo: screenshot reale, "Entrate — dettaglio"). Su iOS Safari il controllo nativo di un `<input type="date">` ha una larghezza propria che può superare quella del contenitore — `w-full` da solo non basta a contenerlo in ogni browser. Aggiunto `min-w-0`/`max-w-full` ovunque mancava (il campo generico del Builder usato da ogni modulo, il modale dettaglio, la creazione rapida, due punti della Dashboard) — `TimbratureWidget.jsx`/`SmistaPanel.jsx` ce l'avevano già, segno che il problema era già noto in parte ma non corretto ovunque. Non riproducibile nei miei strumenti (serve Safari reale, non l'emulazione mobile di Chrome) — fix applicato sulla causa nota e documentata di questo esatto sintomo, da confermare dal vivo.
+
+## 0.3.15 — 24 ottobre 2026
+
+Seguito della domanda dell'utente "le entrate di spese casa, come le gestiamo?": le card "Riepilogo mensile — Personale" e "— Casa" puntavano entrambe allo stesso modulo Entrate senza nessun filtro, quindi avrebbero sommato le STESSE entrate su entrambe (es. lo stipendio intero contato anche nella card Casa, invece dei soli contributi versati alla casa).
+
+- Il widget "Riepilogo mensile" ha ora un filtro facoltativo sulle entrate (un campo a scelta del modulo + un valore, stesso schema già usato per `conti`/`campo_tipo`): su Finance, Personale filtra `gruppo = Personale`, Casa filtra `gruppo = Casa` — campo e valori già esistenti nel modulo Entrate (incluse le categorie "Contributo Nima"/"Contributo Federica", mai usate finora da nessun widget). Verificato in locale: Personale mostra solo lo stipendio, Casa solo i contributi, senza doppio conteggio.
+
+## 0.3.14 — 24 ottobre 2026
+
+Due rifiniture ai widget "Riepilogo mensile" affiancati (0.3.12), trovate dall'utente dal vivo dopo il deploy.
+
+- Soglia per affiancare le due card abbassata da 1024px a 640px (`sm:col-span-1` oltre a `lg:col-span-3`): prima serviva una finestra quasi a schermo intero, ora basta una finestra di media larghezza — richiesto esplicitamente dall'utente ("voglio l'affiancata").
+- L'anello dello spendibile veniva tagliato dal bordo della card quando non c'era spazio per stare a fianco del testo. Messo sempre sotto il testo (mai più a fianco, nemmeno su schermi larghi): non solo risolve il taglio, ma toglie anche un'inconsistenza trovata subito dopo dall'utente — un testo più corto ("80%") lasciava stare l'anello a fianco mentre uno più lungo ("Nessuna entrata registrata") lo spingeva sotto, facendo sembrare le due card "sfalsate" quando una aveva un segno più/meno e l'altra no.
+
+## 0.3.13 — 24 ottobre 2026
+
+Il popup "Aggiornamento in corso" di Super Admin mostrava ~80 righe — una per ogni passaggio grezzo di `docker build` ("Step 12/26", "---> hash", "Using cache") — richiesto dall'utente dopo averlo visto dal vivo: "troppo verbose... qualcosa di più minimale".
+
+- `docker.js` (docker-provisioner) non inoltra più l'output riga per riga della build: restano solo i 2-3 messaggi di prima (scarico il sorgente, costruisco l'immagine, pronta) più un eventuale errore vero. L'icona che gira sull'ultima riga del popup basta a dire "sta ancora lavorando" durante il minuto che la build può richiedere.
+
+## 0.3.12 — 24 ottobre 2026
+
+Il widget "Riepilogo mensile" sommava Spese Casa e Spese Personali insieme — l'utente lo voleva solo personale, "al massimo dividi le due cose". Sul tenant Finance: il widget esistente è diventato "Riepilogo mensile — Personale" (solo lui), nuovo widget "— Casa" (lui e Federica) — stesso schema già in uso per "Come sta andando". Fatto con le vere rotte dell'app (non scrivendo a mano sul database di produzione).
+
+- `riepilogo_mensile` ora sta affiancato a un altro dello stesso tipo su schermi larghi (come già `come_sta_andando`), invece di occupare sempre tutta la riga — "due riquadri vicini", richiesto dall'utente dopo aver visto la divisione.
+
+## 0.3.11 — 24 ottobre 2026
+
+Richiesto dall'utente dopo aver visto un report «Da pagare» su Telegram: le righe (sia «In arrivo» sia le scadute elencate nel messaggio) hanno ora un punto elenco e la data in grassetto come "chiave" — più facili da scorrere a colpo d'occhio. Stesso testo condiviso con WhatsApp (nessun doppione da mantenere allineato): `*grassetto*` e `• ` sono già capiti da entrambi i client.
+
+## 0.3.10 — 21 ottobre 2026
+
+Due rifiniture al bot Telegram, richieste dall'utente dopo averlo provato: "ok i comandi sono migliorati? hai messo i tasti?".
+
+- Foto profilo del bot impostata sull'icona di Platform (prima quella di fabbrica di Telegram) — fatto anche a mano sul bot già collegato in produzione.
+- Il menu nativo "/" di Telegram ora elenca i comandi fissi del bot (`/menu`, `/report`, `/timbra`, `/ore`, `/aiuto`, `/scollega`) con una breve descrizione: prima Telegram non sapeva che comandi avesse, perché il bot non li aveva mai dichiarati (`setMyCommands`, chiamato ora dentro `connect()`). Applicato anche al bot già collegato in produzione, che altrimenti lo avrebbe avuto solo al prossimo ricollegamento.
+
+## 0.3.9 — 21 ottobre 2026
+
+Richiesto dall'utente ("potenzia il bot il più possibile"), con un vincolo chiaro: niente agente sempre acceso stile OpenClaw — la RAM del NAS è fuori discussione, e il bot di Telegram è già profondo (domande sui dati, azioni proposte con conferma, scontrini/bollette letti dall'AI, timbrature, report proattivi già configurabili su Telegram). Il gap vero, verificato leggendo `bot-ai.js`: ogni frase viene interpretata da sola, senza alcuna memoria — un "e il mese scorso?" dopo una domanda non significava niente per il modello.
+
+- Nuova **memoria minima del bot** (`bot-memory.js`, tabella `telegram_memory`): un solo scambio per chat (ultima domanda + cosa si era capito), passato al modello come contesto facoltativo — "e il mese scorso?", "anche per la luce?" ora funzionano come seguiti naturali.
+- Scade da sola dopo 15 minuti di inattività: una domanda nuova non eredita per sbaglio il contesto di una vecchia. Nessun processo in più, nessuna libreria nuova — solo una tabella e un parametro opzionale in più nei prompt già esistenti (`ai-bot.js`/`ai-ask.js` su Super Admin).
+
+## 0.3.8 — 21 ottobre 2026
+
+Richiesto dall'utente: con più verticali diversi, ciascuno salvato come app sul dock (macOS/Chrome), tutte avevano la stessa icona blu/viola — nessun modo di distinguerle a colpo d'occhio nel dock/launcher.
+
+- Nuovo tab **Impostazioni → Aspetto**: un colore per l'app (`accent_color`, colonna già esistente da agosto ma senza UI — "white-label minimo" mai collegato a un posto da cui impostarlo).
+- Quel colore ora arriva anche nell'icona: `core/backend/src/pwa-icon.js` ricolora icon-192/512, apple-touch-icon e il `theme_color` del manifest ogni volta che il colore viene salvato (o riportati di fabbrica se il colore viene tolto) — nessuna libreria di grafica con binari nativi (niente canvas/sharp, già causa di problemi in passato), solo pngjs (puro JS) con un lerp(colore, bianco) sulla "bianchezza" di ogni pixel.
+- L'apple-touch-icon in `index.html` non è più inline (base64 fisso, non ricolorabile) ma un file esterno, come le altre icone.
+
+## 0.3.7 — 20 ottobre 2026
+
+Bug reale trovato scavando su una segnalazione dell'utente ("oggi è arrivata una mail e non è stata smistata"): con l'app Google in modalità "Test" il token scade dopo 7 giorni (noto, documentato) — ma quando scade, il controllo automatico delle mail (ogni 15 minuti) falliva **in totale silenzio**, zero log e zero avviso, da quando era stato introdotto. Il codice trattava "Google mai collegato" (stato normale, giusto restare muti) e "era collegato, il token è scaduto" (guasto vero) allo stesso identico modo. Risultato: bollette smesse di arrivare senza che nessuno se ne accorgesse finché non mancava una mail vera.
+
+- Ora, solo quando il collegamento ERA attivo e smette di funzionare, parte un avviso WhatsApp una tantum (non si ripete a ogni ciclo di 15 minuti) che dice di ricollegare da Impostazioni → Connessioni → Google. Si azzera da solo al primo controllo che torna a funzionare, pronto per avvisare di nuovo alla prossima scadenza.
+- L'utente ha scelto esplicitamente di non pubblicare l'app Google ("non la voglio pubblicare") — il ciclo di scadenza ogni 7 giorni resta quindi normale amministrazione, non un difetto da correggere: da qui in avanti, almeno, non passa inosservato.
+
+## 0.3.6 — 20 ottobre 2026
+
+Due correzioni in core/frontend, segnalate dall'utente dal vivo.
+
+- **Mancava il modo di eliminare un record dalla sua scheda di dettaglio**: l'unico cestino esisteva nell'icona a fianco di ogni riga nell'elenco — chi apriva un record per guardarlo o modificarlo (il posto più naturale dove cercarlo) non trovava modo di cancellarlo. Aggiunto un bottone "Elimina" accanto a "Modifica" nell'intestazione del dettaglio, con conferma, rispettando lo stesso permesso già configurato nel modulo (nessun cambio per chi non ha il permesso di eliminare).
+- **Tolta la sotto-intestazione a due gruppi ("Esportazione" / "Backup e disaster recovery") nella scheda Dati di Impostazioni**, aggiunta nel ridisegno del 18/10 — segnalata come non convincente ("nesting... non mi piace così"): la card "Distacca su un tuo server" è da sempre un accordion a tutta larghezza, non una card come le altre due, e sotto un titolo di gruppo stonava. Tornata alla griglia unica di prima.
+
+## 0.3.5 — 18 ottobre 2026
+
+Stesso trattamento della nuova Impostazioni del tenant applicato a quella di Super Admin (solo `super-admin/frontend`) — richiesto esplicitamente dall'utente dopo aver visto le due affiancate ("impostazioni in admin fanno pena comunque"). Qui le sezioni erano già solo 4 in una pagina sola (niente tab-bar da sostituire come nel tenant): aggiunta la stessa sidebar raggruppata (Account / Piattaforma / AI) per coerenza visiva, nessun cambio di logica o di contenuto nelle 4 sezioni esistenti (Utenti Super Admin, Il tuo accesso, Chiavi AI, Sicurezza della piattaforma).
+
+## 0.3.4 — 18 ottobre 2026
+
+Bug reale segnalato dall'utente subito dopo la 0.3.3: le tendine dei `<select>` (es. "Ruolo" in Invita una persona) e gli altri controlli nativi del browser (selettore data/ora, scrollbar) restavano chiari anche col tema scuro — non sono DOM della pagina, li disegna il sistema operativo, quindi le variabili CSS della palette non li toccano. Una riga CSS per tema (`color-scheme: dark`/`light`) basta a farli seguire il tema: nessuna variabile di colore cambiata.
+
+## 0.3.3 — 18 ottobre 2026
+
+Nuova palette colori, su tutta la piattaforma (core/frontend e super-admin/frontend, entrambi i temi) — scelta esplicitamente dall'utente dopo aver visto il mockup di Impostazioni ("mi piace come schema colori").
+
+- **Tema scuro**: sfondo e card passano da blu notte (`#031321`/`#061927`) a grigio neutro (`#0B0D12`/`#14161D`); l'accent da blu acceso (`#087BFF`) a un blu più tenue (`#5B8DEF`).
+- **Tema chiaro**: sfondo passa dalla scala Tailwind "stone" (calda) a un grigio neutro freddo (`#F6F7FA`); per la prima volta il tema chiaro ha un suo accent dedicato (`#2F5FEA`) — prima non lo sovrascriveva e restava quello scuro anche di giorno.
+- **Lasciati invariati apposta**: i colori semantici di stato (successo/avviso/errore, già tarati per contrasto il 16-17/10) e il bianco-etichetta per tenant (un progetto con un colore proprio continua a sovrascrivere l'accent a runtime, invariato).
+- Stessa mappatura applicata identica a entrambe le app, per non rompere la coerenza visiva tra core e Super Admin voluta dal reskin di agosto (`PLATFORM-UI-RESKIN-PLAN.md`).
+- Provato dal vivo (tenant locale, non solo compilazione): entrambi i temi, dashboard e Impostazioni.
+
+## 0.3.2 — 18 ottobre 2026
+
+Ridisegno di Impostazioni (solo core/frontend) — "impronta SaaS enterprise" richiesta esplicitamente: la vecchia barra di 12 tab orizzontali non aveva più ordine, sostituita da una sidebar laterale con 6 categorie (Account, Workspace, Integrazioni, Sito Web, AI, Dati & Sicurezza).
+
+- **Riorganizzazione dei contenuti**, non solo la navigazione: destinatari e log WhatsApp spostati da Connessioni a Report (restano un'unica funzione, ma vicino a cosa configurano davvero); email di notifica delle richieste del Sito Web spostata da Sito Web a Connessioni (nuovo `SiteLeadEmailPanel.jsx`); "Giro guidato" tolto da Il mio account e spostato in Guida (bottone in testa alla pagina); intestazioni di raggruppamento aggiunte dentro Il mio account (Profilo/Sicurezza/Notifiche), AI (Attivazione/Chiave e spesa/Per modulo) e Dati (Esportazione/Backup e disaster recovery).
+- **Bug trovato e corretto durante il collaudo dal vivo** (tenant locale, non produzione): il nuovo pannello email del Sito Web in Connessioni compariva anche sui tenant con la funzione Sito Web spenta, e il salvataggio falliva sempre (403) perché la rotta richiede quella funzione accesa. Ora il pannello è nascosto quando la funzione è spenta, come lo era la scheda da cui proveniva.
+- Provato dal vivo (non solo compilazione): tutte le 6 schede, il salvataggio dei destinatari WhatsApp spostati in Report, e il bottone "Fai il giro guidato" in Guida.
+
+## 0.3.1 — 18 ottobre 2026
+
+Primo giro dal vivo della 0.3.0 su Finance (dati reali): trovati e corretti tre bug reali che la rendevano di fatto inutilizzabile, più un cambio nel modo in cui "Aggiorna" porta online il codice.
+
+- **Il blocco "Vista" nuovo non funzionava mai su un modulo che lo usava da solo** (`core/backend/src/routes/records.js`): le 5 route che calcolano i dati (per periodo, riepilogo annuale, pivot, barre settimanali, genitori-figli) cercavano il blocco solo nei vecchi array per-tipo, mai nel nuovo array unificato `views` — errore "Vista non trovata" anche con lo schema pubblicato giusto. Aggiunta copertura di test che prima mancava del tutto su queste 5 route.
+- **"Pubblica" nel Builder poteva pubblicare il nulla**: il tasto mandava sempre un corpo vuoto al server, promuovendo solo una bozza già salvata — su un modulo mai salvato come bozza (tipicamente appena creato) ripubblicava lo schema vecchio invariato, perdendo in silenzio ogni modifica fatta a schermo. Ora salva sempre prima lo schema corrente, poi lo pubblica.
+- **"Aggiorna" (Super Admin → Tenant) ora builda sempre dal sorgente più recente su GitHub**, dentro il `docker-provisioner` (unico servizio con accesso Docker) — prima ricreava il container dall'immagine già presente sul NAS, che poteva essere vecchia se nessuno aveva lanciato `redeploy-nas.sh` a mano dal laptop prima. Vedi `OPERAZIONI.md` per il dettaglio.
+  - **Incidente reale durante questo cambio**: il nome del volume dati impostato per questo nuovo meccanismo era sbagliato (`platform_platform-data`, un volume quasi vuoto, invece di `platform-data`, quello vero — un errore che `OPERAZIONI.md` avvisava già di evitare). Il primo "Aggiorna" di Finance con questo codice ha agganciato il container al volume sbagliato, facendo credere per una decina di minuti che l'account e i dati fossero spariti. Non è stato perso nulla: il volume vero non era mai stato toccato, e la causa è stata trovata e corretta nello stesso pomeriggio. Nessun dato reale è stato scritto sul volume sbagliato nel frattempo (l'accesso era bloccato).
+- Confermato dal vivo, non solo nel sandbox: schema, moduli legacy (period_view, yearly_breakdown, category_pivot) e il nuovo blocco Vista coesistono senza conflitti sullo stesso modulo reale (Spese Personali, Entrate).
+
+## 0.3.0 — 18 ottobre 2026
+
+Semplificazione del Builder ispirata a Collections (l'app da cui Platform discende) — 5 fasi, tutte additive: nessun modulo esistente cambia comportamento finché non si usa esplicitamente qualcosa di nuovo dal Builder.
+
+- **Blocco "Vista" unificato**: una sola voce nel Builder (icona, non più tendina) con 4 modalità — per periodo, pivot per categoria, barre settimanali, genitori con figli — al posto di 5 block_type quasi identici. I moduli con un vecchio blocco (vista per periodo, riepilogo annuale, ecc.) restano identici per sempre, mai convertiti.
+- **Liste condivise** (Impostazioni → Liste): un campo `select`/`multiselect` può collegarsi a una lista condivisa invece di avere opzioni private — aggiungere/rinominare/togliere una voce si propaga da sola a tutti i campi collegati, in qualunque modulo, comprese le righe già esistenti in caso di rinomina.
+- **Formula più coerente**: il blocco "Formula / Aggregato" (valore singolo) ora vede le stesse funzioni del campo calcolato (`active_tier`, `running_sum`, le aggregazioni sui figli) — prima la verifica dal vivo nell'editor falliva per formule che in pubblicazione funzionavano già.
+- **Sources scriptabili** ("Fonte esterna"): un modulo può cercare su un'API esterna (due script JS: uno cerca, l'altro costruisce il record) e proporre un nuovo record — pulsante "Cerca da fonte esterna" accanto a "Nuovo". Gli script girano isolati (niente accesso a file/processi), con un "Prova" dal vivo nel Builder che non scrive mai un record. **Scelta esplicita**: l'accesso di rete degli script è libero (nessun blocco su IP privati) — amplifica il rischio già aperto e non corretto del segreto/volume condivisi tra tenant (vedi `DECISIONI.md`, controllo di sicurezza del 16/10).
+- **Sotto-tipi via "Configura sotto-tipi"**: su un campo `select`, un pannello elenca gli altri campi del modulo con "Sempre visibile" / "Solo se [opzione]" — scrive lo stesso "Visibile solo se..." di sempre su più campi da un posto solo, invece di aprirli uno a uno. Nessun concetto nuovo nello schema.
+- **Libreria**: il pannello "Struttura" di un modulo registrato mostra ora anche Viste e Fonti esterne, non solo Campi/Relazioni/Workflow/Automazioni/Permessi.
+
+### Limiti noti (scelte, non difetti da correggere)
+
+- Sources e Liste condivise funzionano solo nel codice dei tenant: in Super Builder (il sandbox di Super Admin) si possono disegnare ma non provare davvero (nessuna route lì).
+- I widget della Dashboard non supportano ancora il nuovo blocco "Vista" unificato, solo i vecchi tipi.
+- ~~Nessuna delle 5 fasi è stata ancora usata su dati reali di Finance~~ — provato dal vivo il 18/10, vedi 0.3.1: tre bug reali trovati e corretti (il blocco Vista in pratica non funzionava).
+
+## 0.2.1 — 17 ottobre 2026
+
+Round di pulizia e sicurezza (16-17 ottobre), senza nuove funzioni visibili.
+
+- **2FA aggirabile sui download di Super Admin corretta**: i link con `?token=` (backup dei tenant, export dei moduli e dell'immagine) accettavano il token "in attesa della 2FA" e gli utenti disabilitati; con la sola password si scaricava il database di un tenant. Ora passano dallo stesso controllo di tutto il resto.
+- **Niente più segreti con valore di riserva**: `INTERNAL_API_SECRET` e `JWT_SECRET` non ricadono più su un valore scritto nel codice se la variabile d'ambiente manca — l'avvio si rifiuta invece di aprire le API interne o il provisioner.
+- **Utenti disabilitati fuori subito dai tenant** (non più fino alla scadenza del token), un admin declassato perde i privilegi alla richiesta successiva.
+- **Allegati**: si aprono nel browser solo PDF, immagini non SVG e testo; il resto si scarica. Corretto anche il download con nomi che hanno accenti o €.
+- **Dipendenze aggiornate** (`proxy-addr`, `qs`, `uuid`, `@grpc/grpc-js`, `nodemailer` v10); le immagini Docker usano il lockfile (`npm ci`) invece di `npm install`.
+- Super Admin non si apre più dentro un iframe di un altro sito.
+- **Pulizia**: tolte sei rotte interne dei tenant mai chiamate, Guida riscritta sul codice attuale (verticali, moduli di supporto, Store non più descritti se non esistono più), qualche funzione morta tolta.
+- Pannello **«Sicurezza della piattaforma»** (in Impostazioni, già nelle note del 15 ottobre) resta il punto dove vedere lo stato: 2FA/passkey, limiti anti-forza-bruta, eventi sospetti, TLS Cloudflare.
+
+### Resta aperto (decisioni, non bug corretti)
+
+- Ogni tenant ha lo stesso `INTERNAL_API_SECRET` di Super Admin e del provisioner, e monta tutto il volume `/data` (compreso il registro con le chiavi di tutti i tenant).
+- Le porte dei tenant sono pubblicate sull'host: raggiungibili dalla rete locale senza passare da nginx.
+- Il limite ai tentativi di accesso conta l'IP del proxy, non quello vero.
+- Cloudflare resta in modalità TLS "Flexible" (traffico in chiaro tra Cloudflare e il NAS).
+- Password trovate in chiaro nella cronologia Git (prima della pulizia del 21 agosto) non sono state ruotate.
+- Nessuna verifica di sicurezza esterna è mai stata condotta.
+
+## 0.2.0 — 13 ottobre 2026
+
+**Dalla sera del 13 ottobre in poi** (le voci più sotto, fino a «Formato dei report su WhatsApp compatto», sono precedenti):
+
+- **Un solo Builder** per tenant e Super Admin (`shared/frontend/builder/`), con «Proponi alla Libreria» (tenant) e «Salva nella Libreria» (Super Admin). Prima erano due copie sincronizzate a mano.
+- **Libreria del tenant**: spunti più moduli e li installi insieme (dipendenze comprese, presenti saltati; il menu si aggiorna da solo). **Parti da un modello**: tessere di verticali (gruppi di moduli pensati per funzionare insieme); ogni modello ha la sua **guida all'uso** («Come si usa»: da dove cominciare, modulo per modulo; stampabile in PDF).
+- **Collega i moduli**: relazioni proposte dai nomi (es. «Righe ordine» → «Ordini»), confermate una per una, create con storia e versione.
+- **Primi passi** al primo avvio di un tenant vuoto (scegli cosa gestire, collega, utenti, connessioni; pillola «Primi passi N/4») e **giro guidato** (evidenzia gli elementi sulla pagina; a richiesta da Primi passi e da Il mio account, mai da solo).
+- **Impostazioni → Funzioni**: gli interruttori delle funzioni facoltative (Suggerimenti, Report, Sito Web, WhatsApp…). Prima non esisteva nessuna schermata per accenderle.
+- **Analisi più profonda**: un processo ha un modulo principale più altri; il secondo passaggio **«Cosa manca?»** (da solo in «Fai tutto», o su richiesta) propone i moduli in più e segna ciò che nessun modulo copre. **Correggi a parole**: scrivi cosa cambiare, l'AI propone operazioni controllate, le vedi in italiano e le applichi tu. **PDF impaginato** (A4, copertina, schede non spezzate) e **Guida all'uso del verticale** nato dall'analisi (da dati, senza AI).
+- **Libreria di Super Admin**: filtri per gruppo e per ruoli dichiarati; scheda **«Dove è usato»** (tenant che hanno il modulo con la versione e chi ha un aggiornamento, moduli che si collegano); **Verticali** gestibili da interfaccia (crea, modifica, elimina, ripristina i predefiniti).
+- **Distacco su un tuo server** (Impostazioni → Dati): una **copia** del progetto su un server Linux via SSH (immagine, database, allegati, segreti), che funziona da sola. Controllo di sola lettura prima, impronta del server fissata, credenziali solo in memoria, token firmato col segreto del tenant. Senza Super Admin: niente AI, Libreria e aggiornamenti.
+- **Inviti**: link monouso (72 ore) con cui la persona sceglie da sé utente e password; dal tenant (Utenti & Ruoli → «Invita») e da Super Admin (Tenant → Credenziali, e dopo la creazione dall'Analisi). Consegna: copia, WhatsApp e Telegram con messaggio pronto, email dalla posta di Super Admin.
+- **Versione 0.2.0** su tutti i badge, `/health` e `package.json`.
+
+- **Report su WhatsApp ridisegnati** (11 ottobre): niente più riepilogo del mattino né report settimanali. Tre messaggi: **quanto devo pagare** (ogni 27, venerdì prima se è weekend, dal 27 al 26 con totale, scadute e «ti restano»), **da smistare** (ogni sera finché non smisti) e **voci scadute** (lunedì sera). Impostazioni → Report, con anteprima, «Invia ora» e pulsante per togliere i vecchi report dai moduli. Dopo l'aggiornamento di Finance: aprire Impostazioni → Report e premere «Toglili dai moduli».
+
+- **Bot Telegram** (11 ottobre): secondo canale dei report e bot a doppio senso. I report arrivano con i bottoni **«✅ Pagata»** (chiude la voce in Finance, con «↩ Annulla») e «Apri l'app»; comandi `/pagare`, `/scadute`, `/smistare`. Ogni telefono è collegato a un utente con un codice monouso e vede/fa solo ciò che può nell'app (Federica solo Casa). **Non è ancora in uso**: serve creare il bot con BotFather e collegarlo (vedi `docs/OPERAZIONI.md`). Mai provato con Telegram vero (solo con un Telegram simulato nei test). Le domande libere con l'AI non ci sono.
+- **Bot Telegram «full powered»** (11 ottobre): capisce frasi libere e fa quasi tutto ciò che si fa nell'app — domande sui dati, segnare pagata/riaprire, smistare, registrare spese, importare un PDF mandato in chat — ma **ogni modifica è una proposta con bottone di conferma** e passa dagli stessi controlli dell'app (permessi dell'utente, «solo propri»). Non elimina né modifica dati a piacere. Richiede l'AI accesa e **Super Admin aggiornato** (nuova rotta `bot-intent`). Mai provato con Telegram e Mistral veri, solo simulati nei test.
+- **Sicurezza** (11 ottobre): **segreti cifrati a riposo** (credenziali Google/WhatsApp/Telegram e segreti 2FA, in Finance e Super Admin; migrazione automatica all'avvio), `/2fa/setup` non sostituisce più il segreto di chi ha già il 2FA attivo, **librerie aggiornate** (Finance 0 avvisi; nodemailer 10; dockerode 4.0.12). Il **provisioner** va rilasciato a parte. I backup precedenti hanno ancora i segreti in chiaro fino a quando scadono.
+- **Foto di scontrini al bot** (11 ottobre): mandi la foto, Mistral legge esercente/data/totale/categoria, il bot propone la spesa («pagata» o «da pagare») con avviso di doppione, e dopo il tuo tocco la crea con la foto allegata. Richiede **Super Admin aggiornato** (nuova rotta `receipt`) e «Importare» acceso sul modulo. **Mai provato con Mistral vero**; l'immagine arriva a Mistral (non si può oscurare).
+- **Timbrature dal bot** (12 ottobre): un modulo può dichiarare nel Builder (Ruoli del modulo → tipo «Timbrature») quali campi sono data, entrata e uscita. Il bot allora capisce «sono entrata», «uscita alle 12:30», «ieri sono entrata alle 7», «quante ore ho fatto questa settimana?» e ha `/timbra` e `/ore`. **Eccezione voluta alla conferma**: la timbratura si registra subito (altrimenti è scomoda) ma passa dagli stessi permessi dell'app e ha il bottone **«↩ Annulla»** (15 minuti). L'uscita chiude solo l'ultima entrata aperta (oggi o ieri). Le ore **a cavallo della mezzanotte** ora si calcolano giuste (22:00→01:00 = 3h, prima negative); turno con un orario mancante = 0. Dopo «Aggiorna» Finance dichiara da solo il modulo `timbrature`; le ore di qualche turno notturno già inserito cambiano. Mai provato con Telegram e Mistral veri.
+- **Privacy e pulizia di Super Admin** (13 ottobre): tolto l'**Update Manager** (resta il pulsante Aggiorna); l'**Attività** mostra solo le azioni di Super Admin e gli errori tecnici dei tenant, non più cosa fanno gli utenti dentro Finance (azioni e movimenti dei record restano nel registro di Finance). Richiede **Aggiorna** su Finance perché il tenant smetta di esporre il resto.
+- **Più generico** (13 ottobre): tolti dal codice i nomi dei moduli e dei campi di Finance. L'**estratto conto** (abbinamento e registrazione delle uscite), le **mail Gmail**, i **riepiloghi** («Come sta andando»: stati «da smistare»/«pagato», rate, data incerta), lo **smistamento AI** e **Chiedi ai dati** leggono ciò che i moduli dichiarano nel Builder (Ruoli del modulo: nuovi usi «estratto», nuovi ruoli note, data incerta, debito, categorie «rata», sezione «Estratto conto»). I valori di Finance sono un file di dati (`seeds/finance-roles.json`) applicato **una volta** all'aggiornamento (ruoli e uso «estratto» completati sulle dichiarazioni esistenti, senza toccare le scelte già fatte). Tolti il vecchio pulsante «Azzera giacenze» (residuo di Coffee) e la sua rotta. Numeri di Finance invariati (stessi test, con le dichiarazioni dei moduli).
+- **Report configurabili** (13 ottobre): ogni report è una definizione (tipo + parametri) e si possono aggiungere dalla scheda Report: totale in un periodo, righe in uno stato, in ritardo, **ore lavorate** (per persona, dalle timbrature). Titolo, simbolo, frase finale, stato guardato, righe mostrate, frequenza, giorno e ora si cambiano dall'app. I tre report di prima sono tre definizioni di partenza: **stessi messaggi, stessi orari** (le impostazioni già salvate si convertono da sole). Nel bot ogni report ha il suo comando `/nome` e `/report` li elenca; l'AI sceglie tra i report del tenant. Nuovo tipo **«Riepilogo ore e straordinari»**: ogni domenica sera (a scelta) ogni persona riceve le ore della settimana, il mese finora e lo straordinario (le ore oltre la soglia settimanale, 40 di partenza). **A chi arriva** si sceglie per ogni report: su Telegram gli utenti (nessuna scelta = tutti i telefoni collegati), su WhatsApp il tag dei destinatari.
+- **Proprietario delle righe automatiche per modulo** (13 ottobre): in Builder → Ruoli del modulo si sceglie chi è il proprietario delle righe create senza una persona (mail, estratto conto, rate, importazioni) in quel modulo; senza scelta vale il proprietario del progetto (Impostazioni → Utenti), come prima.
+- **Chiave AI separata per Super Admin** (13 ottobre): Super Admin ha una chiave sua (Impostazioni → Chiavi AI, salvata cifrata), distinta da quelle dei tenant; non la usa mai un tenant. Un interruttore decide se i tenant senza chiave propria ripiegano sulla chiave generale (di partenza sì): spento, ogni tenant deve avere la sua. Il contatore della spesa di Super Admin è già a parte (consumi senza tenant).
+- **Analisi dei processi in Super Admin** (13 ottobre): nuova voce «Analisi». Racconti un'attività, l'AI propone i processi, li rifinisci (scopo, ruoli, passaggi e bivi, eccezioni, documenti, KPI, modulo che li copre o «da costruire»), vedi cosa copre la Libreria, apri il **manuale dei processi** (stampabile / PDF) e puoi **creare il tenant** con moduli, ruoli e stati del flusso. Ripreso dal vecchio Platform senza clienti, preventivi e prezzi. Costa sulla chiave AI di Super Admin; l'AI propone e tu confermi. **Mai provato con Mistral vero.**
+- **Proponi alla Libreria** (13 ottobre): un tenant può proporre un suo modulo (dal dettaglio del modulo, nella Libreria del tenant). Parte **solo lo schema** (campi, stati, relazioni), mai le righe, e finisce in una **coda** in Super Admin → Libreria → «Proposte dai tenant»: lo approvi (diventa una nuova versione con l'origine di quel tenant, con gruppo e descrizione modificabili) o lo rifiuti con un motivo, che il tenant vede in «Proposte inviate». Una sola proposta in attesa per modulo (una nuova sostituisce la vecchia). Niente entra nella Libreria da solo.
+- **Suggerimenti sul tenant, di nuovo** (13 ottobre): funzione facoltativa **spenta di partenza** (si accende dalle Funzioni del tenant), poi Impostazioni → Suggerimenti. Ogni giorno osserva come usi i moduli, **in locale e senza AI**: campi mai compilati o quasi, campi di testo che ripetono pochi valori (potrebbero essere una scelta), righe ferme in uno stato da oltre 14 giorni, passaggi del flusso mai raggiunti; servono almeno 20 righe. Una notifica agli admin al massimo ogni 7 giorni. «Spiega e proponi» chiama l'AI su una singola osservazione: arrivano solo struttura e conteggi (mai i valori delle righe) e torna una spiegazione prudente con al massimo 4 passi; **niente si applica da solo** (si apre il modulo nel Builder). Le voci ignorate restano ignorate, quelle risolte si chiudono da sole. Non è il vecchio «Usage Insights»: il motore delle segnalazioni di allora era già stato rimosso, questo è nuovo e più piccolo.
+- **Controllo automatico del codice** (13 ottobre): ESLint (solo errori veri) e `scripts/verifica.sh` (lint + test + compilazioni), con un hook a ogni push. Il primo giro ha trovato **cinque errori reali** nascosti nei rami poco usati, ora corretti: le azioni di automazione che chiamano un indirizzo web (Slack, WhatsApp…) non avevano caricato `http`/`https`; l'azione «invia notifica» del Builder non riceveva l'elenco dei ruoli (in entrambi i Builder); la scheda dei tenant in Super Admin richiamava due funzioni dei vecchi suggerimenti e dei verticali, rimosse da tempo.
+- **Analisi: «Fai tutto»** (13 ottobre): un solo racconto e un pulsante. In background (circa un minuto) l'AI trova i processi e il nome dell'attività, li completa tutti (tre alla volta, solo i campi vuoti, un errore non ferma gli altri) e abbina moduli, report e AI; poi arrivi a **un riepilogo** (processi, moduli, ruoli, report spenti) con un solo tocco per creare il tenant. I dettagli a passi restano per chi vuole controllare («Rivedi i dettagli»). I dati personali vengono tolti prima di mandare il testo all'AI. Mai provato con Mistral vero.
+- **Analisi più completa** (13 ottobre): (1) i moduli generici ora portano la **dichiarazione dei ruoli** (quale campo è l'importo, la scadenza, lo stato…): i tenant nati dall'analisi hanno report, riepiloghi e bot già pronti, senza passare dal Builder; (2) la pagina propone i **report** e i **potenziamenti AI** adatti ai moduli scelti (spenti finché non li accendi, ognuno si può togliere); (3) un processo «da costruire» ha il pulsante **«Costruiscilo nel Super Builder»** con la descrizione già pronta; (4) tre moduli generici nuovi: **Spese, Entrate, Timbrature** (55 in tutto), e un nuovo tipo di modulo, la **pratica** (righe con stati e scadenza ma senza denaro: ticket, ordini, scadenzario, manutenzioni…), che entra negli avvisi e nei report senza inventare importi. Il tenant, alla creazione, completa senza sovrascrivere (`/api/internal-setup/apply`). Nel pulsante della Libreria, «Completa i moduli generici» aggiunge i ruoli a quelli già importati.
+- **Analisi: «Completa tutti i processi», creazione del tenant in background, eliminazione** (13 ottobre): un pulsante completa con l'AI tutti i processi incompleti (tre alla volta, solo i campi vuoti, un errore non ferma gli altri); la creazione del tenant parte in background e la pagina mostra le fasi e i secondi (container, database, dominio, moduli, ruoli) e, a fine corsa, **dove è andato il tempo** per ogni fase; non installa più i moduli di default (ha scelto l'analisi) e collega il dominio in parallelo all'avvio del database. L'accesso admin iniziale si vede una volta. Le analisi si eliminano dall'elenco e dall'analisi aperta (non durante la creazione).
+- **Moduli generici nella Libreria** (13 ottobre): **55 moduli senza settore** (anagrafiche, preventivi, ordini, fatture, scadenzario, presenze, ticket, impianti, soci, prenotazioni…) recuperati dal vecchio Platform e importabili con un tocco da Super Admin → Libreria → «Aggiungi i moduli generici». Sono dati (`seeds/moduli-generici.json`), non codice; si importano una volta, senza sovrascrivere. Hanno nome e descrizione, che l'analisi dei processi usa per abbinarli. Un modulo porta con sé quelli a cui è collegato (righe fattura → fattura, prodotti, clienti). Sono mattoncini di partenza (da 2 a 8 campi): si rifiniscono nel Builder.
+- **Menu di Super Admin alleggerito** (14 ottobre): «Utenti» non è più una voce a sé — è ora la prima scheda di Impostazioni (gestione degli account resta lì, password e 2FA restano self-service, invariati). «Analytics» non è più una voce a sé — è ora la scheda «Metriche» dentro Attività, accanto a «Eventi». Nessun dato o funzione tolta, solo due voci in meno nel menu (9 → 7).
+
+- **Gestione utenti di Super Admin più completa** (14 ottobre): ogni riga ora mostra se il 2FA è attivo; si può **rinominare** un utente (clic sul nome), **resettare la password** di un altro admin e **disattivare il suo 2FA** (recupero per chi resta bloccato — entrambe richiedono la TUA password, mai quella del bersaglio, e restano in Attività), **eliminare** un utente per sempre (non più solo disabilitarlo). La propria password e il proprio 2FA restano SOLO self-service (qui sotto, in Impostazioni), nessuna di queste azioni si può fare su se stessi.
+- **Passkey** (14 ottobre): in aggiunta al 2FA, non al posto — entri con l'impronta, il volto o il PIN del dispositivo, senza scrivere username né password (tenant e Super Admin). Si aggiungono e si tolgono da Impostazioni/Il mio account → Passkey, quante se ne vuole. Nella schermata di accesso compare solo se il browser le supporta.
+- **Login dei tenant semplificato** (14 ottobre): tolta la variante a due colonne con titolo configurabile (un dato vecchio, irraggiungibile da nessuna schermata di questo frontend, dettava un login diverso dal resto dell'app) — ora è sempre la stessa card centrata, come Super Admin.
+- **Recupero dell'ultimo admin di Super Admin bloccato** (14 ottobre): se non c'è un altro admin da cui farsi resettare password/2FA, uno script sul NAS lo fa in modo pulito (`docker exec super-admin-backend node src/scripts/break-glass-reset.js <username> <nuova-password> [--disable-2fa]`) — tracciato in Attività, mai una rotta di rete. Vedi `docs/OPERAZIONI.md`.
+- **Bot Telegram: menu a bottoni** (14 ottobre, `/menu`): sottomenu a tocco per tutto quello che si fa più spesso — Spese & Entrate (nuova spesa, scontrino/bolletta, chiedi ai dati), Timbrature (se dichiarate), Report. **Si affianca a tutto il resto, non lo sostituisce**: frase libera e comandi funzionano esattamente come prima, il menu è solo un altro modo di arrivarci.
+- **Widget dashboard «Timbrature rapide»** (14 ottobre, rivisto il 15): due righe sempre visibili, **Entrata** e **Uscita**, ciascuna con data e orario che scegli tu prima di premere (di partenza oggi/adesso, ma modificabili — non un tocco cieco sull'ora corrente). «Esci» chiude il turno aperto nella data scelta: utile se c'è un turno dimenticato aperto da un altro giorno. Il recap di oggi e l'elenco dei turni restano sola lettura; un link apre il modulo vero per modificare o eliminare una riga già esistente. Generico come gli altri widget — legge QUALE modulo è dichiarato Timbrature (Builder → Ruoli del modulo); visibile a chi vuoi (Impostazioni → Utenti → «Widget · N»), utile per esempio per Federica. (Due versioni precedenti nello stesso giorno, un semplice tocco e poi un editor a comparsa, erano risultate troppo complicate.)
+- **Leggi busta paga** (14 ottobre, foto dal rullino il 15): nuovo tipo di modulo, kind `bustapaga` (Builder → Ruoli del modulo: periodo, lordo, netto, ore pagate, trattenute). Con il potenziamento AI «Leggi busta paga» acceso, carichi il PDF **o una foto** della busta paga (anche dal rullino, non serve scansionarla) e l'AI propone periodo/lordo/netto/ore pagate/trattenute (propone, non scrive — confermi tu); il modulo confronta subito le ore pagate con le timbrature già registrate in quello stesso mese (modulo di tipo Timbrature, se c'è), evidenziando la differenza. La riga nasce con il file allegato: un archivio di tutte le buste paga, mese per mese. Sul PDF l'AI legge il testo (a Mistral arriva solo l'estratto, IBAN/codice fiscale/numeri lunghi già tolti da `redact()`, mai il file); sulla foto usa la visione del modello, come per gli scontrini del bot — lì l'immagine arriva per intero, non si può oscurare. **Mai provato con Mistral vero** né con una vera busta paga italiana (PDF o foto): i primi mesi potrebbe servire correggere qualche campo a mano.
+- **Formato «Ore» nei report del Builder** (15 ottobre): i blocchi «Ore totali», «Report raggruppato/Formula» e «Grafico settimanale» ora hanno un formato **Ore (da un campo in minuti)**, che divide per 60 e mostra "h" invece del numero grezzo. Bug reale trovato sul modulo Timbrature di Finance: il campo calcolato `durata_minuti` (uscita − entrata, in minuti — corretto, usato anche dalla soglia straordinari) veniva mostrato col formato «Numero», quindi "2123" invece di "35,4 h". Corretto anche dove mancava proprio il selettore del formato (le metriche di «Ore totali», `period_view`). **Da fare sul modulo Timbrature di Finance** (non un redeploy, una scelta nel Builder): aprire Builder → Timbrature e cambiare il formato in «Ore» sui blocchi «Ore oggi», «Ore settimana corrente», «Ore totali» e «Ore per settimana».
+- **Bug reale nel Builder: «Vista periodo» e «Ore per settimana» sparivano riaprendo un modulo** (15 ottobre): aprendo nel Builder un modulo che aveva già un blocco `period_view`, `weekly_breakdown`, `yearly_breakdown`, `category_pivot`, `parent_children_view`, `view_tabs` o «Crea in filiale» (es. Timbrature: «Ore totali», «Ore per settimana»), quel blocco non compariva più nell'editor — e una pubblicazione da lì lo cancellava per davvero, non solo dalla vista. Stesso tipo di bug già preso una volta per le automazioni (stessa riga di codice, un pezzo dimenticato): il Builder, riaprendo un modulo, ricostruiva l'elenco dei blocchi senza includerli. Scoperto dal vivo tentando di sistemare il formato di «Ore totali» su Timbrature — nessun modulo risulta averlo perso finora (si corregge solo riaprendo e pubblicando), ma è stato vicino.
+- **Super Admin, «Tenant attivi» allineato al grafico a fianco** (15 ottobre): il numero nel riquadro KPI ora viene dallo stesso conteggio live della «Distribuzione tenant per stato» (`/analytics/platform-overview`, solo stato Attivo), non più da una foto storica (`metrics_snapshots`) che poteva restare indietro rispetto ai dati veri — da qui il disallineamento visto (3 contro 2).
+- **Libreria: le 55 categorie dei moduli generici, vere** (15 ottobre): finora erano **tutti** etichettati «Generico» (una sola, non divideva niente). Ora nove categorie vere (Finanza, Vendite, Acquisti, Magazzino, Progetti, Risorse umane, Assistenza clienti, Organizzazione, Servizi alla persona), scelte dal nome/descrizione di ciascun modulo. I moduli già importati in Super Admin si ricategorizzano da soli all'avvio (solo quelli ancora con l'etichetta «Generico»: una categoria già cambiata a mano non si tocca).
+- **Pannello «Sicurezza della piattaforma»** (15 ottobre): in Impostazioni (Super Admin e, in versione ridotta, ogni tenant) — quanti admin hanno 2FA/passkey attivi, i limiti anti-forza-bruta già in vigore, e gli **ultimi eventi sospetti** (accessi falliti, codici 2FA/passkey sbagliati) dal registro attività. Su Super Admin anche la **cifratura in transito di Cloudflare**, letta davvero dall'API (oggi è «Flexible»: il traffico tra Cloudflare e il NAS viaggia in chiaro — nessuna correzione fatta qui, solo mostrata com'è) e due note ferme (password trovate in chiaro nella cronologia Git prima della pulizia del 21 agosto non sono state ruotate; nessuna verifica di sicurezza esterna è mai stata condotta). Ogni pannello legge SOLO i propri dati: Super Admin non entra in un tenant, un tenant non vede Super Admin né altri tenant.
+
+- **Formato dei report su WhatsApp compatto** (scadute non ripetute, importi puliti).
+
+### Da verificare dal vivo (non provato in produzione)
+
+Nessuna schermata nuova è stata provata in un browser da chi l'ha scritta: i test automatici passano, la verifica visiva è da fare.
+- **Libreria**: tessere dei modelli, installazione multipla (compare nel menu senza ricaricare?), «Collega i moduli» (le proposte hanno senso su moduli veri? si è visto un doppio «Clienti» su un tenant: da capire se si ripresenta), guida di un modello e stampa in PDF.
+- **Primi passi** su un tenant vuoto e **giro guidato** (anche su telefono: menu aperto, evidenziazione).
+- **Analisi**: «Cosa manca?», «Correggi a parole», PDF del manuale e della guida (anteprima di stampa), creazione di un tenant vero con Mistral vero.
+- **Inviti**: pagina `/invito/…` sul tenant, mail con la posta vera (mai provata), WhatsApp/Telegram.
+- **Distacco su un server**: provato solo con un server SSH di prova e un Docker finto; la prima volta farlo su un server di prova. Gli indirizzi privati sono vietati di partenza (`EXPORT_ALLOW_PRIVATE=1` per un server in rete locale).
+- **Suggerimenti** sui tenant reali (vanno accesi da Impostazioni → Funzioni); Gmail, bot, scontrini con Mistral vero; le prove di Federica.
+- **Aggiornamento di Finance** a 0.2.0: premere «Aggiorna» da Super Admin (serve il 2FA) e controllare che il badge dica 0.2.0.
+- **Leggi busta paga**: mai provato con Mistral vero né con un vero PDF di busta paga italiana — da creare il modulo, dichiarare i ruoli e accendere il potenziamento, poi caricare una busta paga reale e controllare i campi letti.
+
+### Da sapere
+
+- Un tenant **distaccato** non ha Super Admin: AI, Libreria e aggiornamenti non ci sono (l'AI tornerebbe con una chiave propria nel tenant, che non esiste ancora).
+- Le **mail** (inviti) partono dalla posta di Super Admin (SMTP): se non è configurata, il messaggio lo dice e si usa il link. Tetto di 30 al giorno per tenant (contatore in memoria).
+- Il **link di un invito** si vede una volta sola; nel database resta solo l'impronta.
+- I **verticali** stanno in una tabella di Super Admin, riempita al primo avvio da `seeds/verticali.json`; «Ripristina i predefiniti» rimette solo quelli eliminati.
+- Idee rimaste fuori di proposito: federazione tra più Super Admin, bot Telegram per l'amministrazione, invio automatico su WhatsApp/Telegram.
+
+### Numeri
+
+62 suite di test per il tenant, 34 per Super Admin, 1 per il provisioner, tutte verdi; `bash scripts/verifica.sh` (lint, test, compilazioni) passa.
+
+## 0.1.1 — 10 ottobre 2026
+
+Finance in uso reale, con la prima giornata di test dal vivo. Si parte dalla 0.1.0 (codice potato, un solo progetto: Finance).
+
+### Novità
+
+- **Dashboard.** Layout a colonne (Da smistare e Riepilogo a tutta larghezza, "Come sta andando" su due colonne); su telefono i widget lunghi si comprimono con un tocco e ricordano la scelta.
+- **Riepilogo mensile** rifatto a riquadri animati (spendibile in grande con anello, entrate, uscite, pagato/da pagare, fissa/variabile, previsto carta/conto: **tutte le voci sempre visibili**). Le entrate di un mese sono lo stipendio di fine mese precedente. Segue il mese scelto con le frecce della Checklist.
+- **Smista** nella home leggibile su telefono, e nuova scelta **Sposta in un altro modulo** (Casa ↔ Personale), con l'elenco di ciò che non passa.
+- **Proprietario delle righe automatiche**: Gmail, estratto conto e rate prendono un proprietario (predefinito in Utenti, altrimenti quello della riga che le genera). Risolve le righe invisibili in Spese Personali per chi non è admin.
+- **Documenti come archivio**: cartelle (anche vuote), sottocartelle per anno nelle cartelle grandi, schede con anteprima, elenco alternativo, ricerca su tutto l'archivio, cartelle rinominabili/aggiungibili/eliminabili se vuote, spostamento trascinando. Modulo "Nuovo" semplificato (file in testa, titolo dal nome del file, cartella aperta preselezionata, collegamenti facoltativi chiusi).
+- **Backup settimanale via mail**, cifrato, per tenant (Super Admin → Backup).
+- **Super Admin**: pulsante **Aggiorna** sul tenant con popup di avanzamento e "AGGIORNATO" a fine corsa; il deploy da script non ritenta più il login se Super Admin lo rifiuta (con 2FA attivo).
+- **Pulizia delle primitive** non usate: 5 tipi di blocco e 9 azioni di automazione tolti (circa 2.400 righe), Builder di Super Admin mantenuto.
+- Il "modulo di supporto" non esiste più: solo moduli, che si parlano con le relazioni.
+- Correzioni: scadenza A2A letta dal PDF, avvisi WhatsApp per ogni riga nuova, mail Gmail non riconosciute elencate, widget assegnabili per utente.
+
+### Da verificare dal vivo (non provato in produzione)
+
+- **Gmail dopo il ricollegamento di Google** (10 ottobre): l'ultima mail elaborata è del 2 ottobre, non c'è prova che il controllo giri. Prova: inoltrare una bolletta e vedere se compare in "Da smistare".
+- **Backup via mail**: la cifratura e la pianificazione sono provate con test e con `openssl`; l'invio di posta vero no (premere "Invia ora una prova").
+- **Archivio e modulo "Nuovo"** con i file veri su Google Drive dopo l'aggiornamento di Finance.
+- Il 2FA di Federica e il controllo che veda solo Casa.
+
+### Da sapere
+
+- **Google OAuth**: con l'app in modalità "Test" il collegamento scade dopo 7 giorni (è successo il 9 ottobre). Va pubblicata "In produzione" o ricollegata ogni settimana. Scollegare non cancella più "Salva su Drive".
+- I documenti stanno su **Google Drive**, non sul NAS: senza collegamento a Google non si aprono.
+- Il backup via mail e quelli sul NAS contengono il database, **non** i file caricati.
+- Se Finance dà errore 521 da Cloudflare, controllare che `platform-nginx` sia acceso (`docker start platform-nginx`).
+- Tutti i backup stanno ancora sul NAS: una copia su un altro dispositivo non è configurata.
+
+### Numeri
+
+42 suite di test per Finance, 18 per Super Admin, tutte verdi alla chiusura.
+
+## 0.1.0
+
+Codice potato dopo lo spegnimento di Platform (2 ottobre 2026): vedi [`DECISIONI.md`](DECISIONI.md).

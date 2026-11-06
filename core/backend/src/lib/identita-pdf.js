@@ -12,6 +12,32 @@ const FONT_TITOLO = 'Times-Bold';
 
 const coloreValido = (c) => (/^#[0-9a-f]{6}$/i.test(String(c || '')) ? c : '#1f4e79');
 
+function rgb(colore) { const n = parseInt(coloreValido(colore).slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+const hex = (r, g, b) => '#' + [r, g, b].map((c) => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, '0')).join('');
+
+// Il colore dell'azienda scurito (0 = invariato, 1 = nero): per sfumare la fascia.
+function scurisci(colore, quota) { const [r, g, b] = rgb(colore); return hex(r * (1 - quota), g * (1 - quota), b * (1 - quota)); }
+
+// Un azzurro/accento vivo della stessa tinta del colore dell'azienda (filetti, dettagli).
+function accento(colore) {
+  const [r, g, b] = rgb(colore).map((c) => c / 255);
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let h = 0;
+  if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  h = (h * 60 + 360) % 360;
+  const sat = Math.min(0.85, Math.max(0.55, d ? d / (1 - Math.abs(mx + mn - 1)) + 0.15 : 0.55)), l = 0.52;
+  const c = (1 - Math.abs(2 * l - 1)) * sat, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = l - c / 2;
+  const [r1, g1, b1] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+  return hex((r1 + m) * 255, (g1 + m) * 255, (b1 + m) * 255);
+}
+
+// Il colore dell'azienda schiarito verso il bianco (0 = bianco, 1 = colore pieno): per i fondi delle intestazioni di sezione.
+function tinta(colore, quota) {
+  const n = parseInt(coloreValido(colore).slice(1), 16);
+  const mix = (c) => Math.round(255 - (255 - c) * quota);
+  return '#' + [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) => mix(c).toString(16).padStart(2, '0')).join('');
+}
+
 // Logo da un data: URI PNG/JPEG o da un indirizzo https; qualunque problema → nessun logo (si scrive il nome).
 async function caricaLogo(url) {
   try {
@@ -38,7 +64,10 @@ async function caricaIdentita(db) {
 function intestazione(doc, { azienda = {}, logo = null, etichetta = 'DOCUMENTO', data = '' }) {
   const colore = coloreValido(azienda.colore);
   const W = doc.page.width - M * 2;
-  doc.rect(0, 0, doc.page.width, ALTEZZA_FASCIA).fill(colore);
+  const sf = doc.linearGradient(0, 0, doc.page.width, ALTEZZA_FASCIA); sf.stop(0, colore).stop(0.5, colore).stop(1, tinta(colore, 0.78)); // a sinistra il colore pieno: un logo con il suo fondo si fonde con la fascia
+  doc.rect(0, 0, doc.page.width, ALTEZZA_FASCIA).fill(sf);
+  // Riflesso diagonale appena percettibile, come sulla carta intestata.
+  doc.save().fillOpacity(0.09).polygon([doc.page.width * 0.56, 0], [doc.page.width * 0.78, 0], [doc.page.width * 0.52, ALTEZZA_FASCIA], [doc.page.width * 0.36, ALTEZZA_FASCIA]).fill('#ffffff').restore();
   let xTesto = M, logoLargo = false;
   if (logo) {
     try {
@@ -56,8 +85,11 @@ function intestazione(doc, { azienda = {}, logo = null, etichetta = 'DOCUMENTO',
     doc.font(FONT_TITOLO).fontSize(16).fillColor('#ffffff').text(azienda.nome || etichetta, xTesto, 22, { width: 270, lineBreak: false });
     if (azienda.nome) doc.font('Helvetica').fontSize(9).fillColor('#f3f4f6').text([azienda.indirizzo, azienda.piva && 'P.IVA ' + azienda.piva].filter(Boolean).join(' · '), xTesto, 42, { width: 280, lineBreak: false });
   }
-  doc.font('Helvetica-Bold').fontSize(11).fillColor('#ffffff').text(String(etichetta).toUpperCase(), M + W - 220, 24, { width: 220, align: 'right', lineBreak: false });
-  if (data) doc.font('Helvetica').fontSize(9).fillColor('#f3f4f6').text(data, M + W - 220, 42, { width: 220, align: 'right', lineBreak: false });
+  // Etichetta del documento in una pillola, data sotto.
+  const lp = 118, xp = M + W - lp;
+  doc.roundedRect(xp, 16, lp, 24, 12).lineWidth(0.9).strokeColor('#ffffff').stroke();
+  doc.font('Helvetica').fontSize(9).fillColor('#ffffff').text(String(etichetta).toUpperCase(), xp, 24, { width: lp, align: 'center', lineBreak: false, characterSpacing: 0.8 });
+  if (data) doc.font('Helvetica').fontSize(9).fillColor('#f3f4f6').text(data, xp - 40, 48, { width: lp + 40, align: 'right', lineBreak: false });
   return colore;
 }
 
@@ -69,19 +101,19 @@ function titoloSezione(doc, testo, colore) {
   doc.font(FONT_TITOLO).fontSize(14).fillColor(TESTO).text(testo, M + 12, y, { width: W - 12 });
 }
 
-// Su ogni pagina: filetto, dati dell'azienda (o `riserva`) e «Pagina N di M». Da chiamare prima di doc.end().
-function pieDiPagina(doc, { azienda = {}, riserva = '' }) {
+// Su ogni pagina: filetto, nome dell'azienda in corsivo (o `riserva`) e «Pagina N di M». Da chiamare prima di doc.end().
+function pieDiPagina(doc, { azienda = {}, riserva = '', colore }) {
   const W = doc.page.width - M * 2;
   const { count } = doc.bufferedPageRange();
-  const contatti = [azienda.nome, azienda.indirizzo, azienda.piva && 'P.IVA ' + azienda.piva].filter(Boolean).join(' · ');
+  const c = coloreValido(colore || azienda.colore);
   for (let i = 0; i < count; i++) {
     doc.switchToPage(i);
     doc.page.margins.bottom = 0; // scrivere nel margine in basso non deve aprire una pagina nuova
-    doc.moveTo(M, doc.page.height - 44).lineTo(M + W, doc.page.height - 44).lineWidth(0.5).strokeColor(LINEA).stroke();
-    doc.font('Helvetica').fontSize(8).fillColor('#78716c');
-    doc.text(contatti || riserva, M, doc.page.height - 36, { width: W - 90, lineBreak: false });
-    doc.text('Pagina ' + (i + 1) + ' di ' + count, M + W - 90, doc.page.height - 36, { width: 90, align: 'right', lineBreak: false });
+    doc.moveTo(M, doc.page.height - 44).lineTo(M + W, doc.page.height - 44).lineWidth(0.6).strokeColor(tinta(c, 0.3)).stroke();
+    if (azienda.nome) doc.font('Times-Italic').fontSize(11.5).fillColor(c).text(azienda.nome, M, doc.page.height - 38, { width: W - 100, lineBreak: false });
+    else doc.font('Helvetica').fontSize(8).fillColor('#78716c').text(riserva, M, doc.page.height - 36, { width: W - 100, lineBreak: false });
+    doc.font('Helvetica').fontSize(8.5).fillColor('#44403c').text('Pagina ' + (i + 1) + ' di ' + count, M + W - 90, doc.page.height - 36, { width: 90, align: 'right', lineBreak: false });
   }
 }
 
-module.exports = { M, ALTEZZA_FASCIA, GRIGIO, CHIARO, LINEA, TESTO, FONT_TITOLO, coloreValido, caricaLogo, caricaIdentita, intestazione, titoloSezione, pieDiPagina };
+module.exports = { scurisci, accento, tinta, M, ALTEZZA_FASCIA, GRIGIO, CHIARO, LINEA, TESTO, FONT_TITOLO, coloreValido, caricaLogo, caricaIdentita, intestazione, titoloSezione, pieDiPagina };
