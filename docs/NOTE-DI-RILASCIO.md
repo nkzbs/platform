@@ -2,6 +2,17 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.16 — 6 novembre 2026
+
+**Il dock mobile di Super Admin diventa uguale a quello dei tenant.** Segnalato guardando i due menu da telefono: erano diversi in quattro punti. Richiesto lo stesso aspetto su entrambi.
+
+- Pannello "Altro": ora lo stesso pannello di vetro di core — logo e versione, campo di ricerca, griglia di icone a 4 colonne con etichetta al passaggio, in fondo account, tema e uscita (prima una seconda pillola con 3 sole icone, senza ricerca).
+- Indicatore che scorre tra le icone, misurato via DOM come in core (prima la voce attiva si vedeva solo dal riempimento).
+- Account: il cerchio con le iniziali porta a Impostazioni (come la foto profilo di core porta a "Il mio account"), niente più mini-menu a parte; il tema sta nel pannello "Altro" come nei tenant.
+- Appuntate 4 pagine invece di 5, come in core (Super Builder passa in "Altro"): con 5 il dock a 375px era più largo di quello dei tenant.
+- Non cambiato: la rail laterale su desktop; il cambio password resta dove stava (Impostazioni), il dock di Super Admin non ha la chiave del dock di core.
+- Verificato dal vivo a 375px: nessun overflow orizzontale, pannello e indicatore funzionanti.
+
 ## 0.4.15 — 6 novembre 2026
 
 **Fix: i dialoghi aperti da dentro una card di vetro restavano intrappolati nella card.** Segnalato con uno screenshot: il dialogo "Smista" di un widget della Dashboard era confinato nei bordi del widget, con l'overlay scuro solo lì. Stessa causa della 0.3.47: un `backdrop-filter` su un antenato (`.glass-panel`) rende quell'antenato il contenitore degli elementi `position: fixed`.

@@ -227,7 +227,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
                     : <><span className="font-bold">Platform</span>{tenantName && <span className="font-normal"> {tenantName}</span>}</>
                   }
                 </div>
-                {!hidePlatformName && <div className="text-xs text-gray-500">Platform 0.4.15</div>}
+                {!hidePlatformName && <div className="text-xs text-gray-500">Platform 0.4.16</div>}
               </div>
             )}
           </div>
@@ -308,7 +308,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
               {logoUrl ? <img src={logoUrl} alt="" className="w-[24px] h-[24px] rounded-md object-contain flex-shrink-0" /> : <PlatformLogo size={24} letter={hidePlatformName && tenantName ? tenantName.trim()[0] : undefined} />}
               <div className="min-w-0">
                 <div className="text-sm text-ink font-bold truncate">{hidePlatformName && tenantName ? tenantName : 'Platform' + (tenantName ? ' ' + tenantName : '')}</div>
-                {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.4.15</div>}
+                {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.4.16</div>}
               </div>
             </div>
             <div className="px-0.5 pb-3 flex-shrink-0">

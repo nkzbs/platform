@@ -15,7 +15,7 @@ import { NAV_ITEMS } from '../lib/nav-items'
 // codebase. Il dock sotto è il dock del 11/01 lasciato intatto; la rail è
 // ripresa da git show 34b948b^ (versione pre-dock), adattata per condividere
 // stato/notifiche/account col dock invece di duplicarli.
-const PIN_COUNT = 5
+const PIN_COUNT = 4
 
 function timeAgo(iso) {
   const diffMs = Date.now() - new Date(iso).getTime()
@@ -29,13 +29,14 @@ function timeAgo(iso) {
 }
 
 function Sidebar({ page, onNavigate, onLogout, payload, token }) {
-  const handleNavigate = (id) => { onNavigate(id); setAltroOpen(false) }
+  const handleNavigate = (id) => { onNavigate(id); setAltroOpen(false); setNavFilter('') }
 
   const [altroOpen, setAltroOpen] = useState(false)
+  // Filtro per nome nel pannello "Altro" (come in core: launcher con ricerca).
+  const [navFilter, setNavFilter] = useState('')
   const [accountOpen, setAccountOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const panelRef = useRef(null)
-  const accountRef = useRef(null)
   const notifRef = useRef(null)
   // Refs separati per i popover della rail: rail e dock vivono entrambi nel
   // DOM in contemporanea (solo nascosti via CSS) e condividono lo stesso
@@ -90,8 +91,8 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
 
   useEffect(() => {
     const handler = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target) && !e.target.closest('[data-dock-altro]')) setAltroOpen(false)
-      if (accountRef.current && !accountRef.current.contains(e.target) && railAccountRef.current && !railAccountRef.current.contains(e.target)) setAccountOpen(false)
+      if (panelRef.current && !panelRef.current.contains(e.target) && !e.target.closest('[data-dock-altro]')) { setAltroOpen(false); setNavFilter('') }
+      if (railAccountRef.current && !railAccountRef.current.contains(e.target)) setAccountOpen(false)
       if (notifRef.current && !notifRef.current.contains(e.target) && railNotifRef.current && !railNotifRef.current.contains(e.target)) setNotifOpen(false)
     }
     document.addEventListener('mousedown', handler)
@@ -100,7 +101,7 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
 
   const pinned = NAV_ITEMS.slice(0, PIN_COUNT)
   const overflow = NAV_ITEMS.slice(PIN_COUNT)
-  const pageInOverflow = overflow.some((i) => i.id === page)
+  const pageInOverflow = overflow.some((i) => i.id === page && i.id !== 'impostazioni')
 
   const username = (payload && payload.username) || ''
   const initials = username ? username.trim().slice(0, 2).toUpperCase() : '?'
@@ -141,12 +142,47 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
 
   // Stesso "chip" tondo tinto del dock di core/frontend — icona a tinta piena su sfondo
   // colore+alpha quando non attiva, pieno in accent quando attiva.
-  const DockIcon = ({ name, icon, color, active, onClick, badge }) => (
-    <button onClick={onClick} title={name}
+  const DockIcon = ({ dockKey, name, icon, color, active, onClick, badge }) => (
+    <button data-dock-key={dockKey} onClick={onClick} title={name}
       className={'relative flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ease-out hover:scale-110 ' + (active ? 'bg-cp-primary text-white shadow-md' : '')}
       style={!active ? { backgroundColor: color ? color + '22' : 'rgb(var(--cp-primary) / 0.16)', color: color || 'rgb(var(--cp-primary))' } : undefined}>
       <Icon name={icon} size={17} />
       {badge > 0 && <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-cp-primary text-white text-[8px] rounded-full flex items-center justify-center font-bold leading-none border border-surface-card">{badge > 9 ? '9+' : badge}</span>}
+    </button>
+  )
+
+  // Indicatore che scorre tra le icone — stessa misura via DOM del dock di core.
+  const navRef = useRef(null)
+  const [indicator, setIndicator] = useState(null)
+  const activeDockKey = page === 'impostazioni' ? 'account'
+    : pinned.some((i) => i.id === page) ? page
+    : (altroOpen || pageInOverflow) ? 'altro'
+    : null
+  useEffect(() => {
+    const measure = () => {
+      if (!navRef.current || !activeDockKey) { setIndicator(null); return }
+      const el = navRef.current.querySelector('[data-dock-key="' + activeDockKey + '"]')
+      if (!el) { setIndicator(null); return }
+      const navRect = navRef.current.getBoundingClientRect()
+      const elRect = el.getBoundingClientRect()
+      setIndicator({ left: elRect.left - navRect.left, width: elRect.width })
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [activeDockKey, pinned.map((i) => i.id).join(',')])
+
+  const filtro = navFilter.trim().toLowerCase()
+  const overflowF = overflow.filter((i) => !filtro || i.label.toLowerCase().includes(filtro))
+  const gridTile = (item) => (
+    <button key={item.id} title={item.label} onClick={() => handleNavigate(item.id)}
+      className="group relative flex items-center justify-center p-1 rounded-xl transition hover:bg-white/8">
+      <span className={'w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-150 ease-out group-hover:scale-110 group-hover:shadow-lg ' + (page === item.id ? 'bg-cp-primary text-white' : 'bg-white/8')} style={page !== item.id && item.color ? { color: item.color } : undefined}>
+        <Icon name={item.icon} size={22} />
+      </span>
+      <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black/90 text-white text-[11px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-10">
+        {item.label}
+      </span>
     </button>
   )
 
@@ -161,7 +197,7 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
             {railExpanded && (
               <div>
                 <div className="text-base text-ink tracking-tight"><span className="font-bold">Platform</span> <span className="font-normal">Admin</span></div>
-                <div className="text-xs text-gray-500">versione 0.4.15</div>
+                <div className="text-xs text-gray-500">versione 0.4.16</div>
               </div>
             )}
           </div>
@@ -224,27 +260,59 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
         </div>
       </div>
 
-      {/* ---------- Dock flottante — solo mobile ---------- */}
+      {/* ---------- Dock flottante — solo mobile (stesso dock di core/frontend) ---------- */}
       <div className="md:hidden">
-        {altroOpen && <div className="fixed inset-0 bg-black/30 z-30" onClick={() => setAltroOpen(false)} />}
+        {altroOpen && <div className="fixed inset-0 bg-black/30 z-30" onClick={() => { setAltroOpen(false); setNavFilter('') }} />}
 
         {altroOpen && overflow.length > 0 && (
-          <div ref={panelRef} className="glass-pill fixed left-1/2 z-40 flex items-center gap-1" style={{ transform: 'translateX(-50%)', bottom: 'calc(72px + env(safe-area-inset-bottom))', padding: '8px 10px' }}>
-            {overflow.map((item) => (
-              <DockIcon key={item.id} name={item.label} icon={item.icon} color={item.color} active={page === item.id} onClick={() => handleNavigate(item.id)} />
-            ))}
+          <div ref={panelRef} className="glass-panel fixed left-1/2 z-40 flex flex-col" style={{ transform: 'translateX(-50%)', bottom: 'calc(90px + env(safe-area-inset-bottom))', width: 'min(400px, calc(100vw - 32px))', maxHeight: '70vh', padding: '14px' }}>
+            <div className="flex items-center gap-2.5 px-1.5 pb-3 flex-shrink-0">
+              <PlatformLogo size={24} />
+              <div className="min-w-0">
+                <div className="text-sm text-ink font-bold truncate">Platform Admin</div>
+                <div className="text-[11px] text-gray-500">Platform 0.4.16</div>
+              </div>
+            </div>
+            <div className="px-0.5 pb-3 flex-shrink-0">
+              <input value={navFilter} onChange={(e) => setNavFilter(e.target.value)} placeholder="Cerca una pagina…" aria-label="Cerca una pagina"
+                className="w-full h-10 px-3 rounded-full bg-white/8 border border-white/10 text-sm text-ink placeholder-gray-500 outline-none focus:border-cp-primary" />
+            </div>
+            <div className="overflow-y-auto border-t border-white/10 pt-3" style={{ maxHeight: 'min(46vh, 380px)' }}>
+              {filtro && overflowF.length === 0 && <div className="text-center text-sm text-gray-500 py-6">Nessuna voce per "{navFilter}"</div>}
+              {overflowF.length > 0 && <div className="grid grid-cols-4 gap-1">{overflowF.map(gridTile)}</div>}
+            </div>
+            <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between px-1 flex-shrink-0">
+              <button onClick={() => handleNavigate('impostazioni')} className={'flex items-center gap-2.5 text-left hover:opacity-80 transition rounded-lg px-2 py-1 -mx-2 ' + (page === 'impostazioni' ? 'bg-cp-primary/15' : '')}>
+                <span className="w-7 h-7 rounded-full bg-cp-primary text-white text-[11px] font-semibold flex items-center justify-center flex-shrink-0">{initials}</span>
+                <div className="min-w-0">
+                  <div className="text-sm text-ink font-medium truncate">{username}</div>
+                  <div className="text-xs text-gray-500">{payload && payload.role}</div>
+                </div>
+              </button>
+              <div className="flex items-center gap-3">
+                <button onClick={toggleTheme} className="text-gray-400 hover:text-ink transition" title={theme === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro'}>
+                  <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} />
+                </button>
+                <button onClick={onLogout} className="text-gray-400 hover:text-ink transition" title="Esci">
+                  <Icon name="logout" size={16} />
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
-        <nav aria-label="Navigazione principale" className="glass-pill fixed left-1/2 z-40 flex items-center gap-1" style={{ transform: 'translateX(-50%)', bottom: 'calc(18px + env(safe-area-inset-bottom))', padding: '8px 10px' }}>
+        <nav ref={navRef} aria-label="Navigazione principale" className="glass-pill fixed left-1/2 z-40 flex items-center gap-1" style={{ transform: 'translateX(-50%)', bottom: 'calc(18px + env(safe-area-inset-bottom))', padding: '8px 10px' }}>
+          {indicator && (
+            <div className="absolute top-1.5 bottom-1.5 rounded-full bg-cp-primary/20 pointer-events-none transition-all duration-300 ease-out" style={{ left: indicator.left, width: indicator.width }} />
+          )}
           {pinned.map((item) => (
-            <DockIcon key={item.id} name={item.label} icon={item.icon} color={item.color} active={page === item.id} onClick={() => handleNavigate(item.id)} />
+            <DockIcon key={item.id} dockKey={item.id} name={item.label} icon={item.icon} color={item.color} active={page === item.id} onClick={() => handleNavigate(item.id)} />
           ))}
           {overflow.length > 0 && (
             <>
               <div className="w-px h-6 bg-white/15 mx-1 flex-shrink-0" />
               <div data-dock-altro>
-                <DockIcon name="Altro" icon="grid" active={altroOpen || pageInOverflow} onClick={() => setAltroOpen((x) => !x)} />
+                <DockIcon dockKey="altro" name="Altro" icon="grid" active={altroOpen || pageInOverflow} onClick={() => setAltroOpen((x) => !x)} />
               </div>
             </>
           )}
@@ -262,27 +330,10 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
             )}
           </div>
 
-          <div className="relative" ref={accountRef}>
-            <button onClick={() => setAccountOpen((s) => !s)} title={username || 'Il mio account'}
-              className={'relative flex-shrink-0 w-10 h-10 rounded-full bg-cp-primary text-white text-xs font-semibold flex items-center justify-center transition-all duration-200 ease-out hover:scale-110 ' + (accountOpen ? 'ring-2 ring-cp-primary ring-offset-2 ring-offset-surface-page' : '')}>
-              {initials}
-            </button>
-            {accountOpen && (
-              <div className="glass-panel absolute bottom-[52px] right-0 w-56 z-50 overflow-hidden p-1.5">
-                {username && <div className="px-2.5 py-2 text-xs text-gray-500 border-b border-white/10 mb-1 truncate">{username}{payload && payload.role ? ' · ' + payload.role : ''}</div>}
-                <button onClick={toggleTheme} className="w-full text-left px-2.5 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-ink rounded-lg transition flex items-center gap-2">
-                  <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={14} />{theme === 'dark' ? 'Tema chiaro' : 'Tema scuro'}
-                </button>
-                <button onClick={() => { setAccountOpen(false); handleNavigate('impostazioni') }} className="w-full text-left px-2.5 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-ink rounded-lg transition flex items-center gap-2">
-                  <Icon name="settings" size={14} />Impostazioni
-                </button>
-                <button onClick={onLogout} className="w-full text-left px-2.5 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-ink rounded-lg transition flex items-center gap-2">
-                  <Icon name="logout" size={14} />Esci
-                </button>
-                <div className="px-2.5 pt-1.5 mt-1 border-t border-white/10 text-[10px] text-gray-600">versione 0.4.15</div>
-              </div>
-            )}
-          </div>
+          <button data-dock-key="account" onClick={() => handleNavigate('impostazioni')} title={username || 'Il mio account'}
+            className={'relative flex-shrink-0 w-10 h-10 rounded-full bg-cp-primary text-white text-xs font-semibold flex items-center justify-center transition-all duration-200 ease-out hover:scale-110 ' + (page === 'impostazioni' ? 'ring-2 ring-cp-primary/60 ring-offset-2 ring-offset-transparent' : '')}>
+            {initials}
+          </button>
         </nav>
       </div>
     </>
