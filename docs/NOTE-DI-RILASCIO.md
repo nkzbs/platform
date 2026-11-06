@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.25 — 6 novembre 2026
+
+**PDF completo del report di valutazione.** Nel dettaglio di un Immobile valutato il bottone «Scarica PDF» (al posto di «Stampa o salva in PDF») scarica un PDF vero, su più pagine, con tutto quello che il report contiene: immobile, quotazione e valore stimato (media × superficie, con intervallo), considerazioni del valutatore, quotazioni OMI, comparabili, rischio sismico, fotovoltaico, andamento del mercato, tempi di vendita, annunci per tipologia e superficie, dati della zona, avvertenza.
+
+- Il PDF nasce dal report **già salvato** sul record: nessuna chiamata a OpenAPI.it, nessun credito consumato. Per rifare i dati si rilancia la valutazione.
+- Se i dati di mercato si riferiscono a un comune diverso da quello dell'immobile, il PDF lo dice in cima («ATTENZIONE…»); senza superficie spiega perché il valore stimato non c'è.
+- Nuova rotta `POST /records/immobili/:id/valutazione/pdf` (solo admin, tracciata nell'audit), `lib/report-valutazione.js` (testo), riuso di `lib/documento-pdf.js`. Test `valutazione-pdf.test.js` (4).
+- **Non coperto**: mappe e vista satellitare, servizi di zona, redditi ISTAT, tempi di percorrenza (fase 2); il PDF è solo testo, senza tabelle né grafici.
+
 ## 0.4.24 — 6 novembre 2026
 
 **Provvigione a due parti: venditore e acquirente.** Alla firma del preliminare nascono due righe di provvigione, una per parte, con importo netto, IVA e totale già calcolati.

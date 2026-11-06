@@ -1034,6 +1034,25 @@ router.post('/immobili/:id/valuta', requireAuth, requireAdmin, async (req, res) 
   res.json({ ok: true, record: { ...updated, data: JSON.parse(updated.data) }, dettaglio, comparabili, omi: omiZona, fotovoltaico, zonaSismicaUfficiale: zonaSismicaUff, considerazioni });
 });
 
+// PDF del report di valutazione: parte dal report già salvato sul record (nessuna chiamata a
+// OpenAPI.it, nessun credito consumato). Per rifare i dati si rilancia prima la valutazione.
+router.post('/immobili/:id/valutazione/pdf', requireAuth, requireAdmin, async (req, res) => {
+  const existing = db.prepare("SELECT * FROM records WHERE id = ? AND module_slug = 'immobili'").get(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Immobile non trovato' });
+  const data = JSON.parse(existing.data);
+  if (!data.report_valutazione) return res.status(400).json({ error: 'Questo immobile non è ancora stato valutato: avvia prima la valutazione.' });
+  const tenant = db.prepare('SELECT ragione_sociale FROM tenant_settings WHERE id = 1').get() || {};
+  try {
+    const { titolo, corpo } = require('../lib/report-valutazione').testoReport({ record: { id: existing.id, data }, report: data.report_valutazione });
+    const pdf = await require('../lib/documento-pdf').creaPdf({ titolo, corpo, azienda: tenant.ragione_sociale, riquadroFirma: false, piePagina: data.titolo || 'Valutazione' });
+    logAudit(req.user.username, 'record.scarica_valutazione', 'immobili#' + existing.id, {});
+    res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="valutazione-' + existing.id + '.pdf"', 'Cache-Control': 'no-store' });
+    res.send(pdf);
+  } catch (e) {
+    res.status(500).json({ error: 'Creazione del PDF non riuscita' });
+  }
+});
+
 // ─── Abbinamento (blocco di schema `match_view`) ──────────────────────────────────────────────
 // «Immobili adatti» su un Cliente, «Richieste compatibili» su un Immobile: record di un altro
 // modulo che corrispondono a questo secondo regole dichiarate dal Builder (lib/abbinamento.js).

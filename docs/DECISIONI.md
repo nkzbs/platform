@@ -691,3 +691,8 @@ avrebbe perso ore di storia reale a ogni suo stesso aggiornamento), corretto pri
 **Scostamento dalla scelta 3A**: avevo proposto che l'importo si aggiornasse da solo se cambia il prezzo finché la riga è «da fatturare». **Non è stato fatto**: il motore non ha un'azione «aggiorna i record collegati» e i campi calcolati non leggono un campo del record puntato; costruirla significa una nuova azione con il suo editor nel Builder. Per ora il prezzo è una copia (corregibile a mano). Resta nell'elenco dei raffinamenti.
 **Cosa non c'è**: aggiornamento automatico al cambio di prezzo; provvigione a scaglioni o con minimo garantito; scadenza o fattura emessa da Platform (resta «da fatturare → fatturata → incassata» a mano); compilazione automatica di venditore e acquirente dal cliente della trattativa; rigenerazione per una sola parte.
 
+## 2026-11-06 — PDF del report di valutazione: dal report salvato, solo testo
+
+**Scelta**: il PDF si compone sul server dal report già salvato sul record (`report_valutazione`), senza richiamare OpenAPI.it, e riusa il generatore PDF dei documenti (solo testo). Sostituisce la stampa dal browser.
+**Perché**: richiamare le fonti costa credito a ogni scarico, e il PDF deve poter essere rigenerato identico; la stampa dal browser dipendeva dalla pagina e non era un file vero da allegare o inviare.
+**Cosa non è coperto**: mappe, satellite, servizi di zona, redditi ISTAT e tempi di percorrenza (fase 2); tabelle e grafici (il generatore è di solo testo). Se il report e l'immobile non combaciano per comune il PDF lo scrive in cima invece di nasconderlo.

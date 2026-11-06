@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { createPortal } from 'react-dom'
 import { API, openUploadedFile } from '../../lib/api'
 const toast = (message, type = 'success') => window.dispatchEvent(new CustomEvent('platform:toast', { detail: { message, type } }))
 import useApi from '../../lib/useApi'
@@ -486,6 +485,16 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
       setTimeout(() => URL.revokeObjectURL(url), 2000)
     } finally { setLavorandoFirma(false) }
   }
+  // PDF del report di valutazione: nasce sul server dal report già salvato sul record (nessun credito consumato).
+  const scaricaValutazione = async () => {
+    const r = await fetch(API + '/records/immobili/' + recordId + '/valutazione/pdf', { method: 'POST', headers: { Authorization: 'Bearer ' + token } })
+    if (!r.ok) { const j = await r.json().catch(() => ({})); toast(j.error || 'Creazione del PDF non riuscita', 'error'); return }
+    const url = URL.createObjectURL(await r.blob())
+    const a = document.createElement('a')
+    a.href = url; a.download = 'valutazione-' + recordId + '.pdf'
+    document.body.appendChild(a); a.click(); a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 2000)
+  }
   const registraFirmato = async () => {
     if (!bozzaDoc.file) { toast('Scegli prima il file firmato (PDF o foto)', 'error'); return }
     setLavorandoFirma(true)
@@ -577,7 +586,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
         ) : (
           <>
             {mod.slug === 'immobili' && reportValutazione && (
-              <ReportValutazione report={reportValutazione} titolo={record.data.titolo} indirizzo={[record.data.indirizzo, record.data.comune, record.data.provincia].filter(Boolean).join(', ')} />
+              <ReportValutazione onPdf={scaricaValutazione} report={reportValutazione} titolo={record.data.titolo} indirizzo={[record.data.indirizzo, record.data.comune, record.data.provincia].filter(Boolean).join(', ')} />
             )}
             <AbbinamentiSezione api={api} slug={mod.slug} recordId={recordId} definizioni={schema && schema.match_views} />
             {bozzaDoc && (
@@ -1088,7 +1097,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
 // Non il report multi-pagina con mappe/foto di un concorrente — solo i numeri che OpenAPI.it
 // restituisce davvero, onestamente presentati: niente inventato per sembrare più completo.
 function fmtEuro(n) { return (n || n === 0) ? Number(n).toLocaleString('it-IT', { maximumFractionDigits: 0 }) + ' €' : '—' }
-function ReportValutazione({ report, titolo, indirizzo }) {
+function ReportValutazione({ report, titolo, indirizzo, onPdf }) {
   const d = (report && report.dettaglio) || {}
   const q = d.quotazione || {}
   const med = parseFloat(String(q.med || '').replace(/[^0-9.]/g, '')) || null
@@ -1195,16 +1204,9 @@ function ReportValutazione({ report, titolo, indirizzo }) {
     <div className="glass-panel p-4 mb-5 border-accent/30">
       <div className="flex items-center justify-between gap-2 mb-2">
         <span className="text-xs font-semibold text-ink flex items-center gap-1.5"><Icon name="sparkles" size={13} />Report di valutazione</span>
-        <button onClick={() => window.print()} className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 flex items-center gap-1.5"><Icon name="download" size={12} />Stampa o salva in PDF</button>
+        <button onClick={onPdf} className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 flex items-center gap-1.5"><Icon name="download" size={12} />Scarica PDF</button>
       </div>
       {corpo(false)}
-      {createPortal(
-        <div className="valutazione-stampa-portal" style={{ display: 'none' }}>
-          <style>{'@media print{body > *:not(.valutazione-stampa-portal){display:none!important}.valutazione-stampa-portal{display:block!important}@page{size:A4;margin:16mm 14mm}}'}</style>
-          {corpo(true)}
-        </div>,
-        document.body
-      )}
     </div>
   )
 }
