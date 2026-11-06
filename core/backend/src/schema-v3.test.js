@@ -320,6 +320,39 @@ test('blocco "view" senza equivalente v2 (toV2 strict) -> lancia esplicitamente'
   assertThrows(() => toV2(v3), 'view');
 });
 
+// ─── document_action (documento da modello: anteprima modificabile + invio email) ───────────
+
+console.log('\n--- document_action ---');
+
+const AZIONE_DOC = { key: 'privacy', label: 'Privacy', subject: 'Ciao {{nome}}', body: 'Gentile {{nome}}', recipient: { field: 'email' } };
+
+test('toV3: document_actions di primo livello diventano step "document_action"', () => {
+  const v3 = toV3({ fields: [{ key: 'nome' }], document_actions: [AZIONE_DOC] });
+  const step = v3.steps.find((st) => st.block_type === 'document_action');
+  assertEq(!!step, true);
+  assertEq(step.key, 'privacy');
+  assertEq(step.recipient, { field: 'email' });
+});
+
+test('round trip v2 -> v3 -> v2 lenient conserva le azioni documento (non si perdono riaprendo il Builder)', () => {
+  const dopo = toV2Lenient(toV3({ fields: [{ key: 'nome' }], document_actions: [AZIONE_DOC] }));
+  assertEq(dopo.document_actions, [AZIONE_DOC]);
+});
+
+test('toV2Lenient senza blocchi documento: document_actions è un array vuoto, non undefined', () => {
+  assertEq(toV2Lenient({ version: 3, steps: [] }).document_actions, []);
+});
+
+test('parseSchemaNormalized (lettura runtime) espone document_actions di uno schema v3', () => {
+  const json = JSON.stringify({ version: 3, steps: [{ id: 'd1', block_type: 'document_action', ...AZIONE_DOC }] });
+  assertEq(parseSchemaNormalized(json).document_actions.map((d) => d.key), ['privacy']);
+});
+
+test('toV2 strict con un blocco document_action -> lancia esplicitamente', () => {
+  const v3 = { version: 3, steps: [{ id: 'd1', block_type: 'document_action', ...AZIONE_DOC }] };
+  assertThrows(() => toV2(v3), 'document_action');
+});
+
 // ─── SOMMARIO ─────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(50)}`);

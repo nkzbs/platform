@@ -1,0 +1,180 @@
+'use strict';
+
+// Test — motore del «documento da modello» (lib/modello-documento.js) e parità con i testi che
+// stavano nel codice (lib/doc-cliente.js, lib/doc-immobile.js) prima del blocco `document_action`.
+// Eseguire con: node modello-documento.test.js
+
+const { renderModello, costruisciGet, risolviDestinatario, LINEA } = require('./lib/modello-documento');
+const docCliente = require('./lib/doc-cliente');
+const docImmobile = require('./lib/doc-immobile');
+const seed = require('./seeds/documenti-immobiliare.json');
+
+let passed = 0, failed = 0;
+function test(name, fn) {
+  try { fn(); console.log('  ✓ ' + name); passed++; }
+  catch (e) { console.error('  ✗ ' + name); console.error('    ' + e.message); failed++; }
+}
+function assertEq(actual, expected, msg) {
+  const a = JSON.stringify(actual), b = JSON.stringify(expected);
+  if (a !== b) throw new Error(`${msg || ''}: atteso ${b}, ottenuto ${a}`);
+}
+const getDa = (obj) => (p) => obj[p];
+
+console.log('\n--- segnaposto e filtri ---');
+
+test('{{campo}} sostituisce il valore; se vuoto o assente mostra «—»', () => {
+  assertEq(renderModello('A: {{x}}', getDa({ x: 'ciao' })), 'A: ciao');
+  assertEq(renderModello('A: {{x}}', getDa({ x: '' })), 'A: —');
+  assertEq(renderModello('A: {{x}}', getDa({})), 'A: —');
+  assertEq(renderModello('A: {{x}}', getDa({ x: null })), 'A: —');
+});
+test('i booleani diventano Sì/No (false NON è «vuoto»), 0 resta 0', () => {
+  assertEq(renderModello('{{a}} {{b}} {{c}}', getDa({ a: true, b: false, c: 0 })), 'Sì No 0');
+});
+test('le liste si uniscono con la virgola', () => {
+  assertEq(renderModello('{{x}}', getDa({ x: ['a', 'b'] })), 'a, b');
+});
+test('|linea e |vuoto cambiano cosa compare se il campo è vuoto', () => {
+  assertEq(renderModello('{{x|linea}}', getDa({})), LINEA);
+  assertEq(renderModello('[{{x|vuoto}}]', getDa({})), '[]');
+  assertEq(renderModello('{{x|linea}}', getDa({ x: 'v' })), 'v');
+});
+test('|minuscolo e |maiuscolo, anche concatenati con |vuoto', () => {
+  assertEq(renderModello('{{x|minuscolo}} {{x|maiuscolo}}', getDa({ x: 'Ab' })), 'ab AB');
+  assertEq(renderModello('{{x|vuoto|minuscolo}}', getDa({})), '');
+});
+test('un filtro sconosciuto è ignorato, non rompe il documento', () => {
+  assertEq(renderModello('{{x|inventato}}', getDa({ x: 'ok' })), 'ok');
+});
+test('spazi dentro le graffe sono tollerati', () => {
+  assertEq(renderModello('{{ x }} {{ x | maiuscolo }}', getDa({ x: 'a' })), 'a A');
+});
+test('testo senza segnaposto resta identico, anche con graffe singole e caratteri speciali', () => {
+  assertEq(renderModello('Firma: ___ ☐ No {x} $ & <b>', getDa({})), 'Firma: ___ ☐ No {x} $ & <b>');
+});
+test('modello null/undefined → stringa vuota', () => {
+  assertEq(renderModello(null, getDa({})), '');
+});
+
+console.log('\n--- sezioni ---');
+
+test('{{#k}}…{{/k}} compare solo se k ha un valore', () => {
+  assertEq(renderModello('a{{#k}} [{{k}}]{{/k}}b', getDa({ k: 'v' })), 'a [v]b');
+  assertEq(renderModello('a{{#k}} [{{k}}]{{/k}}b', getDa({})), 'ab');
+});
+test('{{^k}}…{{/k}} compare solo se k è vuoto', () => {
+  assertEq(renderModello('{{^k}}niente{{/k}}', getDa({})), 'niente');
+  assertEq(renderModello('{{^k}}niente{{/k}}', getDa({ k: 'v' })), '');
+});
+test('una casella non spuntata (false) conta come vuota nelle sezioni', () => {
+  assertEq(renderModello('{{#c}}sì{{/c}}{{^c}}no{{/c}}', getDa({ c: false })), 'no');
+  assertEq(renderModello('{{#c}}sì{{/c}}{{^c}}no{{/c}}', getDa({ c: true })), 'sì');
+});
+test('sezioni con nomi diversi si annidano', () => {
+  assertEq(renderModello('{{#a}}A{{#b}}B{{/b}}{{/a}}', getDa({ a: 1, b: 1 })), 'AB');
+  assertEq(renderModello('{{#a}}A{{#b}}B{{/b}}{{/a}}', getDa({ a: 1 })), 'A');
+  assertEq(renderModello('{{#a}}A{{#b}}B{{/b}}{{/a}}', getDa({ b: 1 })), '');
+});
+test('una sezione non chiusa non manda in loop e resta com\'è', () => {
+  assertEq(renderModello('{{#a}}senza fine', getDa({ a: 1 })), '{{#a}}senza fine');
+});
+
+console.log('\n--- contesto: tenant, data, record collegati ---');
+
+const tenant = { ragione_sociale: 'Agenzia Prova', indirizzo: 'Via Roma 1', piva: '01234567890' };
+const leggi = (modulo, id) => (modulo === 'clienti' && id === 7 ? { nome: 'Anna Rossi', email: 'anna@esempio.it' } : null);
+const schemaImm = { relations: [{ key: 'proprietario', target_module: 'clienti' }] };
+
+test('@azienda/@indirizzo/@piva dal tenant; @oggi in italiano', () => {
+  const get = costruisciGet({ record: {}, schema: {}, tenant, leggiRecord: leggi });
+  assertEq(renderModello('{{@azienda}}|{{@indirizzo}}|{{@piva}}', get), 'Agenzia Prova|Via Roma 1|01234567890');
+  assertEq(/^\d{1,2} [a-zà]+ \d{4}$/.test(renderModello('{{@oggi}}', get)), true);
+});
+test('senza tenant i dati del tenant sono vuoti, non un errore', () => {
+  const get = costruisciGet({ record: {}, schema: {}, tenant: null, leggiRecord: leggi });
+  assertEq(renderModello('[{{@azienda|vuoto}}]', get), '[]');
+});
+test('relazione.campo legge il campo del record collegato', () => {
+  const get = costruisciGet({ record: { proprietario: 7 }, schema: schemaImm, tenant, leggiRecord: leggi });
+  assertEq(renderModello('{{proprietario.nome}}', get), 'Anna Rossi');
+});
+test('relazione vuota, id inesistente o relazione non dichiarata → «—», mai un errore', () => {
+  assertEq(renderModello('{{proprietario.nome}}', costruisciGet({ record: {}, schema: schemaImm, tenant, leggiRecord: leggi })), '—');
+  assertEq(renderModello('{{proprietario.nome}}', costruisciGet({ record: { proprietario: 99 }, schema: schemaImm, tenant, leggiRecord: leggi })), '—');
+  assertEq(renderModello('{{altra.nome}}', costruisciGet({ record: { altra: 7 }, schema: schemaImm, tenant, leggiRecord: leggi })), '—');
+});
+test('il record collegato si legge una volta sola per documento', () => {
+  let letture = 0;
+  const get = costruisciGet({ record: { proprietario: 7 }, schema: schemaImm, tenant, leggiRecord: (m, i) => { letture++; return leggi(m, i); } });
+  renderModello('{{proprietario.nome}} {{proprietario.email}} {{proprietario.nome}}', get);
+  assertEq(letture, 1);
+});
+test('risolviDestinatario: campo proprio, campo di un record collegato, vuoto se manca', () => {
+  const get = costruisciGet({ record: { email: ' a@b.it ', proprietario: 7 }, schema: schemaImm, tenant, leggiRecord: leggi });
+  assertEq(risolviDestinatario('email', get), 'a@b.it');
+  assertEq(risolviDestinatario('proprietario.email', get), 'anna@esempio.it');
+  assertEq(risolviDestinatario('', get), '');
+  assertEq(risolviDestinatario('assente', get), '');
+});
+test('il modello non esegue codice né legge proprietà ereditate: espressioni e «constructor» danno «—»', () => {
+  const get = costruisciGet({ record: { nome: 'x' }, schema: schemaImm, tenant, leggiRecord: leggi });
+  assertEq(renderModello('{{process.exit(1)}} {{constructor}} {{__proto__}} {{toString}} {{hasOwnProperty}}', get), '— — — — —');
+  const collegato = costruisciGet({ record: { proprietario: 7 }, schema: schemaImm, tenant, leggiRecord: leggi });
+  assertEq(renderModello('{{proprietario.constructor}} {{proprietario.__proto__}}', collegato), '— —');
+});
+
+console.log('\n--- parità con i testi attuali nel codice (stesso output al carattere) ---');
+
+const clienti = [
+  { nome: 'Mario Bianchi', tipo_cliente: 'Venditore', codice_fiscale_piva: 'BNCMRA80A01H501Z', indirizzo: 'Via Verdi 3' },
+  { nome: 'Lucia Neri' },
+  { tipo_cliente: 'ACQUIRENTE' },
+  {},
+];
+const tenants = [tenant, { ragione_sociale: 'Solo Nome' }, {}, null];
+const getCliente = (c, t) => costruisciGet({ record: c, schema: {}, tenant: t, leggiRecord: leggi });
+const azione = (mod, key) => seed[mod].find((a) => a.key === key);
+
+for (const [idx, c] of clienti.entries()) {
+  for (const [tdx, t] of tenants.entries()) {
+    test(`privacy+incarico identico — cliente ${idx}, tenant ${tdx}`, () => {
+      const vecchio = docCliente.informativaPrivacyIncarico(c, t);
+      const a = azione('clienti', 'privacy_incarico'), get = getCliente(c, t);
+      assertEq(renderModello(a.body, get), vecchio.corpo, 'corpo');
+      assertEq(renderModello(a.subject, get), vecchio.oggetto, 'oggetto');
+    });
+    test(`antiriciclaggio identico — cliente ${idx}, tenant ${tdx}`, () => {
+      const vecchio = docCliente.informativaAntiriciclaggio(c, t);
+      const a = azione('clienti', 'antiriciclaggio'), get = getCliente(c, t);
+      assertEq(renderModello(a.body, get), vecchio.corpo, 'corpo');
+      assertEq(renderModello(a.subject, get), vecchio.oggetto, 'oggetto');
+    });
+  }
+}
+
+const immobili = [
+  { titolo: 'Trilocale centro', tipologia: 'Appartamento', superficie_mq: 85, ascensore: true, giardino: false, note: 'Da ristrutturare', proprietario: 7, classe_energetica: 'D', accessori_impianti: 'Aria condizionata, allarme' },
+  { titolo: 'Villa', proprietario: 99 },
+  {},
+];
+immobili.forEach((im, i) => {
+  for (const [tdx, t] of tenants.entries()) {
+    test(`scheda immobile identica — immobile ${i}, tenant ${tdx}`, () => {
+      const nomeProp = im.proprietario === 7 ? 'Anna Rossi' : null;
+      const vecchio = docImmobile.schedaImmobile(im, nomeProp, t);
+      const a = azione('immobili', 'scheda_immobile');
+      const get = costruisciGet({ record: im, schema: schemaImm, tenant: t, leggiRecord: leggi });
+      assertEq(renderModello(a.body, get), vecchio.corpo, 'corpo');
+      assertEq(renderModello(a.subject, get), vecchio.oggetto, 'oggetto');
+    });
+  }
+});
+
+test('destinatari del seed: email del cliente, email del proprietario collegato', () => {
+  assertEq(azione('clienti', 'privacy_incarico').recipient, 'email');
+  assertEq(azione('immobili', 'scheda_immobile').recipient, 'proprietario.email');
+});
+
+console.log(`\n${'─'.repeat(50)}`);
+console.log(`Risultato: ${passed} passati, ${failed} falliti`);
+if (failed > 0) process.exit(1);
