@@ -60,10 +60,39 @@ function abbinamentoApplicabile(mv, steps, moduliPerSlug) {
 
 // Cosa si può applicare: tipo di blocco, prefisso del marcatore (invariato per i documenti, così in
 // produzione quelli già applicati non si ripetono), controllo di applicabilità, file del seed.
+// Estensione di un modulo: un gruppo di blocchi (campi, calcoli, relazioni, automazioni) che si
+// aggiunge insieme. Si applica solo se i moduli e i campi di cui ha bisogno (`richiede`: modulo →
+// campi) esistono, se le relazioni puntano a moduli che esistono e se nessuna chiave da aggiungere è
+// già usata da un blocco di tipo diverso.
+function estensioneApplicabile(est, steps, moduliPerSlug) {
+  for (const [modulo, campi] of Object.entries(est.richiede || {})) {
+    const presenti = chiaviDelModulo(modulo); // campi E relazioni: le relazioni non stanno in `moduliPerSlug`
+    if (!presenti) return false;
+    if (!campi.every((c) => presenti.has(c))) return false;
+  }
+  for (const b of est.aggiungi || []) {
+    if (b.block_type === 'relation' && !moduliPerSlug[b.target_module]) return false;
+    if (b.key && steps.some((x) => x.key === b.key && (x.block_type !== b.block_type || (x.type || null) !== (b.type || null)))) return false;
+  }
+  return true;
+}
+
 const TIPI = {
+  estensione: { prefisso: 'estensione', applicabile: estensioneApplicabile, file: 'estensioni-immobiliare.json', nome: 'estensione', idPrefisso: 'ext_' },
   document_action: { prefisso: 'azione_documento', applicabile: modelloApplicabile, file: 'documenti-immobiliare.json', nome: 'documento', idPrefisso: 'doc_' },
   match_view: { prefisso: 'abbinamento', applicabile: abbinamentoApplicabile, file: 'abbinamenti-immobiliare.json', nome: 'abbinamento', idPrefisso: 'mtc_' },
 };
+
+// Tutte le chiavi di un modulo installato (campi, calcoli, relazioni), o null se non c'è.
+function chiaviDelModulo(slug) {
+  const m = db.prepare('SELECT schema_json FROM modules WHERE slug = ? AND installed = 1').get(slug);
+  if (!m) return null;
+  try {
+    const sc = JSON.parse(m.schema_json);
+    if (sc.version !== 3 || !Array.isArray(sc.steps)) return null;
+    return new Set(sc.steps.filter((x) => ['field', 'computed', 'relation'].includes(x.block_type) && x.key).map((x) => x.key));
+  } catch (e) { return null; }
+}
 
 function campiDelModulo(slug) {
   const m = db.prepare('SELECT schema_json FROM modules WHERE slug = ? AND installed = 1').get(slug);
@@ -95,7 +124,22 @@ async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs
       if (!m) continue; // il modulo non c'è (ancora): riproverà al prossimo avvio
       let schema; try { schema = JSON.parse(m.schema_json); } catch (e) { continue; }
       if (schema.version !== 3 || !Array.isArray(schema.steps)) continue;
-      if (schema.steps.some((s) => s.block_type === tipo && s.key === az.key)) { segna(chiave); continue; }
+      if (tipo !== 'estensione' && schema.steps.some((s) => s.block_type === tipo && s.key === az.key)) { segna(chiave); continue; }
+      if (tipo === 'estensione') {
+        const presenti = new Set(schema.steps.map((x) => x.block_type + ':' + (x.key || x.label)));
+        const daAggiungere = (az.aggiungi || []).filter((b) => !presenti.has(b.block_type + ':' + (b.key || b.label)))
+          .map((b) => ({ id: cfg.idPrefisso + Math.random().toString(36).slice(2, 10), ...b }));
+        if (!cfg.applicabile(az, schema.steps, mappa)) { segna(chiave); esiti.push({ slug, key: az.key, esito: 'non applicabile' }); continue; }
+        if (!admin) continue;
+        const bozzaE = await callAs(admin, 'PUT', '/builder/' + slug + '/draft', { schema: { version: 3, steps: [...schema.steps, ...daAggiungere] } });
+        if (!bozzaE.ok) { console.error('[seed-blocchi] bozza ' + slug + '/' + az.key + ' fallita:', JSON.stringify(bozzaE.data)); esiti.push({ slug, key: az.key, esito: 'errore bozza' }); continue; }
+        const pubE = await callAs(admin, 'POST', '/builder/' + slug + '/publish', {});
+        if (!pubE.ok) { console.error('[seed-blocchi] pubblicazione ' + slug + '/' + az.key + ' fallita:', JSON.stringify(pubE.data)); esiti.push({ slug, key: az.key, esito: 'errore pubblicazione' }); continue; }
+        segna(chiave);
+        delete moduliPerSlug[slug]; // i campi del modulo sono cambiati: le estensioni dopo questa devono rivederli
+        esiti.push({ slug, key: az.key, esito: 'applicato' });
+        continue;
+      }
       // `aggiungi_campi`: campi che il blocco usa (es. i consensi di un documento da firmare) e che il
       // seed crea nel modulo se mancano. Non fanno parte del blocco: si tolgono prima di salvarlo.
       const { aggiungi_campi: daAggiungere = [], ...blocco } = az;

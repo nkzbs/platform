@@ -2,6 +2,17 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.24 — 6 novembre 2026
+
+**Provvigione a due parti: venditore e acquirente.** Alla firma del preliminare nascono due righe di provvigione, una per parte, con importo netto, IVA e totale già calcolati.
+
+- **Trattative**: nuovi campi «Venditore», «Acquirente», «Provvigione venditore (%)», «Provvigione acquirente (%)» e «Provvigioni generate il».
+- **Provvigioni**: nuovi campi «Parte», «Percentuale provvigione (%)», «Prezzo su cui si calcola» e i calcolati «Importo netto», «IVA 22%», «Totale con IVA». Le provvigioni già inserite con il solo importo continuano a funzionare.
+- **Automazione «Provvigioni alla firma del preliminare»** (si vede e si modifica dal Builder): una riga per ogni parte con percentuale, cliente della parte, scadenza al rogito, stato «da fatturare». Riaprire e rifirmare non duplica; senza percentuali non nasce nulla e si può rifare dopo.
+- **Come arriva su zucca**: al primo avvio dopo l'aggiornamento, dal seed (`estensioni-immobiliare.json`), solo se i moduli Provvigioni e Trattative hanno i campi attesi. Nuovo meccanismo riusabile: le «estensioni» di moduli.
+- **Da sapere**: il prezzo della provvigione è una copia fatta alla firma: se il prezzo concordato cambia dopo, la riga già generata non si aggiorna (si corregge a mano). La fattura si emette fuori da Platform; qui si segnano «fatturata» e «incassata». Se una parte aveva la percentuale vuota alla firma, quella riga va creata a mano.
+- **Test**: `provvigioni-due-parti.test.js` (8); suite del core 86.
+
 ## 0.4.23 — 6 novembre 2026
 
 **Documento da firmare, ricaricare e gestire in ottica GDPR.** La nuova Anagrafica di un cliente genera un PDF da scaricare e far firmare; la copia firmata si ricarica sul record e registra consensi, data, versione e scadenza dei dati.

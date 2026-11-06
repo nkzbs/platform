@@ -1,0 +1,208 @@
+{
+  "_descrizione": "Estensioni di moduli del verticale Mediazione immobiliare, applicate da seed-blocchi-verticale.js (una volta sola per estensione, solo se il modulo e i moduli citati esistono): la provvigione a DUE parti. Sul modulo Provvigioni: parte (venditore/acquirente), percentuale, base imponibile e i calcoli di importo netto, IVA e totale. Sulla Trattativa: venditore e acquirente, una percentuale per parte e un'automazione che, alla firma del preliminare, crea una riga di provvigione per ciascuna parte (una volta sola per trattativa).",
+  "provvigioni": [
+    {
+      "key": "due_parti",
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "parte",
+          "label": "Parte",
+          "type": "select",
+          "options": [
+            "Venditore",
+            "Acquirente"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "percentuale",
+          "label": "Percentuale provvigione (%)",
+          "type": "number"
+        },
+        {
+          "block_type": "field",
+          "key": "base_imponibile",
+          "label": "Prezzo su cui si calcola",
+          "type": "currency"
+        },
+        {
+          "block_type": "field",
+          "key": "importo_netto",
+          "label": "Importo netto",
+          "type": "computed",
+          "expr": "if(percentuale > 0, round(base_imponibile * percentuale / 100, 2), importo)"
+        },
+        {
+          "block_type": "field",
+          "key": "iva",
+          "label": "IVA 22%",
+          "type": "computed",
+          "expr": "round(importo_netto * 0.22, 2)"
+        },
+        {
+          "block_type": "field",
+          "key": "totale",
+          "label": "Totale con IVA",
+          "type": "computed",
+          "expr": "round(importo_netto * 1.22, 2)"
+        }
+      ]
+    }
+  ],
+  "trattative": [
+    {
+      "key": "provvigioni_due_parti",
+      "richiede": {
+        "provvigioni": [
+          "parte",
+          "percentuale",
+          "base_imponibile",
+          "descrizione",
+          "trattativa",
+          "cliente",
+          "tipo",
+          "data_scadenza"
+        ],
+        "clienti": []
+      },
+      "aggiungi": [
+        {
+          "block_type": "relation",
+          "key": "venditore",
+          "label": "Venditore",
+          "type": "many_to_one",
+          "target_module": "clienti",
+          "display_field": "nome"
+        },
+        {
+          "block_type": "relation",
+          "key": "acquirente",
+          "label": "Acquirente",
+          "type": "many_to_one",
+          "target_module": "clienti",
+          "display_field": "nome"
+        },
+        {
+          "block_type": "field",
+          "key": "prov_venditore_perc",
+          "label": "Provvigione venditore (%)",
+          "type": "number"
+        },
+        {
+          "block_type": "field",
+          "key": "prov_acquirente_perc",
+          "label": "Provvigione acquirente (%)",
+          "type": "number"
+        },
+        {
+          "block_type": "field",
+          "key": "provvigioni_generate_il",
+          "label": "Provvigioni generate il",
+          "type": "date"
+        },
+        {
+          "block_type": "automation",
+          "label": "Provvigioni alla firma del preliminare",
+          "trigger": {
+            "evento": "cambio_stato",
+            "stato": "preliminare_firmato"
+          },
+          "azioni": [
+            {
+              "kind": "condition",
+              "a": "provvigioni_generate_il",
+              "op": "!=",
+              "b": {
+                "literal": "provvigioni_generate_il"
+              },
+              "then": [],
+              "otherwise": [
+                {
+                  "kind": "condition",
+                  "a": "prov_venditore_perc",
+                  "op": ">",
+                  "b": {
+                    "literal": 0
+                  },
+                  "then": [
+                    {
+                      "target": "__interno__",
+                      "azione": "crea_record",
+                      "config": {
+                        "modulo": "provvigioni",
+                        "dati": {
+                          "descrizione": "Provvigione venditore",
+                          "trattativa": "__origine_id__",
+                          "cliente": "campo:venditore",
+                          "parte": "Venditore",
+                          "tipo": "Provvigione preliminare",
+                          "percentuale": "campo:prov_venditore_perc",
+                          "base_imponibile": "campo:prezzo_concordato",
+                          "data_scadenza": "campo:data_rogito",
+                          "_stato": "da_fatturare"
+                        }
+                      }
+                    },
+                    {
+                      "target": "__interno__",
+                      "azione": "aggiorna_record",
+                      "config": {
+                        "modulo": "trattative",
+                        "id_field": "__self__",
+                        "campo": "provvigioni_generate_il",
+                        "operazione": "set",
+                        "valore": "_oggi_"
+                      }
+                    }
+                  ],
+                  "otherwise": []
+                },
+                {
+                  "kind": "condition",
+                  "a": "prov_acquirente_perc",
+                  "op": ">",
+                  "b": {
+                    "literal": 0
+                  },
+                  "then": [
+                    {
+                      "target": "__interno__",
+                      "azione": "crea_record",
+                      "config": {
+                        "modulo": "provvigioni",
+                        "dati": {
+                          "descrizione": "Provvigione acquirente",
+                          "trattativa": "__origine_id__",
+                          "cliente": "campo:acquirente",
+                          "parte": "Acquirente",
+                          "tipo": "Provvigione preliminare",
+                          "percentuale": "campo:prov_acquirente_perc",
+                          "base_imponibile": "campo:prezzo_concordato",
+                          "data_scadenza": "campo:data_rogito",
+                          "_stato": "da_fatturare"
+                        }
+                      }
+                    },
+                    {
+                      "target": "__interno__",
+                      "azione": "aggiorna_record",
+                      "config": {
+                        "modulo": "trattative",
+                        "id_field": "__self__",
+                        "campo": "provvigioni_generate_il",
+                        "operazione": "set",
+                        "valore": "_oggi_"
+                      }
+                    }
+                  ],
+                  "otherwise": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
