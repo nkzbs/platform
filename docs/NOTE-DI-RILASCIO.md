@@ -2,6 +2,18 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.23 — 6 novembre 2026
+
+**Documento da firmare, ricaricare e gestire in ottica GDPR.** La nuova Anagrafica di un cliente genera un PDF da scaricare e far firmare; la copia firmata si ricarica sul record e registra consensi, data, versione e scadenza dei dati.
+
+- **Nuova modalità del «Documento da modello»** (Builder → «Cosa fa il bottone»): «Genera un PDF da scaricare, far firmare e ricaricare». Si sceglie il tipo dell'allegato firmato, lo stato dopo la firma, i consensi (campi spuntabili), dove scrivere data della firma, versione del testo e fino a quando si conservano i dati (data della firma + N mesi).
+- **Nel dettaglio del record**: anteprima modificabile, «Scarica PDF da firmare» (A4, caselle da barrare `[ ]`, riquadro Luogo e data / Firma, «Pagina N di M»), poi le copie già firmate, le caselle dei consensi del foglio e il caricamento del file (PDF o foto).
+- **Revoca**: ricaricare un nuovo firmato riscrive i consensi e aggiunge una copia; lo storico resta nella cronologia del record e in Attività.
+- **Per zucca**: «Anagrafica + privacy (da firmare)» sui Clienti, con consensi (comunicazioni commerciali, comunicazione a partner e portali) e conservazione 10 anni. Al primo avvio il seed crea da sé i 5 campi che servono; se il modulo ha già un campo con lo stesso nome ma di tipo diverso, il documento non si applica.
+- **Nuovo filtro** `{{campo|casella}}` nei modelli: `[X]` se spuntato, `[ ]` altrimenti.
+- **Da sapere**: non è firma elettronica (carta firmata e scansionata); il testo dell'informativa è un modello da far rivedere da chi cura la privacy; nessun promemoria alla scadenza della conservazione (si fa con le automazioni). Nuova dipendenza `pdfkit` nel backend del core.
+- **Test**: `documento-firma.test.js` (11) e seed in `documento-da-modello.test.js` (32); suite del core 85.
+
 ## 0.4.22 — 6 novembre 2026
 
 **Abbinamento tra moduli: «Immobili adatti» su un cliente, «Richieste compatibili» su un immobile.** Idea ricavata dall'analisi di Gestim (l'incrocio automatico tra immobili e richieste è la funzione che un'agenzia usa di più), costruita come primitiva generica e non come codice per zucca.

@@ -9,7 +9,8 @@
 //  - UNA volta sola per blocco: dopo l'applicazione resta un marcatore (tabella `seed_applicati`).
 //    Se poi qualcuno toglie o cambia il blocco dal Builder, al riavvio NON ricompare.
 //  - Solo dove ha senso: il modulo deve esistere ed essere installato e avere TUTTI i campi (e le
-//    relazioni) che il blocco cita. Un tenant con un modulo omonimo ma diverso non viene toccato.
+//    relazioni) che il blocco cita (esclusi i campi che il seed dichiara in «aggiungi_campi» e crea
+//    lui). Un tenant con un modulo omonimo ma diverso non viene toccato.
 //  - Passa dalle rotte vere del Builder (bozza + pubblicazione, con la sua validazione), mai con una
 //    scrittura diretta su schema_json.
 //  - Idempotente e senza effetti dove non c'è niente da fare: ogni avvio costa qualche lettura.
@@ -37,6 +38,7 @@ function modelloApplicabile(az, steps, moduliPerSlug) {
     if (!bersaglio || !bersaglio.has(campo)) return false;
   }
   if (az.on_send_state && !steps.some((s) => s.block_type === 'workflow_state' && s.key === az.on_send_state)) return false;
+  if (az.on_signed_state && !steps.some((s) => s.block_type === 'workflow_state' && s.key === az.on_signed_state)) return false;
   return true;
 }
 
@@ -94,10 +96,21 @@ async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs
       let schema; try { schema = JSON.parse(m.schema_json); } catch (e) { continue; }
       if (schema.version !== 3 || !Array.isArray(schema.steps)) continue;
       if (schema.steps.some((s) => s.block_type === tipo && s.key === az.key)) { segna(chiave); continue; }
-      if (!cfg.applicabile(az, schema.steps, mappa)) { segna(chiave); esiti.push({ slug, key: az.key, esito: 'non applicabile' }); continue; }
+      // `aggiungi_campi`: campi che il blocco usa (es. i consensi di un documento da firmare) e che il
+      // seed crea nel modulo se mancano. Non fanno parte del blocco: si tolgono prima di salvarlo.
+      const { aggiungi_campi: daAggiungere = [], ...blocco } = az;
+      const esistenti = new Set(schema.steps.filter((s) => s.block_type === 'field' || s.block_type === 'computed').map((s) => s.key));
+      const nuoviCampi = daAggiungere.filter((f) => f && f.key && !esistenti.has(f.key)).map((f) => ({ id: 'f_' + f.key, block_type: 'field', ...f }));
+      const stepsConCampi = [...schema.steps, ...nuoviCampi];
+      // Un campo con la stessa chiave ma di un altro tipo (es. «consenso_marketing» testo libero) non si
+      // tocca: il documento non sarebbe coerente. Si segna come non applicabile, senza riprovare a ogni avvio.
+      if (daAggiungere.some((f) => f && schema.steps.some((s) => (s.block_type === 'field') && s.key === f.key && s.type !== f.type))) {
+        segna(chiave); esiti.push({ slug, key: az.key, esito: 'non applicabile' }); continue;
+      }
+      if (!cfg.applicabile(blocco, stepsConCampi, mappa)) { segna(chiave); esiti.push({ slug, key: az.key, esito: 'non applicabile' }); continue; }
       if (!admin) continue;
 
-      const nuovo = { version: 3, steps: [...schema.steps, { id: cfg.idPrefisso + Math.random().toString(36).slice(2, 10), block_type: tipo, ...az }] };
+      const nuovo = { version: 3, steps: [...stepsConCampi, { id: cfg.idPrefisso + Math.random().toString(36).slice(2, 10), block_type: tipo, ...blocco }] };
       const bozza = await callAs(admin, 'PUT', '/builder/' + slug + '/draft', { schema: nuovo });
       if (!bozza.ok) { console.error('[seed-blocchi] bozza ' + slug + '/' + az.key + ' fallita:', JSON.stringify(bozza.data)); esiti.push({ slug, key: az.key, esito: 'errore bozza' }); continue; }
       const pub = await callAs(admin, 'POST', '/builder/' + slug + '/publish', {});

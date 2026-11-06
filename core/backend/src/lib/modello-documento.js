@@ -11,6 +11,7 @@
 //   {{campo|linea}}              se vuoto: una riga da compilare a mano  ___________________________
 //   {{campo|vuoto}}              se vuoto: niente
 //   {{campo|minuscolo}}  {{campo|maiuscolo}}
+//   {{campo|casella}}            [X] se il campo è spuntato, [ ] altrimenti (per i moduli da firmare)
 //   {{relazione.campo}}          campo del record collegato tramite una relazione del modulo
 //   {{@azienda}} {{@indirizzo}} {{@piva}}   dati del tenant (Impostazioni)
 //   {{@oggi}}                    data di oggi, in italiano
@@ -40,7 +41,13 @@ function inTesto(v) {
   return String(v);
 }
 
+// «casella»: per i moduli da firmare su carta, una casella da spuntare a penna ([X] data, [ ] non data).
+function eSpuntato(v) {
+  return v === true || v === 1 || (typeof v === 'string' && ['true', '1', 'si', 'sì', 'yes'].includes(v.trim().toLowerCase()));
+}
+
 function applicaFiltri(valore, filtri) {
+  if (filtri.includes('casella')) return eSpuntato(valore) ? '[X]' : '[ ]';
   let testo = vuoto(valore) && valore !== false ? '' : inTesto(valore);
   let eVuoto = testo === '';
   let fallback = '—';

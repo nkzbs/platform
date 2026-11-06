@@ -463,7 +463,47 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
     const res = await api.post('/records/' + mod.slug + '/' + recordId + '/documento/' + az.key + '/anteprima', {})
     setDocInPreparazione(null)
     if (!res.ok) { toast((res.data && res.data.error) || 'Preparazione non riuscita', 'error'); return }
-    setBozzaDoc({ key: az.key, label: az.label, icon: az.icon || 'mail', oggetto: res.data.oggetto, corpo: res.data.corpo, destinatario: res.data.destinatario })
+    const consensi = {}
+    ;(az.consents || []).forEach((c) => { consensi[c.field] = !!(record && record.data && record.data[c.field]) })
+    setBozzaDoc({ key: az.key, label: az.label, icon: az.icon || 'mail', oggetto: res.data.oggetto, corpo: res.data.corpo, destinatario: res.data.destinatario, firma: az.delivery === 'firma', consents: az.consents || [], consensi, signedType: az.signed_type || az.key + '_firmato', file: null })
+  }
+
+  // Documento da firmare: si scarica il PDF del testo approvato, si firma su carta, si ricarica la
+  // scansione/foto e si registrano i consensi spuntati sul foglio (data, versione e scadenza dei dati
+  // le calcola il server dal documento).
+  const [lavorandoFirma, setLavorandoFirma] = useState(false)
+  const scaricaPdf = async () => {
+    setLavorandoFirma(true)
+    try {
+      const r = await fetch(API + '/records/' + mod.slug + '/' + recordId + '/documento/' + bozzaDoc.key + '/pdf', {
+        method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ corpo: bozzaDoc.corpo }),
+      })
+      if (!r.ok) { const j = await r.json().catch(() => ({})); toast(j.error || 'Creazione del PDF non riuscita', 'error'); return }
+      const url = URL.createObjectURL(await r.blob())
+      const a = document.createElement('a')
+      a.href = url; a.download = bozzaDoc.key + '-' + recordId + '.pdf'
+      document.body.appendChild(a); a.click(); a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 2000)
+    } finally { setLavorandoFirma(false) }
+  }
+  const registraFirmato = async () => {
+    if (!bozzaDoc.file) { toast('Scegli prima il file firmato (PDF o foto)', 'error'); return }
+    setLavorandoFirma(true)
+    try {
+      const body = new FormData()
+      body.append('file', bozzaDoc.file)
+      const up = await fetch(API + '/uploads', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body })
+      if (!up.ok) { const j = await up.json().catch(() => ({})); toast(j.error || 'Caricamento non riuscito', 'error'); return }
+      const uploaded = await up.json()
+      const res = await api.post('/records/' + mod.slug + '/' + recordId + '/documento/' + bozzaDoc.key + '/firmato', { upload_id: uploaded.id, consensi: bozzaDoc.consensi })
+      if (!res.ok) { toast((res.data && res.data.error) || 'Registrazione non riuscita', 'error'); return }
+      const fatto = bozzaDoc
+      setBozzaDoc(null)
+      toast('«' + fatto.label + '» firmato registrato' + (res.data.stato_aggiornato ? ' — stato del record aggiornato' : ''))
+      const r = await api.get('/records/' + mod.slug + '/' + recordId)
+      if (r) { setRecord(r); if (onSaved) onSaved(r) }
+      loadAttachments()
+    } finally { setLavorandoFirma(false) }
   }
   const inviaDocumento = async () => {
     setInviandoDoc(true)
@@ -543,21 +583,54 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
             {bozzaDoc && (
               <div className="glass-panel p-4 mb-5 border-accent/30">
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="text-xs font-semibold text-ink flex items-center gap-1.5"><Icon name={bozzaDoc.icon} size={13} />{bozzaDoc.label} — rivedi o modifica prima di inviare</span>
+                  <span className="text-xs font-semibold text-ink flex items-center gap-1.5"><Icon name={bozzaDoc.icon} size={13} />{bozzaDoc.label} — {bozzaDoc.firma ? 'rivedi, scarica, firma e ricarica' : 'rivedi o modifica prima di inviare'}</span>
                 </div>
+                {!bozzaDoc.firma && (<>
                 <label className="text-xs text-gray-400 block mb-1">Oggetto</label>
                 <input value={bozzaDoc.oggetto} onChange={(e) => setBozzaDoc({ ...bozzaDoc, oggetto: e.target.value })}
                   className="w-full bg-surface-page border border-gray-800 rounded-lg px-3 py-2 text-sm text-ink mb-3" />
+                </>)}
                 <label className="text-xs text-gray-400 block mb-1">Testo del documento</label>
                 <textarea value={bozzaDoc.corpo} onChange={(e) => setBozzaDoc({ ...bozzaDoc, corpo: e.target.value })} rows={14}
                   className="w-full bg-surface-page border border-gray-800 rounded-lg px-3 py-2 text-xs text-gray-200 font-mono leading-relaxed mb-3" />
-                {bozzaDoc.destinatario
-                  ? <div className="text-xs text-gray-400 mb-3">Sarà spedito a <span className="text-ink">{bozzaDoc.destinatario}</span></div>
-                  : <div className="text-xs text-red-400 mb-3">Non c'è un indirizzo email a cui spedirlo: aggiungilo al record (o al record collegato) da "Modifica" prima di inviare.</div>}
-                <div className="flex gap-2">
-                  <button onClick={() => setBozzaDoc(null)} className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg transition text-sm">Annulla</button>
-                  <button onClick={inviaDocumento} disabled={inviandoDoc || !bozzaDoc.destinatario} className="flex-1 bg-accent hover:opacity-90 disabled:opacity-50 text-white py-2 rounded-lg transition text-sm font-medium">{inviandoDoc ? 'Invio…' : 'Invia via email'}</button>
-                </div>
+                {bozzaDoc.firma ? (
+                  <>
+                    <div className="flex gap-2 mb-4">
+                      <button onClick={() => setBozzaDoc(null)} className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg transition text-sm">Chiudi</button>
+                      <button onClick={scaricaPdf} disabled={lavorandoFirma} className="flex-1 bg-accent hover:opacity-90 disabled:opacity-50 text-white py-2 rounded-lg transition text-sm font-medium flex items-center justify-center gap-1.5"><Icon name="download" size={13} />Scarica PDF da firmare</button>
+                    </div>
+                    <div className="border-t border-gray-800 pt-3">
+                      <div className="text-xs font-semibold text-ink mb-2">Documento firmato</div>
+                      {attachments.filter((a) => a.tipo === bozzaDoc.signedType).length > 0 && (
+                        <div className="text-xs text-gray-400 mb-2">Già registrati: {attachments.filter((a) => a.tipo === bozzaDoc.signedType).map((a) => a.original_name + ' (' + String(a.created_at).slice(0, 10) + ')').join(', ')}</div>
+                      )}
+                      {bozzaDoc.consents.length > 0 && (
+                        <div className="mb-3">
+                          <div className="text-xs text-gray-400 mb-1.5">Consensi dati sul foglio firmato</div>
+                          {bozzaDoc.consents.map((c) => (
+                            <label key={c.field} className="flex items-center gap-2 text-sm text-gray-200 mb-1 cursor-pointer">
+                              <input type="checkbox" checked={!!bozzaDoc.consensi[c.field]} onChange={(e) => setBozzaDoc({ ...bozzaDoc, consensi: { ...bozzaDoc.consensi, [c.field]: e.target.checked } })} />
+                              {c.label || c.field}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                      <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" onChange={(e) => setBozzaDoc({ ...bozzaDoc, file: (e.target.files && e.target.files[0]) || null })}
+                        className="w-full text-xs text-gray-300 mb-3 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-800 file:px-3 file:py-2 file:text-white" />
+                      <button onClick={registraFirmato} disabled={lavorandoFirma || !bozzaDoc.file} className="w-full bg-accent hover:opacity-90 disabled:opacity-50 text-white py-2 rounded-lg transition text-sm font-medium">{lavorandoFirma ? 'Un attimo…' : 'Registra documento firmato'}</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {bozzaDoc.destinatario
+                      ? <div className="text-xs text-gray-400 mb-3">Sarà spedito a <span className="text-ink">{bozzaDoc.destinatario}</span></div>
+                      : <div className="text-xs text-red-400 mb-3">Non c'è un indirizzo email a cui spedirlo: aggiungilo al record (o al record collegato) da "Modifica" prima di inviare.</div>}
+                    <div className="flex gap-2">
+                      <button onClick={() => setBozzaDoc(null)} className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg transition text-sm">Annulla</button>
+                      <button onClick={inviaDocumento} disabled={inviandoDoc || !bozzaDoc.destinatario} className="flex-1 bg-accent hover:opacity-90 disabled:opacity-50 text-white py-2 rounded-lg transition text-sm font-medium">{inviandoDoc ? 'Invio…' : 'Invia via email'}</button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
             <div className="space-y-2 mb-5">

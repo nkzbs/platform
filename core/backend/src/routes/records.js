@@ -1136,6 +1136,62 @@ router.post('/:slug/:id/documento/:key/invia', requireAuth, requireAdmin, requir
   res.json({ ok: true, stato_aggiornato: statoAggiornato });
 });
 
+// Documento da scaricare: lo stesso testo approvato in anteprima diventa un PDF da stampare e firmare.
+// Vale per qualunque documento del modulo (anche quelli che si spediscono per email).
+router.post('/:slug/:id/documento/:key/pdf', requireAuth, requireAdmin, requireModuleAccess, async (req, res) => {
+  const ctx = contestoDocumento(req);
+  if (ctx.errore) return res.status(ctx.errore[0]).json({ error: ctx.errore[1] });
+  const { corpo } = req.body || {};
+  if (typeof corpo !== 'string' || !corpo.trim()) return res.status(400).json({ error: 'Testo del documento mancante' });
+  const tenant = db.prepare('SELECT ragione_sociale FROM tenant_settings WHERE id = 1').get() || {};
+  try {
+    const pdf = await require('../lib/documento-pdf').creaPdf({ titolo: ctx.azione.label || 'Documento', corpo, azienda: tenant.ragione_sociale, riquadroFirma: ctx.azione.delivery === 'firma', piePagina: ctx.azione.label || '' });
+    logAudit(req.user.username, 'record.scarica_documento', req.params.slug + '#' + ctx.record.id, { documento: ctx.azione.key });
+    res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="' + ctx.azione.key + '-' + ctx.record.id + '.pdf"', 'Cache-Control': 'no-store' });
+    res.send(pdf);
+  } catch (e) {
+    res.status(500).json({ error: 'Creazione del PDF non riuscita' });
+  }
+});
+
+// Documento firmato: il file caricato (scansione o foto del foglio firmato) si allega al record e,
+// se il documento lo prevede, si registrano i consensi dati, la data della firma, la versione del
+// testo e fino a quando si conservano i dati. Richiamare la rotta con un nuovo firmato (anche per
+// revocare un consenso) aggiunge una nuova copia e aggiorna i campi: lo storico resta nella cronologia.
+router.post('/:slug/:id/documento/:key/firmato', requireAuth, requireAdmin, requireModuleAccess, (req, res) => {
+  const ctx = contestoDocumento(req);
+  if (ctx.errore) return res.status(ctx.errore[0]).json({ error: ctx.errore[1] });
+  if (ctx.azione.delivery !== 'firma') return res.status(400).json({ error: 'Questo documento non prevede la firma' });
+  const schema = ctx.schema;
+  const rule = ruleFor(schema, req.user.role);
+  if (rule && (!rule.edit || !ownedOrAllowed(rule, ctx.record, req.user))) return res.status(403).json({ error: 'Non hai i permessi per modificare questo record' });
+
+  const { upload_id, consensi } = req.body || {};
+  const up = upload_id ? db.prepare('SELECT id, uploaded_by, mime_type FROM uploads WHERE id = ?').get(upload_id) : null;
+  if (!up) return res.status(400).json({ error: 'Carica prima il documento firmato' });
+  if (up.uploaded_by !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Puoi allegare solo file che hai caricato tu' });
+  if (!(up.mime_type === 'application/pdf' || /^image\/(jpeg|png|webp)$/.test(up.mime_type))) return res.status(400).json({ error: 'Il documento firmato deve essere un PDF o una foto (JPEG, PNG, WebP)' });
+
+  const { calcolaAggiornamento, TIPO_FIRMATO } = require('../lib/documento-firmato');
+  const oggi = new Date().toISOString().slice(0, 10);
+  const patch = calcolaAggiornamento(ctx.azione, consensi, oggi);
+  const tipo = TIPO_FIRMATO(ctx.azione);
+
+  db.prepare('INSERT INTO record_attachments (module_slug, record_id, upload_id, tipo) VALUES (?, ?, ?, ?)').run(req.params.slug, ctx.record.id, up.id, tipo);
+  const beforeData = JSON.parse(ctx.record.data);
+  if (Object.keys(patch).length) {
+    db.prepare('UPDATE records SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND module_slug = ?').run(JSON.stringify({ ...beforeData, ...patch }), ctx.record.id, req.params.slug);
+    const dopo = db.prepare('SELECT * FROM records WHERE id = ?').get(ctx.record.id);
+    const attached = attachComputedFields({ ...dopo, data: decryptFields(JSON.parse(dopo.data), schema.fields) }, schema, req.params.slug);
+    logHistory(req.params.slug, ctx.record.id, req.user.username, 'update', beforeData, attached.data);
+    Object.keys(patch).forEach((k) => { if (JSON.stringify(beforeData[k]) !== JSON.stringify(patch[k])) fireTrigger(req.params.slug, 'modifica_campo', attached.data, attached.id, { campo: k }); });
+  }
+  logAudit(req.user.username, 'record.documento_firmato', req.params.slug + '#' + ctx.record.id, { documento: ctx.azione.key, consensi: patch });
+  let statoAggiornato = false;
+  if (ctx.azione.on_signed_state) statoAggiornato = runTransition(req.user, req.params.slug, req.params.id, ctx.azione.on_signed_state).status === 200;
+  res.json({ ok: true, tipo, campi_aggiornati: Object.keys(patch), stato_aggiornato: statoAggiornato });
+});
+
 // Cancellare un piano a rate (debiti_casa/debiti_personali, dichiarato con una scheda "Piani rateali" — Builder →
 // Vista genitore-figli) lasciava le rate già generate come righe di spesa orfane, collegate a un piano che non
 // esiste più: bisognava poi cercarle e cancellarle una per una a mano (segnalato dall'utente il 28/10). Qui si

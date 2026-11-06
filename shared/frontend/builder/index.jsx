@@ -1930,6 +1930,10 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                     ...collegati.filter((c) => c.type === 'email' || c.type === 'text').map((c) => ({ value: c.path, label: c.label })),
                   ]
                   const stati = (schema.steps || []).filter((st) => st.block_type === 'workflow_state')
+                  const perFirma = step.delivery === 'firma'
+                  const campiDi = (tipi) => propri.filter((f) => tipi.includes(f.type)).map((f) => ({ value: f.key, label: f.label || f.key }))
+                  const consensi = step.consents || []
+                  const setConsensi = (next) => updateStep(idx, 'consents', next)
                   const inserisci = (path) => {
                     const testo = '{{' + path + '}}'
                     const el = document.getElementById('docbody-' + step.id)
@@ -1960,9 +1964,16 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                         </div>
                       </div>
                       <div className="mb-3">
+                        <label className="text-[10px] text-gray-500 block mb-1">Cosa fa il bottone</label>
+                        <Select value={perFirma ? 'firma' : 'email'} onChange={(v) => updateStep(idx, 'delivery', v)}
+                          options={[{ value: 'email', label: 'Prepara il testo e lo spedisce per email' }, { value: 'firma', label: 'Genera un PDF da scaricare, far firmare e ricaricare' }]} />
+                      </div>
+                      {!perFirma && (
+                      <div className="mb-3">
                         <label className="text-[10px] text-gray-500 block mb-1">Oggetto dell'email</label>
                         <input className={inp} placeholder="es. Documenti da firmare — {{nome}}" value={step.subject || ''} onChange={(e) => updateStep(idx, 'subject', e.target.value)} />
                       </div>
+                      )}
                       <div className="mb-1 flex items-center justify-between gap-2">
                         <label className="text-[10px] text-gray-500">Testo del documento</label>
                         <Select value="" onChange={(v) => v && inserisci(v)} placeholder="Inserisci un campo…" options={segnaposti} className="text-xs w-56" />
@@ -1970,9 +1981,10 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                       <textarea id={'docbody-' + step.id} rows={12} className={inp + ' font-mono text-xs leading-relaxed'}
                         placeholder={'Gentile {{nome}},\n…'} value={step.body || ''} onChange={(e) => updateStep(idx, 'body', e.target.value)} />
                       <div className="text-[10px] text-gray-600 mt-1 mb-3 leading-relaxed">
-                        {'{{campo}}'} il valore (vuoto → «—») · {'{{campo|linea}}'} vuoto → riga da compilare · {'{{campo|vuoto}}'} vuoto → niente · {'|minuscolo'} {'|maiuscolo'} ·
+                        {'{{campo}}'} il valore (vuoto → «—») · {'{{campo|linea}}'} vuoto → riga da compilare · {'{{campo|vuoto}}'} vuoto → niente · {'|minuscolo'} {'|maiuscolo'} {'|casella'} ·
                         {' {{relazione.campo}}'} da un record collegato · {'{{#campo}}…{{/campo}}'} solo se compilato · {'{{^campo}}…{{/campo}}'} solo se vuoto. Un campo scritto male blocca la pubblicazione.
                       </div>
+                      {!perFirma ? (
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="text-[10px] text-gray-500 block mb-1">Spedisci a (campo email)</label>
@@ -1984,6 +1996,60 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                             options={[{ value: '', label: 'Nessun cambio di stato' }, ...stati.map((st) => ({ value: st.key, label: st.label || st.key }))]} />
                         </div>
                       </div>
+                      ) : (
+                      <div className="border-t border-gray-800 pt-3 space-y-3">
+                        <div className="text-[10px] text-gray-600 leading-relaxed">{'{{campo|casella}}'} stampa [X] se il campo è spuntato, [ ] altrimenti: usalo per i consensi da spuntare a penna. Quando torna il foglio firmato, i campi qui sotto si aggiornano da soli e il file resta allegato al record.</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10px] text-gray-500 block mb-1">Tipo dell'allegato firmato</label>
+                            <input className={inp + ' font-mono text-xs'} placeholder={(step.key || 'documento') + '_firmato'} value={step.signed_type || ''} onChange={(e) => updateStep(idx, 'signed_type', e.target.value)} />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-gray-500 block mb-1">Dopo la firma, porta il record a</label>
+                            <Select value={step.on_signed_state || ''} onChange={(v) => updateStep(idx, 'on_signed_state', v)} placeholder="Nessun cambio di stato"
+                              options={[{ value: '', label: 'Nessun cambio di stato' }, ...stati.map((st) => ({ value: st.key, label: st.label || st.key }))]} />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-[10px] text-gray-500">Consensi GDPR registrati (campi spuntabili)</label>
+                            <button onClick={() => setConsensi([...consensi, { field: '', label: '' }])} className="text-[10px] text-teal-400 hover:text-teal-300">+ Aggiungi consenso</button>
+                          </div>
+                          {consensi.length === 0 && <div className="text-[10px] text-gray-600">Nessun consenso: il firmato viene solo allegato.</div>}
+                          {consensi.map((c, ci) => (
+                            <div key={ci} className="grid grid-cols-[1fr_1fr_auto] gap-2 mb-1.5">
+                              <Select value={c.field || ''} onChange={(v) => setConsensi(consensi.map((x, i) => i === ci ? { ...x, field: v } : x))} placeholder="Campo (spunta)…" options={campiDi(['checkbox'])} />
+                              <input className={inp} placeholder="Come lo chiede il foglio" value={c.label || ''} onChange={(e) => setConsensi(consensi.map((x, i) => i === ci ? { ...x, label: e.target.value } : x))} />
+                              <button onClick={() => setConsensi(consensi.filter((_, i) => i !== ci))} className="text-red-400/60 hover:text-red-400"><Icon name="trash" size={14} /></button>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10px] text-gray-500 block mb-1">Data della firma → campo</label>
+                            <Select value={step.signed_date_field || ''} onChange={(v) => updateStep(idx, 'signed_date_field', v)} placeholder="Non registrare"
+                              options={[{ value: '', label: 'Non registrare' }, ...campiDi(['date', 'datetime'])]} />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-gray-500 block mb-1">Versione del testo (es. 2026-11) → campo</label>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              <input className={inp} placeholder="versione" value={step.version || ''} onChange={(e) => updateStep(idx, 'version', e.target.value)} />
+                              <Select value={step.version_field || ''} onChange={(v) => updateStep(idx, 'version_field', v)} placeholder="Non registrare"
+                                options={[{ value: '', label: 'Non registrare' }, ...campiDi(['text', 'textarea', 'select'])]} />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-gray-500 block mb-1">Conserva i dati fino a → campo data</label>
+                            <Select value={step.retention_field || ''} onChange={(v) => updateStep(idx, 'retention_field', v)} placeholder="Non calcolare"
+                              options={[{ value: '', label: 'Non calcolare' }, ...campiDi(['date'])]} />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-gray-500 block mb-1">Mesi di conservazione dalla firma</label>
+                            <input type="number" min="1" className={inp} placeholder="es. 120 (10 anni)" value={step.retention_months || ''} onChange={(e) => updateStep(idx, 'retention_months', e.target.value === '' ? '' : Number(e.target.value))} />
+                          </div>
+                        </div>
+                      </div>
+                      )}
                     </div>
                   )
                 }

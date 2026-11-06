@@ -232,8 +232,10 @@ async function main() {
   const seed = require('./seeds/documenti-immobiliare.json');
   const { applicaSeed } = require('./seed-blocchi-verticale');
   const { percorsiUsati, SEGNAPOSTI_FISSI } = require('./lib/modello-documento');
-  const semplici = (slug) => new Set(seed[slug].flatMap((a) => [...percorsiUsati(a.subject), ...percorsiUsati(a.body), a.recipient])
-    .filter((p) => p && !p.includes('.') && !SEGNAPOSTI_FISSI.includes(p)));
+  // I campi che il seed crea da sé («aggiungi_campi») non vanno messi a mano nel modulo di prova.
+  const creatiDalSeed = new Set(seed.clienti.flatMap((a) => (a.aggiungi_campi || []).map((f) => f.key)));
+  const semplici = (slug) => new Set(seed[slug].flatMap((a) => [...percorsiUsati(a.subject || ''), ...percorsiUsati(a.body), a.recipient])
+    .filter((p) => p && !p.includes('.') && !SEGNAPOSTI_FISSI.includes(p) && !creatiDalSeed.has(p)));
   const campiSeed = (slug) => [...semplici(slug)].map((k) => F(k, k));
   const statoSeed = [
     { id: 'w1', block_type: 'workflow_state', key: 'nuovo', label: 'Nuovo', initial: true },
@@ -249,8 +251,13 @@ async function main() {
   let primoGiro;
   await test('il seed reale si applica ai moduli che hanno i campi giusti (passa dalla validazione del Builder)', async () => {
     primoGiro = await applicaSeed(seed);
-    assertEq(primoGiro.filter((e) => e.esito === 'applicato').map((e) => e.key).sort(), ['antiriciclaggio', 'privacy_incarico', 'scheda_immobile']);
-    assertEq(chiaviDocumento('clienti').sort(), ['antiriciclaggio', 'privacy_incarico']);
+    assertEq(primoGiro.filter((e) => e.esito === 'applicato').map((e) => e.key).sort(), ['anagrafica_privacy', 'antiriciclaggio', 'privacy_incarico', 'scheda_immobile']);
+    assertEq(chiaviDocumento('clienti').sort(), ['anagrafica_privacy', 'antiriciclaggio', 'privacy_incarico']);
+    // Il seed ha creato i campi dei consensi, del tipo giusto, e il documento è «da firmare».
+    const campi = documentiDi('clienti').steps.filter((st) => st.block_type === 'field');
+    assertEq(campi.find((f) => f.key === 'consenso_marketing').type, 'checkbox');
+    assertEq(campi.find((f) => f.key === 'conservazione_fino_al').type, 'date');
+    assertEq(documentiDi('clienti').steps.find((st) => st.key === 'anagrafica_privacy').delivery, 'firma');
     assertEq(chiaviDocumento('immobili'), ['scheda_immobile']);
   });
   await test('dopo l\'applicazione i tre documenti funzionano davvero: anteprima di un cliente e di un immobile', async () => {
@@ -265,14 +272,14 @@ async function main() {
   });
   await test('secondo avvio: niente da fare, nessun documento duplicato', async () => {
     assertEq(await applicaSeed(seed), []);
-    assertEq(chiaviDocumento('clienti').sort(), ['antiriciclaggio', 'privacy_incarico']);
+    assertEq(chiaviDocumento('clienti').sort(), ['anagrafica_privacy', 'antiriciclaggio', 'privacy_incarico']);
   });
   await test('se il documento viene tolto dal Builder, al riavvio NON ricompare', async () => {
     const sc = documentiDi('clienti');
     sc.steps = sc.steps.filter((st) => st.key !== 'antiriciclaggio');
     db.prepare("UPDATE modules SET schema_json = ? WHERE slug = 'clienti'").run(JSON.stringify(sc));
     assertEq(await applicaSeed(seed), []);
-    assertEq(chiaviDocumento('clienti'), ['privacy_incarico']);
+    assertEq(chiaviDocumento('clienti').sort(), ['anagrafica_privacy', 'privacy_incarico']);
   });
   await test('un modulo con lo stesso nome ma senza i campi del modello non viene toccato (e non riprova all\'infinito)', async () => {
     mk('altro_t', [F('nome', 'Nome'), F('email', 'Email')]);
@@ -281,6 +288,14 @@ async function main() {
     assertEq(esiti.map((e) => e.esito), ['non applicabile']);
     assertEq(chiaviDocumento('altro_t'), []);
     assertEq(await applicaSeed(finto), [], 'marcato: non riprova');
+  });
+  await test('un campo con la stessa chiave ma di tipo diverso: documento non applicato, campo intatto, nessun nuovo tentativo', async () => {
+    mk('conflitto_t', [F('nome', 'Nome'), F('consenso', 'Consenso (testo libero)', 'text')]);
+    const finto = { conflitto_t: [{ key: 'k', label: 'K', delivery: 'firma', body: 'x {{nome}} {{consenso|casella}}', consents: [{ field: 'consenso' }], aggiungi_campi: [{ key: 'consenso', label: 'Consenso', type: 'checkbox' }] }] };
+    assertEq((await applicaSeed(finto)).map((e) => e.esito), ['non applicabile']);
+    assertEq(chiaviDocumento('conflitto_t'), []);
+    assertEq(documentiDi('conflitto_t').steps.find((st) => st.key === 'consenso').type, 'text');
+    assertEq(await applicaSeed(finto), []);
   });
   await test('un modulo che non esiste nel tenant non fa nulla e non è un errore', async () => {
     assertEq(await applicaSeed({ inesistente_t: [{ key: 'k', label: 'K', subject: 's', body: 'b', recipient: 'email' }] }), []);

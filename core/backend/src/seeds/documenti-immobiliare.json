@@ -1,5 +1,5 @@
 {
-  "_descrizione": "Azioni «documento da modello» del verticale Mediazione immobiliare, da applicare ai moduli con scripts/applica-azioni-documento.js. Ricavate dai testi che stavano in lib/doc-cliente.js e lib/doc-immobile.js (parità verificata da modello-documento.test.js).",
+  "_descrizione": "Azioni «documento da modello» del verticale Mediazione immobiliare, da applicare ai moduli con scripts/applica-azioni-documento.js. Ricavate dai testi che stavano in lib/doc-cliente.js e lib/doc-immobile.js (parità verificata da modello-documento.test.js). L'«Anagrafica + privacy» è un documento da scaricare, firmare e ricaricare (delivery «firma»): `aggiungi_campi` sono i campi che il seed crea nel modulo se mancano (consensi, data della firma, versione, scadenza di conservazione).",
   "clienti": [
     {
       "key": "privacy_incarico",
@@ -18,6 +18,56 @@
       "body": "MODULO DI ADEGUATA VERIFICA DELLA CLIENTELA (D.Lgs. 231/2007 e successive modifiche)\n\n{{#@azienda}}{{@azienda}}{{/@azienda}}{{^@azienda}}l'agenzia{{/@azienda}}\n{{@oggi}}\n\nGentile {{nome|vuoto}},\n\nai fini dell'incarico di mediazione immobiliare, la normativa antiriciclaggio ci richiede di raccogliere le informazioni seguenti prima di procedere. La preghiamo di completare le parti mancanti e restituire il modulo firmato.\n\nDATI DI IDENTIFICAZIONE DEL CLIENTE\nCognome e Nome: {{nome|linea}}\nCodice Fiscale / P.IVA: {{codice_fiscale_piva|linea}}\nPaese e luogo di nascita: ___________________________\nData di nascita: ___________________________\nIndirizzo: {{indirizzo|linea}}\nComune, provincia, CAP: ___________________________\nPaese di residenza e nazionalità: ___________________________\nPossiede più di una cittadinanza? ☐ No ☐ Sì — quali: ___________________________\nSvolge la maggior parte della Sua attività/vita privata in un luogo diverso dalla residenza? ☐ No ☐ Sì — dove: ___________________________\n\nDOCUMENTO DI IDENTIFICAZIONE\nTipo (carta d'identità / altro): ___________________________\nNumero, rilasciato da, data rilascio e scadenza: ___________________________\n\nTITOLARE EFFETTIVO E DELEGHE\nEsiste un titolare effettivo diverso dal cliente? ☐ No ☐ Sì — nominativo: ___________________________\nSono presenti soggetti delegati ad operare? ☐ No ☐ Sì — nominativo: ___________________________\n\nSITUAZIONE PERSONALE E PROFESSIONALE\nStato civile: ___________________________\nLivello di istruzione: ___________________________\nSettore professionale (codice TAE, vedi tabella allegata dall'agenzia): ___________________________\nDa quanti anni esercita l'attuale professione: ___________________________\nL'attività comporta la gestione di fondi pubblici? ☐ No ☐ Sì, marginale ☐ Sì, componente importante\nDove svolge prevalentemente l'attività economica: ___________________________\n\nPERSONA POLITICAMENTE ESPOSTA (PEP)\nÈ, o è stato nell'ultimo anno, una Persona Politicamente Esposta o le è equiparato (titolare di altre cariche pubbliche, familiare stretto o persona nota per stretti rapporti con una PEP)? ☐ No ☐ Sì — specificare: ___________________________\n\nNATURA, FINALITÀ DEL RAPPORTO E ORIGINE DEI FONDI\nReddito annuo imponibile: ___________________________\nFonte principale del reddito (lavoro dipendente/autonomo, impresa, immobili/investimenti, nessun reddito): ___________________________\nHa mai partecipato a operazioni di rimpatrio o regolarizzazione di attività finanziarie (scudo fiscale, voluntary disclosure)? ☐ No ☐ Sì — quale: ___________________________\nPrincipale origine dei fondi (lavoro, risparmio, vendita beni/strumenti finanziari, eredità/donazione, altro): ___________________________\nPaese di origine dei fondi: ___________________________\nFinalità dell'operazione: ___________________________\n\nIl/La sottoscritto/a dichiara di essere consapevole delle sanzioni penali previste in caso di dichiarazioni mendaci o comunque non veritiere ai sensi della vigente normativa antiriciclaggio (art. 22 del D.Lgs. 231/2007), nonché delle conseguenze derivanti dall'eventuale rifiuto di fornire le ulteriori informazioni richieste.\n\nData e luogo: ___________________________\nFirma del cliente: ___________________________",
       "recipient": "email",
       "on_send_state": "documenti_inviati"
+    },
+    {
+      "key": "anagrafica_privacy",
+      "label": "Anagrafica + privacy (da firmare)",
+      "icon": "file",
+      "delivery": "firma",
+      "body": "SCHEDA ANAGRAFICA E INFORMATIVA PRIVACY (GDPR)\n\nTitolare del trattamento: {{#@azienda}}{{@azienda}}{{/@azienda}}{{^@azienda}}l'agenzia{{/@azienda}}{{#@piva}} — P.IVA {{@piva}}{{/@piva}}{{#@indirizzo}} — {{@indirizzo}}{{/@indirizzo}}\nData: {{@oggi}}\n\nDATI ANAGRAFICI\nNome / ragione sociale: {{nome|linea}}\nTipo soggetto: {{tipo_soggetto|linea}}\nCodice fiscale / P.IVA: {{codice_fiscale_piva|linea}}\nData di nascita: {{data_nascita|linea}}\nIndirizzo: {{indirizzo|linea}}\nEmail: {{email|linea}}\nTelefono: {{telefono|linea}}\n\nCOME USIAMO I SUOI DATI (art. 13 Reg. UE 2016/679)\nFinalità e base giuridica:\na) svolgere l'incarico di mediazione e gestire le trattative — esecuzione del contratto e di misure precontrattuali;\nb) adempiere agli obblighi di legge, in particolare di identificazione e adeguata verifica (D.Lgs. 231/2007), fiscali e contabili — obbligo di legge;\nc) inviarle comunicazioni commerciali su immobili e servizi dell'agenzia — solo se lo consente qui sotto;\nd) comunicare i suoi dati a partner e portali per la promozione dell'immobile — solo se lo consente qui sotto.\nDestinatari: notai, professionisti e consulenti coinvolti nella pratica, enti pubblici per gli adempimenti di legge, fornitori dei sistemi informatici dell'agenzia. I dati non sono diffusi.\nConservazione: per la durata dell'incarico e poi per 10 anni, come richiede la normativa antiriciclaggio; i dati trattati solo con il suo consenso fino alla revoca.\nI suoi diritti: può chiedere accesso, rettifica, cancellazione, limitazione, portabilità dei dati e opporsi al trattamento (artt. 15-22); revocare in ogni momento i consensi qui sotto, senza effetto sul trattamento già fatto; presentare reclamo al Garante per la protezione dei dati personali. Per esercitarli scriva a {{#@azienda}}{{@azienda}}{{/@azienda}}{{^@azienda}}all'agenzia{{/@azienda}}.\n\nI SUOI CONSENSI (barri a penna le caselle che accetta; sono facoltativi e non condizionano l'incarico)\n{{consenso_marketing|casella}} Acconsento a ricevere comunicazioni commerciali (email, telefono, messaggi).\n{{consenso_terzi|casella}} Acconsento alla comunicazione dei miei dati a partner e portali per la promozione dell'immobile.\n\nDichiaro di aver letto l'informativa e che i dati sopra indicati sono esatti.\n",
+      "signed_type": "anagrafica_firmata",
+      "version": "2026-11",
+      "consents": [
+        {
+          "field": "consenso_marketing",
+          "label": "Comunicazioni commerciali"
+        },
+        {
+          "field": "consenso_terzi",
+          "label": "Comunicazione a partner e portali"
+        }
+      ],
+      "signed_date_field": "privacy_firmata_il",
+      "version_field": "privacy_versione",
+      "retention_field": "conservazione_fino_al",
+      "retention_months": 120,
+      "aggiungi_campi": [
+        {
+          "key": "consenso_marketing",
+          "label": "Consenso comunicazioni commerciali",
+          "type": "checkbox"
+        },
+        {
+          "key": "consenso_terzi",
+          "label": "Consenso comunicazione a partner e portali",
+          "type": "checkbox"
+        },
+        {
+          "key": "privacy_firmata_il",
+          "label": "Privacy firmata il",
+          "type": "date"
+        },
+        {
+          "key": "privacy_versione",
+          "label": "Versione informativa firmata",
+          "type": "text"
+        },
+        {
+          "key": "conservazione_fino_al",
+          "label": "Conserva i dati fino al",
+          "type": "date"
+        }
+      ]
     }
   ],
   "immobili": [

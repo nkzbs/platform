@@ -413,11 +413,36 @@ router.post('/:slug/publish', requireAuth, requireAdmin, (req, res) => {
       else if (chiaviDocumento.has(da.key)) errs.push(`la chiave "${da.key}" è usata due volte nello stesso modulo`);
       else chiaviDocumento.add(da.key);
       if (!da.label || !da.label.trim()) errs.push("manca l'etichetta del bottone");
-      if (!da.subject || !da.subject.trim()) errs.push("manca l'oggetto dell'email");
+      const perFirma = da.delivery === 'firma';
+      if (da.delivery && !['email', 'firma'].includes(da.delivery)) errs.push(`modalità "${da.delivery}" non valida (email o firma)`);
+      if (!perFirma && (!da.subject || !da.subject.trim())) errs.push("manca l'oggetto dell'email");
       if (!da.body || !da.body.trim()) errs.push('manca il testo del documento');
-      if (!da.recipient || !da.recipient.trim()) errs.push('manca il destinatario (un campo email di questo record o di un record collegato)');
-      else { const e = erroreDelPercorso(da.recipient.trim(), 'destinatario'); if (e) errs.push(e); }
-      new Set([...percorsiUsati(da.subject), ...percorsiUsati(da.body)]).forEach((p) => { const e = erroreDelPercorso(p, 'nel testo'); if (e) errs.push(e); });
+      if (!perFirma) {
+        if (!da.recipient || !da.recipient.trim()) errs.push('manca il destinatario (un campo email di questo record o di un record collegato)');
+        else { const e = erroreDelPercorso(da.recipient.trim(), 'destinatario'); if (e) errs.push(e); }
+      }
+      if (perFirma) {
+        // Documento da scaricare, firmare e ricaricare: i campi che tiene aggiornati (consensi, data,
+        // scadenza) devono esistere e avere il tipo giusto, altrimenti il «firmato» non scriverebbe nulla.
+        const campo = (k) => (normalized.fields || []).find((f) => f.key === k);
+        const richiedi = (k, tipi, nome) => {
+          if (!k) return;
+          const f = campo(k);
+          if (!f) errs.push(`${nome}: il campo "${k}" non esiste in questo modulo`);
+          else if (!tipi.includes(f.type)) errs.push(`${nome}: il campo "${k}" deve essere di tipo ${tipi.join('/')}`);
+        };
+        (da.consents || []).forEach((c, i) => {
+          if (!c || !c.field) errs.push(`consenso ${i + 1}: manca il campo`);
+          else richiedi(c.field, ['checkbox'], `consenso ${i + 1}`);
+        });
+        richiedi(da.signed_date_field, ['date', 'datetime'], 'data della firma');
+        richiedi(da.version_field, ['text', 'textarea', 'select'], 'versione del documento');
+        richiedi(da.retention_field, ['date'], 'scadenza di conservazione');
+        if (da.retention_field && !(Number(da.retention_months) > 0)) errs.push('scadenza di conservazione: indica per quanti mesi si conservano i dati');
+        if (da.signed_type && !/^[a-z0-9_]+$/.test(da.signed_type)) errs.push('tipo dell\'allegato firmato non valido (solo minuscole, numeri e _)');
+        if (da.on_signed_state && !statiWorkflow.has(da.on_signed_state)) errs.push(`lo stato "${da.on_signed_state}" non esiste nel workflow di questo modulo`);
+      }
+      new Set([...percorsiUsati(da.subject || ''), ...percorsiUsati(da.body)]).forEach((p) => { const e = erroreDelPercorso(p, 'nel testo'); if (e) errs.push(e); });
       if (da.on_send_state && !statiWorkflow.has(da.on_send_state)) errs.push(`lo stato "${da.on_send_state}" non esiste nel workflow di questo modulo`);
       if (errs.length) formulaErrors.push({ label, errors: errs });
     });
