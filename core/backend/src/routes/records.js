@@ -1041,10 +1041,9 @@ router.post('/immobili/:id/valutazione/pdf', requireAuth, requireAdmin, async (r
   if (!existing) return res.status(404).json({ error: 'Immobile non trovato' });
   const data = JSON.parse(existing.data);
   if (!data.report_valutazione) return res.status(400).json({ error: 'Questo immobile non è ancora stato valutato: avvia prima la valutazione.' });
-  const t = db.prepare('SELECT ragione_sociale, indirizzo, piva, logo_url, accent_color FROM tenant_settings WHERE id = 1').get() || {};
   try {
-    const { creaPdfReport, caricaLogo } = require('../lib/report-valutazione-pdf');
-    const pdf = await creaPdfReport({ record: { id: existing.id, data }, report: data.report_valutazione, azienda: { nome: t.ragione_sociale, indirizzo: t.indirizzo, piva: t.piva, colore: t.accent_color }, logo: await caricaLogo(t.logo_url) });
+    const identita = await require('../lib/identita-pdf').caricaIdentita(db);
+    const pdf = await require('../lib/report-valutazione-pdf').creaPdfReport({ record: { id: existing.id, data }, report: data.report_valutazione, ...identita });
     logAudit(req.user.username, 'record.scarica_valutazione', 'immobili#' + existing.id, {});
     res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="valutazione-' + existing.id + '.pdf"', 'Cache-Control': 'no-store' });
     res.send(pdf);
@@ -1162,9 +1161,9 @@ router.post('/:slug/:id/documento/:key/pdf', requireAuth, requireAdmin, requireM
   if (ctx.errore) return res.status(ctx.errore[0]).json({ error: ctx.errore[1] });
   const { corpo } = req.body || {};
   if (typeof corpo !== 'string' || !corpo.trim()) return res.status(400).json({ error: 'Testo del documento mancante' });
-  const tenant = db.prepare('SELECT ragione_sociale FROM tenant_settings WHERE id = 1').get() || {};
   try {
-    const pdf = await require('../lib/documento-pdf').creaPdf({ titolo: ctx.azione.label || 'Documento', corpo, azienda: tenant.ragione_sociale, riquadroFirma: ctx.azione.delivery === 'firma', piePagina: ctx.azione.label || '' });
+    const identita = await require('../lib/identita-pdf').caricaIdentita(db);
+    const pdf = await require('../lib/documento-pdf').creaPdf({ titolo: ctx.azione.label || 'Documento', corpo, ...identita, riquadroFirma: ctx.azione.delivery === 'firma', piePagina: ctx.azione.label || '' });
     logAudit(req.user.username, 'record.scarica_documento', req.params.slug + '#' + ctx.record.id, { documento: ctx.azione.key });
     res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="' + ctx.azione.key + '-' + ctx.record.id + '.pdf"', 'Cache-Control': 'no-store' });
     res.send(pdf);

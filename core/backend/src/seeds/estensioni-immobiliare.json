@@ -204,5 +204,276 @@
         }
       ]
     }
+  ],
+  "immobili": [
+    {
+      "key": "scheda_completa",
+      "_nota": "Porta il modulo Immobili a coprire per intero la scheda di acquisizione dell'agenzia: i campi che mancavano e le caselle da spuntare che erano testo libero (ora elenchi a scelta multipla).",
+      "converti": [
+        {
+          "key": "composizione_vani",
+          "label": "Composizione vani",
+          "type": "multiselect",
+          "options": [
+            "Ingresso",
+            "Soggiorno",
+            "Cucina separata",
+            "Cucina a vista",
+            "Cucina abitabile",
+            "Cucinotto",
+            "Corridoio",
+            "Ripostiglio",
+            "Veranda"
+          ]
+        },
+        {
+          "key": "sfogo_esterno",
+          "label": "Sfogo esterno",
+          "type": "multiselect",
+          "options": [
+            "Balcone",
+            "Terrazzo",
+            "Loggia",
+            "Portico"
+          ]
+        },
+        {
+          "key": "pertinenze_box",
+          "label": "Pertinenze e box",
+          "type": "multiselect",
+          "options": [
+            "Cantina",
+            "Solaio / soffitta",
+            "Garage singolo",
+            "Garage doppio (lungo)",
+            "Garage doppio (largo)",
+            "Basculante elettrica",
+            "Basculante manuale"
+          ]
+        },
+        {
+          "key": "posto_auto",
+          "label": "Posto auto",
+          "type": "multiselect",
+          "options": [
+            "Di proprietà",
+            "Condominiale",
+            "Coperto",
+            "Scoperto"
+          ]
+        },
+        {
+          "key": "oscuranti_protezioni",
+          "label": "Oscuranti e protezioni",
+          "type": "multiselect",
+          "options": [
+            "Tapparelle",
+            "Tapparelle elettriche",
+            "Ante / scuroni",
+            "Inferriate",
+            "Zanzariere"
+          ]
+        },
+        {
+          "key": "pavimenti",
+          "label": "Pavimenti",
+          "type": "multiselect",
+          "options": [
+            "Gres",
+            "Parquet",
+            "Ceramica",
+            "Laminato",
+            "Altro"
+          ]
+        },
+        {
+          "key": "tipologia_diffusione_riscaldamento",
+          "label": "Tipologia diffusione riscaldamento",
+          "type": "multiselect",
+          "options": [
+            "A pavimento",
+            "Radiatori"
+          ]
+        },
+        {
+          "key": "alimentazione_riscaldamento",
+          "label": "Alimentazione riscaldamento",
+          "type": "multiselect",
+          "options": [
+            "Metano",
+            "Pompa di calore",
+            "Stufa a pellet",
+            "Stufa a legna",
+            "Altro"
+          ]
+        },
+        {
+          "key": "accessori_impianti",
+          "label": "Accessori impianti",
+          "type": "multiselect",
+          "options": [
+            "Condizionatori / clima",
+            "Impianto allarme",
+            "Videocitofono",
+            "Domotica"
+          ]
+        },
+        {
+          "key": "spese_condominiali_comprende",
+          "label": "Spese condominiali comprendono",
+          "type": "multiselect",
+          "options": [
+            "Acqua fredda",
+            "Acqua calda",
+            "Riscaldamento"
+          ]
+        },
+        {
+          "key": "documenti_disponibili",
+          "label": "Checklist documenti disponibili",
+          "type": "multiselect",
+          "options": [
+            "Atto di provenienza",
+            "Atto di successione",
+            "Planimetria catastale",
+            "Visura catastale storica",
+            "Certificato APE",
+            "Regolamento condominio",
+            "Certificazione impianti",
+            "Verbali condominio"
+          ]
+        }
+      ],
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "data_sopralluogo",
+          "label": "Data sopralluogo",
+          "type": "date"
+        },
+        {
+          "block_type": "field",
+          "key": "agente_acquisitore",
+          "label": "Agente acquisitore",
+          "type": "text"
+        },
+        {
+          "block_type": "field",
+          "key": "agente_contatto",
+          "label": "Agente acquisitore — telefono / email",
+          "type": "text"
+        },
+        {
+          "block_type": "field",
+          "key": "stato_interno",
+          "label": "Stato interno",
+          "type": "select",
+          "options": [
+            "Ottimo",
+            "Buono",
+            "Da ristrutturare"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "terrazzo_mq",
+          "label": "Terrazzo (mq)",
+          "type": "number"
+        },
+        {
+          "block_type": "field",
+          "key": "portico_mq",
+          "label": "Portico (mq)",
+          "type": "number"
+        },
+        {
+          "block_type": "field",
+          "key": "pavimenti_altro",
+          "label": "Pavimenti — altro",
+          "type": "text"
+        },
+        {
+          "block_type": "field",
+          "key": "valore_ipe",
+          "label": "Valore IPE (Eph, kWh/m² anno)",
+          "type": "number"
+        },
+        {
+          "block_type": "field",
+          "key": "batteria_kw",
+          "label": "Batteria di accumulo — kW",
+          "type": "number"
+        },
+        {
+          "block_type": "field",
+          "key": "altri_documenti_note",
+          "label": "Altri documenti / note",
+          "type": "textarea"
+        },
+        {
+          "block_type": "field",
+          "key": "prezzo_consigliato",
+          "label": "Prezzo consigliato di mercato",
+          "type": "currency"
+        },
+        {
+          "block_type": "field",
+          "key": "punti_di_forza",
+          "label": "Note, punti di forza e osservazioni",
+          "type": "textarea"
+        }
+      ]
+    }
+  ],
+  "clienti": [
+    {
+      "key": "anagrafica_scheda",
+      "_nota": "Dati anagrafici che la scheda di acquisizione chiede a ogni proprietario e che il Cliente non aveva.",
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "luogo_nascita",
+          "label": "Luogo di nascita",
+          "type": "text"
+        },
+        {
+          "block_type": "field",
+          "key": "stato_civile",
+          "label": "Stato civile",
+          "type": "select",
+          "options": [
+            "Celibe / Nubile",
+            "Coniugato/a",
+            "Unito/a civilmente",
+            "Separato/a",
+            "Divorziato/a",
+            "Vedovo/a"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "regime_patrimoniale",
+          "label": "Regime patrimoniale",
+          "type": "select",
+          "options": [
+            "Comunione dei beni",
+            "Separazione dei beni",
+            "Non applicabile"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "residenza",
+          "label": "Residenza",
+          "type": "text"
+        },
+        {
+          "block_type": "field",
+          "key": "pec",
+          "label": "PEC",
+          "type": "email"
+        }
+      ]
+    }
   ]
 }

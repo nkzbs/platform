@@ -1,36 +1,18 @@
 'use strict';
 // PDF «Report di valutazione» con grafica: intestazione con logo e colore dell'azienda, riquadri
 // con le quotazioni, tabelle (OMI, comparabili) e barre (mercato, tempi, annunci). Parte dal report
-// GIÀ salvato sul record, non chiama nessun servizio. Il testo semplice dello stesso report
-// (lib/report-valutazione.js) resta per i test e come riserva. Nessun nome di azienda qui:
+// GIÀ salvato sul record, non chiama nessun servizio. L'identità grafica (fascia, logo, piè di pagina)
+// è in lib/identita-pdf.js, comune a tutti i PDF. Nessun nome di azienda qui:
 // logo, colore e dati vengono da `azienda` (Impostazioni → Azienda).
 
 const PDFDocument = require('pdfkit');
 
-const M = 44; // margine
-const GRIGIO = '#57534e', CHIARO = '#f5f5f4', LINEA = '#e7e5e4', TESTO = '#1c1917';
+const { M, GRIGIO, CHIARO, LINEA, TESTO, coloreValido, caricaLogo, intestazione, pieDiPagina } = require('./identita-pdf');
 
 const num = (n) => (n == null || n === '' || isNaN(Number(n)) ? '—' : String(Math.round(Number(n))).replace(/\B(?=(\d{3})+(?!\d))/g, '.'));
 const euro = (n) => (num(n) === '—' ? '—' : num(n) + ' €');
 const pct = (n) => (n == null || n === '' || isNaN(Number(n)) ? '—' : String(Math.round(Number(n) * 10) / 10).replace('.', ',') + '%');
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-zà-ú0-9]/g, '');
-const coloreValido = (c) => (/^#[0-9a-f]{6}$/i.test(String(c || '')) ? c : '#1f4e79');
-
-// Logo da un data: URI o da un indirizzo http(s); qualunque problema → nessun logo (si scrive il nome).
-async function caricaLogo(url) {
-  try {
-    if (!url) return null;
-    if (/^data:image\/(png|jpeg);base64,/i.test(url)) return Buffer.from(url.split(',')[1], 'base64');
-    if (/^https:\/\//i.test(url)) {
-      const r = await fetch(url, { signal: AbortSignal.timeout(5000) });
-      const tipo = r.headers.get('content-type') || '';
-      if (!r.ok || !/image\/(png|jpeg)/i.test(tipo)) return null;
-      const b = Buffer.from(await r.arrayBuffer());
-      return b.length < 3 * 1024 * 1024 ? b : null;
-    }
-  } catch (e) { /* senza logo */ }
-  return null;
-}
 
 // → Promise<Buffer>
 function creaPdfReport({ record, report, azienda = {}, logo = null }) {
@@ -101,27 +83,8 @@ function creaPdfReport({ record, report, azienda = {}, logo = null }) {
       });
     };
 
-    // ── Intestazione ──
-    doc.rect(0, 0, doc.page.width, 78).fill(colore);
-    let xTesto = M, logoLargo = false;
-    if (logo) {
-      try {
-        const img = doc.openImage(logo);
-        if (img.width / img.height > 1.4) {
-          // Logo orizzontale (scritta + simbolo): sta direttamente sulla fascia, che ha il suo stesso colore di fondo.
-          logoLargo = true;
-          doc.image(logo, M - 6, 6, { fit: [210, 66] });
-        } else {
-          doc.roundedRect(M, 14, 50, 50, 6).fill('#ffffff'); doc.image(logo, M + 5, 19, { fit: [40, 40], align: 'center', valign: 'center' }); xTesto = M + 62;
-        }
-      } catch (e) { /* logo illeggibile: si scrive il nome */ }
-    }
-    if (!logoLargo) {
-      doc.font('Times-Bold').fontSize(16).fillColor('#ffffff').text(azienda.nome || 'Report di valutazione', xTesto, 22, { width: 270, lineBreak: false });
-      if (azienda.nome) doc.font('Helvetica').fontSize(9).fillColor('#f3f4f6').text([azienda.indirizzo, azienda.piva && 'P.IVA ' + azienda.piva].filter(Boolean).join(' · '), xTesto, 42, { width: 280, lineBreak: false });
-    }
-    doc.font('Helvetica-Bold').fontSize(11).fillColor('#ffffff').text('REPORT DI VALUTAZIONE', M + W - 200, 24, { width: 200, align: 'right', lineBreak: false });
-    doc.font('Helvetica').fontSize(9).fillColor('#f3f4f6').text(d.stima_data ? new Date(d.stima_data).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }) : '', M + W - 200, 42, { width: 200, align: 'right', lineBreak: false });
+    // ── Intestazione (identità comune a tutti i PDF) ──
+    intestazione(doc, { azienda, logo, etichetta: 'Report di valutazione', data: d.stima_data ? new Date(d.stima_data).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }) : '' });
 
     // ── Immobile ──
     doc.y = 100;
@@ -250,17 +213,7 @@ function creaPdfReport({ record, report, azienda = {}, logo = null }) {
     doc.moveDown(0.5);
     doc.font('Helvetica').fontSize(8).fillColor(GRIGIO).text('La valutazione è una stima indicativa basata su quotazioni medie di zona e dati pubblici. Non sostituisce una perizia e non tiene conto dello stato interno, delle finiture, del piano e dell\'esposizione dell\'immobile. Fonti: OpenAPI.it, Agenzia delle Entrate (OMI), ISPRA, JRC PVGIS.', M, doc.y, { width: W });
 
-    // ── Piè di pagina ──
-    const { count } = doc.bufferedPageRange();
-    const contatti = [azienda.nome, azienda.indirizzo, azienda.piva && 'P.IVA ' + azienda.piva].filter(Boolean).join(' · ');
-    for (let i = 0; i < count; i++) {
-      doc.switchToPage(i);
-      doc.page.margins.bottom = 0;
-      doc.moveTo(M, doc.page.height - 44).lineTo(M + W, doc.page.height - 44).lineWidth(0.5).strokeColor(LINEA).stroke();
-      doc.font('Helvetica').fontSize(8).fillColor('#78716c');
-      doc.text(contatti || (d.titolo || ''), M, doc.page.height - 36, { width: W - 90, lineBreak: false });
-      doc.text('Pagina ' + (i + 1) + ' di ' + count, M + W - 90, doc.page.height - 36, { width: 90, align: 'right', lineBreak: false });
-    }
+    pieDiPagina(doc, { azienda, riserva: d.titolo || '' });
     doc.end();
   });
 }

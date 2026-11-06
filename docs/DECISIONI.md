@@ -702,3 +702,17 @@ avrebbe perso ore di storia reale a ogni suo stesso aggiornamento), corretto pri
 **Scelta**: il report di valutazione prende logo, colore e dati dell'azienda da `tenant_settings`, che si imposta da Impostazioni → Aspetto; il logo è un'immagine incorporata nel record (o un indirizzo https). Nessun nome o marchio nel codice.
 **Perché**: la regola «sempre generico e configurabile»; lo stesso logo servirà ai prossimi documenti; l'immagine incorporata non dipende da un sito esterno raggiungibile al momento dello scarico.
 **Conseguenza da sapere**: il logo e il colore valgono anche per l'interfaccia (barra laterale, accesso, icona PWA). **Non coperto**: carattere del marchio (Miller Banner, non incorporabile: si usa un serif standard), campi telefono/email/sito.
+
+## 2026-11-06 — Scheda di acquisizione: i campi seguono il modulo dell'agenzia, con elenchi a scelta multipla
+
+**Scelta**: ogni voce del modulo cartaceo ha un campo; le caselle da spuntare sono campi `multiselect` (non testo libero); la scheda da firmare è un documento nuovo `delivery: 'firma'` generato dallo stesso elenco di campi. Per trasformare campi già presenti in produzione si aggiunge al motore dei seed la chiave `converti` (solo da testo, area di testo o scelta singola; valori già scritti spezzati in elenco).
+**Perché**: il modulo lo compilano gli agenti e «deve esserci tutto»; il testo libero perde la struttura (non si filtra, non si abbina) e ognuno scrive a modo suo.
+**Scartato**: aggiungere campi nuovi accanto a quelli vecchi (duplicati e dati sparsi); riscrivere il documento «Scheda immobile» già applicato (un blocco applicato non si aggiorna dal seed: si aggiunge un documento nuovo).
+**Da sapere**: il vecchio documento via email resta con meno campi; la firma non cambia lo stato dell'immobile (nessun passaggio automatico a «in mandato»).
+
+## 2026-11-06 — Un'unica identità grafica per ogni PDF generato
+
+**Scelta**: ogni PDF che Platform genera passa da `lib/identita-pdf.js` (fascia con logo e colore dell'azienda, serif per i titoli, piè di pagina con dati e numero di pagina). Nessun generatore ha un proprio aspetto.
+**Perché**: richiesta esplicita dell'utente: tutta la documentazione deve avere l'identità del report di valutazione. Un solo modulo evita che un documento nuovo esca «spoglio».
+**Regola per il futuro**: un nuovo PDF si crea con `intestazione`, `titoloSezione` e `pieDiPagina` di quel modulo, non con pdfkit nudo.
+**Non coperto**: il font del marchio non è incorporabile senza i file; email in testo semplice e pagine stampate dal browser (Guida dei verticali, Analisi) non seguono questa identità.

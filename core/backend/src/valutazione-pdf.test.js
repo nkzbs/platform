@@ -32,7 +32,8 @@ const REPORT = {
 };
 
 async function main() {
-  const { creaPdfReport, caricaLogo } = require('./lib/report-valutazione-pdf');
+  const { creaPdfReport } = require('./lib/report-valutazione-pdf');
+  const { caricaLogo } = require('./lib/identita-pdf');
   const { spawnSync } = require('child_process');
   // Il testo si legge con pdftotext (poppler); se non c'è sul computer le prove sul contenuto si saltano.
   const testoDi = (buf) => { const f = path.join(os.tmpdir(), 'valpdf-' + crypto.randomBytes(4).toString('hex') + '.pdf'); fs.writeFileSync(f, buf); const o = spawnSync('pdftotext', ['-layout', f, '-']); fs.unlinkSync(f); return o.error ? null : String(o.stdout); };

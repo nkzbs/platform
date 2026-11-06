@@ -2,6 +2,19 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.27 — 6 novembre 2026
+
+**La scheda di acquisizione dell'agenzia, per intero.** Il modulo che compilano gli agenti (11 sezioni) ora ha tutti i suoi campi, e il documento da firmare lo riproduce uguale. Confrontata voce per voce con il PDF di Zucca&Partners.
+
+- **Immobili — campi nuovi**: data sopralluogo, agente acquisitore (e suo telefono/email), stato interno, terrazzo (mq), portico (mq), pavimenti «altro», valore IPE (Eph), potenza batteria di accumulo (kW), altri documenti / note, prezzo consigliato di mercato, note e punti di forza.
+- **Immobili — caselle da spuntare**: le voci che nel modulo cartaceo sono caselle (composizione vani, sfogo esterno, pertinenze e box, posto auto, oscuranti e protezioni, pavimenti, diffusione e alimentazione del riscaldamento, accessori impianti, cosa comprendono le spese, checklist documenti) erano testo libero o scelta singola: ora sono **elenchi a scelta multipla**. I valori già scritti si convertono (zucca ha un solo immobile, senza questi valori).
+- **Clienti — campi nuovi** (servono per ogni comproprietario): luogo di nascita, stato civile, regime patrimoniale, residenza, PEC.
+- **Nuovo documento «Scheda di acquisizione (da firmare)»** sull'Immobile: le 11 sezioni, i dati dei 3 comproprietari (le righe vuote da compilare a mano), l'informativa privacy del modulo e le firme dei comproprietari e dell'agente. Si vede in anteprima, si scarica in PDF, si firma e si ricarica come gli altri documenti da firmare. Il vecchio «Scheda immobile» (invio per email) resta, ma ha meno campi.
+- **Motore dei seed**: nuova chiave `converti` nelle estensioni (un campo di testo o scelta diventa elenco a scelta multipla, con id ed etichetta invariati e i valori già scritti convertiti). Da tipi non compatibili (numero, data…) non si converte: l'estensione non si applica e il campo resta intatto.
+- Test `scheda-completa.test.js` (6) e `documento-da-modello.test.js` aggiornato.
+- **Identità grafica comune a tutti i PDF** (richiesta: «tutta la documentazione generata deve avere l'identità del report»): fascia con logo e colore dell'azienda, titoli con grazie, titoletti con barra colorata, firma e piè di pagina «Pagina N di M» con i dati dell'azienda. Vale per il report di valutazione e per tutti i documenti da modello e da firmare (privacy, antiriciclaggio, anagrafica, scheda). Codice in `lib/identita-pdf.js`; `documento-pdf.js` e `report-valutazione-pdf.js` lo usano; le rotte leggono logo e dati da Impostazioni → Aspetto.
+- **Non coperto**: il carattere del marchio (Miller Banner, Brandon Grotesque) non è incorporato: servono i file del font (OTF/TTF) e un posto dove caricarli; intanto si usa un serif standard per i titoli. La scheda non cambia in automatico lo stato dell'immobile alla firma. La fase 2 del report (mappa, servizi, percorrenze) non è ancora integrata: il servizio pubblico Overpass di OpenStreetMap oggi non risponde in tempo.
+
 ## 0.4.26 — 6 novembre 2026
 
 **Report di valutazione con grafica e marchio dell'azienda.** Il PDF della 0.4.25 (solo testo) diventa un documento impaginato: fascia in alto con logo e colore dell'azienda, tre riquadri con minimo, medio e massimo €/mq, valore stimato in evidenza, tabelle (OMI, comparabili), barre per mercato, tempi di vendita e annunci, piè di pagina con i dati dell'azienda e «Pagina N di M». Titoli in carattere con grazie; il carattere del marchio Zucca&Partners (Miller Banner) non è incorporabile, quindi è una resa vicina, non identica.

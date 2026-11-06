@@ -242,23 +242,26 @@ async function main() {
     { id: 'w2', block_type: 'workflow_state', key: 'documenti_inviati', label: 'Documenti inviati' },
     { id: 'w3', block_type: 'workflow_transition', from: 'nuovo', to: 'documenti_inviati', label: 'Invia', roles: ['admin'] },
   ];
-  mk('clienti', [...campiSeed('clienti'), ...statoSeed]);
-  mk('immobili', [...campiSeed('immobili'),
-    { id: 'rp', block_type: 'relation', key: 'proprietario', label: 'Proprietario', target_module: 'clienti', type: 'many_to_one', display_field: 'nome' }]);
+  // Dati anagrafici che i documenti leggono tramite la relazione col proprietario (non sono segnaposto «semplici»).
+  const anagrafica = ['nome', 'data_nascita', 'codice_fiscale_piva', 'luogo_nascita', 'stato_civile', 'regime_patrimoniale', 'telefono', 'residenza', 'pec', 'email'].map((k) => F(k, k));
+  const nomiCampiClienti = new Set(campiSeed('clienti').map((x) => x.key));
+  mk('clienti', [...campiSeed('clienti'), ...anagrafica.filter((x) => !nomiCampiClienti.has(x.key)), ...statoSeed]);
+  const rel = (key, label) => ({ id: 'r_' + key, block_type: 'relation', key, label, target_module: 'clienti', type: 'many_to_one', display_field: 'nome' });
+  mk('immobili', [...campiSeed('immobili'), rel('proprietario', 'Proprietario'), rel('comproprietario_2', 'Comproprietario 2'), rel('comproprietario_3', 'Comproprietario 3')]);
   const documentiDi = (slug) => JSON.parse(db.prepare('SELECT schema_json FROM modules WHERE slug = ?').get(slug).schema_json);
   const chiaviDocumento = (slug) => { const sc = documentiDi(slug); return (sc.steps || []).filter((st) => st.block_type === 'document_action').map((st) => st.key).concat((sc.document_actions || []).map((d) => d.key)); };
 
   let primoGiro;
   await test('il seed reale si applica ai moduli che hanno i campi giusti (passa dalla validazione del Builder)', async () => {
     primoGiro = await applicaSeed(seed);
-    assertEq(primoGiro.filter((e) => e.esito === 'applicato').map((e) => e.key).sort(), ['anagrafica_privacy', 'antiriciclaggio', 'privacy_incarico', 'scheda_immobile']);
+    assertEq(primoGiro.filter((e) => e.esito === 'applicato').map((e) => e.key).sort(), ['anagrafica_privacy', 'antiriciclaggio', 'privacy_incarico', 'scheda_immobile', 'scheda_immobile_completa']);
     assertEq(chiaviDocumento('clienti').sort(), ['anagrafica_privacy', 'antiriciclaggio', 'privacy_incarico']);
     // Il seed ha creato i campi dei consensi, del tipo giusto, e il documento è «da firmare».
     const campi = documentiDi('clienti').steps.filter((st) => st.block_type === 'field');
     assertEq(campi.find((f) => f.key === 'consenso_marketing').type, 'checkbox');
     assertEq(campi.find((f) => f.key === 'conservazione_fino_al').type, 'date');
     assertEq(documentiDi('clienti').steps.find((st) => st.key === 'anagrafica_privacy').delivery, 'firma');
-    assertEq(chiaviDocumento('immobili'), ['scheda_immobile']);
+    assertEq(chiaviDocumento('immobili'), ['scheda_immobile', 'scheda_immobile_completa']);
   });
   await test('dopo l\'applicazione i tre documenti funzionano davvero: anteprima di un cliente e di un immobile', async () => {
     const idC = rec('clienti', { nome: 'Mario Bianchi', email: 'mario@esempio.it', tipo_cliente: 'Venditore', _stato: 'nuovo' });

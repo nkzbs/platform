@@ -1,7 +1,9 @@
 'use strict';
 // Applica ai moduli di un tenant i blocchi dichiarati nei seed di un verticale (i valori di
 // partenza di un progetto stanno nei seed, mai nel codice): le azioni «documento da modello»
-// (seeds/documenti-immobiliare.json) e gli «abbinamenti» (seeds/abbinamenti-immobiliare.json).
+// (seeds/documenti-immobiliare.json), gli «abbinamenti» (seeds/abbinamenti-immobiliare.json) e le
+// «estensioni» di un modulo (seeds/estensioni-immobiliare.json: campi nuovi, calcoli, automazioni e
+// `converti`, che trasforma campi di testo o scelta in elenchi a scelta multipla).
 // Sostituisce i testi che stavano in lib/doc-cliente.js e lib/doc-immobile.js e le rotte legate
 // agli slug di un solo verticale.
 //
@@ -64,6 +66,10 @@ function abbinamentoApplicabile(mv, steps, moduliPerSlug) {
 // aggiunge insieme. Si applica solo se i moduli e i campi di cui ha bisogno (`richiede`: modulo →
 // campi) esistono, se le relazioni puntano a moduli che esistono e se nessuna chiave da aggiungere è
 // già usata da un blocco di tipo diverso.
+// Un campo si può trasformare in elenco a scelta multipla solo se oggi è testo o una scelta singola:
+// da qualunque altro tipo si perderebbe il significato del dato.
+const TIPI_CONVERTIBILI = ['text', 'textarea', 'select', 'multiselect'];
+
 function estensioneApplicabile(est, steps, moduliPerSlug) {
   for (const [modulo, campi] of Object.entries(est.richiede || {})) {
     const presenti = chiaviDelModulo(modulo); // campi E relazioni: le relazioni non stanno in `moduliPerSlug`
@@ -73,6 +79,11 @@ function estensioneApplicabile(est, steps, moduliPerSlug) {
   for (const b of est.aggiungi || []) {
     if (b.block_type === 'relation' && !moduliPerSlug[b.target_module]) return false;
     if (b.key && steps.some((x) => x.key === b.key && (x.block_type !== b.block_type || (x.type || null) !== (b.type || null)))) return false;
+  }
+  for (const c of est.converti || []) {
+    const attuale = steps.find((x) => x.block_type === 'field' && x.key === c.key);
+    if (steps.some((x) => x.key === c.key && x.block_type !== 'field')) return false;
+    if (attuale && !TIPI_CONVERTIBILI.includes(attuale.type || 'text')) return false;
   }
   return true;
 }
@@ -131,10 +142,36 @@ async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs
           .map((b) => ({ id: cfg.idPrefisso + Math.random().toString(36).slice(2, 10), ...b }));
         if (!cfg.applicabile(az, schema.steps, mappa)) { segna(chiave); esiti.push({ slug, key: az.key, esito: 'non applicabile' }); continue; }
         if (!admin) continue;
-        const bozzaE = await callAs(admin, 'PUT', '/builder/' + slug + '/draft', { schema: { version: 3, steps: [...schema.steps, ...daAggiungere] } });
+        // `converti`: campi già presenti che diventano un elenco a scelta multipla (id ed etichetta restano), o
+        // si creano se mancano. I valori già scritti come testo si spezzano in elenco (vedi sotto).
+        const daConvertire = (az.converti || []);
+        const stepsConvertiti = schema.steps.map((x) => {
+          const c = daConvertire.find((y) => y.key === x.key && x.block_type === 'field');
+          return c ? { ...x, type: c.type || 'multiselect', options: c.options, label: c.label || x.label } : x;
+        });
+        const nuoviDaConvertire = daConvertire.filter((c) => !schema.steps.some((x) => x.key === c.key))
+          .map((c) => ({ id: cfg.idPrefisso + Math.random().toString(36).slice(2, 10), block_type: 'field', key: c.key, label: c.label || c.key, type: c.type || 'multiselect', options: c.options }));
+        const bozzaE = await callAs(admin, 'PUT', '/builder/' + slug + '/draft', { schema: { version: 3, steps: [...stepsConvertiti, ...nuoviDaConvertire, ...daAggiungere] } });
         if (!bozzaE.ok) { console.error('[seed-blocchi] bozza ' + slug + '/' + az.key + ' fallita:', JSON.stringify(bozzaE.data)); esiti.push({ slug, key: az.key, esito: 'errore bozza' }); continue; }
         const pubE = await callAs(admin, 'POST', '/builder/' + slug + '/publish', {});
         if (!pubE.ok) { console.error('[seed-blocchi] pubblicazione ' + slug + '/' + az.key + ' fallita:', JSON.stringify(pubE.data)); esiti.push({ slug, key: az.key, esito: 'errore pubblicazione' }); continue; }
+        // Un valore scritto prima come testo («Balcone, Loggia») diventa l'elenco corrispondente; gli altri non si toccano.
+        const convertiti = daConvertire.filter((c) => schema.steps.some((x) => x.key === c.key && x.block_type === 'field' && x.type !== (c.type || 'multiselect')));
+        if (convertiti.length) {
+          const righe = db.prepare('SELECT id, data FROM records WHERE module_slug = ?').all(slug);
+          const agg = db.prepare('UPDATE records SET data = ? WHERE id = ?');
+          for (const r of righe) {
+            let dati; try { dati = JSON.parse(r.data); } catch (e) { continue; }
+            let cambiato = false;
+            for (const c of convertiti) {
+              if (typeof dati[c.key] === 'string') {
+                dati[c.key] = dati[c.key].split(/[,;\n]+/).map((t) => t.trim()).filter(Boolean);
+                cambiato = true;
+              }
+            }
+            if (cambiato) agg.run(JSON.stringify(dati), r.id);
+          }
+        }
         segna(chiave);
         delete moduliPerSlug[slug]; // i campi del modulo sono cambiati: le estensioni dopo questa devono rivederli
         esiti.push({ slug, key: az.key, esito: 'applicato' });
