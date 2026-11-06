@@ -29,11 +29,21 @@ function timeAgo(iso) {
 }
 
 function Sidebar({ page, onNavigate, onLogout, payload, token }) {
-  const handleNavigate = (id) => { onNavigate(id); setAltroOpen(false); setNavFilter('') }
+  const handleNavigate = (id) => { onNavigate(id); setAltroOpen(false); setNavFilter(''); setEditPins(false) }
 
   const [altroOpen, setAltroOpen] = useState(false)
   // Filtro per nome nel pannello "Altro" (come in core: launcher con ricerca).
   const [navFilter, setNavFilter] = useState('')
+  // Voci appuntate scelte dall'utente (tasto "Modifica" nel pannello "Altro"), salvate su
+  // questo dispositivo — scelta esplicita, mai un riordino automatico. Come in core.
+  const [editPins, setEditPins] = useState(false)
+  const [pinPrefs, setPinPrefs] = useState(() => {
+    try { const v = JSON.parse(localStorage.getItem('platform_sa_dock_pins')); return Array.isArray(v) ? v : null } catch { return null }
+  })
+  const savePins = (ids) => {
+    setPinPrefs(ids)
+    try { if (ids) localStorage.setItem('platform_sa_dock_pins', JSON.stringify(ids)); else localStorage.removeItem('platform_sa_dock_pins') } catch { /* senza storage resta valido per la sessione */ }
+  }
   const [accountOpen, setAccountOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const panelRef = useRef(null)
@@ -91,7 +101,7 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
 
   useEffect(() => {
     const handler = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target) && !e.target.closest('[data-dock-altro]')) { setAltroOpen(false); setNavFilter('') }
+      if (panelRef.current && !panelRef.current.contains(e.target) && !e.target.closest('[data-dock-altro]')) { setAltroOpen(false); setNavFilter(''); setEditPins(false) }
       if (railAccountRef.current && !railAccountRef.current.contains(e.target)) setAccountOpen(false)
       if (notifRef.current && !notifRef.current.contains(e.target) && railNotifRef.current && !railNotifRef.current.contains(e.target)) setNotifOpen(false)
     }
@@ -99,8 +109,14 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const pinned = NAV_ITEMS.slice(0, PIN_COUNT)
-  const overflow = NAV_ITEMS.slice(PIN_COUNT)
+  const defaultPins = NAV_ITEMS.slice(0, PIN_COUNT).map((i) => i.id)
+  const pinIds = (pinPrefs || defaultPins).filter((id, k, a) => a.indexOf(id) === k && NAV_ITEMS.some((i) => i.id === id)).slice(0, PIN_COUNT)
+  const pinned = pinIds.map((id) => NAV_ITEMS.find((i) => i.id === id))
+  const overflow = NAV_ITEMS.filter((i) => !pinIds.includes(i.id))
+  const togglePin = (id) => {
+    if (pinIds.includes(id)) savePins(pinIds.filter((x) => x !== id))
+    else if (pinIds.length < PIN_COUNT) savePins([...pinIds, id])
+  }
   const pageInOverflow = overflow.some((i) => i.id === page && i.id !== 'impostazioni')
 
   const username = (payload && payload.username) || ''
@@ -174,17 +190,21 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
 
   const filtro = navFilter.trim().toLowerCase()
   const overflowF = overflow.filter((i) => !filtro || i.label.toLowerCase().includes(filtro))
-  const gridTile = (item) => (
-    <button key={item.id} title={item.label} onClick={() => handleNavigate(item.id)}
-      className="group relative flex items-center justify-center p-1 rounded-xl transition hover:bg-white/8">
-      <span className={'w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-150 ease-out group-hover:scale-110 group-hover:shadow-lg ' + (page === item.id ? 'bg-cp-primary text-white' : 'bg-white/8')} style={page !== item.id && item.color ? { color: item.color } : undefined}>
-        <Icon name={item.icon} size={22} />
-      </span>
-      <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black/90 text-white text-[11px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-10">
-        {item.label}
-      </span>
-    </button>
-  )
+  const poolF = NAV_ITEMS.filter((i) => !filtro || i.label.toLowerCase().includes(filtro))
+  const gridTile = (item) => {
+    const attiva = page === item.id
+    const appuntata = pinIds.includes(item.id)
+    return (
+      <button key={item.id} title={item.label} onClick={() => (editPins ? togglePin(item.id) : handleNavigate(item.id))}
+        className="group relative flex flex-col items-center gap-1 p-1 rounded-xl transition hover:bg-white/8 min-w-0">
+        <span className={'relative w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-150 ease-out group-hover:scale-105 ' + (attiva ? 'bg-cp-primary text-white' : 'bg-white/8') + (editPins && appuntata ? ' ring-2 ring-cp-primary' : '')} style={!attiva && item.color ? { color: item.color } : undefined}>
+          <Icon name={item.icon} size={21} />
+          {editPins && <span className={'absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold leading-none ' + (appuntata ? 'bg-cp-primary text-white' : 'bg-white/25 text-ink')}>{appuntata ? '✓' : '+'}</span>}
+        </span>
+        <span className="w-full text-[11px] leading-tight text-center text-ink/80 line-clamp-2 break-words">{item.label}</span>
+      </button>
+    )
+  }
 
   return (
     <>
@@ -197,7 +217,7 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
             {railExpanded && (
               <div>
                 <div className="text-base text-ink tracking-tight"><span className="font-bold">Platform</span> <span className="font-normal">Admin</span></div>
-                <div className="text-xs text-gray-500">versione 0.4.16</div>
+                <div className="text-xs text-gray-500">versione 0.4.17</div>
               </div>
             )}
           </div>
@@ -264,29 +284,35 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
       <div className="md:hidden">
         {altroOpen && <div className="fixed inset-0 bg-black/30 z-30" onClick={() => { setAltroOpen(false); setNavFilter('') }} />}
 
-        {altroOpen && overflow.length > 0 && (
-          <div ref={panelRef} className="glass-panel fixed left-1/2 z-40 flex flex-col" style={{ transform: 'translateX(-50%)', bottom: 'calc(90px + env(safe-area-inset-bottom))', width: 'min(400px, calc(100vw - 32px))', maxHeight: '70vh', padding: '14px' }}>
-            <div className="flex items-center gap-2.5 px-1.5 pb-3 flex-shrink-0">
+        {altroOpen && (
+          <div ref={panelRef} className="glass-panel fixed left-1/2 z-40 flex flex-col" style={{ transform: 'translateX(-50%)', bottom: 'calc(90px + env(safe-area-inset-bottom))', width: 'min(400px, calc(100vw - 32px))', maxHeight: '70vh', padding: '12px' }}>
+            <div className="flex items-center gap-2.5 px-1.5 pb-2.5 flex-shrink-0">
               <PlatformLogo size={24} />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="text-sm text-ink font-bold truncate">Platform Admin</div>
-                <div className="text-[11px] text-gray-500">Platform 0.4.16</div>
               </div>
+              <button onClick={() => setEditPins((x) => !x)} className={'text-xs px-2.5 py-1 rounded-full transition flex-shrink-0 ' + (editPins ? 'bg-cp-primary text-white' : 'text-cp-primary hover:bg-white/8')}>{editPins ? 'Fine' : 'Modifica'}</button>
             </div>
-            <div className="px-0.5 pb-3 flex-shrink-0">
+            <div className="px-0.5 pb-2.5 flex-shrink-0">
               <input value={navFilter} onChange={(e) => setNavFilter(e.target.value)} placeholder="Cerca una pagina…" aria-label="Cerca una pagina"
                 className="w-full h-10 px-3 rounded-full bg-white/8 border border-white/10 text-sm text-ink placeholder-gray-500 outline-none focus:border-cp-primary" />
             </div>
-            <div className="overflow-y-auto border-t border-white/10 pt-3" style={{ maxHeight: 'min(46vh, 380px)' }}>
-              {filtro && overflowF.length === 0 && <div className="text-center text-sm text-gray-500 py-6">Nessuna voce per "{navFilter}"</div>}
-              {overflowF.length > 0 && <div className="grid grid-cols-4 gap-1">{overflowF.map(gridTile)}</div>}
+            <div className="overflow-y-auto border-t border-white/10 pt-2.5" style={{ maxHeight: 'min(46vh, 380px)' }}>
+              {editPins && (
+                <div className="px-1.5 pb-2 text-[11px] text-gray-500">
+                  Tocca per appuntare nel dock (massimo {PIN_COUNT}){pinIds.length >= PIN_COUNT ? ' — ne hai già ' + PIN_COUNT + ', togline una per sceglierne un\'altra' : ''}.
+                  {pinPrefs && <button onClick={() => savePins(null)} className="ml-1 text-cp-primary hover:opacity-80">Ripristina</button>}
+                </div>
+              )}
+              {filtro && (editPins ? poolF : overflowF).length === 0 && <div className="text-center text-sm text-gray-500 py-6">Nessuna voce per "{navFilter}"</div>}
+              {(editPins ? poolF : overflowF).length > 0 && <div className="grid grid-cols-4 gap-1">{(editPins ? poolF : overflowF).map(gridTile)}</div>}
             </div>
-            <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between px-1 flex-shrink-0">
+            <div className="mt-2.5 pt-2.5 border-t border-white/10 flex items-center justify-between px-1 flex-shrink-0">
               <button onClick={() => handleNavigate('impostazioni')} className={'flex items-center gap-2.5 text-left hover:opacity-80 transition rounded-lg px-2 py-1 -mx-2 ' + (page === 'impostazioni' ? 'bg-cp-primary/15' : '')}>
                 <span className="w-7 h-7 rounded-full bg-cp-primary text-white text-[11px] font-semibold flex items-center justify-center flex-shrink-0">{initials}</span>
                 <div className="min-w-0">
                   <div className="text-sm text-ink font-medium truncate">{username}</div>
-                  <div className="text-xs text-gray-500">{payload && payload.role}</div>
+                  <div className="text-xs text-gray-500">{payload && payload.role} · Platform 0.4.17</div>
                 </div>
               </button>
               <div className="flex items-center gap-3">
@@ -308,7 +334,7 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
           {pinned.map((item) => (
             <DockIcon key={item.id} dockKey={item.id} name={item.label} icon={item.icon} color={item.color} active={page === item.id} onClick={() => handleNavigate(item.id)} />
           ))}
-          {overflow.length > 0 && (
+          {(
             <>
               <div className="w-px h-6 bg-white/15 mx-1 flex-shrink-0" />
               <div data-dock-altro>

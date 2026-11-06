@@ -2,6 +2,16 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.17 — 6 novembre 2026
+
+**Menu "Altro" del dock mobile più leggibile, e voci appuntate scelte dall'utente** (core e Super Admin, insieme: i due dock condividono lo stesso stile). Segnalato con uno screenshot di Finance da iPhone: le icone della griglia non avevano nome (due triangoli di avviso e due carte quasi identiche) e il nome compariva solo al passaggio del mouse, che sul telefono non esiste.
+
+- Il nome sotto ogni icona, fino a due righe (prima solo un suggerimento al passaggio del mouse).
+- Pannello più compatto: icone 48px, margini ridotti; la versione non ha più una riga propria in testa ma sta accanto al ruolo in fondo.
+- **Voci appuntate scelte dall'utente**: tasto **Modifica** nel pannello. Con "Modifica" attivo la griglia mostra tutte le voci (anche quelle già nel dock) con un segno ✓ o +; un tocco appunta o toglie, massimo 4 come prima, con un avviso quando sono già 4; **Ripristina** torna alle prime 4 dell'elenco. In core si possono appuntare anche le voci di sistema (Libreria, Impostazioni, Guida...).
+- Salvate su questo dispositivo (`localStorage`, una chiave per utente in core), non sul server: una scelta di comodità, non un dato. Scelta esplicita e visibile, non un riordino automatico per uso.
+- Verificato dal vivo a 375px su entrambe le app: etichette, modalità Modifica, limite di 4, salvataggio e ripristino.
+
 ## 0.4.16 — 6 novembre 2026
 
 **Il dock mobile di Super Admin diventa uguale a quello dei tenant.** Segnalato guardando i due menu da telefono: erano diversi in quattro punti. Richiesto lo stesso aspetto su entrambi.

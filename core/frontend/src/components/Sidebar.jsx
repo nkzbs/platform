@@ -27,7 +27,19 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
   // Filtro per nome dentro il pannello "Altro" (dock, mobile) — stile launcher macOS,
   // riempito da GlobalSearch mentre si scrive, filtra la griglia sotto.
   const [navFilter, setNavFilter] = useState('')
-  const closeAltro = () => { setAltroOpen(false); setNavFilter('') }
+  // Modifica delle voci appuntate nel dock: scelta esplicita dell'utente (tasto "Modifica"
+  // nel pannello "Altro"), salvata su questo dispositivo — mai un riordino automatico.
+  const [editPins, setEditPins] = useState(false)
+  const closeAltro = () => { setAltroOpen(false); setNavFilter(''); setEditPins(false) }
+  const pinsKey = 'platform_dock_pins_' + ((user && (user.id || user.username)) || '')
+  const [pinPrefs, setPinPrefs] = useState(null)
+  useEffect(() => {
+    try { const v = JSON.parse(localStorage.getItem(pinsKey)); setPinPrefs(Array.isArray(v) ? v : null) } catch { setPinPrefs(null) }
+  }, [pinsKey])
+  const savePins = (slugs) => {
+    setPinPrefs(slugs)
+    try { if (slugs) localStorage.setItem(pinsKey, JSON.stringify(slugs)); else localStorage.removeItem(pinsKey) } catch { /* senza storage resta valido per la sessione */ }
+  }
   // L'hamburger in App.jsx (solo mobile) apre il pannello "Altro" del dock.
   useEffect(() => { if (mobileOpen) setAltroOpen(true) }, [mobileOpen])
 
@@ -138,11 +150,19 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
 
   // ───────────────────────────── Dock (mobile) ─────────────────────────────
   const ordinate = [...senzaGruppo, ...conGruppo]
-  const pinned = ordinate.slice(0, PIN_COUNT)
+  const pool = [...ordinate, ...systemItems]
+  const defaultPins = ordinate.slice(0, PIN_COUNT).map((m) => m.slug)
+  const pinSlugs = (pinPrefs || defaultPins).filter((sl, i, a) => a.indexOf(sl) === i && pool.some((m) => m.slug === sl)).slice(0, PIN_COUNT)
+  const pinned = pinSlugs.map((sl) => pool.find((m) => m.slug === sl))
+  const togglePin = (slug) => {
+    if (pinSlugs.includes(slug)) savePins(pinSlugs.filter((sl) => sl !== slug))
+    else if (pinSlugs.length < PIN_COUNT) savePins([...pinSlugs, slug])
+  }
   const pinnedSlugs = new Set(pinned.map((m) => m.slug))
+  const systemItemsRest = systemItems.filter((m) => !pinnedSlugs.has(m.slug))
   const overflowSenzaGruppo = senzaGruppo.filter((m) => !pinnedSlugs.has(m.slug))
   const overflowConGruppo = conGruppo.filter((m) => !pinnedSlugs.has(m.slug))
-  const pageInOverflow = overflowSenzaGruppo.some((m) => m.slug === currentPage) || overflowConGruppo.some((m) => m.slug === currentPage) || systemItems.some((m) => m.slug === currentPage) || currentPage === 'account'
+  const pageInOverflow = overflowSenzaGruppo.some((m) => m.slug === currentPage) || overflowConGruppo.some((m) => m.slug === currentPage) || systemItemsRest.some((m) => m.slug === currentPage) || currentPage === 'account'
 
   const DockIcon = ({ slug, dockKey, name, icon, color, active, onClick, badge }) => (
     <button key={slug} data-tour={slug ? 'sidebar-' + slug : undefined} data-dock-key={dockKey} onClick={onClick || (() => handleNavigate(slug))} title={name}
@@ -173,23 +193,27 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
     return () => window.removeEventListener('resize', measure)
   }, [activeDockKey, pinned.map((m) => m.slug).join(',')])
 
-  const gridTile = (m) => (
-    <button key={m.slug} data-tour={'sidebar-' + m.slug} title={m.name} onClick={() => handleNavigate(m.slug)}
-      className="group relative flex items-center justify-center p-1 rounded-xl transition hover:bg-white/8">
-      <span className={'w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-150 ease-out group-hover:scale-110 group-hover:shadow-lg ' + (currentPage === m.slug ? 'bg-accent text-white' : 'bg-white/8')} style={currentPage === m.slug ? undefined : { color: m.color }}>
-        <Icon name={m.icon} size={22} />
-      </span>
-      <span className="pointer-events-none absolute top-full mt-1 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black/90 text-white text-[11px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-10">
-        {m.name}
-      </span>
-    </button>
-  )
+  const gridTile = (m) => {
+    const attiva = currentPage === m.slug
+    const appuntata = pinSlugs.includes(m.slug)
+    return (
+      <button key={m.slug} data-tour={'sidebar-' + m.slug} title={m.name} onClick={() => (editPins ? togglePin(m.slug) : handleNavigate(m.slug))}
+        className="group relative flex flex-col items-center gap-1 p-1 rounded-xl transition hover:bg-white/8 min-w-0">
+        <span className={'relative w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-150 ease-out group-hover:scale-105 ' + (attiva ? 'bg-accent text-white' : 'bg-white/8') + (editPins && appuntata ? ' ring-2 ring-accent' : '')} style={attiva ? undefined : { color: m.color }}>
+          <Icon name={m.icon} size={21} />
+          {editPins && <span className={'absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold leading-none ' + (appuntata ? 'bg-accent text-white' : 'bg-white/25 text-ink')}>{appuntata ? '✓' : '+'}</span>}
+        </span>
+        <span className="w-full text-[11px] leading-tight text-center text-ink/80 line-clamp-2 break-words">{m.name}</span>
+      </button>
+    )
+  }
   const filtro = navFilter.trim().toLowerCase()
   const passaFiltro = (m) => !filtro || m.name.toLowerCase().includes(filtro)
   const overflowSenzaGruppoF = overflowSenzaGruppo.filter(passaFiltro)
   const overflowConGruppoF = overflowConGruppo.filter(passaFiltro)
-  const systemItemsF = systemItems.filter(passaFiltro)
-  const nessunRisultato = filtro && !overflowSenzaGruppoF.length && !overflowConGruppoF.length && !systemItemsF.length
+  const systemItemsF = systemItemsRest.filter(passaFiltro)
+  const poolF = pool.filter(passaFiltro)
+  const nessunRisultato = filtro && (editPins ? !poolF.length : (!overflowSenzaGruppoF.length && !overflowConGruppoF.length && !systemItemsF.length))
 
   const notificationList = (
     <div className="max-h-64 overflow-y-auto">
@@ -227,7 +251,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
                     : <><span className="font-bold">Platform</span>{tenantName && <span className="font-normal"> {tenantName}</span>}</>
                   }
                 </div>
-                {!hidePlatformName && <div className="text-xs text-gray-500">Platform 0.4.16</div>}
+                {!hidePlatformName && <div className="text-xs text-gray-500">Platform 0.4.17</div>}
               </div>
             )}
           </div>
@@ -302,45 +326,57 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
       <div className="md:hidden">
         {altroOpen && <div className="fixed inset-0 bg-black/30 z-30" onClick={() => { closeAltro(); if (onMobileClose) onMobileClose() }} />}
 
-        {altroOpen && (overflowSenzaGruppo.length > 0 || overflowConGruppo.length > 0 || systemItems.length > 0) && (
-          <div ref={panelRef} className="glass-panel fixed left-1/2 z-40 flex flex-col" style={{ transform: 'translateX(-50%)', bottom: 'calc(90px + env(safe-area-inset-bottom))', width: 'min(400px, calc(100vw - 32px))', maxHeight: '70vh', padding: '14px' }}>
-            <div className="flex items-center gap-2.5 px-1.5 pb-3 flex-shrink-0">
+        {altroOpen && (overflowSenzaGruppo.length > 0 || overflowConGruppo.length > 0 || systemItemsRest.length > 0 || pool.length > 0) && (
+          <div ref={panelRef} className="glass-panel fixed left-1/2 z-40 flex flex-col" style={{ transform: 'translateX(-50%)', bottom: 'calc(90px + env(safe-area-inset-bottom))', width: 'min(400px, calc(100vw - 32px))', maxHeight: '70vh', padding: '12px' }}>
+            <div className="flex items-center gap-2.5 px-1.5 pb-2.5 flex-shrink-0">
               {logoUrl ? <img src={logoUrl} alt="" className="w-[24px] h-[24px] rounded-md object-contain flex-shrink-0" /> : <PlatformLogo size={24} letter={hidePlatformName && tenantName ? tenantName.trim()[0] : undefined} />}
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="text-sm text-ink font-bold truncate">{hidePlatformName && tenantName ? tenantName : 'Platform' + (tenantName ? ' ' + tenantName : '')}</div>
-                {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.4.16</div>}
               </div>
+              <button onClick={() => setEditPins((x) => !x)} className={'text-xs px-2.5 py-1 rounded-full transition flex-shrink-0 ' + (editPins ? 'bg-accent text-white' : 'text-accent hover:bg-white/8')}>{editPins ? 'Fine' : 'Modifica'}</button>
             </div>
-            <div className="px-0.5 pb-3 flex-shrink-0">
+            <div className="px-0.5 pb-2.5 flex-shrink-0">
               <GlobalSearch token={token} onNavigate={handleNavigate} panel onQueryChange={setNavFilter} />
             </div>
-            <div className="overflow-y-auto border-t border-white/10 pt-3" style={{ maxHeight: 'min(46vh, 380px)' }}>
-              {nessunRisultato && <div className="text-center text-sm text-gray-500 py-6">Nessuna voce per "{navFilter}"</div>}
-              {overflowSenzaGruppoF.length > 0 && (
-                <div className="grid grid-cols-4 gap-1">{overflowSenzaGruppoF.map(gridTile)}</div>
-              )}
-              {gruppi.map((g) => {
-                const items = overflowConGruppoF.filter((m) => m.group_name === g)
-                if (!items.length) return null
-                return (
-                  <div key={g} className="mt-2">
-                    <div className="px-1.5 pb-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{g}</div>
-                    <div className="grid grid-cols-4 gap-1">{items.map(gridTile)}</div>
-                  </div>
-                )
-              })}
-              {systemItemsF.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-white/10">
-                  <div className="grid grid-cols-4 gap-1">{systemItemsF.map(gridTile)}</div>
+            <div className="overflow-y-auto border-t border-white/10 pt-2.5" style={{ maxHeight: 'min(46vh, 380px)' }}>
+              {editPins && (
+                <div className="px-1.5 pb-2 text-[11px] text-gray-500">
+                  Tocca per appuntare nel dock (massimo {PIN_COUNT}){pinSlugs.length >= PIN_COUNT ? ' — ne hai già ' + PIN_COUNT + ', togline una per sceglierne un\'altra' : ''}.
+                  {pinPrefs && <button onClick={() => savePins(null)} className="ml-1 text-accent hover:opacity-80">Ripristina</button>}
                 </div>
               )}
+              {nessunRisultato && <div className="text-center text-sm text-gray-500 py-6">Nessuna voce per "{navFilter}"</div>}
+              {editPins ? (
+                poolF.length > 0 && <div className="grid grid-cols-4 gap-1">{poolF.map(gridTile)}</div>
+              ) : (
+                <>
+                  {overflowSenzaGruppoF.length > 0 && (
+                    <div className="grid grid-cols-4 gap-1">{overflowSenzaGruppoF.map(gridTile)}</div>
+                  )}
+                  {gruppi.map((g) => {
+                    const items = overflowConGruppoF.filter((m) => m.group_name === g)
+                    if (!items.length) return null
+                    return (
+                      <div key={g} className="mt-2">
+                        <div className="px-1.5 pb-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{g}</div>
+                        <div className="grid grid-cols-4 gap-1">{items.map(gridTile)}</div>
+                      </div>
+                    )
+                  })}
+                  {systemItemsF.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-white/10">
+                      <div className="grid grid-cols-4 gap-1">{systemItemsF.map(gridTile)}</div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-            <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between px-1 flex-shrink-0">
+            <div className="mt-2.5 pt-2.5 border-t border-white/10 flex items-center justify-between px-1 flex-shrink-0">
               <button onClick={() => handleNavigate('account')} className={'flex items-center gap-2.5 text-left hover:opacity-80 transition rounded-lg px-2 py-1 -mx-2 ' + (currentPage === 'account' ? 'bg-accent/20' : '')} title="Il mio account">
                 <Avatar user={user} size={28} />
                 <div className="min-w-0">
                   <div className="text-sm text-ink font-medium truncate">{user && user.display_name}</div>
-                  <div className="text-xs text-gray-500">{user && user.role}</div>
+                  <div className="text-xs text-gray-500">{user && user.role}{!hidePlatformName && <span> · Platform 0.4.17</span>}</div>
                 </div>
               </button>
               <div className="flex items-center gap-3">
@@ -365,7 +401,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
           {pinned.map((m) => (
             <DockIcon key={m.slug} slug={m.slug} dockKey={m.slug} name={m.name} icon={m.icon} color={m.color} active={currentPage === m.slug} />
           ))}
-          {(overflowSenzaGruppo.length > 0 || overflowConGruppo.length > 0 || systemItems.length > 0) && (
+          {(overflowSenzaGruppo.length > 0 || overflowConGruppo.length > 0 || systemItemsRest.length > 0 || pool.length > 0) && (
             <>
               <div className="w-px h-6 bg-white/15 mx-1 flex-shrink-0" />
               <div data-dock-altro>
