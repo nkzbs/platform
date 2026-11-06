@@ -119,6 +119,19 @@ nuova (l'aggiornamento sovrascrive la copia locale, ed è avvisato prima).
 - **Collega i moduli** (`core/backend/src/module-links.js`, `GET /api/modules/collegamenti/proposte`, `POST /api/modules/collegamenti/applica`): regole sui **nomi**, nessun nome di settore: il nome di un modulo contenuto nel nome di un altro («Righe ordine» → «Ordini») oppure un campo di testo che si chiama come un altro modulo; radice delle parole senza vocale finale, parole grammaticali ignorate; mai verso moduli di sistema, mai due volte. `applica` **non si fida** del browser: ricalcola da/a, chiave libera (`rel_<slug>`), etichetta e campo da mostrare, aggiunge una relazione `many_to_one` allo schema (v3: blocco `relation`; v2: `relations[]`), salva la versione precedente in `modules_schema_history` e incrementa `schema_version`, come una pubblicazione.
 - **Libreria di Super Admin**: filtri per gruppo e per «ruoli dichiarati»; `GET /api/registry/modules/:id/usage` («Dove è usato»): per ogni tenant non cancellato e non sandbox apre il database **in sola lettura** e legge **solo la tabella dei moduli** (da quale modulo della Libreria viene e a che versione è), mai le righe; ritorna anche i moduli della Libreria che hanno una relazione verso quello. Da lì non si aggiorna niente: decide il tenant.
 
+### Documento da modello (blocco `document_action`)
+
+Un bottone sul record che prepara un documento dai suoi dati, lo mostra **in anteprima modificabile** e lo spedisce per email. Si dichiara dal Builder (categoria Automazione → «Documento da modello»), non si programma: nel nucleo non c'è il testo né il nome di nessun documento.
+
+- **Cosa dichiara il blocco**: `key` (minuscole, numeri, `_`), `label` (testo del bottone), `subject` e `body` (modelli con segnaposto), `recipient` (percorso di un campo email: `email` oppure `relazione.email`), `on_send_state` opzionale (stato del workflow in cui portare il record dopo l'invio), `icon` opzionale.
+- **Segnaposto** (`core/backend/src/lib/modello-documento.js`, senza `eval`; vale solo ciò che è elencato): `{{campo}}` (vuoto → «—»; Sì/No per i booleani), `{{campo|linea}}` (vuoto → riga da compilare), `{{campo|vuoto}}`, `|minuscolo`, `|maiuscolo`; `{{relazione.campo}}` dal record collegato; `{{@azienda}}`, `{{@indirizzo}}`, `{{@piva}}` (Impostazioni), `{{@oggi}}`; sezioni `{{#k}}…{{/k}}` (solo se compilato) e `{{^k}}…{{/k}}` (solo se vuoto). Si leggono solo proprietà proprie del record (`constructor`, `__proto__` danno «—»).
+- **Rotte** (`routes/records.js`): `POST /records/:slug/:id/documento/:key/anteprima` (**non spedisce nulla**: restituisce oggetto, corpo e destinatario) e `.../invia` (spedisce esattamente il testo approvato). Solo admin. **Il destinatario lo ricava sempre il server** dal modello e dal record: la richiesta non può sceglierlo. L'invio è tracciato in Attività (`record.invia_documento`); l'eventuale cambio di stato non è un errore se il workflow non lo ammette (il secondo invio parte comunque). Email via `lib/email.js` (Resend, collegamento `email_resend`), testo sempre escapato.
+- **Validazione alla pubblicazione** (`routes/builder.js`): ogni segnaposto deve essere un campo vero del modulo o `relazione.campo` esistente nel modulo collegato; destinatario, etichetta, oggetto, testo e chiave unica obbligatori; `on_send_state` deve esistere nel workflow. Un campo scritto male blocca la pubblicazione invece di mostrare «—» in un documento già inviato.
+- **Schema**: `document_action` è un blocco v3 come `branch_create` (`shared/schema-v3-core.js`: `toV3`, `toV2Lenient` → `document_actions`, `toV2` strict lancia). Il Builder lo serializza in `shared/frontend/builder/index.jsx` (`document_actions`): senza quella riga riaprendo il modulo i documenti sparirebbero.
+- **Interfaccia**: `RecordDetailModal.jsx` mostra un pulsante per ogni documento del modulo e un pannello con oggetto, testo e destinatario (se manca: avviso rosso e invio disattivato).
+- **Valori di partenza**: i documenti del verticale Mediazione immobiliare stanno in `core/backend/src/seeds/documenti-immobiliare.json` (Privacy+Incarico e Antiriciclaggio sui Clienti, Scheda immobile sugli Immobili) e `seed-azioni-documento.js` li applica all'avvio **una volta sola per documento** (marcatore nella tabella `seed_applicati`), passando dalle rotte vere del Builder, **solo ai moduli installati che hanno tutti i campi citati**. Se un documento viene tolto o cambiato dal Builder, al riavvio non ricompare.
+- **Test**: `modello-documento.test.js` (motore, sicurezza, parità al carattere con i testi che stavano nel codice, congelati in `fixtures/documenti-parita.json`), `documento-da-modello.test.js` (rotte, validazione, seed), `schema-v3.test.js`.
+
 ### Come si vede l'elenco di un modulo
 
 `modules.list_view` ha tre valori: `table` (tabella, anche a schede su telefono), `card_grid` (card colorate) e `archive` (**archivio**, vedi sotto). Si sceglie nel Builder, proprietà del modulo, «Come si vede l'elenco».
@@ -439,17 +452,16 @@ il tipo "semplice" (solo oggetto, data e allegati) per mail che non sono bollett
 
 **Test del frontend**: `cd core/frontend && npm test` (vitest + jsdom), compreso in `scripts/verifica.sh`. Oggi coprono la logica pura (`shared/frontend/dock-pins.js`: voci appuntate), il `Portal` e la guardia degli overlay; non i componenti grandi né il browser vero. Logica nuova da testare: metterla in un modulo senza React (come `dock-pins.js`), non dentro il componente.
 
-## Immobiliare: OpenAPI.it, valutazione, documenti cliente
+## Immobiliare: OpenAPI.it e valutazione
 
-Costruito per il tenant di una mediazione immobiliare (moduli Immobili, Trattative, Provvigioni, Clienti, Interazioni). **Eccezione consapevole alla regola "il nucleo non conosce i nomi dei moduli"** — vedi `docs/DECISIONI.md`, 01/11/2026: le rotte stanno in `core/backend/src/routes/records.js` e sono legate agli slug `immobili` e `clienti`, perché Platform non ha ancora una primitiva "azione esterna su un record esistente".
+Costruito per il tenant di una mediazione immobiliare (moduli Immobili, Trattative, Provvigioni, Clienti, Interazioni). **Resta un'eccezione consapevole alla regola "il nucleo non conosce i nomi dei moduli"** — vedi `docs/DECISIONI.md`: la sola valutazione (`POST /records/immobili/:id/valuta`, in `routes/records.js`, e il suo bottone/pannello in `RecordDetailModal.jsx`) è legata allo slug `immobili`, perché ha un report su misura; i documenti sono già generici.
 
 | Cosa | Dove |
 |---|---|
 | Connettore OpenAPI.it (token a due passi, in cache, rigenerato da solo; sandbox/produzione dal campo `ambiente`) | `core/backend/src/lib/openapi-it.js`; riga "OpenAPI.it — Immobili" in `routes/connections.js`, prova reale con `POST /connections/openapi_it/test` |
 | Valutazione di un immobile | `POST /records/immobili/:id/valuta` (`routes/records.js`): scrive `stima_valore`, `stima_eur_mq`, `stima_data`, `stima_fonte` e il report in `report_valutazione` (chiave non dichiarata nello schema, quindi non compare come campo) |
 | Fonti del report | OpenAPI.it avanzato (quotazione, comparabili, OMI); fonti pubbliche in `lib/rischi-territorio.js` (zona sismica ISPRA, fotovoltaico PVGIS); paragrafo AI in `lib/ai-valutazione.js` → Super Admin `POST /api/tenant-ai/explain-valuation`, con ogni numero scritto dal modello verificato contro i dati |
-| Documenti cliente (Privacy+Incarico, Antiriciclaggio) | `POST /records/clienti/:id/genera-documenti` (solo bozza, non spedisce) e `.../invia-documenti` (spedisce il testo approvato dall'admin e porta lo stato a "documenti inviati"); testi in `lib/doc-cliente.js`, invio via `lib/email.js` (Resend) |
-| Scheda immobile | `lib/doc-immobile.js`, bottone nel dettaglio dell'Immobile (`RecordDetailModal.jsx`) |
+| Documenti cliente e scheda immobile | Non più codice dedicato: sono azioni «documento da modello» generiche (vedi sopra), con i testi in `seeds/documenti-immobiliare.json` |
 
 Mai inviato nulla senza che l'admin abbia visto e potuto modificare il testo. Il report di valutazione si legge dal record, senza richiamare OpenAPI.it (che costa a chiamata).
 

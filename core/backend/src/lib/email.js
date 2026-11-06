@@ -34,7 +34,7 @@ async function invia({ to, subject, html }) {
 }
 
 // Testo semplice -> HTML minimale per il corpo di un'email (indentazione/a-capo preservati,
-// nessun markup): condiviso da tutti i documenti generati (doc-cliente.js, doc-immobile.js).
+// nessun markup): condiviso da tutti i documenti da modello (routes/records.js, blocco `document_action`).
 function htmlDaTesto(testo) {
   const righe = String(testo || '').split('\n').map((r) => r.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
   return '<div style="font-family:system-ui,-apple-system,sans-serif;color:#1c1917;white-space:pre-wrap;line-height:1.6;max-width:640px">' + righe.join('<br>') + '</div>';

@@ -385,6 +385,40 @@ router.post('/:slug/publish', requireAuth, requireAdmin, (req, res) => {
         });
       });
     });
+    // document_action (documento da modello): ogni segnaposto del testo deve corrispondere a un
+    // campo vero del modulo (o di un record collegato tramite una relazione): un nome scritto male
+    // darebbe «—» nel documento già inviato al cliente, troppo tardi per accorgersene. Controlla
+    // anche destinatario, chiave unica e lo stato scelto per dopo l'invio.
+    const { percorsiUsati, SEGNAPOSTI_FISSI } = require('../lib/modello-documento');
+    const campiProprii = new Set((normalized.fields || []).map((f) => f.key));
+    const relazioniModulo = new Map((normalized.relations || []).map((r) => [r.key, r]));
+    const statiWorkflow = new Set(((normalized.workflow && normalized.workflow.states) || []).map((st) => st.key));
+    const chiaviDocumento = new Set();
+    const erroreDelPercorso = (p, dove) => {
+      if (SEGNAPOSTI_FISSI.includes(p)) return null;
+      if (!p.includes('.')) return campiProprii.has(p) ? null : `${dove}: il campo "${p}" non esiste in questo modulo`;
+      const [rel, campo] = p.split('.');
+      const def = relazioniModulo.get(rel);
+      if (!def) return `${dove}: la relazione "${rel}" non esiste in questo modulo`;
+      const bersaglio = branchModMap[def.target_module];
+      if (!bersaglio) return `${dove}: il modulo collegato da "${rel}" ("${def.target_module}") non esiste`;
+      return (bersaglio.fields || []).some((f) => f.key === campo) ? null : `${dove}: il campo "${campo}" non esiste nel modulo collegato "${def.target_module}"`;
+    };
+    (normalized.document_actions || []).forEach((da) => {
+      const label = da.label || 'Documento da modello';
+      const errs = [];
+      if (!da.key || !/^[a-z0-9_]+$/.test(da.key)) errs.push('chiave non valida (solo minuscole, numeri e _)');
+      else if (chiaviDocumento.has(da.key)) errs.push(`la chiave "${da.key}" è usata due volte nello stesso modulo`);
+      else chiaviDocumento.add(da.key);
+      if (!da.label || !da.label.trim()) errs.push("manca l'etichetta del bottone");
+      if (!da.subject || !da.subject.trim()) errs.push("manca l'oggetto dell'email");
+      if (!da.body || !da.body.trim()) errs.push('manca il testo del documento');
+      if (!da.recipient || !da.recipient.trim()) errs.push('manca il destinatario (un campo email di questo record o di un record collegato)');
+      else { const e = erroreDelPercorso(da.recipient.trim(), 'destinatario'); if (e) errs.push(e); }
+      new Set([...percorsiUsati(da.subject), ...percorsiUsati(da.body)]).forEach((p) => { const e = erroreDelPercorso(p, 'nel testo'); if (e) errs.push(e); });
+      if (da.on_send_state && !statiWorkflow.has(da.on_send_state)) errs.push(`lo stato "${da.on_send_state}" non esiste nel workflow di questo modulo`);
+      if (errs.length) formulaErrors.push({ label, errors: errs });
+    });
     // period_view: granularità valida, campo data esistente, ogni metrica ha un campo
     // valido (tranne count, che non ne ha bisogno) — stessa disciplina degli altri
     // blocchi "vista", un riferimento sbagliato qui tornerebbe metriche sempre a zero

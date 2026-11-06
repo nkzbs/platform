@@ -632,12 +632,11 @@ che non può ridistribuirsi da sé come fanno i tenant) aveva `DB_PATH=/data/sup
 VECCHIO e incompleto, non quello vero in uso. Mai eseguito da quando la discrepanza esisteva (altrimenti Super Admin
 avrebbe perso ore di storia reale a ogni suo stesso aggiornamento), corretto prima che causasse danno.
 
-## 2026-11-01 — Rotte specifiche per Immobili e Clienti (eccezione alla regola "sempre generico")
+## 2026-11-01 — Rotte specifiche per Immobili e Clienti (eccezione alla regola "sempre generico") — AGGIORNATA il 06/11
 
-**Cosa**: `POST /records/immobili/:id/valuta`, `POST /records/clienti/:id/genera-documenti` e `.../invia-documenti` sono legate agli slug `immobili` e `clienti`, e i bottoni corrispondenti stanno in `RecordDetailModal.jsx` solo per quei moduli.
-**Perché**: Platform non ha ancora una primitiva "azione esterna su un record esistente" (le Source scriptabili servono solo a creare record nuovi). Inventarne una generica per un solo caso, senza un secondo caso che mostri la forma giusta, sarebbe stato prematuro.
-**Quando si toglie**: appena un secondo tenant ha bisogno di un'azione simile, si costruisce la primitiva (azione configurabile dal Builder) e queste tre rotte ci migrano. Fino ad allora il test `no-hardcoded-names` non le vede, perché usa slug di modulo e non nomi di progetto.
-**Regola che resta**: il testo di un documento al cliente non parte mai senza un'anteprima modificabile dall'admin (due rotte separate apposta: genera non spedisce).
+**Cosa era**: `POST /records/immobili/:id/valuta`, `.../clienti/:id/genera-documenti`, `.../invia-documenti`, `.../immobili/:id/genera-scheda`, `.../invia-scheda` legate agli slug `immobili` e `clienti`, con i bottoni in `RecordDetailModal.jsx` solo per quei moduli. **Perché**: Platform non aveva una primitiva "azione su un record esistente" e inventarne una per un solo caso sarebbe stato prematuro.
+**Cosa resta (06/11)**: solo la **valutazione** (`/immobili/:id/valuta`): ha un report su misura (comparabili, OMI, zona sismica, considerazioni AI) e dipende da un connettore; generalizzarla richiede un secondo caso di "azione su connettore" che oggi non esiste. I **documenti** sono stati generalizzati: vedi la voce del 06/11 «Documento da modello».
+**Regola che resta**: il testo di un documento al cliente non parte mai senza un'anteprima modificabile dall'admin (due rotte separate apposta: anteprima non spedisce).
 
 ## 2026-11-06 — Ogni overlay a tutto schermo in un portale
 
@@ -662,4 +661,11 @@ avrebbe perso ore di storia reale a ogni suo stesso aggiornamento), corretto pri
 **Come si è visto**: `curl -sI https://<tenant>/` senza `cache-control`, mentre `/index.html` lo aveva; il bundle servito conteneva già la versione nuova. Super Admin non lo aveva (la sua `/` passa da `/index.html`).
 **Scelta**: `add_header Cache-Control "no-cache"` su entrambi i blocchi della root. Non `no-store`: il browser può comunque tenere la pagina, ma la rivalida a ogni apertura (costo: una richiesta condizionata, poche centinaia di byte).
 **Cosa NON risolve**: la copia già in cache sul telefono finché non viene rivalidata una volta (chiudere l'app dalla Home di iOS e riaprirla, o Impostazioni → Safari → Avanzate → Dati dei siti web).
+
+## 2026-11-06 — Documento da modello: la primitiva che mancava, al posto di quattro rotte cablate
+
+**Cosa**: nuovo blocco di schema `document_action` (Builder → Automazione → «Documento da modello»): oggetto e testo con segnaposto, destinatario, stato opzionale dopo l'invio; due rotte generiche (`anteprima` non spedisce, `invia` spedisce il testo approvato). Tolte le 4 rotte `genera-documenti`/`invia-documenti`/`genera-scheda`/`invia-scheda` e i file `lib/doc-cliente.js`, `lib/doc-immobile.js`. Dettagli in `ARCHITETTURA.md`.
+**Perché**: «Custom in platform non esiste»: se una cosa difficile da replicare serve, si costruisce la primitiva. Era il punto "azione su un record" dell'elenco sviluppi futuri; copre i 3 documenti esistenti e qualunque altro (preventivo, lettera, scheda) senza codice.
+**Scelte**: (1) **modello a segnaposto, non codice**: nessun `eval`, nessuna espressione; solo campi, `relazione.campo`, filtri e sezioni (il test della sicurezza ha scovato che `{{constructor}}` leggeva una proprietà ereditata: ora si leggono solo proprietà proprie). (2) **Il destinatario non arriva mai dalla richiesta**: lo ricava il server dal modello e dal record. (3) **Validazione alla pubblicazione**: un campo scritto male blocca, invece di dare «—» in un documento già inviato. (4) **Parità prima della cancellazione**: i modelli sono stati ricavati dai testi esistenti con uno script e confrontati al carattere (44 casi: 4 clienti × 4 tenant × 2 documenti, 3 immobili × 4 tenant), poi l'output vecchio è stato congelato in `fixtures/documenti-parita.json` e il codice vecchio cancellato. (5) **Seed una volta sola**: i documenti del verticale sono dati (`seeds/documenti-immobiliare.json`), applicati all'avvio con un marcatore (`seed_applicati`) e solo ai moduli che hanno tutti i campi citati; se qualcuno li toglie dal Builder non ricompaiono. Una scrittura diretta su `schema_json` è esclusa: si passa dalle rotte vere del Builder.
+**Cosa non è coperto**: la valutazione OpenAPI.it resta specifica (vedi voce del 01/11). Il Builder non ha ancora un selettore per l'icona del documento (si imposta nel seed o nello schema; di default `mail`). Non c'è un registro dei modelli condivisi tra tenant: il verticale viaggia come seed, non come modulo di Libreria (resta da fare: pubblicarli in Libreria insieme ai moduli).
 

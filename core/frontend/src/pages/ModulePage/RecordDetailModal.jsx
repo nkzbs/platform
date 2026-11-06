@@ -448,52 +448,32 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
     if (onSaved) onSaved(res.data.record)
   }
 
-  // Documenti cliente — Privacy+Incarico (2026-11-01, stesso principio di valutaImmobile sopra:
-  // deliberatamente specifico a Clienti). Due passi distinti perché il testo generato va
-  // rivisto PRIMA dell'invio ("mostrato a schermo che verifica con possibilità di modifica da
-  // parte dell'utente admin", richiesto dal vivo): genera riempie bozza, invia manda
-  // esattamente il testo nel textarea (che l'admin può aver modificato).
-  const [generandoDoc, setGenerandoDoc] = useState(false)
+  // Documenti da modello (blocco `document_action` del modulo, dichiarato dal Builder). Due
+  // passi distinti perché il testo generato va rivisto PRIMA dell'invio ("mostrato a schermo
+  // che verifica con possibilità di modifica da parte dell'utente admin", richiesto dal vivo):
+  // «anteprima» riempie la bozza e non spedisce nulla, «invia» manda esattamente il testo nel
+  // riquadro (che l'admin può aver modificato). Il destinatario lo decide il server.
+  const documenti = (schema && schema.document_actions) || []
+  const [docInPreparazione, setDocInPreparazione] = useState(null) // chiave del documento in corso
   const [inviandoDoc, setInviandoDoc] = useState(false)
-  const [bozzaDoc, setBozzaDoc] = useState(null) // { oggetto, corpo } oppure null = pannello chiuso
-  const generaDocumenti = async (tipo) => {
-    setGenerandoDoc(true)
-    const res = await api.post('/records/clienti/' + recordId + '/genera-documenti', { tipo })
-    setGenerandoDoc(false)
-    if (!res.ok) { toast((res.data && res.data.error) || 'Generazione non riuscita', 'error'); return }
-    setBozzaDoc({ oggetto: res.data.oggetto, corpo: res.data.corpo })
+  const [bozzaDoc, setBozzaDoc] = useState(null) // { key, label, icon, oggetto, corpo, destinatario } oppure null = pannello chiuso
+  const apriDocumento = async (az) => {
+    setDocInPreparazione(az.key)
+    const res = await api.post('/records/' + mod.slug + '/' + recordId + '/documento/' + az.key + '/anteprima', {})
+    setDocInPreparazione(null)
+    if (!res.ok) { toast((res.data && res.data.error) || 'Preparazione non riuscita', 'error'); return }
+    setBozzaDoc({ key: az.key, label: az.label, icon: az.icon || 'mail', oggetto: res.data.oggetto, corpo: res.data.corpo, destinatario: res.data.destinatario })
   }
-  const inviaDocumenti = async () => {
+  const inviaDocumento = async () => {
     setInviandoDoc(true)
-    const res = await api.post('/records/clienti/' + recordId + '/invia-documenti', bozzaDoc)
+    const res = await api.post('/records/' + mod.slug + '/' + recordId + '/documento/' + bozzaDoc.key + '/invia', { oggetto: bozzaDoc.oggetto, corpo: bozzaDoc.corpo })
     setInviandoDoc(false)
     if (!res.ok) { toast((res.data && res.data.error) || 'Invio non riuscito', 'error'); return }
+    const inviato = bozzaDoc
     setBozzaDoc(null)
-    toast(res.data.stato_aggiornato ? 'Documenti inviati — stato aggiornato a "Documenti inviati"' : 'Documenti inviati')
+    toast(res.data.stato_aggiornato ? '«' + inviato.label + '» inviato — stato del record aggiornato' : '«' + inviato.label + '» inviato')
     const r = await api.get('/records/' + mod.slug + '/' + recordId)
     if (r.ok) { setRecord(r.data); if (onSaved) onSaved(r.data) }
-  }
-
-  // Scheda Immobile — stesso principio di generaDocumenti/inviaDocumenti sopra, ma verso il
-  // proprietario collegato (non c'è uno stato da aggiornare: Immobili non ha un workflow
-  // "scheda inviata", a differenza di Clienti).
-  const [generandoScheda, setGenerandoScheda] = useState(false)
-  const [inviandoScheda, setInviandoScheda] = useState(false)
-  const [bozzaScheda, setBozzaScheda] = useState(null) // { oggetto, corpo, proprietario_email }
-  const generaScheda = async () => {
-    setGenerandoScheda(true)
-    const res = await api.post('/records/immobili/' + recordId + '/genera-scheda', {})
-    setGenerandoScheda(false)
-    if (!res.ok) { toast((res.data && res.data.error) || 'Generazione non riuscita', 'error'); return }
-    setBozzaScheda({ oggetto: res.data.oggetto, corpo: res.data.corpo, proprietario_email: res.data.proprietario_email })
-  }
-  const inviaScheda = async () => {
-    setInviandoScheda(true)
-    const res = await api.post('/records/immobili/' + recordId + '/invia-scheda', { oggetto: bozzaScheda.oggetto, corpo: bozzaScheda.corpo })
-    setInviandoScheda(false)
-    if (!res.ok) { toast((res.data && res.data.error) || 'Invio non riuscito', 'error'); return }
-    setBozzaScheda(null)
-    toast('Scheda inviata al proprietario')
   }
 
   return (
@@ -508,21 +488,11 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
               <Icon name="sparkles" size={12} />{valutando ? 'Valuto…' : 'Valuta con OpenAPI.it'}
             </button>
           )}
-          {!editing && record && mod.slug === 'immobili' && !bozzaScheda && (
-            <button onClick={generaScheda} disabled={generandoScheda} className="text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1">
-              <Icon name="file" size={12} />{generandoScheda ? 'Preparo…' : 'Scheda immobile'}
+          {!editing && record && !bozzaDoc && documenti.map((az) => (
+            <button key={az.key} onClick={() => apriDocumento(az)} disabled={docInPreparazione !== null} className="text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1">
+              <Icon name={az.icon || 'mail'} size={12} />{docInPreparazione === az.key ? 'Preparo…' : az.label}
             </button>
-          )}
-          {!editing && record && mod.slug === 'clienti' && !bozzaDoc && (
-            <>
-              <button onClick={() => generaDocumenti('privacy_incarico')} disabled={generandoDoc} className="text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1">
-                <Icon name="mail" size={12} />{generandoDoc ? 'Preparo…' : 'Privacy + Incarico'}
-              </button>
-              <button onClick={() => generaDocumenti('antiriciclaggio')} disabled={generandoDoc} className="text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1">
-                <Icon name="shield" size={12} />{generandoDoc ? 'Preparo…' : 'Antiriciclaggio'}
-              </button>
-            </>
-          )}
+          ))}
           {!editing && record && <button onClick={startEditing} className="text-xs text-accent hover:opacity-80 transition flex items-center gap-1"><Icon name="edit" size={12} />Modifica</button>}
           {!editing && record && canDelete && <button onClick={remove} className="text-xs text-red-400/70 hover:text-red-400 transition flex items-center gap-1"><Icon name="trash" size={12} />Elimina</button>}
         </>
@@ -567,10 +537,10 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
             {mod.slug === 'immobili' && reportValutazione && (
               <ReportValutazione report={reportValutazione} titolo={record.data.titolo} indirizzo={[record.data.indirizzo, record.data.comune, record.data.provincia].filter(Boolean).join(', ')} />
             )}
-            {mod.slug === 'clienti' && bozzaDoc && (
+            {bozzaDoc && (
               <div className="glass-panel p-4 mb-5 border-accent/30">
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="text-xs font-semibold text-ink flex items-center gap-1.5"><Icon name="mail" size={13} />Anteprima — rivedi o modifica prima di inviare</span>
+                  <span className="text-xs font-semibold text-ink flex items-center gap-1.5"><Icon name={bozzaDoc.icon} size={13} />{bozzaDoc.label} — rivedi o modifica prima di inviare</span>
                 </div>
                 <label className="text-xs text-gray-400 block mb-1">Oggetto</label>
                 <input value={bozzaDoc.oggetto} onChange={(e) => setBozzaDoc({ ...bozzaDoc, oggetto: e.target.value })}
@@ -578,28 +548,12 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                 <label className="text-xs text-gray-400 block mb-1">Testo del documento</label>
                 <textarea value={bozzaDoc.corpo} onChange={(e) => setBozzaDoc({ ...bozzaDoc, corpo: e.target.value })} rows={14}
                   className="w-full bg-surface-page border border-gray-800 rounded-lg px-3 py-2 text-xs text-gray-200 font-mono leading-relaxed mb-3" />
-                {!record.data.email && <div className="text-xs text-red-400 mb-3">Il cliente non ha un indirizzo email: aggiungilo da "Modifica" prima di inviare.</div>}
+                {bozzaDoc.destinatario
+                  ? <div className="text-xs text-gray-400 mb-3">Sarà spedito a <span className="text-ink">{bozzaDoc.destinatario}</span></div>
+                  : <div className="text-xs text-red-400 mb-3">Non c'è un indirizzo email a cui spedirlo: aggiungilo al record (o al record collegato) da "Modifica" prima di inviare.</div>}
                 <div className="flex gap-2">
                   <button onClick={() => setBozzaDoc(null)} className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg transition text-sm">Annulla</button>
-                  <button onClick={inviaDocumenti} disabled={inviandoDoc || !record.data.email} className="flex-1 bg-accent hover:opacity-90 disabled:opacity-50 text-white py-2 rounded-lg transition text-sm font-medium">{inviandoDoc ? 'Invio…' : 'Invia al cliente via email'}</button>
-                </div>
-              </div>
-            )}
-            {mod.slug === 'immobili' && bozzaScheda && (
-              <div className="glass-panel p-4 mb-5 border-accent/30">
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="text-xs font-semibold text-ink flex items-center gap-1.5"><Icon name="file" size={13} />Anteprima — rivedi o modifica prima di inviare</span>
-                </div>
-                <label className="text-xs text-gray-400 block mb-1">Oggetto</label>
-                <input value={bozzaScheda.oggetto} onChange={(e) => setBozzaScheda({ ...bozzaScheda, oggetto: e.target.value })}
-                  className="w-full bg-surface-page border border-gray-800 rounded-lg px-3 py-2 text-sm text-ink mb-3" />
-                <label className="text-xs text-gray-400 block mb-1">Testo della scheda</label>
-                <textarea value={bozzaScheda.corpo} onChange={(e) => setBozzaScheda({ ...bozzaScheda, corpo: e.target.value })} rows={14}
-                  className="w-full bg-surface-page border border-gray-800 rounded-lg px-3 py-2 text-xs text-gray-200 font-mono leading-relaxed mb-3" />
-                {!bozzaScheda.proprietario_email && <div className="text-xs text-red-400 mb-3">Il proprietario collegato non ha un indirizzo email (o nessun Proprietario è collegato): aggiungilo prima di inviare.</div>}
-                <div className="flex gap-2">
-                  <button onClick={() => setBozzaScheda(null)} className="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg transition text-sm">Annulla</button>
-                  <button onClick={inviaScheda} disabled={inviandoScheda || !bozzaScheda.proprietario_email} className="flex-1 bg-accent hover:opacity-90 disabled:opacity-50 text-white py-2 rounded-lg transition text-sm font-medium">{inviandoScheda ? 'Invio…' : 'Invia al proprietario via email'}</button>
+                  <button onClick={inviaDocumento} disabled={inviandoDoc || !bozzaDoc.destinatario} className="flex-1 bg-accent hover:opacity-90 disabled:opacity-50 text-white py-2 rounded-lg transition text-sm font-medium">{inviandoDoc ? 'Invio…' : 'Invia via email'}</button>
                 </div>
               </div>
             )}

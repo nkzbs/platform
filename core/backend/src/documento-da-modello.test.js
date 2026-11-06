@@ -158,6 +158,134 @@ async function main() {
     assertTrue(!html.includes('<script>') && html.includes('&lt;script&gt;'), html);
   });
 
+  console.log('\n--- validazione alla pubblicazione ---');
+  const pubblica = (slug) => post(`/builder/${slug}/publish`, {});
+  const dettagli = async (r) => ((await r.json()).details || []).map((d) => (d.errors || []).join('; ')).join(' | ');
+  const modulo = (slug, azione) => mk(slug, [
+    F('nome', 'Nome'), F('email', 'Email'),
+    { id: 'rel', block_type: 'relation', key: 'riferimento', label: 'Riferimento', target_module: 'persone_t', type: 'many_to_one', display_field: 'nome' },
+    { id: 'st', block_type: 'workflow_state', key: 'a', label: 'A', initial: true },
+    { id: 'st2', block_type: 'workflow_state', key: 'b', label: 'B' },
+    { id: 'tr', block_type: 'workflow_transition', from: 'a', to: 'b', label: 'Vai', roles: ['admin'] },
+    { id: 'da', block_type: 'document_action', key: 'doc', label: 'Doc', subject: 'Oggetto {{nome}}', body: 'Testo {{nome}}', recipient: 'email', ...azione },
+  ]);
+  await test('un documento corretto si pubblica', async () => {
+    modulo('valido_t', {});
+    const r = await pubblica('valido_t');
+    assertEq(r.status, 200, await dettagli(r));
+  });
+  await test('campo inesistente nel testo → pubblicazione bloccata, con il nome del campo', async () => {
+    modulo('typo_t', { body: 'Gentile {{nmoe}}' });
+    const r = await pubblica('typo_t');
+    assertEq(r.status, 400); const d = await dettagli(r);
+    assertTrue(/nmoe/.test(d) && /non esiste in questo modulo/.test(d), d);
+  });
+  await test('campo inesistente nell\'oggetto, dentro una sezione e con un filtro → bloccato', async () => {
+    modulo('typo2_t', { subject: '{{#nome}}{{cognome|maiuscolo}}{{/nome}}' });
+    const r = await pubblica('typo2_t');
+    assertEq(r.status, 400); assertTrue(/cognome/.test(await dettagli(r)));
+  });
+  await test('relazione inesistente, o campo inesistente nel modulo collegato → bloccato', async () => {
+    modulo('rel1_t', { body: '{{altra.nome}}' });
+    assertTrue(/relazione "altra" non esiste/.test(await dettagli(await pubblica('rel1_t'))));
+    modulo('rel2_t', { body: '{{riferimento.telefono_inesistente}}' });
+    assertTrue(/non esiste nel modulo collegato "persone_t"/.test(await dettagli(await pubblica('rel2_t'))));
+  });
+  await test('un campo di un record collegato che esiste si pubblica (relazione.campo)', async () => {
+    modulo('rel3_t', { body: '{{riferimento.nome}}', recipient: 'riferimento.email' });
+    const r = await pubblica('rel3_t');
+    assertEq(r.status, 200, await dettagli(r));
+  });
+  await test('destinatario mancante o su un campo inesistente → bloccato', async () => {
+    modulo('dest1_t', { recipient: '' });
+    assertTrue(/manca il destinatario/.test(await dettagli(await pubblica('dest1_t'))));
+    modulo('dest2_t', { recipient: 'posta' });
+    assertTrue(/destinatario: il campo "posta"/.test(await dettagli(await pubblica('dest2_t'))));
+  });
+  await test('oggetto, testo ed etichetta vuoti → bloccato con un messaggio per ciascuno', async () => {
+    modulo('vuoti_t', { subject: ' ', body: '', label: '' });
+    const d = await dettagli(await pubblica('vuoti_t'));
+    assertTrue(/oggetto/.test(d) && /testo del documento/.test(d) && /etichetta/.test(d), d);
+  });
+  await test('stato dopo l\'invio che non esiste nel workflow → bloccato; uno vero passa', async () => {
+    modulo('stato1_t', { on_send_state: 'inventato' });
+    assertTrue(/stato "inventato" non esiste/.test(await dettagli(await pubblica('stato1_t'))));
+    modulo('stato2_t', { on_send_state: 'b' });
+    assertEq((await pubblica('stato2_t')).status, 200);
+  });
+  await test('chiave non valida o duplicata → bloccato', async () => {
+    modulo('chiave1_t', { key: 'Doc Con Spazi' });
+    assertTrue(/chiave non valida/.test(await dettagli(await pubblica('chiave1_t'))));
+    mk('chiave2_t', [
+      F('nome', 'Nome'), F('email', 'Email'),
+      { id: 'a', block_type: 'document_action', key: 'x', label: 'A', subject: 's', body: 'b {{nome}}', recipient: 'email' },
+      { id: 'b', block_type: 'document_action', key: 'x', label: 'B', subject: 's', body: 'b {{nome}}', recipient: 'email' },
+    ]);
+    assertTrue(/usata due volte/.test(await dettagli(await pubblica('chiave2_t'))));
+  });
+  await test('un segnaposto fisso (@azienda, @oggi) non è un campo e non dà errore', async () => {
+    modulo('fissi_t', { body: '{{@azienda}} {{@piva}} {{@indirizzo}} {{@oggi}} {{nome}}' });
+    assertEq((await pubblica('fissi_t')).status, 200);
+  });
+
+  console.log('\n--- seed: i documenti del verticale applicati ai moduli (una volta sola) ---');
+  const seed = require('./seeds/documenti-immobiliare.json');
+  const { applicaSeed } = require('./seed-azioni-documento');
+  const { percorsiUsati, SEGNAPOSTI_FISSI } = require('./lib/modello-documento');
+  const semplici = (slug) => new Set(seed[slug].flatMap((a) => [...percorsiUsati(a.subject), ...percorsiUsati(a.body), a.recipient])
+    .filter((p) => p && !p.includes('.') && !SEGNAPOSTI_FISSI.includes(p)));
+  const campiSeed = (slug) => [...semplici(slug)].map((k) => F(k, k));
+  const statoSeed = [
+    { id: 'w1', block_type: 'workflow_state', key: 'nuovo', label: 'Nuovo', initial: true },
+    { id: 'w2', block_type: 'workflow_state', key: 'documenti_inviati', label: 'Documenti inviati' },
+    { id: 'w3', block_type: 'workflow_transition', from: 'nuovo', to: 'documenti_inviati', label: 'Invia', roles: ['admin'] },
+  ];
+  mk('clienti', [...campiSeed('clienti'), ...statoSeed]);
+  mk('immobili', [...campiSeed('immobili'),
+    { id: 'rp', block_type: 'relation', key: 'proprietario', label: 'Proprietario', target_module: 'clienti', type: 'many_to_one', display_field: 'nome' }]);
+  const documentiDi = (slug) => JSON.parse(db.prepare('SELECT schema_json FROM modules WHERE slug = ?').get(slug).schema_json);
+  const chiaviDocumento = (slug) => { const sc = documentiDi(slug); return (sc.steps || []).filter((st) => st.block_type === 'document_action').map((st) => st.key).concat((sc.document_actions || []).map((d) => d.key)); };
+
+  let primoGiro;
+  await test('il seed reale si applica ai moduli che hanno i campi giusti (passa dalla validazione del Builder)', async () => {
+    primoGiro = await applicaSeed(seed);
+    assertEq(primoGiro.filter((e) => e.esito === 'applicato').map((e) => e.key).sort(), ['antiriciclaggio', 'privacy_incarico', 'scheda_immobile']);
+    assertEq(chiaviDocumento('clienti').sort(), ['antiriciclaggio', 'privacy_incarico']);
+    assertEq(chiaviDocumento('immobili'), ['scheda_immobile']);
+  });
+  await test('dopo l\'applicazione i tre documenti funzionano davvero: anteprima di un cliente e di un immobile', async () => {
+    const idC = rec('clienti', { nome: 'Mario Bianchi', email: 'mario@esempio.it', tipo_cliente: 'Venditore', _stato: 'nuovo' });
+    const rc = await (await post(`/records/clienti/${idC}/documento/privacy_incarico/anteprima`)).json();
+    assertTrue(rc.corpo.startsWith('INFORMATIVA PRIVACY (GDPR) E MODULO DI INCARICO\n\nStudio Prova (P.IVA 01234567890)'), rc.corpo.slice(0, 120));
+    assertEq(rc.destinatario, 'mario@esempio.it'); assertEq(rc.oggetto, 'Documenti da firmare — Mario Bianchi');
+    const idI = rec('immobili', { titolo: 'Villa', proprietario: idC });
+    const ri = await (await post(`/records/immobili/${idI}/documento/scheda_immobile/anteprima`)).json();
+    assertTrue(ri.corpo.includes('Proprietario: Mario Bianchi'), ri.corpo.slice(0, 200));
+    assertEq(ri.destinatario, 'mario@esempio.it');
+  });
+  await test('secondo avvio: niente da fare, nessun documento duplicato', async () => {
+    assertEq(await applicaSeed(seed), []);
+    assertEq(chiaviDocumento('clienti').sort(), ['antiriciclaggio', 'privacy_incarico']);
+  });
+  await test('se il documento viene tolto dal Builder, al riavvio NON ricompare', async () => {
+    const sc = documentiDi('clienti');
+    sc.steps = sc.steps.filter((st) => st.key !== 'antiriciclaggio');
+    db.prepare("UPDATE modules SET schema_json = ? WHERE slug = 'clienti'").run(JSON.stringify(sc));
+    assertEq(await applicaSeed(seed), []);
+    assertEq(chiaviDocumento('clienti'), ['privacy_incarico']);
+  });
+  await test('un modulo con lo stesso nome ma senza i campi del modello non viene toccato (e non riprova all\'infinito)', async () => {
+    mk('altro_t', [F('nome', 'Nome'), F('email', 'Email')]);
+    const finto = { altro_t: [{ key: 'k', label: 'K', subject: '{{inesistente}}', body: 'x {{nome}}', recipient: 'email' }] };
+    const esiti = await applicaSeed(finto);
+    assertEq(esiti.map((e) => e.esito), ['non applicabile']);
+    assertEq(chiaviDocumento('altro_t'), []);
+    assertEq(await applicaSeed(finto), [], 'marcato: non riprova');
+  });
+  await test('un modulo che non esiste nel tenant non fa nulla e non è un errore', async () => {
+    assertEq(await applicaSeed({ inesistente_t: [{ key: 'k', label: 'K', subject: 's', body: 'b', recipient: 'email' }] }), []);
+  });
+
   console.log(`\n${'─'.repeat(50)}`);
   console.log(`Risultato: ${passed} passati, ${failed} falliti`);
   process.exit(failed > 0 ? 1 : 0);

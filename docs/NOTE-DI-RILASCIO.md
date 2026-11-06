@@ -2,6 +2,19 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.21 — 6 novembre 2026
+
+**«Documento da modello»: la primitiva «azione su un record» che mancava, al posto delle rotte cablate su Immobili e Clienti.** Era il primo punto degli sviluppi futuri («Custom in platform non esiste»).
+
+- **Nuovo blocco del Builder** (Automazione → «Documento da modello»): bottone sul record, testo con segnaposto (`{{campo}}`, `{{relazione.campo}}`, `{{@azienda}}`, `{{@oggi}}`, filtri `|linea` `|vuoto` `|minuscolo`, sezioni `{{#k}}…{{/k}}`), email di destinazione scelta tra i campi email del record o di un record collegato, e stato opzionale in cui portare il record dopo l'invio. Un selettore «Inserisci un campo…» scrive il segnaposto nel punto in cui si trova il cursore.
+- **Anteprima sempre modificabile, mai invio automatico**: `anteprima` non spedisce nulla; `invia` manda il testo approvato. **Il destinatario lo ricava il server**, non la richiesta; l'invio è tracciato in Attività; il secondo invio parte anche se lo stato non può più cambiare.
+- **Pubblicare con un campo scritto male non si può più**: segnaposto, destinatario, stato e chiave vengono controllati contro i campi veri del modulo e dei moduli collegati.
+- **Tolti** i 4 percorsi dedicati (`genera-documenti`, `invia-documenti`, `genera-scheda`, `invia-scheda`) e i file `lib/doc-cliente.js`, `lib/doc-immobile.js`. Resta specifica solo la **valutazione** (ha un report su misura).
+- **Per zucca**: i tre documenti (Privacy+Incarico, Antiriciclaggio, Scheda immobile) diventano blocchi dei moduli Clienti e Immobili, applicati **una sola volta** al primo avvio dopo l'aggiornamento (`seed-azioni-documento.js`, marcatore `seed_applicati`) dalle rotte vere del Builder, solo se i moduli hanno i campi giusti. I testi sono identici al carattere a quelli di prima: 44 casi di confronto, congelati in `fixtures/documenti-parita.json`. Se li togli dal Builder non ricompaiono.
+- **Sicurezza trovata dal test**: il motore leggeva anche proprietà ereditate (`{{constructor}}` stampava una funzione). Ora legge solo i campi propri del record.
+- **Test**: 71 per il motore (compresa la parità), 31 d'integrazione (anteprima, invio, errori, validazione, seed), 5 sullo schema; tutta la suite del core (82) e di Super Admin (35) passa. Verificato dal vivo in locale: bottone, anteprima, destinatario, errore chiaro se l'email non è configurata.
+- **Non coperto**: la valutazione OpenAPI.it resta legata a `immobili`; il Builder non ha un selettore dell'icona del documento; i documenti del verticale non sono ancora un modulo di Libreria.
+
 ## 0.4.20 — 6 novembre 2026
 
 **Test del frontend, e lo stesso difetto dei dialoghi corretto anche in Super Admin.** Il frontend (22.000 righe) non aveva nessun test: regressioni come quella dei dialoghi si vedevano solo a occhio.

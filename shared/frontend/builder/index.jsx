@@ -26,7 +26,7 @@ const BLOCK_TYPE_CATEGORY = {
   workflow_state: 'Workflow', workflow_transition: 'Workflow',
   permissions: 'Permessi', validazione_creazione: 'Permessi',
   report_aggregate: 'Calcolo', yearly_breakdown: 'Calcolo', category_pivot: 'Calcolo', weekly_breakdown: 'Calcolo',
-  connection_required: 'Automazione', automation: 'Automazione',
+  connection_required: 'Automazione', automation: 'Automazione', document_action: 'Automazione',
   branch_create: 'Layout form', period_view: 'Layout form', parent_children_view: 'Layout form', view_tabs: 'Layout form', view: 'Layout form',
 }
 
@@ -39,7 +39,7 @@ const BLOCK_TYPE_CATEGORY = {
 const BLOCK_TYPE_LABEL = {
   field: 'Campo', relation: 'Relazione', workflow_state: 'Stato workflow', workflow_transition: 'Transizione workflow',
   permissions: 'Permessi', validazione_creazione: 'Validazione alla creazione', allegati: 'Allegati',
-  connection_required: 'Richiede connessione', automation: 'Automazione',
+  connection_required: 'Richiede connessione', automation: 'Automazione', document_action: 'Documento da modello',
   branch_create: 'Crea in filiale', period_view: 'Vista periodo',
   parent_children_view: 'Vista padre/figli', yearly_breakdown: 'Riepilogo annuale', category_pivot: 'Pivot categoria',
   weekly_breakdown: 'Riepilogo settimanale', view_tabs: 'Tab di vista', report_aggregate: 'Report aggregato', view: 'Vista', api_source: 'Fonte esterna',
@@ -410,6 +410,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
         // totali"/"Ore per settimana") li toglieva dall'editor, e una pubblicazione
         // successiva li cancellava per davvero (2026-10-15, scoperto dal vivo).
         branch_creates: draft.branch_creates || [],
+        document_actions: draft.document_actions || [],
         period_views: draft.period_views || [],
         parent_children_views: draft.parent_children_views || [],
         yearly_breakdowns: draft.yearly_breakdowns || [],
@@ -815,6 +816,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
     { label: 'Richiede connessione', desc: 'Serve SOLO se il modulo dipende da un connettore fuori dalle sue automazioni (es. un poller dedicato come quello Gmail) — se invece è una tua automazione a usare Slack/WhatsApp/ecc, il modulo lo segnala da solo, non serve aggiungere questo blocco a mano.', icon: 'plug', color: '#F59E0B', category: 'Automazione', block_type: 'connection_required', defaults: { integration_id: 'google' }, disabled: schema && schema.steps.some((s) => s.block_type === 'connection_required'), note: 'Già presente su questo modulo' },
     { label: 'Formula / Aggregato', desc: 'Calcolo su relazioni (sum/avg/count…).', icon: 'cpu', color: '#F87171', category: 'Calcolo', block_type: 'report_aggregate', defaults: { key: 'agg_' + Date.now(), label: 'Nuovo aggregato', expr: '', format: 'number' } },
     { label: 'Automazione', desc: 'Quando succede qualcosa in questo modulo, esegui delle azioni (con Se/Altrimenti).', icon: 'zap', color: '#FBBF24', category: 'Automazione', block_type: 'automation', defaults: { label: 'Nuova automazione', enabled: true, trigger: { evento: 'nuovo_record', stato: '', campo: '' }, azioni: [] } },
+    { label: 'Documento da modello', desc: "Un bottone sul record che prepara un documento (privacy, scheda, preventivo…) dai dati del record, lo mostra in anteprima modificabile e lo spedisce per email — mai senza che qualcuno l'abbia visto. Il testo si scrive qui con segnaposto ({{campo}}), l'email di destinazione è un campo del record o di un record collegato, e dopo l'invio il record può cambiare stato.", icon: 'mail', color: '#14B8A6', category: 'Automazione', block_type: 'document_action', defaults: { key: 'documento_' + Date.now(), label: 'Nuovo documento', icon: 'mail', subject: '', body: '', recipient: '', on_send_state: '' } },
     { label: 'Creazione con scelta', desc: "Un bottone che chiede prima una scelta (es. \"Diretto\" o \"A rate\") e poi mostra campi diversi, creando il record in un modulo diverso a seconda della scelta — es. un pagamento diretto crea una Spesa, un pagamento a rate crea un Debito.", icon: 'git-branch', color: '#EC4899', category: 'Layout form', block_type: 'branch_create', defaults: { label: 'Nuovo', branches: [] } },
     { label: 'Vista', desc: "Una vista configurabile sui record: per periodo navigabile (mese/anno, con metriche e confronto col precedente), riepilogo per sotto-periodo, pivot per categoria su più anni, barre settimanali con soglia, oppure genitori con rollup dei figli collegati. Sostituisce o si aggiunge alla vista del modulo secondo la modalità scelta.", icon: 'bar-chart', color: '#10B981', category: 'Layout form', block_type: 'view', defaults: { key: 'vista_' + Date.now(), label: 'Nuova vista', mode: 'period', placement: 'replace', granularity: 'mese', date_field: '', compare_previous: false, breakdown: false, metrics: [], filters: [] } },
     { label: 'Tab della vista', desc: "Più viste che sostituiscono la tabella, alternabili a tab sullo stesso modulo — es. un tab \"Spese\" (la vista mensile propria) e un tab \"Debiti\" (il progresso di un altro modulo). Ogni tab riusa un blocco già dichiarato altrove (qui o su un altro modulo), non lo ridefinisce.", icon: 'list', color: '#8B5CF6', category: 'Layout form', block_type: 'view_tabs', defaults: { tabs: [] }, disabled: schema && schema.steps.some((s) => s.block_type === 'view_tabs'), note: 'Un solo blocco per modulo' },
@@ -1909,6 +1911,80 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                   </div>
                 )
 
+
+                if (step.block_type === 'document_action') {
+                  const propri = (schema.steps || []).filter((st) => st.block_type === 'field' || st.block_type === 'computed')
+                  const relazioni = (schema.steps || []).filter((st) => st.block_type === 'relation' && st.target_module)
+                  const collegati = relazioni.flatMap((r) => (((fieldCache.find((m) => m.slug === r.target_module) || {}).fields) || [])
+                    .map((f) => ({ path: r.key + '.' + f.key, label: (r.label || r.key) + ' › ' + (f.label || f.key), type: f.type })))
+                  const segnaposti = [
+                    ...propri.map((f) => ({ value: f.key, label: f.label || f.key })),
+                    ...collegati.map((c) => ({ value: c.path, label: c.label })),
+                    { value: '@azienda', label: 'Ragione sociale (Impostazioni)' }, { value: '@indirizzo', label: 'Indirizzo (Impostazioni)' },
+                    { value: '@piva', label: 'P.IVA (Impostazioni)' }, { value: '@oggi', label: 'Data di oggi' },
+                  ]
+                  const destinatari = [
+                    ...propri.filter((f) => f.type === 'email' || f.type === 'text').map((f) => ({ value: f.key, label: f.label || f.key })),
+                    ...collegati.filter((c) => c.type === 'email' || c.type === 'text').map((c) => ({ value: c.path, label: c.label })),
+                  ]
+                  const stati = (schema.steps || []).filter((st) => st.block_type === 'workflow_state')
+                  const inserisci = (path) => {
+                    const testo = '{{' + path + '}}'
+                    const el = document.getElementById('docbody-' + step.id)
+                    const cur = step.body || ''
+                    if (!el || el.selectionStart == null) { updateStep(idx, 'body', cur + testo); return }
+                    updateStep(idx, 'body', cur.slice(0, el.selectionStart) + testo + cur.slice(el.selectionEnd))
+                  }
+                  const inp = 'w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-700 focus:border-teal-500 transition placeholder-gray-600'
+                  return (
+                    <div key={step.id} {...dragHandlers(idx)}
+                      className="bg-surface-card rounded-md border border-gray-800 p-4 cursor-grab active:cursor-grabbing"
+                      style={{ borderLeft: '3px solid #14B8A6' }}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-400">
+                          <span className="text-gray-600 select-none">&#8942;&#8942;</span>
+                          <Icon name="mail" size={12} /> Documento da modello
+                        </div>
+                        <button onClick={() => removeStep(idx)} className="text-red-400/60 hover:text-red-400 transition"><Icon name="trash" size={14} /></button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <div>
+                          <label className="text-[10px] text-gray-500 block mb-1">Testo del bottone</label>
+                          <input className={inp} placeholder="es. Scheda immobile" value={step.label || ''} onChange={(e) => updateStep(idx, 'label', e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-500 block mb-1">Chiave (minuscole, numeri, _)</label>
+                          <input className={inp + ' font-mono text-xs'} value={step.key || ''} onChange={(e) => updateStep(idx, 'key', e.target.value)} />
+                        </div>
+                      </div>
+                      <div className="mb-3">
+                        <label className="text-[10px] text-gray-500 block mb-1">Oggetto dell'email</label>
+                        <input className={inp} placeholder="es. Documenti da firmare — {{nome}}" value={step.subject || ''} onChange={(e) => updateStep(idx, 'subject', e.target.value)} />
+                      </div>
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <label className="text-[10px] text-gray-500">Testo del documento</label>
+                        <Select value="" onChange={(v) => v && inserisci(v)} placeholder="Inserisci un campo…" options={segnaposti} className="text-xs w-56" />
+                      </div>
+                      <textarea id={'docbody-' + step.id} rows={12} className={inp + ' font-mono text-xs leading-relaxed'}
+                        placeholder={'Gentile {{nome}},\n…'} value={step.body || ''} onChange={(e) => updateStep(idx, 'body', e.target.value)} />
+                      <div className="text-[10px] text-gray-600 mt-1 mb-3 leading-relaxed">
+                        {'{{campo}}'} il valore (vuoto → «—») · {'{{campo|linea}}'} vuoto → riga da compilare · {'{{campo|vuoto}}'} vuoto → niente · {'|minuscolo'} {'|maiuscolo'} ·
+                        {' {{relazione.campo}}'} da un record collegato · {'{{#campo}}…{{/campo}}'} solo se compilato · {'{{^campo}}…{{/campo}}'} solo se vuoto. Un campo scritto male blocca la pubblicazione.
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-gray-500 block mb-1">Spedisci a (campo email)</label>
+                          <Select value={step.recipient || ''} onChange={(v) => updateStep(idx, 'recipient', v)} placeholder="Scegli un campo…" options={destinatari} />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-500 block mb-1">Dopo l'invio, porta il record a</label>
+                          <Select value={step.on_send_state || ''} onChange={(v) => updateStep(idx, 'on_send_state', v)} placeholder="Nessun cambio di stato"
+                            options={[{ value: '', label: 'Nessun cambio di stato' }, ...stati.map((st) => ({ value: st.key, label: st.label || st.key }))]} />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }
 
                 if (step.block_type === 'branch_create') {
                   const branches = step.branches || []

@@ -1,12 +1,12 @@
 'use strict';
 
 // Test — motore del «documento da modello» (lib/modello-documento.js) e parità con i testi che
-// stavano nel codice (lib/doc-cliente.js, lib/doc-immobile.js) prima del blocco `document_action`.
+// stavano nel codice (lib/doc-cliente.js, lib/doc-immobile.js, cancellati) prima del blocco `document_action`:
+// la parità si verifica contro fixtures/documenti-parita.json, il loro output congelato.
 // Eseguire con: node modello-documento.test.js
 
 const { renderModello, costruisciGet, risolviDestinatario, percorsiUsati, SEGNAPOSTI_FISSI, LINEA } = require('./lib/modello-documento');
-const docCliente = require('./lib/doc-cliente');
-const docImmobile = require('./lib/doc-immobile');
+const fixture = require('./fixtures/documenti-parita.json');
 const seed = require('./seeds/documenti-immobiliare.json');
 
 let passed = 0, failed = 0;
@@ -18,6 +18,7 @@ function assertEq(actual, expected, msg) {
   const a = JSON.stringify(actual), b = JSON.stringify(expected);
   if (a !== b) throw new Error(`${msg || ''}: atteso ${b}, ottenuto ${a}`);
 }
+function assertTrue(c, msg) { if (!c) throw new Error(msg || 'atteso true'); }
 const getDa = (obj) => (p) => obj[p];
 
 console.log('\n--- segnaposto e filtri ---');
@@ -146,51 +147,27 @@ test('i modelli del seed citano solo campi, relazioni e segnaposto noti', () => 
   }
 });
 
-console.log('\n--- parità con i testi attuali nel codice (stesso output al carattere) ---');
+console.log('\n--- parità con i testi che stavano nel codice (stesso output al carattere) ---');
 
-const clienti = [
-  { nome: 'Mario Bianchi', tipo_cliente: 'Venditore', codice_fiscale_piva: 'BNCMRA80A01H501Z', indirizzo: 'Via Verdi 3' },
-  { nome: 'Lucia Neri' },
-  { tipo_cliente: 'ACQUIRENTE' },
-  {},
-];
-const tenants = [tenant, { ragione_sociale: 'Solo Nome' }, {}, null];
 const getCliente = (c, t) => costruisciGet({ record: c, schema: {}, tenant: t, leggiRecord: leggi });
 const azione = (mod, key) => seed[mod].find((a) => a.key === key);
+const oggiIt = new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+const senzaData = (t) => t.split(oggiIt).join('<OGGI>');
 
-for (const [idx, c] of clienti.entries()) {
-  for (const [tdx, t] of tenants.entries()) {
-    test(`privacy+incarico identico — cliente ${idx}, tenant ${tdx}`, () => {
-      const vecchio = docCliente.informativaPrivacyIncarico(c, t);
-      const a = azione('clienti', 'privacy_incarico'), get = getCliente(c, t);
-      assertEq(renderModello(a.body, get), vecchio.corpo, 'corpo');
-      assertEq(renderModello(a.subject, get), vecchio.oggetto, 'oggetto');
-    });
-    test(`antiriciclaggio identico — cliente ${idx}, tenant ${tdx}`, () => {
-      const vecchio = docCliente.informativaAntiriciclaggio(c, t);
-      const a = azione('clienti', 'antiriciclaggio'), get = getCliente(c, t);
-      assertEq(renderModello(a.body, get), vecchio.corpo, 'corpo');
-      assertEq(renderModello(a.subject, get), vecchio.oggetto, 'oggetto');
-    });
-  }
+for (const caso of fixture.casi) {
+  test(`${caso.id}: documento identico al testo originale`, () => {
+    const mod = caso.documento === 'scheda_immobile' ? 'immobili' : 'clienti';
+    const a = azione(mod, caso.documento);
+    const get = caso.immobile
+      ? costruisciGet({ record: caso.immobile, schema: schemaImm, tenant: caso.tenant, leggiRecord: leggi })
+      : getCliente(caso.cliente, caso.tenant);
+    assertEq(senzaData(renderModello(a.body, get)), caso.corpo, 'corpo');
+    assertEq(senzaData(renderModello(a.subject, get)), caso.oggetto, 'oggetto');
+  });
 }
-
-const immobili = [
-  { titolo: 'Trilocale centro', tipologia: 'Appartamento', superficie_mq: 85, ascensore: true, giardino: false, note: 'Da ristrutturare', proprietario: 7, classe_energetica: 'D', accessori_impianti: 'Aria condizionata, allarme' },
-  { titolo: 'Villa', proprietario: 99 },
-  {},
-];
-immobili.forEach((im, i) => {
-  for (const [tdx, t] of tenants.entries()) {
-    test(`scheda immobile identica — immobile ${i}, tenant ${tdx}`, () => {
-      const nomeProp = im.proprietario === 7 ? 'Anna Rossi' : null;
-      const vecchio = docImmobile.schedaImmobile(im, nomeProp, t);
-      const a = azione('immobili', 'scheda_immobile');
-      const get = costruisciGet({ record: im, schema: schemaImm, tenant: t, leggiRecord: leggi });
-      assertEq(renderModello(a.body, get), vecchio.corpo, 'corpo');
-      assertEq(renderModello(a.subject, get), vecchio.oggetto, 'oggetto');
-    });
-  }
+test('la fixture copre tre documenti e almeno 40 casi', () => {
+  assertEq([...new Set(fixture.casi.map((c) => c.documento))].sort(), ['antiriciclaggio', 'privacy_incarico', 'scheda_immobile']);
+  assertTrue(fixture.casi.length >= 40, 'casi: ' + fixture.casi.length);
 });
 
 test('destinatari del seed: email del cliente, email del proprietario collegato', () => {
