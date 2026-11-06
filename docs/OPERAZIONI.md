@@ -49,6 +49,8 @@ bash scripts/redeploy-nas.sh                          # backend + frontend + pro
 bash scripts/redeploy-nas.sh frontend                 # una sola parte: backend | frontend | provisioner | core
 ```
 
+**Dal 06/11/2026 per il `core` conviene non usare lo script**: il passo dei tenant può dare `524` (vedi "Quando qualcosa non va"). Usalo per `backend`, `frontend` e `provisioner`; per i tenant premi **Aggiorna**. Un tenant che non si aggiorna a mano resta com'è: `ai-sandbox` è stato lasciato apposta sulla vecchia immagine il 06/11.
+
 Lo script manda il sorgente al NAS, ricostruisce le immagini lì (il NAS è amd64, il Mac no), sostituisce i
 container di Super Admin/provisioner (vecchio tenuto finché il nuovo non risulta in esecuzione) e, per il
 `core`, si limita a richiamare `/api/tenants/redeploy-all` — la build vera la fa il provisioner, non più lo
@@ -188,6 +190,7 @@ l'unico modo è reimpostarla direttamente nel database.
 | Il redeploy dice "Sessione attiva rilevata" (`finance -> saltato: active_session`) | Il tenant ha avuto un'azione negli ultimi 3 minuti (conta `last_active_at`, non il polling passivo). Chiudi le schede di Finance, anche sul telefono, aspetta 3 minuti e rilancia. Anche le chiamate API fatte a mano contano come attività. Per forzare: `POST /api/tenants/finance/redeploy {"force":true}` su Super Admin (la pagina aperta chiede di nuovo l'accesso) |
 | Dopo il redeploy il tenant risponde `502` per qualche secondo | Normale: il container sta partendo. Aspetta la risposta 200 di `/api/tenant-info` prima di verificare |
 | `redeploy-nas.sh` stampa `aggiornato` ma la vecchia versione è ancora lì | Controlla la riga del tenant: se è `saltato`, il codice nuovo è sul NAS ma il container non è stato ricreato |
+| `redeploy-nas.sh` si ferma al passo "Ricreo i tenant" con `error code: 524` | È il timeout di Cloudflare (~100 s): lo script chiama `/api/tenants/redeploy-all` passando da `admin.platform-core.it`, ma la build dell'immagine core può durare di più. Nessun tenant è stato toccato (`docker ps`: "Up" da giorni; `docker images platform-core` ancora vecchia). Super Admin e provisioner, già sostituiti prima di quel passo, sono a posto. Rilanciare lo script non serve. **Usa Aggiorna** sulla riga di ciascun tenant in Super Admin → Tenant (2FA): ha il popup di avanzamento e nessun limite di 100 secondi. Caso reale: 06/11/2026 (0.4.15) |
 
 Comandi utili (sul NAS: `/usr/local/bin/docker`):
 

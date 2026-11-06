@@ -424,6 +424,31 @@ decide ogni modulo (vedi sopra). **Export e Backup** stanno in Impostazioni → 
 **Onestà sul confine.** Il codice delle capacità sta ancora nel nucleo. I nomi dei moduli e dei campi di Finance stanno solo nel file di dati `seeds/finance-roles.json` (e nei moduli di esempio di `db.js`): non più nel codice di Movimenti bancari, Gmail, riepiloghi e bot. Il parser Gmail estrae importo e scadenza con regole pensate per le bollette italiane; la regola può scegliere
 il tipo "semplice" (solo oggetto, data e allegati) per mail che non sono bollette.
 
+## Interfaccia: vetro, rail e dock, overlay
+
+**Vetro ("Liquid Glass")**: tutte le pagine di lavoro di tenant e Super Admin usano gli stessi token (`--glass-*` in `index.css` di ciascuna app) e le stesse classi: `.glass-panel` (card), `.glass-pill` (pillole e dock), `.glass-mesh-bg` + `GlassPageBackground.jsx` (lo sfondo sfumato da sfocare — senza di lui l'effetto sparisce). Restano **volutamente opachi** i modali di conferma, il contenuto pubblico del Sito Web, il login pre-onboarding e il Builder condiviso (`shared/frontend/builder/`), che ha un linguaggio a sé.
+
+**Navigazione**: un solo componente per app (`core/frontend/src/components/Sidebar.jsx`, `super-admin/frontend/src/components/Sidebar.jsx`), reso due volte con stato condiviso (tema, notifiche, account, password): la **rail** laterale su desktop (`hidden md:flex`, stretta a riposo, si allarga col mouse) e il **dock** flottante in vetro su mobile (`md:hidden`). Quale dei due stia nel DOM lo decide il CSS, non JS. I due dock sono lo stesso dock: 4 voci appuntate, una pillola **Altro** con pannello (ricerca, griglia 4 colonne con il nome sotto ogni icona, account/tema/uscita in fondo), notifiche, account, e un indicatore che scorre tra le icone (misurato via DOM da `data-dock-key`).
+
+- **Voci appuntate scelte dall'utente**: tasto *Modifica* nel pannello Altro (massimo 4, *Ripristina* torna alle prime 4). Salvate **sul dispositivo**, non sul server: `localStorage` `platform_dock_pins_<utente>` nei tenant, `platform_sa_dock_pins` in Super Admin. Una comodità per-dispositivo, non un dato di Platform.
+- **Differenze volute**: Super Admin ha pagine fisse (`lib/nav-items.js`), un tenant ha moduli dinamici raggruppati più le voci di sistema (Libreria, Builder, Log, Impostazioni, Guida); solo nel tenant si possono appuntare anche queste ultime e c'è il cambio password nel dock.
+
+**Overlay a tutto schermo: sempre in un portale.** Un `backdrop-filter` su un antenato (e `.glass-panel` ce l'ha) rende quell'antenato il contenitore degli elementi `position: fixed`: un dialogo aperto da dentro una card di vetro restava confinato nella card, con l'overlay scuro solo lì. Ogni overlay `fixed inset-0` va quindi reso su `document.body`: `components/Portal.jsx` (`<Portal>…</Portal>`), oppure `createPortal` diretto come in `FormDrawer.jsx`, `Select.jsx`, `SmistaPanel.jsx`. Eccezioni: il backdrop del dock (non è un dialogo) e `ProductTour.jsx` (overlay di radice).
+
+## Immobiliare: OpenAPI.it, valutazione, documenti cliente
+
+Costruito per il tenant di una mediazione immobiliare (moduli Immobili, Trattative, Provvigioni, Clienti, Interazioni). **Eccezione consapevole alla regola "il nucleo non conosce i nomi dei moduli"** — vedi `docs/DECISIONI.md`, 01/11/2026: le rotte stanno in `core/backend/src/routes/records.js` e sono legate agli slug `immobili` e `clienti`, perché Platform non ha ancora una primitiva "azione esterna su un record esistente".
+
+| Cosa | Dove |
+|---|---|
+| Connettore OpenAPI.it (token a due passi, in cache, rigenerato da solo; sandbox/produzione dal campo `ambiente`) | `core/backend/src/lib/openapi-it.js`; riga "OpenAPI.it — Immobili" in `routes/connections.js`, prova reale con `POST /connections/openapi_it/test` |
+| Valutazione di un immobile | `POST /records/immobili/:id/valuta` (`routes/records.js`): scrive `stima_valore`, `stima_eur_mq`, `stima_data`, `stima_fonte` e il report in `report_valutazione` (chiave non dichiarata nello schema, quindi non compare come campo) |
+| Fonti del report | OpenAPI.it avanzato (quotazione, comparabili, OMI); fonti pubbliche in `lib/rischi-territorio.js` (zona sismica ISPRA, fotovoltaico PVGIS); paragrafo AI in `lib/ai-valutazione.js` → Super Admin `POST /api/tenant-ai/explain-valuation`, con ogni numero scritto dal modello verificato contro i dati |
+| Documenti cliente (Privacy+Incarico, Antiriciclaggio) | `POST /records/clienti/:id/genera-documenti` (solo bozza, non spedisce) e `.../invia-documenti` (spedisce il testo approvato dall'admin e porta lo stato a "documenti inviati"); testi in `lib/doc-cliente.js`, invio via `lib/email.js` (Resend) |
+| Scheda immobile | `lib/doc-immobile.js`, bottone nel dettaglio dell'Immobile (`RecordDetailModal.jsx`) |
+
+Mai inviato nulla senza che l'admin abbia visto e potuto modificare il testo. Il report di valutazione si legge dal record, senza richiamare OpenAPI.it (che costa a chiamata).
+
 ## Mappa dei file della 0.2.0
 
 | Cosa | Dove |

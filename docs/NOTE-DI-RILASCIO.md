@@ -12,6 +12,10 @@ Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la 
 - Salvate su questo dispositivo (`localStorage`, una chiave per utente in core), non sul server: una scelta di comodità, non un dato. Scelta esplicita e visibile, non un riordino automatico per uso.
 - Verificato dal vivo a 375px su entrambe le app: etichette, modalità Modifica, limite di 4, salvataggio e ripristino.
 
+### Documentazione, stesso giorno
+
+Nessun cambio di comportamento: `ARCHITETTURA.md` ora descrive vetro, rail/dock, portale degli overlay e il blocco Immobiliare (OpenAPI.it, valutazione, documenti cliente); `DECISIONI.md` registra l'eccezione delle rotte specifiche per Immobili/Clienti, la regola del portale, le voci appuntate scelte dall'utente e i due script eliminati; `OPERAZIONI.md` spiega l'errore `524` di `redeploy-nas.sh` sul passo dei tenant e che per i tenant si usa **Aggiorna**.
+
 ## 0.4.16 — 6 novembre 2026
 
 **Il dock mobile di Super Admin diventa uguale a quello dei tenant.** Segnalato guardando i due menu da telefono: erano diversi in quattro punti. Richiesto lo stesso aspetto su entrambi.

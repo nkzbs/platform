@@ -631,3 +631,28 @@ Trovato e corretto lungo la strada: `scripts/redeploy-nas.sh` (lo script manuale
 che non può ridistribuirsi da sé come fanno i tenant) aveva `DB_PATH=/data/super-admin-01.db` cablato — il database
 VECCHIO e incompleto, non quello vero in uso. Mai eseguito da quando la discrepanza esisteva (altrimenti Super Admin
 avrebbe perso ore di storia reale a ogni suo stesso aggiornamento), corretto prima che causasse danno.
+
+## 2026-11-01 — Rotte specifiche per Immobili e Clienti (eccezione alla regola "sempre generico")
+
+**Cosa**: `POST /records/immobili/:id/valuta`, `POST /records/clienti/:id/genera-documenti` e `.../invia-documenti` sono legate agli slug `immobili` e `clienti`, e i bottoni corrispondenti stanno in `RecordDetailModal.jsx` solo per quei moduli.
+**Perché**: Platform non ha ancora una primitiva "azione esterna su un record esistente" (le Source scriptabili servono solo a creare record nuovi). Inventarne una generica per un solo caso, senza un secondo caso che mostri la forma giusta, sarebbe stato prematuro.
+**Quando si toglie**: appena un secondo tenant ha bisogno di un'azione simile, si costruisce la primitiva (azione configurabile dal Builder) e queste tre rotte ci migrano. Fino ad allora il test `no-hardcoded-names` non le vede, perché usa slug di modulo e non nomi di progetto.
+**Regola che resta**: il testo di un documento al cliente non parte mai senza un'anteprima modificabile dall'admin (due rotte separate apposta: genera non spedisce).
+
+## 2026-11-06 — Ogni overlay a tutto schermo in un portale
+
+**Cosa**: nuovo `core/frontend/src/components/Portal.jsx`; tutti gli overlay `fixed inset-0` (18 file, circa 30 dialoghi) ora sono resi su `document.body`. Escluse: il backdrop del dock (non è un dialogo) e `ProductTour`.
+**Perché**: segnalato dal vivo con "Smista" aperto da un widget della Dashboard: il `backdrop-filter` di `.glass-panel` rende la card il contenitore dei `position: fixed`, quindi il dialogo restava confinato nella card (stessa causa del bug di `FormDrawer`, 31/10, risolto allora solo per quel componente). Correggerli a uno a uno quando li si incontrava era il modo per ripetere lo stesso bug; la regola ora è scritta in `ARCHITETTURA.md`.
+**Cosa non si è fatto**: non è stato provato a mano ogni dialogo; verificato dal vivo un caso (overlay figlio di `body` a tutta finestra).
+
+## 2026-11-06 — Le voci appuntate nel dock si scelgono, non si deducono
+
+**Cosa**: tasto *Modifica* nel pannello "Altro" (core e Super Admin): l'utente appunta fino a 4 voci, con *Ripristina*. Salvate in `localStorage` del dispositivo.
+**Perché**: alla domanda "come migliorare il menu" è stata scartata la variante che porta in alto le voci più usate: un dock che si riordina da solo sposta le icone sotto il pollice. Un controllo esplicito e sempre visibile è in linea con la scelta fatta per i widget di inserimento dati (plain controls, niente default "furbi").
+**Limite noto**: la scelta vale per dispositivo e utente, non segue l'utente da un telefono all'altro. Se serve, il passo successivo è una preferenza utente sul server.
+
+## 2026-11-06 — Tolti due script una tantum del 30/10
+
+**Cosa**: eliminati `one-off-2026-10-30-ricevute.js` e `one-off-2026-10-30-match-test.js`.
+**Perché**: contenevano i nomi `spese_personali`/`spese_casa` di Finance e facevano fallire `no-hardcoded-names` (l'unico test rosso su 80 suite). Già eseguiti e tolti dall'avvio; il lavoro che hanno fatto sta nei dati. Restano nella cronologia di git (`git log --diff-filter=D -- core/backend/src/one-off-2026-10-30-*`). Preferito l'eliminazione a una lista di eccezioni nel test: una lista di eccezioni cresce e indebolisce la regola.
+
