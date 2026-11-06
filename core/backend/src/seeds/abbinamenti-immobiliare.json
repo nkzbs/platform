@@ -1,0 +1,34 @@
+{
+  "_descrizione": "Abbinamenti («match_view») del verticale Mediazione immobiliare, applicati da seed-blocchi-verticale.js: «Immobili adatti» sul Cliente che cerca casa, «Richieste compatibili» sull'Immobile. Il budget è un vincolo (esclude), tipologia e zona fanno il punteggio. Il campo «tipologia» del cliente è testo libero: si confronta con la tipologia e il titolo dell'immobile.",
+  "clienti": [
+    {
+      "key": "immobili_adatti",
+      "label": "Immobili adatti",
+      "target_module": "immobili",
+      "display_field": "titolo",
+      "subtitle_fields": ["comune", "tipologia", "prezzo_richiesto"],
+      "when": { "field": "tipo_cliente", "equals": "Acquirente" },
+      "target_filter": { "field": "_stato", "in": ["in_mandato", "in_vendita"] },
+      "rules": [
+        { "mine": "ricerca_tipologia", "theirs": ["tipologia", "titolo"], "op": "testo", "label": "Tipologia" },
+        { "mine": "ricerca_budget_max", "theirs": "prezzo_richiesto", "op": "theirs<=mine", "label": "Nel budget", "required": true },
+        { "mine": "ricerca_zona", "theirs": ["comune", "zona_quartiere", "localita"], "op": "testo", "label": "Zona" }
+      ]
+    }
+  ],
+  "immobili": [
+    {
+      "key": "richieste_compatibili",
+      "label": "Richieste compatibili",
+      "target_module": "clienti",
+      "display_field": "nome",
+      "subtitle_fields": ["ricerca_tipologia", "ricerca_zona", "ricerca_budget_max"],
+      "target_filter": { "field": "tipo_cliente", "equals": "Acquirente" },
+      "rules": [
+        { "mine": "tipologia", "theirs": "ricerca_tipologia", "op": "testo", "label": "Tipologia" },
+        { "mine": "prezzo_richiesto", "theirs": "ricerca_budget_max", "op": "theirs>=mine", "label": "Nel budget", "required": true },
+        { "mine": "comune", "theirs": "ricerca_zona", "op": "testo", "label": "Zona" }
+      ]
+    }
+  ]
+}

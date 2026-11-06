@@ -2,6 +2,19 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.22 — 6 novembre 2026
+
+**Abbinamento tra moduli: «Immobili adatti» su un cliente, «Richieste compatibili» su un immobile.** Idea ricavata dall'analisi di Gestim (l'incrocio automatico tra immobili e richieste è la funzione che un'agenzia usa di più), costruita come primitiva generica e non come codice per zucca.
+
+- **Nuovo blocco del Builder** (Layout form → «Abbinamento»): modulo in cui cercare, criteri tra un mio campo e uno (o più) del candidato con 4 operatori (`è simile a`, `è uguale a`, `del candidato ≤ mio`, `del candidato ≥ mio`), titolo e dettagli di ogni risultato, condizione sul mio record (es. solo gli acquirenti) e filtro per stato del candidato (es. solo gli immobili in vendita).
+- **Vincoli e affinità**: un criterio «Obbligatorio» esclude chi non lo soddisfa (es. prezzo ≤ budget); gli altri fanno il punteggio e il record deve soddisfarne almeno uno. Un campo vuoto sul mio record non esclude nessuno. Ordine per punteggio, poi il più recente; ogni risultato mostra cosa soddisfa e cosa manca.
+- **Nel dettaglio del record**: una sezione per ogni abbinamento, con percentuale, dettagli e le etichette dei criteri (verdi quelle soddisfatte, barrate quelle mancanti). Se la condizione non vale (un venditore) la sezione non compare. Rispetta i permessi del modulo bersaglio.
+- **Pubblicare con un campo scritto male non si può**: campi, operatori, modulo bersaglio, filtro e campi mostrati vengono controllati.
+- **Per zucca**: i due abbinamenti si applicano da soli al primo avvio dopo l'aggiornamento (budget = vincolo, tipologia e zona = affinità, solo acquirenti, solo immobili in mandato/in vendita), solo se i moduli hanno i campi giusti, e non ricompaiono se li togli dal Builder. Per questo `seed-azioni-documento.js` è diventato `seed-blocchi-verticale.js` e applica documenti e abbinamenti (stessi marcatori di prima: i documenti già applicati non si ripetono).
+- **Corretto di passaggio**: dopo l'invio di un documento il dettaglio non si ricaricava (il codice controllava `r.ok` ma `api.get` restituisce direttamente il record): lo stato del record non si aggiornava a schermo finché non lo si riapriva. Era già così prima della 0.4.21.
+- **Test**: 18 sul motore, 18 d'integrazione (rotta, permessi, validazione, seed), 4 sullo schema; core 84 suite, Super Admin 35, frontend 15. Verificato dal vivo in locale con dati veri e il seed vero: a una cliente compaiono i 2 immobili giusti (100% e 50%), quello fuori budget è escluso, per un cliente con budget basso nessuno; l'editor nel Builder si apre e mostra i criteri.
+- **Non coperto**: nessun avviso automatico quando arriva un immobile compatibile; la zona è testo (nessuna distanza); il confronto di testo non capisce sinonimi; i risultati non si aprono con un clic dal dettaglio.
+
 ## 0.4.21 — 6 novembre 2026
 
 **«Documento da modello»: la primitiva «azione su un record» che mancava, al posto delle rotte cablate su Immobili e Clienti.** Era il primo punto degli sviluppi futuri («Custom in platform non esiste»).

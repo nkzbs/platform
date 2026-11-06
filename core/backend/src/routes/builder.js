@@ -34,6 +34,8 @@ router.get('/schema-cache', requireAuth, requireAdmin, (req, res) => {
       period_views: schema.period_views || [],
       parent_children_views: schema.parent_children_views || [],
       views: schema.views || [],
+      // stati del workflow: servono all'editor degli abbinamenti per scegliere «solo i record in questi stati»
+      workflow_states: (schema.workflow && schema.workflow.states) || [],
     };
   });
   res.json(full);

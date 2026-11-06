@@ -9,6 +9,7 @@ import FormDrawer from '../../components/FormDrawer'
 import Select from '../../components/Select'
 import FieldEditorInput from './FieldEditorInput'
 import { parseSchemaFrontend } from '../../lib/schema-v3-frontend'
+import AbbinamentiSezione from '../../components/AbbinamentiSezione'
 
 function VaultPinGate({ token, userId, onUnlocked }) {
   const [pin, setPin] = useState('')
@@ -472,8 +473,9 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
     const inviato = bozzaDoc
     setBozzaDoc(null)
     toast(res.data.stato_aggiornato ? '«' + inviato.label + '» inviato — stato del record aggiornato' : '«' + inviato.label + '» inviato')
+    // api.get restituisce direttamente il record (o null), non {ok, data}: prima qui si controllava r.ok e il record non si ricaricava mai dopo l'invio.
     const r = await api.get('/records/' + mod.slug + '/' + recordId)
-    if (r.ok) { setRecord(r.data); if (onSaved) onSaved(r.data) }
+    if (r) { setRecord(r); if (onSaved) onSaved(r) }
   }
 
   return (
@@ -537,6 +539,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
             {mod.slug === 'immobili' && reportValutazione && (
               <ReportValutazione report={reportValutazione} titolo={record.data.titolo} indirizzo={[record.data.indirizzo, record.data.comune, record.data.provincia].filter(Boolean).join(', ')} />
             )}
+            <AbbinamentiSezione api={api} slug={mod.slug} recordId={recordId} definizioni={schema && schema.match_views} />
             {bozzaDoc && (
               <div className="glass-panel p-4 mb-5 border-accent/30">
                 <div className="flex items-center justify-between gap-2 mb-2">

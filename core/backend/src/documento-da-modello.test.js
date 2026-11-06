@@ -230,7 +230,7 @@ async function main() {
 
   console.log('\n--- seed: i documenti del verticale applicati ai moduli (una volta sola) ---');
   const seed = require('./seeds/documenti-immobiliare.json');
-  const { applicaSeed } = require('./seed-azioni-documento');
+  const { applicaSeed } = require('./seed-blocchi-verticale');
   const { percorsiUsati, SEGNAPOSTI_FISSI } = require('./lib/modello-documento');
   const semplici = (slug) => new Set(seed[slug].flatMap((a) => [...percorsiUsati(a.subject), ...percorsiUsati(a.body), a.recipient])
     .filter((p) => p && !p.includes('.') && !SEGNAPOSTI_FISSI.includes(p)));

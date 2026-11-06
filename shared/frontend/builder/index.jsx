@@ -26,7 +26,7 @@ const BLOCK_TYPE_CATEGORY = {
   workflow_state: 'Workflow', workflow_transition: 'Workflow',
   permissions: 'Permessi', validazione_creazione: 'Permessi',
   report_aggregate: 'Calcolo', yearly_breakdown: 'Calcolo', category_pivot: 'Calcolo', weekly_breakdown: 'Calcolo',
-  connection_required: 'Automazione', automation: 'Automazione', document_action: 'Automazione',
+  connection_required: 'Automazione', automation: 'Automazione', document_action: 'Automazione', match_view: 'Layout form',
   branch_create: 'Layout form', period_view: 'Layout form', parent_children_view: 'Layout form', view_tabs: 'Layout form', view: 'Layout form',
 }
 
@@ -39,7 +39,7 @@ const BLOCK_TYPE_CATEGORY = {
 const BLOCK_TYPE_LABEL = {
   field: 'Campo', relation: 'Relazione', workflow_state: 'Stato workflow', workflow_transition: 'Transizione workflow',
   permissions: 'Permessi', validazione_creazione: 'Validazione alla creazione', allegati: 'Allegati',
-  connection_required: 'Richiede connessione', automation: 'Automazione', document_action: 'Documento da modello',
+  connection_required: 'Richiede connessione', automation: 'Automazione', document_action: 'Documento da modello', match_view: 'Abbinamento',
   branch_create: 'Crea in filiale', period_view: 'Vista periodo',
   parent_children_view: 'Vista padre/figli', yearly_breakdown: 'Riepilogo annuale', category_pivot: 'Pivot categoria',
   weekly_breakdown: 'Riepilogo settimanale', view_tabs: 'Tab di vista', report_aggregate: 'Report aggregato', view: 'Vista', api_source: 'Fonte esterna',
@@ -411,6 +411,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
         // successiva li cancellava per davvero (2026-10-15, scoperto dal vivo).
         branch_creates: draft.branch_creates || [],
         document_actions: draft.document_actions || [],
+        match_views: draft.match_views || [],
         period_views: draft.period_views || [],
         parent_children_views: draft.parent_children_views || [],
         yearly_breakdowns: draft.yearly_breakdowns || [],
@@ -817,6 +818,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
     { label: 'Formula / Aggregato', desc: 'Calcolo su relazioni (sum/avg/count…).', icon: 'cpu', color: '#F87171', category: 'Calcolo', block_type: 'report_aggregate', defaults: { key: 'agg_' + Date.now(), label: 'Nuovo aggregato', expr: '', format: 'number' } },
     { label: 'Automazione', desc: 'Quando succede qualcosa in questo modulo, esegui delle azioni (con Se/Altrimenti).', icon: 'zap', color: '#FBBF24', category: 'Automazione', block_type: 'automation', defaults: { label: 'Nuova automazione', enabled: true, trigger: { evento: 'nuovo_record', stato: '', campo: '' }, azioni: [] } },
     { label: 'Documento da modello', desc: "Un bottone sul record che prepara un documento (privacy, scheda, preventivo…) dai dati del record, lo mostra in anteprima modificabile e lo spedisce per email — mai senza che qualcuno l'abbia visto. Il testo si scrive qui con segnaposto ({{campo}}), l'email di destinazione è un campo del record o di un record collegato, e dopo l'invio il record può cambiare stato.", icon: 'mail', color: '#14B8A6', category: 'Automazione', block_type: 'document_action', defaults: { key: 'documento_' + Date.now(), label: 'Nuovo documento', icon: 'mail', subject: '', body: '', recipient: '', on_send_state: '' } },
+    { label: 'Abbinamento', desc: "Nel dettaglio di un record mostra i record di un altro modulo che gli corrispondono, ordinati per quanti criteri soddisfano — es. «Immobili adatti» su un cliente che cerca casa (tipologia, budget, zona), o «Richieste compatibili» su un immobile. Un criterio obbligatorio è un vincolo (esclude), gli altri fanno il punteggio. Sola lettura: non scrive nulla.", icon: 'link', color: '#8B5CF6', category: 'Layout form', block_type: 'match_view', defaults: { key: 'abbinamento_' + Date.now(), label: 'Record corrispondenti', target_module: '', display_field: '', subtitle_fields: [], rules: [] } },
     { label: 'Creazione con scelta', desc: "Un bottone che chiede prima una scelta (es. \"Diretto\" o \"A rate\") e poi mostra campi diversi, creando il record in un modulo diverso a seconda della scelta — es. un pagamento diretto crea una Spesa, un pagamento a rate crea un Debito.", icon: 'git-branch', color: '#EC4899', category: 'Layout form', block_type: 'branch_create', defaults: { label: 'Nuovo', branches: [] } },
     { label: 'Vista', desc: "Una vista configurabile sui record: per periodo navigabile (mese/anno, con metriche e confronto col precedente), riepilogo per sotto-periodo, pivot per categoria su più anni, barre settimanali con soglia, oppure genitori con rollup dei figli collegati. Sostituisce o si aggiunge alla vista del modulo secondo la modalità scelta.", icon: 'bar-chart', color: '#10B981', category: 'Layout form', block_type: 'view', defaults: { key: 'vista_' + Date.now(), label: 'Nuova vista', mode: 'period', placement: 'replace', granularity: 'mese', date_field: '', compare_previous: false, breakdown: false, metrics: [], filters: [] } },
     { label: 'Tab della vista', desc: "Più viste che sostituiscono la tabella, alternabili a tab sullo stesso modulo — es. un tab \"Spese\" (la vista mensile propria) e un tab \"Debiti\" (il progresso di un altro modulo). Ogni tab riusa un blocco già dichiarato altrove (qui o su un altro modulo), non lo ridefinisce.", icon: 'list', color: '#8B5CF6', category: 'Layout form', block_type: 'view_tabs', defaults: { tabs: [] }, disabled: schema && schema.steps.some((s) => s.block_type === 'view_tabs'), note: 'Un solo blocco per modulo' },
@@ -1980,6 +1982,132 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                           <label className="text-[10px] text-gray-500 block mb-1">Dopo l'invio, porta il record a</label>
                           <Select value={step.on_send_state || ''} onChange={(v) => updateStep(idx, 'on_send_state', v)} placeholder="Nessun cambio di stato"
                             options={[{ value: '', label: 'Nessun cambio di stato' }, ...stati.map((st) => ({ value: st.key, label: st.label || st.key }))]} />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }
+
+                if (step.block_type === 'match_view') {
+                  const propri = (schema.steps || []).filter((st) => st.block_type === 'field' || st.block_type === 'computed')
+                  const bers = fieldCache.find((m) => m.slug === step.target_module)
+                  const campiBers = (bers && bers.fields) || []
+                  const optMiei = propri.map((f) => ({ value: f.key, label: f.label || f.key }))
+                  const optLoro = campiBers.map((f) => ({ value: f.key, label: f.label || f.key }))
+                  const stati = (bers && bers.workflow_states) || []
+                  const regole = step.rules || []
+                  const setRegole = (next) => updateStep(idx, 'rules', next)
+                  const patchRegola = (ri, patch) => setRegole(regole.map((r, i) => i === ri ? { ...r, ...patch } : r))
+                  const loroLista = (r) => (Array.isArray(r.theirs) ? r.theirs : (r.theirs ? [r.theirs] : []))
+                  const inp = 'w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-700 focus:border-violet-500 transition placeholder-gray-600'
+                  const OPS = [
+                    { value: 'testo', label: 'è simile a (contiene / contenuto)' },
+                    { value: 'uguale', label: 'è uguale a' },
+                    { value: 'theirs<=mine', label: 'del candidato ≤ mio (es. prezzo ≤ budget)' },
+                    { value: 'theirs>=mine', label: 'del candidato ≥ mio (es. budget ≥ prezzo)' },
+                  ]
+                  const statiScelti = (step.target_filter && step.target_filter.field === '_stato' && step.target_filter.in) || []
+                  const alternaStato = (k) => {
+                    const next = statiScelti.includes(k) ? statiScelti.filter((x) => x !== k) : [...statiScelti, k]
+                    updateStep(idx, 'target_filter', next.length ? { field: '_stato', in: next } : null)
+                  }
+                  const chip = (testo, rimuovi) => (
+                    <span key={testo} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-violet-500/15 text-violet-200">
+                      {testo}<button onClick={rimuovi} className="text-violet-300/70 hover:text-white"><Icon name="x" size={10} /></button>
+                    </span>
+                  )
+                  const etichettaLoro = (k) => (optLoro.find((o) => o.value === k) || { label: k }).label
+                  return (
+                    <div key={step.id} {...dragHandlers(idx)}
+                      className="bg-surface-card rounded-md border border-gray-800 p-4 cursor-grab active:cursor-grabbing"
+                      style={{ borderLeft: '3px solid #8B5CF6' }}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-400">
+                          <span className="text-gray-600 select-none">&#8942;&#8942;</span>
+                          <Icon name="link" size={12} /> Abbinamento
+                        </div>
+                        <button onClick={() => removeStep(idx)} className="text-red-400/60 hover:text-red-400 transition"><Icon name="trash" size={14} /></button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <div>
+                          <label className="text-[10px] text-gray-500 block mb-1">Titolo della sezione</label>
+                          <input className={inp} placeholder="es. Immobili adatti" value={step.label || ''} onChange={(e) => updateStep(idx, 'label', e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-500 block mb-1">Chiave (minuscole, numeri, _)</label>
+                          <input className={inp + ' font-mono text-xs'} value={step.key || ''} onChange={(e) => updateStep(idx, 'key', e.target.value)} />
+                        </div>
+                      </div>
+                      <div className="mb-3">
+                        <label className="text-[10px] text-gray-500 block mb-1">Cerca nei record del modulo</label>
+                        <Select value={step.target_module || ''} onChange={(v) => updateStep(idx, 'target_module', v)} placeholder="Scegli un modulo…"
+                          options={allModules.filter((m) => m.slug !== selected).map((m) => ({ value: m.slug, label: m.name }))} />
+                      </div>
+
+                      <div className="text-[10px] text-gray-500 mb-1">Criteri — un criterio obbligatorio esclude chi non lo soddisfa; gli altri fanno il punteggio (il record deve soddisfarne almeno uno). Se il TUO campo è vuoto il criterio si salta.</div>
+                      <div className="space-y-2 mb-2">
+                        {regole.map((r, ri) => (
+                          <div key={ri} className="bg-surface-page rounded-lg border border-gray-700 p-2.5">
+                            <div className="grid grid-cols-[1fr_1fr] gap-2 mb-2">
+                              <Select value={r.mine || ''} onChange={(v) => patchRegola(ri, { mine: v })} placeholder="Il mio campo…" options={optMiei} className="text-xs" />
+                              <Select value={r.op || 'testo'} onChange={(v) => patchRegola(ri, { op: v })} options={OPS} className="text-xs" />
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                              <span className="text-[10px] text-gray-500">nel candidato:</span>
+                              {loroLista(r).map((k) => chip(etichettaLoro(k), () => patchRegola(ri, { theirs: loroLista(r).filter((x) => x !== k) })))}
+                              <Select value="" onChange={(v) => v && patchRegola(ri, { theirs: [...loroLista(r), v] })} placeholder="+ campo" options={optLoro.filter((o) => !loroLista(r).includes(o.value))} className="text-xs w-36" />
+                            </div>
+                            <div className="flex items-center justify-between gap-2">
+                              <input className="flex-1 bg-surface-card text-ink px-2 py-1 rounded text-xs outline-none border border-gray-700 focus:border-violet-500 transition placeholder-gray-600"
+                                placeholder="Etichetta (es. Nel budget)" value={r.label || ''} onChange={(e) => patchRegola(ri, { label: e.target.value })} />
+                              <label className="flex items-center gap-1.5 text-[11px] text-gray-400 flex-shrink-0 cursor-pointer">
+                                <input type="checkbox" checked={!!r.required} onChange={(e) => patchRegola(ri, { required: e.target.checked })} /> Obbligatorio
+                              </label>
+                              <button onClick={() => setRegole(regole.filter((_, i) => i !== ri))} className="text-red-400/50 hover:text-red-400 transition flex-shrink-0"><Icon name="trash" size={13} /></button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <button onClick={() => setRegole([...regole, { mine: '', theirs: [], op: 'testo', label: '', required: false }])} className="text-violet-300 hover:text-violet-200 text-xs transition flex items-center gap-1 mb-3">
+                        <Icon name="plus" size={12} />Aggiungi criterio
+                      </button>
+
+                      {stati.length > 0 && (
+                        <div className="mb-3">
+                          <div className="text-[10px] text-gray-500 mb-1">Considera solo i record in questi stati (nessuno = tutti)</div>
+                          <div className="flex flex-wrap gap-2">
+                            {stati.map((st) => (
+                              <label key={st.key} className="flex items-center gap-1.5 text-[11px] text-gray-300 cursor-pointer">
+                                <input type="checkbox" checked={statiScelti.includes(st.key)} onChange={() => alternaStato(st.key)} />{st.label || st.key}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <div>
+                          <label className="text-[10px] text-gray-500 block mb-1">Mostra la sezione solo se il mio campo…</label>
+                          <Select value={(step.when && step.when.field) || ''} onChange={(v) => updateStep(idx, 'when', v ? { field: v, equals: (step.when && step.when.equals) || '' } : null)}
+                            placeholder="Sempre" options={[{ value: '', label: 'Sempre' }, ...optMiei]} className="text-xs" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-500 block mb-1">…è uguale a</label>
+                          <input className={inp + ' text-xs'} disabled={!(step.when && step.when.field)} placeholder="es. Acquirente"
+                            value={(step.when && step.when.equals) || ''} onChange={(e) => updateStep(idx, 'when', { field: step.when.field, equals: e.target.value })} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-gray-500 block mb-1">Titolo di ogni risultato</label>
+                          <Select value={step.display_field || ''} onChange={(v) => updateStep(idx, 'display_field', v)} placeholder="Scegli un campo…" options={optLoro} className="text-xs" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-gray-500 block mb-1">Dettagli sotto il titolo</label>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {(step.subtitle_fields || []).map((k) => chip(etichettaLoro(k), () => updateStep(idx, 'subtitle_fields', (step.subtitle_fields || []).filter((x) => x !== k))))}
+                            <Select value="" onChange={(v) => v && updateStep(idx, 'subtitle_fields', [...(step.subtitle_fields || []), v])} placeholder="+ campo"
+                              options={optLoro.filter((o) => !(step.subtitle_fields || []).includes(o.value) && o.value !== step.display_field)} className="text-xs w-32" />
+                          </div>
                         </div>
                       </div>
                     </div>

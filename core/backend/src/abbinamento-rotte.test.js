@@ -165,6 +165,55 @@ async function main() {
     assertEq((await pubblica('v7')).status, 200);
   });
 
+  console.log('\n--- seed: gli abbinamenti del verticale applicati ai moduli (una volta sola) ---');
+  const seedAbb = require('./seeds/abbinamenti-immobiliare.json');
+  const { applicaSeed } = require('./seed-blocchi-verticale');
+  mk('clienti', [F('nome', 'Nome'), F('tipo_cliente', 'Tipo'), F('ricerca_tipologia', 'Tipologia'), F('ricerca_budget_max', 'Budget', 'currency'), F('ricerca_zona', 'Zona')]);
+  mk('immobili', [F('titolo', 'Titolo'), F('tipologia', 'Tipologia'), F('comune', 'Comune'), F('zona_quartiere', 'Zona'), F('localita', 'Località'), F('prezzo_richiesto', 'Prezzo', 'currency'),
+    { id: 'i1', block_type: 'workflow_state', key: 'in_mandato', label: 'In mandato', initial: true },
+    { id: 'i2', block_type: 'workflow_state', key: 'in_vendita', label: 'In vendita' }, { id: 'i3', block_type: 'workflow_state', key: 'venduto', label: 'Venduto' }]);
+  const chiaviMv = (slug) => (JSON.parse(db.prepare('SELECT schema_json FROM modules WHERE slug = ?').get(slug).schema_json).steps || []).filter((st) => st.block_type === 'match_view').map((st) => st.key);
+
+  await test('il seed reale degli abbinamenti si applica (passa dalla validazione del Builder)', async () => {
+    const esiti = await applicaSeed(seedAbb, { tipo: 'match_view' });
+    assertEq(esiti.filter((e) => e.esito === 'applicato').map((e) => e.key).sort(), ['immobili_adatti', 'richieste_compatibili']);
+    assertEq(chiaviMv('clienti'), ['immobili_adatti']); assertEq(chiaviMv('immobili'), ['richieste_compatibili']);
+  });
+  await test('con i dati veri: un acquirente vede gli immobili in vendita nel suo budget, in zona', async () => {
+    const acq = rec('clienti', { nome: 'Elena', tipo_cliente: 'Acquirente', ricerca_tipologia: 'trilocale', ricerca_budget_max: 250000, ricerca_zona: 'Sirmione' });
+    const ven = rec('clienti', { nome: 'Fabio', tipo_cliente: 'Venditore', ricerca_budget_max: 250000 });
+    const i1 = rec('immobili', { titolo: 'Trilocale vista lago', tipologia: 'Appartamento', comune: 'Sirmione', prezzo_richiesto: 240000, _stato: 'in_vendita' });
+    const i2 = rec('immobili', { titolo: 'Villa grande', tipologia: 'Villa', comune: 'Sirmione', prezzo_richiesto: 900000, _stato: 'in_vendita' });
+    const i3 = rec('immobili', { titolo: 'Trilocale venduto', tipologia: 'Appartamento', comune: 'Sirmione', prezzo_richiesto: 200000, _stato: 'venduto' });
+    const j = await (await get(`/records/clienti/${acq}/abbinamenti/immobili_adatti`)).json();
+    // «trilocale» compare nel titolo di i1 (la tipologia del cliente è testo libero): tipologia + zona. i2 escluso dal budget, i3 dallo stato.
+    assertEq(j.items.map((i) => i.id), [i1]); assertEq(j.items[0].punteggio, 1);
+    assertEq((await (await get(`/records/clienti/${ven}/abbinamenti/immobili_adatti`)).json()).applicabile, false, 'il venditore non vede gli immobili adatti');
+    const inv = await (await get(`/records/immobili/${i1}/abbinamenti/richieste_compatibili`)).json();
+    assertEq(inv.items.map((i) => i.titolo), ['Elena'], 'solo gli acquirenti con budget sufficiente');
+    assertEq((await (await get(`/records/immobili/${i2}/abbinamenti/richieste_compatibili`)).json()).items, [], 'nessuno ha 900.000');
+    assertEq(i3 > 0, true);
+  });
+  await test('secondo avvio: niente da fare; se l\'abbinamento viene tolto dal Builder non ricompare', async () => {
+    assertEq(await applicaSeed(seedAbb, { tipo: 'match_view' }), []);
+    const sc = JSON.parse(db.prepare("SELECT schema_json FROM modules WHERE slug = 'clienti'").get().schema_json);
+    sc.steps = sc.steps.filter((st) => st.block_type !== 'match_view');
+    db.prepare("UPDATE modules SET schema_json = ? WHERE slug = 'clienti'").run(JSON.stringify(sc));
+    assertEq(await applicaSeed(seedAbb, { tipo: 'match_view' }), []);
+    assertEq(chiaviMv('clienti'), []);
+  });
+  await test('un modulo omonimo senza i campi dell\'abbinamento non viene toccato', async () => {
+    mk('altrove', [F('nome', 'Nome')]);
+    const finto = { altrove: [{ key: 'k', label: 'K', target_module: 'immobili', display_field: 'titolo', rules: [{ mine: 'ricerca_zona', theirs: 'comune', op: 'testo' }] }] };
+    assertEq((await applicaSeed(finto, { tipo: 'match_view' })).map((e) => e.esito), ['non applicabile']);
+    assertEq(chiaviMv('altrove'), []);
+  });
+  await test('un abbinamento verso un modulo che non esiste nel tenant non fa nulla', async () => {
+    mk('qui', [F('a', 'A')]);
+    const finto = { qui: [{ key: 'k2', label: 'K2', target_module: 'inesistente_t', display_field: 'titolo', rules: [{ mine: 'a', theirs: 'b', op: 'testo' }] }] };
+    assertEq((await applicaSeed(finto, { tipo: 'match_view' })).map((e) => e.esito), ['non applicabile']);
+  });
+
   console.log(`\n${'─'.repeat(50)}`);
   console.log(`Risultato: ${passed} passati, ${failed} falliti`);
   process.exit(failed > 0 ? 1 : 0);

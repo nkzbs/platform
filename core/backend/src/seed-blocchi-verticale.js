@@ -1,15 +1,15 @@
 'use strict';
-// Applica ai moduli di un tenant le azioni «documento da modello» dichiarate in
-// seeds/documenti-immobiliare.json (i valori di partenza di un progetto stanno nei seed, mai nel
-// codice). Sostituisce i testi che stavano in lib/doc-cliente.js e lib/doc-immobile.js e le
-// rotte legate agli slug di un solo verticale.
+// Applica ai moduli di un tenant i blocchi dichiarati nei seed di un verticale (i valori di
+// partenza di un progetto stanno nei seed, mai nel codice): le azioni «documento da modello»
+// (seeds/documenti-immobiliare.json) e gli «abbinamenti» (seeds/abbinamenti-immobiliare.json).
+// Sostituisce i testi che stavano in lib/doc-cliente.js e lib/doc-immobile.js e le rotte legate
+// agli slug di un solo verticale.
 //
 // Regole, tutte pensate per non fare danni:
-//  - UNA volta sola per documento: dopo l'applicazione resta un marcatore (tabella
-//    `seed_applicati`). Se poi qualcuno toglie o cambia il documento dal Builder, al riavvio NON
-//    ricompare.
+//  - UNA volta sola per blocco: dopo l'applicazione resta un marcatore (tabella `seed_applicati`).
+//    Se poi qualcuno toglie o cambia il blocco dal Builder, al riavvio NON ricompare.
 //  - Solo dove ha senso: il modulo deve esistere ed essere installato e avere TUTTI i campi (e le
-//    relazioni) che il modello cita. Un tenant con un modulo omonimo ma diverso non viene toccato.
+//    relazioni) che il blocco cita. Un tenant con un modulo omonimo ma diverso non viene toccato.
 //  - Passa dalle rotte vere del Builder (bozza + pubblicazione, con la sua validazione), mai con una
 //    scrittura diretta su schema_json.
 //  - Idempotente e senza effetti dove non c'è niente da fare: ogni avvio costa qualche lettura.
@@ -40,6 +40,29 @@ function modelloApplicabile(az, steps, moduliPerSlug) {
   return true;
 }
 
+// L'abbinamento è applicabile se i campi «miei» (e la condizione) esistono in questo modulo e quelli
+// «loro» (regole, filtro, campi mostrati) esistono nel modulo bersaglio, che deve esistere.
+function abbinamentoApplicabile(mv, steps, moduliPerSlug) {
+  const miei = new Set(steps.filter((s) => s.block_type === 'field' || s.block_type === 'computed').map((s) => s.key).concat(['_stato']));
+  const loro = moduliPerSlug[mv.target_module];
+  if (!loro) return false;
+  const loroOk = (k) => k === '_stato' || loro.has(k);
+  for (const r of mv.rules || []) {
+    if (!miei.has(r.mine)) return false;
+    if (![].concat(r.theirs).every(loroOk)) return false;
+  }
+  if (mv.when && mv.when.field && !miei.has(mv.when.field)) return false;
+  if (mv.target_filter && mv.target_filter.field && !loroOk(mv.target_filter.field)) return false;
+  return [mv.display_field, ...(mv.subtitle_fields || [])].filter(Boolean).every(loroOk);
+}
+
+// Cosa si può applicare: tipo di blocco, prefisso del marcatore (invariato per i documenti, così in
+// produzione quelli già applicati non si ripetono), controllo di applicabilità, file del seed.
+const TIPI = {
+  document_action: { prefisso: 'azione_documento', applicabile: modelloApplicabile, file: 'documenti-immobiliare.json', nome: 'documento', idPrefisso: 'doc_' },
+  match_view: { prefisso: 'abbinamento', applicabile: abbinamentoApplicabile, file: 'abbinamenti-immobiliare.json', nome: 'abbinamento', idPrefisso: 'mtc_' },
+};
+
 function campiDelModulo(slug) {
   const m = db.prepare('SELECT schema_json FROM modules WHERE slug = ? AND installed = 1').get(slug);
   if (!m) return null;
@@ -51,7 +74,8 @@ function campiDelModulo(slug) {
   } catch (e) { return null; }
 }
 
-async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs } = {}) {
+async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs, tipo = 'document_action' } = {}) {
+  const cfg = TIPI[tipo];
   const esiti = [];
   const admin = db.prepare("SELECT * FROM users WHERE role = 'admin' LIMIT 1").get();
   const moduliPerSlug = {};
@@ -63,21 +87,21 @@ async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs
   for (const [slug, azioni] of Object.entries(seed)) {
     if (slug.startsWith('_') || !Array.isArray(azioni)) continue;
     for (const az of azioni) {
-      const chiave = 'azione_documento:' + slug + ':' + az.key;
+      const chiave = cfg.prefisso + ':' + slug + ':' + az.key;
       if (gia(chiave)) continue;
       const m = db.prepare('SELECT schema_json FROM modules WHERE slug = ? AND installed = 1').get(slug);
       if (!m) continue; // il modulo non c'è (ancora): riproverà al prossimo avvio
       let schema; try { schema = JSON.parse(m.schema_json); } catch (e) { continue; }
       if (schema.version !== 3 || !Array.isArray(schema.steps)) continue;
-      if (schema.steps.some((s) => s.block_type === 'document_action' && s.key === az.key)) { segna(chiave); continue; }
-      if (!modelloApplicabile(az, schema.steps, mappa)) { segna(chiave); esiti.push({ slug, key: az.key, esito: 'non applicabile' }); continue; }
+      if (schema.steps.some((s) => s.block_type === tipo && s.key === az.key)) { segna(chiave); continue; }
+      if (!cfg.applicabile(az, schema.steps, mappa)) { segna(chiave); esiti.push({ slug, key: az.key, esito: 'non applicabile' }); continue; }
       if (!admin) continue;
 
-      const nuovo = { version: 3, steps: [...schema.steps, { id: 'doc_' + Math.random().toString(36).slice(2, 10), block_type: 'document_action', ...az }] };
+      const nuovo = { version: 3, steps: [...schema.steps, { id: cfg.idPrefisso + Math.random().toString(36).slice(2, 10), block_type: tipo, ...az }] };
       const bozza = await callAs(admin, 'PUT', '/builder/' + slug + '/draft', { schema: nuovo });
-      if (!bozza.ok) { console.error('[seed-azioni-documento] bozza ' + slug + '/' + az.key + ' fallita:', JSON.stringify(bozza.data)); esiti.push({ slug, key: az.key, esito: 'errore bozza' }); continue; }
+      if (!bozza.ok) { console.error('[seed-blocchi] bozza ' + slug + '/' + az.key + ' fallita:', JSON.stringify(bozza.data)); esiti.push({ slug, key: az.key, esito: 'errore bozza' }); continue; }
       const pub = await callAs(admin, 'POST', '/builder/' + slug + '/publish', {});
-      if (!pub.ok) { console.error('[seed-azioni-documento] pubblicazione ' + slug + '/' + az.key + ' fallita:', JSON.stringify(pub.data)); esiti.push({ slug, key: az.key, esito: 'errore pubblicazione' }); continue; }
+      if (!pub.ok) { console.error('[seed-blocchi] pubblicazione ' + slug + '/' + az.key + ' fallita:', JSON.stringify(pub.data)); esiti.push({ slug, key: az.key, esito: 'errore pubblicazione' }); continue; }
       segna(chiave);
       esiti.push({ slug, key: az.key, esito: 'applicato' });
     }
@@ -86,11 +110,13 @@ async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs
 }
 
 async function run() {
-  try {
-    const seed = require(path.join(__dirname, 'seeds', 'documenti-immobiliare.json'));
-    const esiti = await applicaSeed(seed);
-    esiti.filter((e) => e.esito === 'applicato').forEach((e) => console.log('[seed-azioni-documento] documento «' + e.key + '» aggiunto al modulo ' + e.slug));
-  } catch (e) { console.error('[seed-azioni-documento] non riuscito:', e.message); }
+  for (const [tipo, cfg] of Object.entries(TIPI)) {
+    try {
+      const seed = require(path.join(__dirname, 'seeds', cfg.file));
+      const esiti = await applicaSeed(seed, { tipo });
+      esiti.filter((e) => e.esito === 'applicato').forEach((e) => console.log('[seed-blocchi] ' + cfg.nome + ' «' + e.key + '» aggiunto al modulo ' + e.slug));
+    } catch (e) { console.error('[seed-blocchi] ' + cfg.nome + ': non riuscito:', e.message); }
+  }
 }
 
-module.exports = { applicaSeed, modelloApplicabile, run };
+module.exports = { applicaSeed, modelloApplicabile, abbinamentoApplicabile, TIPI, run };
