@@ -1,6 +1,6 @@
 {
   "name": "platform-core-frontend",
-  "version": "0.4.17",
+  "version": "0.4.18",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
-    "autoprefixer": "^10.4.17",
+    "autoprefixer": "^10.4.18",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
     "vite": "^5.1.0"

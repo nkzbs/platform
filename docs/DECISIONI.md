@@ -656,3 +656,10 @@ avrebbe perso ore di storia reale a ogni suo stesso aggiornamento), corretto pri
 **Cosa**: eliminati `one-off-2026-10-30-ricevute.js` e `one-off-2026-10-30-match-test.js`.
 **Perché**: contenevano i nomi `spese_personali`/`spese_casa` di Finance e facevano fallire `no-hardcoded-names` (l'unico test rosso su 80 suite). Già eseguiti e tolti dall'avvio; il lavoro che hanno fatto sta nei dati. Restano nella cronologia di git (`git log --diff-filter=D -- core/backend/src/one-off-2026-10-30-*`). Preferito l'eliminazione a una lista di eccezioni nel test: una lista di eccezioni cresce e indebolisce la regola.
 
+## 2026-11-06 — `/` dei tenant senza Cache-Control: l'utente vedeva la 0.4.14 dopo il deploy della 0.4.17
+
+**Cosa**: `core/nginx.conf` aveva `no-cache` solo su `location = /index.html` (corretto il 02/09 per lo stesso sintomo). La root `/` non ci passa — viene servita dal backend (`/__root_public`) o, se il Sito Web non è attivo, da `@spa_root` — quindi nessun `Cache-Control`: il browser applicava la cache euristica (da `Last-Modified`) e teneva un `index.html` vecchio.
+**Come si è visto**: `curl -sI https://<tenant>/` senza `cache-control`, mentre `/index.html` lo aveva; il bundle servito conteneva già la versione nuova. Super Admin non lo aveva (la sua `/` passa da `/index.html`).
+**Scelta**: `add_header Cache-Control "no-cache"` su entrambi i blocchi della root. Non `no-store`: il browser può comunque tenere la pagina, ma la rivalida a ogni apertura (costo: una richiesta condizionata, poche centinaia di byte).
+**Cosa NON risolve**: la copia già in cache sul telefono finché non viene rivalidata una volta (chiudere l'app dalla Home di iOS e riaprirla, o Impostazioni → Safari → Avanzate → Dati dei siti web).
+

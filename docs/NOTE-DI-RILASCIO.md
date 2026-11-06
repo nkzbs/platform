@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.18 — 6 novembre 2026
+
+**Fix: dopo un deploy, un tenant poteva mostrare per ore la versione vecchia** (segnalato: "perché vedo la 0.4.14?" quando il server serviva già la 0.4.17). Causa: in `core/nginx.conf` solo `/index.html` aveva `Cache-Control: no-cache`; l'indirizzo base del dominio (`/`) passa dal ramo del Sito Web (`/__root_public`, poi `@spa_root`) e non riceveva l'intestazione, quindi il browser — soprattutto l'app aggiunta alla Home di iOS — riusava un `index.html` vecchio che puntava a un bundle vecchio.
+
+- `no-cache` aggiunto a `location = /` e a `@spa_root`. Super Admin non era toccato (la sua `/` passa da `/index.html`, che ce l'ha).
+- Sintassi nginx verificata (`nginx -t`). Il bundle JS resta in cache a lungo (nome con hash), solo l'`index.html` viene rivalidato a ogni apertura.
+- **Per vederlo funzionare serve Aggiorna sui tenant**; la prima apertura dopo l'aggiornamento può ancora mostrare la copia vecchia già in cache (una volta sola: da lì in poi si rivalida).
+
 ## 0.4.17 — 6 novembre 2026
 
 **Menu "Altro" del dock mobile più leggibile, e voci appuntate scelte dall'utente** (core e Super Admin, insieme: i due dock condividono lo stesso stile). Segnalato con uno screenshot di Finance da iPhone: le icone della griglia non avevano nome (due triangoli di avviso e due carte quasi identiche) e il nome compariva solo al passaggio del mouse, che sul telefono non esiste.

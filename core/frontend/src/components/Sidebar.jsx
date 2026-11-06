@@ -251,7 +251,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
                     : <><span className="font-bold">Platform</span>{tenantName && <span className="font-normal"> {tenantName}</span>}</>
                   }
                 </div>
-                {!hidePlatformName && <div className="text-xs text-gray-500">Platform 0.4.17</div>}
+                {!hidePlatformName && <div className="text-xs text-gray-500">Platform 0.4.18</div>}
               </div>
             )}
           </div>
@@ -376,7 +376,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
                 <Avatar user={user} size={28} />
                 <div className="min-w-0">
                   <div className="text-sm text-ink font-medium truncate">{user && user.display_name}</div>
-                  <div className="text-xs text-gray-500">{user && user.role}{!hidePlatformName && <span> · Platform 0.4.17</span>}</div>
+                  <div className="text-xs text-gray-500">{user && user.role}{!hidePlatformName && <span> · Platform 0.4.18</span>}</div>
                 </div>
               </button>
               <div className="flex items-center gap-3">
