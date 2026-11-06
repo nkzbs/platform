@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import Portal from './Portal'
 
 // «Proponi alla Libreria»: manda a Super Admin la STRUTTURA di un modulo (mai le righe), che la approva o la rifiuta.
 // Usata sia dalla Libreria sia dal Builder (bottone nell'intestazione del modulo): stessa modale, stessa rotta.
@@ -11,6 +12,7 @@ export default function ProponiAllaLibreriaModal({ api, module, description = ''
     if (r.ok) { setForm((p) => ({ ...p, busy: false, fatto: true })); if (onSent) onSent() } else setForm((p) => ({ ...p, busy: false, errore: (r.data && r.data.error) || 'Non riuscito.' }))
   }
   return (
+    <Portal>
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => !form.busy && onClose()}>
       <div className="bg-surface-card rounded-xl w-full max-w-md border border-gray-800 p-5" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-bold text-ink mb-1">Proponi «{module.name}» alla Libreria</h2>
@@ -35,5 +37,6 @@ export default function ProponiAllaLibreriaModal({ api, module, description = ''
         )}
       </div>
     </div>
+    </Portal>
   )
 }

@@ -4,6 +4,7 @@ import useApi from '../../lib/useApi'
 import Icon from '../../components/Icon'
 import FieldEditorInput from './FieldEditorInput'
 import { parseSchemaFrontend } from '../../lib/schema-v3-frontend'
+import Portal from '../../components/Portal'
 
 // Primitiva "Creazione con scelta" (block_type branch_create) — un bottone che chiede
 // prima una scelta (es. "Diretto" / "A rate") e poi mostra campi diversi, creando il
@@ -73,6 +74,7 @@ function BranchCreateModal({ config, defaultModuleSlug, token, onClose, onCreate
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
       <div className="bg-surface-card rounded-md p-6 w-full max-w-md border border-gray-800 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
@@ -115,6 +117,7 @@ function BranchCreateModal({ config, defaultModuleSlug, token, onClose, onCreate
         )}
       </div>
     </div>
+    </Portal>
   )
 }
 

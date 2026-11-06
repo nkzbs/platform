@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import useApi from '../lib/useApi'
 import Icon from './Icon'
+import Portal from './Portal'
 
 // «Chiedi ai dati»: scrivi una domanda ("quanto ho speso di luce nel 2025?"); l'AI la traduce in un filtro strutturato (mai una query libera) e il progetto
 // lo esegue sui tuoi dati. Il risultato mostra anche cosa è stato capito, così puoi controllare. Solo con l'AI accesa (Impostazioni → AI).
@@ -40,6 +41,7 @@ export default function AskData({ token, glass }) {
         <Icon name="wand" size={14} /><span className="hidden sm:inline">Chiedi ai dati</span>
       </button>
       {open && (
+        <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 pt-[10vh]" onClick={(e) => { if (e.target === e.currentTarget) setOpen(false) }}>
           <div className="bg-surface-card rounded-md p-6 w-full max-w-xl border border-gray-800 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-3">
@@ -79,6 +81,7 @@ export default function AskData({ token, glass }) {
             )}
           </div>
         </div>
+        </Portal>
       )}
     </>
   )

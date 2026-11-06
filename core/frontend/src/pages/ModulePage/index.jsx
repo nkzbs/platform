@@ -28,6 +28,7 @@ import ArchiveView from './ArchiveView'
 import FormulaEditor from '@shared/builder/FormulaEditor.jsx'
 import { StepChainEditor } from '@shared/builder/StepChainEditor.jsx'
 import GlassPageBackground from '../../components/GlassPageBackground'
+import Portal from '../../components/Portal'
 
 function ModulePage({ module: mod, token, user, onNavigate }) {
   const api = useApi(token)
@@ -1202,6 +1203,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
       )}
 
       {showImport && (
+        <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-surface-card rounded-md p-6 w-full max-w-lg border border-gray-800 max-h-[85vh] overflow-y-auto">
             <h2 className="text-base font-bold text-ink mb-1">Importa CSV — {mod.name}</h2>
@@ -1266,9 +1268,11 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
             )}
           </div>
         </div>
+        </Portal>
       )}
 
       {quickCreateRel && (
+        <Portal>
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60]">
           <div className="bg-surface-card rounded-md p-6 w-full max-w-sm border border-gray-800">
             <h2 className="text-base font-bold text-ink mb-1">Nuovo {quickCreateRel.label.toLowerCase()}</h2>
@@ -1295,6 +1299,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </GlassPageBackground>
   )

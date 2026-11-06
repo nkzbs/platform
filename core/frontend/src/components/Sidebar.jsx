@@ -4,6 +4,7 @@ import PlatformLogo from './PlatformLogo'
 import GlobalSearch from './GlobalSearch'
 import Avatar from './Avatar'
 import { API, notifyUnauthorized } from '../lib/api'
+import Portal from './Portal'
 
 // Due rese della stessa navigazione, non due componenti — rail verticale fissa a sinistra
 // su desktop (richiesto dal vivo, 2026-11-01, dopo aver provato il dock ovunque: "da pc/mac
@@ -226,7 +227,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
                     : <><span className="font-bold">Platform</span>{tenantName && <span className="font-normal"> {tenantName}</span>}</>
                   }
                 </div>
-                {!hidePlatformName && <div className="text-xs text-gray-500">Platform 0.4.14</div>}
+                {!hidePlatformName && <div className="text-xs text-gray-500">Platform 0.4.15</div>}
               </div>
             )}
           </div>
@@ -307,7 +308,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
               {logoUrl ? <img src={logoUrl} alt="" className="w-[24px] h-[24px] rounded-md object-contain flex-shrink-0" /> : <PlatformLogo size={24} letter={hidePlatformName && tenantName ? tenantName.trim()[0] : undefined} />}
               <div className="min-w-0">
                 <div className="text-sm text-ink font-bold truncate">{hidePlatformName && tenantName ? tenantName : 'Platform' + (tenantName ? ' ' + tenantName : '')}</div>
-                {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.4.14</div>}
+                {!hidePlatformName && <div className="text-[11px] text-gray-500">Platform 0.4.15</div>}
               </div>
             </div>
             <div className="px-0.5 pb-3 flex-shrink-0">
@@ -399,6 +400,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
       </div>
 
       {pwOpen && (
+        <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-surface-card rounded-md p-6 w-full max-w-sm border border-gray-800">
             <h2 className="text-base font-bold text-ink mb-4">Cambia password</h2>
@@ -427,6 +429,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </>
   )

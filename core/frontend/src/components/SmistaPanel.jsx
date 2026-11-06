@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import useApi from '../lib/useApi'
 import { parseSchemaFrontend } from '../lib/schema-v3-frontend'
 import AiSource from './AiSource'
@@ -86,7 +87,9 @@ export default function SmistaPanel({ token, q, row, modules, canDelete, onClose
   }
 
   const inp = 'w-full min-w-0 h-10 appearance-none bg-surface-page text-ink px-3 py-2 rounded-lg outline-none border border-gray-800 focus:border-accent text-sm'
-  return (
+  // createPortal verso document.body: aperto da un widget di vetro (backdrop-filter) il
+  // fixed restava intrappolato nella card — stesso bug e stessa cura di FormDrawer.jsx.
+  return createPortal(
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
       <div className="bg-surface-card rounded-md p-6 w-full max-w-lg border border-gray-800 max-h-[90vh] overflow-y-auto">
         <h2 className="text-base font-bold text-ink">Smista</h2>
@@ -156,6 +159,7 @@ export default function SmistaPanel({ token, q, row, modules, canDelete, onClose
           <button type="button" onClick={conferma} disabled={busy || manca} className={'flex-1 disabled:opacity-50 text-white py-2.5 rounded-lg text-sm font-medium transition ' + (modo === 'elimina' ? 'bg-red-600 hover:opacity-90' : 'bg-accent hover:opacity-90')}>{busy ? 'Un momento…' : modo === 'elimina' ? 'Elimina' : 'Conferma'}</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import InviteShare from '@shared/InviteShare.jsx'
+import Portal from './Portal'
 
 // «Invita»: si scrive nome, email (facoltativa) e ruolo; nasce un link monouso con cui la persona sceglie da sé utente e password. Il link si vede UNA volta (nel database resta solo
 // la sua impronta): si copia, si manda su WhatsApp o Telegram, oppure parte per mail dalla posta di Super Admin se c'è. Sotto, gli inviti recenti, con «Annulla» per quelli ancora aperti.
@@ -29,6 +30,7 @@ export default function InviteModal({ token, onClose }) {
   const nuovo = () => { setFatto(null); setF({ nome: '', email: '', role: 'user', mail: false }) }
 
   return (
+    <Portal>
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-surface-card rounded-xl w-full max-w-lg border border-gray-800 p-5 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-bold text-ink mb-1">Invita una persona</h2>
@@ -63,5 +65,6 @@ export default function InviteModal({ token, onClose }) {
         )}
       </div>
     </div>
+    </Portal>
   )
 }

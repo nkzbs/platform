@@ -3,6 +3,7 @@ import useApi from '../lib/useApi'
 import InviteModal from '../components/InviteModal'
 import Icon from '../components/Icon'
 import RecordOwnerCard from '../components/RecordOwnerCard'
+import Portal from '../components/Portal'
 
 function UsersPage({ token }) {
   const api = useApi(token)
@@ -259,6 +260,7 @@ function UsersPage({ token }) {
       </div>
 
       {showNew && (
+        <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-surface-card rounded-md p-6 w-full max-w-md border border-gray-800">
             <h2 className="text-lg font-bold text-ink mb-4">Nuovo Utente</h2>
@@ -295,9 +297,11 @@ function UsersPage({ token }) {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {resetUserId !== null && (
+        <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-surface-card rounded-md p-6 w-full max-w-sm border border-gray-800">
             <h2 className="text-lg font-bold text-ink mb-1">Reimposta password</h2>
@@ -313,9 +317,11 @@ function UsersPage({ token }) {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {showNewRole && (
+        <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-surface-card rounded-md p-6 w-full max-w-md border border-gray-800">
             <h2 className="text-lg font-bold text-ink mb-4">Nuovo Ruolo</h2>
@@ -335,6 +341,7 @@ function UsersPage({ token }) {
             </div>
           </div>
         </div>
+        </Portal>
       )}
       {showInvite && <InviteModal token={token} onClose={() => setShowInvite(false)} />}
     </div>

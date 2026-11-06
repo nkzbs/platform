@@ -3,6 +3,7 @@ import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
 import Tile from '../components/Tile'
 import { parseSchemaFrontend } from '../lib/schema-v3-frontend'
+import Portal from '../components/Portal'
 
 // Sito Web (2026-09-04, richiesto dall'utente: motore standard per qualunque tenant,
 // non solo e-commerce — "lo vorrei standard per tutti", verticale e-commerce lo
@@ -1579,6 +1580,7 @@ function PageEditor({ token, pageId, onBack, installedModules, api }) {
           lista tipi dei pulsanti "+ tipo" della sidebar, la scelta chiama
           insertBlockAt esattamente come il drag dalla sidebar. */}
       {blockPickerAt !== null && (
+        <Portal>
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setBlockPickerAt(null)}>
           <div className="bg-surface-card border border-gray-800 rounded-md p-4 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <div className="text-sm font-semibold text-ink mb-3">Inserisci un blocco</div>
@@ -1593,9 +1595,11 @@ function PageEditor({ token, pageId, onBack, installedModules, api }) {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {imagePopup && (
+        <Portal>
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setImagePopup(null)}>
           <div className="bg-surface-card border border-gray-800 rounded-md p-4 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <div className="text-sm font-semibold text-ink mb-3">{imagePopup.kind === 'url' ? 'Cambia link' : imagePopup.kind === 'icon' ? 'Scegli icona' : 'Cambia immagine'}</div>
@@ -1653,6 +1657,7 @@ function PageEditor({ token, pageId, onBack, installedModules, api }) {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       <div className="glass-panel p-4 mb-4">

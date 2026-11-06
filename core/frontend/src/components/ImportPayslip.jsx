@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from './Icon'
+import Portal from './Portal'
 
 // «Carica busta paga» (potenziamento "payslip" del modulo): carichi il PDF o una foto della
 // busta paga (anche dal rullino: sul PDF l'AI legge il testo, sulla foto usa la visione del
@@ -75,6 +76,7 @@ export default function ImportPayslip({ token, mod, user, onCreated }) {
     <>
       <button type="button" onClick={() => setOpen(true)} className="bg-gray-800 hover:bg-gray-700 text-accent px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5"><Icon name="wand" size={14} />Carica busta paga</button>
       {open && (
+        <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-surface-card rounded-md p-6 w-full max-w-lg border border-gray-800 max-h-[90vh] overflow-y-auto">
             <h2 className="text-base font-bold text-ink">Carica busta paga</h2>
@@ -107,6 +109,7 @@ export default function ImportPayslip({ token, mod, user, onCreated }) {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </>
   )

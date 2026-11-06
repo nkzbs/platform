@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
+import Portal from '../components/Portal'
 
 const toast = (message, type = 'success') => window.dispatchEvent(new CustomEvent('platform:toast', { detail: { message, type } }))
 
@@ -173,6 +174,7 @@ function ListePage({ token }) {
       </div>
 
       {confirmDeleteList && (
+        <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-surface-card rounded-md p-6 w-full max-w-md border border-red-900/50">
             <h2 className="text-lg font-bold text-ink mb-2">Eliminare "{detail && detail.name}"?</h2>
@@ -187,6 +189,7 @@ function ListePage({ token }) {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )

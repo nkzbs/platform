@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import useApi from '../../lib/useApi'
 import Icon from '../../components/Icon'
+import Portal from '../../components/Portal'
 
 // Cerca da fonte esterna (Builder, Fase 4 — block_type 'api_source'): cerca su
 // un'API esterna via lo script search_script della fonte, poi importa il risultato
@@ -35,6 +36,7 @@ function SourceSearchModal({ mod, sources, token, onClose, onImported }) {
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-surface-card rounded-md border border-gray-800 w-full max-w-lg max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-gray-800 flex-shrink-0">
@@ -85,6 +87,7 @@ function SourceSearchModal({ mod, sources, token, onClose, onImported }) {
         </div>
       </div>
     </div>
+    </Portal>
   )
 }
 

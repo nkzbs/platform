@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.15 — 6 novembre 2026
+
+**Fix: i dialoghi aperti da dentro una card di vetro restavano intrappolati nella card.** Segnalato con uno screenshot: il dialogo "Smista" di un widget della Dashboard era confinato nei bordi del widget, con l'overlay scuro solo lì. Stessa causa della 0.3.47: un `backdrop-filter` su un antenato (`.glass-panel`) rende quell'antenato il contenitore degli elementi `position: fixed`.
+
+- Nuovo `components/Portal.jsx` (`createPortal` verso `document.body`); `SmistaPanel` usa direttamente `createPortal`.
+- Tutti gli altri overlay a tutto schermo senza portale ora ne sono avvolti (18 file: modali di Utenti, Libreria, Backup, Liste, Sito Web, Archivio, Dashboard, Modulo, import PDF/busta paga, invito, wizard, "Chiedi ai dati"...), invece di correggerli uno a uno quando qualcuno li incontra.
+- Lasciati com'erano: il backdrop del dock (non è un dialogo) e `ProductTour` (overlay di radice).
+- Verificato dal vivo: l'overlay di "Aggiungi widget" è figlio di `body` e copre tutta la finestra. Non provato a mano ogni singolo dialogo.
+
 ## 0.4.14 — 1 novembre 2026
 
 **Scheda Immobile completa, invio al proprietario.** Terzo e penultimo pezzo del workflow Clienti/Immobili/AML: Immobili estesa con la scheda reale a 3 pagine dell'agenzia (comproprietari, localizzazione/contesto, caratteristiche interne, serramenti/isolamento, impianti/certificazione energetica, catasto, spese condominiali/mutuo, valutazione/incarico, esigenze di riacquisto) — circa 55 nuovi campi.

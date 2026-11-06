@@ -11,6 +11,7 @@ import TimbratureWidget from '../components/TimbratureWidget'
 import YearlyBreakdownView from './ModulePage/YearlyBreakdownView'
 import CategoryPivotView from './ModulePage/CategoryPivotView'
 import WeeklyBreakdownView from './ModulePage/WeeklyBreakdownView'
+import Portal from '../components/Portal'
 
 // ─── DASHBOARD / REPORT ─────────────────────────────────────────────────────────
 // Stesso motore widget per due pagine — page='dashboard' (default, invariato) o
@@ -529,6 +530,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
       </div>
 
       {showAdd && (
+        <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className={'bg-surface-card rounded-md p-6 w-full border border-gray-800 max-h-[90vh] overflow-y-auto ' + (['checklist', 'riepilogo_mensile'].includes(newWidget.type) ? 'max-w-2xl' : 'max-w-md')}>
             <h2 className="text-lg font-bold text-ink mb-4">{editingWidgetId ? 'Modifica Widget' : 'Nuovo Widget'}</h2>
@@ -959,6 +961,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </GlassPageBackground>
   )

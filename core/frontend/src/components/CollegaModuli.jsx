@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from './Icon'
+import Portal from './Portal'
 
 // «Collega i moduli»: le relazioni che mancano tra i moduli installati, proposte dal nome (es. «Righe ordine» → «Ordini»). Si spuntano
 // quelle giuste e si conferma: nessun collegamento nasce da solo. Il campo di testo che c'era resta com'è (si toglie dal Builder).
@@ -22,6 +23,7 @@ export default function CollegaModuli({ token, onClose, onDone }) {
     if (r.ok) { setStato({ busy: false, esito: r.data, errore: '' }); if (onDone) onDone() } else setStato({ busy: false, esito: null, errore: (r.data && r.data.error) || 'Non riuscito.' })
   }
   return (
+    <Portal>
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => !stato.busy && onClose()}>
       <div className="bg-surface-card rounded-xl w-full max-w-lg border border-gray-800 p-5 max-h-[88vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-bold text-ink mb-1 flex items-center gap-2"><Icon name="link" size={16} />Collega i moduli</h2>
@@ -60,5 +62,6 @@ export default function CollegaModuli({ token, onClose, onDone }) {
         )}
       </div>
     </div>
+    </Portal>
   )
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { API } from '../../lib/api'
 import useApi from '../../lib/useApi'
 import Icon from '../../components/Icon'
+import Portal from '../../components/Portal'
 
 // Vista ad archivio: cartelle (i valori del primo campo "scelta"), file come schede con anteprima, interruttore Schede/Elenco.
 // Generica: nessun nome di modulo o di campo. Cartelle = primo campo select; file = primo campo di tipo file; titolo = primo campo di testo
@@ -80,6 +81,7 @@ function Preview({ item, token, folders, folderField, canEdit, onMove, onDetail,
   useEffect(() => { const k = (e) => { if (e.key === 'Escape') onClose() }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [onClose])
   const st = KIND_STYLE[kind]
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-0 sm:p-6" onClick={onClose}>
       <div className="bg-surface-card w-full h-full sm:h-[90vh] sm:max-w-5xl sm:rounded-xl border border-gray-800 flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="px-4 py-3 border-b border-gray-800 flex items-center gap-3">
@@ -120,6 +122,7 @@ function Preview({ item, token, folders, folderField, canEdit, onMove, onDetail,
         </div>
       </div>
     </div>
+    </Portal>
   )
 }
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import useApi from '../lib/useApi'
 import Icon from './Icon'
 import CollegaModuli from './CollegaModuli'
+import Portal from './Portal'
 
 // I primi passi di un tenant nuovo: scegliere cosa gestire, collegare i moduli, invitare chi lo usa, scegliere come avvisare.
 // Compare da solo (solo admin) finché il tenant è vuoto e non è stato chiuso. Ogni passo porta alla pagina giusta; cosa è già fatto si
@@ -38,6 +39,7 @@ export default function SetupWizard({ token, user, onNavigate, onOpenBuilderNewM
   }
   return (
     <>
+      <Portal>
       <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setAperto(false)}>
         <div className="bg-surface-card rounded-xl w-full max-w-lg border border-gray-800 p-5 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
           <h2 className="text-lg font-bold text-ink">Benvenuto: cominciamo</h2>
@@ -70,6 +72,7 @@ export default function SetupWizard({ token, user, onNavigate, onOpenBuilderNewM
           </div>
         </div>
       </div>
+      </Portal>
       {collega && <CollegaModuli token={token} onClose={() => { setCollega(false); carica() }} onDone={carica} />}
     </>
   )

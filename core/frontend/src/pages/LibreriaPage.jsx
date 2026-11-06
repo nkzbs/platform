@@ -8,6 +8,7 @@ import VerticaliLibreria from '../components/VerticaliLibreria'
 import ProponiAllaLibreriaModal from '../components/ProponiAllaLibreria'
 import { parseSchemaFrontend, getAutomationSteps, getRequiredConnectors } from '../lib/schema-v3-frontend'
 import GlassPageBackground from '../components/GlassPageBackground'
+import Portal from '../components/Portal'
 
 // La Libreria del tenant: i moduli che ho già (installati) e quelli salvati nella Libreria di
 // Super Admin che posso installare. Installare = copiare: il modulo diventa mio, modificabile
@@ -431,6 +432,7 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
         const spec = installedMatch ? techSpec(installedMatch.schema_json) : null
         const isInstalled = alreadyInstalledSlugs.has(detailModule.slug) && !!(installedMatch && installedMatch.installed)
         return (
+        <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setDetailModule(null)}>
           <div className="bg-surface-card rounded-xl w-full max-w-2xl border border-gray-800 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="p-5 border-b border-gray-800 flex items-start justify-between gap-4">
@@ -611,10 +613,12 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
             </div>
           </div>
         </div>
+        </Portal>
         )
       })()}
 
       {installing && (
+        <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-surface-card rounded-md p-6 w-full max-w-sm border border-gray-800">
             <h2 className="text-lg font-bold text-ink mb-1">Installa "{installing.name}"</h2>
@@ -626,9 +630,11 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {uninstalled && (
+        <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setUninstalled(null)}>
           <div className="bg-surface-card rounded-md p-6 w-full max-w-sm border border-gray-800" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-3">
@@ -641,6 +647,7 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
             <button onClick={() => setUninstalled(null)} className="w-full bg-accent hover:opacity-90 text-white py-3 rounded-lg transition font-medium">Ok</button>
           </div>
         </div>
+        </Portal>
       )}
     </GlassPageBackground>
   )

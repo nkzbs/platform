@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react'
 import { API } from '../lib/api'
 import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
+import Portal from '../components/Portal'
 
 function BackupPage({ token }) {
   const api = useApi(token)
@@ -116,6 +117,7 @@ function BackupPage({ token }) {
       </div>
 
       {confirmFile && (
+        <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-surface-card rounded-md p-6 w-full max-w-md border border-red-900/50">
             <h2 className="text-lg font-bold text-ink mb-2">Ripristinare da backup?</h2>
@@ -128,6 +130,7 @@ function BackupPage({ token }) {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {restoreResult && (
