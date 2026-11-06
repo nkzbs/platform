@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import Icon from './Icon'
+import Portal from './Portal'
 
 // ─── UI DI PROGRESSO CREAZIONE TENANT (2026-08-16) ──────────────────────────
 // Segnalato dall'utente: "anche la creazione del tenant è lenta" — verificato
@@ -44,6 +45,7 @@ function TenantCreatingOverlay({ label }) {
   const pct = estimatedPercent(elapsed)
 
   return (
+    <Portal>
     <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
       <div className="bg-surface-card border border-gray-800 rounded-2xl p-8 max-w-sm w-full text-center">
         <div className="text-ink font-medium mb-1">{label || 'Creazione tenant in corso'}</div>
@@ -60,6 +62,7 @@ function TenantCreatingOverlay({ label }) {
         </div>
       </div>
     </div>
+    </Portal>
   )
 }
 

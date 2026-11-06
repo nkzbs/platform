@@ -3,6 +3,7 @@ import { API } from '../../lib/api'
 import Icon from '../Icon'
 import PlatformLogo from '../PlatformLogo'
 import { startAuthentication, browserSupportsWebAuthn } from '@simplewebauthn/browser'
+import Portal from '../Portal'
 
 // Stessa logica di autenticazione di sempre (POST /auth/login, token in
 // localStorage) — cambia solo la presentazione: un overlay richiamabile dalla
@@ -89,6 +90,7 @@ function LoginModal({ onLogin, onClose, mode }) {
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-surface-card p-8 rounded-xl w-full max-w-sm border border-gray-800 relative" onClick={(e) => e.stopPropagation()}>
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-ink transition">
@@ -165,6 +167,7 @@ function LoginModal({ onLogin, onClose, mode }) {
         )}
       </div>
     </div>
+    </Portal>
   )
 }
 

@@ -2,6 +2,18 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.20 — 6 novembre 2026
+
+**Test del frontend, e lo stesso difetto dei dialoghi corretto anche in Super Admin.** Il frontend (22.000 righe) non aveva nessun test: regressioni come quella dei dialoghi si vedevano solo a occhio.
+
+- **Infrastruttura**: `vitest` + `jsdom` + Testing Library in `core/frontend` (`npm test`), agganciata a `scripts/verifica.sh`.
+- **Voci appuntate del dock**: la logica (cosa mostrare, cosa fa un tocco, il limite di 4) estratta in `shared/frontend/dock-pins.js` — prima ogni Sidebar ne teneva una copia — con 11 test (lista vuota = scelta valida, voci sparite scartate, doppioni, dock pieno non salva).
+- **Portale**: 2 test (i figli finiscono su `body`, fuori dalla card con `backdrop-filter`; sparisce allo smontaggio).
+- **Guardia contro il bug dei dialoghi**: un test controlla che in tenant e in Super Admin ogni overlay `fixed inset-0` sia in un portale (eccezioni elencate nel test, con il motivo). Verificata: aggiungendo un overlay finto il test fallisce e indica il file.
+- **Super Admin** aveva lo stesso difetto potenziale: 13 overlay senza portale (Tenant, Libreria, Utenti, creazione/registrazione tenant, Verticali, login...). Ora tutti in `components/Portal.jsx`. Verificato dal vivo: il dialogo "Nuovo tenant" è figlio di `body`, a tutta finestra.
+- 15 test frontend, tutti verdi; build e lint puliti.
+- Non coperto: nessun test dei componenti più grandi (Dashboard, Builder, pagine di modulo) né test nel browser vero (login, navigazione): il passo successivo, se serve.
+
 ## 0.4.19 — 6 novembre 2026
 
 **Velocità: il codice si scarica a pezzi, non tutto insieme.** Richiesto: "si può fare qualcosa per la velocità di caricamento?". Il frontend dei tenant era un unico file JS da 1,09 MB (271 KB compressi), quello di Super Admin da 723 KB (180 KB), scaricati e analizzati a ogni apertura, anche da telefono.

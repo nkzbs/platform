@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { API } from '../lib/api'
 import Icon from './Icon'
+import Portal from './Portal'
 
 // Registra un tenant che esiste già (container e dati creati altrove o da un
 // Super Admin precedente): non ricrea nulla, riusa le sue chiavi originali, così i
@@ -94,6 +95,7 @@ export default function RegisterExistingModal({ token, onClose, onDone }) {
   const setField = (k) => (e) => setManual({ ...manual, [k]: e.target.value })
 
   return (
+    <Portal>
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-surface-card rounded-md p-6 w-full max-w-md border border-gray-800 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-bold text-ink mb-1">Registra tenant esistente</h2>
@@ -188,5 +190,6 @@ export default function RegisterExistingModal({ token, onClose, onDone }) {
         )}
       </div>
     </div>
+    </Portal>
   )
 }

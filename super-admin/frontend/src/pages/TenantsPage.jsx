@@ -9,6 +9,7 @@ import StatusBadge from '../components/StatusBadge'
 import TenantCreatingOverlay from '../components/TenantCreatingOverlay'
 import RegisterExistingModal from '../components/RegisterExistingModal'
 import GlassPageBackground from '../components/GlassPageBackground'
+import Portal from '../components/Portal'
 
 // F7 (PLATFORM-MASTER-ROADMAP.md) — Provisioning Engine: se un tenant resta
 // bloccato in status 'creating' (es. il processo Super Admin è stato riavviato
@@ -941,6 +942,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
       {showRegister && <RegisterExistingModal token={token} onClose={() => setShowRegister(false)} onDone={load} />}
 
       {showNew && (
+        <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-surface-card rounded-md p-6 w-full max-w-md border border-gray-800">
             <h2 className="text-lg font-bold text-ink mb-1">Nuovo tenant</h2>
@@ -974,11 +976,13 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {loading && showNew && <TenantCreatingOverlay />}
 
       {credentialsReveal && (
+        <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setCredentialsReveal(null)}>
           <div className="bg-surface-card rounded-md p-6 w-full max-w-sm border border-gray-800" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2 text-green-400 mb-1">
@@ -1011,9 +1015,11 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
             </button>
           </div>
         </div>
+        </Portal>
       )}
 
       {pendingOpenTenant && (
+        <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={closeReauthModal}>
           <div className="bg-surface-card rounded-md p-6 w-full max-w-sm border border-gray-800" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2 mb-1">
@@ -1053,8 +1059,10 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
             )}
           </div>
         </div>
+        </Portal>
       )}
       {upd && (
+        <Portal>
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-surface-card border border-gray-800 rounded-xl w-full max-w-md shadow-2xl overflow-hidden">
             <div className="px-6 pt-6 pb-4 flex items-center gap-3">
@@ -1090,6 +1098,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
             </div>
           </div>
         </div>
+        </Portal>
       )}
       {inviteTenant && <InviteTenantModal token={token} tenant={inviteTenant} onClose={() => setInviteTenant(null)} />}
     </GlassPageBackground>

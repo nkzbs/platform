@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { API } from '../lib/api'
 import InviteShare from '@shared/InviteShare.jsx'
+import Portal from './Portal'
 
 // «Invita» il primo admin di un tenant (o chi serve): il tenant crea un link monouso, la persona sceglie da sé utente e password (nessuna password gira). Il link si vede UNA volta:
 // si copia, si manda su WhatsApp o Telegram (messaggio già scritto), oppure parte per mail dalla posta di Super Admin se c'è e il tenant ha un dominio.
@@ -23,6 +24,7 @@ export default function InviteTenantModal({ token, tenant, onClose }) {
     } catch (e) { setErrore('Errore di rete, riprova.') } finally { setBusy(false) }
   }
   return (
+    <Portal>
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-surface-card rounded-xl w-full max-w-md border border-gray-800 p-5 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-bold text-ink mb-1">Invita su «{tenant.name}»</h2>
@@ -46,5 +48,6 @@ export default function InviteTenantModal({ token, tenant, onClose }) {
         )}
       </div>
     </div>
+    </Portal>
   )
 }

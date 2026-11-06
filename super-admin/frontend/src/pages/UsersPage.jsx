@@ -3,6 +3,7 @@ import { API } from '../lib/api'
 import Icon from '../components/Icon'
 import Select from '../components/Select'
 import StatusBadge from '../components/StatusBadge'
+import Portal from '../components/Portal'
 
 // Un solo ruolo possibile (Super Admin non ha mai avuto Partner — vedi
 // nav-items.js): niente più mappa role→colore/etichetta, bastava un badge fisso.
@@ -157,6 +158,7 @@ function UsersPage({ token, embedded, myId }) {
       </div>
 
       {showNew && (
+        <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-surface-card rounded-md p-6 w-full max-w-md border border-gray-800">
             <h2 className="text-lg font-bold text-ink mb-4">Nuovo Utente</h2>
@@ -173,9 +175,11 @@ function UsersPage({ token, embedded, myId }) {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {action && action.kind !== 'rename-error' && (
+        <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-surface-card rounded-md p-6 w-full max-w-md border border-gray-800">
             <h2 className="text-lg font-bold text-ink mb-1">{actionTitle[action.kind]} <span className="font-mono">{action.user.username}</span></h2>
@@ -207,15 +211,18 @@ function UsersPage({ token, embedded, myId }) {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {action && action.kind === 'rename-error' && (
+        <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-surface-card rounded-md p-6 w-full max-w-sm border border-gray-800">
             <div className="bg-red-900/30 text-red-400 text-sm p-3 rounded-lg mb-4">{action.error}</div>
             <button onClick={closeAction} className="w-full bg-gray-800 hover:bg-gray-700 text-white py-2.5 rounded-lg transition">Chiudi</button>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   )

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Controllo completo prima di mettere online: lint (errori veri), test del core e di Super Admin, compilazione dei due frontend.
+# Controllo completo prima di mettere online: lint (errori veri), test del core, di Super Admin e del frontend, compilazione dei due frontend.
 # Uso: bash scripts/verifica.sh        (circa 3 minuti)   |   bash scripts/verifica.sh veloce   (solo lint, pochi secondi)
 set -u
 cd "$(dirname "$0")/.."
@@ -13,6 +13,7 @@ if [ "${1:-}" = "veloce" ]; then [ $esito -eq 0 ] && echo "✓ lint pulito" ; ex
 
 passo "Test del core";            (cd core/backend && npm test >/tmp/verifica-core.log 2>&1) && echo "✓ core" || { tail -20 /tmp/verifica-core.log; fallito "test del core"; }
 passo "Test di Super Admin";      (cd super-admin/backend && npm test >/tmp/verifica-sa.log 2>&1) && echo "✓ super admin" || { tail -20 /tmp/verifica-sa.log; fallito "test di Super Admin"; }
+passo "Test del frontend (logica del dock, portale, overlay)"; (cd core/frontend && npm test >/tmp/verifica-ft.log 2>&1) && echo "✓ test frontend" || { tail -20 /tmp/verifica-ft.log; fallito "test del frontend"; }
 passo "Compilazione frontend core";  (cd core/frontend && npx vite build >/tmp/verifica-fc.log 2>&1) && echo "✓ frontend core" || { tail -20 /tmp/verifica-fc.log; fallito "frontend core"; }
 passo "Compilazione frontend Super Admin"; (cd super-admin/frontend && npx vite build >/tmp/verifica-fs.log 2>&1) && echo "✓ frontend super admin" || { tail -20 /tmp/verifica-fs.log; fallito "frontend Super Admin"; }
 

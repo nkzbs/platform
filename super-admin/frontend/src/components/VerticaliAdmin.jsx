@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { API } from '../lib/api'
 import Icon from './Icon'
 import { MODULE_ICON_CHOICES } from '@shared/builder/constants.js'
+import Portal from './Portal'
 
 // I verticali proposti ai tenant: gruppi di moduli con nome, icona e descrizione. Sono solo dati: i tenant li vedono come tessere in «Parti da un modello» e
 // li installano scegliendo i moduli. Si crea scegliendo tra i moduli presenti in Libreria (si salva lo slug, che resta uguale tra una versione e l'altra).
@@ -65,6 +66,7 @@ export default function VerticaliAdmin({ token, modules }) {
       )}
 
       {form && (
+        <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setForm(null)}>
           <div className="bg-surface-card rounded-xl w-full max-w-lg border border-gray-800 p-5 max-h-[88vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-bold text-ink mb-3">{form.id ? 'Modifica verticale' : 'Nuovo verticale'}</h2>
@@ -93,6 +95,7 @@ export default function VerticaliAdmin({ token, modules }) {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </section>
   )

@@ -5,6 +5,7 @@ import Select from '../components/Select'
 import VerticaliAdmin from '../components/VerticaliAdmin'
 import { parseSchemaFrontend, getAutomationSteps, getRequiredConnectors } from '../lib/schema-v3-frontend'
 import GlassPageBackground from '../components/GlassPageBackground'
+import Portal from '../components/Portal'
 
 // La Libreria: i miei moduli, salvati con una versione, da installare in qualunque
 // tenant. Installare = copiare: il tenant ne riceve una copia sua e vede "disponibile
@@ -37,11 +38,13 @@ function formatDate(s) {
 
 function Modal({ onClose, children, wide }) {
   return (
+    <Portal>
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className={'bg-surface-card rounded-xl w-full border border-gray-800 max-h-[88vh] overflow-y-auto ' + (wide ? 'max-w-2xl' : 'max-w-md')} onClick={(e) => e.stopPropagation()}>
         {children}
       </div>
     </div>
+    </Portal>
   )
 }
 

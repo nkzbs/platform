@@ -25,4 +25,9 @@ export default defineConfig({
   build: {
     outDir: 'dist'
   },
+  // Test del frontend (vitest): `npm test`. jsdom per i componenti; la logica pura sta in file senza React.
+  test: {
+    environment: 'jsdom',
+    include: ['src/**/*.test.{js,jsx}'],
+  },
 })

@@ -5,6 +5,7 @@ import GlobalSearch from './GlobalSearch'
 import Avatar from './Avatar'
 import { API, notifyUnauthorized } from '../lib/api'
 import Portal from './Portal'
+import { risolviAppuntate, alternaAppuntata } from '@shared/dock-pins'
 
 // Due rese della stessa navigazione, non due componenti — rail verticale fissa a sinistra
 // su desktop (richiesto dal vivo, 2026-11-01, dopo aver provato il dock ovunque: "da pc/mac
@@ -152,11 +153,11 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
   const ordinate = [...senzaGruppo, ...conGruppo]
   const pool = [...ordinate, ...systemItems]
   const defaultPins = ordinate.slice(0, PIN_COUNT).map((m) => m.slug)
-  const pinSlugs = (pinPrefs || defaultPins).filter((sl, i, a) => a.indexOf(sl) === i && pool.some((m) => m.slug === sl)).slice(0, PIN_COUNT)
+  const pinSlugs = risolviAppuntate(pinPrefs, defaultPins, pool.map((m) => m.slug), PIN_COUNT)
   const pinned = pinSlugs.map((sl) => pool.find((m) => m.slug === sl))
   const togglePin = (slug) => {
-    if (pinSlugs.includes(slug)) savePins(pinSlugs.filter((sl) => sl !== slug))
-    else if (pinSlugs.length < PIN_COUNT) savePins([...pinSlugs, slug])
+    const next = alternaAppuntata(pinSlugs, slug, PIN_COUNT)
+    if (next !== pinSlugs) savePins(next)
   }
   const pinnedSlugs = new Set(pinned.map((m) => m.slug))
   const systemItemsRest = systemItems.filter((m) => !pinnedSlugs.has(m.slug))
@@ -251,7 +252,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
                     : <><span className="font-bold">Platform</span>{tenantName && <span className="font-normal"> {tenantName}</span>}</>
                   }
                 </div>
-                {!hidePlatformName && <div className="text-xs text-gray-500">Platform 0.4.19</div>}
+                {!hidePlatformName && <div className="text-xs text-gray-500">Platform 0.4.20</div>}
               </div>
             )}
           </div>
@@ -376,7 +377,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
                 <Avatar user={user} size={28} />
                 <div className="min-w-0">
                   <div className="text-sm text-ink font-medium truncate">{user && user.display_name}</div>
-                  <div className="text-xs text-gray-500">{user && user.role}{!hidePlatformName && <span> · Platform 0.4.19</span>}</div>
+                  <div className="text-xs text-gray-500">{user && user.role}{!hidePlatformName && <span> · Platform 0.4.20</span>}</div>
                 </div>
               </button>
               <div className="flex items-center gap-3">

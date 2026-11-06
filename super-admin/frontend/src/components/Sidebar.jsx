@@ -3,6 +3,7 @@ import Icon from './Icon'
 import PlatformLogo from './PlatformLogo'
 import { API } from '../lib/api'
 import { NAV_ITEMS } from '../lib/nav-items'
+import { risolviAppuntate, alternaAppuntata } from '@shared/dock-pins'
 
 // Rail verticale su desktop/Mac, dock orizzontale flottante solo su mobile
 // (2026-11-01, richiesto dal vivo: "da pc/mac il menù debba essere ancora
@@ -110,12 +111,12 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
   }, [])
 
   const defaultPins = NAV_ITEMS.slice(0, PIN_COUNT).map((i) => i.id)
-  const pinIds = (pinPrefs || defaultPins).filter((id, k, a) => a.indexOf(id) === k && NAV_ITEMS.some((i) => i.id === id)).slice(0, PIN_COUNT)
+  const pinIds = risolviAppuntate(pinPrefs, defaultPins, NAV_ITEMS.map((i) => i.id), PIN_COUNT)
   const pinned = pinIds.map((id) => NAV_ITEMS.find((i) => i.id === id))
   const overflow = NAV_ITEMS.filter((i) => !pinIds.includes(i.id))
   const togglePin = (id) => {
-    if (pinIds.includes(id)) savePins(pinIds.filter((x) => x !== id))
-    else if (pinIds.length < PIN_COUNT) savePins([...pinIds, id])
+    const next = alternaAppuntata(pinIds, id, PIN_COUNT)
+    if (next !== pinIds) savePins(next)
   }
   const pageInOverflow = overflow.some((i) => i.id === page && i.id !== 'impostazioni')
 
@@ -217,7 +218,7 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
             {railExpanded && (
               <div>
                 <div className="text-base text-ink tracking-tight"><span className="font-bold">Platform</span> <span className="font-normal">Admin</span></div>
-                <div className="text-xs text-gray-500">versione 0.4.19</div>
+                <div className="text-xs text-gray-500">versione 0.4.20</div>
               </div>
             )}
           </div>
@@ -312,7 +313,7 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
                 <span className="w-7 h-7 rounded-full bg-cp-primary text-white text-[11px] font-semibold flex items-center justify-center flex-shrink-0">{initials}</span>
                 <div className="min-w-0">
                   <div className="text-sm text-ink font-medium truncate">{username}</div>
-                  <div className="text-xs text-gray-500">{payload && payload.role} · Platform 0.4.19</div>
+                  <div className="text-xs text-gray-500">{payload && payload.role} · Platform 0.4.20</div>
                 </div>
               </button>
               <div className="flex items-center gap-3">
