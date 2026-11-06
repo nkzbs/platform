@@ -419,6 +419,38 @@ router.post('/:slug/publish', requireAuth, requireAdmin, (req, res) => {
       if (da.on_send_state && !statiWorkflow.has(da.on_send_state)) errs.push(`lo stato "${da.on_send_state}" non esiste nel workflow di questo modulo`);
       if (errs.length) formulaErrors.push({ label, errors: errs });
     });
+    // match_view (abbinamento): le regole confrontano un campo di QUESTO modulo con uno del modulo
+    // bersaglio; un nome di campo sbagliato darebbe «nessun risultato» per sempre, senza un errore da
+    // cui accorgersene. Controlla modulo bersaglio, operatori, campi, filtri e campi mostrati.
+    const { OPERATORI: OPERATORI_ABBINAMENTO } = require('../lib/abbinamento');
+    const chiaviAbbinamento = new Set();
+    (normalized.match_views || []).forEach((mv) => {
+      const label = mv.label || 'Abbinamento';
+      const errs = [];
+      if (!mv.key || !/^[a-z0-9_]+$/.test(mv.key)) errs.push('chiave non valida (solo minuscole, numeri e _)');
+      else if (chiaviAbbinamento.has(mv.key)) errs.push(`la chiave "${mv.key}" è usata due volte nello stesso modulo`);
+      else chiaviAbbinamento.add(mv.key);
+      if (!mv.label || !mv.label.trim()) errs.push("manca il titolo della sezione");
+      const bersaglio = branchModMap[mv.target_module];
+      if (!mv.target_module) errs.push('manca il modulo in cui cercare');
+      else if (!allModuleSlugs.has(mv.target_module)) errs.push(`il modulo "${mv.target_module}" non esiste`);
+      const campiBersaglio = new Set(((bersaglio || {}).fields || []).map((f) => f.key).concat(['_stato']));
+      const campoQui = (k) => k === '_stato' || (normalized.fields || []).some((f) => f.key === k);
+      const regole = mv.rules || [];
+      if (regole.length === 0) errs.push('serve almeno una regola');
+      regole.forEach((r, i) => {
+        const n = `regola ${i + 1}`;
+        if (!OPERATORI_ABBINAMENTO.includes(r.op)) errs.push(`${n}: operatore "${r.op}" non valido`);
+        if (!r.mine || !campoQui(r.mine)) errs.push(`${n}: il campo "${r.mine || ''}" non esiste in questo modulo`);
+        const loro = Array.isArray(r.theirs) ? r.theirs : [r.theirs];
+        if (loro.length === 0 || !loro[0]) errs.push(`${n}: manca il campo da confrontare nel modulo bersaglio`);
+        loro.filter(Boolean).forEach((c) => { if (bersaglio && !campiBersaglio.has(c)) errs.push(`${n}: il campo "${c}" non esiste in "${mv.target_module}"`); });
+      });
+      if (mv.when && mv.when.field && !campoQui(mv.when.field)) errs.push(`condizione: il campo "${mv.when.field}" non esiste in questo modulo`);
+      if (mv.target_filter && mv.target_filter.field && bersaglio && !campiBersaglio.has(mv.target_filter.field)) errs.push(`filtro: il campo "${mv.target_filter.field}" non esiste in "${mv.target_module}"`);
+      [mv.display_field, ...(mv.subtitle_fields || [])].filter(Boolean).forEach((c) => { if (bersaglio && !campiBersaglio.has(c)) errs.push(`campo mostrato "${c}" non esiste in "${mv.target_module}"`); });
+      if (errs.length) formulaErrors.push({ label, errors: errs });
+    });
     // period_view: granularità valida, campo data esistente, ogni metrica ha un campo
     // valido (tranne count, che non ne ha bisogno) — stessa disciplina degli altri
     // blocchi "vista", un riferimento sbagliato qui tornerebbe metriche sempre a zero

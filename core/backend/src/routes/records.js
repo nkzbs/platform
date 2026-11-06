@@ -1034,6 +1034,48 @@ router.post('/immobili/:id/valuta', requireAuth, requireAdmin, async (req, res) 
   res.json({ ok: true, record: { ...updated, data: JSON.parse(updated.data) }, dettaglio, comparabili, omi: omiZona, fotovoltaico, zonaSismicaUfficiale: zonaSismicaUff, considerazioni });
 });
 
+// ─── Abbinamento (blocco di schema `match_view`) ──────────────────────────────────────────────
+// «Immobili adatti» su un Cliente, «Richieste compatibili» su un Immobile: record di un altro
+// modulo che corrispondono a questo secondo regole dichiarate dal Builder (lib/abbinamento.js).
+// Solo lettura: non scrive nulla. Rispetta i permessi di vista del modulo bersaglio (compreso
+// «solo propri»); un modulo che l'utente non può vedere dà un elenco vuoto, non un errore.
+router.get('/:slug/:id/abbinamenti/:key', requireAuth, requireModuleAccess, (req, res) => {
+  const { slug, id, key } = req.params;
+  const schema = getModuleSchema(slug) || {};
+  const def = (schema.match_views || []).find((m) => m.key === key);
+  if (!def) return res.status(404).json({ error: 'Abbinamento non trovato in questo modulo' });
+  const record = db.prepare('SELECT * FROM records WHERE id = ? AND module_slug = ?').get(id, slug);
+  if (!record) return res.status(404).json({ error: 'Record non trovato' });
+  const rule = ruleFor(schema, req.user.role);
+  if (rule && (!rule.view || !ownedOrAllowed(rule, record, req.user))) return res.status(403).json({ error: 'Non hai i permessi per vedere questo record' });
+
+  const vuoto = { applicabile: true, valutabili: 0, items: [], titolo: def.label };
+  const targetSchema = getModuleSchema(def.target_module);
+  if (!targetSchema) return res.json(vuoto);
+  const targetRule = ruleFor(targetSchema, req.user.role);
+  if (req.user.role !== 'admin') {
+    const haRighe = db.prepare('SELECT 1 FROM user_modules WHERE user_id = ?').get(req.user.id);
+    if (haRighe && !db.prepare('SELECT 1 FROM user_modules WHERE user_id = ? AND module_slug = ?').get(req.user.id, def.target_module)) return res.json(vuoto);
+  }
+  const candidati = filterViewable(
+    db.prepare('SELECT id, user_id, data, updated_at FROM records WHERE module_slug = ? ORDER BY updated_at DESC LIMIT 2000').all(def.target_module)
+      .map((r) => ({ ...r, data: JSON.parse(r.data) })),
+    targetRule, req.user
+  );
+  const mioDato = decryptFields(JSON.parse(record.data), schema.fields);
+  const esito = require('../lib/abbinamento').calcolaAbbinamenti(def, mioDato, candidati);
+  const mostra = [def.display_field, ...(def.subtitle_fields || [])].filter(Boolean);
+  res.json({
+    applicabile: esito.applicabile, valutabili: esito.valutabili, titolo: def.label, target_module: def.target_module,
+    items: esito.items.slice(0, 20).map((it) => ({
+      id: it.id, punteggio: it.punteggio, soddisfatte: it.soddisfatte, mancanti: it.mancanti,
+      titolo: def.display_field && it.data[def.display_field] != null && it.data[def.display_field] !== '' ? String(it.data[def.display_field]) : '#' + it.id,
+      dettagli: mostra.filter((c) => c !== def.display_field).map((c) => ({ campo: c, valore: it.data[c] })).filter((d) => d.valore != null && d.valore !== ''),
+    })),
+    totale: esito.items.length,
+  });
+});
+
 // ─── Documento da modello (blocco di schema `document_action`) ────────────────────────────────
 // Un modulo dichiara dal Builder uno o più documenti (oggetto + testo con segnaposto + dove
 // spedirli); qui non c'è nessun nome di modulo né di campo. Due rotte separate, apposta:

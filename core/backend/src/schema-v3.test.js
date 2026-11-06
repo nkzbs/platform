@@ -353,6 +353,27 @@ test('toV2 strict con un blocco document_action -> lancia esplicitamente', () =>
   assertThrows(() => toV2(v3), 'document_action');
 });
 
+// ─── match_view (abbinamento tra moduli) ─────────────────────────────────────────────────
+
+console.log('\n--- match_view ---');
+
+const ABBINAMENTO = { key: 'adatti', label: 'Adatti', target_module: 'altro', rules: [{ mine: 'a', theirs: 'b', op: 'testo' }] };
+
+test('toV3 + toV2Lenient: le definizioni di abbinamento si conservano (non spariscono riaprendo il Builder)', () => {
+  const dopo = toV2Lenient(toV3({ fields: [{ key: 'a' }], match_views: [ABBINAMENTO] }));
+  assertEq(dopo.match_views, [ABBINAMENTO]);
+});
+test('toV2Lenient senza abbinamenti: match_views è un array vuoto', () => {
+  assertEq(toV2Lenient({ version: 3, steps: [] }).match_views, []);
+});
+test('parseSchemaNormalized (lettura runtime) espone match_views di uno schema v3', () => {
+  const json = JSON.stringify({ version: 3, steps: [{ id: 'm1', block_type: 'match_view', ...ABBINAMENTO }] });
+  assertEq(parseSchemaNormalized(json).match_views.map((m) => m.key), ['adatti']);
+});
+test('toV2 strict con un blocco match_view -> lancia esplicitamente', () => {
+  assertThrows(() => toV2({ version: 3, steps: [{ id: 'm1', block_type: 'match_view', ...ABBINAMENTO }] }), 'match_view');
+});
+
 // ─── SOMMARIO ─────────────────────────────────────────────────────────────────
 
 console.log(`\n${'─'.repeat(50)}`);
