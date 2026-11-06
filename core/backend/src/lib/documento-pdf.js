@@ -89,6 +89,8 @@ function struttura(corpo) {
 const soloCampi = (s) => s.voci.length >= 3 && s.voci.every((v) => v.t === 'celle' && v.lista.length === 1);
 const conVoci = (s) => s.voci.some((v) => v.t === 'voce');
 const haCaselle = (s) => s.voci.some((v) => v.t === 'casella');
+// La linguetta scura è del riquadro dei consensi; una scheda con caselle di altro tipo (es. «coperto / da fare») ha l'intestazione normale.
+const eConsensi = (s) => haCaselle(s) && /consens|dichiaraz|accett/i.test(s.titolo);
 
 // Glifo dalle parole del titolo (sezione o voce).
 function glifo(titolo) {
@@ -203,7 +205,7 @@ function creaPdf({ titolo, corpo, azienda, logo = null, etichetta = 'Documento',
           const cx = x + i * (cw + GAP), lw = larghEtichetta(c);
           const hc = Math.min(riga(), misura({ t: 'celle', lista: [c] }, cw));
           doc.font('Helvetica').fontSize(fs()).fillColor('#1c1917').text(c.etichetta, cx, y + (denso ? 6 : 8), { width: lw + 4, lineBreak: false });
-          doc.moveTo(cx + lw, y + hc - 4).lineTo(cx + cw, y + hc - 4).lineWidth(0.8).strokeColor(colore).stroke();
+          doc.moveTo(cx + lw, y + hc - 4).lineTo(cx + cw, y + hc - 4).lineWidth(eDaCompilare(c.valore) ? 0.8 : 0.5).strokeColor(eDaCompilare(c.valore) ? colore : bordo).stroke(); // riga piena solo dove si scrive
           if (!eDaCompilare(c.valore)) doc.font('Helvetica').fontSize(fs()).fillColor('#1c1917').text(c.valore, cx + lw + 2, y + (denso ? 6 : 8), { width: Math.max(30, cw - lw - 2), lineGap: 1.2 });
         });
       }
@@ -217,7 +219,7 @@ function creaPdf({ titolo, corpo, azienda, logo = null, etichetta = 'Documento',
       doc.save().roundedRect(x + 0.45, y + 0.45, w - 0.9, TESTA, 9.5).clip();
       const g = doc.linearGradient(x, y, x + w, y); g.stop(0, chiaro).stop(1, chiaro2);
       doc.rect(x, y, w, TESTA).fill(g);
-      const consensi = haCaselle(sez);
+      const consensi = eConsensi(sez);
       if (consensi) doc.polygon([x, y], [x + LINGUETTA(w), y], [x + LINGUETTA(w) - 16, y + TESTA], [x, y + TESTA]).fill(colore); // linguetta scura col taglio diagonale
       doc.restore();
       doc.moveTo(x, y + TESTA).lineTo(x + w, y + TESTA).lineWidth(0.6).strokeColor(bordo).stroke();
@@ -303,7 +305,7 @@ function creaPdf({ titolo, corpo, azienda, logo = null, etichetta = 'Documento',
     for (let k = 0; k < sezioni.length; k++) {
       const s = sezioni[k], n = sezioni[k + 1];
       if (s.libero) { libero(s); continue; }
-      if (n && soloCampi(s) && conVoci(n) && !haCaselle(n)) { coppia(s, n); k++; } else scheda(s);
+      if (n && soloCampi(s) && conVoci(n) && !eConsensi(n)) { coppia(s, n); k++; } else scheda(s);
     }
 
     // ── Luogo e data / Firma, con le loro icone ──

@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.29 — 6 novembre 2026
+
+**Relazione processi e Guida all'uso di zucca, aggiornate e con il marchio.** I due documenti che l'utente si aspettava in admin non erano allineati: l'analisi salvata in Super Admin è del 30 ottobre (8 processi generici, «Catalogazione immobili» ancora «da costruire») e non conosce i documenti, la scheda completa, l'abbinamento né le provvigioni a due parti.
+
+- **Testi**: `docs/zucca/relazione-processi.txt` (13 processi con come funziona, stato coperto o da fare, cosa manca, e la risposta a «abbiamo coperto tutto?») e `docs/zucca/guida-all-uso.txt` (9 passi di lavoro, dal nuovo cliente alla privacy, con le domande frequenti). Si basano sui moduli installati su zucca letti in sola lettura il 6 novembre.
+- **PDF**: `node scripts/genera-documenti-zucca.js <cartella> [logo.png]` crea «Relazione» e «Guida» con l'identità grafica comune.
+- **Piccola correzione ai PDF**: la linguetta scura dell'intestazione vale solo per il riquadro dei consensi (una scheda con caselle di altro tipo ha l'intestazione normale); nei campi già compilati la riga sotto il valore è leggera, piena solo dove si scrive.
+- **Non fatto**: l'analisi dentro Super Admin (Analisi) non è stata aggiornata: va fatto dall'interfaccia di Super Admin (non si scrive sul suo database) e richiede l'accesso.
+
 ## 0.4.28 — 6 novembre 2026
 
 **Documenti impaginati con stile, e report nella UI con la stessa grafica.** Su indicazione dell'utente (mockup di riferimento): i PDF dei documenti non sono più testo in colonna ma schede.

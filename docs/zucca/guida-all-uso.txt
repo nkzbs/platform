@@ -1,0 +1,58 @@
+COME SI LAVORA, PASSO PASSO
+
+PRIMA DI INIZIARE
+Accesso: si entra dall'indirizzo di zucca con utente e password (o con la passkey). Chi ha l'autenticazione a due fattori inserisce anche il codice.
+Menu: a sinistra ci sono Clienti, Immobili, Trattative, Provvigioni, Interazioni e Attività; più in basso Impostazioni e la Guida.
+Marchio: in Impostazioni, Aspetto, si carica il logo e si inseriscono ragione sociale, indirizzo e partita IVA: compaiono in tutti i PDF.
+
+1. NUOVO CLIENTE
+Apri Clienti: premi «Nuovo» e compila nome, codice fiscale o partita IVA, tipo soggetto (persona fisica o società), tipo cliente (venditore o acquirente) e i dati anagrafici.
+Se è un acquirente: indica se ha già individuato l'immobile oppure lo cerca, e compila tipologia, budget massimo e zona.
+Il cliente nasce nello stato «verifica identità cliente».
+Allega le copie dei documenti che il cliente fornisce (documento di identità, attualità della residenza, atto di provenienza se vende).
+
+2. DOCUMENTI DEL CLIENTE
+Privacy e incarico: dal dettaglio del cliente apri il documento, rileggi il testo a schermo, correggilo se serve e invialo per email. Non parte nulla senza la tua conferma.
+Antiriciclaggio: stessa procedura; il cliente lo restituisce firmato.
+Anagrafica e privacy (da firmare): scarica il PDF, fallo firmare, poi ricaricalo dallo stesso pannello. Spunta i consensi dati dal cliente (comunicazioni commerciali, comunicazione a partner e portali): vengono registrati sul record con data, versione e data di conservazione.
+Quando hai ricevuto i firmati, passa il cliente a «documenti inviati» e poi a «cliente verificato» con i pulsanti di stato.
+
+3. NUOVO IMMOBILE
+Apri Immobili e premi «Nuovo»: scegli il proprietario (fino a tre comproprietari, con le quote) e compila la scheda, che segue le 11 sezioni del modulo dell'agenzia. Le voci con caselle si spuntano da un elenco.
+Lo stato di partenza è «da valutare». Un cliente può avere più immobili.
+Apri il documento «Scheda di acquisizione (da firmare)»: vedi l'anteprima, scarica il PDF con il marchio, fallo firmare e ricarica l'originale firmato: resta archiviato nell'immobile.
+
+4. VALUTAZIONE DELL'IMMOBILE
+Dal dettaglio premi «Valuta con OpenAPI.it». Servono almeno indirizzo e comune; con la superficie compare anche il valore stimato.
+Il report mostra le quotazioni al metro quadro, le quotazioni OMI, i comparabili, il rischio sismico e le considerazioni del valutatore. Si salva sull'immobile: riaprendolo lo ritrovi senza rifare la richiesta.
+«Scarica PDF» produce il report con il marchio dell'agenzia da consegnare al proprietario.
+Attenzione: finché il collegamento è in ambiente di prova i dati sono di esempio e non sono dell'immobile.
+
+5. ABBINARE IMMOBILI E RICHIESTE
+Nel dettaglio di un cliente acquirente compare «Immobili adatti»: gli immobili che rispondono a tipologia, budget e zona, con il punteggio.
+Nel dettaglio di un immobile compare «Richieste compatibili»: i clienti che lo cercano.
+È un elenco di consultazione: non invia nulla da solo.
+
+6. TRATTATIVA
+Apri Trattative e premi «Nuovo»: scegli immobile, cliente, venditore e acquirente, il prezzo concordato e le date.
+Fai avanzare la trattativa con i pulsanti di stato: incontro e profilazione, catalogazione, trattativa in corso, preliminare firmato, rogito completato, adempimenti post vendita, chiusa.
+Prima del preliminare indica le percentuali di provvigione di venditore e acquirente. Lascia vuota la percentuale di una parte se non paga provvigione.
+
+7. PROVVIGIONI
+Quando la trattativa passa a «preliminare firmato» nascono da sole le righe di provvigione, una per ogni parte con una percentuale: importo netto, IVA al 22% e totale sono calcolati; la scadenza è la data del rogito.
+Apri Provvigioni: quando emetti la fattura premi «Fattura emessa», quando incassi «Segna incassata».
+Se riapri e rifirmi la trattativa le righe non si duplicano. Se cambia il prezzo, correggi a mano le righe già create.
+
+8. CONTATTI E VISITE
+Apri Interazioni per registrare una telefonata, una email o una visita con un cliente: data e ora, esito e data del prossimo contatto. Segna «svolta» quando è fatta.
+Le cose da fare interne vanno in Attività, con scadenza e priorità.
+
+9. PRIVACY E CONSERVAZIONE
+Sul cliente trovi consensi, data della firma, versione dell'informativa e data fino a cui conservare i dati. Se un cliente revoca un consenso, ricarica il documento firmato con il consenso tolto: il sistema aggiorna il record e conserva la storia.
+
+DOMANDE FREQUENTI
+Il documento va corretto prima dell'invio: puoi modificare il testo a schermo, poi invii o scarichi. Il testo che vedi è quello che parte.
+Il PDF non mostra il logo: controlla Impostazioni, Aspetto: devono essere caricati logo e dati dell'agenzia.
+Non vedo un modulo: i moduli e i pulsanti dipendono dal ruolo; chiedi all'amministratore di verificarne i permessi.
+Il valore stimato non c'è: manca la superficie dell'immobile.
+Il report parla di un'altra città: l'indirizzo non è stato trovato; correggilo e rifai la valutazione.

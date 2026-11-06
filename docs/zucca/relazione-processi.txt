@@ -1,0 +1,86 @@
+MEDIAZIONE IMMOBILIARE — COPERTURA DEI PROCESSI
+
+SINTESI
+Processi esaminati: 13, dal documento dell'agenzia (Cliente, Immobile, Trattativa) e dall'analisi del 30 ottobre
+Coperti: il flusso operativo completo, dal cliente alla provvigione fatturata alle due parti
+Da completare o da fare: società e cessione di quote, planner delle visite, promemoria, allegati richiesti, valutazione con dati veri
+Fonte dello stato: i moduli installati su zucca alla versione 0.4.28, controllati in sola lettura il 6 novembre 2026
+
+CLIENTE — ACQUISIZIONE E VERIFICA (Venditore o Acquirente, privato o società)
+Come funziona: la scheda Cliente raccoglie nome, codice fiscale o P.IVA, data e luogo di nascita, stato civile, regime patrimoniale, residenza, email, PEC e telefono. Il tipo soggetto è Persona fisica o Società; il tipo cliente è Venditore o Acquirente (per l'acquirente: ha già individuato l'immobile oppure lo cerca, con tipologia, budget e zona).
+Percorso di stato: verifica identità cliente, documenti inviati, cliente verificato (con la possibilità di tornare indietro se i documenti sono da rifare).
+Documenti dal sistema: Privacy e incarico (anteprima a schermo modificabile dall'admin, poi invio per email); Antiriciclaggio (email); Anagrafica e privacy (PDF da scaricare, firmare e ricaricare, con i consensi GDPR registrati sul record).
+[X] Coperto il flusso base: scheda, tipologia, stati, tre documenti
+[ ] Da completare gli allegati richiesti per tipo
+Cosa manca: l'elenco degli allegati che il cliente deve fornire (copia documento, attualità della residenza, atto di provenienza per il venditore, atto di matrimonio opzionale per l'acquirente) con l'avviso se ne manca uno. Oggi si può allegare qualunque file al cliente, ma nessuno è richiesto.
+Cosa manca (2): Privacy e incarico e Antiriciclaggio partono solo per email; non hanno ancora il giro scarica, firma e ricarica. Il cambio di stato a «cliente verificato» è manuale.
+
+CLIENTE — SOCIETÀ E CESSIONE DI QUOTE
+Come funziona: un cliente può essere una Società (con partita IVA) e un immobile può avere come proprietario quel cliente.
+[ ] Da fare, da studiare insieme
+Cosa manca: il caso in cui si vendono le quote della società che detiene l'immobile. Servono i soci con le loro quote, il legame tra società e immobile e un documento dedicato alla cessione. È stato indicato come caso da studiare e non è ancora stato progettato.
+
+IMMOBILE — SCHEDA DI ACQUISIZIONE
+Come funziona: la scheda ha le 11 sezioni del modulo dell'agenzia: anagrafica fino a 3 comproprietari con le quote, localizzazione e contesto, caratteristiche interne, serramenti e finiture, impianti e certificazione energetica, catasto e documenti, spese e mutuo, valutazione economica e incarico, esigenze di riacquisto, note e punti di forza, privacy. Le voci con casella sono elenchi a scelta multipla. Un cliente può avere più immobili.
+Percorso di stato: da valutare, in mandato, in vendita, in trattativa, venduto (oppure ritirato dal mercato).
+Documento dal sistema: Scheda di acquisizione da firmare, con anteprima, PDF con il marchio dell'agenzia, firma e caricamento dell'originale firmato.
+[X] Coperto: tutti i campi del modulo dell'agenzia, anteprima, firma, archivio
+[ ] Da completare il controllo automatico dei dati catastali
+Cosa manca: il confronto automatico con il catasto e il passaggio di stato in automatico alla firma della scheda.
+
+VALUTAZIONE DELL'IMMOBILE
+Come funziona: dal dettaglio dell'immobile si avvia la valutazione con OpenAPI.it. Il report mostra quotazione minima, media e massima al metro quadro, valore stimato (con la superficie), quotazioni OMI della zona, comparabili, rischio sismico ufficiale, resa fotovoltaica e le considerazioni del valutatore generate dall'AI e controllate sui numeri. Si salva sul record e si scarica in PDF con il marchio, senza consumare altro credito.
+[X] Coperto il flusso tecnico, dalla richiesta al PDF
+[ ] Da fare con dati veri
+Cosa manca: oggi il collegamento è in ambiente di prova e restituisce dati di esempio su Roma; per i dati reali serve il passaggio alla produzione, con credito. Restano da fare mappa e vista satellitare, servizi vicini, tempi di percorrenza, coefficienti correttivi calcolati sulle vendite reali e la valutazione pubblica dal sito.
+
+ABBINAMENTO DOMANDA E OFFERTA
+Come funziona: sul cliente acquirente compare «Immobili adatti», sull'immobile compare «Richieste compatibili», con il punteggio e i criteri soddisfatti o mancanti. Si basa su tipologia, budget e zona.
+[X] Coperto in consultazione
+Cosa manca: l'avviso automatico quando entra un immobile compatibile con una richiesta già presente.
+
+TRATTATIVA
+Come funziona: collega immobile, cliente, venditore e acquirente, con prezzo concordato, date di incontro, preliminare e rogito, professionisti coinvolti e note.
+Percorso di stato: incontro e profilazione, catalogazione, trattativa in corso, preliminare firmato, rogito completato, adempimenti post vendita, chiusa.
+[X] Coperto
+Cosa manca: i solleciti automatici in base allo stato e un riepilogo di avanzamento per periodo.
+
+PROVVIGIONI
+Come funziona: alla firma del preliminare nascono due righe di provvigione, una per il venditore e una per l'acquirente, con percentuale, prezzo di calcolo, importo netto, IVA al 22% e totale, scadenza al rogito, stato da fatturare. Una parte senza percentuale (accordi specifici, per esempio provvigione zero al venditore) non genera la sua riga. Ogni riga passa da fatturata a incassata. Le righe non si duplicano se la pratica viene riaperta.
+[X] Coperto, compresa la fatturazione alle due parti
+Cosa manca: l'aggiornamento automatico degli importi se cambia il prezzo concordato, scaglioni e minimo garantito, l'emissione della fattura (resta fuori dal sistema) e il calcolo delle trattenute per gli agenti.
+
+CONTATTI E VISITE (CRM)
+Come funziona: per ogni cliente si registrano telefonate, email, visite e altro, con data e ora, esito e data del prossimo contatto; ogni interazione passa da pianificata a svolta. Le attività interne hanno scadenza e priorità.
+[X] Coperto il registro dei contatti
+[ ] Da completare il planner delle visite
+Cosa manca: una vista calendario delle visite, i promemoria automatici alla data del prossimo contatto e il collegamento della visita all'immobile.
+
+PROMEMORIA E RICORRENZE
+Come funziona: oggi il sistema registra se il cliente accetta le comunicazioni commerciali.
+[ ] Da fare
+Cosa manca: gli auguri e i promemoria annuali (compleanni): serve la ricorrenza annuale nei report. Non ancora realizzato.
+
+ADEMPIMENTI POST-VENDITA
+Come funziona: la trattativa ha lo stato dedicato agli adempimenti dopo il rogito.
+[ ] Coperto solo come stato
+Cosa manca: l'elenco delle cose da fare dopo la vendita (volture delle utenze, consegna documenti) con scadenze e responsabile.
+
+PRIVACY E CONSERVAZIONE DEI DATI (GDPR)
+Come funziona: sul cliente restano i consensi (comunicazioni commerciali, comunicazione a partner e portali), la data della firma, la versione dell'informativa e la data fino a cui si conservano i dati (10 anni).
+[X] Coperto il tracciamento
+Cosa manca: l'avviso o la cancellazione alla scadenza della conservazione e la revisione del testo da parte di un legale. Il modulo Richieste Privacy esiste ma è collegato a un modulo che non c'è: va corretto.
+
+MODULI DA RIVEDERE
+Come funziona: sono presenti anche Dashboard, Report, Note e Richieste Privacy, nati dall'analisi iniziale.
+[ ] Da sistemare
+Cosa manca: la Dashboard è vuota, il modulo Report non ha campi, Note è generico, i permessi per ruolo sono definiti solo per Clienti e Attività (gli undici ruoli creati non hanno ancora i permessi sugli altri moduli).
+
+MARCHIO E DATI DELL'AGENZIA
+Come funziona: logo, colore e dati dell'azienda compaiono nell'intestazione di tutti i PDF.
+[ ] Da impostare
+Cosa manca: ragione sociale, indirizzo, partita IVA, logo e colore non sono ancora stati inseriti su zucca (Impostazioni, Aspetto).
+
+RISPOSTA ALLA DOMANDA: ABBIAMO COPERTO TUTTO?
+Risposta: il percorso operativo sì (cliente, documenti, immobile, valutazione, abbinamento, trattativa, provvigioni a due parti, registro dei contatti). Non ancora: società e cessione di quote, planner delle visite, promemoria, allegati richiesti per tipo di cliente, dati di valutazione reali, avvisi automatici, permessi per ruolo.
+Priorità consigliate: 1) impostare marchio e dati dell'agenzia; 2) allegati richiesti e firma dei documenti del cliente; 3) planner delle visite; 4) permessi per ruolo; 5) studio del caso società e quote.
