@@ -2,6 +2,16 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.26 — 6 novembre 2026
+
+**Report di valutazione con grafica e marchio dell'azienda.** Il PDF della 0.4.25 (solo testo) diventa un documento impaginato: fascia in alto con logo e colore dell'azienda, tre riquadri con minimo, medio e massimo €/mq, valore stimato in evidenza, tabelle (OMI, comparabili), barre per mercato, tempi di vendita e annunci, piè di pagina con i dati dell'azienda e «Pagina N di M». Titoli in carattere con grazie; il carattere del marchio Zucca&Partners (Miller Banner) non è incorporabile, quindi è una resa vicina, non identica.
+
+- **Dati azienda**: nuova scheda in Impostazioni → Aspetto con ragione sociale, indirizzo, partita IVA e logo (PNG, JPEG o WebP fino a ~650 KB, incorporato nel record). Il logo si accetta solo come immagine incorporata o indirizzo https (`PUT /settings/azienda` rifiuta il resto). **Attenzione**: il logo e il colore principale valgono anche per l'interfaccia dell'app (barra laterale, accesso, icona sul dock).
+- **Paragrafo «considerazioni» coerente**: usa la città trovata dal report, non il comune scritto sul record, così non mescola due luoghi.
+- Se il logo manca o non si legge, nella fascia compare il nome dell'azienda; senza nome, il titolo «Report di valutazione».
+- Rimosso il builder di solo testo (`lib/report-valutazione.js`): resta `lib/report-valutazione-pdf.js`. Test `valutazione-pdf.test.js` (7).
+- **Non coperto**: mappe e satellite, servizi di zona, redditi ISTAT, tempi di percorrenza (fase 2); telefono, email e sito dell'agenzia non hanno ancora un campo; il piè di pagina mostra nome, indirizzo e P.IVA.
+
 ## 0.4.25 — 6 novembre 2026
 
 **PDF completo del report di valutazione.** Nel dettaglio di un Immobile valutato il bottone «Scarica PDF» (al posto di «Stampa o salva in PDF») scarica un PDF vero, su più pagine, con tutto quello che il report contiene: immobile, quotazione e valore stimato (media × superficie, con intervallo), considerazioni del valutatore, quotazioni OMI, comparabili, rischio sismico, fotovoltaico, andamento del mercato, tempi di vendita, annunci per tipologia e superficie, dati della zona, avvertenza.

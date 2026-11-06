@@ -696,3 +696,9 @@ avrebbe perso ore di storia reale a ogni suo stesso aggiornamento), corretto pri
 **Scelta**: il PDF si compone sul server dal report già salvato sul record (`report_valutazione`), senza richiamare OpenAPI.it, e riusa il generatore PDF dei documenti (solo testo). Sostituisce la stampa dal browser.
 **Perché**: richiamare le fonti costa credito a ogni scarico, e il PDF deve poter essere rigenerato identico; la stampa dal browser dipendeva dalla pagina e non era un file vero da allegare o inviare.
 **Cosa non è coperto**: mappe, satellite, servizi di zona, redditi ISTAT e tempi di percorrenza (fase 2); tabelle e grafici (il generatore è di solo testo). Se il report e l'immobile non combaciano per comune il PDF lo scrive in cima invece di nasconderlo.
+
+## 2026-11-06 — Marchio dell'azienda nei PDF: dati e logo nelle impostazioni, non nel codice
+
+**Scelta**: il report di valutazione prende logo, colore e dati dell'azienda da `tenant_settings`, che si imposta da Impostazioni → Aspetto; il logo è un'immagine incorporata nel record (o un indirizzo https). Nessun nome o marchio nel codice.
+**Perché**: la regola «sempre generico e configurabile»; lo stesso logo servirà ai prossimi documenti; l'immagine incorporata non dipende da un sito esterno raggiungibile al momento dello scarico.
+**Conseguenza da sapere**: il logo e il colore valgono anche per l'interfaccia (barra laterale, accesso, icona PWA). **Non coperto**: carattere del marchio (Miller Banner, non incorporabile: si usa un serif standard), campi telefono/email/sito.

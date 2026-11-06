@@ -1010,7 +1010,7 @@ router.post('/immobili/:id/valuta', requireAuth, requireAdmin, async (req, res) 
   const tempiVendita = Array.isArray(dettaglio.tempistiche) && Array.isArray(dettaglio.tempistiche[0]) ? dettaglio.tempistiche[0] : [];
   const tempoVenditaMedio = tempiVendita.length ? Math.round(tempiVendita.reduce((s, t) => s + (t.media_giorni || 0), 0) / tempiVendita.length) : null;
   const considerazioni = await aiValutazione.considerazioni({
-    tipologia: data.tipologia, comune: data.comune, zona: dettaglio.nome,
+    tipologia: data.tipologia, comune: dettaglio.citta || data.comune, zona: dettaglio.nome, // la città del report: i numeri sono di quel luogo, non del comune scritto sul record
     superficie_mq: superficie, quotazione_min: q.min, quotazione_media: eurMq, quotazione_max: q.max, valore_stimato: stimaValore,
     rischio_sismico: demo.rischio_sismico, zona_sismica_ufficiale: zonaSismicaUff && zonaSismicaUff.zona,
     dinamicita_mercato: ultimaDinamicita, tempo_vendita_giorni: tempoVenditaMedio, comparabili_count: (comparabili || []).length,
@@ -1041,10 +1041,10 @@ router.post('/immobili/:id/valutazione/pdf', requireAuth, requireAdmin, async (r
   if (!existing) return res.status(404).json({ error: 'Immobile non trovato' });
   const data = JSON.parse(existing.data);
   if (!data.report_valutazione) return res.status(400).json({ error: 'Questo immobile non è ancora stato valutato: avvia prima la valutazione.' });
-  const tenant = db.prepare('SELECT ragione_sociale FROM tenant_settings WHERE id = 1').get() || {};
+  const t = db.prepare('SELECT ragione_sociale, indirizzo, piva, logo_url, accent_color FROM tenant_settings WHERE id = 1').get() || {};
   try {
-    const { titolo, corpo } = require('../lib/report-valutazione').testoReport({ record: { id: existing.id, data }, report: data.report_valutazione });
-    const pdf = await require('../lib/documento-pdf').creaPdf({ titolo, corpo, azienda: tenant.ragione_sociale, riquadroFirma: false, piePagina: data.titolo || 'Valutazione' });
+    const { creaPdfReport, caricaLogo } = require('../lib/report-valutazione-pdf');
+    const pdf = await creaPdfReport({ record: { id: existing.id, data }, report: data.report_valutazione, azienda: { nome: t.ragione_sociale, indirizzo: t.indirizzo, piva: t.piva, colore: t.accent_color }, logo: await caricaLogo(t.logo_url) });
     logAudit(req.user.username, 'record.scarica_valutazione', 'immobili#' + existing.id, {});
     res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="valutazione-' + existing.id + '.pdf"', 'Cache-Control': 'no-store' });
     res.send(pdf);

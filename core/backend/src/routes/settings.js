@@ -17,6 +17,11 @@ router.get('/azienda', requireAuth, (req, res) => {
 
 router.put('/azienda', requireAuth, requireAdmin, (req, res) => {
   const { ragione_sociale, indirizzo, piva, logo_url, accent_color, hide_platform_name, login_headline, login_subheadline, login_body, login_hero_image_url } = req.body;
+  // Il logo è un indirizzo https oppure un'immagine incorporata (PNG/JPEG/WebP, fino a ~700 KB): niente altro,
+  // perché finisce anche in un <img> e nei PDF.
+  if (logo_url && !/^https:\/\//i.test(logo_url) && !(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(logo_url) && logo_url.length < 950000)) {
+    return res.status(400).json({ error: 'Il logo deve essere un\'immagine PNG, JPEG o WebP (fino a circa 700 KB) o un indirizzo https.' });
+  }
   db.prepare('UPDATE tenant_settings SET ragione_sociale = ?, indirizzo = ?, piva = ?, logo_url = ?, accent_color = ?, hide_platform_name = ?, login_headline = ?, login_subheadline = ?, login_body = ?, login_hero_image_url = ? WHERE id = 1')
     .run(ragione_sociale || null, indirizzo || null, piva || null, logo_url || null, accent_color || null, hide_platform_name ? 1 : 0, login_headline || null, login_subheadline || null, login_body || null, login_hero_image_url || null);
   // Icona PWA/dock (icon-192/512, apple-touch-icon, theme_color del manifest):

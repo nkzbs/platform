@@ -32,20 +32,34 @@ const REPORT = {
 };
 
 async function main() {
-  const { testoReport } = require('./lib/report-valutazione');
+  const { creaPdfReport, caricaLogo } = require('./lib/report-valutazione-pdf');
+  const { spawnSync } = require('child_process');
+  // Il testo si legge con pdftotext (poppler); se non c'è sul computer le prove sul contenuto si saltano.
+  const testoDi = (buf) => { const f = path.join(os.tmpdir(), 'valpdf-' + crypto.randomBytes(4).toString('hex') + '.pdf'); fs.writeFileSync(f, buf); const o = spawnSync('pdftotext', ['-layout', f, '-']); fs.unlinkSync(f); return o.error ? null : String(o.stdout); };
+  const png1x1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
 
-  console.log('\n--- testo del report ---');
-  await test('valore stimato = media × superficie, con separatore delle migliaia e percentuali pulite', async () => {
-    const { corpo } = testoReport({ record: { data: { titolo: 'Casa', comune: 'Roma', superficie_mq: 100, stima_data: '2026-11-01' } }, report: REPORT });
-    assertTrue(corpo.includes('250.000 €') && corpo.includes('intervallo 200.000 € – 300.000 €'), 'valore stimato');
-    assertTrue(corpo.includes('Abitazioni di proprietà: 73%'), 'percentuale');
-    assertTrue(corpo.includes('50-85 Mq: 178 giorni') && corpo.includes('Nessun annuncio comparabile'), 'tempi e comparabili');
-    assertTrue(!corpo.includes('ATTENZIONE'), 'nessun avviso se il comune coincide');
+  console.log('\n--- contenuto del PDF ---');
+  await test('valore stimato = media × superficie, con separatore delle migliaia, e dati dell\'azienda', async () => {
+    const buf = await creaPdfReport({ record: { data: { titolo: 'Casa', comune: 'Roma', superficie_mq: 100, stima_data: '2026-11-01' } }, report: REPORT, azienda: { nome: 'Agenzia Prova', piva: '123' }, logo: png1x1 });
+    assertEq(buf.slice(0, 5).toString(), '%PDF-');
+    const t = testoDi(buf);
+    if (t == null) return console.log('    (pdftotext non disponibile: contenuto non controllato)');
+    assertTrue(t.includes('250.000 €') && t.includes('200.000 € – 300.000 €'), 'valore stimato');
+    assertTrue(t.includes('73%') && t.includes('50-85 mq') && t.includes('Nessun annuncio comparabile'), 'percentuale, tempi, comparabili');
+    assertTrue(t.includes('Agenzia Prova') && t.includes('P.IVA 123'), 'dati azienda');
+    assertTrue(!t.includes('Attenzione:'), 'nessun avviso se il comune coincide');
   });
-  await test('senza superficie dice perché il valore non c\'è; comune diverso dal report → avviso', async () => {
-    const { corpo } = testoReport({ record: { data: { titolo: 'Casa', comune: 'Milano' } }, report: REPORT });
-    assertTrue(corpo.includes('manca la superficie'), 'manca la superficie');
-    assertTrue(corpo.includes('ATTENZIONE') && corpo.includes('Milano'), 'avviso comune diverso');
+  await test('senza superficie dice perché il valore non c\'è; comune diverso dal report → avviso; senza logo né azienda funziona', async () => {
+    const t = testoDi(await creaPdfReport({ record: { data: { titolo: 'Casa', comune: 'Milano' } }, report: REPORT }));
+    if (t == null) return;
+    assertTrue(t.includes('manca la superficie'), 'manca la superficie');
+    assertTrue(t.includes('Attenzione:') && t.includes('Milano'), 'avviso comune diverso');
+  });
+  await test('caricaLogo: accetta immagine incorporata, rifiuta il resto senza errori', async () => {
+    assertTrue(Buffer.isBuffer(await caricaLogo('data:image/png;base64,' + png1x1.toString('base64'))));
+    assertEq(await caricaLogo('data:text/html;base64,AAAA'), null);
+    assertEq(await caricaLogo('http://non-sicuro.example/logo.png'), null);
+    assertEq(await caricaLogo(null), null);
   });
 
   require('./index.js');
@@ -71,6 +85,24 @@ async function main() {
     assertTrue(/valutazione/i.test((await r.json()).error));
     assertEq((await fetch(BASE + '/api/records/immobili/99999/valutazione/pdf', { method: 'POST', headers: H })).status, 404);
     assertEq((await fetch(BASE + '/api/records/immobili/' + id + '/valutazione/pdf', { method: 'POST' })).status, 401);
+  });
+
+  console.log('\n--- logo e dati azienda ---');
+  await test('il logo si salva solo se è un\'immagine incorporata piccola o un indirizzo https', async () => {
+    const put = (logo_url) => fetch(BASE + '/api/settings/azienda', { method: 'PUT', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ ragione_sociale: 'Agenzia Prova', logo_url }) });
+    assertEq((await put('data:image/png;base64,' + png1x1.toString('base64'))).status, 200);
+    assertEq((await put('https://esempio.it/logo.png')).status, 200);
+    assertEq((await put('javascript:alert(1)')).status, 400);
+    assertEq((await put('data:image/svg+xml;base64,AAAA')).status, 400);
+    assertEq((await put('data:image/png;base64,' + 'A'.repeat(1000000))).status, 400);
+  });
+  await test('il PDF scaricato dalla rotta usa i dati azienda salvati', async () => {
+    await fetch(BASE + '/api/settings/azienda', { method: 'PUT', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ ragione_sociale: 'Agenzia Prova', piva: '999', logo_url: 'data:image/png;base64,' + png1x1.toString('base64'), accent_color: '#16355B' }) });
+    const id = rec({ titolo: 'Casa', comune: 'Roma', superficie_mq: 100, report_valutazione: REPORT });
+    const r = await fetch(BASE + '/api/records/immobili/' + id + '/valutazione/pdf', { method: 'POST', headers: H });
+    assertEq(r.status, 200);
+    const t = testoDi(Buffer.from(await r.arrayBuffer()));
+    if (t != null) assertTrue(t.includes('Agenzia Prova') && t.includes('P.IVA 999'), 'intestazione');
   });
 
   console.log(`\n${passed} passati, ${failed} falliti`);
