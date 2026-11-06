@@ -105,4 +105,16 @@ function risolviDestinatario(percorso, get) {
   return typeof v === 'string' ? v.trim() : '';
 }
 
-module.exports = { renderModello, costruisciGet, risolviDestinatario, LINEA };
+// Percorsi (campo, relazione.campo, @tenant) citati da un modello, comprese le sezioni: serve alla
+// validazione del Builder per rifiutare in pubblicazione un campo scritto male, invece di scoprire
+// «—» nel documento già inviato.
+function percorsiUsati(modello) {
+  const trovati = new Set();
+  const testo = String(modello == null ? '' : modello);
+  for (const m of testo.matchAll(/\{\{\s*[#^]?\s*([^}|\s/][^}|]*?)\s*(?:\|[^}]*)?\}\}/g)) trovati.add(m[1].trim());
+  return Array.from(trovati);
+}
+
+const SEGNAPOSTI_FISSI = ['@oggi', ...Object.keys(TENANT_CHIAVI)];
+
+module.exports = { renderModello, costruisciGet, risolviDestinatario, percorsiUsati, SEGNAPOSTI_FISSI, LINEA };

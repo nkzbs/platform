@@ -4,7 +4,7 @@
 // stavano nel codice (lib/doc-cliente.js, lib/doc-immobile.js) prima del blocco `document_action`.
 // Eseguire con: node modello-documento.test.js
 
-const { renderModello, costruisciGet, risolviDestinatario, LINEA } = require('./lib/modello-documento');
+const { renderModello, costruisciGet, risolviDestinatario, percorsiUsati, SEGNAPOSTI_FISSI, LINEA } = require('./lib/modello-documento');
 const docCliente = require('./lib/doc-cliente');
 const docImmobile = require('./lib/doc-immobile');
 const seed = require('./seeds/documenti-immobiliare.json');
@@ -121,6 +121,29 @@ test('il modello non esegue codice né legge proprietà ereditate: espressioni e
   assertEq(renderModello('{{process.exit(1)}} {{constructor}} {{__proto__}} {{toString}} {{hasOwnProperty}}', get), '— — — — —');
   const collegato = costruisciGet({ record: { proprietario: 7 }, schema: schemaImm, tenant, leggiRecord: leggi });
   assertEq(renderModello('{{proprietario.constructor}} {{proprietario.__proto__}}', collegato), '— —');
+});
+
+console.log('\n--- percorsiUsati (per la validazione del Builder) ---');
+
+test('elenca campi, relazione.campo, @tenant, anche dentro sezioni e con filtri; senza doppioni', () => {
+  const t = 'A {{nome}} {{ nome | maiuscolo }} {{#tipo}}{{tipo|minuscolo}}{{/tipo}}{{^note}}x{{/note}} {{proprietario.email}} {{@azienda}} {{@oggi}}';
+  assertEq(percorsiUsati(t).sort(), ['@azienda', '@oggi', 'nome', 'note', 'proprietario.email', 'tipo'].sort());
+});
+test('modello vuoto o senza segnaposto → nessun percorso; le chiusure {{/k}} non contano', () => {
+  assertEq(percorsiUsati(''), []);
+  assertEq(percorsiUsati('solo testo {{#a}}x{{/a}}'), ['a']);
+});
+test('SEGNAPOSTI_FISSI contiene i quattro segnaposto che non sono campi', () => {
+  assertEq(SEGNAPOSTI_FISSI.sort(), ['@azienda', '@indirizzo', '@oggi', '@piva']);
+});
+test('i modelli del seed citano solo campi, relazioni e segnaposto noti', () => {
+  const tutti = Object.values(seed).filter(Array.isArray).flat();
+  for (const a of tutti) {
+    for (const p of [...percorsiUsati(a.body), ...percorsiUsati(a.subject)]) {
+      const ok = SEGNAPOSTI_FISSI.includes(p) || /^[a-z_][a-z0-9_]*(\.[a-z_][a-z0-9_]*)?$/.test(p);
+      if (!ok) throw new Error(a.key + ': segnaposto sospetto «' + p + '»');
+    }
+  }
 });
 
 console.log('\n--- parità con i testi attuali nel codice (stesso output al carattere) ---');

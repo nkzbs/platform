@@ -1034,6 +1034,66 @@ router.post('/immobili/:id/valuta', requireAuth, requireAdmin, async (req, res) 
   res.json({ ok: true, record: { ...updated, data: JSON.parse(updated.data) }, dettaglio, comparabili, omi: omiZona, fotovoltaico, zonaSismicaUfficiale: zonaSismicaUff, considerazioni });
 });
 
+// ─── Documento da modello (blocco di schema `document_action`) ────────────────────────────────
+// Un modulo dichiara dal Builder uno o più documenti (oggetto + testo con segnaposto + dove
+// spedirli); qui non c'è nessun nome di modulo né di campo. Due rotte separate, apposta:
+// `anteprima` NON spedisce nulla (solo testo di bozza da rivedere e modificare), `invia` manda
+// esattamente il testo che l'admin ha approvato — mai il testo generato senza un giro per gli
+// occhi di chi lo manda. Il DESTINATARIO lo ricava sempre il server dal modello e dal record:
+// non arriva dalla richiesta, così nessuno può far spedire un documento a un indirizzo scelto da fuori.
+// Sostituisce le rotte che stavano legate agli slug di un solo verticale (vedi docs/DECISIONI.md).
+function contestoDocumento(req) {
+  const { slug, id, key } = req.params;
+  const schema = getModuleSchema(slug) || {};
+  const azione = (schema.document_actions || []).find((a) => a.key === key);
+  if (!azione) return { errore: [404, 'Documento non trovato in questo modulo'] };
+  const record = db.prepare('SELECT * FROM records WHERE id = ? AND module_slug = ?').get(id, slug);
+  if (!record) return { errore: [404, 'Record non trovato'] };
+  const rule = ruleFor(schema, req.user.role);
+  if (rule && (!rule.view || !ownedOrAllowed(rule, record, req.user))) return { errore: [403, 'Non hai i permessi per vedere questo record'] };
+  const dati = attachComputedFields({ ...record, data: decryptFields(JSON.parse(record.data), schema.fields) }, schema, slug).data;
+  const tenant = db.prepare('SELECT ragione_sociale, indirizzo, piva FROM tenant_settings WHERE id = 1').get();
+  const leggiRecord = (modulo, rid) => {
+    const r = db.prepare('SELECT data FROM records WHERE module_slug = ? AND id = ?').get(modulo, rid);
+    return r ? JSON.parse(r.data) : null;
+  };
+  const get = require('../lib/modello-documento').costruisciGet({ record: dati, schema, tenant, leggiRecord });
+  return { schema, azione, record, get };
+}
+
+router.post('/:slug/:id/documento/:key/anteprima', requireAuth, requireAdmin, requireModuleAccess, (req, res) => {
+  const ctx = contestoDocumento(req);
+  if (ctx.errore) return res.status(ctx.errore[0]).json({ error: ctx.errore[1] });
+  const { renderModello, risolviDestinatario } = require('../lib/modello-documento');
+  res.json({
+    oggetto: renderModello(ctx.azione.subject, ctx.get),
+    corpo: renderModello(ctx.azione.body, ctx.get),
+    destinatario: risolviDestinatario(ctx.azione.recipient, ctx.get),
+  });
+});
+
+router.post('/:slug/:id/documento/:key/invia', requireAuth, requireAdmin, requireModuleAccess, async (req, res) => {
+  const ctx = contestoDocumento(req);
+  if (ctx.errore) return res.status(ctx.errore[0]).json({ error: ctx.errore[1] });
+  const { oggetto, corpo } = req.body || {};
+  if (typeof corpo !== 'string' || !corpo.trim()) return res.status(400).json({ error: 'Testo del documento mancante' });
+  const { risolviDestinatario } = require('../lib/modello-documento');
+  const destinatario = risolviDestinatario(ctx.azione.recipient, ctx.get);
+  if (!destinatario) return res.status(400).json({ error: 'Nessun indirizzo email a cui spedire: il campo del destinatario è vuoto' });
+
+  const email = require('../lib/email');
+  const invio = await email.invia({ to: destinatario, subject: (typeof oggetto === 'string' && oggetto.trim()) || ctx.azione.label || 'Documento', html: email.htmlDaTesto(corpo) });
+  if (!invio.ok) return res.status(502).json({ error: 'Invio non riuscito: ' + invio.motivo });
+
+  logAudit(req.user.username, 'record.invia_documento', req.params.slug + '#' + ctx.record.id, { documento: ctx.azione.key, email: destinatario });
+  // Cambio di stato opzionale dopo l'invio, solo se il workflow lo ammette da dove il record si
+  // trova: se non è ammesso (es. già "documenti inviati" per un secondo invio) l'email parte
+  // comunque e lo stato non si tocca.
+  let statoAggiornato = false;
+  if (ctx.azione.on_send_state) statoAggiornato = runTransition(req.user, req.params.slug, req.params.id, ctx.azione.on_send_state).status === 200;
+  res.json({ ok: true, stato_aggiornato: statoAggiornato });
+});
+
 // Documenti cliente (Privacy+Incarico, Antiriciclaggio): generazione e invio (2026-11-01,
 // verticale Mediazione immobiliare, richiesto dal vivo — "prima di essere inviato dovrà
 // essere mostrato a schermo che verifica con possibilità di modifica da parte dell'utente
