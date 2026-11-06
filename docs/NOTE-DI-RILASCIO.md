@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.19 — 6 novembre 2026
+
+**Velocità: il codice si scarica a pezzi, non tutto insieme.** Richiesto: "si può fare qualcosa per la velocità di caricamento?". Il frontend dei tenant era un unico file JS da 1,09 MB (271 KB compressi), quello di Super Admin da 723 KB (180 KB), scaricati e analizzati a ogni apertura, anche da telefono.
+
+- Le pagine pesanti si caricano alla prima apertura (`React.lazy` + `Suspense`, con un "Caricamento…" breve): nei tenant Libreria, Builder, Impostazioni, Guida, Log attività e la pagina di un modulo; in Super Admin Tenant, Libreria, Analisi, Super Builder, Attività, Impostazioni, Guida. La Dashboard resta nel bundle iniziale (è la prima schermata).
+- JS iniziale compresso: **tenant da 271 a 115 KB (−58%)**, **Super Admin da 180 a 70 KB (−61%)**. I file hanno il nome con hash e restano in cache a lungo: la seconda visita non riscarica nulla di invariato.
+- Verificato dal vivo (locale): tutte le pagine di entrambe le app si aprono e mostrano il contenuto, nessuna risorsa fallita al caricamento dei tenant.
+- **Cosa non ha cambiato**: i secondi di attesa visti sulla *prima richiesta* a un tenant (7–20 s per il primo byte, poi ~0,1 s) non vengono dal frontend: dal NAS la risposta arriva in 1 ms. Diagnosi ancora aperta, vedi `docs/OPERAZIONI.md`.
+
 ## 0.4.18 — 6 novembre 2026
 
 **Fix: dopo un deploy, un tenant poteva mostrare per ore la versione vecchia** (segnalato: "perché vedo la 0.4.14?" quando il server serviva già la 0.4.17). Causa: in `core/nginx.conf` solo `/index.html` aveva `Cache-Control: no-cache`; l'indirizzo base del dominio (`/`) passa dal ramo del Sito Web (`/__root_public`, poi `@spa_root`) e non riceveva l'intestazione, quindi il browser — soprattutto l'app aggiunta alla Home di iOS — riusava un `index.html` vecchio che puntava a un bundle vecchio.

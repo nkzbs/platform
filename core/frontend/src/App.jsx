@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, lazy, Suspense } from 'react'
 import { API, notifyUnauthorized, setAuth, clearAuth } from './lib/api'
 
 import Login from './components/Login'
@@ -7,16 +7,20 @@ import Icon from './components/Icon'
 import AskData from './components/AskData'
 import GlobalSearch from './components/GlobalSearch'
 import DashboardPage from './pages/DashboardPage'
-import LibreriaPage from './pages/LibreriaPage'
-import BuilderPage from './pages/BuilderPage'
 import SetupWizard from './components/SetupWizard'
 import ProductTour from './components/ProductTour'
 import { ONBOARDING_STEPS } from './components/onboardingSteps'
-import GuidaPage from './pages/GuidaPage'
-import AuditPage from './pages/AuditPage'
-import ImpostazioniPage from './pages/ImpostazioniPage'
-import ModulePage from './pages/ModulePage'
-import ExportDatiPage from './pages/ExportDatiPage'
+
+// Pagine caricate a richiesta (2026-11-06, velocità): prima tutto stava in un unico bundle da
+// 1,09 MB (271 KB compressi) scaricato e analizzato ad ogni apertura, anche da telefono. La
+// Dashboard resta nel bundle principale (è la prima schermata); Builder, Libreria, Impostazioni,
+// Guida, Log e la pagina di un modulo si scaricano quando si aprono la prima volta.
+const LibreriaPage = lazy(() => import('./pages/LibreriaPage'))
+const BuilderPage = lazy(() => import('./pages/BuilderPage'))
+const GuidaPage = lazy(() => import('./pages/GuidaPage'))
+const AuditPage = lazy(() => import('./pages/AuditPage'))
+const ImpostazioniPage = lazy(() => import('./pages/ImpostazioniPage'))
+const ModulePage = lazy(() => import('./pages/ModulePage'))
 
 // Toast globale: qualunque componente fa:
 //   window.dispatchEvent(new CustomEvent('platform:toast', { detail: { message, type } }))
@@ -235,6 +239,7 @@ export default function App() {
             l'ultimo pezzo di pagina — su desktop c'è la rail, non il dock, niente da
             lasciare libero in fondo. */}
         <div className="p-4 md:p-8 pb-28 md:pb-8">
+        <Suspense fallback={<div className="py-16 text-center text-sm text-gray-500">Caricamento…</div>}>
         {currentPage === 'dashboard' && <DashboardPage user={user} modules={installedModules} token={token} features={features} onNavigate={setCurrentPage} />}
         {currentPage === 'report' && <DashboardPage user={user} modules={installedModules} token={token} page="report" />}
         {currentPage === 'libreria' && user && user.role === 'admin' && <LibreriaPage token={token} onFeaturesChanged={loadTenantName} onRefresh={loadModules} onOpenInBuilder={openInBuilder} onCreateNewModule={openBuilderNewModule} />}
@@ -258,6 +263,7 @@ export default function App() {
         {(currentPage === 'impostazioni' || currentPage === 'account' || currentPage === 'sito_web' || currentPage === 'export_dati' || currentPage === 'connessioni' || currentPage === 'movimenti') && user &&
           <ImpostazioniPage token={token} user={user} features={features} modules={installedModules} onOpenInBuilder={openInBuilder} onCreateNewModule={openBuilderNewModule} onFeaturesChanged={loadTenantName} onUserUpdate={updateUser} initialTab={currentPage === 'impostazioni' ? undefined : currentPage} />}
         {currentModule && !['dashboard', 'utenti', 'report'].includes(currentPage) && <ModulePage module={currentModule} token={token} user={user} onNavigate={setCurrentPage} />}
+        </Suspense>
         </div>
       </main>
       <ToastContainer />

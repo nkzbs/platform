@@ -1,16 +1,19 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, lazy, Suspense } from 'react'
 import { API } from './lib/api'
 import LoginModal from './components/Home/LoginModal'
 import Sidebar from './components/Sidebar'
 import Icon from './components/Icon'
 import DashboardPage from './pages/DashboardPage'
-import TenantsPage from './pages/TenantsPage'
-import LibreriaPage from './pages/LibreriaPage'
-import ActivityPage from './pages/ActivityPage'
-import TenantBuilderPage from './pages/TenantBuilderPage'
-import SettingsPage from './pages/SettingsPage'
-import GuidaPage from './pages/GuidaPage'
-import AnalisiPage from './pages/AnalisiPage'
+
+// Pagine caricate a richiesta (2026-11-06, velocità): prima un unico bundle da 723 KB (180 KB
+// compressi) ad ogni apertura. La Dashboard resta nel bundle principale (prima schermata).
+const TenantsPage = lazy(() => import('./pages/TenantsPage'))
+const LibreriaPage = lazy(() => import('./pages/LibreriaPage'))
+const ActivityPage = lazy(() => import('./pages/ActivityPage'))
+const TenantBuilderPage = lazy(() => import('./pages/TenantBuilderPage'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const GuidaPage = lazy(() => import('./pages/GuidaPage'))
+const AnalisiPage = lazy(() => import('./pages/AnalisiPage'))
 
 // Semplificazione 2026-09-27: Platform torna a essere un side project a uso
 // personale — rimossi il Partner Portal, il CRM (Clienti/Clienti Core) e
@@ -131,6 +134,7 @@ export default function App() {
           non copra l'ultimo pezzo di pagina, md:pb-8 su desktop dove non c'è dock da schivare. */}
       <main className="flex-1 min-w-0 md:ml-14" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="p-4 md:p-8 pb-28 md:pb-8">
+          <Suspense fallback={<div className="py-16 text-center text-sm text-gray-500">Caricamento…</div>}>
           {page === 'dashboard' && <DashboardPage token={token} onNavigate={setPage} />}
           {page === 'tenants' && <TenantsPage token={token} onViewActivity={viewTenantActivity} onNavigate={setPage} />}
           {page === 'libreria' && <LibreriaPage token={token} />}
@@ -139,6 +143,7 @@ export default function App() {
           {page === 'attivita' && <ActivityPage token={token} initialTenantFilter={activityTenantFilter} />}
           {page === 'impostazioni' && <SettingsPage token={token} myId={payload && payload.id} />}
           {page === 'guida' && <GuidaPage token={token} />}
+          </Suspense>
         </div>
       </main>
     </div>
