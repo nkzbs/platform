@@ -264,7 +264,7 @@ export default function App() {
         {currentPage === 'report' && <DashboardPage user={user} modules={installedModules} token={token} page="report" />}
         {currentPage === 'libreria' && user && user.role === 'admin' && <LibreriaPage token={token} onFeaturesChanged={loadTenantName} onRefresh={loadModules} onOpenInBuilder={openInBuilder} onCreateNewModule={openBuilderNewModule} />}
         {currentPage === 'builder' && user && user.role === 'admin' && <BuilderPage token={token} allModules={allModulesForBuilder} onModulesChanged={loadModules} preselectSlug={builderPreselect} onPreselectHandled={() => setBuilderPreselect(null)} openNewModule={builderOpenNew} onNewModuleHandled={() => setBuilderOpenNew(false)} />}
-        {currentPage === 'guida' && <GuidaPage modules={installedModules} token={token} onStartTour={() => setShowTour(true)} />}
+        {currentPage === 'guida' && <GuidaPage modules={installedModules} token={token} user={user} onStartTour={() => setShowTour(true)} />}
         {/* Export e Backup uniti (2026-08-29): un solo tab-set dentro ExportDatiPage,
             Backup resta un tab admin-only al suo interno — stesso gate di prima, solo
             spostato dentro il componente invece che qui. */}

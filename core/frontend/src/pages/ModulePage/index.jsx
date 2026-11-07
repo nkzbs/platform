@@ -25,6 +25,7 @@ import GenericView from './GenericView'
 import SourceSearchModal from './SourceSearchModal'
 import ViewTabs from './ViewTabs'
 import CalendarView from './CalendarView'
+import AiutoModulo from '../../components/AiutoModulo'
 import ArchiveView from './ArchiveView'
 import FormulaEditor from '@shared/builder/FormulaEditor.jsx'
 import { StepChainEditor } from '@shared/builder/StepChainEditor.jsx'
@@ -591,7 +592,10 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
             <Icon name={mod.icon} size={18} />
           </div>
           <div className="min-w-0">
-            <h1 className="text-lg font-bold text-ink tracking-[-0.35px] truncate">{mod.name}</h1>
+            <div className="flex items-center gap-2 min-w-0">
+              <h1 className="text-lg font-bold text-ink tracking-[-0.35px] truncate">{mod.name}</h1>
+              <AiutoModulo mod={mod} token={token} />
+            </div>
             <div className="text-xs text-gray-500">{search.trim() ? displayRecords.length + ' / ' + records.length : records.length} record</div>
           </div>
         </div>

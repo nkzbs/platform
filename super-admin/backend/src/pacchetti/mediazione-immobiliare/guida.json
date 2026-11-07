@@ -1,0 +1,174 @@
+{
+  "_descrizione": "La guida d'uso del verticale Mediazione immobiliare: testo scritto a mano solo per il «perché» e i casi d'uso. L'elenco di campi, passaggi di stato, requisiti, documenti e azioni di ogni modulo NON sta qui: lo ricava l'app dagli schemi, così non invecchia. Forma: introduzione, per_ruolo (chiave = ruolo dell'utente o `default`), capitoli (chiave = modulo), flussi, glossario.",
+  "introduzione": {
+    "titolo": "Come si lavora in agenzia",
+    "testo": [
+      "Qui trovi, nell'ordine in cui lavori: chi sono i tuoi clienti, quali immobili hai in mandato, come proporli, come chiudere una trattativa e come incassare la provvigione.",
+      "Ogni scheda ti mostra in alto **dove si trova la pratica** (il percorso degli stati) e **cosa manca per fare il passo successivo**. Se un passaggio è importante (fatture, preliminare, rogito, verifica del cliente) l'app non ti lascia andare avanti senza i dati richiesti."
+    ]
+  },
+  "per_ruolo": {
+    "admin": {
+      "titolo": "Per iniziare — amministratore",
+      "passi": [
+        "Controlla in Impostazioni → Aspetto il nome, il logo e il colore dell'app.",
+        "Collega OpenAPI.it in Impostazioni → Connessioni: serve per la valutazione di mercato. Prima in ambiente di prova, poi in produzione; imposta un tetto di spesa mensile.",
+        "Invita gli agenti da Utenti e dai a ciascuno il ruolo giusto.",
+        "Dalla Dashboard aggiungi o togli i widget: «Da fare» mostra le scadenze di oggi."
+      ]
+    },
+    "default": {
+      "titolo": "Per iniziare — il tuo lavoro di ogni giorno",
+      "passi": [
+        "Apri la **Dashboard**: «Da fare» ti dice cosa è in ritardo, cosa scade oggi e cosa nei prossimi giorni.",
+        "Prima di una visita guarda il calendario delle **Visite**; dopo, segnala come conclusa e scrivi l'esito.",
+        "Quando arriva un nuovo cliente, crealo in **Clienti** con codice fiscale e un recapito: ti servono per i documenti.",
+        "Per ogni immobile in mandato tieni aggiornati prezzo e foto: sono ciò che serve per proporlo."
+      ]
+    }
+  },
+  "capitoli": {
+    "clienti": {
+      "scopo": "L'anagrafica di chi vende, compra o cerca casa. Tutto il resto (trattative, provvigioni, visite) parte da qui.",
+      "come_si_usa": [
+        "Crea il cliente con nome, codice fiscale (o P.IVA) e almeno un recapito: il codice fiscale viene controllato mentre salvi.",
+        "Indica se è venditore o acquirente e, se cerca casa, cosa cerca (budget, zona, tipologia): l'app propone da sola gli **immobili adatti**.",
+        "Dalla scheda spedisci i documenti da firmare (privacy e incarico, antiriciclaggio) con il menu **Documenti**: il testo si rivede prima dell'invio.",
+        "Per passare a «Cliente verificato» servono il documento d'identità e la privacy firmata."
+      ],
+      "consigli": [
+        "Un cliente società ha come codice fiscale la partita IVA: il campo accetta entrambi.",
+        "Gli **Auguri** si mandano dal menu Documenti; i compleanni li trovi nel report Ricorrenze."
+      ]
+    },
+    "immobili": {
+      "scopo": "Il portafoglio: ogni immobile in mandato, dal primo incarico alla vendita.",
+      "come_si_usa": [
+        "Inserisci proprietario, indirizzo, tipologia e prezzo richiesto.",
+        "Con **Valutazione di mercato** (serve OpenAPI.it) ottieni la stima, i comparabili e un PDF da mostrare al proprietario. L'app chiede la conferma del costo prima di ogni richiesta.",
+        "Fai firmare la scheda di acquisizione e allegala: prima di metterlo «In vendita» l'app ti ricorda che serve.",
+        "Dal dettaglio vedi le **richieste compatibili**: i clienti che cercano qualcosa come questo immobile."
+      ],
+      "consigli": [
+        "Il report di valutazione sta in una sezione chiusa sotto i dati chiave: aprilo solo quando serve."
+      ]
+    },
+    "visite": {
+      "scopo": "Il planner delle visite agli immobili.",
+      "come_si_usa": [
+        "Crea la visita scegliendo immobile, cliente, data e ora.",
+        "Vedi tutto nel **Calendario**: tocca un giorno per l'elenco, una visita per aprirla. «Elenco» riporta alla tabella.",
+        "A visita fatta usa «Segna come conclusa» e scegli l'esito: se è «Interessato», apri una trattativa."
+      ],
+      "consigli": [
+        "Le visite di oggi compaiono anche nella Dashboard, in «Da fare»."
+      ]
+    },
+    "trattative": {
+      "scopo": "Il percorso di una compravendita: dall'incontro tra le parti al rogito.",
+      "come_si_usa": [
+        "Apri la trattativa con immobile, venditore e acquirente.",
+        "Al preliminare indica prezzo concordato, data e allega il contratto firmato.",
+        "Al rogito indica la data e allega l'atto.",
+        "Alla chiusura l'app può generare le **provvigioni**, divise tra venditore e acquirente."
+      ],
+      "consigli": [
+        "Le percentuali di provvigione per parte si impostano sulla trattativa."
+      ]
+    },
+    "provvigioni": {
+      "scopo": "I compensi dell'agenzia: quanto, da chi, quando scadono.",
+      "come_si_usa": [
+        "Ogni provvigione è una parte (venditore o acquirente) con la sua percentuale: l'app calcola importo, IVA e totale.",
+        "Se non scrivi la percentuale, l'app propone quella dello **scaglione** in base al prezzo.",
+        "Per «Fatturata» servono importo e data di scadenza; per «Incassata» la data di incasso.",
+        "Se è scaduta e non pagata, dal menu Documenti spedisci il **Sollecito di pagamento**."
+      ],
+      "consigli": [
+        "La fattura elettronica è prevista ma «da attivare»: richiede il servizio SDI di OpenAPI.it."
+      ]
+    },
+    "quote_societarie": {
+      "scopo": "Le quote di società che detengono immobili, e la loro cessione.",
+      "come_si_usa": [
+        "Registra società, socio, percentuale e valore.",
+        "Quando c'è un acquirente, passa a «In cessione» e prepara la proposta (Documenti): va firmata e fatta rivedere dal notaio.",
+        "Per «Ceduta» servono la data e la proposta firmata allegata."
+      ]
+    },
+    "richieste_privacy": {
+      "scopo": "Le richieste dei clienti sui propri dati (accesso, rettifica, cancellazione).",
+      "come_si_usa": [
+        "Registra la richiesta il giorno in cui arriva: la risposta è dovuta entro 30 giorni.",
+        "Per chiuderla («Completata») scrivi la risposta data al richiedente."
+      ]
+    },
+    "interazioni": {
+      "scopo": "Telefonate, incontri e messaggi con i clienti.",
+      "come_si_usa": [
+        "Annota ogni contatto; quando è svolto, scrivi l'esito."
+      ]
+    }
+  },
+  "flussi": [
+    {
+      "titolo": "Dal mandato al rogito",
+      "passi": [
+        "**Clienti**: crea il proprietario e fagli firmare privacy e incarico.",
+        "**Immobili**: inserisci l'immobile e fai la valutazione di mercato.",
+        "**Immobili → In vendita**: l'app ti ricorda cosa manca (prezzo, valutazione, scheda di acquisizione firmata).",
+        "**Visite**: porta i clienti interessati a vedere l'immobile.",
+        "**Trattative**: apri la trattativa, poi preliminare e rogito.",
+        "**Provvigioni**: alla chiusura nascono le provvigioni da fatturare e incassare."
+      ]
+    },
+    {
+      "titolo": "Un nuovo cliente",
+      "passi": [
+        "Crealo in **Clienti** con codice fiscale e un recapito.",
+        "Invia **Privacy + Incarico** e, se serve, il modulo antiriciclaggio.",
+        "Quando hai documento d'identità e privacy firmata, passa a «Cliente verificato».",
+        "La verifica automatica del soggetto è prevista, ma «da attivare»."
+      ]
+    },
+    {
+      "titolo": "Dalla fattura all'incasso",
+      "passi": [
+        "Controlla importi e percentuale nella **provvigione**.",
+        "Segnala «Fatturata» (servono importo e scadenza).",
+        "Se la scadenza passa, manda il **Sollecito di pagamento**.",
+        "All'incasso scrivi la data e segnala «Incassata»."
+      ]
+    }
+  ],
+  "glossario": [
+    {
+      "termine": "Mandato",
+      "significato": "L'incarico con cui il proprietario ti affida la vendita dell'immobile."
+    },
+    {
+      "termine": "Preliminare",
+      "significato": "Il contratto con cui venditore e acquirente si vincolano prima del rogito, di solito con una caparra."
+    },
+    {
+      "termine": "Rogito",
+      "significato": "L'atto notarile di compravendita: da lì l'immobile cambia proprietario."
+    },
+    {
+      "termine": "Dato chiave",
+      "significato": "L'informazione più importante di una scheda, messa in evidenza in alto."
+    },
+    {
+      "termine": "Requisito di stato",
+      "significato": "Ciò che serve perché la pratica passi allo stato successivo; se è «bloccante» l'app non lascia andare avanti senza."
+    },
+    {
+      "termine": "Da attivare",
+      "significato": "Una funzione prevista che richiede un servizio esterno non ancora collegato: il pulsante c'è, ma non fa nulla finché il servizio non è attivo."
+    },
+    {
+      "termine": "Scaglione",
+      "significato": "La fascia di prezzo che decide la percentuale di provvigione proposta."
+    }
+  ]
+}

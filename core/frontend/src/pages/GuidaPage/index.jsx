@@ -1,4 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import useApi from '../../lib/useApi'
+import GuidaOperativa from './GuidaOperativa'
 import { GUIDA_SECTIONS } from './content'
 import GuidedPath from './GuidedPath'
 import ModuleGuide from './ModuleGuide'
@@ -6,8 +8,11 @@ import RichText from '../../components/RichText'
 import Icon from '../../components/Icon'
 import GlassPageBackground from '../../components/GlassPageBackground'
 
-function GuidaPage({ modules, token, onStartTour }) {
+function GuidaPage({ modules, token, user, onStartTour }) {
+  const api = useApi(token)
   const [tab, setTab] = useState('percorso')
+  const [haGuida, setHaGuida] = useState(false) // il pacchetto del verticale porta una guida d'uso: allora è la scheda iniziale
+  useEffect(() => { api.get('/guida').then((d) => { if (d && d.presente) { setHaGuida(true); setTab('lavoro') } }).catch(() => {}) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [openSection, setOpenSection] = useState(GUIDA_SECTIONS[0].title)
   const [openTopic, setOpenTopic] = useState(null)
   const [query, setQuery] = useState('')
@@ -41,6 +46,12 @@ function GuidaPage({ modules, token, onStartTour }) {
       <p className="text-gray-500 text-sm mb-5">Come funziona Platform — moduli, campi, relazioni, permessi, automazioni e il resto.</p>
 
       <div className="flex items-center gap-1 mb-6 border-b border-gray-800">
+        {haGuida && (
+          <button onClick={() => setTab('lavoro')}
+            className={'px-4 py-2.5 text-sm font-medium transition border-b-2 -mb-px ' + (tab === 'lavoro' ? 'text-ink border-accent' : 'text-gray-500 border-transparent hover:text-gray-300')}>
+            Come si lavora
+          </button>
+        )}
         <button onClick={() => setTab('percorso')}
           className={'px-4 py-2.5 text-sm font-medium transition border-b-2 -mb-px ' + (tab === 'percorso' ? 'text-ink border-accent' : 'text-gray-500 border-transparent hover:text-gray-300')}>
           Percorso guidato
@@ -55,7 +66,7 @@ function GuidaPage({ modules, token, onStartTour }) {
         </button>
       </div>
 
-      {tab === 'percorso' ? <GuidedPath /> : tab === 'moduli' ? <ModuleGuide modules={modules} /> : (
+      {tab === 'lavoro' ? <GuidaOperativa modules={modules} token={token} user={user} /> : tab === 'percorso' ? <GuidedPath /> : tab === 'moduli' ? <ModuleGuide modules={modules} /> : (
       <div className="flex flex-col md:flex-row gap-6">
         <div className="w-full md:w-80 flex-shrink-0">
           <div className="relative mb-3">

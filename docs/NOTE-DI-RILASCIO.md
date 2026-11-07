@@ -2,6 +2,18 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.55 — 7 novembre 2026
+
+**La guida d'uso interna: «Come si lavora» nella pagina Guida e un «?» in ogni modulo.**
+
+- **Il pacchetto del verticale porta la sua guida** (nuova parte `guida`, `guida.json`): introduzione, passi per ruolo (chiave = ruolo dell'utente, altrimenti `default`), un capitolo per modulo (a cosa serve, come si usa, consigli), flussi passo per passo e glossario. Scritto a mano solo il «perché» e i casi d'uso. Rotta `GET /api/guida` (unisce i testi dei pacchetti attivi, nessun nome di settore nel codice).
+- **Ciò che si può ricavare non è scritto a mano**: in ogni capitolo, il percorso degli stati, i dati chiave, **cosa serve per ogni passaggio (obbligatorio o promemoria)**, i documenti, le funzioni collegate a servizi esterni (con «da attivare») e il calendario vengono letti dallo schema del modulo (`lib/guida-da-schema.js`), quindi restano allineati anche se il modulo cambia dal Builder.
+- **Pagina Guida → «Come si lavora»** (scheda iniziale quando c'è una guida): introduzione, i passi per il tuo ruolo, i flussi, un capitolo per ogni modulo installato, il glossario, con ricerca su tutto il testo.
+- **«?» accanto al titolo di ogni modulo**: apre il capitolo di quel modulo senza lasciare la pagina; funziona anche senza testi del pacchetto (mostra la parte ricavata dallo schema).
+- Il Percorso guidato, il Riferimento e «I tuoi moduli» restano com'erano.
+- Test: `guida.test.js` (unione dei pacchetti, pacchetto reale con capitoli solo per moduli esistenti), `guida-da-schema.test.js` (percorso, passaggi, azioni da attivare). Pacchetto alla versione 6.
+- **Non fatto**: note proprie dei tenant sui capitoli (la guida è di sola lettura), PDF stampabile. **Non provato nel browser** su un tenant con la guida attiva.
+
 ## 0.4.54 — 7 novembre 2026
 
 **Le Visite hanno la vista a calendario; il widget «Da fare» arriva da solo sulla Dashboard di zucca.**

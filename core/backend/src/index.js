@@ -44,6 +44,7 @@ const bankRoutes = require('./routes/bank');
 const featuresRoutes = require('./routes/features');
 const features = require('./features');
 const moduleRolesRoutes = require('./routes/module-roles');
+const guidaRoutes = require('./routes/guida');
 const bustaPagaReportRoutes = require('./routes/busta-paga-report');
 const drivePollerRoutes = require('./routes/drive-poller');
 const apiTokensRoutes = require('./routes/api-tokens');
@@ -119,6 +120,7 @@ const routeMounts = [
   ['/bank', bankRoutes],
   ['/features', featuresRoutes],
   ['/module-roles', moduleRolesRoutes],
+  ['/guida', guidaRoutes],
   ['/busta-paga-report', bustaPagaReportRoutes],
   ['/drive-poller', drivePollerRoutes],
   ['/api-tokens', apiTokensRoutes],
@@ -161,7 +163,7 @@ app.use('/__root_public', rootPublicRouter);
 
 app.get('/health', (req, res) => res.json({
   status: 'ok',
-  version: '0.4.54',
+  version: '0.4.55',
   tenant: process.env.TENANT_SLUG || 'unknown',
   name: process.env.TENANT_NAME || 'Platform Core'
 }));
