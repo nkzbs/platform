@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.57 — 7 novembre 2026
+
+**Due difetti trovati preparando la guida illustrata.**
+
+- **«Annulla» illeggibile nel tema chiaro**: i pulsanti grigi con testo bianco (15 punti dell'app: moduli «Nuovo», finestre dei widget…) avevano il testo bianco su grigio chiaro. Ora nel tema chiaro il testo prende il colore del tema.
+- **Pannelli laterali**: le azioni stanno sempre sotto il titolo (anche su computer), perché accanto lo facevano troncare («Provvigio…») quando erano quattro.
+- **Guida illustrata in PDF** (`docs/guida-utente/Guida-illustrata.pdf`, 35 pagine, 43 schermate): ogni azione dei moduli, della Dashboard e delle Impostazioni, con l'intestazione grafica comune dei PDF. Le schermate sono di un ambiente di prova con dati di esempio, non di zucca.
+- **Da sistemare (non toccato)**: nelle Provvigioni il «Totale con IVA» usa la percentuale scritta a mano e ignora lo scaglione: con percentuale vuota e prezzo 152.000 € la scheda mostra «Provvigione da scaglione 4.560» e «Totale con IVA 0». La guida lo spiega; la soluzione di fondo è far usare lo scaglione al calcolo del totale.
+
 ## 0.4.56 — 7 novembre 2026
 
 **La scheda di dettaglio torna usabile su telefono.**

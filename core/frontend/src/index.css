@@ -126,6 +126,8 @@
    utilities → vince per ordine di sorgente a parità di specificità, senza
    !important. NON tocca le varianti quasi opache (/90+, banner/toast interi
    con testo chiaro pensato per quello sfondo). */
+:root[data-theme="light"] .bg-gray-800.text-white,
+:root[data-theme="light"] .bg-gray-700.text-white { color: rgb(var(--ink)); } /* i pulsanti «Annulla» grigi col testo bianco: nel tema chiaro il grigio è chiaro e il testo spariva */
 :root[data-theme="light"] .bg-amber-900\/10 { background-color: rgb(254 243 199); }
 :root[data-theme="light"] .bg-amber-900\/20 { background-color: rgb(254 243 199); }
 :root[data-theme="light"] .bg-amber-900\/30 { background-color: rgb(254 243 199); }

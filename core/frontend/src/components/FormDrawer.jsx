@@ -22,11 +22,11 @@ function FormDrawer({ title, onClose, children, footer, wide, headerExtra }) {
         className={'bg-surface-card h-full border-l border-gray-800 flex flex-col ' + (wide ? 'w-full max-w-3xl' : 'w-full max-w-xl')}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Intestazione: il titolo ha la sua riga (non si spezza in tre righe), le azioni (headerExtra) vanno sotto su telefono, a capo se non stanno in una riga (tutte visibili, niente scorrimento nascosto), e accanto al titolo da tablet in su. */}
+        {/* Intestazione: il titolo ha la sua riga (non si spezza in tre righe), le azioni (headerExtra) vanno SEMPRE sotto, a capo se non stanno in una riga (tutte visibili, niente scorrimento nascosto): accanto al titolo lo facevano troncare («Provvigio…»). */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-800 flex-shrink-0">
           <h2 className="flex-1 min-w-0 text-lg font-bold text-ink truncate">{title}</h2>
-          <button onClick={onClose} aria-label="Chiudi" className="text-gray-500 hover:text-ink transition p-1 sm:order-3"><Icon name="x" size={18} /></button>
-          {headerExtra && <div className="order-last sm:order-2 w-full sm:w-auto flex flex-wrap items-center gap-2">{headerExtra}</div>}
+          <button onClick={onClose} aria-label="Chiudi" className="text-gray-500 hover:text-ink transition p-1"><Icon name="x" size={18} /></button>
+          {headerExtra && <div className="order-last w-full flex flex-wrap items-center gap-2">{headerExtra}</div>}
         </div>
         {/* overflow-x-hidden (2026-10-31, bug reale segnalato dal vivo: "il dettaglio aperto
             da mobile risulta sfalsato") — un <input type="date"> su iOS Safari ha una
