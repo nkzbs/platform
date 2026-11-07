@@ -1,0 +1,6 @@
+{
+  "_descrizione": "Relazioni da riallineare nei moduli del verticale Mediazione immobiliare: un modulo della Libreria può citare un modulo con uno slug che nei tenant di questo verticale non esiste (`da`), mentre il modulo giusto c'è con un altro slug (`a`). Le applica seed-blocchi-verticale.js: solo se il bersaglio vecchio NON esiste (né come slug né come slug della Libreria) e quello nuovo sì; il campo mostrato (`display_field`) deve esistere nel modulo nuovo.",
+  "richieste_privacy": [
+    { "chiave": "cliente", "da": "clienti_generico", "a": "clienti", "display_field": "nome" }
+  ]
+}

@@ -66,6 +66,26 @@ async function main() {
     ok(/notaio/i.test(az.body), 'il documento avverte di farlo rivedere');
   });
 
+  await test('la relazione che cita un modulo inesistente si riallinea al modulo giusto, una volta sola; se il vecchio bersaglio esiste o il nuovo manca non si tocca', async () => {
+    const REL = { rp: [{ chiave: 'cliente', da: 'clienti_generico', a: 'clienti', display_field: 'nome' }] };
+    const relazione = (target) => ({ id: 'rel_c', block_type: 'relation', key: 'cliente', label: 'Cliente', type: 'many_to_one', target_module: target, display_field: 'ragione_sociale' });
+    add('rp', [F('titolo'), relazione('clienti_generico')]); chiamate.length = 0;
+    const e1 = await seedEngine.riallineaRelazioni(REL, { callAs: finto() });
+    eq(e1.map((e) => e.esito), ['applicato']);
+    const rel = JSON.parse(db.prepare("SELECT schema_json FROM modules WHERE slug = 'rp'").get().schema_json).steps.find((x) => x.key === 'cliente');
+    eq([rel.target_module, rel.display_field], ['clienti', 'nome']);
+    chiamate.length = 0; eq(await seedEngine.riallineaRelazioni(REL, { callAs: finto() }), []); eq(chiamate, [], 'una volta sola');
+    // il vecchio bersaglio esiste (anche come slug della Libreria): niente da riallineare
+    add('rp2', [relazione('clienti_generico')]); db.prepare("UPDATE modules SET registry_slug = 'clienti_generico' WHERE slug = 'clienti'").run();
+    eq(await seedEngine.riallineaRelazioni({ rp2: REL.rp }, { callAs: finto() }), []);
+    ok(JSON.parse(db.prepare("SELECT schema_json FROM modules WHERE slug = 'rp2'").get().schema_json).steps[0].target_module === 'clienti_generico', 'non toccato');
+    // il modulo giusto non c'è: riprova senza segnare
+    db.prepare("UPDATE modules SET registry_slug = NULL WHERE slug = 'clienti'").run(); add('rp3', [relazione('clienti_generico')]);
+    eq(await seedEngine.riallineaRelazioni({ rp3: [{ ...REL.rp[0], a: 'inesistente' }] }, { callAs: finto() }), []);
+    ok(!db.prepare("SELECT 1 FROM seed_applicati WHERE chiave = 'relazione:rp3:cliente'").get(), 'riproverà');
+    eq(require('./seeds/relazioni-immobiliare.json').richieste_privacy[0].a, 'clienti');
+  });
+
   console.log(`\n${passed} passati, ${failed} falliti`);
   try { fs.unlinkSync(process.env.DB_PATH); } catch (e) {}
   process.exit(failed ? 1 : 0);

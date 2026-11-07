@@ -230,6 +230,37 @@ async function creaModuli(seed = require('./seeds/moduli-immobiliare.json'), { c
   return esiti;
 }
 
+// Le relazioni da riallineare (seeds/relazioni-immobiliare.json): una relazione che cita un modulo che nel tenant non esiste (né come slug né come slug della Libreria) mentre il modulo giusto
+// c'è con un altro slug. Passa da bozza e pubblicazione del Builder; una volta sola per relazione (marcatore `relazione:<modulo>:<chiave>`); se il modulo giusto non c'è ancora, ci riprova.
+async function riallineaRelazioni(seed = require('./seeds/relazioni-immobiliare.json'), { callAs = require('./lib/internal-api').callAs } = {}) {
+  const esiti = [];
+  const admin = db.prepare("SELECT * FROM users WHERE role = 'admin' LIMIT 1").get();
+  const esiste = (slug) => !!db.prepare('SELECT 1 FROM modules WHERE installed = 1 AND (slug = ? OR registry_slug = ?)').get(slug, slug);
+  for (const [slug, lista] of Object.entries(seed)) {
+    if (slug.startsWith('_') || !Array.isArray(lista)) continue;
+    for (const r of lista) {
+      const chiave = 'relazione:' + slug + ':' + r.chiave;
+      if (gia(chiave) || !admin) continue;
+      const m = db.prepare('SELECT schema_json FROM modules WHERE slug = ? AND installed = 1').get(slug);
+      if (!m) continue;
+      let schema; try { schema = JSON.parse(m.schema_json); } catch (e) { continue; }
+      if (schema.version !== 3 || !Array.isArray(schema.steps)) continue;
+      const rel = schema.steps.find((x) => x.block_type === 'relation' && x.key === r.chiave);
+      if (!rel || rel.target_module !== r.da || esiste(r.da)) { segna(chiave); continue; } // niente da riallineare
+      const bersaglio = db.prepare('SELECT slug FROM modules WHERE installed = 1 AND (slug = ? OR registry_slug = ?)').get(r.a, r.a);
+      if (!bersaglio) continue; // il modulo giusto non c'è ancora: riproverà
+      const campi = chiaviDelModulo(bersaglio.slug) || new Set();
+      const steps = schema.steps.map((x) => (x === rel ? { ...x, target_module: bersaglio.slug, ...(r.display_field && campi.has(r.display_field) ? { display_field: r.display_field } : {}) } : x));
+      const bozza = await callAs(admin, 'PUT', '/builder/' + slug + '/draft', { schema: { version: 3, steps } });
+      if (!bozza.ok) { console.error('[seed-blocchi] bozza ' + slug + '/' + r.chiave + ' fallita:', JSON.stringify(bozza.data)); esiti.push({ slug, key: r.chiave, esito: 'errore bozza' }); continue; }
+      const pub = await callAs(admin, 'POST', '/builder/' + slug + '/publish', {});
+      if (!pub.ok) { console.error('[seed-blocchi] pubblicazione ' + slug + '/' + r.chiave + ' fallita:', JSON.stringify(pub.data)); esiti.push({ slug, key: r.chiave, esito: 'errore pubblicazione' }); continue; }
+      segna(chiave); esiti.push({ slug, key: r.chiave, esito: 'applicato' });
+    }
+  }
+  return esiti;
+}
+
 // I «ruoli del modulo» del verticale (seeds/ruoli-immobiliare.json): si dichiarano solo se il modulo esiste, è installato, NON ne ha già una (si completa,
 // non si sovrascrive) e ha tutti i campi che la dichiarazione cita. Una volta sola per modulo (marcatore `ruoli:<slug>`); se il modulo non c'è ancora, ci riprova al giro dopo.
 function dichiaraRuoli(seed = require('./seeds/ruoli-immobiliare.json')) {
@@ -266,10 +297,12 @@ async function run() {
         esiti.filter((e) => e.esito === 'applicato').forEach((e) => { applicati++; console.log('[seed-blocchi] ' + cfg.nome + ' «' + e.key + '» aggiunto al modulo ' + e.slug); });
       } catch (e) { console.error('[seed-blocchi] ' + cfg.nome + ': non riuscito:', e.message); }
     }
+    try { (await riallineaRelazioni()).filter((e) => e.esito === 'applicato').forEach((e) => { applicati++; console.log('[seed-blocchi] relazione «' + e.key + '» di ' + e.slug + ' riallineata'); }); }
+    catch (e) { console.error('[seed-blocchi] relazioni: non riuscito:', e.message); }
     try { dichiaraRuoli().forEach((e) => { applicati++; console.log('[seed-blocchi] ruoli del modulo ' + e.slug + ' dichiarati'); }); }
     catch (e) { console.error('[seed-blocchi] ruoli dei moduli: non riuscito:', e.message); }
     if (!applicati) break;
   }
 }
 
-module.exports = { applicaSeed, modelloApplicabile, abbinamentoApplicabile, TIPI, dichiaraRuoli, creaModuli, run };
+module.exports = { applicaSeed, modelloApplicabile, abbinamentoApplicabile, TIPI, dichiaraRuoli, creaModuli, riallineaRelazioni, run };

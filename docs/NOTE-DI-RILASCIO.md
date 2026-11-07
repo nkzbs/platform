@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.38 — 7 novembre 2026
+
+**La relazione «Cliente» di Richieste Privacy ora punta al Clienti vero.** Il modulo della Libreria cita `clienti_generico`, uno slug che nei tenant di questo verticale non esiste (il modulo si chiama `clienti`): l'app legge i record dello slug citato, quindi il campo non mostrava nessun cliente. Trovato confrontando zucca con un tenant nato dall'analisi: lo avevano entrambi.
+
+- **Seed `seeds/relazioni-immobiliare.json`** (`riallineaRelazioni` in `seed-blocchi-verticale.js`): una relazione che cita un modulo inesistente (né come slug né come slug della Libreria) si riallinea al modulo giusto, e il campo mostrato passa a `nome` (prima `ragione_sociale`, che Clienti non ha). Da bozza e pubblicazione del Builder, una volta sola per relazione; se il vecchio bersaglio esiste o il nuovo manca, non tocca nulla.
+- Vale per zucca (all'**Aggiorna**) e per ogni tenant nuovo del verticale, senza modificare il modulo nella Libreria.
+- Test nuovo in `moduli-verticale.test.js`.
+- **Da sapere**: i record di Richieste Privacy già scritti non hanno un cliente collegato (il campo era vuoto); si collega a mano dove serve.
+
 ## 0.4.37 — 7 novembre 2026
 
 **Società e cessione di quote, e Promemoria e ricorrenze: i due lavori «da costruire» dell'analisi di zucca sono costruiti.** Più i widget della Dashboard dell'analisi.
