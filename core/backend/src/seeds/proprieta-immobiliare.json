@@ -1,0 +1,5 @@
+{
+  "_descrizione": "Proprietà a livello di modulo del verticale Mediazione immobiliare, applicate una volta sola da seed-blocchi-verticale.js (poi si cambiano dal Builder e non tornano indietro). `quick_toggle: 0` toglie il cerchio rapido dalla tabella: ricavato da una coppia di stati che si rimandano indietro (Immobili: In vendita ↔ In trattativa; Clienti: Documenti inviati ↔ Verifica identità), non è un «fatto / da fare», quindi sulle righe non vuol dire niente.",
+  "immobili": { "quick_toggle": 0 },
+  "clienti": { "quick_toggle": 0 }
+}

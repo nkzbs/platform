@@ -261,6 +261,23 @@ async function riallineaRelazioni(seed = require('./seeds/relazioni-immobiliare.
   return esiti;
 }
 
+// Le proprietà di modulo del verticale (seeds/proprieta-immobiliare.json: oggi solo `quick_toggle`, il cerchio rapido in tabella). Una volta sola per modulo (marcatore `proprieta:<slug>`):
+// se poi qualcuno le cambia dal Builder, al riavvio non tornano indietro. Il modulo che non c'è (ancora) si riprova.
+async function impostaProprieta(seed = require('./seeds/proprieta-immobiliare.json'), { callAs = require('./lib/internal-api').callAs } = {}) {
+  const esiti = [];
+  const admin = db.prepare("SELECT * FROM users WHERE role = 'admin' LIMIT 1").get();
+  for (const [slug, prop] of Object.entries(seed)) {
+    if (slug.startsWith('_') || !prop || typeof prop !== 'object') continue;
+    const chiave = 'proprieta:' + slug;
+    if (gia(chiave) || !admin || !db.prepare('SELECT 1 FROM modules WHERE slug = ? AND installed = 1').get(slug)) continue;
+    const corpo = {}; if (prop.quick_toggle !== undefined) corpo.quick_toggle = !!prop.quick_toggle;
+    const r = await callAs(admin, 'PATCH', '/modules/' + slug, corpo);
+    if (!r.ok) { console.error('[seed-blocchi] proprietà di ' + slug + ' non impostate:', JSON.stringify(r.data)); esiti.push({ slug, esito: 'errore' }); continue; }
+    segna(chiave); esiti.push({ slug, esito: 'applicato' });
+  }
+  return esiti;
+}
+
 // I «ruoli del modulo» del verticale (seeds/ruoli-immobiliare.json): si dichiarano solo se il modulo esiste, è installato, NON ne ha già una (si completa,
 // non si sovrascrive) e ha tutti i campi che la dichiarazione cita. Una volta sola per modulo (marcatore `ruoli:<slug>`); se il modulo non c'è ancora, ci riprova al giro dopo.
 function dichiaraRuoli(seed = require('./seeds/ruoli-immobiliare.json')) {
@@ -299,10 +316,12 @@ async function run() {
     }
     try { (await riallineaRelazioni()).filter((e) => e.esito === 'applicato').forEach((e) => { applicati++; console.log('[seed-blocchi] relazione «' + e.key + '» di ' + e.slug + ' riallineata'); }); }
     catch (e) { console.error('[seed-blocchi] relazioni: non riuscito:', e.message); }
+    try { (await impostaProprieta()).filter((e) => e.esito === 'applicato').forEach((e) => { applicati++; console.log('[seed-blocchi] proprietà del modulo ' + e.slug + ' impostate'); }); }
+    catch (e) { console.error('[seed-blocchi] proprietà dei moduli: non riuscito:', e.message); }
     try { dichiaraRuoli().forEach((e) => { applicati++; console.log('[seed-blocchi] ruoli del modulo ' + e.slug + ' dichiarati'); }); }
     catch (e) { console.error('[seed-blocchi] ruoli dei moduli: non riuscito:', e.message); }
     if (!applicati) break;
   }
 }
 
-module.exports = { applicaSeed, modelloApplicabile, abbinamentoApplicabile, TIPI, dichiaraRuoli, creaModuli, riallineaRelazioni, run };
+module.exports = { applicaSeed, modelloApplicabile, abbinamentoApplicabile, TIPI, dichiaraRuoli, creaModuli, riallineaRelazioni, impostaProprieta, run };

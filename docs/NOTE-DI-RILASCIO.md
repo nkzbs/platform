@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.39 — 7 novembre 2026
+
+**Il cerchio rapido in tabella non compare più in Immobili e Clienti.** Il cerchio (cambia stato senza aprire la riga) si deduce da due stati che si rimandano indietro; in Immobili sono In vendita ↔ In trattativa e in Clienti Documenti inviati ↔ Verifica identità: non sono «fatto / da fare», quindi su una riga come «Ritirato» il cerchio non vuol dire niente.
+
+- **Seed `seeds/proprieta-immobiliare.json`** (`impostaProprieta`): imposta `quick_toggle: 0` su Immobili e Clienti una volta sola, dalla rotta vera dei moduli; se poi si riaccende dal Builder («Cerchio rapido in tabella») non torna spento. Vale per zucca (all'**Aggiorna**) e per i tenant nuovi.
+- Test nuovo in `moduli-verticale.test.js`.
+- Lasciato com'è su Attività, dove il cerchio ha senso.
+
 ## 0.4.38 — 7 novembre 2026
 
 **La relazione «Cliente» di Richieste Privacy ora punta al Clienti vero.** Il modulo della Libreria cita `clienti_generico`, uno slug che nei tenant di questo verticale non esiste (il modulo si chiama `clienti`): l'app legge i record dello slug citato, quindi il campo non mostrava nessun cliente. Trovato confrontando zucca con un tenant nato dall'analisi: lo avevano entrambi.

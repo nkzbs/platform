@@ -86,6 +86,17 @@ async function main() {
     eq(require('./seeds/relazioni-immobiliare.json').richieste_privacy[0].a, 'clienti');
   });
 
+  await test('il cerchio rapido si toglie da Immobili e Clienti una volta sola, senza rimetterlo se poi lo si riaccende; senza il modulo riprova', async () => {
+    const seed = require('./seeds/proprieta-immobiliare.json');
+    eq(seed.immobili, { quick_toggle: 0 }); eq(seed.clienti, { quick_toggle: 0 });
+    const prop = []; const callAs = async (u, m, p, b) => { prop.push(m + ' ' + p + ' ' + JSON.stringify(b)); return { ok: true, data: {} }; };
+    db.prepare("DELETE FROM seed_applicati WHERE chiave LIKE 'proprieta:%'").run(); db.prepare("DELETE FROM modules WHERE slug = 'immobili'").run();
+    eq((await seedEngine.impostaProprieta(seed, { callAs })).map((e) => e.slug), ['clienti']); eq(prop, ['PATCH /modules/clienti {"quick_toggle":false}']);
+    add('immobili', [F('titolo')]); prop.length = 0;
+    eq((await seedEngine.impostaProprieta(seed, { callAs })).map((e) => e.slug), ['immobili']); eq(prop, ['PATCH /modules/immobili {"quick_toggle":false}']);
+    prop.length = 0; eq(await seedEngine.impostaProprieta(seed, { callAs }), []); eq(prop, [], 'una volta sola');
+  });
+
   console.log(`\n${passed} passati, ${failed} falliti`);
   try { fs.unlinkSync(process.env.DB_PATH); } catch (e) {}
   process.exit(failed ? 1 : 0);
