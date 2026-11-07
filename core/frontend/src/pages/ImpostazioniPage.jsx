@@ -47,6 +47,7 @@ function ConnessioniTab({ token, user, features = {} }) {
   const [saving, setSaving] = useState(false)
   const [waTest, setWaTest] = useState(null) // { busy } oppure { esito, dettaglio, error }
   const [speseOa, setSpeseOa] = useState(null) // spese di OpenAPI.it: contatore del mese, tetto, prezzi, ultime richieste
+  const [demoOa, setDemoOa] = useState(null) // dati dimostrativi: { disponibili, totale, presenti, piano?, busy?, risultato?, errore? }
   const [serviziOa, setServiziOa] = useState(null) // controllo dei servizi OpenAPI.it: { busy } oppure { ambiente, servizi } oppure { error }
 
   const loadConnections = async () => { const data = await api.get('/connections'); if (data) setConnections(data) }
@@ -76,6 +77,23 @@ function ConnessioniTab({ token, user, features = {} }) {
     if (res.ok) setSpeseOa(res.data); else setSpeseOa((x) => ({ ...(x || {}), errore: (res.data && res.data.error) || 'Non salvato.' }))
   }
   useEffect(() => { if (openFor === 'openapi_it' && connections.some((c) => c.id === 'openapi_it' && c.connected)) caricaSpeseOa() }, [openFor, connections]) // eslint-disable-line react-hooks/exhaustive-deps
+  const caricaDemoOa = async () => { const d = await api.get('/connections/openapi_it/dati-dimostrativi'); if (d) setDemoOa((x) => ({ ...(x || {}), ...d })) }
+  // Carica i dati dimostrativi: la prima richiesta torna con il piano dei costi da confermare (409), la seconda (conferma) li carica davvero.
+  const avviaDemoOa = async (conferma = false) => {
+    setDemoOa((x) => ({ ...(x || {}), busy: true, errore: null, risultato: null }))
+    const res = await api.post('/connections/openapi_it/dati-dimostrativi', { conferma })
+    if (!res.ok && res.data && res.data.code === 'conferma_costo') { setDemoOa((x) => ({ ...(x || {}), busy: false, piano: res.data })); return }
+    if (!res.ok) { setDemoOa((x) => ({ ...(x || {}), busy: false, piano: null, errore: (res.data && res.data.error) || 'Caricamento non riuscito.' })); return }
+    setDemoOa((x) => ({ ...(x || {}), busy: false, piano: null, risultato: res.data, presenti: res.data.presenti, totale: Object.values(res.data.presenti || {}).reduce((a, b) => a + b, 0) }))
+    caricaSpeseOa()
+  }
+  const togliDemoOa = async () => {
+    if (!window.confirm('Togliere tutti i dati dimostrativi? I dati veri non si toccano.')) return
+    setDemoOa((x) => ({ ...(x || {}), busy: true, errore: null, risultato: null }))
+    const res = await api.del('/connections/openapi_it/dati-dimostrativi')
+    setDemoOa((x) => ({ ...(x || {}), busy: false, piano: null, presenti: (res.data && res.data.presenti) || {}, totale: 0, rimossi: res.ok ? res.data.rimossi : null, errore: res.ok ? null : 'Rimozione non riuscita.' }))
+  }
+  useEffect(() => { if (openFor === 'openapi_it' && connections.some((c) => c.id === 'openapi_it' && c.connected)) caricaDemoOa() }, [openFor, connections]) // eslint-disable-line react-hooks/exhaustive-deps
   const toggle = (id) => { const next = openFor === id ? null : id; setOpenFor(next); if (next) setCredForm(initialCredForm(next)) }
 
   const connectGoogle = () => { window.location.href = API + '/integrazioni/google/oauth/start' }
@@ -235,6 +253,48 @@ function ConnessioniTab({ token, user, features = {} }) {
                               ))}
                             </div>
                           </details>
+                        )}
+                      </div>
+                    )}
+                    {row.id === 'openapi_it' && row.connected && demoOa && demoOa.disponibili && (
+                      <div className="mt-4 pt-4 border-t border-gray-800">
+                        <div className="text-sm text-ink font-medium">Dati dimostrativi</div>
+                        <div className="text-xs text-gray-500 mt-0.5 leading-snug">Per mostrare cosa sa fare il portale: imprese dalle visure camerali, annunci vicino ad alcuni indirizzi e qualche cliente, trattativa e provvigione inventati che li collegano. Ogni dato è segnato come dimostrativo e si toglie tutto con un clic: i dati veri non si toccano.</div>
+                        {demoOa.totale > 0 ? (
+                          <div className="mt-2 flex items-center gap-3 flex-wrap">
+                            <span className="text-xs text-gray-300">{Object.entries(demoOa.presenti || {}).map(([m, n]) => n + ' in «' + m + '»').join(' · ')}</span>
+                            <button onClick={togliDemoOa} disabled={demoOa.busy} className="text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-200 px-3 py-1.5 rounded-lg transition">Togli i dati dimostrativi ({demoOa.totale})</button>
+                          </div>
+                        ) : !demoOa.piano && (
+                          <button onClick={() => avviaDemoOa(false)} disabled={demoOa.busy} className="mt-2 text-xs bg-accent hover:opacity-90 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg transition font-medium">{demoOa.busy ? 'Un attimo…' : 'Carica i dati dimostrativi'}</button>
+                        )}
+                        {demoOa.piano && (
+                          <div className="mt-3 bg-accent/10 border border-accent/30 rounded-lg p-3 text-xs" role="alertdialog" aria-label="Conferma del costo">
+                            <div className="font-semibold text-ink mb-1.5">Conferma cosa verrà chiesto a OpenAPI.it</div>
+                            {demoOa.piano.piano.voci.map((v, i) => (
+                              <div key={i} className="flex justify-between gap-3 text-gray-400 py-0.5">
+                                <span>{v.descrizione}</span>
+                                <span className="text-gray-300 whitespace-nowrap">{v.noto ? (v.costo_unitario === 0 ? 'senza costi' : v.richieste + ' × ' + Number(v.costo_unitario).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })) : 'prezzo non indicato'}</span>
+                              </div>
+                            ))}
+                            <div className="mt-1.5 text-gray-300">
+                              {demoOa.piano.ambiente === 'prova' ? 'Sei in ambiente di prova: non si paga. In produzione sarebbero circa ' : 'Costo previsto: circa '}
+                              <span className="font-semibold text-ink">{Number(demoOa.piano.piano.totale).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}</span>
+                              {demoOa.piano.piano.ignoti > 0 ? ' più le richieste con prezzo non indicato (le imposti qui sopra)' : ''}. Spesa del mese: {Number(demoOa.piano.speso_mese).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}{demoOa.piano.tetto ? ' su un tetto di ' + Number(demoOa.piano.tetto).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' }) : ''}.
+                            </div>
+                            <div className="flex gap-2 mt-2.5">
+                              <button onClick={() => avviaDemoOa(true)} disabled={demoOa.busy} className="bg-accent hover:opacity-90 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg font-medium">{demoOa.busy ? 'Carico…' : 'Procedi'}</button>
+                              <button onClick={() => setDemoOa((x) => ({ ...x, piano: null }))} className="bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-lg">Annulla</button>
+                            </div>
+                          </div>
+                        )}
+                        {demoOa.errore && <div className="text-xs text-amber-500 mt-2">{demoOa.errore}</div>}
+                        {demoOa.rimossi && <div className="text-xs text-gray-400 mt-2">Tolti: {Object.entries(demoOa.rimossi).map(([m, n]) => n + ' in «' + m + '»').join(' · ') || 'niente'}.</div>}
+                        {demoOa.risultato && (
+                          <div className="text-xs mt-2 text-gray-300">
+                            <div className="font-medium text-ink">Caricati: {Object.entries(demoOa.risultato.creati).map(([m, n]) => n + ' in «' + m + '»').join(' · ') || 'nessun dato'}.</div>
+                            {demoOa.risultato.avvisi.map((a, i) => <div key={i} className="text-amber-500 mt-0.5">• {a}</div>)}
+                          </div>
                         )}
                       </div>
                     )}

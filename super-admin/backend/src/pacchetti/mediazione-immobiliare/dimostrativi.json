@@ -1,0 +1,146 @@
+{
+  "_descrizione": "Dati dimostrativi di Mediazione immobiliare: cosa prelevare da OpenAPI.it (imprese dalle visure camerali, annunci vicino a un indirizzo) e quali record inventati aggiungere per collegarli. Ogni record porta `_demo` e si toglie tutto da Impostazioni → Connessioni → OpenAPI.it. Forma e regole nei commenti di core/backend/src/lib/dati-dimostrativi.js.",
+  "fonti": [
+    {
+      "id": "societa",
+      "tipo": "imprese",
+      "modulo": "clienti",
+      "provincia": "BS",
+      "limite": 6,
+      "campi": {
+        "nome": "{denominazione}",
+        "tipo_soggetto": "Società",
+        "tipo_cliente": "Venditore",
+        "indirizzo": "{comune}",
+        "note": "Dato dimostrativo: impresa trovata nelle visure camerali (OpenAPI.it)."
+      }
+    },
+    {
+      "id": "annunci",
+      "tipo": "annunci",
+      "modulo": "immobili",
+      "per_indirizzo": 4,
+      "raggio_metri": 3000,
+      "indirizzi": [
+        "Via Marconi 10, Desenzano del Garda",
+        "Via Roma 20, Sirmione",
+        "Piazza Municipio 1, Peschiera del Garda"
+      ],
+      "campi": {
+        "titolo": "{property_type} · {address}",
+        "tipologia": {
+          "da": "property_type",
+          "mappa": {
+            "Appartamento": "Appartamento",
+            "Bilocale": "Bilocale",
+            "Trilocale": "Trilocale",
+            "Villa": "Villa",
+            "Villetta a schiera": "Villa",
+            "Casa indipendente": "Casa indipendente",
+            "Attico": "Attico",
+            "Ufficio": "Ufficio",
+            "Negozio": "Negozio",
+            "Box": "Box/Garage",
+            "Garage": "Box/Garage",
+            "Terreno": "Terreno"
+          },
+          "predefinito": "Altro"
+        },
+        "indirizzo": "{address}, {municipality}",
+        "comune": "{municipality}",
+        "provincia": "{province_code}",
+        "superficie_mq": "{total_sqm}",
+        "locali": "{rooms}",
+        "numero_camere": "{bedrooms}",
+        "numero_bagni": "{bathrooms}",
+        "piano": "{floor}",
+        "prezzo_richiesto": "{price}",
+        "stima_eur_mq": "{price_per_sqm}",
+        "stima_data": "{oggi}",
+        "stima_fonte": "Dato dimostrativo: annuncio vicino a un indirizzo (OpenAPI.it)",
+        "note": "Dato dimostrativo: annuncio di zona, non un immobile dell'agenzia.",
+        "_stato": "in_mandato"
+      }
+    }
+  ],
+  "statici": [
+    {
+      "alias": "acquirente",
+      "modulo": "clienti",
+      "campi": {
+        "nome": "Anna Esempio (dimostrativo)",
+        "email": "anna.esempio@example.com",
+        "telefono": "+39 000 000 0001",
+        "tipo_soggetto": "Persona fisica",
+        "tipo_cliente": "Acquirente",
+        "esigenza_acquisto": "Cerca immobile",
+        "ricerca_tipologia": "Villa",
+        "ricerca_budget_max": 900000,
+        "ricerca_zona": "Desenzano del Garda",
+        "note": "Cliente inventato per la dimostrazione."
+      }
+    },
+    {
+      "alias": "venditore",
+      "modulo": "clienti",
+      "campi": {
+        "nome": "Mario Esempio (dimostrativo)",
+        "email": "mario.esempio@example.com",
+        "telefono": "+39 000 000 0002",
+        "tipo_soggetto": "Persona fisica",
+        "tipo_cliente": "Venditore",
+        "note": "Cliente inventato per la dimostrazione."
+      }
+    },
+    {
+      "alias": "trattativa",
+      "modulo": "trattative",
+      "stato": "preliminare_firmato",
+      "relazioni": {
+        "cliente": "acquirente",
+        "venditore": "venditore",
+        "acquirente": "acquirente",
+        "immobile": "fonte:annunci#0"
+      },
+      "campi": {
+        "titolo": "Trattativa dimostrativa",
+        "tipo": "Vendita",
+        "prezzo_concordato": 860000,
+        "data_incontro": "{oggi-30}",
+        "data_preliminare": "{oggi+10}",
+        "data_rogito": "{oggi+45}",
+        "note": "Trattativa inventata per la dimostrazione."
+      }
+    },
+    {
+      "alias": "provvigione",
+      "modulo": "provvigioni",
+      "stato": "da_fatturare",
+      "relazioni": {
+        "trattativa": "trattativa",
+        "cliente": "venditore"
+      },
+      "campi": {
+        "descrizione": "Provvigione dimostrativa (venditore)",
+        "tipo": "Provvigione preliminare",
+        "parte": "Venditore",
+        "percentuale": 3,
+        "base_imponibile": 860000,
+        "data_scadenza": "{oggi+20}"
+      }
+    },
+    {
+      "alias": "contatto",
+      "modulo": "interazioni",
+      "stato": "pianificata",
+      "relazioni": {
+        "cliente": "acquirente"
+      },
+      "campi": {
+        "tipo": "Visita",
+        "data_ora": "{oggi+3}T10:00",
+        "prossimo_contatto": "{oggi+3}"
+      }
+    }
+  ]
+}

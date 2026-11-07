@@ -20,6 +20,8 @@ db.exec('CREATE TABLE IF NOT EXISTS openapi_impostazioni (chiave TEXT PRIMARY KE
 // Prezzi di listino in € a richiesta (IVA esclusa), dal catalogo di OpenAPI.it. `null` = non indicato nelle pagine viste: va scritto dall'utente.
 const SERVIZI = {
   valutazione_immobiliare: { nome: 'Valutazione di mercato (Real Estate)', prezzo: null },
+  real_estate_comparabili: { nome: 'Real Estate — annunci comparabili vicino a un punto', prezzo: null },
+  visure_ricerca_imprese: { nome: 'Visure camerali — ricerca di imprese (senza costi di ricerca)', prezzo: 0 },
   catasto_indirizzo: { nome: 'Catasto — cerca un indirizzo', prezzo: 0.10 },
   catasto_foglio: { nome: 'Catasto — foglio catastale', prezzo: 0.30 },
   catasto_particella: { nome: 'Catasto — particella catastale', prezzo: 0.30 },

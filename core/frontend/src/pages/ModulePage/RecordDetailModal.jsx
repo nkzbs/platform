@@ -587,7 +587,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                 <Icon name="file" size={12} />{docInPreparazione !== null ? 'Preparo…' : 'Documenti'}<Icon name="chevron-down" size={11} />
               </button>
               {menuDoc && (
-                <div role="menu" className="absolute right-0 top-full mt-1 z-30 min-w-[260px] bg-surface-card border border-gray-700 rounded-lg shadow-lg py-1">
+                <div role="menu" className="fixed left-3 right-3 top-auto mt-1 z-30 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:min-w-[260px] bg-surface-card border border-gray-700 rounded-lg shadow-lg py-1">
                   {documenti.map((az) => (
                     <button key={az.key} role="menuitem" onClick={() => { setMenuDoc(false); apriDocumento(az) }} className="w-full text-left px-3 py-2 hover:bg-white/5 transition flex items-start gap-2">
                       <Icon name={az.icon || 'mail'} size={13} className="mt-0.5 text-accent flex-shrink-0" />

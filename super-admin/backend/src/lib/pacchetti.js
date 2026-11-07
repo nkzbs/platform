@@ -8,7 +8,7 @@ const path = require('path');
 const { marcatoriDelPacchetto } = require('../../../../shared/pacchetto-marcatori.js');
 
 const CARTELLA = path.join(__dirname, '..', 'pacchetti');
-const PARTI = ['estensioni', 'documenti', 'abbinamenti', 'moduli', 'ruoli', 'relazioni', 'proprieta', 'sezioni'];
+const PARTI = ['estensioni', 'documenti', 'abbinamenti', 'moduli', 'ruoli', 'relazioni', 'proprieta', 'sezioni', 'dimostrativi'];
 const SLUG = /^[a-z0-9][a-z0-9-]{0,59}$/;
 
 const disponibili = () => { try { return fs.readdirSync(CARTELLA, { withFileTypes: true }).filter((d) => d.isDirectory() && SLUG.test(d.name)).map((d) => d.name).sort(); } catch (e) { return []; } };

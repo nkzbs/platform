@@ -1,4 +1,5 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react'
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react'
+import { accentoLeggibile } from './lib/accento-leggibile'
 import { API, notifyUnauthorized, setAuth, clearAuth } from './lib/api'
 
 import Login from './components/Login'
@@ -116,6 +117,19 @@ export default function App() {
     return [(n >> 16) & 255, (n >> 8) & 255, n & 255].join(' ')
   }
 
+  // L'accento scelto resta com'è; quello MOSTRATO è schiarito/scurito per restare leggibile sul tema (scuro o chiaro).
+  const accentoScelto = useRef(null)
+  const applicaAccento = () => {
+    if (!accentoScelto.current) return
+    const tema = document.documentElement.getAttribute('data-theme') || 'dark'
+    document.documentElement.style.setProperty('--accent', accentoLeggibile(accentoScelto.current, tema).join(' '))
+  }
+  useEffect(() => {
+    const obs = new MutationObserver(applicaAccento)
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => obs.disconnect()
+  }, [])
+
   const loadTenantName = async () => {
     const res = await fetch(API + '/tenant-info')
     if (!res.ok) return
@@ -126,8 +140,8 @@ export default function App() {
     setAiOn(!!data.ai)
     setTenantLogoUrl(data.app_logo_url || data.logo_url || '')
     setHidePlatformName(!!data.app_name || !!data.hide_platform_name)
-    const triplet = hex2rgbTriplet(data.accent_color)
-    if (triplet) document.documentElement.style.setProperty('--accent', triplet)
+    if (hex2rgbTriplet(data.accent_color)) accentoScelto.current = hex2rgbTriplet(data.accent_color).split(' ').map(Number)
+    applicaAccento()
     document.title = data.app_name ? data.app_name : (data.name ? data.name + ' — Platform' : 'Platform')
   }
 

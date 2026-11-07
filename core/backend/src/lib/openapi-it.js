@@ -27,6 +27,7 @@ const domini = (sandbox) => ({
   oauth: (sandbox ? 'test.' : '') + 'oauth.openapi.com',
   realestate: (sandbox ? 'test.' : '') + 'realestate.openapi.com',
   catasto: (sandbox ? 'test.' : '') + 'catasto.openapi.com',
+  visurecamerali: (sandbox ? 'test.' : '') + 'visurecamerali.openapi.it', // le visure camerali stanno su un dominio .it
 });
 
 // Token in cache per processo, per ambiente — mai nel DB: si rigenera da solo a ogni
@@ -157,6 +158,13 @@ async function esitoRicerca(id) {
 }
 
 
+// Ricerca di imprese per provincia (Visure Camerali, GET /impresa): la ricerca non ha costi. Ogni risultato: id, denominazione, comune, codice_natura_giuridica (niente partita IVA: serve una visura).
+async function cercaImprese({ provincia, limite = 10 }) {
+  const c = credenziali();
+  const scope = 'GET:' + (c ? domini(c.sandbox).visurecamerali : 'visurecamerali.openapi.it') + '/impresa';
+  return chiamataGet('visurecamerali', '/impresa', { provincia, limit: limite }, scope);
+}
+
 // ── Controllo dei servizi attivi ─────────────────────────────────────────────────────────────────────────────────────────────────
 // Quali prodotti di OpenAPI.it la chiave collegata può usare davvero. Per ognuno si chiede il token con lo scope di UNA lettura gratuita (l'elenco delle proprie richieste,
 // o un elenco di servizio) e la si prova: nessun controllo a pagamento parte. L'elenco dei servizi è un dato (nome, dominio, rotta): per un prodotto in più si aggiunge una riga.
@@ -192,4 +200,4 @@ async function verificaServizi() {
   return { ambiente: c.sandbox ? 'prova' : 'produzione', servizi: out };
 }
 
-module.exports = { SERVIZI, verificaServizi, credenziali, valoreAlMq, valoreAlMqAvanzato, comparabili, omi, ricercaPerCF, esitoRicerca };
+module.exports = { SERVIZI, verificaServizi, cercaImprese, credenziali, valoreAlMq, valoreAlMqAvanzato, comparabili, omi, ricercaPerCF, esitoRicerca };

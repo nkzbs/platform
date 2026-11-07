@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.51 — 7 novembre 2026
+
+**Dati dimostrativi da OpenAPI.it, segnati e rimovibili; accento leggibile nel tema scuro; menu Documenti entro lo schermo sul telefono.**
+
+- **Dati dimostrativi** (Impostazioni → Connessioni → OpenAPI.it → «Dati dimostrativi»): il pacchetto del verticale dichiara cosa mostrare (`dimostrativi.json`, versione 3 del pacchetto) e il motore generico `lib/dati-dimostrativi.js` lo carica: imprese reali dalla ricerca gratuita di Visure Camerali, annunci con valutazione e comparabili, e record statici collegati tra loro. Prima di caricare mostra il **piano con i costi** e chiede conferma; rispetta il tetto di spesa. Ogni record creato è segnato `_demo` e **«Togli i dati dimostrativi» li rimuove tutti** senza toccare i dati veri. Rotte `GET/POST/DELETE /api/connections/openapi_it/dati-dimostrativi`. Test `dati-dimostrativi.test.js`.
+- **Accento leggibile**: un colore d'accento scuro (il blu notte di zucca) rendeva quasi invisibili le icone e i testi in tema scuro. Il colore scelto non cambia; quello mostrato viene schiarito (o scurito nel tema chiaro) quanto basta per avere contrasto, e si ricalcola al cambio tema. Colori già leggibili: identici.
+- **Menu «Documenti» su telefono**: era tagliato sul bordo sinistro; ora occupa la larghezza dello schermo sotto i 640 px.
+- **Per averlo su zucca**: Super Admin con il pacchetto v3 (da mettere online), poi «Aggiorna» sul tenant.
+
 ## 0.4.50 — 7 novembre 2026
 
 **Ogni richiesta a pagamento a OpenAPI.it chiede prima il costo e finisce in un contatore delle spese del mese.** In più, i riquadri della scheda tornano leggibili.

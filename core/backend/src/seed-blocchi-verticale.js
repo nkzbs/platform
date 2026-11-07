@@ -336,7 +336,7 @@ const MAX_GIRI = 4;
 // ── Pacchetti di verticale ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 // Un pacchetto è un insieme di dati con una parte per tipo di blocco; ogni parte ha la stessa forma di sempre (`{ <modulo>: [...] }`). Il core NON ne contiene: li
 // custodisce Super Admin (accanto all'analisi) e li INVIA al tenant, che li tiene qui (`pacchetti_ricevuti`) per riapplicarli ai riavvii anche senza Super Admin.
-const PARTI = ['estensioni', 'documenti', 'abbinamenti', 'moduli', 'ruoli', 'relazioni', 'proprieta', 'sezioni'];
+const PARTI = ['estensioni', 'documenti', 'abbinamenti', 'moduli', 'ruoli', 'relazioni', 'proprieta', 'sezioni', 'dimostrativi']; // `dimostrativi` non è un blocco applicato all'avvio: lo legge lib/dati-dimostrativi.js su richiesta
 const SLUG_PACCHETTO = /^[a-z0-9][a-z0-9-]{0,59}$/;
 const LIMITE_PACCHETTO = 2000000; // byte di JSON: un pacchetto vero è di poche decine di KB
 db.exec('CREATE TABLE IF NOT EXISTS pacchetti_attivi (slug TEXT PRIMARY KEY, attivato_il TEXT DEFAULT CURRENT_TIMESTAMP)');

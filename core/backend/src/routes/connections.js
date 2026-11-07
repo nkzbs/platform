@@ -166,6 +166,30 @@ router.put('/openapi_it/impostazioni', requireAuth, requireAdmin, (req, res) => 
   res.json({ ok: true, ...spese.riepilogo(), ambiente: spese.ambiente(), prezzi: spese.elencoPrezzi() });
 });
 
+// I dati dimostrativi (lib/dati-dimostrativi.js): cosa c'è, il piano con i costi, il caricamento (con `conferma: true`) e la rimozione di tutto.
+router.get('/openapi_it/dati-dimostrativi', requireAuth, requireAdmin, (req, res) => {
+  const dd = require('../lib/dati-dimostrativi'), def = dd.definizione();
+  res.json({ disponibili: !!def, presenti: dd.conta(), totale: dd.totaleDemo() });
+});
+router.post('/openapi_it/dati-dimostrativi', requireAuth, requireAdmin, async (req, res) => {
+  const dd = require('../lib/dati-dimostrativi'), spese = require('../lib/openapi-spese'), def = dd.definizione();
+  if (!def) return res.status(404).json({ error: 'Nessun pacchetto attivo ha dati dimostrativi.' });
+  if (dd.totaleDemo() > 0) return res.status(409).json({ error: 'Ci sono già dati dimostrativi: toglili prima di caricarne altri.', code: 'gia_presenti' });
+  const p = dd.piano(def), mese = spese.riepilogo(), amb = spese.ambiente();
+  if (!(req.body && req.body.conferma === true)) return res.status(409).json({ error: 'Conferma il costo prima di caricare.', code: 'conferma_costo', piano: p, ambiente: amb, speso_mese: mese.produzione.speso, tetto: mese.tetto });
+  if (amb === 'produzione' && mese.tetto !== null && mese.produzione.speso + p.totale > mese.tetto) return res.status(402).json({ error: 'Il caricamento (circa ' + p.totale.toFixed(2) + ' €) supera il tetto di spesa mensile (' + mese.tetto.toFixed(2) + ' €, già spesi ' + mese.produzione.speso.toFixed(2) + ' €).', code: 'tetto_superato' });
+  try {
+    const out = await dd.carica({ utente: req.user.username });
+    require('../audit-log').logAudit(req.user.username, 'dati_dimostrativi.carica', null, { creati: out.creati, avvisi: out.avvisi.length });
+    res.json({ ok: true, ...out, presenti: dd.conta() });
+  } catch (e) { res.status(e.status || 500).json({ error: e.message, code: e.code }); }
+});
+router.delete('/openapi_it/dati-dimostrativi', requireAuth, requireAdmin, (req, res) => {
+  const dd = require('../lib/dati-dimostrativi'), out = dd.rimuovi();
+  require('../audit-log').logAudit(req.user.username, 'dati_dimostrativi.rimuovi', null, out.rimossi);
+  res.json({ ok: true, ...out, presenti: dd.conta() });
+});
+
 router.post('/:id/toggle', requireAuth, requireAdmin, (req, res) => {
   if (!CATALOG.some((c) => c.id === req.params.id)) return res.status(404).json({ error: 'Connessione non trovata' });
   const existing = db.prepare('SELECT connected FROM connections WHERE integration_id = ?').get(req.params.id);
