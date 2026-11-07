@@ -87,6 +87,7 @@ async function main() {
     ok(j.avvisi.some((a) => /Via Nessuna/.test(a)), 'un indirizzo senza coordinate si dice, gli altri vanno avanti');
     const t = demoDi('trattative')[0]; const idImm = db.prepare("SELECT id FROM records WHERE module_slug = 'immobili' AND json_extract(data, '$._demo') = 1 ORDER BY id").get().id;
     eq([t._stato, t.immobile, typeof t.cliente], ['avanzata', idImm, 'number'], 'relazioni verso i record creati prima');
+    eq([DD.statoIniziale('trattative'), DD.statoIniziale('clienti'), DD.statoIniziale('non_esiste')], ['bozza', null, null], 'un record senza stato scelto parte dal primo stato del flusso; un modulo senza flusso o assente: nessuno');
     eq(chiamate.filter((c) => /^valutazione/.test(c)).length, 2); ok(chiamate.includes('imprese BS 5'));
     const s = S.riepilogo(); eq([s.prova.richieste, s.prova.stimato], [4, 1.25], '1 ricerca (0) + 2 valutazioni (0,5) + 1 comparabili (0,25): il secondo indirizzo non ha coordinate, quindi niente richiesta di annunci; in prova'); eq(s.produzione.richieste, 0);
     eq(JSON.parse(db.prepare('SELECT data FROM records WHERE id = ?').get(reale).data)._demo, undefined, 'un record vero non viene segnato');

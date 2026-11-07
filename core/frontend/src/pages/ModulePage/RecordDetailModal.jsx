@@ -102,6 +102,24 @@ function VaultPinGate({ token, userId, onUnlocked }) {
   )
 }
 
+// Un modulo può puntare a questo record con PIÙ relazioni (es. Trattative: «Venditore» e «Acquirente» verso lo stesso Cliente). Prima erano due voci uguali («Trattative 1» due volte)
+// e la seconda cancellava le righe della prima. Ora è UNA voce per modulo che tiene tutte le relazioni (`relation_keys`) e unisce le righe, senza doppioni.
+function unisciPerModulo(lista) {
+  const per = new Map()
+  for (const c of lista) {
+    const e = per.get(c.module_slug)
+    if (e) { e.relation_keys.push(c.relation_key); e.relation_labels.push(c.relation_label) } else per.set(c.module_slug, { ...c, relation_keys: [c.relation_key], relation_labels: [c.relation_label] })
+  }
+  return [...per.values()]
+}
+async function caricaRigheFiglie(api, c, recordId) {
+  const liste = await Promise.all((c.relation_keys || [c.relation_key]).map((k) => api.get('/records/' + c.module_slug + '?rel=' + k + '&value=' + recordId)))
+  if (liste.every((l) => !l)) return null
+  const viste = new Set(), out = []
+  for (const l of liste) for (const r of Array.isArray(l) ? l : []) if (!viste.has(r.id)) { viste.add(r.id); out.push(r) }
+  return out
+}
+
 function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token, onSaved, user, canDelete, onDeleted }) {
   const api = useApi(token)
   const [record, setRecord] = useState(null)
@@ -189,7 +207,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
       if (cancelled || !data) return
       setRecord(data)
     })
-    api.get('/modules/' + mod.slug + '/children-modules').then((data) => { if (!cancelled && data) setChildren(data) })
+    api.get('/modules/' + mod.slug + '/children-modules').then((data) => { if (!cancelled && data) setChildren(unisciPerModulo(data)) })
     if (!cancelled && allegatiConfig) {
       api.get('/records/' + mod.slug + '/' + recordId + '/attachments').then((data) => { if (!cancelled && data) setAttachments(data) })
     }
@@ -199,9 +217,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
 
   useEffect(() => {
     children.forEach((c) => {
-      api.get('/records/' + c.module_slug + '?rel=' + c.relation_key + '&value=' + recordId).then((data) => {
-        if (data) setChildData((p) => ({ ...p, [c.module_slug]: data }))
-      })
+      caricaRigheFiglie(api, c, recordId).then((data) => { if (data) setChildData((p) => ({ ...p, [c.module_slug]: data })) })
       api.get('/modules/' + c.module_slug).then((modData) => {
         if (!modData) return
         const sch = parseSchemaFrontend(modData.schema_json)
@@ -222,9 +238,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   }, [children, recordId])
 
   const reloadChild = useCallback((c) => {
-    api.get('/records/' + c.module_slug + '?rel=' + c.relation_key + '&value=' + recordId).then((data) => {
-      if (data) setChildData((p) => ({ ...p, [c.module_slug]: data }))
-    })
+    caricaRigheFiglie(api, c, recordId).then((data) => { if (data) setChildData((p) => ({ ...p, [c.module_slug]: data })) })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordId])
 
@@ -488,6 +502,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   // ── Scheda leggibile: i campi vuoti si nascondono, i campi con una «sezione» si raggruppano (la prima aperta, le altre chiuse), i «dati chiave» stanno in alto ──
   const [mostraVuoti, setMostraVuoti] = useState(false)
   const [gruppiAperti, setGruppiAperti] = useState({})
+  const [menuFunz, setMenuFunz] = useState(false)
   const [menuDoc, setMenuDoc] = useState(false)
   const valoreVuoto = (f) => { const v = record && record.data ? record.data[f.key] : undefined; return v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0) }
   const campiRiempiti = fields.filter((f) => !valoreVuoto(f))
@@ -572,19 +587,35 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
       wide
       headerExtra={(
         <>
-          {!editing && record && azioniEsterne.map((az) => (
-            <button key={az.key} onClick={() => eseguiAzione(az)} disabled={inEsecuzione !== null} title={az.descrizione || undefined} className={'text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1' + (az.adapter === 'da_attivare' || (az.connection && connessioni && connessioni[az.connection] === false) ? ' opacity-60' : '')}>
-              <Icon name={az.icon || 'sparkles'} size={12} />{inEsecuzione === az.key ? 'Un attimo…' : az.label}{az.adapter === 'da_attivare' && <span className="text-[10px] uppercase tracking-wide bg-amber-400/15 border border-amber-500/50 text-ink rounded px-1.5 py-0.5 ml-0.5">da attivare</span>}
+          {!editing && record && azioniEsterne.filter((az) => az.adapter !== 'da_attivare').map((az) => (
+            <button key={az.key} onClick={() => eseguiAzione(az)} disabled={inEsecuzione !== null} title={az.descrizione || undefined} className={'text-xs border border-gray-700 hover:border-accent text-accent rounded-lg px-3 py-2 min-h-[36px] whitespace-nowrap flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50 transition' + (az.adapter === 'da_attivare' || (az.connection && connessioni && connessioni[az.connection] === false) ? ' opacity-60' : '')}>
+              <Icon name={az.icon || 'sparkles'} size={12} />{inEsecuzione === az.key ? 'Un attimo…' : az.label}
             </button>
           ))}
+          {!editing && record && azioniEsterne.some((az) => az.adapter === 'da_attivare') && (
+            <div className="relative flex-shrink-0">
+              <button onClick={() => setMenuFunz((x) => !x)} aria-haspopup="menu" aria-expanded={menuFunz} className="text-xs border border-gray-700 hover:border-accent text-accent rounded-lg px-3 py-2 min-h-[36px] whitespace-nowrap flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50 transition"><Icon name="sparkles" size={12} />Altre funzioni<Icon name="chevron-down" size={11} /></button>
+              {menuFunz && (
+                <div role="menu" className="fixed left-3 right-3 top-auto mt-1 z-30 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:w-80 bg-surface-card border border-gray-700 rounded-lg shadow-lg py-1">
+                  <div className="px-3 py-1.5 text-[11px] text-gray-500">Previste, ma legate a un servizio esterno ancora da attivare.</div>
+                  {azioniEsterne.filter((az) => az.adapter === 'da_attivare').map((az) => (
+                    <button key={az.key} role="menuitem" onClick={() => { setMenuFunz(false); eseguiAzione(az) }} className="w-full text-left px-3 py-2 hover:bg-white/5 transition flex items-start gap-2">
+                      <Icon name={az.icon || 'sparkles'} size={13} className="mt-0.5 text-gray-500 flex-shrink-0" />
+                      <span className="flex-1 min-w-0"><span className="block text-xs text-ink">{az.label} <span className="ml-1 text-[10px] uppercase tracking-wide bg-amber-400/15 border border-amber-500/50 text-ink rounded px-1.5 py-0.5">da attivare</span></span><span className="block text-[11px] text-gray-500">{az.descrizione}</span></span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           {!editing && record && !bozzaDoc && documenti.length === 1 && documenti.map((az) => (
-            <button key={az.key} onClick={() => apriDocumento(az)} disabled={docInPreparazione !== null} title={az.delivery === 'firma' ? 'Si scarica il PDF da firmare e poi si ricarica la scansione firmata' : 'Prepara l\'email: il testo si rivede e si modifica prima di spedirla'} className="text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1">
+            <button key={az.key} onClick={() => apriDocumento(az)} disabled={docInPreparazione !== null} title={az.delivery === 'firma' ? 'Si scarica il PDF da firmare e poi si ricarica la scansione firmata' : 'Prepara l\'email: il testo si rivede e si modifica prima di spedirla'} className="text-xs border border-gray-700 hover:border-accent text-accent rounded-lg px-3 py-2 min-h-[36px] whitespace-nowrap flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50 transition">
               <Icon name={az.icon || 'mail'} size={12} />{docInPreparazione === az.key ? 'Preparo…' : az.label}{az.delivery !== 'firma' && docInPreparazione !== az.key && <span className="text-gray-500"> · email</span>}
             </button>
           ))}
           {!editing && record && !bozzaDoc && documenti.length > 1 && (
             <div className="relative">
-              <button onClick={() => setMenuDoc((x) => !x)} disabled={docInPreparazione !== null} aria-haspopup="menu" aria-expanded={menuDoc} className="text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1">
+              <button onClick={() => setMenuDoc((x) => !x)} disabled={docInPreparazione !== null} aria-haspopup="menu" aria-expanded={menuDoc} className="text-xs border border-gray-700 hover:border-accent text-accent rounded-lg px-3 py-2 min-h-[36px] whitespace-nowrap flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50 transition">
                 <Icon name="file" size={12} />{docInPreparazione !== null ? 'Preparo…' : 'Documenti'}<Icon name="chevron-down" size={11} />
               </button>
               {menuDoc && (
@@ -599,8 +630,8 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
               )}
             </div>
           )}
-          {!editing && record && <button onClick={startEditing} className="text-xs text-accent hover:opacity-80 transition flex items-center gap-1"><Icon name="edit" size={12} />Modifica</button>}
-          {!editing && record && canDelete && <button onClick={remove} className="text-xs text-red-400/70 hover:text-red-400 transition flex items-center gap-1"><Icon name="trash" size={12} />Elimina</button>}
+          {!editing && record && <button onClick={startEditing} className="text-xs border border-gray-700 hover:border-accent text-accent rounded-lg px-3 py-2 min-h-[36px] whitespace-nowrap flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50 transition"><Icon name="edit" size={12} />Modifica</button>}
+          {!editing && record && canDelete && <button onClick={remove} className="text-xs border border-gray-700 hover:border-red-400 text-red-400/80 hover:text-red-400 rounded-lg px-3 py-2 min-h-[36px] whitespace-nowrap flex items-center gap-1.5 flex-shrink-0 transition"><Icon name="trash" size={12} />Elimina</button>}
         </>
       )}
     >
@@ -806,7 +837,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                   {(!g.nome || gruppoAperto(g, gi)) && g.campi.map((f) => (
                 <div key={f.key} className="flex items-center justify-between text-sm border-b border-gray-800/60 pb-2">
                   <span className="text-gray-500">{f.label}{f.type === 'computed' && <span className="text-gray-700"> (calcolato)</span>}</span>
-                  <span className="text-gray-200 font-mono">
+                  <span className={'text-gray-200 text-right break-words min-w-0 ml-4' + (f.type === 'encrypted' ? ' font-mono' : '')}>
                     {f.type === 'encrypted'
                       ? (record.data[f.key]
                           ? <span className="flex items-center gap-1.5">

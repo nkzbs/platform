@@ -2,6 +2,17 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.56 — 7 novembre 2026
+
+**La scheda di dettaglio torna usabile su telefono.**
+
+- **Intestazione**: il titolo ha la sua riga (prima si spezzava in tre righe) e le azioni stanno sotto, come pulsanti con bordo, tutti visibili e a capo se non stanno in una riga (valeva per ogni pannello laterale dell'app, `FormDrawer`). Margini laterali ridotti su telefono.
+- **«Altre funzioni»**: le funzioni «da attivare» (verifica del soggetto, PEC, firma, fattura) non sono più pulsanti affiancati con l'etichetta: stanno in un unico menu con la spiegazione, e il menu occupa la larghezza dello schermo.
+- **Valori**: non più in carattere a spaziatura fissa (solo i campi cifrati), a destra e a capo se lunghi.
+- **Collegati**: un modulo che punta al record con più relazioni (Trattative come venditore e come acquirente) è una sola voce, con le righe unite senza doppioni; prima compariva due volte e la seconda cancellava le righe della prima.
+- **Dati dimostrativi**: un record senza stato scelto parte dal primo stato del flusso (come fa il modulo), non più «—» con «0 transizioni disponibili».
+- Provato nel browser in locale a 375 px (intestazione, menu «Altre funzioni», valori). **Non provato**: il tema scuro, e «Collegati» con righe vere da due relazioni (il codice è semplice ma non l'ho visto in azione).
+
 ## 0.4.55 — 7 novembre 2026
 
 **La guida d'uso interna: «Come si lavora» nella pagina Guida e un «?» in ogni modulo.**

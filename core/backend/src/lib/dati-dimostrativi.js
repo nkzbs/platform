@@ -75,12 +75,20 @@ function conta() {
 }
 const totaleDemo = () => Object.values(conta()).reduce((a, b) => a + b, 0);
 
+function statoIniziale(slug) {
+  const m = db.prepare('SELECT schema_json FROM modules WHERE slug = ?').get(slug);
+  if (!m) return null;
+  try { const st = (require('../schema-v3').parseSchemaNormalized(m.schema_json).workflow || {}).states || []; return (st.find((x) => x.initial) || st[0] || {}).key || null; } catch (e) { return null; }
+}
+
 async function creaRecord(admin, callAs, modulo, dati, avvisi) {
   const ammessi = campiDelModulo(modulo);
   if (!ammessi) { avvisi.push('Il modulo «' + modulo + '» non è installato: salto.'); return null; }
   const puliti = {}, scartati = [];
   for (const [k, v] of Object.entries(dati)) { if (ammessi.has(k) || k === '_stato') puliti[k] = v; else scartati.push(k); }
   if (scartati.length) avvisi.push('«' + modulo + '»: campi che il modulo non ha, saltati (' + scartati.join(', ') + ').');
+  // Come fa il form del modulo: senza uno stato scelto, il record parte dal primo stato del flusso (altrimenti la scheda mostra «—» e nessun passaggio possibile).
+  if (puliti._stato === undefined) { const iniziale = statoIniziale(modulo); if (iniziale) puliti._stato = iniziale; }
   const r = await callAs(admin, 'POST', '/records/' + modulo, puliti);
   if (!r.ok) { avvisi.push('«' + modulo + '»: record non creato (' + String((r.data && r.data.error) || r.status).slice(0, 120) + ').'); return null; }
   db.prepare("UPDATE records SET data = json_set(data, '$._demo', 1) WHERE id = ?").run(r.data.id);
@@ -155,4 +163,4 @@ function rimuovi() {
   return { rimossi };
 }
 
-module.exports = { definizione, piano, conta, totaleDemo, carica, rimuovi, valoreModello, rendiCampi };
+module.exports = { statoIniziale, definizione, piano, conta, totaleDemo, carica, rimuovi, valoreModello, rendiCampi };
