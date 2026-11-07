@@ -67,4 +67,5 @@ async function pdf({ id, dati, config, identita }) {
   return require('../report-valutazione-pdf').creaPdfReport({ record: { id, data: dati }, report, ...identita });
 }
 
-module.exports = { nome: 'valutazione_immobiliare', esegui, pdf };
+// `servizio`: la voce del listino di OpenAPI.it (lib/openapi-spese.js) che questa azione consuma: la rotta chiede la conferma del costo e registra la spesa.
+module.exports = { nome: 'valutazione_immobiliare', servizio: 'valutazione_immobiliare', esegui, pdf };

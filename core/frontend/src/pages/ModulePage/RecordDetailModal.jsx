@@ -442,14 +442,18 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
     api.get('/connections').then((list) => { if (Array.isArray(list)) setConnessioni(Object.fromEntries(connessioniRichieste.split(',').map((id) => [id, !!(list.find((c) => c.id === id) || {}).connected]))) })
   }, [connessioniRichieste]) // eslint-disable-line react-hooks/exhaustive-deps
   const datoPresente = (d, k) => d[k] !== undefined && d[k] !== null && d[k] !== ''
-  const eseguiAzione = async (az) => {
+  // Il costo da confermare prima di una richiesta a pagamento (lo chiede il server con un 409): { az, nome, costo, noto, ambiente, speso_mese, tetto }
+  const [confermaCosto, setConfermaCosto] = useState(null)
+  const euro = (n) => Number(n).toLocaleString('it-IT', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 })
+  const eseguiAzione = async (az, conferma = false) => {
     const d = (record && record.data) || {}
     if (Array.isArray(az.richiede_uno_di) && az.richiede_uno_di.length && !az.richiede_uno_di.some((k) => datoPresente(d, k))) { setAvviso({ testo: az.richiede_messaggio || 'Mancano dei dati per «' + az.label + '»: compilali da «Modifica» e riprova.', azione: 'modifica' }); return }
     if (az.connection && connessioni && connessioni[az.connection] === false) { setAvviso({ testo: 'La connessione «' + az.connection + '» non è collegata: senza di lei «' + az.label + '» non può partire. Si collega da Impostazioni → Connessioni.' }); return }
-    setAvviso(null)
+    setAvviso(null); setConfermaCosto(null)
     setInEsecuzione(az.key)
-    const res = await api.post('/records/' + mod.slug + '/' + recordId + '/azione/' + az.key, {})
+    const res = await api.post('/records/' + mod.slug + '/' + recordId + '/azione/' + az.key, { conferma })
     setInEsecuzione(null)
+    if (!res.ok && res.data && res.data.code === 'conferma_costo') { setConfermaCosto({ az, ...res.data }); return }
     if (!res.ok) { setAvviso({ testo: '«' + az.label + '» non è riuscita: ' + ((res.data && res.data.error) || 'errore sconosciuto') + '.' }); return }
     setRecord(res.data.record)
     setVistaAperta((p) => ({ ...p, [az.key]: true }))
@@ -635,10 +639,26 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
           </>
         ) : (
           <>
+            {confermaCosto && (
+              <div className="bg-accent/10 border border-accent/30 text-xs p-3 rounded-lg mb-4" role="alertdialog" aria-label="Conferma del costo">
+                <div className="font-semibold text-ink mb-1">{confermaCosto.az.label}: conferma il costo</div>
+                <div className="mb-2 leading-snug text-gray-400">
+                  {confermaCosto.ambiente === 'prova'
+                    ? 'Sei in ambiente di prova: la richiesta non si paga' + (confermaCosto.noto ? '. In produzione costerebbe circa ' + euro(confermaCosto.costo) + ' (listino, IVA esclusa).' : '. In produzione il prezzo non è indicato.')
+                    : confermaCosto.noto
+                      ? 'La richiesta costa circa ' + euro(confermaCosto.costo) + ' (listino, IVA esclusa). Spesa del mese: ' + euro(confermaCosto.speso_mese) + (confermaCosto.tetto ? ' su un tetto di ' + euro(confermaCosto.tetto) : '') + '.'
+                      : 'Il prezzo di questa richiesta non è indicato nel listino: si registra a 0 € finché non lo scrivi in Impostazioni → Connessioni → OpenAPI.it. Spesa del mese: ' + euro(confermaCosto.speso_mese) + '.'}
+                </div>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => eseguiAzione(confermaCosto.az, true)} className="bg-accent hover:opacity-90 text-white px-3 py-1.5 rounded-lg font-medium">Procedi</button>
+                  <button type="button" onClick={() => setConfermaCosto(null)} className="bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-lg">Annulla</button>
+                </div>
+              </div>
+            )}
             {avviso && (
-              <div className="bg-amber-900/20 border border-amber-900/40 text-amber-300 text-xs p-3 rounded-lg mb-4 flex items-start gap-2" role="alert">
+              <div className="bg-amber-400/15 border border-amber-500/50 text-ink text-xs p-3 rounded-lg mb-4 flex items-start gap-2" role="alert">
                 <span className="flex-1">{avviso.testo}</span>
-                {avviso.azione === 'modifica' && <button onClick={() => { setAvviso(null); startEditing() }} className="underline flex-shrink-0">Modifica</button>}
+                {avviso.azione === 'modifica' && <button onClick={() => { setAvviso(null); startEditing() }} className="underline text-accent flex-shrink-0">Modifica</button>}
                 <button onClick={() => setAvviso(null)} aria-label="Chiudi l'avviso" className="flex-shrink-0 opacity-70 hover:opacity-100"><Icon name="x" size={12} /></button>
               </div>
             )}
@@ -710,24 +730,31 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
               </div>
             )}
             {workflow && requisitiDallo(record.data._stato, workflow, schema && schema.state_requirements, record.data, attachments).map((r) => (
-              <div key={r.stato} className={'rounded-lg border p-3 mb-4 text-xs ' + (r.pronto ? 'bg-green-900/20 border-green-900/40 text-green-300' : 'bg-amber-900/20 border-amber-900/40 text-amber-300')}>
-                <div className="font-semibold mb-1.5">
+              <div key={r.stato} className={'rounded-lg border p-3 mb-4 text-xs ' + (r.pronto ? 'bg-green-500/10 border-green-500/40' : 'bg-amber-400/15 border-amber-500/50')}>
+                <div className="font-semibold text-ink mb-1.5">
                   {r.pronto ? 'Tutto pronto per passare a «' + r.label + '»' : 'Per passare a «' + r.label + '» manca'}
-                  {r.bloccante && !r.pronto && <span className="font-normal opacity-80"> · senza, il passaggio non è permesso</span>}
+                  {r.bloccante && !r.pronto && <span className="font-normal text-gray-400"> · senza, il passaggio non è permesso</span>}
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1">
-                  {r.voci.map((v) => <span key={v.label} className={'flex items-center gap-1 ' + (v.ok ? 'opacity-70' : '')}><Icon name={v.ok ? 'check' : 'x'} size={11} />{v.label}</span>)}
+                  {r.voci.map((v) => (
+                    <span key={v.label} className={'flex items-center gap-1 ' + (v.ok ? 'text-gray-500' : 'text-ink font-medium')}>
+                      <Icon name={v.ok ? 'check' : 'x'} size={11} className={v.ok ? 'text-green-500' : 'text-amber-500'} />{v.label}
+                    </span>
+                  ))}
                 </div>
               </div>
             ))}
             {datiChiave.length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
-                {datiChiave.map((f) => (
-                  <div key={f.key} className="bg-surface-page rounded-lg p-3 border border-gray-800">
-                    <div className="text-[11px] text-gray-500">{f.label}</div>
-                    <div className="text-base font-semibold text-ink">{formatoChiave(f, record.data[f.key])}</div>
-                  </div>
-                ))}
+                {datiChiave.map((f) => {
+                  const testo = formatoChiave(f, record.data[f.key])
+                  return (
+                    <div key={f.key} className={'bg-surface-page rounded-lg p-3 border border-gray-800 min-w-0' + (String(testo).length > 18 ? ' col-span-2' : '')}>
+                      <div className="text-[11px] text-gray-500">{f.label}</div>
+                      <div className="text-base font-semibold text-ink break-words">{testo}</div>
+                    </div>
+                  )
+                })}
               </div>
             )}
             {children.some((c) => (childData[c.module_slug] || []).length > 0) && (

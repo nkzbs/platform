@@ -154,6 +154,18 @@ router.post('/openapi_it/servizi', requireAuth, requireAdmin, async (req, res) =
   catch (e) { res.status(e.status || 500).json({ ok: false, error: e.message, code: e.code }); }
 });
 
+// Le spese di OpenAPI.it (stima di Platform sui prezzi di listino): contatore del mese, tetto, prezzi e ultime richieste; e le impostazioni (tetto mensile, prezzi personalizzati).
+router.get('/openapi_it/spese', requireAuth, requireAdmin, (req, res) => {
+  const spese = require('../lib/openapi-spese');
+  res.json({ ...spese.riepilogo(), ambiente: spese.ambiente(), prezzi: spese.elencoPrezzi() });
+});
+router.put('/openapi_it/impostazioni', requireAuth, requireAdmin, (req, res) => {
+  const spese = require('../lib/openapi-spese');
+  const out = spese.impostazioni(req.body || {});
+  if (out.errore) return res.status(400).json({ error: out.errore });
+  res.json({ ok: true, ...spese.riepilogo(), ambiente: spese.ambiente(), prezzi: spese.elencoPrezzi() });
+});
+
 router.post('/:id/toggle', requireAuth, requireAdmin, (req, res) => {
   if (!CATALOG.some((c) => c.id === req.params.id)) return res.status(404).json({ error: 'Connessione non trovata' });
   const existing = db.prepare('SELECT connected FROM connections WHERE integration_id = ?').get(req.params.id);

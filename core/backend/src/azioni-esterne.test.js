@@ -40,7 +40,7 @@ async function main() {
   const rec = (slug, d) => db.prepare('INSERT INTO records (module_slug, data) VALUES (?, ?)').run(slug, JSON.stringify(d)).lastInsertRowid;
   const login = await (await fetch(BASE + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: process.env.INITIAL_ADMIN_PASSWORD }) })).json();
   const H = { Authorization: 'Bearer ' + login.token };
-  const esegui = (slug, id, key, headers = H) => fetch(BASE + '/api/records/' + slug + '/' + id + '/azione/' + key, { method: 'POST', headers });
+  const esegui = (slug, id, key, headers = H, corpo = { conferma: true }) => fetch(BASE + '/api/records/' + slug + '/' + id + '/azione/' + key, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) }); // conferma: true = il costo è stato confermato (lo chiede il server)
 
   await test('gli adattatori sono un elenco chiuso: un nome qualunque (anche __proto__) non carica nulla', () => {
     ok(registro.adattatore('valutazione_immobiliare'), 'quello vero c\'è');

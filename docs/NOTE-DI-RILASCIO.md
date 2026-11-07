@@ -2,6 +2,19 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.50 — 7 novembre 2026
+
+**Ogni richiesta a pagamento a OpenAPI.it chiede prima il costo e finisce in un contatore delle spese del mese.** In più, i riquadri della scheda tornano leggibili.
+
+- **Conferma del costo, chiesta dal server.** Un'azione esterna che consuma un servizio a pagamento (oggi la «Valutazione di mercato») non parte senza `conferma: true`: il server risponde 409 con importo, ambiente, spesa del mese e tetto, e la scheda mostra un riquadro «conferma il costo» con *Procedi* e *Annulla*. Un client non può saltarla. In ambiente di prova il riquadro dice che non si paga e quanto costerebbe in produzione.
+- **Registro delle spese** (`openapi_spese`): ogni richiesta riuscita si registra con servizio, costo, utente e ambiente; una richiesta fallita non si registra. **Produzione e prova si contano a parte**: la spesa reale è solo quella di produzione.
+- **Tetto di spesa mensile** (facoltativo): una richiesta che lo supererebbe è rifiutata (402) senza chiamare il servizio.
+- **Pannello «Spese del mese»** in Impostazioni → Connessioni → OpenAPI.it: contatore del mese, richieste, tetto modificabile, **prezzi per richiesta** (listino del catalogo, modificabili: quelli ignoti si scrivono a mano; vuoto torna al listino) e ultime richieste. Listino noto: catasto 0,10–23,70 €, semaforo di rischio società 0,19 €; i prezzi di Real Estate e di Risk sulle persone non risultano dalle pagine viste.
+- **È una stima di Platform** sui prezzi di listino (IVA esclusa): il conto vero è quello di openapi.com. Un prezzo ignoto non blocca: chiede conferma dicendo che il prezzo non è noto e si registra a 0 finché non lo si scrive.
+- **Leggibilità**: il riquadro «Per passare a… manca» e gli avvisi avevano testo giallo chiaro su fondo giallo chiaro (illeggibile nel tema chiaro): ora il testo è del colore del tema, il colore sta nel fondo, nel bordo e nelle icone. I dati chiave lunghi (un'email) vanno a capo e occupano due colonne invece di essere tagliati.
+- Test nuovo `openapi-spese.test.js` (conferma, registro, produzione e prova, tetto, errore del servizio, validazione, mese corrente); `azioni-esterne.test.js` aggiornato.
+- **Non fatto**: i dati dimostrativi da OpenAPI.it (segnati e rimovibili), in arrivo.
+
 ## 0.4.49 — 7 novembre 2026
 
 **«Controlla i servizi» di OpenAPI.it, per sapere cosa la chiave collegata può usare davvero.** Con più prodotti da attivare nella console (Risk, Catasto, Visure Camerali…) serviva un modo per vedere cosa è abilitato senza spendere credito.

@@ -974,9 +974,19 @@ function contestoAzione(req) {
 router.post('/:slug/:id/azione/:key', requireAuth, requireAdmin, requireModuleAccess, async (req, res) => {
   const ctx = contestoAzione(req);
   if (ctx.errore) return res.status(ctx.errore[0]).json({ error: ctx.errore[1] });
+  // Se l'azione consuma un servizio a pagamento (l'adattatore dichiara `servizio`): prima si conferma il costo (409 con importo, spesa del mese e tetto), poi si controlla il tetto
+  // mensile, e a esecuzione riuscita la spesa si registra. La conferma è richiesta DAL SERVER: un client non può saltarla.
+  const spese = ctx.adattatore.servizio ? require('../lib/openapi-spese') : null;
+  const st = spese ? spese.stima(ctx.adattatore.servizio) : null;
+  if (spese) {
+    const mese = spese.riepilogo(), amb = spese.ambiente();
+    if (!(req.body && req.body.conferma === true)) return res.status(409).json({ error: 'Conferma il costo prima di eseguire.', code: 'conferma_costo', servizio: st.servizio, nome: st.nome, costo: st.costo, noto: st.noto, ambiente: amb, speso_mese: mese.produzione.speso, tetto: mese.tetto });
+    if (amb === 'produzione' && mese.tetto !== null && st.costo !== null && mese.produzione.speso + st.costo > mese.tetto) return res.status(402).json({ error: 'Questa richiesta supera il tetto di spesa mensile (' + mese.tetto.toFixed(2) + ' €, già spesi ' + mese.produzione.speso.toFixed(2) + ' €). Si cambia in Impostazioni → Connessioni → OpenAPI.it.', code: 'tetto_superato', tetto: mese.tetto, speso_mese: mese.produzione.speso });
+  }
   let out;
   try { out = await ctx.adattatore.esegui({ dati: ctx.dati, config: ctx.config, utente: req.user }); }
   catch (e) { return res.status(e.status || 500).json({ error: e.message, code: e.code }); }
+  if (spese) spese.registra({ servizio: st.servizio, descrizione: ctx.config.label + ' · ' + req.params.slug + '#' + ctx.record.id, costo: st.costo || 0, utente: req.user.username, riferimento: req.params.slug + '#' + ctx.record.id });
   const next = { ...ctx.dati, ...out.patch };
   db.prepare('UPDATE records SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify(next), ctx.record.id);
   const updated = db.prepare('SELECT * FROM records WHERE id = ?').get(ctx.record.id);

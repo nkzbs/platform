@@ -46,6 +46,7 @@ function ConnessioniTab({ token, user, features = {} }) {
   const [credForm, setCredForm] = useState({})
   const [saving, setSaving] = useState(false)
   const [waTest, setWaTest] = useState(null) // { busy } oppure { esito, dettaglio, error }
+  const [speseOa, setSpeseOa] = useState(null) // spese di OpenAPI.it: contatore del mese, tetto, prezzi, ultime richieste
   const [serviziOa, setServiziOa] = useState(null) // controllo dei servizi OpenAPI.it: { busy } oppure { ambiente, servizi } oppure { error }
 
   const loadConnections = async () => { const data = await api.get('/connections'); if (data) setConnections(data) }
@@ -69,6 +70,12 @@ function ConnessioniTab({ token, user, features = {} }) {
     if (!res.ok) { setServiziOa({ error: (res.data && res.data.error) || 'Controllo non riuscito' }); return }
     setServiziOa({ ambiente: res.data.ambiente, servizi: res.data.servizi })
   }
+  const caricaSpeseOa = async () => { const d = await api.get('/connections/openapi_it/spese'); if (d) setSpeseOa(d) }
+  const salvaImpostazioniOa = async (corpo) => {
+    const res = await api.put('/connections/openapi_it/impostazioni', corpo)
+    if (res.ok) setSpeseOa(res.data); else setSpeseOa((x) => ({ ...(x || {}), errore: (res.data && res.data.error) || 'Non salvato.' }))
+  }
+  useEffect(() => { if (openFor === 'openapi_it' && connections.some((c) => c.id === 'openapi_it' && c.connected)) caricaSpeseOa() }, [openFor, connections]) // eslint-disable-line react-hooks/exhaustive-deps
   const toggle = (id) => { const next = openFor === id ? null : id; setOpenFor(next); if (next) setCredForm(initialCredForm(next)) }
 
   const connectGoogle = () => { window.location.href = API + '/integrazioni/google/oauth/start' }
@@ -185,6 +192,52 @@ function ConnessioniTab({ token, user, features = {} }) {
                         <span className="text-[10px] text-gray-600 ml-auto">attuali: {Object.keys(row.intg.credentials_masked).join(', ')}</span>
                       )}
                     </div>
+                    {row.id === 'openapi_it' && row.connected && speseOa && speseOa.prezzi && (
+                      <div className="mt-4 pt-4 border-t border-gray-800">
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <span className="text-sm text-ink font-medium">Spese del mese</span>
+                          <span className="text-xl font-semibold text-ink">{Number(speseOa.produzione.speso).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}</span>
+                          <span className="text-xs text-gray-500">{speseOa.produzione.richieste} {speseOa.produzione.richieste === 1 ? 'richiesta' : 'richieste'} in produzione{speseOa.tetto ? ' · tetto ' + Number(speseOa.tetto).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' }) : ''}</span>
+                        </div>
+                        {speseOa.prova.richieste > 0 && <div className="text-xs text-gray-500 mt-0.5">In ambiente di prova: {speseOa.prova.richieste} {speseOa.prova.richieste === 1 ? 'richiesta' : 'richieste'}, non pagate (sarebbero {Number(speseOa.prova.stimato).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}).</div>}
+                        <div className="text-[11px] text-gray-600 mt-1">È una stima di Platform sui prezzi di listino qui sotto (IVA esclusa): il conto vero è quello di openapi.com.</div>
+                        {speseOa.errore && <div className="text-xs text-amber-400 mt-2">{speseOa.errore}</div>}
+                        <label className="block mt-3">
+                          <span className="text-xs text-gray-500">Tetto di spesa mensile in € (vuoto: nessun tetto)</span>
+                          <input type="number" min="0" step="1" defaultValue={speseOa.tetto || ''} key={'tetto' + speseOa.tetto}
+                            onBlur={(e) => { const v = e.target.value === '' ? null : parseFloat(e.target.value); if (v !== (speseOa.tetto || null)) salvaImpostazioniOa({ tetto_mensile: v }) }}
+                            className="mt-1 w-40 bg-surface-card border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-ink" />
+                        </label>
+                        <details className="mt-3">
+                          <summary className="text-xs text-gray-400 cursor-pointer">Prezzi per richiesta</summary>
+                          <div className="mt-2 space-y-1">
+                            {speseOa.prezzi.map((p) => (
+                              <div key={p.servizio} className="flex items-center gap-2 text-xs">
+                                <span className="flex-1 text-gray-300">{p.nome}</span>
+                                <input type="number" min="0" step="0.01" placeholder="non indicato" defaultValue={p.prezzo === null ? '' : p.prezzo} key={p.servizio + p.prezzo}
+                                  onBlur={(e) => { const v = e.target.value === '' ? null : parseFloat(e.target.value); if (v !== p.prezzo) salvaImpostazioniOa({ prezzi: { [p.servizio]: v === p.listino ? null : v } }) }}
+                                  className="w-28 bg-surface-card border border-gray-700 rounded px-2 py-1 text-ink text-right" />
+                                <span className="text-gray-600 w-4">€</span>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                        {speseOa.ultime.length > 0 && (
+                          <details className="mt-3">
+                            <summary className="text-xs text-gray-400 cursor-pointer">Ultime richieste</summary>
+                            <div className="mt-2 space-y-0.5">
+                              {speseOa.ultime.map((u, i) => (
+                                <div key={i} className="flex gap-2 text-xs text-gray-400">
+                                  <span className="text-gray-600 w-32 flex-shrink-0">{String(u.quando).slice(0, 16).replace('T', ' ')}</span>
+                                  <span className="flex-1 truncate">{u.descrizione || u.servizio}</span>
+                                  <span className="text-gray-500">{u.ambiente === 'prova' ? 'prova' : Number(u.costo).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        )}
+                      </div>
+                    )}
                     {row.id === 'openapi_it' && serviziOa && !serviziOa.busy && (
                       <div className={'text-xs mt-3 p-3 rounded-lg border ' + (serviziOa.error ? 'bg-amber-900/20 text-amber-400 border-amber-900/40' : 'bg-surface-page text-gray-300 border-gray-800')}>
                         {serviziOa.error ? serviziOa.error : (
