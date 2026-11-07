@@ -19,6 +19,15 @@ router.get('/queues', requireAuth, (req, res) => {
   })));
 });
 
+// L'«agenda del giorno» per la dashboard: i moduli che hanno acceso le scadenze negli Avvisi e dichiarato il campo `scadenza` (visite, provvigioni da incassare…).
+// Come per le code, nessun dato di righe: il widget le legge dall'elenco normale del modulo, che rispetta i permessi di chi guarda.
+router.get('/agenda', requireAuth, (req, res) => {
+  res.json(roles.list({ use: 'avvisi' }).filter((m) => m.avvisi.scadenze && m.roles.scadenza).map((m) => ({
+    module_slug: m.module_slug, name: m.name, scadenza: m.roles.scadenza, descrizione: m.roles.descrizione || '', stato: m.roles.stato || '_stato', fatto: m.avvisi.states.fatto || '',
+    noun_s: m.avvisi.noun_s,
+  })));
+});
+
 // Il modulo di timbrature (se c'è) — stessa dichiarazione già usata dal bot
 // Telegram (bot-timbrature.js): kind 'presenze' con i tre ruoli data/inizio/
 // fine. Nessun dato di righe qui: le legge il widget dall'elenco normale del

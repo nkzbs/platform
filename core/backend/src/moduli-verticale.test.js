@@ -44,9 +44,11 @@ async function main() {
   await test('senza i moduli che cita non si crea nulla; con Clienti e Immobili si crea (crea, bozza, pubblica) una volta sola', async () => {
     eq(await seedEngine.creaModuli(SEED, { callAs: finto() }), []); eq(chiamate, []);
     add('clienti', [F('nome')]); eq(await seedEngine.creaModuli(SEED, { callAs: finto() }), [], 'manca Immobili'); add('immobili', [F('titolo')]);
-    eq((await seedEngine.creaModuli(SEED, { callAs: finto() })).map((e) => e.esito), ['applicato']);
-    eq(chiamate, ['POST /modules/create', 'PUT /builder/quote_societarie/draft', 'POST /builder/quote_societarie/publish']);
-    eq(await seedEngine.creaModuli(SEED, { callAs: finto() }), [], 'una volta sola'); eq(chiamate.length, 3);
+    const nuovi = Object.keys(SEED).filter((k) => !k.startsWith('_')); // i moduli del pacchetto che richiedono solo Clienti e Immobili (oggi: Quote societarie e Visite)
+    eq((await seedEngine.creaModuli(SEED, { callAs: finto() })).map((e) => e.esito), nuovi.map(() => 'applicato'));
+    eq(chiamate.slice(0, 3), ['POST /modules/create', 'PUT /builder/' + nuovi[0] + '/draft', 'POST /builder/' + nuovi[0] + '/publish']);
+    eq(chiamate.length, 3 * nuovi.length);
+    eq(await seedEngine.creaModuli(SEED, { callAs: finto() }), [], 'una volta sola'); eq(chiamate.length, 3 * nuovi.length);
   });
   await test('un modulo che c\'è già con il suo schema non si tocca; uno rimasto vuoto per un errore si completa al giro dopo', async () => {
     const S2 = { nuovo_a: { ...SEED.quote_societarie, nome: 'A' }, nuovo_b: { ...SEED.quote_societarie, nome: 'B' } };

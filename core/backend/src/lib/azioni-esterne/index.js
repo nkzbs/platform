@@ -4,6 +4,7 @@
 // non conosce nomi di moduli. Gli adattatori sono un elenco chiuso (un blocco non può caricare codice a piacere).
 const ADATTATORI = {
   valutazione_immobiliare: () => require('./valutazione_immobiliare'),
+  da_attivare: () => require('./da_attivare'), // segnaposto per funzioni previste ma non ancora collegate al servizio esterno
 };
 const adattatore = (nome) => (Object.prototype.hasOwnProperty.call(ADATTATORI, nome) ? ADATTATORI[nome]() : null);
 module.exports = { adattatore, nomiAdattatori: () => Object.keys(ADATTATORI) };

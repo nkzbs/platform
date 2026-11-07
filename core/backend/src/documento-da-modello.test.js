@@ -254,8 +254,8 @@ async function main() {
   let primoGiro;
   await test('il seed reale si applica ai moduli che hanno i campi giusti (passa dalla validazione del Builder)', async () => {
     primoGiro = await applicaSeed(seed);
-    assertEq(primoGiro.filter((e) => e.esito === 'applicato').map((e) => e.key).sort(), ['anagrafica_privacy', 'antiriciclaggio', 'privacy_incarico', 'scheda_immobile', 'scheda_immobile_completa']);
-    assertEq(chiaviDocumento('clienti').sort(), ['anagrafica_privacy', 'antiriciclaggio', 'privacy_incarico']);
+    assertEq(primoGiro.filter((e) => e.esito === 'applicato').map((e) => e.key).sort(), ['anagrafica_privacy', 'antiriciclaggio', 'auguri', 'privacy_incarico', 'scheda_immobile', 'scheda_immobile_completa']);
+    assertEq(chiaviDocumento('clienti').sort(), ['anagrafica_privacy', 'antiriciclaggio', 'auguri', 'privacy_incarico']);
     // Il seed ha creato i campi dei consensi, del tipo giusto, e il documento è «da firmare».
     const campi = documentiDi('clienti').steps.filter((st) => st.block_type === 'field');
     assertEq(campi.find((f) => f.key === 'consenso_marketing').type, 'checkbox');
@@ -275,14 +275,14 @@ async function main() {
   });
   await test('secondo avvio: niente da fare, nessun documento duplicato', async () => {
     assertEq(await applicaSeed(seed), []);
-    assertEq(chiaviDocumento('clienti').sort(), ['anagrafica_privacy', 'antiriciclaggio', 'privacy_incarico']);
+    assertEq(chiaviDocumento('clienti').sort(), ['anagrafica_privacy', 'antiriciclaggio', 'auguri', 'privacy_incarico']);
   });
   await test('se il documento viene tolto dal Builder, al riavvio NON ricompare', async () => {
     const sc = documentiDi('clienti');
     sc.steps = sc.steps.filter((st) => st.key !== 'antiriciclaggio');
     db.prepare("UPDATE modules SET schema_json = ? WHERE slug = 'clienti'").run(JSON.stringify(sc));
     assertEq(await applicaSeed(seed), []);
-    assertEq(chiaviDocumento('clienti').sort(), ['anagrafica_privacy', 'privacy_incarico']);
+    assertEq(chiaviDocumento('clienti').sort(), ['anagrafica_privacy', 'auguri', 'privacy_incarico']);
   });
   await test('un modulo con lo stesso nome ma senza i campi del modello non viene toccato (e non riprova all\'infinito)', async () => {
     mk('altro_t', [F('nome', 'Nome'), F('email', 'Email')]);

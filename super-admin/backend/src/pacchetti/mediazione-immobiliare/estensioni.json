@@ -94,6 +94,60 @@
           ]
         }
       ]
+    },
+    {
+      "key": "scaglioni",
+      "_nota": "Scaglioni di provvigione: la percentuale proposta cambia con il prezzo su cui si calcola. SOGLIE E PERCENTUALI SONO UN ESEMPIO da adattare alle condizioni dell'agenzia (si modificano dal Builder nella formula del campo «Percentuale da scaglione»). Se la percentuale è scritta a mano vince quella.",
+      "richiede": {
+        "provvigioni": [
+          "base_imponibile",
+          "percentuale"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "percentuale_scaglione",
+          "label": "Percentuale da scaglione",
+          "type": "computed",
+          "expr": "if(base_imponibile >= 500000, 2, if(base_imponibile >= 250000, 2.5, if(base_imponibile > 0, 3, 0)))"
+        },
+        {
+          "block_type": "field",
+          "key": "percentuale_applicata",
+          "label": "Percentuale applicata",
+          "type": "computed",
+          "expr": "if(percentuale > 0, percentuale, percentuale_scaglione)"
+        },
+        {
+          "block_type": "field",
+          "key": "provvigione_scaglione",
+          "label": "Provvigione da scaglione",
+          "type": "computed",
+          "expr": "round(base_imponibile * percentuale_applicata / 100, 2)"
+        }
+      ]
+    },
+    {
+      "key": "fattura_elettronica",
+      "_nota": "Segnaposto «da attivare»: la fattura della provvigione richiede SDI attivo in OpenAPI.it.",
+      "richiede": {
+        "provvigioni": [
+          "descrizione"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "external_action",
+          "key": "fattura_elettronica",
+          "label": "Fattura elettronica",
+          "icon": "receipt",
+          "descrizione": "Emette la fattura della provvigione e la manda allo SDI",
+          "adapter": "da_attivare",
+          "servizio_richiesto": "il servizio Fatturazione Elettronica (SDI) di OpenAPI.it",
+          "come_attivare": "Attivalo nella console di OpenAPI.it e controllalo da Impostazioni → Connessioni → OpenAPI.it («Controlla i servizi»); poi la funzione verrà collegata."
+        }
+      ]
     }
   ],
   "trattative": [
@@ -353,6 +407,27 @@
               "campo": "provvigioni_generate_il"
             }
           ]
+        }
+      ]
+    },
+    {
+      "key": "firma_elettronica",
+      "_nota": "Segnaposto «da attivare»: al posto del giro «scarica, firma, ricarica» dei documenti.",
+      "richiede": {
+        "trattative": [
+          "titolo"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "external_action",
+          "key": "firma_elettronica",
+          "label": "Firma elettronica",
+          "icon": "file",
+          "descrizione": "Fa firmare il preliminare a distanza, senza stampare e ricaricare",
+          "adapter": "da_attivare",
+          "servizio_richiesto": "il servizio eSignature (Firma Digitale) di OpenAPI.it",
+          "come_attivare": "Attivalo nella console di OpenAPI.it e controllalo da Impostazioni → Connessioni → OpenAPI.it («Controlla i servizi»); poi la funzione verrà collegata."
         }
       ]
     }
@@ -917,6 +992,48 @@
               "campo": "privacy_firmata_il"
             }
           ]
+        }
+      ]
+    },
+    {
+      "key": "verifica_soggetto",
+      "_nota": "Segnaposto «da attivare»: la verifica del soggetto richiede Risk attivo in OpenAPI.it. Quando c'è, si cambia `adapter` con quello vero.",
+      "richiede": {
+        "clienti": [
+          "nome"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "external_action",
+          "key": "verifica_soggetto",
+          "label": "Verifica del soggetto",
+          "icon": "search",
+          "descrizione": "Controlla il nuovo cliente dal codice fiscale (negatività, protesti, report persona)",
+          "adapter": "da_attivare",
+          "servizio_richiesto": "il servizio Risk di OpenAPI.it (con «Verifica dell'identità» e «Contratto informazioni commerciali»), il consenso del cliente e la conferma del costo",
+          "come_attivare": "Attivalo nella console di OpenAPI.it e controllalo da Impostazioni → Connessioni → OpenAPI.it («Controlla i servizi»); poi la funzione verrà collegata."
+        }
+      ]
+    },
+    {
+      "key": "invio_pec",
+      "_nota": "Segnaposto «da attivare»: la PEC richiede il servizio PEC di OpenAPI.it.",
+      "richiede": {
+        "clienti": [
+          "nome"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "external_action",
+          "key": "invio_pec",
+          "label": "Invia via PEC",
+          "icon": "mail",
+          "descrizione": "Spedisce un documento al cliente con posta elettronica certificata",
+          "adapter": "da_attivare",
+          "servizio_richiesto": "il servizio PEC di OpenAPI.it",
+          "come_attivare": "Attivalo nella console di OpenAPI.it e controllalo da Impostazioni → Connessioni → OpenAPI.it («Controlla i servizi»); poi la funzione verrà collegata."
         }
       ]
     }

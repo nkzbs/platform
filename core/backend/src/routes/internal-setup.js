@@ -51,12 +51,12 @@ router.post('/apply', (req, res) => {
   if (Array.isArray(b.dashboard) && !db.prepare("SELECT 1 FROM dashboard_widgets WHERE page = 'dashboard'").get()) {
     const ins = db.prepare("INSERT INTO dashboard_widgets (type, module_slug, field, aggregation, label, color, sort_order, config, roles, user_ids, page) VALUES (?, ?, ?, ?, ?, '#2563EB', ?, ?, '[]', '[]', 'dashboard')");
     const campo = (v) => (typeof v === 'string' && /^[A-Za-z0-9_]{1,60}$/.test(v) ? v : null);
-    b.dashboard.slice(0, 30).forEach((w, i) => {
-      if (!w || !['kpi', 'table', 'periodo'].includes(w.type) || !installed(w.modulo)) { out.saltati.push('dashboard: widget ' + (i + 1) + ' non valido o modulo non installato'); return; }
+    b.dashboard.slice(0, 30).forEach((w, i) => { // «agenda» e «coda» non hanno un modulo proprio: leggono i moduli che si sono dichiarati
+      if (!w || (!['agenda', 'coda'].includes(w.type) && (!['kpi', 'table', 'periodo'].includes(w.type) || !installed(w.modulo)))) { out.saltati.push('dashboard: widget ' + (i + 1) + ' non valido o modulo non installato'); return; }
       // un widget «periodo» conta o somma le righe la cui data (`config.date_field`) cade nel periodo scelto
       const cfg = w.type === 'periodo' ? { date_field: campo(w.config && w.config.date_field) || '', periodo: ['oggi', 'settimana', 'mese', 'anno', 'tutti'].includes(w.config && w.config.periodo) ? w.config.periodo : 'mese' } : {};
       if (w.type === 'periodo' && !cfg.date_field) { out.saltati.push('dashboard: widget ' + (i + 1) + ' (periodo) senza il campo data'); return; }
-      ins.run(w.type, w.modulo, campo(w.campo), ['sum', 'count', 'avg', 'min', 'max'].includes(w.aggregazione) ? w.aggregazione : 'sum', String(w.etichetta || w.modulo).slice(0, 80), i, JSON.stringify(cfg));
+      ins.run(w.type, w.modulo || null, campo(w.campo), ['sum', 'count', 'avg', 'min', 'max'].includes(w.aggregazione) ? w.aggregazione : 'sum', String(w.etichetta || w.modulo || w.type).slice(0, 80), i, JSON.stringify(cfg));
       out.dashboard++;
     });
   }

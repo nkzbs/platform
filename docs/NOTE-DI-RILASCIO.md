@@ -2,6 +2,20 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.53 — 7 novembre 2026
+
+**Visite, scaglioni di provvigione, solleciti, auguri e una Dashboard che aiuta il lavoro del giorno; le funzioni che richiedono OpenAPI.it ci sono, con l'avviso «da attivare».**
+
+- **Dashboard «Da fare»** (nuovo widget `agenda`, `components/AgendaWidget.jsx`, rotta `GET /api/module-roles/agenda`): le scadenze **in ritardo, di oggi e dei prossimi 7 giorni** di tutti i moduli che hanno acceso le scadenze negli Avvisi e dichiarato il campo scadenza (Builder → Ruoli del modulo). Le righe già nello stato «fatto» non compaiono; si leggono dall'elenco normale del modulo, quindi valgono i permessi di chi guarda. Nessun nome di modulo nel codice. Si aggiunge da Dashboard → modifica → Aggiungi widget → «Da fare» (anche da analisi: `type: agenda`).
+- **Visite** (modulo nuovo del pacchetto, `moduli.json`): immobile, cliente interessato, data, ora, chi accompagna, esito (Interessato / Da pensarci / Non interessato / Rimandata); stati Programmata → Conclusa. Entra nell'agenda tramite i ruoli.
+- **Provvigioni da incassare** entrano nell'agenda con la loro scadenza (ruoli del pacchetto; «fatto» = incassata).
+- **Scaglioni di provvigione** (estensione `scaglioni`): «Percentuale da scaglione» (2% da 500.000 €, 2,5% da 250.000 €, 3% sotto; **soglie e percentuali sono un esempio da adattare** nella formula dal Builder), «Percentuale applicata» (quella scritta a mano vince) e «Provvigione da scaglione». Le formule sono verificate nei test dei calcoli.
+- **Sollecito di pagamento** (documento sulle Provvigioni, email al cliente collegato) e **Auguri** (documento sui Clienti): il testo si rivede e si modifica prima dell'invio, come gli altri documenti.
+- **«Da attivare»**: Verifica del soggetto (Risk), Invia via PEC, Firma elettronica, Fattura elettronica (SDI) hanno già il pulsante nella scheda, con l'etichetta «da attivare»; premuto, spiega quale servizio di OpenAPI.it serve e non fa nulla né costa nulla. Adattatore segnaposto `da_attivare` (501, `code: da_attivare`): quando il servizio sarà attivo si sostituisce l'`adapter` del blocco con quello vero.
+- Test: `agenda-e-segnaposto.test.js`; aggiornati i test dei moduli e dei documenti del pacchetto (che ora ne hanno uno in più). Pacchetto alla versione 5.
+- **Per averlo su zucca**: deploy di Super Admin, Aggiorna, poi aggiungere il widget «Da fare» alla Dashboard.
+- **Non fatto**: la vista a calendario delle Visite (oggi è l'elenco), l'invio automatico dei solleciti e degli auguri (oggi si inviano a mano dalla scheda), il collegamento reale ai servizi «da attivare».
+
 ## 0.4.52 — 7 novembre 2026
 
 **Codice fiscale e partita IVA controllati, passaggi di stato critici davvero bloccanti, dock con il fondo pieno.**

@@ -447,6 +447,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   const euro = (n) => Number(n).toLocaleString('it-IT', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 })
   const eseguiAzione = async (az, conferma = false) => {
     const d = (record && record.data) || {}
+    if (az.adapter === 'da_attivare') { setConfermaCosto(null); setAvviso({ testo: '«' + az.label + '» è da attivare' + (az.servizio_richiesto ? ': serve ' + az.servizio_richiesto : '') + '. ' + (az.come_attivare || 'Quando il servizio è attivo, la funzione parte da qui senza altre modifiche.') }); return }
     if (Array.isArray(az.richiede_uno_di) && az.richiede_uno_di.length && !az.richiede_uno_di.some((k) => datoPresente(d, k))) { setAvviso({ testo: az.richiede_messaggio || 'Mancano dei dati per «' + az.label + '»: compilali da «Modifica» e riprova.', azione: 'modifica' }); return }
     if (az.connection && connessioni && connessioni[az.connection] === false) { setAvviso({ testo: 'La connessione «' + az.connection + '» non è collegata: senza di lei «' + az.label + '» non può partire. Si collega da Impostazioni → Connessioni.' }); return }
     setAvviso(null); setConfermaCosto(null)
@@ -572,8 +573,8 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
       headerExtra={(
         <>
           {!editing && record && azioniEsterne.map((az) => (
-            <button key={az.key} onClick={() => eseguiAzione(az)} disabled={inEsecuzione !== null} title={az.descrizione || undefined} className={'text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1' + (az.connection && connessioni && connessioni[az.connection] === false ? ' opacity-60' : '')}>
-              <Icon name={az.icon || 'sparkles'} size={12} />{inEsecuzione === az.key ? 'Un attimo…' : az.label}
+            <button key={az.key} onClick={() => eseguiAzione(az)} disabled={inEsecuzione !== null} title={az.descrizione || undefined} className={'text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1' + (az.adapter === 'da_attivare' || (az.connection && connessioni && connessioni[az.connection] === false) ? ' opacity-60' : '')}>
+              <Icon name={az.icon || 'sparkles'} size={12} />{inEsecuzione === az.key ? 'Un attimo…' : az.label}{az.adapter === 'da_attivare' && <span className="text-[10px] uppercase tracking-wide bg-amber-400/15 border border-amber-500/50 text-ink rounded px-1.5 py-0.5 ml-0.5">da attivare</span>}
             </button>
           ))}
           {!editing && record && !bozzaDoc && documenti.length === 1 && documenti.map((az) => (

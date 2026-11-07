@@ -1,4 +1,55 @@
 {
-  "_descrizione": "Dichiarazioni dei «ruoli del modulo» del verticale Mediazione immobiliare (Builder → Ruoli del modulo), applicate da seed-blocchi-verticale.js solo dove il modulo non ne ha già una e ha tutti i campi citati. Qui: Clienti è un'anagrafica con la data di nascita che ricorre ogni anno, che il report «Ricorrenze» legge per i promemoria di compleanno.",
-  "clienti": { "kind": "anagrafica", "uses": [], "roles": { "descrizione": "nome", "data_ricorrenza": "data_nascita" } }
+  "_descrizione": "Dichiarazioni dei «ruoli del modulo» del verticale Mediazione immobiliare (Builder → Ruoli del modulo), applicate da seed-blocchi-verticale.js solo dove il modulo non ne ha già una e ha tutti i campi citati. Qui: Clienti è un'anagrafica con la data di nascita che ricorre ogni anno, che il report «Ricorrenze» legge per i promemoria di compleanno. Visite e Provvigioni dichiarano la scadenza: alimentano l'agenda «Da fare» della Dashboard.",
+  "clienti": {
+    "kind": "anagrafica",
+    "uses": [],
+    "roles": {
+      "descrizione": "nome",
+      "data_ricorrenza": "data_nascita"
+    }
+  },
+  "visite": {
+    "kind": "pratica",
+    "uses": [
+      "avvisi"
+    ],
+    "roles": {
+      "descrizione": "oggetto",
+      "scadenza": "data_visita"
+    },
+    "avvisi": {
+      "states": {
+        "nuovo": "",
+        "da_fare": "",
+        "fatto": "conclusa"
+      },
+      "nuovo": false,
+      "scadenze": true,
+      "label": "visite",
+      "noun_s": "visita",
+      "noun_p": "visite"
+    }
+  },
+  "provvigioni": {
+    "kind": "pratica",
+    "uses": [
+      "avvisi"
+    ],
+    "roles": {
+      "descrizione": "descrizione",
+      "scadenza": "data_scadenza"
+    },
+    "avvisi": {
+      "states": {
+        "nuovo": "",
+        "da_fare": "",
+        "fatto": "incassata"
+      },
+      "nuovo": false,
+      "scadenze": true,
+      "label": "provvigioni",
+      "noun_s": "provvigione",
+      "noun_p": "provvigioni"
+    }
+  }
 }

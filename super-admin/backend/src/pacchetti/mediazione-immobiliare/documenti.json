@@ -68,6 +68,14 @@
           "type": "date"
         }
       ]
+    },
+    {
+      "key": "auguri",
+      "label": "Auguri",
+      "icon": "mail",
+      "subject": "Auguri da {{#@azienda}}{{@azienda}}{{/@azienda}}{{^@azienda}}tutta l'agenzia{{/@azienda}}",
+      "body": "Gentile {{nome|vuoto}},\n\ncolgo l'occasione per farLe i miei migliori auguri: che sia un periodo sereno, per Lei e per la Sua famiglia.\n\nRingraziandoLa per la fiducia, resto a disposizione per qualsiasi esigenza legata alla casa.\n\nUn caro saluto\n{{#@azienda}}{{@azienda}}{{/@azienda}}{{^@azienda}}L'agenzia{{/@azienda}}\n",
+      "recipient": "email"
     }
   ],
   "immobili": [
@@ -98,6 +106,16 @@
       "signed_type": "cessione_quote_firmata",
       "version": "2026-11",
       "body": "PROPOSTA DI CESSIONE DI QUOTE SOCIETARIE\n\n{{#@azienda}}{{@azienda}}{{/@azienda}}{{^@azienda}}l'agenzia{{/@azienda}}{{#@piva}} (P.IVA {{@piva}}){{/@piva}}\n{{@oggi}}\n\nSOCIETÀ\nDenominazione: {{societa.nome}}\nCodice fiscale / P.IVA: {{societa.codice_fiscale_piva|vuoto}}\n\nCEDENTE\n{{socio.nome}}, titolare di una quota pari al {{quota_percentuale}}% del capitale{{#valore_quota}}, valore dichiarato {{valore_quota}}{{/valore_quota}}.\n\nCESSIONARIO\n{{cessionario.nome|vuoto}}\n\nIMMOBILE DETENUTO DALLA SOCIETÀ\n{{immobile.titolo|vuoto}}\n\nOGGETTO\nIl cedente propone di cedere al cessionario la quota sopra indicata, alle condizioni che verranno definite tra le parti.\n\nAVVERTENZA\nQuesto documento è un modello di proposta da far rivedere dal notaio o dal commercialista: la cessione di quote di una società a responsabilità limitata si perfeziona con atto notarile o con firma autenticata e il successivo deposito al Registro delle Imprese.\n\nLuogo: ___________________________    Data: {{@oggi}}\n\nFirma cedente: ___________________________\n\nFirma cessionario: ___________________________\n\nFirma agente: ___________________________\n"
+    }
+  ],
+  "provvigioni": [
+    {
+      "key": "sollecito_pagamento",
+      "label": "Sollecito di pagamento",
+      "icon": "mail",
+      "subject": "Sollecito di pagamento — {{#descrizione}}{{descrizione}}{{/descrizione}}{{^descrizione}}provvigione{{/descrizione}}",
+      "body": "Gentile {{cliente.nome|vuoto}},\n\nle scriviamo in merito alla provvigione «{{descrizione|vuoto}}», con scadenza {{data_scadenza|vuoto}}{{#totale}}, per un importo di {{totale}} (IVA inclusa){{/totale}}{{^totale}}{{#importo}}, per un importo di {{importo}}{{/importo}}{{/totale}}, che a oggi non risulta ancora saldata.\n\nSe ha già provveduto al pagamento, La preghiamo di ignorare questo messaggio e di inviarci la contabile; in caso contrario Le saremmo grati se potesse regolarizzare la posizione a breve.\n\nResto a disposizione per qualsiasi chiarimento.\n\nCordiali saluti\n{{#@azienda}}{{@azienda}}{{/@azienda}}{{^@azienda}}L'agenzia{{/@azienda}}\n",
+      "recipient": "cliente.email"
     }
   ]
 }

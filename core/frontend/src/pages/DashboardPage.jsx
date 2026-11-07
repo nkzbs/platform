@@ -7,6 +7,7 @@ import { parseSchemaFrontend } from '../lib/schema-v3-frontend'
 import ChecklistWidget from './ChecklistWidget'
 import InsightsCard from '../components/InsightsCard'
 import QueueWidget from '../components/QueueWidget'
+import AgendaWidget from '../components/AgendaWidget'
 import TimbratureWidget from '../components/TimbratureWidget'
 import YearlyBreakdownView from './ModulePage/YearlyBreakdownView'
 import CategoryPivotView from './ModulePage/CategoryPivotView'
@@ -275,6 +276,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
     table: 'Le ultime righe di un modulo, in una piccola tabella.',
     checklist: 'Righe da spuntare, prese da uno o più moduli (es. cosa è già pagato e cosa no).',
     coda: 'Le righe rimaste nello stato «nuovo» dei moduli che lo hanno dichiarato (Builder → Avvisi), con il pulsante per smistarle.',
+    agenda: 'Cosa c\'è da fare: le scadenze in ritardo, di oggi e dei prossimi giorni dei moduli che le hanno dichiarate (Builder → Avvisi e Ruoli del modulo).',
     timbrature_rapide: 'Entrata/uscita con un tocco e il totale di oggi, per il modulo dichiarato come Timbrature (Builder → Ruoli del modulo).',
     yearly_breakdown: 'Un campo sommato mese per mese, con il confronto con l\'anno prima.',
     category_pivot: 'Un campo sommato per categoria, anno su anno.',
@@ -286,7 +288,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
 
   const saveWidget = async () => {
     const w = { ...newWidget, page }
-    if (!w.label) w.label = w.module_slug || (w.type === 'checklist' ? 'Checklist' : w.type === 'come_sta_andando' ? 'Come sta andando' : w.type === 'coda' ? 'Coda' : w.type === 'timbrature_rapide' ? 'Timbrature' : 'Widget')
+    if (!w.label) w.label = w.module_slug || (w.type === 'checklist' ? 'Checklist' : w.type === 'come_sta_andando' ? 'Come sta andando' : w.type === 'coda' ? 'Coda' : w.type === 'agenda' ? 'Da fare' : w.type === 'timbrature_rapide' ? 'Timbrature' : 'Widget')
     if (w.type === 'checklist') w.config = checklistConfig
     if (w.type === 'periodo') w.config = periodoConfig
     if (w.type === 'riepilogo_mensile') w.config = riepilogoConfig
@@ -424,7 +426,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
           // slegati invece di uno. Ora il wrapper porta il vetro (come checklist/coda/
           // riepilogo_mensile) e InsightsCard non disegna più un proprio sfondo.
           return (
-            <div key={w.id} className={(!isAperto(w) ? 'max-lg:[&>*:not(.wbar)]:hidden ' : '') + (['yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? 'relative' : 'glass-panel overflow-hidden relative') + (['checklist', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? ' col-span-full' : ['coda'].includes(w.type) ? ' col-span-full' : ['come_sta_andando', 'riepilogo_mensile'].includes(w.type) ? ' col-span-full sm:col-span-1 lg:col-span-3' : ' lg:col-span-2')}>
+            <div key={w.id} className={(!isAperto(w) ? 'max-lg:[&>*:not(.wbar)]:hidden ' : '') + (['yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? 'relative' : 'glass-panel overflow-hidden relative') + (['checklist', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? ' col-span-full' : ['coda', 'agenda'].includes(w.type) ? ' col-span-full' : ['come_sta_andando', 'riepilogo_mensile'].includes(w.type) ? ' col-span-full sm:col-span-1 lg:col-span-3' : ' lg:col-span-2')}>
               {['come_sta_andando', 'checklist', 'coda', 'riepilogo_mensile'].includes(w.type) && !editMode && (
                 /* "Liquid Glass" (2026-10-31) — questa barra, da chiusa, sta DENTRO la card già
                    di vetro (.glass-panel sul wrapper, sopra): prima aveva un suo sfondo opaco
@@ -479,6 +481,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                 const { anno, mese } = meseScelto((w.config || {}).giorno_cutoff)
                 return <RiepilogoMensile data={data} label={w.label} nomeMese={new Date(anno, mese, 1).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })} />
               })()}
+              {w.type === 'agenda' && <AgendaWidget token={token} onNavigate={onNavigate} />}
               {w.type === 'coda' && <QueueWidget token={token} onNavigate={onNavigate} modules={modules} user={user} />}
               {w.type === 'timbrature_rapide' && <TimbratureWidget token={token} user={user} onNavigate={onNavigate} />}
               {w.type === 'come_sta_andando' && <InsightsCard token={token} widgetId={w.id} title={w.label} onNavigate={features.movimenti ? onNavigate : undefined} />}
@@ -546,6 +549,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                   <optgroup label="Elenchi">
                     <option value="table">Tabella — ultime righe di un modulo</option>
                     <option value="checklist">Checklist — righe da spuntare, da più moduli</option>
+                    <option value="agenda">Da fare — scadenze di oggi e dei prossimi giorni</option>
                     <option value="coda">Coda — righe nello stato «nuovo» dei moduli</option>
                     <option value="timbrature_rapide">Timbrature rapide — entrata/uscita e il totale di oggi</option>
                   </optgroup>
@@ -601,7 +605,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                   )
                 })()}
               </div>
-              {!['checklist', 'riepilogo_mensile', 'come_sta_andando', 'coda', 'timbrature_rapide', ...REPORT_WIDGET_TYPES].includes(newWidget.type) && (
+              {!['checklist', 'riepilogo_mensile', 'come_sta_andando', 'coda', 'agenda', 'timbrature_rapide', ...REPORT_WIDGET_TYPES].includes(newWidget.type) && (
                 <div>
                   <label className="text-xs text-gray-400 block mb-1">Modulo</label>
                   <select className="w-full bg-surface-page text-ink px-4 py-3 rounded-lg outline-none border border-gray-800 focus:border-accent transition" value={newWidget.module_slug} onChange={(e) => setNewWidget({ ...newWidget, module_slug: e.target.value, field: '' })}>
@@ -955,7 +959,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
                 newWidget.type === 'checklist' ? checklistConfig.sources.filter((s) => s.module_slug && s.amount_field && s.status_field).length === 0
                 : newWidget.type === 'riepilogo_mensile' ? !(riepilogoConfig.entrate.modulo && riepilogoConfig.gruppi.some((g) => g.modulo && g.campo_importo))
                 : REPORT_WIDGET_TYPES.includes(newWidget.type) ? !(reportBlockConfig.source_module && reportBlockConfig.block_key)
-                : newWidget.type === 'come_sta_andando' || newWidget.type === 'coda' || newWidget.type === 'timbrature_rapide' ? false
+                : newWidget.type === 'come_sta_andando' || newWidget.type === 'coda' || newWidget.type === 'agenda' || newWidget.type === 'timbrature_rapide' ? false
                 : !newWidget.module_slug
               } className="flex-1 bg-accent hover:opacity-90 disabled:opacity-50 text-white py-3 rounded-lg transition font-medium">{editingWidgetId ? 'Salva modifiche' : 'Aggiungi'}</button>
             </div>
