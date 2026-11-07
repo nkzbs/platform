@@ -143,12 +143,23 @@ async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs
         // `converti`: campi già presenti che diventano un elenco a scelta multipla (id ed etichetta restano), o
         // si creano se mancano. I valori già scritti come testo si spezzano in elenco (vedi sotto).
         const daConvertire = (az.converti || []);
-        const stepsConvertiti = schema.steps.map((x) => {
+        const stepsConvertiti0 = schema.steps.map((x) => {
           const c = daConvertire.find((y) => y.key === x.key && x.block_type === 'field');
           return c ? { ...x, type: c.type || 'multiselect', options: c.options, label: c.label || x.label } : x;
         });
+        // `ricalcola`: [{ key, da, a, in_fondo? }] cambia la formula di un campo calcolato già presente SOLO se è ancora quella di prima (`da`): una formula che l'utente ha
+        // modificato dal Builder non si tocca mai. `in_fondo` sposta il campo dopo gli altri (un calcolo vede solo i campi che lo precedono): servono quando la nuova formula usa campi aggiunti più tardi.
+        const ricalcolati = [];
+        const stepsRicalcolati = stepsConvertiti0.map((x) => {
+          const r = (az.ricalcola || []).find((y) => y.key === x.key);
+          if (r && x.block_type === 'field' && x.type === 'computed' && x.expr === r.da) { ricalcolati.push(r); return { ...x, expr: r.a }; }
+          return x;
+        });
+        const inFondo = ricalcolati.filter((r) => r.in_fondo).map((r) => r.key);
+        const stepsConvertiti = inFondo.length ? [...stepsRicalcolati.filter((x) => !(x.block_type === 'field' && inFondo.includes(x.key))), ...inFondo.map((k) => stepsRicalcolati.find((x) => x.block_type === 'field' && x.key === k))] : stepsRicalcolati;
         const nuoviDaConvertire = daConvertire.filter((c) => !schema.steps.some((x) => x.key === c.key))
           .map((c) => ({ id: cfg.idPrefisso + Math.random().toString(36).slice(2, 10), block_type: 'field', key: c.key, label: c.label || c.key, type: c.type || 'multiselect', options: c.options }));
+        if (!daAggiungere.length && !daConvertire.length && !ricalcolati.length) { segna(chiave); esiti.push({ slug, key: az.key, esito: 'nulla da fare' }); continue; } // formule già cambiate dall'utente (o già giuste): niente da pubblicare
         const bozzaE = await callAs(admin, 'PUT', '/builder/' + slug + '/draft', { schema: { version: 3, steps: [...stepsConvertiti, ...nuoviDaConvertire, ...daAggiungere] } });
         if (!bozzaE.ok) { console.error('[seed-blocchi] bozza ' + slug + '/' + az.key + ' fallita:', JSON.stringify(bozzaE.data)); esiti.push({ slug, key: az.key, esito: 'errore bozza' }); continue; }
         const pubE = await callAs(admin, 'POST', '/builder/' + slug + '/publish', {});

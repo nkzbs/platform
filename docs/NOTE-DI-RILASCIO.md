@@ -2,6 +2,17 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.58 — 7 novembre 2026
+
+**Il totale delle Provvigioni usa gli scaglioni.**
+
+- **Il difetto**: importo netto, IVA e totale usavano solo la percentuale scritta a mano. Con la percentuale vuota la scheda mostrava «Provvigione da scaglione 4.560» e «Totale con IVA 0».
+- **La correzione**: nuova estensione del pacchetto `scaglioni_nel_totale` (pacchetto alla versione 7). Importo netto, IVA e totale ora usano la **Percentuale applicata**: quella scritta a mano se c'è, altrimenti quella dello scaglione. Con 152.000 € e percentuale vuota: 3% → netto 4.560, totale 5.563,20.
+- **Meccanismo generico `ricalcola`** nelle estensioni (`seed-blocchi-verticale.js`): `[{ key, da, a, in_fondo? }]` cambia la formula di un campo calcolato già presente **solo se è ancora quella di prima** (`da`): una formula modificata dal Builder non si tocca mai. `in_fondo` sposta il campo dopo gli altri, perché un calcolo vede solo i campi che lo precedono. Una volta sola per estensione, come le altre.
+- **Su zucca**: arriva con deploy di Super Admin e Aggiorna; le provvigioni esistenti si ricalcolano da sole (i campi sono calcolati al volo, nessun dato da migrare). Se qualcuno ha cambiato a mano la formula di importo netto, resta com'è.
+- Test: `ricalcolo-estensioni.test.js` con le estensioni vere (scaglione, percentuale scritta, scaglione alto, solo importo, formula dell'utente intatta, ripetere non cambia nulla). Provato su un tenant locale con il pacchetto reale.
+- La guida illustrata in PDF è stata rigenerata con il nuovo comportamento.
+
 ## 0.4.57 — 7 novembre 2026
 
 **Due difetti trovati preparando la guida illustrata.**
@@ -9,7 +20,7 @@ Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la 
 - **«Annulla» illeggibile nel tema chiaro**: i pulsanti grigi con testo bianco (15 punti dell'app: moduli «Nuovo», finestre dei widget…) avevano il testo bianco su grigio chiaro. Ora nel tema chiaro il testo prende il colore del tema.
 - **Pannelli laterali**: le azioni stanno sempre sotto il titolo (anche su computer), perché accanto lo facevano troncare («Provvigio…») quando erano quattro.
 - **Guida illustrata in PDF** (`docs/guida-utente/Guida-illustrata.pdf`, 35 pagine, 43 schermate): ogni azione dei moduli, della Dashboard e delle Impostazioni, con l'intestazione grafica comune dei PDF. Le schermate sono di un ambiente di prova con dati di esempio, non di zucca.
-- **Da sistemare (non toccato)**: nelle Provvigioni il «Totale con IVA» usa la percentuale scritta a mano e ignora lo scaglione: con percentuale vuota e prezzo 152.000 € la scheda mostra «Provvigione da scaglione 4.560» e «Totale con IVA 0». La guida lo spiega; la soluzione di fondo è far usare lo scaglione al calcolo del totale.
+- Il totale delle Provvigioni che ignorava lo scaglione è corretto nella 0.4.58.
 
 ## 0.4.56 — 7 novembre 2026
 

@@ -129,6 +129,41 @@
       ]
     },
     {
+      "key": "scaglioni_nel_totale",
+      "_nota": "Il totale della provvigione usa la «Percentuale applicata» (quella scritta a mano, altrimenti quella dello scaglione). Prima importo netto, IVA e totale usavano solo la percentuale scritta a mano e con la percentuale vuota davano 0 mentre lo scaglione proponeva un importo. Cambia le formule SOLO se sono ancora quelle originali (una formula modificata dal Builder non si tocca) e le sposta dopo i campi degli scaglioni, perché un calcolo vede solo i campi che lo precedono.",
+      "richiede": {
+        "provvigioni": [
+          "importo",
+          "base_imponibile",
+          "percentuale",
+          "importo_netto",
+          "iva",
+          "totale",
+          "percentuale_applicata"
+        ]
+      },
+      "ricalcola": [
+        {
+          "key": "importo_netto",
+          "da": "if(percentuale > 0, round(base_imponibile * percentuale / 100, 2), importo)",
+          "a": "if(percentuale_applicata > 0, round(base_imponibile * percentuale_applicata / 100, 2), importo)",
+          "in_fondo": true
+        },
+        {
+          "key": "iva",
+          "da": "round(importo_netto * 0.22, 2)",
+          "a": "round(importo_netto * 0.22, 2)",
+          "in_fondo": true
+        },
+        {
+          "key": "totale",
+          "da": "round(importo_netto * 1.22, 2)",
+          "a": "round(importo_netto * 1.22, 2)",
+          "in_fondo": true
+        }
+      ]
+    },
+    {
       "key": "fattura_elettronica",
       "_nota": "Segnaposto «da attivare»: la fattura della provvigione richiede SDI attivo in OpenAPI.it.",
       "richiede": {
