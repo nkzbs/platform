@@ -36,6 +36,13 @@ async function main() {
     const r = await (await fetch(BASE + '/api/internal-setup/apply', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': process.env.INTERNAL_API_SECRET }, body: JSON.stringify({ dashboard: [{ type: 'agenda', etichetta: 'Da fare' }, { type: 'boh' }, { type: 'kpi', modulo: 'non_installato' }] }) })).json();
     eq(r.dashboard, 1); const w = db.prepare("SELECT type, module_slug, label FROM dashboard_widgets WHERE page = 'dashboard'").all(); eq(w, [{ type: 'agenda', module_slug: null, label: 'Da fare' }]);
   });
+  await test('il widget «Da fare» si aggiunge a una Dashboard già piena, una volta sola; a una vuota no (ci pensa il profilo)', async () => {
+    const eng = require('./seed-blocchi-verticale'); const n = () => db.prepare("SELECT COUNT(*) c FROM dashboard_widgets WHERE type = 'agenda'").get().c;
+    db.prepare("DELETE FROM dashboard_widgets").run(); eq(eng.aggiungiWidgetAgenda(), false, 'vuota'); eq(n(), 0);
+    db.prepare("INSERT INTO dashboard_widgets (type, module_slug, label, sort_order, config, roles, user_ids, page) VALUES ('kpi', 'visite_x', 'K', 3, '{}', '[]', '[]', 'dashboard')").run();
+    eq(eng.aggiungiWidgetAgenda(), true); eq(n(), 1); eq(eng.aggiungiWidgetAgenda(), false, 'una volta sola'); eq(n(), 1);
+    eq(db.prepare("SELECT sort_order FROM dashboard_widgets WHERE type = 'agenda'").get().sort_order, 4, 'in fondo');
+  });
   await test('l\'adattatore «da_attivare» non chiama nulla: 501 col motivo, e il record non cambia', async () => {
     add('clienti_x', [F('nome'), { id: 'ea', block_type: 'external_action', key: 'verifica', label: 'Verifica del soggetto', adapter: 'da_attivare', servizio_richiesto: 'il servizio Risk' }]);
     const id = db.prepare("INSERT INTO records (module_slug, data) VALUES ('clienti_x', ?)").run(JSON.stringify({ nome: 'Rossi' })).lastInsertRowid;

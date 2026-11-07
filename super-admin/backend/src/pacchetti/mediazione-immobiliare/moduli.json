@@ -240,6 +240,21 @@
         "from": "conclusa",
         "to": "programmata",
         "label": "Riprogramma"
+      },
+      {
+        "id": "cal_visite",
+        "block_type": "calendar_view",
+        "key": "calendario",
+        "label": "Visite",
+        "date_field": "data_visita",
+        "time_field": "ora",
+        "title_field": "oggetto",
+        "subtitle_fields": [
+          "immobile",
+          "cliente",
+          "agente"
+        ],
+        "done_state": "conclusa"
       }
     ]
   }

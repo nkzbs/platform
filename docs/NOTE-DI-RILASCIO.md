@@ -2,6 +2,16 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.54 — 7 novembre 2026
+
+**Le Visite hanno la vista a calendario; il widget «Da fare» arriva da solo sulla Dashboard di zucca.**
+
+- **Vista a calendario** (nuovo blocco di schema `calendar_view`, `ModulePage/CalendarView.jsx`): un mese alla volta, con le righe sul loro giorno per un campo data (`date_field`), l'ora (`time_field`), il titolo (`title_field`), il sottotitolo (`subtitle_fields`, relazioni comprese) e le righe concluse attenuate (`done_state`). Toccando un giorno le sue righe compaiono sotto (su telefono i giorni mostrano un punto per riga); toccando una riga si apre la scheda. Nella pagina del modulo un selettore **Calendario / Elenco** permette di tornare alla tabella. Generico: qualunque modulo può dichiararlo; oggi lo usano le Visite (dal pacchetto).
+- **Builder**: scheda del blocco per cambiare campo data, ora, titolo e stato concluso, e il blocco è portato dentro il salvataggio (senza, riaprire e pubblicare il Builder lo avrebbe cancellato: stesso errore già visto per le altre viste).
+- **«Da fare» automatico**: quando un modulo dichiara la scadenza negli Avvisi e la Dashboard ha già dei widget, il motore dei pacchetti aggiunge **una volta sola** il widget «Da fare» in fondo (marcatore `widget:agenda`); una Dashboard vuota la riempie il profilo dell'analisi. Su zucca arriva con l'Aggiorna, senza toccare i dati a mano.
+- Test: calendario nello schema delle Visite (campi citati esistenti, andata e ritorno del Builder), widget automatico (una volta sola, mai su una Dashboard vuota).
+- Provato nel browser in locale (mese, etichette, elenco del giorno). **Non provato**: telefono e tema scuro.
+
 ## 0.4.53 — 7 novembre 2026
 
 **Visite, scaglioni di provvigione, solleciti, auguri e una Dashboard che aiuta il lavoro del giorno; le funzioni che richiedono OpenAPI.it ci sono, con l'avviso «da attivare».**
@@ -13,8 +23,8 @@ Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la 
 - **Sollecito di pagamento** (documento sulle Provvigioni, email al cliente collegato) e **Auguri** (documento sui Clienti): il testo si rivede e si modifica prima dell'invio, come gli altri documenti.
 - **«Da attivare»**: Verifica del soggetto (Risk), Invia via PEC, Firma elettronica, Fattura elettronica (SDI) hanno già il pulsante nella scheda, con l'etichetta «da attivare»; premuto, spiega quale servizio di OpenAPI.it serve e non fa nulla né costa nulla. Adattatore segnaposto `da_attivare` (501, `code: da_attivare`): quando il servizio sarà attivo si sostituisce l'`adapter` del blocco con quello vero.
 - Test: `agenda-e-segnaposto.test.js`; aggiornati i test dei moduli e dei documenti del pacchetto (che ora ne hanno uno in più). Pacchetto alla versione 5.
-- **Per averlo su zucca**: deploy di Super Admin, Aggiorna, poi aggiungere il widget «Da fare» alla Dashboard.
-- **Non fatto**: la vista a calendario delle Visite (oggi è l'elenco), l'invio automatico dei solleciti e degli auguri (oggi si inviano a mano dalla scheda), il collegamento reale ai servizi «da attivare».
+- **Per averlo su zucca**: deploy di Super Admin e Aggiorna (il widget «Da fare» si aggiunge da solo, vedi 0.4.54).
+- **Non fatto**: l'invio automatico dei solleciti e degli auguri (oggi si inviano a mano dalla scheda), il collegamento reale ai servizi «da attivare».
 
 ## 0.4.52 — 7 novembre 2026
 

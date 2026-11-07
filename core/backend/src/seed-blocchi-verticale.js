@@ -417,6 +417,19 @@ async function giroPacchetto(slug) {
 }
 
 // Applica i pacchetti attivi del tenant (all'avvio e a fine creazione). Senza pacchetti attivi non fa niente.
+// Il widget «Da fare» della Dashboard (agenda delle scadenze): se un modulo ha dichiarato la scadenza negli Avvisi e la Dashboard ha già dei widget (altrimenti ci pensa
+// l'impostazione dal profilo, che riempie solo una Dashboard vuota) e non c'è già un widget «agenda», lo si aggiunge in fondo, una volta sola (marcatore `widget:agenda`).
+function aggiungiWidgetAgenda() {
+  const chiave = 'widget:agenda';
+  if (gia(chiave)) return false;
+  const conScadenze = require('./module-roles').list({ use: 'avvisi' }).some((m) => m.avvisi.scadenze && m.roles.scadenza);
+  if (!conScadenze) return false;
+  const ci = db.prepare("SELECT COUNT(*) c, COALESCE(MAX(sort_order), 0) m, SUM(type = 'agenda') a FROM dashboard_widgets WHERE page = 'dashboard'").get();
+  if (!ci.c) return false; // Dashboard vuota: non si marca, ci riprova al prossimo giro
+  if (!ci.a) db.prepare("INSERT INTO dashboard_widgets (type, module_slug, field, aggregation, label, color, sort_order, config, roles, user_ids, page) VALUES ('agenda', NULL, NULL, 'count', 'Da fare', '#2563EB', ?, '{}', '[]', '[]', 'dashboard')").run(ci.m + 1);
+  segna(chiave); return !ci.a;
+}
+
 async function run() {
   migraDaMarcatori().forEach((slug) => console.log('[seed-blocchi] pacchetto «' + slug + '» riconosciuto come già applicato: attivo'));
   const pacchetti = pacchettiAttivi();
@@ -426,6 +439,7 @@ async function run() {
     for (const slug of pacchetti) applicati += await giroPacchetto(slug);
     if (!applicati) break;
   }
+  try { if (aggiungiWidgetAgenda()) console.log('[seed-blocchi] widget «Da fare» aggiunto alla Dashboard'); } catch (e) { console.error('[seed-blocchi] widget Da fare non aggiunto:', e.message); }
 }
 
-module.exports = { pacchettiDisponibili, leggiPacchetto, riceviPacchetto, statoPacchetti, pacchettiAttivi, attivaPacchetto, marcatoriDelPacchetto, migraDaMarcatori, applicaSeed, modelloApplicabile, abbinamentoApplicabile, TIPI, dichiaraRuoli, creaModuli, riallineaRelazioni, impostaProprieta, assegnaSezioni, run };
+module.exports = { aggiungiWidgetAgenda, pacchettiDisponibili, leggiPacchetto, riceviPacchetto, statoPacchetti, pacchettiAttivi, attivaPacchetto, marcatoriDelPacchetto, migraDaMarcatori, applicaSeed, modelloApplicabile, abbinamentoApplicabile, TIPI, dichiaraRuoli, creaModuli, riallineaRelazioni, impostaProprieta, assegnaSezioni, run };

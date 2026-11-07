@@ -24,6 +24,7 @@ import WeeklyBreakdownView from './WeeklyBreakdownView'
 import GenericView from './GenericView'
 import SourceSearchModal from './SourceSearchModal'
 import ViewTabs from './ViewTabs'
+import CalendarView from './CalendarView'
 import ArchiveView from './ArchiveView'
 import FormulaEditor from '@shared/builder/FormulaEditor.jsx'
 import { StepChainEditor } from '@shared/builder/StepChainEditor.jsx'
@@ -41,6 +42,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
   const [form, setForm] = useState({})
   const [relatedCache, setRelatedCache] = useState({})
   const [detailId, setDetailId] = useState(null)
+  const [inCalendario, setInCalendario] = useState(true) // moduli con un blocco calendar_view: calendario o elenco
   // Modulo "nuovo" semplice: i collegamenti facoltativi stanno chiusi in fondo; in un archivio il nuovo documento parte dalla cartella aperta
   const [mostraCollegamenti, setMostraCollegamenti] = useState(false)
   const [cartellaCorrente, setCartellaCorrente] = useState('')
@@ -805,7 +807,16 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
         </div>
       )}
 
-      {schema && schema.view_tabs && schema.view_tabs.tabs && schema.view_tabs.tabs.length > 0 ? (
+      {schema && schema.calendar_views && schema.calendar_views.length > 0 && !(schema.view_tabs && schema.view_tabs.tabs && schema.view_tabs.tabs.length > 0) && (
+        <div className="flex gap-1 mb-4" role="tablist" aria-label="Come vedere le righe">
+          {[[true, 'Calendario', 'calendar'], [false, 'Elenco', 'list']].map(([v, nome, ic]) => (
+            <button key={nome} type="button" role="tab" aria-selected={inCalendario === v} onClick={() => setInCalendario(v)} className={'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border transition ' + (inCalendario === v ? 'border-accent text-accent bg-accent/10' : 'border-gray-800 text-gray-400 hover:bg-white/5')}><Icon name={ic} size={14} />{nome}</button>
+          ))}
+        </div>
+      )}
+      {schema && schema.calendar_views && schema.calendar_views.length > 0 && inCalendario && !(schema.view_tabs && schema.view_tabs.tabs && schema.view_tabs.tabs.length > 0) ? (
+        <CalendarView config={schema.calendar_views[0]} records={displayRecords} relatedCache={relatedCache} onOpen={(id) => setDetailId(id)} />
+      ) : schema && schema.view_tabs && schema.view_tabs.tabs && schema.view_tabs.tabs.length > 0 ? (
         <ViewTabs tabs={schema.view_tabs.tabs} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} user={user} />
       ) : schema && schema.parent_children_views && schema.parent_children_views.length > 0 ? (
         <ParentChildrenView config={schema.parent_children_views[0]} mod={mod} schema={schema} token={token} tableColumns={tableColumns} records={records} user={user} />

@@ -41,6 +41,15 @@ async function main() {
     for (const r of sc.relations) ok(def.richiede.includes(r.target_module), 'la relazione ' + r.key + ' cita ' + r.target_module + ' che non è tra i richiesti');
     eq(def.steps.filter((s) => s.block_type === 'workflow_state' && s.initial).length, 1);
   });
+  await test('Visite: il calendario è dichiarato nello schema, cita solo campi e relazioni che esistono e sopravvive all\'andata e ritorno del Builder', () => {
+    const def = SEED.visite, sc = parseSchemaNormalized(JSON.stringify({ version: 3, steps: def.steps }));
+    eq(sc.calendar_views.length, 1); const c = sc.calendar_views[0];
+    const chiavi = new Set([...sc.fields.map((f) => f.key), ...sc.relations.map((r) => r.key)]);
+    for (const k of [c.date_field, c.time_field, c.title_field, ...c.subtitle_fields]) ok(chiavi.has(k), 'il calendario cita «' + k + '» che non esiste');
+    ok(sc.workflow.states.some((st) => st.key === c.done_state), 'stato concluso inesistente');
+    const { toV3 } = require('./schema-v3');
+    eq(parseSchemaNormalized(JSON.stringify(toV3(sc))).calendar_views.map((x) => x.key), ['calendario'], 'andata e ritorno');
+  });
   await test('senza i moduli che cita non si crea nulla; con Clienti e Immobili si crea (crea, bozza, pubblica) una volta sola', async () => {
     eq(await seedEngine.creaModuli(SEED, { callAs: finto() }), []); eq(chiamate, []);
     add('clienti', [F('nome')]); eq(await seedEngine.creaModuli(SEED, { callAs: finto() }), [], 'manca Immobili'); add('immobili', [F('titolo')]);

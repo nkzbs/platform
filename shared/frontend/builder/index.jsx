@@ -26,7 +26,7 @@ const BLOCK_TYPE_CATEGORY = {
   workflow_state: 'Workflow', workflow_transition: 'Workflow',
   permissions: 'Permessi', validazione_creazione: 'Permessi',
   report_aggregate: 'Calcolo', yearly_breakdown: 'Calcolo', category_pivot: 'Calcolo', weekly_breakdown: 'Calcolo',
-  connection_required: 'Automazione', automation: 'Automazione', document_action: 'Automazione', external_action: 'Automazione', state_requirements: 'Workflow', match_view: 'Layout form',
+  connection_required: 'Automazione', automation: 'Automazione', document_action: 'Automazione', external_action: 'Automazione', calendar_view: 'Layout form', state_requirements: 'Workflow', match_view: 'Layout form',
   branch_create: 'Layout form', period_view: 'Layout form', parent_children_view: 'Layout form', view_tabs: 'Layout form', view: 'Layout form',
 }
 
@@ -39,7 +39,7 @@ const BLOCK_TYPE_CATEGORY = {
 const BLOCK_TYPE_LABEL = {
   field: 'Campo', relation: 'Relazione', workflow_state: 'Stato workflow', workflow_transition: 'Transizione workflow',
   permissions: 'Permessi', validazione_creazione: 'Validazione alla creazione', allegati: 'Allegati',
-  connection_required: 'Richiede connessione', automation: 'Automazione', document_action: 'Documento da modello', external_action: 'Azione esterna', state_requirements: 'Requisiti dello stato', match_view: 'Abbinamento',
+  connection_required: 'Richiede connessione', automation: 'Automazione', document_action: 'Documento da modello', external_action: 'Azione esterna', calendar_view: 'Vista a calendario', state_requirements: 'Requisiti dello stato', match_view: 'Abbinamento',
   branch_create: 'Crea in filiale', period_view: 'Vista periodo',
   parent_children_view: 'Vista padre/figli', yearly_breakdown: 'Riepilogo annuale', category_pivot: 'Pivot categoria',
   weekly_breakdown: 'Riepilogo settimanale', view_tabs: 'Tab di vista', report_aggregate: 'Report aggregato', view: 'Vista', api_source: 'Fonte esterna',
@@ -415,6 +415,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
         state_requirements: draft.state_requirements || [],
         match_views: draft.match_views || [],
         period_views: draft.period_views || [],
+        calendar_views: draft.calendar_views || [], // senza questa riga riaprire e pubblicare il Builder cancellerebbe il calendario
         parent_children_views: draft.parent_children_views || [],
         yearly_breakdowns: draft.yearly_breakdowns || [],
         category_pivots: draft.category_pivots || [],
@@ -2085,6 +2086,36 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                         </div>
                       ))}
                       <div className="text-[11px] text-gray-500 leading-snug">I requisiti sono un campo compilato, un allegato di un certo tipo o uno tra più campi. Si aggiungono dal pacchetto del verticale; qui si rinominano e si tolgono.</div>
+                    </div>
+                  )
+                }
+
+                if (step.block_type === 'calendar_view') {
+                  const campiMod = (fieldCache.find((m) => m.slug === selected) || {}).fields || []
+                  const stati = (schema.steps || []).filter((st) => st.block_type === 'workflow_state')
+                  const inp = 'w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-700 focus:border-violet-500 transition'
+                  const scegli = (chiave, etichetta, tipi, vuoto) => (
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">{etichetta}</label>
+                      <select value={step[chiave] || ''} onChange={(e) => updateStep(idx, chiave, e.target.value || undefined)} className={inp}>
+                        <option value="">{vuoto}</option>
+                        {campiMod.filter((f) => !tipi || tipi.includes(f.type)).map((f) => <option key={f.key} value={f.key}>{f.label || f.key}</option>)}
+                      </select>
+                    </div>
+                  )
+                  return (
+                    <div className="space-y-2">
+                      {scegli('date_field', 'Campo data (obbligatorio)', ['date', 'datetime'], '— scegli il campo data —')}
+                      {scegli('time_field', 'Campo ora (facoltativo)', null, '— nessuno —')}
+                      {scegli('title_field', 'Titolo di ogni riga', null, '— il primo del sottotitolo —')}
+                      <div>
+                        <label className="text-xs text-gray-400 block mb-1">Righe concluse (attenuate)</label>
+                        <select value={step.done_state || ''} onChange={(e) => updateStep(idx, 'done_state', e.target.value || undefined)} className={inp}>
+                          <option value="">— nessuno stato —</option>
+                          {stati.map((st) => <option key={st.key} value={st.key}>{st.label || st.key}</option>)}
+                        </select>
+                      </div>
+                      <div className="text-[11px] text-gray-500 leading-snug">Il modulo si può vedere anche a calendario: un mese alla volta, toccando un giorno compaiono le sue righe. I campi del sottotitolo (relazioni comprese) si dichiarano nel pacchetto.</div>
                     </div>
                   )
                 }
