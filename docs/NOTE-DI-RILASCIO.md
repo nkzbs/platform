@@ -2,6 +2,16 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.40 — 7 novembre 2026
+
+**Il dettaglio Immobili dice cosa succede quando si preme un pulsante.** I tre pulsanti in alto sembravano non fare nulla: il pannello dei documenti si apriva sotto il report di valutazione e gli abbinamenti, fuori schermo, e gli errori comparivano in un avviso che spariva in pochi secondi.
+
+- **Il pannello del documento si apre in vista**: appena si preme «Scheda …» la scheda scorre fino al pannello.
+- **Avviso fisso in cima alla scheda** (con «Modifica» dove serve) al posto dell'avviso che spariva: manca l'indirizzo o il comune per valutare; OpenAPI.it non è collegato (e dove si collega); la valutazione o la preparazione di un documento non sono riuscite, con il motivo.
+- **Nomi più chiari**: «Valutazione di mercato» al posto di «Valuta con OpenAPI.it»; i documenti che si spediscono per email portano «· email» accanto al nome, e ogni pulsante ha un suggerimento che dice cosa fa (email da rivedere prima di spedirla, oppure PDF da firmare e scansione da ricaricare).
+- Solo interfaccia del core (`ModulePage/RecordDetailModal.jsx`): nessun dato cambia. Il controllo della connessione OpenAPI.it avviene all'apertura della scheda.
+- **Non fatto (prossimo passo proposto)**: scheda a sezioni con i dati chiave in alto e blocco «Documenti» con lo stato della firma.
+
 ## 0.4.39 — 7 novembre 2026
 
 **Il cerchio rapido in tabella non compare più in Immobili e Clienti.** Il cerchio (cambia stato senza aprire la riga) si deduce da due stati che si rimandano indietro; in Immobili sono In vendita ↔ In trattativa e in Clienti Documenti inviati ↔ Verifica identità: non sono «fatto / da fare», quindi su una riga come «Ritirato» il cerchio non vuol dire niente.

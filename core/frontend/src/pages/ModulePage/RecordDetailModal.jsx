@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { API, openUploadedFile } from '../../lib/api'
 const toast = (message, type = 'success') => window.dispatchEvent(new CustomEvent('platform:toast', { detail: { message, type } }))
 import useApi from '../../lib/useApi'
@@ -431,6 +431,14 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   // Immobili, non un bottone generico, finché non esiste un secondo caso che giustifichi
   // un vero primitivo "azione esterna su un record esistente".
   const [valutando, setValutando] = useState(false)
+  // Perché un'azione non può partire (una frase, visibile in cima alla scheda e non solo in un avviso che sparisce): { testo, azione? }
+  const [avviso, setAvviso] = useState(null)
+  // OpenAPI.it è collegato? (null = non lo so ancora). Senza connessione la valutazione non può partire: lo si dice prima, non dopo un errore.
+  const [openapiCollegato, setOpenapiCollegato] = useState(null)
+  useEffect(() => {
+    if (mod.slug !== 'immobili') return
+    api.get('/connections').then((list) => { if (Array.isArray(list)) setOpenapiCollegato(!!(list.find((c) => c.id === 'openapi_it') || {}).connected) })
+  }, [mod.slug]) // eslint-disable-line react-hooks/exhaustive-deps
   // Report dell'ultima valutazione (dettaglio/comparabili/OMI) — idratato da
   // record.data.report_valutazione al caricamento (vedi la rotta: ora è salvato sul
   // record, non solo i 4 campi stima_*), così riaprendo il dettaglio in futuro resta
@@ -438,10 +446,14 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   // valutazione, che però lo riscrive anche sul record.
   const [reportValutazione, setReportValutazione] = useState(null)
   const valutaImmobile = async () => {
+    const d = (record && record.data) || {}
+    if (!(d.indirizzo || d.comune)) { setAvviso({ testo: 'Per valutare l\'immobile serve almeno l\'indirizzo o il comune: compilali da «Modifica» e riprova.', azione: 'modifica' }); return }
+    if (openapiCollegato === false) { setAvviso({ testo: 'OpenAPI.it non è collegato: senza la sua chiave la valutazione non può partire. Si collega da Impostazioni → Connessioni.' }); return }
+    setAvviso(null)
     setValutando(true)
     const res = await api.post('/records/immobili/' + recordId + '/valuta', {})
     setValutando(false)
-    if (!res.ok) { toast((res.data && res.data.error) || 'Valutazione non riuscita', 'error'); return }
+    if (!res.ok) { setAvviso({ testo: 'Valutazione non riuscita: ' + ((res.data && res.data.error) || 'errore sconosciuto') + '.' }); return }
     setRecord(res.data.record)
     setReportValutazione({ dettaglio: res.data.dettaglio, comparabili: res.data.comparabili, omi: res.data.omi, fotovoltaico: res.data.fotovoltaico, zonaSismicaUfficiale: res.data.zonaSismicaUfficiale, considerazioni: res.data.considerazioni })
     toast('Valutazione aggiornata')
@@ -457,11 +469,15 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   const [docInPreparazione, setDocInPreparazione] = useState(null) // chiave del documento in corso
   const [inviandoDoc, setInviandoDoc] = useState(false)
   const [bozzaDoc, setBozzaDoc] = useState(null) // { key, label, icon, oggetto, corpo, destinatario } oppure null = pannello chiuso
+  // Il pannello del documento si apre sotto il report e gli abbinamenti, fuori schermo: appena si apre ci si porta lì.
+  const pannelloDocRef = useRef(null)
+  useEffect(() => { if (bozzaDoc && pannelloDocRef.current) pannelloDocRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, [bozzaDoc && bozzaDoc.key]) // eslint-disable-line react-hooks/exhaustive-deps
   const apriDocumento = async (az) => {
     setDocInPreparazione(az.key)
     const res = await api.post('/records/' + mod.slug + '/' + recordId + '/documento/' + az.key + '/anteprima', {})
     setDocInPreparazione(null)
-    if (!res.ok) { toast((res.data && res.data.error) || 'Preparazione non riuscita', 'error'); return }
+    if (!res.ok) { setAvviso({ testo: 'Non riesco a preparare «' + az.label + '»: ' + ((res.data && res.data.error) || 'errore sconosciuto') + '.' }); return }
+    setAvviso(null)
     const consensi = {}
     ;(az.consents || []).forEach((c) => { consensi[c.field] = !!(record && record.data && record.data[c.field]) })
     setBozzaDoc({ key: az.key, label: az.label, icon: az.icon || 'mail', oggetto: res.data.oggetto, corpo: res.data.corpo, destinatario: res.data.destinatario, firma: az.delivery === 'firma', consents: az.consents || [], consensi, signedType: az.signed_type || az.key + '_firmato', file: null })
@@ -535,13 +551,13 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
       headerExtra={(
         <>
           {!editing && record && mod.slug === 'immobili' && (
-            <button onClick={valutaImmobile} disabled={valutando} className="text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1">
-              <Icon name="sparkles" size={12} />{valutando ? 'Valuto…' : 'Valuta con OpenAPI.it'}
+            <button onClick={valutaImmobile} disabled={valutando} title="Stima il valore con le quotazioni di mercato (OpenAPI.it) e prepara il report con il PDF" className={'text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1' + (openapiCollegato === false || !((record.data || {}).indirizzo || (record.data || {}).comune) ? ' opacity-60' : '')}>
+              <Icon name="sparkles" size={12} />{valutando ? 'Valuto…' : 'Valutazione di mercato'}
             </button>
           )}
           {!editing && record && !bozzaDoc && documenti.map((az) => (
-            <button key={az.key} onClick={() => apriDocumento(az)} disabled={docInPreparazione !== null} className="text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1">
-              <Icon name={az.icon || 'mail'} size={12} />{docInPreparazione === az.key ? 'Preparo…' : az.label}
+            <button key={az.key} onClick={() => apriDocumento(az)} disabled={docInPreparazione !== null} title={az.delivery === 'firma' ? 'Si scarica il PDF da firmare e poi si ricarica la scansione firmata' : 'Prepara l\'email: il testo si rivede e si modifica prima di spedirla'} className="text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1">
+              <Icon name={az.icon || 'mail'} size={12} />{docInPreparazione === az.key ? 'Preparo…' : az.label}{az.delivery !== 'firma' && docInPreparazione !== az.key && <span className="text-gray-500"> · email</span>}
             </button>
           ))}
           {!editing && record && <button onClick={startEditing} className="text-xs text-accent hover:opacity-80 transition flex items-center gap-1"><Icon name="edit" size={12} />Modifica</button>}
@@ -585,12 +601,19 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
           </>
         ) : (
           <>
+            {avviso && (
+              <div className="bg-amber-900/20 border border-amber-900/40 text-amber-300 text-xs p-3 rounded-lg mb-4 flex items-start gap-2" role="alert">
+                <span className="flex-1">{avviso.testo}</span>
+                {avviso.azione === 'modifica' && <button onClick={() => { setAvviso(null); startEditing() }} className="underline flex-shrink-0">Modifica</button>}
+                <button onClick={() => setAvviso(null)} aria-label="Chiudi l'avviso" className="flex-shrink-0 opacity-70 hover:opacity-100"><Icon name="x" size={12} /></button>
+              </div>
+            )}
             {mod.slug === 'immobili' && reportValutazione && (
               <ReportValutazione onPdf={scaricaValutazione} dati={record.data} report={reportValutazione} titolo={record.data.titolo} indirizzo={[record.data.indirizzo, record.data.comune, record.data.provincia].filter(Boolean).join(', ')} />
             )}
             <AbbinamentiSezione api={api} slug={mod.slug} recordId={recordId} definizioni={schema && schema.match_views} />
             {bozzaDoc && (
-              <div className="glass-panel p-4 mb-5 border-accent/30">
+              <div ref={pannelloDocRef} className="glass-panel p-4 mb-5 border-accent/30">
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <span className="text-xs font-semibold text-ink flex items-center gap-1.5"><Icon name={bozzaDoc.icon} size={13} />{bozzaDoc.label} — {bozzaDoc.firma ? 'rivedi, scarica, firma e ricarica' : 'rivedi o modifica prima di inviare'}</span>
                 </div>
