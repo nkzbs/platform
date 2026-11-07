@@ -431,6 +431,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   // quale vista mostrarlo (VISTE_AZIONE): qui non ci sono nomi di moduli né di servizi.
   const azioniEsterne = (schema && schema.external_actions) || []
   const [inEsecuzione, setInEsecuzione] = useState(null) // chiave dell'azione in corso
+  const [vistaAperta, setVistaAperta] = useState({}) // l'esito di un'azione si mostra in una sezione chiusa; si apre da sola dopo averla eseguita
   // Perché un'azione non può partire (una frase, visibile in cima alla scheda e non solo in un avviso che sparisce): { testo, azione? }
   const [avviso, setAvviso] = useState(null)
   // Le connessioni che le azioni richiedono sono collegate? (null = non lo so ancora). Lo si dice prima, non dopo un errore.
@@ -451,6 +452,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
     setInEsecuzione(null)
     if (!res.ok) { setAvviso({ testo: '«' + az.label + '» non è riuscita: ' + ((res.data && res.data.error) || 'errore sconosciuto') + '.' }); return }
     setRecord(res.data.record)
+    setVistaAperta((p) => ({ ...p, [az.key]: true }))
     toast(az.label + ': fatto')
     if (onSaved) onSaved(res.data.record)
   }
@@ -640,14 +642,6 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                 <button onClick={() => setAvviso(null)} aria-label="Chiudi l'avviso" className="flex-shrink-0 opacity-70 hover:opacity-100"><Icon name="x" size={12} /></button>
               </div>
             )}
-            {azioniEsterne.map((az) => {
-              const Vista = az.vista && VISTE_AZIONE[az.vista]
-              const esito = az.risultato_in && record.data[az.risultato_in]
-              if (!Vista || !esito) return null
-              const C = az.campi || {}
-              return <Vista key={az.key} report={esito} dati={record.data} campi={C} titolo={record.data[C.titolo]} indirizzo={[C.indirizzo, C.comune, C.provincia].map((k) => record.data[k]).filter(Boolean).join(', ')} onPdf={az.pdf ? () => scaricaAzionePdf(az) : null} />
-            })}
-            <AbbinamentiSezione api={api} slug={mod.slug} recordId={recordId} definizioni={schema && schema.match_views} />
             {bozzaDoc && (
               <div ref={pannelloDocRef} className="glass-panel p-4 mb-5 border-accent/30">
                 <div className="flex items-center justify-between gap-2 mb-2">
@@ -736,6 +730,29 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                 ))}
               </div>
             )}
+            {azioniEsterne.map((az) => {
+              const voce = az.vista && VISTE_AZIONE[az.vista]
+              const esito = az.risultato_in && record.data[az.risultato_in]
+              if (!voce || !esito) return null
+              const C = az.campi || {}, aperta = !!vistaAperta[az.key], Vista = voce.Vista
+              return (
+                <div key={az.key} className="mb-4">
+                  <button type="button" onClick={() => setVistaAperta((p) => ({ ...p, [az.key]: !aperta }))} aria-expanded={aperta}
+                    className="w-full text-left bg-surface-page border border-gray-800 rounded-lg px-3 py-2.5 flex items-center gap-2 hover:border-gray-600 transition">
+                    <Icon name={aperta ? 'chevron-down' : 'chevron-right'} size={13} className="text-gray-500 flex-shrink-0" />
+                    <Icon name={az.icon || 'sparkles'} size={13} className="text-accent flex-shrink-0" />
+                    <span className="text-sm font-semibold text-ink flex-shrink-0">{az.label}</span>
+                    <span className="text-xs text-gray-500 truncate">{voce.sintesi ? voce.sintesi(esito, record.data, az) : ''}</span>
+                  </button>
+                  {aperta && (
+                    <div className="mt-2">
+                      <Vista report={esito} dati={record.data} campi={C} titolo={record.data[C.titolo]} indirizzo={[C.indirizzo, C.comune, C.provincia].map((k) => record.data[k]).filter(Boolean).join(', ')} onPdf={az.pdf ? () => scaricaAzionePdf(az) : null} />
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+            <AbbinamentiSezione api={api} slug={mod.slug} recordId={recordId} definizioni={schema && schema.match_views} />
             <div className="space-y-2 mb-5">
               {gruppiCampi.map((g, gi) => (
                 <div key={g.nome || '_'} className="space-y-2">
@@ -1360,4 +1377,12 @@ function ReportValutazione({ report, titolo, indirizzo, onPdf, dati = {}, campi 
 export default RecordDetailModal
 
 // Le viste con cui mostrare l'esito di un'azione esterna (campo `vista` del blocco). Un elenco chiuso, come gli adattatori sul server.
-const VISTE_AZIONE = { valutazione_immobiliare: ReportValutazione }
+function sintesiValutazione(report, dati, az) {
+  const q = (report && report.dettaglio && report.dettaglio.quotazione) || {}
+  const num = (v) => { const x = parseFloat(String(v == null ? '' : v).replace(/[^0-9.]/g, '')); return isNaN(x) ? null : x }
+  const it = (x) => x.toLocaleString('it-IT', { maximumFractionDigits: 0, useGrouping: 'always' })
+  const E = (az && az.esito) || {}
+  const min = num(q.min), max = num(q.max), valore = parseFloat(dati[E.valore]), data = dati[E.data]
+  return [min != null && max != null ? it(min) + '–' + it(max) + ' €/mq' : null, valore ? 'stima ' + it(valore) + ' €' : null, data ? String(data).slice(0, 10).split('-').reverse().join('/') : null].filter(Boolean).join(' · ')
+}
+const VISTE_AZIONE = { valutazione_immobiliare: { Vista: ReportValutazione, sintesi: sintesiValutazione } }

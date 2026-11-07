@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.46 — 7 novembre 2026
+
+**Il report di valutazione non copre più la scheda: è una sezione chiusa sotto i dati chiave.** Dalla schermata di zucca: il report occupava la prima pagina e spingeva giù percorso dello stato, «per passare a… manca», dati chiave e sezioni.
+
+- **L'esito di un'azione esterna** (blocco `external_action` con una `vista`) si mostra in una riga apribile con il nome dell'azione e una sintesi (per la valutazione: «2.371–3.476 €/mq · stima 845.000 € · 07/11/2026»), sotto i dati chiave e prima dei campi. Si apre con un clic e **da sola subito dopo aver eseguito l'azione**; «Scarica PDF» resta dentro.
+- **Ordine della scheda**: avviso, documento in preparazione, percorso dello stato, «manca», dati chiave, esito delle azioni, abbinamenti, campi per sezione, riquadri (Stato, Cronologia, Allegati…).
+- Vale per ogni modulo con un'azione esterna con vista: la sintesi è del registro delle viste (`VISTE_AZIONE`), non di Immobili.
+- Solo interfaccia del core. Provato in locale.
+
 ## 0.4.45 — 7 novembre 2026
 
 **I pacchetti di verticale vivono in Super Admin, accanto all'analisi, e il core non ne contiene più.** Ultimo punto del piano di modularità: i dati di Mediazione immobiliare erano ancora una cartella dentro il core.
