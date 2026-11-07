@@ -97,6 +97,20 @@ async function main() {
     prop.length = 0; eq(await seedEngine.impostaProprieta(seed, { callAs }), []); eq(prop, [], 'una volta sola');
   });
 
+  await test('le sezioni e i dati chiave si assegnano ai campi che esistono, senza sovrascrivere, una volta sola', async () => {
+    const SEZ = { sz: { sezioni: { Posizione: ['indirizzo', 'comune'], Prezzi: ['prezzo', 'inesistente'] }, dati_chiave: ['prezzo'] } };
+    add('sz', [F('indirizzo'), { ...F('comune'), sezione: 'Mia sezione' }, F('prezzo', 'currency'), F('altro')]); chiamate.length = 0;
+    eq((await seedEngine.assegnaSezioni(SEZ, { callAs: finto() })).map((e) => e.esito), ['applicato']);
+    const campi = JSON.parse(db.prepare("SELECT schema_json FROM modules WHERE slug = 'sz'").get().schema_json).steps;
+    const per = (k) => campi.find((x) => x.key === k);
+    eq([per('indirizzo').sezione, per('comune').sezione, per('prezzo').sezione, per('altro').sezione], ['Posizione', 'Mia sezione', 'Prezzi', undefined], 'quella scelta a mano resta');
+    eq([per('prezzo').dato_chiave, per('altro').dato_chiave], [true, undefined]);
+    chiamate.length = 0; eq(await seedEngine.assegnaSezioni(SEZ, { callAs: finto() }), []); eq(chiamate, [], 'una volta sola');
+    const reale = require('./seeds/sezioni-immobiliare.json').immobili;
+    eq(reale.dati_chiave, ['prezzo_richiesto', 'stima_valore', 'superficie_mq', 'locali']);
+    const tutte = Object.values(reale.sezioni).flat(); eq(new Set(tutte).size, tutte.length, 'nessun campo in due sezioni'); ok(tutte.includes('titolo') && tutte.includes('riacquisto_zona'));
+  });
+
   console.log(`\n${passed} passati, ${failed} falliti`);
   try { fs.unlinkSync(process.env.DB_PATH); } catch (e) {}
   process.exit(failed ? 1 : 0);

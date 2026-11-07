@@ -472,6 +472,26 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   // Il pannello del documento si apre sotto il report e gli abbinamenti, fuori schermo: appena si apre ci si porta lì.
   const pannelloDocRef = useRef(null)
   useEffect(() => { if (bozzaDoc && pannelloDocRef.current) pannelloDocRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, [bozzaDoc && bozzaDoc.key]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Scheda leggibile: i campi vuoti si nascondono, i campi con una «sezione» si raggruppano (la prima aperta, le altre chiuse), i «dati chiave» stanno in alto ──
+  const [mostraVuoti, setMostraVuoti] = useState(false)
+  const [gruppiAperti, setGruppiAperti] = useState({})
+  const [menuDoc, setMenuDoc] = useState(false)
+  const valoreVuoto = (f) => { const v = record && record.data ? record.data[f.key] : undefined; return v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0) }
+  const campiRiempiti = fields.filter((f) => !valoreVuoto(f))
+  const nVuoti = fields.length - campiRiempiti.length
+  const gruppiCampi = (() => {
+    const out = [], indice = new Map()
+    for (const f of (mostraVuoti ? fields : campiRiempiti)) {
+      const nome = typeof f.sezione === 'string' ? f.sezione.trim() : ''
+      if (!indice.has(nome)) { indice.set(nome, out.length); out.push({ nome, campi: [] }) }
+      out[indice.get(nome)].campi.push(f)
+    }
+    return out
+  })()
+  const gruppoAperto = (g, i) => (gruppiAperti[g.nome] !== undefined ? gruppiAperti[g.nome] : i === 0)
+  const datiChiave = fields.filter((f) => f.dato_chiave && !valoreVuoto(f))
+  const formatoChiave = (f, v) => { const n = Number(v); if (f.type === 'currency' && !isNaN(n)) return n.toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }); if (f.type === 'number' && !isNaN(n)) return n.toLocaleString('it-IT'); return Array.isArray(v) ? v.join(', ') : String(v) }
   const apriDocumento = async (az) => {
     setDocInPreparazione(az.key)
     const res = await api.post('/records/' + mod.slug + '/' + recordId + '/documento/' + az.key + '/anteprima', {})
@@ -555,11 +575,28 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
               <Icon name="sparkles" size={12} />{valutando ? 'Valuto…' : 'Valutazione di mercato'}
             </button>
           )}
-          {!editing && record && !bozzaDoc && documenti.map((az) => (
+          {!editing && record && !bozzaDoc && documenti.length === 1 && documenti.map((az) => (
             <button key={az.key} onClick={() => apriDocumento(az)} disabled={docInPreparazione !== null} title={az.delivery === 'firma' ? 'Si scarica il PDF da firmare e poi si ricarica la scansione firmata' : 'Prepara l\'email: il testo si rivede e si modifica prima di spedirla'} className="text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1">
               <Icon name={az.icon || 'mail'} size={12} />{docInPreparazione === az.key ? 'Preparo…' : az.label}{az.delivery !== 'firma' && docInPreparazione !== az.key && <span className="text-gray-500"> · email</span>}
             </button>
           ))}
+          {!editing && record && !bozzaDoc && documenti.length > 1 && (
+            <div className="relative">
+              <button onClick={() => setMenuDoc((x) => !x)} disabled={docInPreparazione !== null} aria-haspopup="menu" aria-expanded={menuDoc} className="text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1">
+                <Icon name="file" size={12} />{docInPreparazione !== null ? 'Preparo…' : 'Documenti'}<Icon name="chevron-down" size={11} />
+              </button>
+              {menuDoc && (
+                <div role="menu" className="absolute right-0 top-full mt-1 z-30 min-w-[260px] bg-surface-card border border-gray-700 rounded-lg shadow-lg py-1">
+                  {documenti.map((az) => (
+                    <button key={az.key} role="menuitem" onClick={() => { setMenuDoc(false); apriDocumento(az) }} className="w-full text-left px-3 py-2 hover:bg-white/5 transition flex items-start gap-2">
+                      <Icon name={az.icon || 'mail'} size={13} className="mt-0.5 text-accent flex-shrink-0" />
+                      <span><span className="block text-xs text-ink">{az.label}</span><span className="block text-[11px] text-gray-500">{az.delivery === 'firma' ? 'PDF da firmare, poi si ricarica la scansione' : 'Email da rivedere prima di spedirla'}</span></span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           {!editing && record && <button onClick={startEditing} className="text-xs text-accent hover:opacity-80 transition flex items-center gap-1"><Icon name="edit" size={12} />Modifica</button>}
           {!editing && record && canDelete && <button onClick={remove} className="text-xs text-red-400/70 hover:text-red-400 transition flex items-center gap-1"><Icon name="trash" size={12} />Elimina</button>}
         </>
@@ -666,8 +703,39 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                 )}
               </div>
             )}
+            {workflow && workflow.states.length > 1 && (
+              <div className="flex flex-wrap items-center gap-1.5 mb-4 text-xs" aria-label="Percorso dello stato">
+                {workflow.states.map((st, i) => {
+                  const attuale = st.key === record.data._stato
+                  return (
+                    <React.Fragment key={st.key}>
+                      {i > 0 && <Icon name="chevron-right" size={11} className="text-gray-600" />}
+                      <span className={attuale ? 'px-2.5 py-1 rounded-lg font-medium' : 'text-gray-500'} style={attuale ? { backgroundColor: (st.color || '#6B7280') + '26', color: st.color || '#9CA3AF' } : undefined}>{st.label}</span>
+                    </React.Fragment>
+                  )
+                })}
+              </div>
+            )}
+            {datiChiave.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                {datiChiave.map((f) => (
+                  <div key={f.key} className="bg-surface-page rounded-lg p-3 border border-gray-800">
+                    <div className="text-[11px] text-gray-500">{f.label}</div>
+                    <div className="text-base font-semibold text-ink">{formatoChiave(f, record.data[f.key])}</div>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="space-y-2 mb-5">
-              {fields.map((f) => (
+              {gruppiCampi.map((g, gi) => (
+                <div key={g.nome || '_'} className="space-y-2">
+                  {g.nome && (
+                    <button type="button" onClick={() => setGruppiAperti((p) => ({ ...p, [g.nome]: !gruppoAperto(g, gi) }))} aria-expanded={gruppoAperto(g, gi)}
+                      className="w-full flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-gray-200 transition pt-2">
+                      <Icon name={gruppoAperto(g, gi) ? 'chevron-down' : 'chevron-right'} size={12} />{g.nome}<span className="text-gray-600 font-normal">· {g.campi.length}</span>
+                    </button>
+                  )}
+                  {(!g.nome || gruppoAperto(g, gi)) && g.campi.map((f) => (
                 <div key={f.key} className="flex items-center justify-between text-sm border-b border-gray-800/60 pb-2">
                   <span className="text-gray-500">{f.label}{f.type === 'computed' && <span className="text-gray-700"> (calcolato)</span>}</span>
                   <span className="text-gray-200 font-mono">
@@ -712,7 +780,14 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                       : (record.data[f.key] !== undefined && record.data[f.key] !== null ? String(record.data[f.key]) : '—')}
                   </span>
                 </div>
+                  ))}
+                </div>
               ))}
+              {nVuoti > 0 && (
+                <button type="button" onClick={() => setMostraVuoti((x) => !x)} className="text-xs text-accent hover:opacity-80 transition pt-1">
+                  {mostraVuoti ? 'Nascondi i campi vuoti' : 'Mostra anche i ' + nVuoti + (nVuoti === 1 ? ' campo vuoto' : ' campi vuoti')}
+                </button>
+              )}
               {relations.map((r) => {
                 const cache = relatedCache[r.key]
                 const label = cache && cache.byId[record.data[r.key]]

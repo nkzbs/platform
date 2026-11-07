@@ -1,0 +1,128 @@
+{
+  "_descrizione": "Come si raggruppano i campi nel dettaglio dei moduli del verticale Mediazione immobiliare (`sezione` di ogni campo) e quali sono i «dati chiave» mostrati in alto. Li assegna seed-blocchi-verticale.js una volta sola, solo ai campi che esistono e che non hanno già una sezione; poi si cambiano dal Builder (Sezione, Dato chiave) e non tornano indietro.",
+  "immobili": {
+    "sezioni": {
+      "Annuncio e posizione": [
+        "titolo",
+        "tipologia",
+        "indirizzo",
+        "numero_civico",
+        "interno",
+        "cap",
+        "comune",
+        "provincia",
+        "zona_quartiere",
+        "localita"
+      ],
+      "Prezzi e valutazione": [
+        "prezzo_richiesto",
+        "prezzo_consigliato",
+        "valutazione_agente",
+        "stima_valore",
+        "stima_eur_mq",
+        "stima_data",
+        "stima_fonte"
+      ],
+      "Dimensioni e composizione": [
+        "superficie_mq",
+        "locali",
+        "piano",
+        "piani_totali",
+        "totale_vani",
+        "composizione_vani",
+        "numero_camere",
+        "numero_bagni",
+        "terrazzo_mq",
+        "portico_mq",
+        "giardino",
+        "superficie_giardino_mq",
+        "sfogo_esterno",
+        "pertinenze_box",
+        "posto_auto",
+        "numero_posti_auto"
+      ],
+      "Edificio": [
+        "contesto_stabile",
+        "stato_edificio",
+        "anno_costruzione",
+        "anno_ristrutturazione",
+        "numero_unita_condominio",
+        "ascensore",
+        "portineria",
+        "assenza_barriere_architettoniche"
+      ],
+      "Finiture e impianti": [
+        "infissi_materiale",
+        "tipo_vetri",
+        "oscuranti_protezioni",
+        "pavimenti",
+        "pavimenti_altro",
+        "cappotto_termico",
+        "isolamento_acustico",
+        "vmc",
+        "riscaldamento",
+        "tipologia_diffusione_riscaldamento",
+        "alimentazione_riscaldamento",
+        "accessori_impianti",
+        "fotovoltaico_presente",
+        "fotovoltaico_kw",
+        "batteria_accumulo",
+        "batteria_kw",
+        "solare_termico",
+        "stato_impianto_elettrico",
+        "stato_impianto_idraulico",
+        "fognatura",
+        "classe_energetica",
+        "valore_ipe"
+      ],
+      "Catasto e documenti": [
+        "foglio_catastale",
+        "particella_catastale",
+        "subalterno_catastale",
+        "categoria_catastale",
+        "rendita_catastale",
+        "agibilita",
+        "planimetria_conforme",
+        "documenti_disponibili",
+        "altri_documenti_note"
+      ],
+      "Spese e vincoli": [
+        "spese_condominiali_importo",
+        "spese_condominiali_periodicita",
+        "spese_condominiali_comprende",
+        "spese_deliberate",
+        "residuo_mutuo",
+        "residuo_mutuo_importo",
+        "ipoteche_vincoli"
+      ],
+      "Proprietà e incarico": [
+        "quota_proprietario",
+        "quota_comproprietario_2",
+        "quota_comproprietario_3",
+        "tipologia_incarico",
+        "durata_incarico",
+        "provvigione_accordata",
+        "data_sopralluogo",
+        "agente_acquisitore",
+        "agente_contatto",
+        "stato_interno"
+      ],
+      "Riacquisto": [
+        "riacquisto_tipologia",
+        "riacquisto_budget_max",
+        "riacquisto_zona",
+        "riacquisto_caratteristiche"
+      ],
+      "Note": [
+        "note",
+        "punti_di_forza"
+      ]
+    },
+    "dati_chiave": [
+      "prezzo_richiesto",
+      "stima_valore",
+      "superficie_mq",
+      "locali"
+    ]
+  }
+}

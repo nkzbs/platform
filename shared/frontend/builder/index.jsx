@@ -1408,6 +1408,13 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                           <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
                             <input type="checkbox" checked={step.show_in_list !== false} onChange={(e) => updateStep(idx, 'show_in_list', e.target.checked)} className="accent-accent" />In lista
                           </label>
+                          <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer" title="Mostrato in alto nel dettaglio, in evidenza">
+                            <input type="checkbox" checked={step.dato_chiave || false} onChange={(e) => updateStep(idx, 'dato_chiave', e.target.checked || undefined)} className="accent-accent" />Dato chiave
+                          </label>
+                          <label className="flex items-center gap-2 text-xs text-gray-400" title="Nel dettaglio i campi con la stessa sezione stanno insieme">
+                            Sezione
+                            <input value={step.sezione || ''} onChange={(e) => updateStep(idx, 'sezione', e.target.value.slice(0, 40) || undefined)} placeholder="es. Catasto" className="w-32 bg-surface-page text-ink px-2 py-1 rounded-lg text-xs outline-none border border-gray-800 focus:border-accent placeholder-gray-600" />
+                          </label>
                           {step.type === 'select' && (
                             <label className="flex items-center gap-2 text-xs text-accent cursor-pointer" title="Mostra i valori come tab di filtro sopra la lista">
                               <input type="checkbox" checked={step.filter_tab || false} onChange={(e) => updateStep(idx, 'filter_tab', e.target.checked)} className="accent-accent" />Tab filtro

@@ -2,6 +2,19 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.41 — 7 novembre 2026
+
+**Il dettaglio di un record si legge dall'alto verso il basso invece di essere un elenco di 95 righe.** Primo passo della scheda Immobili più chiara, fatto con mattoni generici (valgono per ogni modulo), non con una pagina su misura.
+
+- **Percorso dello stato** in cima al dettaglio (per i moduli con un flusso): tutte le tappe in fila, quella attuale evidenziata.
+- **Dati chiave** (proprietà `dato_chiave` di un campo, casella «Dato chiave» nel Builder): quattro riquadri in alto con i valori che contano (per Immobili: prezzo richiesto, valore stimato, superficie, locali).
+- **Sezioni** (proprietà `sezione` di un campo, campo «Sezione» nel Builder): i campi con la stessa sezione stanno insieme in un blocco che si apre e si chiude; la prima sezione è aperta, le altre chiuse con il numero di campi.
+- **Campi vuoti nascosti**, con «Mostra anche i N campi vuoti» in fondo: in un immobile quasi nuovo è la riduzione più grande.
+- **Menu «Documenti»**: quando un modulo ha due o più documenti, un solo pulsante apre l'elenco, con a fianco di ognuno che cosa fa (email da rivedere, oppure PDF da firmare e scansione da ricaricare). Con un solo documento resta il pulsante di prima.
+- **Seed `seeds/sezioni-immobiliare.json`** (`assegnaSezioni`): assegna a Immobili 10 sezioni (Annuncio e posizione, Prezzi e valutazione, Dimensioni e composizione, Edificio, Finiture e impianti, Catasto e documenti, Spese e vincoli, Proprietà e incarico, Riacquisto, Note) e i quattro dati chiave. Una volta sola, solo sui campi che non hanno già una sezione; poi si cambiano dal Builder e non tornano indietro.
+- Test nuovo in `moduli-verticale.test.js`.
+- **Non fatto (prossimo passo)**: il blocco «per passare a… manca» con la regola di ogni passaggio, e togliere i controlli «OpenAPI.it collegato» quando il modulo lo richiederà per l'installazione.
+
 ## 0.4.40 — 7 novembre 2026
 
 **Il dettaglio Immobili dice cosa succede quando si preme un pulsante.** I tre pulsanti in alto sembravano non fare nulla: il pannello dei documenti si apriva sotto il report di valutazione e gli abbinamenti, fuori schermo, e gli errori comparivano in un avviso che spariva in pochi secondi.

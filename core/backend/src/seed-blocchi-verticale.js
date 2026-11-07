@@ -278,6 +278,39 @@ async function impostaProprieta(seed = require('./seeds/proprieta-immobiliare.js
   return esiti;
 }
 
+// Le sezioni e i dati chiave del dettaglio (seeds/sezioni-immobiliare.json): una proprietà `sezione` sui campi (per raggrupparli nella scheda) e `dato_chiave` (in evidenza in alto). Solo sui campi che
+// esistono e che non hanno già un valore (si completa, non si sovrascrive), da bozza e pubblicazione del Builder, una volta sola per modulo (marcatore `sezioni:<slug>`).
+async function assegnaSezioni(seed = require('./seeds/sezioni-immobiliare.json'), { callAs = require('./lib/internal-api').callAs } = {}) {
+  const esiti = [];
+  const admin = db.prepare("SELECT * FROM users WHERE role = 'admin' LIMIT 1").get();
+  for (const [slug, def] of Object.entries(seed)) {
+    if (slug.startsWith('_') || !def) continue;
+    const chiave = 'sezioni:' + slug;
+    if (gia(chiave) || !admin) continue;
+    const m = db.prepare('SELECT schema_json FROM modules WHERE slug = ? AND installed = 1').get(slug);
+    if (!m) continue;
+    let schema; try { schema = JSON.parse(m.schema_json); } catch (e) { continue; }
+    if (schema.version !== 3 || !Array.isArray(schema.steps)) continue;
+    const dellaSezione = new Map(); for (const [nome, chiavi] of Object.entries(def.sezioni || {})) for (const k of chiavi) dellaSezione.set(k, nome);
+    const chiaveSet = new Set(def.dati_chiave || []);
+    let cambiato = 0;
+    const steps = schema.steps.map((x) => {
+      if (!['field', 'computed'].includes(x.block_type) || !x.key) return x;
+      const y = { ...x };
+      if (dellaSezione.has(x.key) && !x.sezione) { y.sezione = dellaSezione.get(x.key); cambiato++; }
+      if (chiaveSet.has(x.key) && !x.dato_chiave) { y.dato_chiave = true; cambiato++; }
+      return y;
+    });
+    if (!cambiato) { segna(chiave); continue; }
+    const bozza = await callAs(admin, 'PUT', '/builder/' + slug + '/draft', { schema: { version: 3, steps } });
+    if (!bozza.ok) { console.error('[seed-blocchi] bozza sezioni ' + slug + ' fallita:', JSON.stringify(bozza.data)); esiti.push({ slug, esito: 'errore bozza' }); continue; }
+    const pub = await callAs(admin, 'POST', '/builder/' + slug + '/publish', {});
+    if (!pub.ok) { console.error('[seed-blocchi] pubblicazione sezioni ' + slug + ' fallita:', JSON.stringify(pub.data)); esiti.push({ slug, esito: 'errore pubblicazione' }); continue; }
+    segna(chiave); esiti.push({ slug, esito: 'applicato', campi: cambiato });
+  }
+  return esiti;
+}
+
 // I «ruoli del modulo» del verticale (seeds/ruoli-immobiliare.json): si dichiarano solo se il modulo esiste, è installato, NON ne ha già una (si completa,
 // non si sovrascrive) e ha tutti i campi che la dichiarazione cita. Una volta sola per modulo (marcatore `ruoli:<slug>`); se il modulo non c'è ancora, ci riprova al giro dopo.
 function dichiaraRuoli(seed = require('./seeds/ruoli-immobiliare.json')) {
@@ -316,6 +349,8 @@ async function run() {
     }
     try { (await riallineaRelazioni()).filter((e) => e.esito === 'applicato').forEach((e) => { applicati++; console.log('[seed-blocchi] relazione «' + e.key + '» di ' + e.slug + ' riallineata'); }); }
     catch (e) { console.error('[seed-blocchi] relazioni: non riuscito:', e.message); }
+    try { (await assegnaSezioni()).filter((e) => e.esito === 'applicato').forEach((e) => { applicati++; console.log('[seed-blocchi] sezioni del modulo ' + e.slug + ' assegnate (' + e.campi + ' impostazioni)'); }); }
+    catch (e) { console.error('[seed-blocchi] sezioni: non riuscito:', e.message); }
     try { (await impostaProprieta()).filter((e) => e.esito === 'applicato').forEach((e) => { applicati++; console.log('[seed-blocchi] proprietà del modulo ' + e.slug + ' impostate'); }); }
     catch (e) { console.error('[seed-blocchi] proprietà dei moduli: non riuscito:', e.message); }
     try { dichiaraRuoli().forEach((e) => { applicati++; console.log('[seed-blocchi] ruoli del modulo ' + e.slug + ' dichiarati'); }); }
@@ -324,4 +359,4 @@ async function run() {
   }
 }
 
-module.exports = { applicaSeed, modelloApplicabile, abbinamentoApplicabile, TIPI, dichiaraRuoli, creaModuli, riallineaRelazioni, impostaProprieta, run };
+module.exports = { applicaSeed, modelloApplicabile, abbinamentoApplicabile, TIPI, dichiaraRuoli, creaModuli, riallineaRelazioni, impostaProprieta, assegnaSezioni, run };
