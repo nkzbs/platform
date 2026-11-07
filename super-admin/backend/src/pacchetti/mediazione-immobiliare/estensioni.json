@@ -64,7 +64,7 @@
         {
           "block_type": "state_requirements",
           "stato": "fatturata",
-          "bloccante": false,
+          "bloccante": true,
           "requisiti": [
             {
               "label": "Importo",
@@ -84,7 +84,7 @@
         {
           "block_type": "state_requirements",
           "stato": "incassata",
-          "bloccante": false,
+          "bloccante": true,
           "requisiti": [
             {
               "label": "Data di incasso",
@@ -306,7 +306,7 @@
         {
           "block_type": "state_requirements",
           "stato": "preliminare_firmato",
-          "bloccante": false,
+          "bloccante": true,
           "requisiti": [
             {
               "label": "Prezzo concordato",
@@ -328,7 +328,7 @@
         {
           "block_type": "state_requirements",
           "stato": "rogito_completato",
-          "bloccante": false,
+          "bloccante": true,
           "requisiti": [
             {
               "label": "Data del rogito",
@@ -345,7 +345,7 @@
         {
           "block_type": "state_requirements",
           "stato": "chiusa",
-          "bloccante": false,
+          "bloccante": true,
           "requisiti": [
             {
               "label": "Provvigioni generate",
@@ -904,7 +904,7 @@
         {
           "block_type": "state_requirements",
           "stato": "cliente_verificato",
-          "bloccante": false,
+          "bloccante": true,
           "requisiti": [
             {
               "label": "Documento d'identità",
@@ -969,7 +969,7 @@
         {
           "block_type": "state_requirements",
           "stato": "ceduta",
-          "bloccante": false,
+          "bloccante": true,
           "requisiti": [
             {
               "label": "Data della cessione",
@@ -999,7 +999,7 @@
         {
           "block_type": "state_requirements",
           "stato": "completata",
-          "bloccante": false,
+          "bloccante": true,
           "requisiti": [
             {
               "label": "Risposta al richiedente",

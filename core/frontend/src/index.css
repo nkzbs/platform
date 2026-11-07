@@ -212,6 +212,12 @@ body {
   border-radius: 9999px;
 }
 
+/* Il dock in basso sta sopra il contenuto della pagina: col solo 7% di vetro il testo sotto si vedeva attraverso le icone.
+   Si aggiunge un fondo del colore del tema (più pieno) SOTTO il vetro: l'effetto resta, il contenuto non disturba. */
+.glass-dock {
+  background: linear-gradient(rgb(var(--glass-tint) / var(--glass-bg-alpha)), rgb(var(--glass-tint) / var(--glass-bg-alpha))), rgb(var(--surface-card) / 0.82);
+}
+
 /* Sfondo sfumato dietro i pannelli — chiazze di colore sfocate, diverse per
    tema (in chiaro, sature ma su base chiara: colori pieni scurirebbero
    troppo lo sfondo e abbasserebbero il contrasto dei pannelli sopra).

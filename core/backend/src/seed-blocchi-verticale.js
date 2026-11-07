@@ -282,8 +282,10 @@ async function assegnaSezioni(seed = {}, { callAs = require('./lib/internal-api'
   const admin = db.prepare("SELECT * FROM users WHERE role = 'admin' LIMIT 1").get();
   for (const [slug, def] of Object.entries(seed)) {
     if (slug.startsWith('_') || !def) continue;
-    const chiave = 'sezioni:' + slug;
-    if (gia(chiave) || !admin) continue;
+    // Due cose si assegnano, ognuna una volta sola per modulo: sezioni/dati chiave (marcatore `sezioni:<slug>`) e `validazioni` (campo → regola, es. codice fiscale; marcatore `validazioni:<slug>`).
+    const chiave = 'sezioni:' + slug, chiaveVal = 'validazioni:' + slug;
+    const faSezioni = !gia(chiave), faValidazioni = !!def.validazioni && !gia(chiaveVal);
+    if ((!faSezioni && !faValidazioni) || !admin) continue;
     const m = db.prepare('SELECT schema_json FROM modules WHERE slug = ? AND installed = 1').get(slug);
     if (!m) continue;
     let schema; try { schema = JSON.parse(m.schema_json); } catch (e) { continue; }
@@ -294,16 +296,18 @@ async function assegnaSezioni(seed = {}, { callAs = require('./lib/internal-api'
     const steps = schema.steps.map((x) => {
       if (!['field', 'computed'].includes(x.block_type) || !x.key) return x;
       const y = { ...x };
-      if (dellaSezione.has(x.key) && !x.sezione) { y.sezione = dellaSezione.get(x.key); cambiato++; }
-      if (chiaveSet.has(x.key) && !x.dato_chiave) { y.dato_chiave = true; cambiato++; }
+      if (faSezioni && dellaSezione.has(x.key) && !x.sezione) { y.sezione = dellaSezione.get(x.key); cambiato++; }
+      if (faSezioni && chiaveSet.has(x.key) && !x.dato_chiave) { y.dato_chiave = true; cambiato++; }
+      if (faValidazioni && def.validazioni[x.key] && !x.validazione) { y.validazione = def.validazioni[x.key]; cambiato++; }
       return y;
     });
-    if (!cambiato) { segna(chiave); continue; }
+    if (!cambiato) { if (faSezioni) segna(chiave); if (faValidazioni) segna(chiaveVal); continue; }
     const bozza = await callAs(admin, 'PUT', '/builder/' + slug + '/draft', { schema: { version: 3, steps } });
     if (!bozza.ok) { console.error('[seed-blocchi] bozza sezioni ' + slug + ' fallita:', JSON.stringify(bozza.data)); esiti.push({ slug, esito: 'errore bozza' }); continue; }
     const pub = await callAs(admin, 'POST', '/builder/' + slug + '/publish', {});
     if (!pub.ok) { console.error('[seed-blocchi] pubblicazione sezioni ' + slug + ' fallita:', JSON.stringify(pub.data)); esiti.push({ slug, esito: 'errore pubblicazione' }); continue; }
-    segna(chiave); esiti.push({ slug, esito: 'applicato', campi: cambiato });
+    if (faSezioni) segna(chiave); if (faValidazioni) segna(chiaveVal);
+    esiti.push({ slug, esito: 'applicato', campi: cambiato });
   }
   return esiti;
 }

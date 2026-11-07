@@ -65,8 +65,9 @@ async function main() {
     const id = rec({}); eq((await vai(id)).status, 200); eq(stato(id), 'pronto');
   });
 
-  await test('i requisiti per stato del pacchetto di Mediazione immobiliare (tutti i moduli): tipi validi, campi citati tra quelli richiesti, solo promemoria', () => {
+  await test('i requisiti per stato del pacchetto di Mediazione immobiliare (tutti i moduli): tipi validi, campi citati tra quelli richiesti, bloccanti solo i passaggi critici', () => {
     const est = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/estensioni.json');
+    const CRITICI = new Set(['fatturata', 'incassata', 'preliminare_firmato', 'rogito_completato', 'chiusa', 'cliente_verificato', 'ceduta', 'completata']); // fatture, atti, verifica clienti: non si passa senza i dati
     const nascosti = new Set(['report_valutazione']); // l'esito della valutazione sta sul record, non è un campo dichiarato
     let moduli = 0, blocchi = 0;
     for (const [mod, lista] of Object.entries(est)) {
@@ -75,7 +76,7 @@ async function main() {
       moduli++;
       const dichiarati = new Set(e.richiede[mod]);
       for (const b of e.aggiungi) {
-        blocchi++; eq(b.block_type, 'state_requirements'); ok(b.stato && b.requisiti.length, mod + ': stato e requisiti'); eq(b.bloccante, false, mod + ': promemoria, non blocco');
+        blocchi++; eq(b.block_type, 'state_requirements'); ok(b.stato && b.requisiti.length, mod + ': stato e requisiti'); eq(typeof b.bloccante, 'boolean', mod + ': bloccante dichiarato'); eq(b.bloccante, CRITICI.has(b.stato), mod + ': «' + b.stato + '» ' + (CRITICI.has(b.stato) ? 'è critico: deve bloccare' : 'è un promemoria'));
         for (const r of b.requisiti) {
           ok(r.label && ['campo', 'uno_di', 'allegato'].includes(r.tipo), mod + ': tipo ' + r.tipo);
           for (const k of (r.tipo === 'campo' ? [r.campo] : r.tipo === 'uno_di' ? r.campi : [])) ok(dichiarati.has(k) || nascosti.has(k), mod + ': il campo «' + k + '» non è tra i richiesti');

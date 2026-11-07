@@ -167,7 +167,10 @@
       "telefono",
       "email",
       "ricerca_budget_max"
-    ]
+    ],
+    "validazioni": {
+      "codice_fiscale_piva": "codice_fiscale_o_piva_it"
+    }
   },
   "trattative": {
     "sezioni": {

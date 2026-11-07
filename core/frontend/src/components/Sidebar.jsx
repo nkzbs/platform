@@ -252,7 +252,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
                     : <><span className="font-bold">Platform</span>{tenantName && <span className="font-normal"> {tenantName}</span>}</>
                   }
                 </div>
-                {!hidePlatformName && <div className="text-xs text-gray-500">Platform 0.4.51</div>}
+                {!hidePlatformName && <div className="text-xs text-gray-500">Platform 0.4.52</div>}
               </div>
             )}
           </div>
@@ -377,7 +377,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
                 <Avatar user={user} size={28} />
                 <div className="min-w-0">
                   <div className="text-sm text-ink font-medium truncate">{user && user.display_name}</div>
-                  <div className="text-xs text-gray-500">{user && user.role}{!hidePlatformName && <span> · Platform 0.4.51</span>}</div>
+                  <div className="text-xs text-gray-500">{user && user.role}{!hidePlatformName && <span> · Platform 0.4.52</span>}</div>
                 </div>
               </button>
               <div className="flex items-center gap-3">
@@ -395,7 +395,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
           </div>
         )}
 
-        <nav ref={navRef} aria-label="Navigazione principale" className="glass-pill fixed left-1/2 z-40 flex items-center gap-1" style={{ transform: 'translateX(-50%)', bottom: 'calc(18px + env(safe-area-inset-bottom))', padding: '8px 10px' }}>
+        <nav ref={navRef} aria-label="Navigazione principale" className="glass-pill glass-dock fixed left-1/2 z-40 flex items-center gap-1" style={{ transform: 'translateX(-50%)', bottom: 'calc(18px + env(safe-area-inset-bottom))', padding: '8px 10px' }}>
           {indicator && (
             <div className="absolute top-1.5 bottom-1.5 rounded-full bg-accent/20 pointer-events-none transition-all duration-300 ease-out" style={{ left: indicator.left, width: indicator.width }} />
           )}

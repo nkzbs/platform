@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.52 — 7 novembre 2026
+
+**Codice fiscale e partita IVA controllati, passaggi di stato critici davvero bloccanti, dock con il fondo pieno.**
+
+- **Validazione di campo** (`validazione` sul campo, `shared/validazioni-campo.js`): `codice_fiscale_it`, `partita_iva_it`, `codice_fiscale_o_piva_it`. Controllo locale e gratuito (forma e carattere di controllo), fatto dal server alla creazione e alla modifica (400 col nome del campo); un dato vecchio invariato non blocca altre modifiche. Il pacchetto la assegna al campo «Codice fiscale / P.IVA» dei Clienti (marcatore `validazioni:<modulo>`). È il primo gradino della verifica di un nuovo cliente; la verifica del soggetto con Risk resta da fare quando ci saranno prezzi e attivazione.
+- **Requisiti di stato bloccanti** per i passaggi critici del pacchetto: fatturata, incassata, preliminare firmato, rogito completato, chiusa, cliente verificato, quota ceduta, richiesta privacy completata. Gli altri restano promemoria. Il test del pacchetto fissa l'elenco.
+- **Dock**: sotto il vetro c'è un fondo pieno del colore del tema (82%), così il testo della pagina non si vede attraverso le icone.
+- Pacchetto alla versione 4: serve il deploy di Super Admin, poi Aggiorna.
+
 ## 0.4.51 — 7 novembre 2026
 
 **Dati dimostrativi da OpenAPI.it, segnati e rimovibili; accento leggibile nel tema scuro; menu Documenti entro lo schermo sul telefono.**

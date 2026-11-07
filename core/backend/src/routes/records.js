@@ -6,6 +6,7 @@ const { parseSchemaNormalized } = require('../schema-v3');
 const { fireTrigger } = require('../automation-engine');
 const { logAudit } = require('../audit-log');
 const { encryptFields, decryptFields } = require('../crypto-fields');
+const { controllaValidazioni } = require('../validazioni-campo');
 const { attachComputedFields: attachComputedFieldsShared } = require('../computed-fields');
 const { runSourceScript } = require('../source-engine');
 const { ruleFor, ownedOrAllowed, filterViewable, isOwnRecord } = require('../permissions');
@@ -699,6 +700,8 @@ router.post('/:slug', requireAuth, requireModuleAccess, (req, res) => {
   const withDefaults = applyDefaults(req.body, schema.fields);
   const uniqueError = checkUnique(req.params.slug, schema.fields, withDefaults, null);
   if (uniqueError) return res.status(400).json(uniqueError);
+  const campoError = controllaValidazioni(schema.fields, withDefaults);
+  if (campoError) return res.status(400).json(campoError);
   const validationError = checkCreationValidation(schema, req.params.slug, withDefaults);
   if (validationError) return res.status(400).json(validationError);
   const safeBody = encryptFields(withDefaults, schema.fields);
@@ -845,6 +848,8 @@ router.put('/:slug/:id', requireAuth, requireModuleAccess, (req, res) => {
 
   const uniqueError = checkUnique(req.params.slug, schema.fields, req.body, req.params.id);
   if (uniqueError) return res.status(400).json(uniqueError);
+  const campoError = controllaValidazioni(schema.fields, req.body, beforeData);
+  if (campoError) return res.status(400).json(campoError);
   const safeBody = encryptFields(req.body, schema.fields);
   db.prepare('UPDATE records SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND module_slug = ?').run(JSON.stringify(safeBody), req.params.id, req.params.slug);
   const record = db.prepare('SELECT * FROM records WHERE id = ?').get(req.params.id);
