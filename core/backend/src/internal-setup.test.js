@@ -86,9 +86,10 @@ async function main() {
   await test('AI generale e Dashboard solo su richiesta esplicita; la Dashboard non si sovrascrive', async () => {
     eq(ai.masterOn(), false);
     let r = await (await post({})).json(); eq(ai.masterOn(), false, 'senza richiesta l\'AI resta spenta'); eq(r.dashboard, 0);
-    r = await (await post({ ai_master: true, dashboard: [{ type: 'kpi', modulo: 'ticket', etichetta: 'Ticket' }, { type: 'table', modulo: 'timbr' }, { type: 'boh', modulo: 'ticket' }, { type: 'kpi', modulo: 'non_installato' }] })).json();
-    eq(ai.masterOn(), true); eq(r.ai_master, true); eq(r.dashboard, 2); ok(r.saltati.filter((x) => /dashboard/.test(x)).length === 2, JSON.stringify(r.saltati));
-    eq(db.prepare("SELECT COUNT(*) c FROM dashboard_widgets WHERE page = 'dashboard'").get().c, 2);
+    r = await (await post({ ai_master: true, dashboard: [{ type: 'kpi', modulo: 'ticket', etichetta: 'Ticket' }, { type: 'table', modulo: 'timbr' }, { type: 'boh', modulo: 'ticket' }, { type: 'kpi', modulo: 'non_installato' }, { type: 'periodo', modulo: 'ticket', etichetta: 'In scadenza nel mese', campo: 'importo', config: { date_field: 'scadenza', periodo: 'mese' } }, { type: 'periodo', modulo: 'ticket' }] })).json();
+    eq(ai.masterOn(), true); eq(r.ai_master, true); eq(r.dashboard, 3); ok(r.saltati.filter((x) => /dashboard/.test(x)).length === 3, JSON.stringify(r.saltati));
+    eq(db.prepare("SELECT COUNT(*) c FROM dashboard_widgets WHERE page = 'dashboard'").get().c, 3);
+    const p = db.prepare("SELECT config, roles, field FROM dashboard_widgets WHERE type = 'periodo'").get(); eq(JSON.parse(p.config), { date_field: 'scadenza', periodo: 'mese' }); eq([p.roles, p.field], ['[]', 'importo']);
     r = await (await post({ dashboard: [{ type: 'kpi', modulo: 'ticket' }] })).json(); eq(r.dashboard, 0, 'Dashboard già piena: non si tocca');
   });
 

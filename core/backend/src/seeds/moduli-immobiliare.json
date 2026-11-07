@@ -1,0 +1,135 @@
+{
+  "_descrizione": "Moduli NUOVI del verticale Mediazione immobiliare che non hanno un omonimo generico (per questo non stanno nella Libreria): li crea seed-blocchi-verticale.js solo se mancano, mai li sovrascrive, e solo dove esistono i moduli che citano (`richiede`). Il documento di cessione sta in documenti-immobiliare.json.",
+  "quote_societarie": {
+    "nome": "Quote societarie",
+    "icon": "building",
+    "color": "#7C3AED",
+    "richiede": [
+      "clienti",
+      "immobili"
+    ],
+    "steps": [
+      {
+        "id": "rel_societa",
+        "block_type": "relation",
+        "key": "societa",
+        "label": "Società",
+        "type": "many_to_one",
+        "target_module": "clienti",
+        "display_mode": "select_inline",
+        "display_field": "nome",
+        "required": true
+      },
+      {
+        "id": "rel_socio",
+        "block_type": "relation",
+        "key": "socio",
+        "label": "Socio (cedente)",
+        "type": "many_to_one",
+        "target_module": "clienti",
+        "display_mode": "select_inline",
+        "display_field": "nome",
+        "required": true
+      },
+      {
+        "id": "fld_quota",
+        "block_type": "field",
+        "key": "quota_percentuale",
+        "label": "Quota (%)",
+        "type": "number",
+        "required": true
+      },
+      {
+        "id": "fld_valore",
+        "block_type": "field",
+        "key": "valore_quota",
+        "label": "Valore della quota",
+        "type": "currency"
+      },
+      {
+        "id": "fld_acquisizione",
+        "block_type": "field",
+        "key": "data_acquisizione",
+        "label": "Socio dal",
+        "type": "date"
+      },
+      {
+        "id": "rel_immobile",
+        "block_type": "relation",
+        "key": "immobile",
+        "label": "Immobile detenuto dalla società",
+        "type": "many_to_one",
+        "target_module": "immobili",
+        "display_mode": "select_inline",
+        "display_field": "titolo"
+      },
+      {
+        "id": "rel_cessionario",
+        "block_type": "relation",
+        "key": "cessionario",
+        "label": "Acquirente della quota",
+        "type": "many_to_one",
+        "target_module": "clienti",
+        "display_mode": "select_inline",
+        "display_field": "nome"
+      },
+      {
+        "id": "fld_cessione",
+        "block_type": "field",
+        "key": "data_cessione",
+        "label": "Data della cessione",
+        "type": "date"
+      },
+      {
+        "id": "fld_note",
+        "block_type": "field",
+        "key": "note",
+        "label": "Note",
+        "type": "textarea"
+      },
+      {
+        "id": "wst_essere",
+        "block_type": "workflow_state",
+        "key": "in_essere",
+        "label": "In essere",
+        "color": "#10B981",
+        "initial": true
+      },
+      {
+        "id": "wst_cessione",
+        "block_type": "workflow_state",
+        "key": "in_cessione",
+        "label": "In cessione",
+        "color": "#F59E0B"
+      },
+      {
+        "id": "wst_ceduta",
+        "block_type": "workflow_state",
+        "key": "ceduta",
+        "label": "Ceduta",
+        "color": "#6B7280"
+      },
+      {
+        "id": "wtr_1",
+        "block_type": "workflow_transition",
+        "from": "in_essere",
+        "to": "in_cessione",
+        "label": "Metti in cessione"
+      },
+      {
+        "id": "wtr_2",
+        "block_type": "workflow_transition",
+        "from": "in_cessione",
+        "to": "ceduta",
+        "label": "Cedi la quota"
+      },
+      {
+        "id": "wtr_3",
+        "block_type": "workflow_transition",
+        "from": "in_cessione",
+        "to": "in_essere",
+        "label": "Annulla la cessione"
+      }
+    ]
+  }
+}

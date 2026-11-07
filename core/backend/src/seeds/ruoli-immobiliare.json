@@ -1,0 +1,4 @@
+{
+  "_descrizione": "Dichiarazioni dei «ruoli del modulo» del verticale Mediazione immobiliare (Builder → Ruoli del modulo), applicate da seed-blocchi-verticale.js solo dove il modulo non ne ha già una e ha tutti i campi citati. Qui: Clienti è un'anagrafica con la data di nascita che ricorre ogni anno, che il report «Ricorrenze» legge per i promemoria di compleanno.",
+  "clienti": { "kind": "anagrafica", "uses": [], "roles": { "descrizione": "nome", "data_ricorrenza": "data_nascita" } }
+}

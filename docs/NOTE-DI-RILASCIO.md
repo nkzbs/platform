@@ -2,6 +2,16 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.37 — 7 novembre 2026
+
+**Società e cessione di quote, e Promemoria e ricorrenze: i due lavori «da costruire» dell'analisi di zucca sono costruiti.** Più i widget della Dashboard dell'analisi.
+
+- **Quote societarie** (nuovo modulo, creato dai seed `seeds/moduli-immobiliare.json` solo dove esistono Clienti e Immobili; mai sovrascritto): società, socio cedente, quota %, valore, immobile detenuto dalla società, acquirente della quota, date, flusso In essere → In cessione → Ceduta. Il **documento da firmare «Proposta di cessione quote»** (`documenti-immobiliare.json`) porta un avviso: è un modello da far rivedere dal notaio o dal commercialista, la cessione si perfeziona con atto notarile o firma autenticata e deposito al Registro delle Imprese.
+- **Report «Ricorrenze»** (tipo `ricorrenze`, spento alla nascita): compleanni e date annuali nei prossimi N giorni, con l'età. Nuovo tipo di modulo **anagrafica** (ruoli `descrizione` e `data_ricorrenza`, Builder → Ruoli del modulo); il seed dichiara Clienti come anagrafica. È un avviso all'agente: gli **auguri al cliente non partono da soli** (servirebbe il consenso alle comunicazioni commerciali).
+- **Analisi**: `configurazione.report` (report creati spenti alla nascita) e widget di tipo «periodo» con campo data e periodo (`configurazione.dashboard`). La rotta `/api/internal-setup/apply` salva i widget con `roles` e `user_ids` come la Dashboard («[]», non vuoto).
+- Test nuovi: `ricorrenze.test.js`, `moduli-verticale.test.js`, casi in `internal-setup.test.js` e `workflow-ritorni.test.js`.
+- **Da sapere**: su zucca i due nuovi pezzi arrivano con l'**Aggiorna** (il modulo e le ruoli si creano all'avvio); il report Ricorrenze va aggiunto da Impostazioni → Report e acceso. Trovato lungo la strada, non toccato: la relazione «Cliente» di Richieste Privacy cita `clienti_generico`, uno slug che nei tenant di questo verticale non esiste (c'è `clienti`).
+
 ## 0.4.36 — 7 novembre 2026
 
 **La pagina dell'analisi dice le cose giuste.** Dopo la copia di zucca il riepilogo mostrava «5 processi non sono completi» e «Ruoli utente 3» anche se l'analisi era completa.

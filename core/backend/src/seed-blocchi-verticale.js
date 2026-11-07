@@ -204,6 +204,52 @@ async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs
   return esiti;
 }
 
+// I moduli NUOVI del verticale (seeds/moduli-immobiliare.json): quelli senza un omonimo generico, che non stanno quindi nella Libreria. Si creano dalle rotte vere del Builder
+// (crea, bozza, pubblica), solo se mancano e solo se esistono i moduli che citano (`richiede`); mai si sovrascrive un modulo che c'è già. Un modulo rimasto vuoto per un errore a
+// metà si completa al giro dopo. Una volta sola per modulo (marcatore `modulo:<slug>`).
+async function creaModuli(seed = require('./seeds/moduli-immobiliare.json'), { callAs = require('./lib/internal-api').callAs } = {}) {
+  const esiti = [];
+  const admin = db.prepare("SELECT * FROM users WHERE role = 'admin' LIMIT 1").get();
+  for (const [slug, def] of Object.entries(seed)) {
+    if (slug.startsWith('_') || !def || !Array.isArray(def.steps)) continue;
+    const chiave = 'modulo:' + slug;
+    if (gia(chiave) || !admin) continue;
+    if ((def.richiede || []).some((r) => !db.prepare('SELECT 1 FROM modules WHERE slug = ? AND installed = 1').get(r))) continue; // manca un modulo che cita: ci riprova
+    const esistente = db.prepare('SELECT schema_json FROM modules WHERE slug = ?').get(slug);
+    if (esistente && esistente.schema_json && esistente.schema_json !== '{}') { segna(chiave); continue; } // c'è già, con un suo schema: non si tocca
+    if (!esistente) {
+      const c = await callAs(admin, 'POST', '/modules/create', { name: def.nome, slug, icon: def.icon, color: def.color });
+      if (!c.ok) { console.error('[seed-blocchi] modulo ' + slug + ' non creato:', JSON.stringify(c.data)); esiti.push({ slug, esito: 'errore creazione' }); continue; }
+    }
+    const bozza = await callAs(admin, 'PUT', '/builder/' + slug + '/draft', { schema: { version: 3, steps: def.steps } });
+    if (!bozza.ok) { console.error('[seed-blocchi] bozza del modulo ' + slug + ' fallita:', JSON.stringify(bozza.data)); esiti.push({ slug, esito: 'errore bozza' }); continue; }
+    const pub = await callAs(admin, 'POST', '/builder/' + slug + '/publish', {});
+    if (!pub.ok) { console.error('[seed-blocchi] pubblicazione del modulo ' + slug + ' fallita:', JSON.stringify(pub.data)); esiti.push({ slug, esito: 'errore pubblicazione' }); continue; }
+    segna(chiave); esiti.push({ slug, esito: 'applicato' });
+  }
+  return esiti;
+}
+
+// I «ruoli del modulo» del verticale (seeds/ruoli-immobiliare.json): si dichiarano solo se il modulo esiste, è installato, NON ne ha già una (si completa,
+// non si sovrascrive) e ha tutti i campi che la dichiarazione cita. Una volta sola per modulo (marcatore `ruoli:<slug>`); se il modulo non c'è ancora, ci riprova al giro dopo.
+function dichiaraRuoli(seed = require('./seeds/ruoli-immobiliare.json')) {
+  const moduleRoles = require('./module-roles');
+  const esiti = [];
+  for (const [slug, dich] of Object.entries(seed)) {
+    if (slug.startsWith('_')) continue;
+    const chiave = 'ruoli:' + slug;
+    if (gia(chiave)) continue;
+    const mod = db.prepare('SELECT slug FROM modules WHERE slug = ? AND installed = 1').get(slug);
+    if (!mod) continue;
+    const campi = chiaviDelModulo(slug);
+    if (!campi) continue;
+    const citati = Object.values(dich.roles || {});
+    if (moduleRoles.get(slug) || citati.some((c) => !campi.has(c))) { if (moduleRoles.get(slug)) segna(chiave); continue; } // già dichiarato: non si tocca e non si riprova; campi mancanti: può ancora arrivare l'estensione
+    moduleRoles.set(slug, dich); segna(chiave); esiti.push({ slug, esito: 'applicato' });
+  }
+  return esiti;
+}
+
 // Un solo giro non basta su un tenant appena nato: un blocco può citare i campi di un altro modulo che il suo
 // stesso giro aggiunge solo più avanti (la scheda di Immobili cita campi di Clienti, che si estende dopo). Si
 // ripete finché c'è qualcosa da applicare, al massimo MAX_GIRI volte; ogni giro è comunque idempotente.
@@ -211,6 +257,8 @@ const MAX_GIRI = 4;
 async function run() {
   for (let giro = 1; giro <= MAX_GIRI; giro++) {
     let applicati = 0;
+    try { (await creaModuli()).filter((e) => e.esito === 'applicato').forEach((e) => { applicati++; console.log('[seed-blocchi] modulo «' + e.slug + '» creato'); }); }
+    catch (e) { console.error('[seed-blocchi] moduli nuovi: non riuscito:', e.message); }
     for (const [tipo, cfg] of Object.entries(TIPI)) {
       try {
         const seed = require(path.join(__dirname, 'seeds', cfg.file));
@@ -218,8 +266,10 @@ async function run() {
         esiti.filter((e) => e.esito === 'applicato').forEach((e) => { applicati++; console.log('[seed-blocchi] ' + cfg.nome + ' «' + e.key + '» aggiunto al modulo ' + e.slug); });
       } catch (e) { console.error('[seed-blocchi] ' + cfg.nome + ': non riuscito:', e.message); }
     }
+    try { dichiaraRuoli().forEach((e) => { applicati++; console.log('[seed-blocchi] ruoli del modulo ' + e.slug + ' dichiarati'); }); }
+    catch (e) { console.error('[seed-blocchi] ruoli dei moduli: non riuscito:', e.message); }
     if (!applicati) break;
   }
 }
 
-module.exports = { applicaSeed, modelloApplicabile, abbinamentoApplicabile, TIPI, run };
+module.exports = { applicaSeed, modelloApplicabile, abbinamentoApplicabile, TIPI, dichiaraRuoli, creaModuli, run };

@@ -6,6 +6,7 @@
 //   coda               le righe in uno stato (di solito «nuovo»: da smistare): giornaliero o settimanale, solo se ce ne sono.
 //   in_ritardo         le righe nello stato scelto con la scadenza passata (da quanti giorni): giornaliero o settimanale, solo se ce ne sono.
 //   ore_periodo        le ore lavorate dai moduli di timbrature (ruoli data/inizio/fine) in un periodo, per persona. Mensile o settimanale.
+//   ricorrenze         le date che tornano ogni anno (compleanni, anniversari) dei moduli «anagrafica» entro N giorni: giornaliero o settimanale, solo se ce ne sono.
 //   ore_settimana      il riepilogo ore di una persona: la settimana, il mese in corso e lo straordinario (oltre una soglia settimanale). Di solito la domenica sera.
 // Quali moduli contano, cosa significa «da fare» o «nuovo», come si chiamano le righe, e cosa sono le timbrature lo dichiara il modulo (Builder → Ruoli del modulo):
 // qui non ci sono nomi di moduli né di campi. Giorno e ora sono quelli italiani. I tre report storici (pagare, smistare, scadute) sono tre definizioni di partenza.
@@ -44,6 +45,12 @@ const TIPI = {
     descrizione: 'Le ore lavorate nella settimana, il mese finora e lo straordinario (le ore oltre la soglia settimanale), per ogni persona. Ogni telefono Telegram riceve solo le sue.',
     vuoto: 'Nessuna timbratura nella settimana: il messaggio non partirebbe.',
     base: { freq: 'settimanale', weekday: 0, ora: 20, soglia_ore: 40, mese: true, titolo: 'Ore lavorate', emoji: '🕒', invia_se_vuoto: false },
+  },
+  ricorrenze: {
+    nome: 'Ricorrenze in arrivo', frequenze: ['settimanale', 'giornaliera'],
+    descrizione: 'I compleanni e le altre date che tornano ogni anno (dai moduli con una data di ricorrenza dichiarata) nei prossimi giorni, con l\'età che si compie.',
+    vuoto: 'Nessuna ricorrenza in arrivo: il messaggio non partirebbe.',
+    base: { freq: 'settimanale', weekday: 1, ora: 9, giorni_prima: 7, max_righe: 10, titolo: 'Ricorrenze', emoji: '🎂', piede: '', invia_se_vuoto: false },
   },
   ore_periodo: {
     nome: 'Ore lavorate', frequenze: ['mensile', 'settimanale'],
@@ -158,6 +165,7 @@ function saveSettings(id, patch) {
     d.utenti = ids;
   }
   if (p.tag != null) { const t = String(p.tag).trim(); if (!/^[A-Za-z0-9_-]{1,40}$/.test(t)) return { error: 'Il tag può avere lettere, numeri, - e _.' }; d.tag = t; }
+  if (p.giorni_prima != null && 'giorni_prima' in T.base) { const n = int(p.giorni_prima, 1, 60); if (n == null) return { error: 'I giorni di anticipo vanno da 1 a 60.' }; d.giorni_prima = n; }
   if (p.soglia_ore != null) { const n = int(p.soglia_ore, 1, 100); if (n == null) return { error: 'La soglia va da 1 a 100 ore.' }; d.soglia_ore = n; }
   if (p.mese != null) d.mese = !!p.mese;
   if (p.stipendio != null) d.stipendio = !!p.stipendio;
@@ -359,7 +367,37 @@ function buildOreSettimana(d, now = new Date(), scope = null) {
   return { text: intestazione(d, 'settimana ' + shortDate(lun) + '–' + shortDate(fine)) + '\n\n' + blocchi.map((b) => b.testo).join('\n\n') + (aperti ? '\n\n_' + aperti + (aperti === 1 ? ' turno è ancora aperto e non è contato.' : ' turni sono ancora aperti e non sono contati.') + '_' : ''), counts: { persone: blocchi.length } };
 }
 
-const BUILDERS = { riepilogo_periodo: buildRiepilogo, coda: buildCoda, in_ritardo: buildInRitardo, ore_periodo: buildOre, ore_settimana: buildOreSettimana };
+// La prossima volta che una data ricorre (stesso giorno e mese), a partire da `oggi` compreso. Il 29 febbraio negli anni non bisestili è il 28.
+function prossimaRicorrenza(iso, oggi) {
+  const mm = Number(iso.slice(5, 7)), dd = Number(iso.slice(8, 10));
+  const del = (y) => { const bisestile = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0; return y + '-' + pad(mm) + '-' + pad(mm === 2 && dd === 29 && !bisestile ? 28 : dd); };
+  const y = Number(oggi.slice(0, 4)); const q = del(y);
+  return q >= oggi ? q : del(y + 1);
+}
+// Le ricorrenze dei moduli dichiarati «anagrafica» (ruoli `data_ricorrenza` e `descrizione`) nei prossimi `giorni_prima` giorni, con l'età che si compie.
+function buildRicorrenze(d, now = new Date(), scope = null) {
+  const oggi = romeParts(now).date, fine = addDays(oggi, d.giorni_prima), voci = [];
+  for (const m of require('./module-roles').list({ kind: 'anagrafica' })) {
+    if (scope && scope.slugs && !scope.slugs.has(m.module_slug)) continue;
+    const R = m.roles; if (!R.data_ricorrenza) continue;
+    for (const { data: r } of rows(m.module_slug, scope)) {
+      const iso = String(r[R.data_ricorrenza] || '').slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) continue;
+      const quando = prossimaRicorrenza(iso, oggi);
+      if (quando > fine) continue;
+      const anni = Number(quando.slice(0, 4)) - Number(iso.slice(0, 4));
+      voci.push({ quando, anni: anni > 0 && anni < 130 ? anni : null, nome: String(r[R.descrizione] || '(senza nome)').trim() });
+    }
+  }
+  if (!voci.length) return null;
+  voci.sort((a, b) => a.quando.localeCompare(b.quando) || a.nome.localeCompare(b.nome));
+  const tra = (q) => { const n = daysBetween(oggi, q); return n === 0 ? 'oggi' : n === 1 ? 'domani' : shortDate(q); };
+  const lines = voci.slice(0, d.max_righe).map((x) => '• *' + tra(x.quando) + '*  ' + x.nome + (x.anni ? ' — ' + x.anni + ' anni' : ''));
+  if (voci.length > d.max_righe) lines.push('+ altre ' + (voci.length - d.max_righe));
+  return { text: intestazione(d, voci.length + (voci.length === 1 ? ' ricorrenza' : ' ricorrenze')) + '\n\n' + lines.join('\n') + (d.piede ? '\n\n' + d.piede : ''), counts: { voci: voci.length }, items: voci };
+}
+
+const BUILDERS = { ricorrenze: buildRicorrenze, riepilogo_periodo: buildRiepilogo, coda: buildCoda, in_ritardo: buildInRitardo, ore_periodo: buildOre, ore_settimana: buildOreSettimana };
 // Il messaggio di una definizione (un oggetto definizione o il suo id); null se non c'è niente da dire (o la definizione non esiste).
 function build(def, now, scope) {
   const d = typeof def === 'string' ? definizione(def) : def;
@@ -470,4 +508,4 @@ function startReports() {
   console.log('Report: controllo ogni minuto (le definizioni si scelgono in Impostazioni → Report)');
 }
 
-module.exports = { rows, avvisiModules, TIPI, STATI, FREQUENZE, TAG, DEFAULTS, settings, definizione, saveSettings, addDefinition, removeDefinition, isEnabled, build, sendReport, tick, dueKey, lastSent, startReports, romeParts, sendDateFor, endOfWindow, addDays, weekdayOf };
+module.exports = { prossimaRicorrenza, rows, avvisiModules, TIPI, STATI, FREQUENZE, TAG, DEFAULTS, settings, definizione, saveSettings, addDefinition, removeDefinition, isEnabled, build, sendReport, tick, dueKey, lastSent, startReports, romeParts, sendDateFor, endOfWindow, addDays, weekdayOf };

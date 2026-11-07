@@ -74,6 +74,12 @@ test('«senza flusso» si conserva; il riepilogo conta i ruoli della configurazi
   const b = analysis.blueprint(proc, { ruoli: ['A', 'B', 'C'], ai_attiva: true, dashboard: [{}, {}] });
   eq([b.ruoli_utente, b.ai_attiva, b.widget_dashboard], [3, true, 2]);
 });
+test('i report della configurazione arrivano al tenant in coda a quelli proposti', () => {
+  const c = analysis.sanitizeProfilo({ configurazione: { report: [{ tipo: 'ricorrenze', nome: 'Compleanni', params: { giorni_prima: 7 } }, { tipo: '' }] } }).configurazione;
+  eq(c.report.length, 1);
+  const pk = analysis.pacchettoTenant([], [], c);
+  eq(pk.reports.map((r) => r.tipo), ['ricorrenze']); eq(pk.reports[0].params, { giorni_prima: 7 });
+});
 
 console.log(`\n${passed} passati, ${failed} falliti`);
 process.exit(failed ? 1 : 0);

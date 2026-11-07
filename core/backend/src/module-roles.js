@@ -8,9 +8,10 @@ const db = require('./db');
 // bustapaga = una riga al mese con quanto scritto in busta (lordo, netto, ore pagate, trattenute); ruoli `lordo`, `netto`, `ore_pagate`, `trattenute` (`data` = il mese).
 // `pagato_da`: su un modulo di spesa condivisa (un "pot" tra più persone), il campo che dice chi ha pagato quella riga
 // direttamente di tasca propria invece che dal conto comune — solo chi lo dichiara entra nel saldo dei contributi (debito-casa.js).
-const ROLE_KEYS = ['importo', 'data', 'scadenza', 'categoria', 'descrizione', 'stato', 'gruppo', 'fisso', 'data_pagamento', 'note', 'data_incerta', 'debito', 'inizio', 'fine', 'lordo', 'netto', 'ore_pagate', 'trattenute', 'pagato_da'];
+const ROLE_KEYS = ['importo', 'data', 'scadenza', 'categoria', 'descrizione', 'stato', 'gruppo', 'fisso', 'data_pagamento', 'note', 'data_incerta', 'debito', 'inizio', 'fine', 'lordo', 'netto', 'ore_pagate', 'trattenute', 'pagato_da', 'data_ricorrenza'];
 // pratica = una riga con stati e (se serve) una scadenza, senza essere denaro (ticket, ordini, scadenzario, manutenzioni…): entra negli avvisi e nei report, non nei riepiloghi di spese ed entrate.
-const KINDS = ['spesa', 'entrata', 'presenze', 'pratica', 'bustapaga'];
+// anagrafica = persone o soggetti con una data che ricorre ogni anno (compleanno, anniversario): ruoli `descrizione` (come chiamarli) e `data_ricorrenza`; li legge il report «Ricorrenze».
+const KINDS = ['spesa', 'entrata', 'presenze', 'pratica', 'bustapaga', 'anagrafica'];
 const USES = ['riepiloghi', 'avvisi', 'mail', 'estratto'];
 
 db.exec('CREATE TABLE IF NOT EXISTS module_roles (module_slug TEXT PRIMARY KEY, kind TEXT, uses TEXT NOT NULL DEFAULT \'[]\', roles TEXT NOT NULL DEFAULT \'{}\')');
