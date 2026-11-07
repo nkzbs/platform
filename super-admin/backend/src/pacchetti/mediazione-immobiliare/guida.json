@@ -45,6 +45,7 @@
       "scopo": "Il portafoglio: ogni immobile in mandato, dal primo incarico alla vendita.",
       "come_si_usa": [
         "Inserisci proprietario, indirizzo, tipologia e prezzo richiesto.",
+        "Sotto i dati chiave c'è la **mappa** con l'indirizzo (OpenStreetMap): **+** e **−** avvicinano e allontanano, **Apri la mappa** la apre a tutto schermo, **Percorso** dà le indicazioni per arrivarci. Se l'indirizzo non si trova, la mappa non compare: controlla indirizzo e comune.",
         "Con **Valutazione di mercato** (serve OpenAPI.it) ottieni la stima, i comparabili e un PDF da mostrare al proprietario. L'app chiede la conferma del costo prima di ogni richiesta.",
         "Fai firmare la scheda di acquisizione e allegala: prima di metterlo «In vendita» l'app ti ricorda che serve.",
         "Dal dettaglio vedi le **richieste compatibili**: i clienti che cercano qualcosa come questo immobile."

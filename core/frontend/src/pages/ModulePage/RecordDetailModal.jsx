@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import MappaOSM from '../../components/MappaOSM'
 import { API, openUploadedFile } from '../../lib/api'
 const toast = (message, type = 'success') => window.dispatchEvent(new CustomEvent('platform:toast', { detail: { message, type } }))
 import useApi from '../../lib/useApi'
@@ -802,6 +803,10 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                 </div>
               </div>
             )}
+            {((schema && schema.map_views) || []).map((mv) => {
+              const indirizzo = (mv.campi || []).map((k) => record.data[k]).filter((v) => (typeof v === 'string' && v.trim()) || typeof v === 'number').join(', ')
+              return indirizzo ? <MappaOSM key={mv.key || mv.label} token={token} titolo={mv.label} indirizzo={indirizzo} paese={mv.paese} /> : null
+            })}
             {azioniEsterne.map((az) => {
               const voce = az.vista && VISTE_AZIONE[az.vista]
               const esito = az.risultato_in && record.data[az.risultato_in]

@@ -839,6 +839,31 @@
           ]
         }
       ]
+    },
+    {
+      "key": "mappa_osm",
+      "_nota": "La mappa dell'immobile nella scheda (OpenStreetMap, gratuita e senza chiave): l'indirizzo scritto nella scheda si cerca su Nominatim dal server, con cache. Se l'indirizzo non si trova la mappa non compare.",
+      "richiede": {
+        "immobili": [
+          "indirizzo",
+          "comune"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "map_view",
+          "key": "posizione",
+          "label": "Dove si trova",
+          "campi": [
+            "indirizzo",
+            "numero_civico",
+            "cap",
+            "comune",
+            "provincia"
+          ],
+          "paese": "it"
+        }
+      ]
     }
   ],
   "clienti": [

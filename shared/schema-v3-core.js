@@ -70,6 +70,7 @@ export function toV3(schemaV2) {
   ;(s.match_views || []).forEach((mv) => steps.push({ id: genId('mtc'), block_type: 'match_view', ...mv }))
   ;(s.period_views || []).forEach((pv) => steps.push({ id: genId('pvw'), block_type: 'period_view', ...pv }))
   ;(s.calendar_views || []).forEach((cv) => steps.push({ id: genId('cal'), block_type: 'calendar_view', ...cv }))
+  ;(s.map_views || []).forEach((mv) => steps.push({ id: genId('map'), block_type: 'map_view', ...mv }))
   ;(s.parent_children_views || []).forEach((pc) => steps.push({ id: genId('pcv'), block_type: 'parent_children_view', ...pc }))
   ;(s.yearly_breakdowns || []).forEach((yb) => steps.push({ id: genId('ybk'), block_type: 'yearly_breakdown', ...yb }))
   ;(s.category_pivots || []).forEach((cp) => steps.push({ id: genId('cpv'), block_type: 'category_pivot', ...cp }))
@@ -115,6 +116,7 @@ export function toV2(schemaV3) {
     else if (block_type === 'state_requirements') throw new Error('Impossibile convertire a v2: contiene un blocco "state_requirements" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
     else if (block_type === 'external_action') throw new Error('Impossibile convertire a v2: contiene un blocco "external_action" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
     else if (block_type === 'document_action') throw new Error('Impossibile convertire a v2: contiene un blocco "document_action" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
+    else if (block_type === 'map_view') throw new Error('Impossibile convertire a v2: contiene un blocco "map_view" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
     else if (block_type === 'calendar_view') throw new Error('Impossibile convertire a v2: contiene un blocco "calendar_view" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
     else if (block_type === 'period_view') throw new Error('Impossibile convertire a v2: contiene un blocco "period_view" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
     else if (block_type === 'parent_children_view') throw new Error('Impossibile convertire a v2: contiene un blocco "parent_children_view" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
@@ -138,7 +140,7 @@ export function toV2(schemaV3) {
 // tutti i propri campi solo perché li contiene.
 export function toV2Lenient(schemaV3) {
   const steps = (schemaV3 && schemaV3.steps) || []
-  const out = { fields: [], relations: [], workflow: null, scope: null, permissions: null, validazione_creazione: null, aggregati: [], allegati: null,  branch_creates: [], document_actions: [], external_actions: [], state_requirements: [], match_views: [],    period_views: [], calendar_views: [], parent_children_views: [], yearly_breakdowns: [], category_pivots: [], weekly_breakdowns: [], views: [], api_sources: [], view_tabs: null, requires_connection: null, _v3_unsupported: [] }
+  const out = { fields: [], relations: [], workflow: null, scope: null, permissions: null, validazione_creazione: null, aggregati: [], allegati: null,  branch_creates: [], document_actions: [], external_actions: [], state_requirements: [], match_views: [],    period_views: [], calendar_views: [], map_views: [], parent_children_views: [], yearly_breakdowns: [], category_pivots: [], weekly_breakdowns: [], views: [], api_sources: [], view_tabs: null, requires_connection: null, _v3_unsupported: [] }
   const states = []
   const transitions = []
 
@@ -160,6 +162,7 @@ export function toV2Lenient(schemaV3) {
     else if (block_type === 'match_view') out.match_views.push(rest)
     else if (block_type === 'period_view') out.period_views.push(rest)
     else if (block_type === 'calendar_view') out.calendar_views.push(rest)
+    else if (block_type === 'map_view') out.map_views.push(rest)
     else if (block_type === 'parent_children_view') out.parent_children_views.push(rest)
     else if (block_type === 'yearly_breakdown') out.yearly_breakdowns.push(rest)
     else if (block_type === 'category_pivot') out.category_pivots.push(rest)

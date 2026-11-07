@@ -50,6 +50,13 @@ async function main() {
     const { toV3 } = require('./schema-v3');
     eq(parseSchemaNormalized(JSON.stringify(toV3(sc))).calendar_views.map((x) => x.key), ['calendario'], 'andata e ritorno');
   });
+  await test('Mappa (map_view): l\'estensione di Immobili è un blocco valido, i campi che cita sono tra quelli richiesti o noti e sopravvive all\'andata e ritorno del Builder', () => {
+    const est = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/estensioni.json').immobili.find((x) => x.key === 'mappa_osm');
+    const blocco = est.aggiungi[0]; eq(blocco.block_type, 'map_view'); ok(blocco.campi.includes('indirizzo') && blocco.campi.includes('comune'), 'indirizzo e comune');
+    const { toV3 } = require('./schema-v3');
+    const sc = parseSchemaNormalized(JSON.stringify({ version: 3, steps: [F('indirizzo'), F('comune'), { id: 'm1', ...blocco }] }));
+    eq(sc.map_views.length, 1); eq(parseSchemaNormalized(JSON.stringify(toV3(sc))).map_views.map((m) => m.key), ['posizione'], 'andata e ritorno');
+  });
   await test('senza i moduli che cita non si crea nulla; con Clienti e Immobili si crea (crea, bozza, pubblica) una volta sola', async () => {
     eq(await seedEngine.creaModuli(SEED, { callAs: finto() }), []); eq(chiamate, []);
     add('clienti', [F('nome')]); eq(await seedEngine.creaModuli(SEED, { callAs: finto() }), [], 'manca Immobili'); add('immobili', [F('titolo')]);

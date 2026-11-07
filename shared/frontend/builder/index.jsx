@@ -26,7 +26,7 @@ const BLOCK_TYPE_CATEGORY = {
   workflow_state: 'Workflow', workflow_transition: 'Workflow',
   permissions: 'Permessi', validazione_creazione: 'Permessi',
   report_aggregate: 'Calcolo', yearly_breakdown: 'Calcolo', category_pivot: 'Calcolo', weekly_breakdown: 'Calcolo',
-  connection_required: 'Automazione', automation: 'Automazione', document_action: 'Automazione', external_action: 'Automazione', calendar_view: 'Layout form', state_requirements: 'Workflow', match_view: 'Layout form',
+  connection_required: 'Automazione', automation: 'Automazione', document_action: 'Automazione', external_action: 'Automazione', calendar_view: 'Layout form', map_view: 'Layout form', state_requirements: 'Workflow', match_view: 'Layout form',
   branch_create: 'Layout form', period_view: 'Layout form', parent_children_view: 'Layout form', view_tabs: 'Layout form', view: 'Layout form',
 }
 
@@ -39,7 +39,7 @@ const BLOCK_TYPE_CATEGORY = {
 const BLOCK_TYPE_LABEL = {
   field: 'Campo', relation: 'Relazione', workflow_state: 'Stato workflow', workflow_transition: 'Transizione workflow',
   permissions: 'Permessi', validazione_creazione: 'Validazione alla creazione', allegati: 'Allegati',
-  connection_required: 'Richiede connessione', automation: 'Automazione', document_action: 'Documento da modello', external_action: 'Azione esterna', calendar_view: 'Vista a calendario', state_requirements: 'Requisiti dello stato', match_view: 'Abbinamento',
+  connection_required: 'Richiede connessione', automation: 'Automazione', document_action: 'Documento da modello', external_action: 'Azione esterna', calendar_view: 'Vista a calendario', map_view: 'Mappa', state_requirements: 'Requisiti dello stato', match_view: 'Abbinamento',
   branch_create: 'Crea in filiale', period_view: 'Vista periodo',
   parent_children_view: 'Vista padre/figli', yearly_breakdown: 'Riepilogo annuale', category_pivot: 'Pivot categoria',
   weekly_breakdown: 'Riepilogo settimanale', view_tabs: 'Tab di vista', report_aggregate: 'Report aggregato', view: 'Vista', api_source: 'Fonte esterna',
@@ -416,6 +416,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
         match_views: draft.match_views || [],
         period_views: draft.period_views || [],
         calendar_views: draft.calendar_views || [], // senza questa riga riaprire e pubblicare il Builder cancellerebbe il calendario
+        map_views: draft.map_views || [], // idem per la mappa
         parent_children_views: draft.parent_children_views || [],
         yearly_breakdowns: draft.yearly_breakdowns || [],
         category_pivots: draft.category_pivots || [],
@@ -2116,6 +2117,25 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                         </select>
                       </div>
                       <div className="text-[11px] text-gray-500 leading-snug">Il modulo si può vedere anche a calendario: un mese alla volta, toccando un giorno compaiono le sue righe. I campi del sottotitolo (relazioni comprese) si dichiarano nel pacchetto.</div>
+                    </div>
+                  )
+                }
+
+                if (step.block_type === 'map_view') {
+                  const campiMod = (fieldCache.find((m) => m.slug === selected) || {}).fields || []
+                  const scelti = step.campi || []
+                  const inp = 'w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-700 focus:border-violet-500 transition'
+                  return (
+                    <div className="space-y-2">
+                      <label className="text-xs text-gray-400 block">Titolo del riquadro</label>
+                      <input value={step.label || ''} onChange={(e) => updateStep(idx, 'label', e.target.value)} placeholder="Dove si trova" className={inp} />
+                      <label className="text-xs text-gray-400 block">Campi che formano l'indirizzo (nell'ordine in cui li scrivi)</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {campiMod.map((f) => { const on = scelti.includes(f.key); return (
+                          <button key={f.key} type="button" onClick={() => updateStep(idx, 'campi', on ? scelti.filter((k) => k !== f.key) : [...scelti, f.key])} className={'text-xs px-2.5 py-1 rounded-full border transition ' + (on ? 'border-accent text-accent bg-accent/10' : 'border-gray-700 text-gray-400 hover:border-gray-500')}>{on ? (scelti.indexOf(f.key) + 1) + '. ' : ''}{f.label || f.key}</button>
+                        ) })}
+                      </div>
+                      <div className="text-[11px] text-gray-500 leading-snug">Nella scheda compare una mappa di OpenStreetMap con l'indirizzo. L'indirizzo scritto viene cercato su Nominatim (gratuito, senza chiave); la mappa non si vede se l'indirizzo non si trova.</div>
                     </div>
                   )
                 }

@@ -23,7 +23,7 @@ export function createIcon(lucide) {
     info: lucide.Info, 'git-compare': lucide.GitCompare, 'alert-triangle': lucide.AlertTriangle,
     'corner-down-right': lucide.CornerDownRight, search: lucide.Search, list: lucide.List,
     calendar: lucide.Calendar, download: lucide.Download, upload: lucide.Upload,
-    bell: lucide.Bell, key: lucide.Key, 'chevron-left': lucide.ChevronLeft,
+    bell: lucide.Bell, 'map-pin': lucide.MapPin, key: lucide.Key, 'chevron-left': lucide.ChevronLeft,
     'chevron-up': lucide.ChevronUp, 'eye-off': lucide.EyeOff, shield: lucide.Shield,
     sun: lucide.Sun, moon: lucide.Moon, play: lucide.Play, square: lucide.Square,
     activity: lucide.Activity, globe: lucide.Globe, sparkles: lucide.Sparkles,

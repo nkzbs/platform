@@ -2,6 +2,17 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.59 — 7 novembre 2026
+
+**La mappa di OpenStreetMap nella scheda dell'immobile.**
+
+- **Blocco `map_view`** (generico, `shared/schema-v3-core.js` → `schema.map_views`): `campi` (i campi che formano l'indirizzo, nell'ordine), `label`, `paese` (es. `it`). Nella scheda, sotto i dati chiave, compare una **mappa** con il segnaposto; **+ / −** avvicinano e allontanano, **Apri la mappa** la apre su openstreetmap.org, **Percorso** dà le indicazioni. Se l'indirizzo non si trova la mappa non compare. Scheda del blocco nel Builder (con il blocco portato nel salvataggio, come per il calendario).
+- **Come funziona**: l'indirizzo scritto nella scheda si cerca su **Nominatim** dal nostro server (`GET /api/geocode`, `lib/geocodifica.js`: gratuito e senza chiave, User-Agent dichiarato, **una richiesta al secondo al massimo**, risultati in cache 30 giorni, «non trovato» ricordato un giorno, un errore del servizio non si mette in cache). Le tessere della mappa si disegnano nel browser (`MappaOSM.jsx`, `lib/tile-osm.js`), senza librerie e senza chiave; in basso «© OpenStreetMap contributors».
+- **Privacy**: a Nominatim e ai server delle tessere arriva solo l'indirizzo dell'immobile (non i dati del proprietario); il browser di chi guarda chiede le tessere a OpenStreetMap.
+- **Pacchetto** alla versione 8: estensione `mappa_osm` per gli Immobili (indirizzo, numero civico, CAP, comune, provincia, paese `it`) e un passo nel capitolo di guida degli Immobili.
+- Test: `geocodifica.test.js` (cache, una richiesta alla volta, errori, non trovato), `tile-osm.test.js` (calcolo delle tessere, verificato a parte), blocco nello schema e andata e ritorno del Builder. Provato dal vivo in locale: 15 tessere su 15 caricate (Brescia).
+- **Non fatto**: mappa nei moduli che non siano Immobili (basta dichiarare il blocco), clic sulla mappa per correggere la posizione, mappa nel PDF del report (il report ha già la sua).
+
 ## 0.4.58 — 7 novembre 2026
 
 **Il totale delle Provvigioni usa gli scaglioni.**
