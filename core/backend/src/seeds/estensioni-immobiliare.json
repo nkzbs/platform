@@ -465,6 +465,20 @@
   ],
   "clienti": [
     {
+      "key": "profilo_mediazione",
+      "_nota": "Il profilo del cliente di un'agenzia di mediazione: tipo di soggetto, venditore o acquirente, cosa cerca. Prima stavano solo nel Clienti di zucca (aggiunti a mano nel Builder): qui diventano un'estensione del Clienti generico, così lo stesso risultato nasce su qualunque tenant senza una copia del modulo nella Libreria.",
+      "aggiungi": [
+        { "block_type": "field", "key": "data_nascita", "label": "Data di nascita", "type": "date" },
+        { "block_type": "field", "key": "tipo_soggetto", "label": "Tipo soggetto", "type": "select", "options": ["Persona fisica", "Società"] },
+        { "block_type": "field", "key": "codice_fiscale_piva", "label": "Codice Fiscale / P.IVA", "type": "text" },
+        { "block_type": "field", "key": "tipo_cliente", "label": "Tipo cliente", "type": "select", "options": ["Venditore", "Acquirente"] },
+        { "block_type": "field", "key": "esigenza_acquisto", "label": "Esigenza (per Acquirente)", "type": "select", "options": ["Ha già individuato l'immobile", "Cerca immobile"] },
+        { "block_type": "field", "key": "ricerca_tipologia", "label": "Tipologia immobile ricercata", "type": "text" },
+        { "block_type": "field", "key": "ricerca_budget_max", "label": "Budget massimo ricerca", "type": "currency" },
+        { "block_type": "field", "key": "ricerca_zona", "label": "Zona/città ricercata", "type": "text" }
+      ]
+    },
+    {
       "key": "anagrafica_scheda",
       "_nota": "Dati anagrafici che la scheda di acquisizione chiede a ogni proprietario e che il Cliente non aveva.",
       "aggiungi": [

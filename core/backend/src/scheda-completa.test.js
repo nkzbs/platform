@@ -39,7 +39,7 @@ async function main() {
   const documenti = require('./seeds/documenti-immobiliare.json');
   const scheda = documenti.immobili.find((d) => d.key === 'scheda_immobile_completa');
   const est = estensioni.immobili[0];
-  const estC = estensioni.clienti[0];
+  const estC = estensioni.clienti.find((e) => e.key === 'anagrafica_scheda');
 
   const mk = (slug, steps) => db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES (?, ?, 'box', '#000', 1, 1, 70, ?)").run(slug, slug, JSON.stringify({ version: 3, steps }));
   const rec = (slug, data) => db.prepare('INSERT INTO records (module_slug, data) VALUES (?, ?)').run(slug, JSON.stringify(data)).lastInsertRowid;
@@ -63,7 +63,7 @@ async function main() {
   let esiti;
   await test('si applica: nuovi campi del tipo giusto e caselle trasformate in elenchi a scelta multipla', async () => {
     esiti = await applicaSeed(estensioni, { tipo: 'estensione' });
-    assertEq(esiti.filter((e) => (e.slug === 'immobili' || e.slug === 'clienti') && e.key !== 'allegati').map((e) => e.slug + ':' + e.esito), ['immobili:applicato', 'clienti:applicato']);
+    assertEq(esiti.filter((e) => (e.slug === 'immobili' || e.slug === 'clienti') && e.key !== 'allegati' && e.key !== 'profilo_mediazione').map((e) => e.slug + ':' + e.esito), ['immobili:applicato', 'clienti:applicato']);
     assertEq(campo('immobili', 'data_sopralluogo').type, 'date');
     assertEq(campo('immobili', 'prezzo_consigliato').type, 'currency');
     assertEq(campo('immobili', 'valore_ipe').type, 'number');
@@ -93,6 +93,15 @@ async function main() {
     assertEq(campo('altro', 'pavimenti').type, 'number');
   });
 
+  await test('profilo di mediazione: un Clienti generico a 6 campi riceve gli stessi campi di zucca, senza una copia del modulo', async () => {
+    mk('clienti_generico', ['nome', 'email', 'telefono', 'azienda', 'indirizzo', 'note'].map((k) => F(k)));
+    const estP = estensioni.clienti.find((e) => e.key === 'profilo_mediazione');
+    assertEq((await applicaSeed({ clienti_generico: [estP] }, { tipo: 'estensione' })).map((e) => e.esito), ['applicato']);
+    const chiavi = schemaDi('clienti_generico').steps.filter((x) => x.block_type === 'field').map((x) => x.key);
+    for (const k of ['data_nascita', 'tipo_soggetto', 'codice_fiscale_piva', 'tipo_cliente', 'esigenza_acquisto', 'ricerca_tipologia', 'ricerca_budget_max', 'ricerca_zona']) assertTrue(chiavi.includes(k), 'manca ' + k);
+    assertEq(campo('clienti_generico', 'tipo_cliente').options, ['Venditore', 'Acquirente']);
+    assertEq((await applicaSeed({ clienti_generico: [estP] }, { tipo: 'estensione' })).map((e) => e.esito), [], 'secondo giro: niente da fare');
+  });
   await test('allegati tipizzati: Clienti e Immobili ricevono il riquadro con i tipi di documento; un secondo riquadro non si aggiunge', async () => {
     for (const slug of ['clienti', 'immobili']) {
       const blocchi = schemaDi(slug).steps.filter((x) => x.block_type === 'allegati');

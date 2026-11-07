@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.31 — 7 novembre 2026
+
+**Il Clienti di zucca non ha più bisogno di una copia nella Libreria.** Per far nascere da un'analisi un tenant uguale a zucca, i moduli di zucca erano stati pubblicati nella Libreria: cinque di loro (Clienti, Attività, Note, Report, Richieste Privacy) avevano un omonimo generico, cioè un doppione. I moduli sono generici apposta: la specificità di un verticale si applica come estensione, non come copia.
+
+- **Estensione `clienti:profilo_mediazione`** (`seeds/estensioni-immobiliare.json`): data di nascita, tipo soggetto, codice fiscale o P.IVA, tipo cliente, esigenza e i tre campi di ricerca dell'acquirente. In zucca erano stati aggiunti a mano nel Builder; ora un Clienti generico a 6 campi li riceve da solo, come gli altri. Su zucca i campi ci sono già e non cambia nulla. Test nuovo in `scheda-completa.test.js`.
+- **Libreria di Super Admin**: tolte le cinque copie. Restano di zucca solo Immobili, Trattative, Provvigioni e Interazioni, che non hanno un omonimo generico.
+- **Analisi «Mediazione immobiliare»** (Super Admin): 13 processi, ognuno agganciato al suo modulo (i generici per Clienti, Attività, Note, Report, Richieste Privacy). Due sono «da costruire»: società e cessione di quote, promemoria e ricorrenze.
+- **Da sapere**: workflow e permessi dei moduli nascono dall'analisi alla creazione del tenant; logo, colore e dati azienda sono impostazioni del tenant e non si copiano. Un tenant di prova creato dall'analisi non è ancora stato confrontato con zucca.
+
 ## 0.4.30 — 6 novembre 2026
 
 **Gli allegati dei documenti del cliente non si potevano caricare: corretto.** Scrivendo la relazione su zucca si è scoperto che nessun modulo del verticale aveva il riquadro «Allegati» (il blocco «Allegati tipizzati»): sul cliente non c'era modo di allegare copia del documento, attualità della residenza, atto di provenienza o i moduli firmati. L'unico allegato possibile era il firmato dei documenti da firmare.
