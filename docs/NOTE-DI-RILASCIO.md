@@ -2,6 +2,20 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.48 — 7 novembre 2026
+
+**La scheda di Immobili vale ora per Clienti, Trattative, Provvigioni, Quote societarie, Richieste privacy e Contatti.** Pacchetto Mediazione immobiliare alla versione 2, più un riquadro «Collegati» generico.
+
+- **Clienti**: sezioni Anagrafica, Contatti, Cosa cerca, Privacy e consensi, Note; dati chiave tipo cliente, telefono, email, budget massimo; per passare a «Documenti inviati» servono codice fiscale o P.IVA e un recapito, per «Cliente verificato» il documento d'identità allegato e la privacy firmata.
+- **Trattative**: sezioni Trattativa, Prezzo e provvigioni, Date, Professionisti, Note; dati chiave tipo, prezzo concordato, data del preliminare e del rogito; requisiti per «In corso» (immobile, venditore, acquirente), «Preliminare firmato» (prezzo, data, contratto preliminare allegato), «Rogito completato» (data, atto allegato), «Chiusa» (provvigioni generate).
+- **Provvigioni**: sezioni Provvigione, Importi, Scadenze, Note; dati chiave parte, totale con IVA, scadenza, incasso; «Fatturata» chiede importo e scadenza, «Incassata» la data di incasso.
+- **Quote societarie** (con il nuovo riquadro Allegati: visura, statuto, atto di cessione), **Richieste privacy** e **Contatti**: dati chiave e un requisito ciascuno (acquirente e valore per «In cessione»; data e proposta firmata per «Ceduta»; la risposta per «Completata»; l'esito per «Svolta»).
+- Tutti i requisiti sono **promemoria**, non bloccano. Attività, Note e Report non cambiano: hanno 3-4 campi, bastano i miglioramenti generici.
+- **Riquadro «Collegati»** (core, per ogni modulo con relazioni): sotto i dati chiave elenca i moduli che puntano a questo record con il numero («Immobili di proprietà 1, Trattative 2…»); un clic apre quella sezione. I dati chiave di tipo data e data/ora si mostrano come 12/11/2026 e i campi calcolati con le migliaia.
+- **Super Admin**: nuova rotta `POST /api/tenants/:slug/pacchetti/sincronizza` per mandare a un tenant il pacchetto aggiornato senza ricostruirne il core (lo fa già da solo ogni Aggiorna).
+- Test: coerenza dei requisiti e delle sezioni di tutto il pacchetto (nessun campo in due sezioni, campi citati tra quelli richiesti). I campi citati sono stati controllati uno per uno contro i moduli di zucca.
+- **Ordine di messa online**: deploy di Super Admin (porta il pacchetto v2), poi invio a zucca (rotta sopra o Aggiorna); il riquadro «Collegati» arriva con l'Aggiorna.
+
 ## 0.4.47 — 7 novembre 2026
 
 **In Aspetto il nome e il logo dell'app si scelgono: prendono il posto di «Platform».** Prima il nome mostrato era quello dato al tenant alla creazione e il logo era uno solo, lo stesso dei documenti.

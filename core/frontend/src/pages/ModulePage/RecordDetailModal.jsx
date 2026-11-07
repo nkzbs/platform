@@ -498,7 +498,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   })()
   const gruppoAperto = (g, i) => (gruppiAperti[g.nome] !== undefined ? gruppiAperti[g.nome] : i === 0)
   const datiChiave = fields.filter((f) => f.dato_chiave && !valoreVuoto(f))
-  const formatoChiave = (f, v) => { const n = Number(v); if (f.type === 'currency' && !isNaN(n)) return n.toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }); if (f.type === 'number' && !isNaN(n)) return n.toLocaleString('it-IT'); return Array.isArray(v) ? v.join(', ') : String(v) }
+  const formatoChiave = (f, v) => { const n = Number(v); if ((f.type === 'date' || f.type === 'datetime') && /^\d{4}-\d{2}-\d{2}/.test(String(v))) { const t = String(v); const g = t.slice(8, 10) + '/' + t.slice(5, 7) + '/' + t.slice(0, 4); return f.type === 'datetime' && t.length >= 16 ? g + ' ' + t.slice(11, 16) : g } if (f.type === 'computed' && !isNaN(n)) return n.toLocaleString('it-IT', { maximumFractionDigits: 2, useGrouping: 'always' }); if (f.type === 'currency' && !isNaN(n)) return n.toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }); if (f.type === 'number' && !isNaN(n)) return n.toLocaleString('it-IT'); return Array.isArray(v) ? v.join(', ') : String(v) }
   const apriDocumento = async (az) => {
     setDocInPreparazione(az.key)
     const res = await api.post('/records/' + mod.slug + '/' + recordId + '/documento/' + az.key + '/anteprima', {})
@@ -728,6 +728,19 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                     <div className="text-base font-semibold text-ink">{formatoChiave(f, record.data[f.key])}</div>
                   </div>
                 ))}
+              </div>
+            )}
+            {children.some((c) => (childData[c.module_slug] || []).length > 0) && (
+              <div className="mb-4 bg-surface-page border border-gray-800 rounded-lg px-3 py-2.5">
+                <div className="text-xs font-semibold text-gray-400 mb-1.5 flex items-center gap-1.5"><Icon name="link" size={11} />Collegati</div>
+                <div className="flex flex-wrap gap-x-5 gap-y-1">
+                  {children.filter((c) => (childData[c.module_slug] || []).length > 0).map((c) => (
+                    <button key={c.module_slug} type="button" onClick={() => { setOpenSection('child:' + c.module_slug); setTimeout(() => { const el = document.getElementById('collegati-' + c.module_slug); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 50) }}
+                      className="text-sm text-ink hover:text-accent transition flex items-center gap-1.5">
+                      <Icon name={c.module_icon || 'box'} size={12} className="text-gray-500" />{c.module_name} <span className="text-accent font-semibold">{(childData[c.module_slug] || []).length}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
             {azioniEsterne.map((az) => {
@@ -1024,7 +1037,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                 // che si è aperta" — segnalato dall'utente ("la parte che si apre non si capisce
                 // bene"). Aggiunta anche una X di chiusura esplicita nell'header: prima l'unico
                 // modo di richiudere era ritrovare e ricliccare la stessa tile più in alto.
-                <div key={c.module_slug} className="mb-4 p-3 rounded-lg bg-surface-page border border-gray-800">
+                <div key={c.module_slug} id={'collegati-' + c.module_slug} className="mb-4 p-3 rounded-lg bg-surface-page border border-gray-800">
                   <div className="flex items-center gap-2 text-xs font-semibold text-gray-400 mb-3 flex-wrap">
                     <Icon name={c.module_icon || 'box'} size={12} />{c.module_name}
                     <span className="text-gray-600 font-normal">({rows.length})</span>

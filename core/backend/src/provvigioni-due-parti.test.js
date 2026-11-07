@@ -33,7 +33,9 @@ async function main() {
   for (let i = 0; i < 100; i++) { try { if ((await fetch(BASE + '/health')).ok) break; } catch (e) { await new Promise((r) => setTimeout(r, 100)); } }
   const db = require('./db');
   const { applicaSeed } = require('./seed-blocchi-verticale');
-  const seed = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/estensioni.json');
+  const tutte = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/estensioni.json');
+  // qui si provano le due estensioni della provvigione a due parti: gli altri blocchi del pacchetto (requisiti per stato…) hanno i loro test
+  const seed = { provvigioni: tutte.provvigioni.filter((e) => e.key === 'due_parti'), trattative: tutte.trattative.filter((e) => e.key === 'provvigioni_due_parti') };
 
   const mk = (slug, steps) => db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES (?, ?, 'box', '#000', 1, 1, 70, ?)").run(slug, slug, JSON.stringify({ version: 3, steps }));
   const rec = (slug, data) => db.prepare('INSERT INTO records (module_slug, data) VALUES (?, ?)').run(slug, JSON.stringify(data)).lastInsertRowid;

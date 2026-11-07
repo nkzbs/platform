@@ -552,6 +552,16 @@ async function redeployTenant(tenant, { force, actor, log }) {
   return { ok: true, healthy: true };
 }
 
+// Manda a UN tenant i pacchetti di verticale aggiornati (quelli con una versione più vecchia, o già applicati prima che esistessero i pacchetti) SENZA ricostruire né
+// riavviare il core: serve quando cambiano solo i dati di un pacchetto. Lo fa già da solo ogni Aggiorna.
+router.post('/:slug/pacchetti/sincronizza', requireAuth, requireTenantScope, async (req, res) => {
+  try {
+    const r = await require('../lib/pacchetti').sincronizza(req.params.slug);
+    logAudit(req.user.username, 'tenant.pacchetti_sincronizza', req.params.slug, { inviati: r.inviati });
+    res.json(r);
+  } catch (err) { res.status(err.status || 502).json({ error: 'Pacchetti non inviati: ' + err.message }); }
+});
+
 router.post('/:slug/redeploy', requireAuth, requireTenantScope, async (req, res) => {
   const { slug } = req.params;
   const force = !!(req.body && req.body.force);

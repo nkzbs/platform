@@ -48,6 +48,52 @@
           "expr": "round(importo_netto * 1.22, 2)"
         }
       ]
+    },
+    {
+      "key": "requisiti_stato",
+      "_nota": "«Per passare a… manca» sulla scheda della provvigione: solo promemoria.",
+      "richiede": {
+        "provvigioni": [
+          "importo",
+          "base_imponibile",
+          "data_scadenza",
+          "data_incasso"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "state_requirements",
+          "stato": "fatturata",
+          "bloccante": false,
+          "requisiti": [
+            {
+              "label": "Importo",
+              "tipo": "uno_di",
+              "campi": [
+                "importo",
+                "base_imponibile"
+              ]
+            },
+            {
+              "label": "Data di scadenza",
+              "tipo": "campo",
+              "campo": "data_scadenza"
+            }
+          ]
+        },
+        {
+          "block_type": "state_requirements",
+          "stato": "incassata",
+          "bloccante": false,
+          "requisiti": [
+            {
+              "label": "Data di incasso",
+              "tipo": "campo",
+              "campo": "data_incasso"
+            }
+          ]
+        }
+      ]
     }
   ],
   "trattative": [
@@ -216,6 +262,96 @@
             "Contratto preliminare",
             "Atto di rogito",
             "Altro"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "requisiti_stato",
+      "_nota": "«Per passare a… manca» sulla scheda della trattativa: solo promemoria.",
+      "richiede": {
+        "trattative": [
+          "immobile",
+          "venditore",
+          "acquirente",
+          "prezzo_concordato",
+          "data_preliminare",
+          "data_rogito",
+          "provvigioni_generate_il"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "state_requirements",
+          "stato": "trattativa_in_corso",
+          "bloccante": false,
+          "requisiti": [
+            {
+              "label": "Immobile",
+              "tipo": "campo",
+              "campo": "immobile"
+            },
+            {
+              "label": "Venditore",
+              "tipo": "campo",
+              "campo": "venditore"
+            },
+            {
+              "label": "Acquirente",
+              "tipo": "campo",
+              "campo": "acquirente"
+            }
+          ]
+        },
+        {
+          "block_type": "state_requirements",
+          "stato": "preliminare_firmato",
+          "bloccante": false,
+          "requisiti": [
+            {
+              "label": "Prezzo concordato",
+              "tipo": "campo",
+              "campo": "prezzo_concordato"
+            },
+            {
+              "label": "Data del preliminare",
+              "tipo": "campo",
+              "campo": "data_preliminare"
+            },
+            {
+              "label": "Contratto preliminare",
+              "tipo": "allegato",
+              "valore": "Contratto preliminare"
+            }
+          ]
+        },
+        {
+          "block_type": "state_requirements",
+          "stato": "rogito_completato",
+          "bloccante": false,
+          "requisiti": [
+            {
+              "label": "Data del rogito",
+              "tipo": "campo",
+              "campo": "data_rogito"
+            },
+            {
+              "label": "Atto di rogito",
+              "tipo": "allegato",
+              "valore": "Atto di rogito"
+            }
+          ]
+        },
+        {
+          "block_type": "state_requirements",
+          "stato": "chiusa",
+          "bloccante": false,
+          "requisiti": [
+            {
+              "label": "Provvigioni generate",
+              "tipo": "campo",
+              "campo": "provvigioni_generate_il"
+            }
           ]
         }
       ]
@@ -727,6 +863,174 @@
             "Privacy e incarico firmato",
             "Antiriciclaggio firmato",
             "Altro"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "requisiti_stato",
+      "_nota": "«Per passare a… manca» sulla scheda del cliente: solo promemoria.",
+      "richiede": {
+        "clienti": [
+          "codice_fiscale_piva",
+          "email",
+          "telefono",
+          "pec",
+          "privacy_firmata_il"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "state_requirements",
+          "stato": "documenti_inviati",
+          "bloccante": false,
+          "requisiti": [
+            {
+              "label": "Codice fiscale o P.IVA",
+              "tipo": "campo",
+              "campo": "codice_fiscale_piva"
+            },
+            {
+              "label": "Un recapito",
+              "tipo": "uno_di",
+              "campi": [
+                "email",
+                "telefono",
+                "pec"
+              ]
+            }
+          ]
+        },
+        {
+          "block_type": "state_requirements",
+          "stato": "cliente_verificato",
+          "bloccante": false,
+          "requisiti": [
+            {
+              "label": "Documento d'identità",
+              "tipo": "allegato",
+              "valore": "Documento di identità"
+            },
+            {
+              "label": "Privacy firmata",
+              "tipo": "campo",
+              "campo": "privacy_firmata_il"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "quote_societarie": [
+    {
+      "key": "allegati",
+      "_nota": "Riquadro «Allegati» sulle quote societarie: visura, statuto, atto di cessione e la proposta firmata.",
+      "aggiungi": [
+        {
+          "block_type": "allegati",
+          "label": "Allegati",
+          "types": [
+            "Visura camerale",
+            "Statuto",
+            "Atto di cessione",
+            "Altro"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "requisiti_stato",
+      "_nota": "«Per passare a… manca» sulle quote societarie: solo promemoria.",
+      "richiede": {
+        "quote_societarie": [
+          "cessionario",
+          "valore_quota",
+          "data_cessione"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "state_requirements",
+          "stato": "in_cessione",
+          "bloccante": false,
+          "requisiti": [
+            {
+              "label": "Acquirente della quota",
+              "tipo": "campo",
+              "campo": "cessionario"
+            },
+            {
+              "label": "Valore della quota",
+              "tipo": "campo",
+              "campo": "valore_quota"
+            }
+          ]
+        },
+        {
+          "block_type": "state_requirements",
+          "stato": "ceduta",
+          "bloccante": false,
+          "requisiti": [
+            {
+              "label": "Data della cessione",
+              "tipo": "campo",
+              "campo": "data_cessione"
+            },
+            {
+              "label": "Proposta di cessione firmata",
+              "tipo": "allegato",
+              "valore": "cessione_quote_firmata"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "richieste_privacy": [
+    {
+      "key": "requisiti_stato",
+      "_nota": "«Per passare a… manca» sulle richieste privacy: solo promemoria.",
+      "richiede": {
+        "richieste_privacy": [
+          "risposta"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "state_requirements",
+          "stato": "completata",
+          "bloccante": false,
+          "requisiti": [
+            {
+              "label": "Risposta al richiedente",
+              "tipo": "campo",
+              "campo": "risposta"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "interazioni": [
+    {
+      "key": "requisiti_stato",
+      "_nota": "«Per passare a… manca» sui contatti: solo promemoria.",
+      "richiede": {
+        "interazioni": [
+          "esito"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "state_requirements",
+          "stato": "svolta",
+          "bloccante": false,
+          "requisiti": [
+            {
+              "label": "Esito del contatto",
+              "tipo": "campo",
+              "campo": "esito"
+            }
           ]
         }
       ]

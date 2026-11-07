@@ -124,5 +124,132 @@
       "superficie_mq",
       "locali"
     ]
+  },
+  "clienti": {
+    "sezioni": {
+      "Anagrafica": [
+        "nome",
+        "tipo_soggetto",
+        "data_nascita",
+        "luogo_nascita",
+        "stato_civile",
+        "regime_patrimoniale",
+        "codice_fiscale_piva"
+      ],
+      "Contatti": [
+        "email",
+        "pec",
+        "telefono",
+        "azienda",
+        "indirizzo",
+        "residenza"
+      ],
+      "Cosa cerca": [
+        "tipo_cliente",
+        "esigenza_acquisto",
+        "ricerca_tipologia",
+        "ricerca_budget_max",
+        "ricerca_zona"
+      ],
+      "Privacy e consensi": [
+        "consenso_marketing",
+        "consenso_terzi",
+        "privacy_firmata_il",
+        "privacy_versione",
+        "conservazione_fino_al"
+      ],
+      "Note": [
+        "note"
+      ]
+    },
+    "dati_chiave": [
+      "tipo_cliente",
+      "telefono",
+      "email",
+      "ricerca_budget_max"
+    ]
+  },
+  "trattative": {
+    "sezioni": {
+      "Trattativa": [
+        "titolo",
+        "tipo"
+      ],
+      "Prezzo e provvigioni": [
+        "prezzo_concordato",
+        "prov_venditore_perc",
+        "prov_acquirente_perc",
+        "provvigioni_generate_il"
+      ],
+      "Date": [
+        "data_incontro",
+        "data_preliminare",
+        "data_rogito"
+      ],
+      "Professionisti": [
+        "professionisti_coinvolti"
+      ],
+      "Note": [
+        "note"
+      ]
+    },
+    "dati_chiave": [
+      "tipo",
+      "prezzo_concordato",
+      "data_preliminare",
+      "data_rogito"
+    ]
+  },
+  "provvigioni": {
+    "sezioni": {
+      "Provvigione": [
+        "descrizione",
+        "tipo",
+        "parte"
+      ],
+      "Importi": [
+        "percentuale",
+        "base_imponibile",
+        "importo",
+        "importo_netto",
+        "iva",
+        "totale"
+      ],
+      "Scadenze": [
+        "data_scadenza",
+        "data_incasso"
+      ],
+      "Note": [
+        "note"
+      ]
+    },
+    "dati_chiave": [
+      "parte",
+      "totale",
+      "data_scadenza",
+      "data_incasso"
+    ]
+  },
+  "quote_societarie": {
+    "sezioni": {},
+    "dati_chiave": [
+      "quota_percentuale",
+      "valore_quota"
+    ]
+  },
+  "richieste_privacy": {
+    "sezioni": {},
+    "dati_chiave": [
+      "tipo_richiesta",
+      "data_ricezione"
+    ]
+  },
+  "interazioni": {
+    "sezioni": {},
+    "dati_chiave": [
+      "tipo",
+      "data_ora",
+      "prossimo_contatto"
+    ]
   }
 }

@@ -65,16 +65,34 @@ async function main() {
     const id = rec({}); eq((await vai(id)).status, 200); eq(stato(id), 'pronto');
   });
 
-  await test('il blocco del pacchetto di Mediazione immobiliare: stati e tipi validi, campi citati tra quelli richiesti, solo promemoria', () => {
-    const e = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/estensioni.json').immobili.find((x) => x.key === 'requisiti_stato');
-    const dichiarati = new Set(e.richiede.immobili); const nascosti = new Set(['report_valutazione']); // l'esito della valutazione sta sul record, non è un campo dichiarato
-    eq(e.aggiungi.map((b) => b.stato), ['in_mandato', 'in_vendita']);
-    for (const b of e.aggiungi) {
-      eq(b.bloccante, false, 'promemoria, non blocco');
-      for (const r of b.requisiti) {
-        ok(['campo', 'uno_di', 'allegato'].includes(r.tipo), 'tipo ' + r.tipo);
-        for (const k of (r.tipo === 'campo' ? [r.campo] : r.tipo === 'uno_di' ? r.campi : [])) ok(dichiarati.has(k) || nascosti.has(k), 'il campo «' + k + '» non è tra i richiesti');
+  await test('i requisiti per stato del pacchetto di Mediazione immobiliare (tutti i moduli): tipi validi, campi citati tra quelli richiesti, solo promemoria', () => {
+    const est = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/estensioni.json');
+    const nascosti = new Set(['report_valutazione']); // l'esito della valutazione sta sul record, non è un campo dichiarato
+    let moduli = 0, blocchi = 0;
+    for (const [mod, lista] of Object.entries(est)) {
+      if (mod.startsWith('_')) continue;
+      const e = lista.find((x) => x.key === 'requisiti_stato'); if (!e) continue;
+      moduli++;
+      const dichiarati = new Set(e.richiede[mod]);
+      for (const b of e.aggiungi) {
+        blocchi++; eq(b.block_type, 'state_requirements'); ok(b.stato && b.requisiti.length, mod + ': stato e requisiti'); eq(b.bloccante, false, mod + ': promemoria, non blocco');
+        for (const r of b.requisiti) {
+          ok(r.label && ['campo', 'uno_di', 'allegato'].includes(r.tipo), mod + ': tipo ' + r.tipo);
+          for (const k of (r.tipo === 'campo' ? [r.campo] : r.tipo === 'uno_di' ? r.campi : [])) ok(dichiarati.has(k) || nascosti.has(k), mod + ': il campo «' + k + '» non è tra i richiesti');
+          if (r.tipo === 'allegato') ok(r.valore, mod + ': allegato senza tipo');
+        }
       }
+    }
+    ok(moduli >= 7 && blocchi >= 12, 'moduli ' + moduli + ', blocchi ' + blocchi);
+    eq(est.immobili.find((x) => x.key === 'requisiti_stato').aggiungi.map((b) => b.stato), ['in_mandato', 'in_vendita']);
+  });
+  await test('sezioni e dati chiave del pacchetto: nessun campo in due sezioni, dati chiave senza doppioni, per ogni modulo', () => {
+    const sez = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/sezioni.json');
+    const moduli = Object.keys(sez).filter((m) => !m.startsWith('_')); ok(moduli.length >= 7, moduli.join());
+    for (const m of moduli) {
+      const tutte = Object.values(sez[m].sezioni || {}).flat(); eq(new Set(tutte).size, tutte.length, m + ': un campo in due sezioni');
+      const dc = sez[m].dati_chiave || []; eq(new Set(dc).size, dc.length, m + ': dato chiave doppio'); ok(dc.length >= 1 && dc.length <= 4, m + ': da 1 a 4 dati chiave');
+      if (tutte.length) for (const k of dc) ok(tutte.includes(k), m + ': il dato chiave «' + k + '» non sta in nessuna sezione');
     }
   });
 
