@@ -2,6 +2,17 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.47 — 7 novembre 2026
+
+**In Aspetto il nome e il logo dell'app si scelgono: prendono il posto di «Platform».** Prima il nome mostrato era quello dato al tenant alla creazione e il logo era uno solo, lo stesso dei documenti.
+
+- **Nome dell'app** (Impostazioni → Aspetto, massimo 40 caratteri, una riga): se impostato è l'unico nome mostrato, senza «Platform» e senza il numero di versione, nella barra laterale, nella schermata di accesso e nel titolo della scheda del browser. Vuoto: tutto come prima.
+- **Logo dell'app** (PNG, JPEG o WebP fino a circa 650 KB, oppure un indirizzo https): prende il posto del logo Platform nella barra laterale e nella schermata di accesso. Se non c'è, vale il logo dell'azienda (quello dei PDF); se non c'è nemmeno quello, resta il logo Platform. Il logo dell'azienda per i documenti resta separato.
+- Dati in `tenant_settings.app_name` e `app_logo_url`, esposti dalla schermata di accesso (`/api/tenant-info`, senza accesso, come il logo di prima). `PUT /api/settings/azienda` li cambia solo se la richiesta li porta: un client vecchio che rimanda la riga non li azzera. Solo l'amministratore; un logo non valido dà 400.
+- **Il marchio sfumato dietro ogni pagina e il login** (lo «sfondo liquid glass») usa lo stesso logo: stessa sfocatura e trasparenza di sempre, con il logo scelto al posto di quello Platform; senza logo, il marchio Platform o l'iniziale del nome scelto. Lo legge da un contesto (`components/IdentitaApp.jsx`) fornito da `App.jsx`, così non serve passare props a ogni pagina.
+- Test nuovo `app-identita.test.js`.
+- **Da sapere**: un logo scuro su sfondo scuro, sfocato, si vede poco (è lo stesso effetto del marchio Platform); l'icona dell'app sul telefono (PWA) continua a usare il suo colore e non il logo; dopo aver cambiato il nome si ricarica la pagina per vederlo ovunque.
+
 ## 0.4.46 — 7 novembre 2026
 
 **Il report di valutazione non copre più la scheda: è una sezione chiusa sotto i dati chiave.** Dalla schermata di zucca: il report occupava la prima pagina e spingeva giù percorso dello stato, «per passare a… manca», dati chiave e sezioni.

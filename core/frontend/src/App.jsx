@@ -2,6 +2,7 @@ import React, { useState, useEffect, lazy, Suspense } from 'react'
 import { API, notifyUnauthorized, setAuth, clearAuth } from './lib/api'
 
 import Login from './components/Login'
+import { IdentitaAppContext } from './components/IdentitaApp'
 import Sidebar from './components/Sidebar'
 import Icon from './components/Icon'
 import AskData from './components/AskData'
@@ -119,14 +120,15 @@ export default function App() {
     const res = await fetch(API + '/tenant-info')
     if (!res.ok) return
     const data = await res.json()
-    setTenantName(data.name || '')
+    // Se l'utente ha scelto un nome per l'app (Aspetto), è l'unico nome mostrato (niente «Platform»); lo stesso per il logo dell'app, che ha la precedenza su quello dell'azienda.
+    setTenantName(data.app_name || data.name || '')
     setFeatures(data.features || {})
     setAiOn(!!data.ai)
-    setTenantLogoUrl((data.logo_url || ''))
-    setHidePlatformName(!!data.hide_platform_name)
+    setTenantLogoUrl(data.app_logo_url || data.logo_url || '')
+    setHidePlatformName(!!data.app_name || !!data.hide_platform_name)
     const triplet = hex2rgbTriplet(data.accent_color)
     if (triplet) document.documentElement.style.setProperty('--accent', triplet)
-    document.title = data.name ? data.name + ' — Platform' : 'Platform'
+    document.title = data.app_name ? data.app_name : (data.name ? data.name + ' — Platform' : 'Platform')
   }
 
   useEffect(() => { loadModules() }, [token])
@@ -196,12 +198,16 @@ export default function App() {
   }, [token])
 
 
-  if (!token) return <Login onLogin={onLogin} tenantName={tenantName} logoUrl={tenantLogoUrl} hidePlatformName={hidePlatformName} />
+  // L'identità dell'app (logo e iniziale del nome) per chi non riceve props: lo sfondo sfumato dietro ogni pagina e il login.
+  const identita = { logoUrl: tenantLogoUrl, letter: hidePlatformName && tenantName ? tenantName.trim()[0] : undefined }
+
+  if (!token) return <IdentitaAppContext.Provider value={identita}><Login onLogin={onLogin} tenantName={tenantName} logoUrl={tenantLogoUrl} hidePlatformName={hidePlatformName} /></IdentitaAppContext.Provider>
 
   const currentModule = installedModules.find((m) => m.slug === currentPage)
   const allModulesForBuilder = installedModules
 
   return (
+    <IdentitaAppContext.Provider value={identita}>
     <div className="flex min-h-screen bg-surface-page">
       <Sidebar modules={installedModules} currentPage={currentPage} onNavigate={setCurrentPage} user={user} onLogout={logout} tenantName={tenantName} logoUrl={tenantLogoUrl} hidePlatformName={hidePlatformName} features={features} token={token}
         mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)} collapsed />
@@ -273,5 +279,6 @@ export default function App() {
           onStepChange={(step) => setMobileNavOpen(window.innerWidth < 768 && !!step.target && step.target.startsWith('sidebar'))} />
       )}
     </div>
+    </IdentitaAppContext.Provider>
   )
 }

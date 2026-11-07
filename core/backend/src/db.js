@@ -537,6 +537,9 @@ ensureColumn('tenant_settings', 'setup_wizard', 'TEXT DEFAULT NULL'); // 'done' 
 // legata a un tenant specifico. Default 0: nessun cambiamento per chi non
 // la attiva esplicitamente dalle Impostazioni.
 ensureColumn('tenant_settings', 'hide_platform_name', 'INTEGER DEFAULT 0');
+// Identità dell'app (Impostazioni → Aspetto): il nome mostrato al posto di «Platform» e un logo dell'app (sidebar e login) diverso da quello dei documenti.
+ensureColumn('tenant_settings', 'app_name', 'TEXT');
+ensureColumn('tenant_settings', 'app_logo_url', 'TEXT');
 // CMS pagina di accesso (2026-08-15) — richiesto dall'utente esplicitamente
 // come NON un modulo ("non sarà un modulo"): stessi 4 campi facoltativi del
 // resto del white-label, letti dall'endpoint pubblico /tenant-info (la login

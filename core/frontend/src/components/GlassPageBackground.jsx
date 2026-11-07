@@ -1,5 +1,6 @@
 import React from 'react'
 import PlatformLogo from './PlatformLogo'
+import { useIdentitaApp } from './IdentitaApp'
 
 // Sfondo "Liquid Glass" condiviso — lo sfumato dietro i pannelli di vetro (vedi
 // .glass-mesh-bg/.glass-panel in index.css), estratto da DashboardPage.jsx (2026-10-31,
@@ -10,11 +11,16 @@ import PlatformLogo from './PlatformLogo'
 // FUORI (come già in DashboardPage), apposta per non finire dentro il containing block
 // creato dal backdrop-filter (vedi FormDrawer.jsx).
 function GlassPageBackground({ children }) {
+  // Il marchio sfumato dietro i pannelli è quello dell'app: il logo scelto in Aspetto (stessa sfocatura e trasparenza di .glass-mesh-logo, valgono per qualunque immagine);
+  // senza un logo, il marchio Platform o l'iniziale del nome scelto.
+  const { logoUrl, letter } = useIdentitaApp()
   return (
     <div className="relative">
       <div className="glass-mesh-bg" aria-hidden="true">
         <div className="glass-mesh-logo">
-          <PlatformLogo size={520} />
+          {logoUrl
+            ? <img src={logoUrl} alt="" style={{ width: 520, height: 520, objectFit: 'contain', display: 'block' }} />
+            : <PlatformLogo size={520} letter={letter} />}
         </div>
       </div>
       <div className="relative z-10">{children}</div>

@@ -50,6 +50,17 @@ export default function AspettoTab({ token }) {
     lettore.readAsDataURL(file)
   }
 
+  const scegliLogoApp = (e) => {
+    const file = e.target.files && e.target.files[0]
+    e.target.value = ''
+    if (!file) return
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) { setErrore('Il logo deve essere PNG, JPEG o WebP.'); return }
+    if (file.size > 650 * 1024) { setErrore('Immagine troppo pesante (massimo circa 650 KB): riducila e riprova.'); return }
+    const lettore = new FileReader()
+    lettore.onload = () => salvaAzienda({ app_logo_url: lettore.result })
+    lettore.readAsDataURL(file)
+  }
+
   if (!azienda) return <p className="text-sm text-gray-500">Carico…</p>
 
   const colore = azienda.accent_color || '#2563EB'
@@ -67,6 +78,27 @@ export default function AspettoTab({ token }) {
           {salvo && <span className="text-xs text-emerald-400">Salvato</span>}
           <input type="color" value={colore} onChange={(e) => salva(e.target.value)}
             className="w-12 h-9 bg-transparent border border-gray-800 rounded cursor-pointer" />
+        </div>
+      </div>
+
+      <p className="text-sm text-gray-500 mt-6 mb-3">Il nome e il logo dell'app prendono il posto di «Platform» nella barra laterale, nella schermata di accesso e nel titolo della scheda del browser.</p>
+      <div className="glass-panel p-4 space-y-3">
+        <label className="block">
+          <span className="text-xs text-gray-500">Nome dell'app</span>
+          <input defaultValue={azienda.app_name || ''} maxLength={40} placeholder="Platform" onBlur={(e) => { if ((e.target.value || '').trim() !== (azienda.app_name || '')) salvaAzienda({ app_name: e.target.value.trim() || null }) }}
+            className="mt-1 w-full bg-surface-page border border-gray-800 rounded-lg px-3 py-2 text-sm text-ink placeholder-gray-600" />
+          <span className="text-[11px] text-gray-600">Vuoto: resta «Platform». Dopo averlo cambiato, ricarica la pagina per vederlo ovunque.</span>
+        </label>
+        <div>
+          <span className="text-xs text-gray-500">Logo dell'app</span>
+          <div className="mt-1 flex items-center gap-3">
+            {azienda.app_logo_url ? <img src={azienda.app_logo_url} alt="Logo dell'app" className="h-12 max-w-[200px] object-contain rounded border border-gray-800" /> : <span className="text-xs text-gray-600">{azienda.logo_url ? 'Si usa il logo dell\'azienda qui sotto' : 'Quello di Platform'}</span>}
+            <label className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 cursor-pointer">
+              {azienda.app_logo_url ? 'Cambia' : 'Carica'}
+              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={scegliLogoApp} className="hidden" />
+            </label>
+            {azienda.app_logo_url && <button onClick={() => salvaAzienda({ app_logo_url: null })} className="text-xs text-gray-500 hover:text-gray-300">Togli</button>}
+          </div>
         </div>
       </div>
 
