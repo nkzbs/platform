@@ -1,10 +1,9 @@
 'use strict';
-// Applica ai moduli di un tenant i blocchi di un PACCHETTO di verticale. Un pacchetto è una cartella di dati in
-// `pacchetti/<nome>/` (mai codice): `documenti` (azioni «documento da modello»), `abbinamenti`, `estensioni` (campi nuovi,
-// calcoli, automazioni e `converti`), `moduli` (moduli nuovi), `ruoli`, `relazioni`, `proprieta`, `sezioni`. Il tenant applica
-// solo i pacchetti ATTIVI (tabella `pacchetti_attivi`, scelti dall'analisi alla creazione); un tenant con già applicato qualcosa di un
-// pacchetto (marcatori in `seed_applicati`) lo ha attivo da solo. Nel codice non c'è nessun nome di verticale: per un altro verticale
-// basta un'altra cartella.
+// Applica ai moduli di un tenant i blocchi di un PACCHETTO di verticale. Un pacchetto è un insieme di dati (mai codice) con una parte per tipo di blocco:
+// `documenti` (azioni «documento da modello»), `abbinamenti`, `estensioni` (campi nuovi, calcoli, automazioni, azioni esterne, requisiti per stato e `converti`),
+// `moduli` (moduli nuovi), `ruoli`, `relazioni`, `proprieta`, `sezioni`. Il core non ne contiene: li custodisce Super Admin (accanto all'analisi) e li invia al
+// tenant, che li tiene (`pacchetti_ricevuti`) e applica solo quelli ATTIVI (`pacchetti_attivi`, scelti dall'analisi alla creazione). Nel codice non c'è nessun nome
+// di verticale: per un altro verticale basta un altro pacchetto in Super Admin.
 //
 // Regole, tutte pensate per non fare danni:
 //  - UNA volta sola per blocco: dopo l'applicazione resta un marcatore (tabella `seed_applicati`).
@@ -15,8 +14,6 @@
 //  - Passa dalle rotte vere del Builder (bozza + pubblicazione, con la sua validazione), mai con una
 //    scrittura diretta su schema_json.
 //  - Idempotente e senza effetti dove non c'è niente da fare: ogni avvio costa qualche lettura.
-const path = require('path');
-const fs = require('fs');
 const db = require('./db');
 const { percorsiUsati, SEGNAPOSTI_FISSI } = require('./lib/modello-documento');
 
@@ -337,46 +334,59 @@ function dichiaraRuoli(seed = {}) {
 const MAX_GIRI = 4;
 
 // ── Pacchetti di verticale ─────────────────────────────────────────────────────────────────────────────────────────────────────────
-// Una cartella `pacchetti/<nome>/` con una parte per tipo di blocco. Ogni parte ha la stessa forma di prima (`{ <modulo>: [...] }`).
-const CARTELLA = path.join(__dirname, 'pacchetti');
+// Un pacchetto è un insieme di dati con una parte per tipo di blocco; ogni parte ha la stessa forma di sempre (`{ <modulo>: [...] }`). Il core NON ne contiene: li
+// custodisce Super Admin (accanto all'analisi) e li INVIA al tenant, che li tiene qui (`pacchetti_ricevuti`) per riapplicarli ai riavvii anche senza Super Admin.
 const PARTI = ['estensioni', 'documenti', 'abbinamenti', 'moduli', 'ruoli', 'relazioni', 'proprieta', 'sezioni'];
 const SLUG_PACCHETTO = /^[a-z0-9][a-z0-9-]{0,59}$/;
+const LIMITE_PACCHETTO = 2000000; // byte di JSON: un pacchetto vero è di poche decine di KB
 db.exec('CREATE TABLE IF NOT EXISTS pacchetti_attivi (slug TEXT PRIMARY KEY, attivato_il TEXT DEFAULT CURRENT_TIMESTAMP)');
+db.exec('CREATE TABLE IF NOT EXISTS pacchetti_ricevuti (slug TEXT PRIMARY KEY, versione INTEGER NOT NULL DEFAULT 1, parti TEXT NOT NULL, ricevuto_il TEXT DEFAULT CURRENT_TIMESTAMP)');
 
-function pacchettiDisponibili() {
-  try { return fs.readdirSync(CARTELLA, { withFileTypes: true }).filter((d) => d.isDirectory() && SLUG_PACCHETTO.test(d.name)).map((d) => d.name).sort(); } catch (e) { return []; }
-}
+const pacchettiDisponibili = () => db.prepare('SELECT slug FROM pacchetti_ricevuti ORDER BY slug').all().map((r) => r.slug);
 function leggiPacchetto(slug) {
   const out = {};
-  for (const parte of PARTI) {
-    out[parte] = {};
-    if (!SLUG_PACCHETTO.test(String(slug))) continue;
-    try { out[parte] = JSON.parse(fs.readFileSync(path.join(CARTELLA, slug, parte + '.json'), 'utf8')); } catch (e) { /* parte assente: pacchetto senza quel tipo di blocco */ }
-  }
+  for (const parte of PARTI) out[parte] = {};
+  const r = SLUG_PACCHETTO.test(String(slug)) ? db.prepare('SELECT parti FROM pacchetti_ricevuti WHERE slug = ?').get(slug) : null;
+  if (!r) return out;
+  let dati = {}; try { dati = JSON.parse(r.parti); } catch (e) { /* illeggibile: pacchetto vuoto */ }
+  for (const parte of PARTI) if (dati[parte] && typeof dati[parte] === 'object' && !Array.isArray(dati[parte])) out[parte] = dati[parte];
   return out;
 }
+// Riceve (o aggiorna) un pacchetto. Controlla nome, forma e dimensione; tiene solo le parti che conosce. Ritorna { ok } oppure { errore }.
+function riceviPacchetto(slug, versione, parti) {
+  if (!SLUG_PACCHETTO.test(String(slug))) return { errore: 'Nome del pacchetto non valido' };
+  if (!parti || typeof parti !== 'object' || Array.isArray(parti)) return { errore: 'Il pacchetto non ha le sue parti' };
+  const pulito = {};
+  for (const parte of PARTI) {
+    const v = parti[parte];
+    if (v === undefined) continue;
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return { errore: 'La parte «' + parte + '» non è un oggetto' };
+    pulito[parte] = v;
+  }
+  const json = JSON.stringify(pulito);
+  if (json.length > LIMITE_PACCHETTO) return { errore: 'Pacchetto troppo grande' };
+  const n = Math.max(1, Math.min(100000, parseInt(versione, 10) || 1));
+  db.prepare('INSERT INTO pacchetti_ricevuti (slug, versione, parti) VALUES (?, ?, ?) ON CONFLICT(slug) DO UPDATE SET versione = excluded.versione, parti = excluded.parti, ricevuto_il = CURRENT_TIMESTAMP').run(slug, n, json);
+  return { ok: true, versione: n };
+}
 const pacchettiAttivi = () => { const d = new Set(pacchettiDisponibili()); return db.prepare('SELECT slug FROM pacchetti_attivi ORDER BY slug').all().map((r) => r.slug).filter((x) => d.has(x)); };
-// Attiva un pacchetto (se esiste). Ritorna true/false; ripetere non fa danni.
+// Attiva un pacchetto già ricevuto. Ritorna true/false; ripetere non fa danni.
 function attivaPacchetto(slug) {
   if (!pacchettiDisponibili().includes(slug)) return false;
   db.prepare('INSERT OR IGNORE INTO pacchetti_attivi (slug) VALUES (?)').run(slug);
   return true;
 }
-// I marcatori che l'applicazione di un pacchetto lascia in `seed_applicati`: servono a riconoscere un tenant che ne ha già applicato uno.
-function marcatoriDelPacchetto(slug) {
-  const P = leggiPacchetto(slug), m = [];
-  const perModulo = (parte, f) => { for (const [mod, v] of Object.entries(P[parte] || {})) if (!mod.startsWith('_')) f(mod, v); };
-  perModulo('estensioni', (mod, l) => (Array.isArray(l) ? l : []).forEach((x) => m.push('estensione:' + mod + ':' + x.key)));
-  perModulo('documenti', (mod, l) => (Array.isArray(l) ? l : []).forEach((x) => m.push('azione_documento:' + mod + ':' + x.key)));
-  perModulo('abbinamenti', (mod, l) => (Array.isArray(l) ? l : []).forEach((x) => m.push('abbinamento:' + mod + ':' + x.key)));
-  perModulo('relazioni', (mod, l) => (Array.isArray(l) ? l : []).forEach((x) => m.push('relazione:' + mod + ':' + x.chiave)));
-  perModulo('moduli', (mod) => m.push('modulo:' + mod));
-  perModulo('ruoli', (mod) => m.push('ruoli:' + mod));
-  perModulo('proprieta', (mod) => m.push('proprieta:' + mod));
-  perModulo('sezioni', (mod) => m.push('sezioni:' + mod));
-  return m;
+// Stato per Super Admin: quali pacchetti ha il tenant (con la versione) e cosa è già stato applicato (i marcatori), per decidere cosa inviare.
+function statoPacchetti() {
+  const attivi = new Set(pacchettiAttivi());
+  return {
+    pacchetti: db.prepare('SELECT slug, versione FROM pacchetti_ricevuti ORDER BY slug').all().map((r) => ({ slug: r.slug, versione: r.versione, attivo: attivi.has(r.slug) })),
+    seed_applicati: db.prepare('SELECT chiave FROM seed_applicati').all().map((r) => r.chiave),
+  };
 }
-// Un tenant nato prima dei pacchetti ha già i marcatori di quello che gli è stato applicato: ha quel pacchetto attivo, senza che nessuno lo debba dire.
+// I marcatori che l'applicazione di un pacchetto lascia in `seed_applicati` (la definizione è condivisa con Super Admin).
+const marcatoriDelPacchetto = (slug) => require('./pacchetto-marcatori').marcatoriDelPacchetto(leggiPacchetto(slug));
+// Un tenant che ha già i marcatori di un pacchetto ricevuto lo ha attivo da solo, senza che nessuno lo debba dire.
 function migraDaMarcatori() {
   const attivi = new Set(pacchettiAttivi()), fatti = new Set(db.prepare('SELECT chiave FROM seed_applicati').all().map((r) => r.chiave)), migrati = [];
   for (const slug of pacchettiDisponibili()) {
@@ -414,4 +424,4 @@ async function run() {
   }
 }
 
-module.exports = { pacchettiDisponibili, leggiPacchetto, pacchettiAttivi, attivaPacchetto, marcatoriDelPacchetto, migraDaMarcatori, applicaSeed, modelloApplicabile, abbinamentoApplicabile, TIPI, dichiaraRuoli, creaModuli, riallineaRelazioni, impostaProprieta, assegnaSezioni, run };
+module.exports = { pacchettiDisponibili, leggiPacchetto, riceviPacchetto, statoPacchetti, pacchettiAttivi, attivaPacchetto, marcatoriDelPacchetto, migraDaMarcatori, applicaSeed, modelloApplicabile, abbinamentoApplicabile, TIPI, dichiaraRuoli, creaModuli, riallineaRelazioni, impostaProprieta, assegnaSezioni, run };

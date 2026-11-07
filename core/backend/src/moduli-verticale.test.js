@@ -16,7 +16,7 @@ const ok = (c, m) => { if (!c) throw new Error(m || 'atteso true'); };
 
 const db = require('./db'); const seedEngine = require('./seed-blocchi-verticale');
 const { parseSchemaNormalized } = require('./schema-v3');
-const SEED = require('./pacchetti/mediazione-immobiliare/moduli.json'); const DOC = require('./pacchetti/mediazione-immobiliare/documenti.json');
+const SEED = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/moduli.json'); const DOC = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/documenti.json');
 const F = (key, type = 'text') => ({ id: 'f_' + key, block_type: 'field', key, label: key, type });
 const add = (slug, steps) => db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES (?, ?, 'box', '#000', 1, 1, 80, ?)").run(slug, slug, steps ? JSON.stringify({ version: 3, steps }) : '{}');
 
@@ -83,11 +83,11 @@ async function main() {
     db.prepare("UPDATE modules SET registry_slug = NULL WHERE slug = 'clienti'").run(); add('rp3', [relazione('clienti_generico')]);
     eq(await seedEngine.riallineaRelazioni({ rp3: [{ ...REL.rp[0], a: 'inesistente' }] }, { callAs: finto() }), []);
     ok(!db.prepare("SELECT 1 FROM seed_applicati WHERE chiave = 'relazione:rp3:cliente'").get(), 'riproverà');
-    eq(require('./pacchetti/mediazione-immobiliare/relazioni.json').richieste_privacy[0].a, 'clienti');
+    eq(require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/relazioni.json').richieste_privacy[0].a, 'clienti');
   });
 
   await test('il cerchio rapido si toglie da Immobili e Clienti una volta sola, senza rimetterlo se poi lo si riaccende; senza il modulo riprova', async () => {
-    const seed = require('./pacchetti/mediazione-immobiliare/proprieta.json');
+    const seed = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/proprieta.json');
     eq(seed.immobili, { quick_toggle: 0 }); eq(seed.clienti, { quick_toggle: 0 });
     const prop = []; const callAs = async (u, m, p, b) => { prop.push(m + ' ' + p + ' ' + JSON.stringify(b)); return { ok: true, data: {} }; };
     db.prepare("DELETE FROM seed_applicati WHERE chiave LIKE 'proprieta:%'").run(); db.prepare("DELETE FROM modules WHERE slug = 'immobili'").run();
@@ -106,7 +106,7 @@ async function main() {
     eq([per('indirizzo').sezione, per('comune').sezione, per('prezzo').sezione, per('altro').sezione], ['Posizione', 'Mia sezione', 'Prezzi', undefined], 'quella scelta a mano resta');
     eq([per('prezzo').dato_chiave, per('altro').dato_chiave], [true, undefined]);
     chiamate.length = 0; eq(await seedEngine.assegnaSezioni(SEZ, { callAs: finto() }), []); eq(chiamate, [], 'una volta sola');
-    const reale = require('./pacchetti/mediazione-immobiliare/sezioni.json').immobili;
+    const reale = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/sezioni.json').immobili;
     eq(reale.dati_chiave, ['prezzo_richiesto', 'stima_valore', 'superficie_mq', 'locali']);
     const tutte = Object.values(reale.sezioni).flat(); eq(new Set(tutte).size, tutte.length, 'nessun campo in due sezioni'); ok(tutte.includes('titolo') && tutte.includes('riacquisto_zona'));
   });

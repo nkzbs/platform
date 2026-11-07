@@ -2,6 +2,17 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.45 — 7 novembre 2026
+
+**I pacchetti di verticale vivono in Super Admin, accanto all'analisi, e il core non ne contiene più.** Ultimo punto del piano di modularità: i dati di Mediazione immobiliare erano ancora una cartella dentro il core.
+
+- **Super Admin** custodisce i pacchetti in `super-admin/backend/src/pacchetti/<nome>/` (una parte per tipo di blocco, più `pacchetto.json` con nome, descrizione e **versione**) e li **invia** ai tenant (`lib/pacchetti.js`): alla creazione, quando l'analisi sceglie il pacchetto, e a ogni **Aggiorna** di un tenant (best-effort, con una riga nel popup di avanzamento: «Pacchetti aggiornati: …»).
+- **Il tenant riceve e tiene il pacchetto** (`pacchetti_ricevuti`, con la versione) e lo applica ai riavvii anche senza Super Admin. `POST /api/internal-setup/pacchetto` ora accetta `{ slug, versione, parti }` (nome, forma e dimensione controllati, parti sconosciute scartate, tetto 2 MB); `GET /api/internal-setup/pacchetti` dice cosa ha il tenant e quali blocchi ha già applicato. Il core non ha più cartelle di pacchetti.
+- **Riallineamento**: un tenant che aveva già applicato blocchi del pacchetto prima che esistessero (zucca) viene riconosciuto dai blocchi già applicati (la definizione dei marcatori è una sola, in `shared/pacchetto-marcatori.js`, usata da core e Super Admin) e riceve il pacchetto all'Aggiorna. Un tenant che non usa pacchetti (Finance) non riceve niente.
+- **Per cambiare un pacchetto**: si cambiano i dati e si **aumenta `versione`** in `pacchetto.json`; i tenant lo ricevono all'Aggiorna successivo.
+- Test: `pacchetti.test.js` nel core (ricezione, forma, marcatori, rotte) e in Super Admin (lettura, invio, riallineamento con un tenant finto). I test del core che usano il pacchetto come esempio lo leggono da Super Admin.
+- **Ordine di messa online**: prima Super Admin (invia il pacchetto anche a un core vecchio, che usa ancora il suo), poi l'Aggiorna dei tenant.
+
 ## 0.4.44 — 7 novembre 2026
 
 **«Per passare a… manca» sulla scheda, dichiarato nello schema e non nel codice.** Ultimo punto del piano di modularità sulla scheda Immobili.

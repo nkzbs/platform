@@ -544,6 +544,11 @@ async function redeployTenant(tenant, { force, actor, log }) {
     if (!up) { say('Il tenant non risponde entro 60 secondi: controlla nei Dettagli.'); return { ok: true, healthy: false } }
     say('Il tenant risponde correttamente.')
   }
+  // I pacchetti di verticale del tenant (custoditi qui in Super Admin) si riallineano alla versione corrente. Best-effort: un errore non ferma l'aggiornamento.
+  try {
+    const r = await require('../lib/pacchetti').sincronizza(tenant.slug)
+    if (r.inviati.length) say('Pacchetti aggiornati: ' + r.inviati.join(', ') + '.')
+  } catch (e) { say('Pacchetti non aggiornati (' + e.message + '): si riprova al prossimo aggiornamento.') }
   return { ok: true, healthy: true };
 }
 

@@ -239,7 +239,7 @@ async function creaTenantInBackground({ id, name, slug, domain, actor, processi,
     // i pacchetti di verticale che l'analisi sceglie (campi, documenti, abbinamenti, sezioni… dei moduli di un settore): si attivano e si applicano ora che i moduli ci sono.
     // Senza pacchetti non c'è niente da applicare. Un pacchetto sconosciuto al core dà un avviso con quelli disponibili, non ferma la creazione.
     for (const slug of (pacchetti || [])) {
-      try { await require('../lib/tenant-api-client').callTenantAPI(tenant.slug, 'POST', '/api/internal-setup/pacchetto', { slug }); }
+      try { await require('../lib/pacchetti').invia(tenant.slug, slug); }
       catch (e) { console.error('[analyses] pacchetto ' + slug + ' non applicato (non bloccante):', e.message); avvisi.push({ tipo: 'pacchetto', testo: 'Il pacchetto «' + slug + '» non è stato applicato del tutto: ' + e.message + '. Arriva al prossimo riavvio del tenant.' }); }
     }
     segni.push({ fase: 'fine', t: Date.now() });

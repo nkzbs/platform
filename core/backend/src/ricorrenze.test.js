@@ -67,7 +67,7 @@ test('il seed dichiara Clienti come anagrafica solo se ha i campi citati, una vo
   eq(dichiaraRuoli(seed), [], 'una volta sola');
   roles.set('clienti', { kind: 'pratica', uses: [], roles: { descrizione: 'nome' } }); db.prepare("DELETE FROM seed_applicati WHERE chiave = 'ruoli:clienti'").run();
   eq(dichiaraRuoli(seed), []); eq(roles.get('clienti').kind, 'pratica', 'già dichiarato: non si tocca');
-  const reale = require('./pacchetti/mediazione-immobiliare/ruoli.json'); eq(reale.clienti.kind, 'anagrafica');
+  const reale = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/ruoli.json'); eq(reale.clienti.kind, 'anagrafica');
 });
 
 console.log(`\n${passed} passati, ${failed} falliti`);

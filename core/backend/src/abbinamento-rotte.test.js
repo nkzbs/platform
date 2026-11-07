@@ -166,7 +166,7 @@ async function main() {
   });
 
   console.log('\n--- seed: gli abbinamenti del verticale applicati ai moduli (una volta sola) ---');
-  const seedAbb = require('./pacchetti/mediazione-immobiliare/abbinamenti.json');
+  const seedAbb = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/abbinamenti.json');
   const { applicaSeed } = require('./seed-blocchi-verticale');
   mk('clienti', [F('nome', 'Nome'), F('tipo_cliente', 'Tipo'), F('ricerca_tipologia', 'Tipologia'), F('ricerca_budget_max', 'Budget', 'currency'), F('ricerca_zona', 'Zona')]);
   mk('immobili', [F('titolo', 'Titolo'), F('tipologia', 'Tipologia'), F('comune', 'Comune'), F('zona_quartiere', 'Zona'), F('localita', 'Località'), F('prezzo_richiesto', 'Prezzo', 'currency'),

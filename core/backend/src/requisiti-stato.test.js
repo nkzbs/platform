@@ -66,7 +66,7 @@ async function main() {
   });
 
   await test('il blocco del pacchetto di Mediazione immobiliare: stati e tipi validi, campi citati tra quelli richiesti, solo promemoria', () => {
-    const e = require('./pacchetti/mediazione-immobiliare/estensioni.json').immobili.find((x) => x.key === 'requisiti_stato');
+    const e = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/estensioni.json').immobili.find((x) => x.key === 'requisiti_stato');
     const dichiarati = new Set(e.richiede.immobili); const nascosti = new Set(['report_valutazione']); // l'esito della valutazione sta sul record, non è un campo dichiarato
     eq(e.aggiungi.map((b) => b.stato), ['in_mandato', 'in_vendita']);
     for (const b of e.aggiungi) {

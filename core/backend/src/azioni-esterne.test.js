@@ -74,7 +74,7 @@ async function main() {
   });
 
   await test('il blocco del pacchetto di Mediazione immobiliare è applicabile a Immobili e usa un adattatore che esiste', async () => {
-    const e = require('./pacchetti/mediazione-immobiliare/estensioni.json').immobili.find((x) => x.key === 'valutazione_mercato');
+    const e = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/estensioni.json').immobili.find((x) => x.key === 'valutazione_mercato');
     const b = e.aggiungi[0];
     eq([b.block_type, b.key], ['external_action', 'valutazione']); ok(registro.adattatore(b.adapter), 'adattatore noto');
     const citati = [...Object.values(b.campi), ...Object.values(b.esito), ...b.richiede_uno_di];

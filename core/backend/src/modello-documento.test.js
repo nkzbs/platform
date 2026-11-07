@@ -7,7 +7,7 @@
 
 const { renderModello, costruisciGet, risolviDestinatario, percorsiUsati, SEGNAPOSTI_FISSI, LINEA } = require('./lib/modello-documento');
 const fixture = require('./fixtures/documenti-parita.json');
-const seed = require('./pacchetti/mediazione-immobiliare/documenti.json');
+const seed = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/documenti.json');
 
 let passed = 0, failed = 0;
 function test(name, fn) {

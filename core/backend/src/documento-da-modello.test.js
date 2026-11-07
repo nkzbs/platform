@@ -229,7 +229,7 @@ async function main() {
   });
 
   console.log('\n--- seed: i documenti del verticale applicati ai moduli (una volta sola) ---');
-  const seed = require('./pacchetti/mediazione-immobiliare/documenti.json');
+  const seed = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/documenti.json');
   const { applicaSeed } = require('./seed-blocchi-verticale');
   const { percorsiUsati, SEGNAPOSTI_FISSI } = require('./lib/modello-documento');
   // I campi che il seed crea da sé («aggiungi_campi») non vanno messi a mano nel modulo di prova.
