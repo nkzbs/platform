@@ -49,5 +49,17 @@ test('il marchio si conserva; logo non valido e colore non valido si scartano', 
   eq(analysis.sanitizeProfilo({}).marchio.ragione_sociale, '');
 });
 
+console.log('\n--- configurazione esatta del tenant ---');
+test('azione, ritorna_etichetta e colore si riportano nel flusso', () => {
+  const s = buildWorkflowSteps([P('Verifica', { colore: '#3B82F6' }), P('Documenti', { azione: 'Documenti inviati', ritorna_a: 'Verifica', ritorna_etichetta: 'Documenti da rifare', colore: '#F59E0B' })], ruoli);
+  eq(s.filter((x) => x.block_type === 'workflow_state').map((x) => x.color), ['#3B82F6', '#F59E0B']);
+  eq(s.filter((x) => x.block_type === 'workflow_transition').map((x) => x.label), ['Documenti inviati', 'Documenti da rifare']);
+});
+test('la configurazione si pulisce: id validi, colori validi, relazioni AI accese di default', () => {
+  const c = analysis.sanitizeProfilo({ configurazione: { ruoli: ['A', '', 'B'], moduli: [{ id: '7', permessi: ['A'], passaggi: [{ titolo: 'X', colore: 'rosso' }, { titolo: '' }] }, { id: 0 }] } }).configurazione;
+  eq(c.ruoli, ['A', 'B']); eq(c.moduli.length, 1); eq(c.moduli[0].id, 7); eq(c.moduli[0].passaggi.length, 1); eq(c.moduli[0].passaggi[0].colore, ''); eq(c.relazioni_ai, true);
+  eq(analysis.sanitizeProfilo({ configurazione: { relazioni_ai: false } }).configurazione.relazioni_ai, false);
+});
+
 console.log(`\n${passed} passati, ${failed} falliti`);
 process.exit(failed ? 1 : 0);

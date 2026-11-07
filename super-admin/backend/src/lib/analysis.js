@@ -68,9 +68,24 @@ function sanitizeMarchio(m) {
   const colore = String(m.accent_color == null ? '' : m.accent_color).trim();
   return { ragione_sociale: t(m.ragione_sociale, 120), indirizzo: t(m.indirizzo, 200), piva: t(m.piva, 30), logo_url: logoOk ? logo : '', accent_color: /^#[0-9a-fA-F]{6}$/.test(colore) ? colore : '' };
 }
+// La configurazione esatta del tenant, quando l'analisi deve riprodurre un tenant esistente: ruoli (in ordine, perché il colore dipende dalla posizione),
+// e per ogni modulo i permessi e il flusso (con il testo di ogni azione). Se c'è, è l'unica fonte: ruoli e flussi dei processi restano documentazione.
+function sanitizeConfigurazione(c) {
+  c = c && typeof c === 'object' ? c : {};
+  const moduli = (Array.isArray(c.moduli) ? c.moduli : []).map((m) => ({
+    id: parseInt(m && m.id, 10) || 0,
+    permessi: list(m && m.permessi, 30, 80),
+    passaggi: (Array.isArray(m && m.passaggi) ? m.passaggi : []).slice(0, 30).map((x) => ({
+      titolo: t(x && x.titolo, 120), ruolo: t(x && x.ruolo, 80), azione: t(x && x.azione, 120),
+      ritorna_a: t(x && x.ritorna_a, 120), ritorna_etichetta: t(x && x.ritorna_etichetta, 120),
+      colore: /^#[0-9a-fA-F]{6}$/.test(String(x && x.colore)) ? x.colore : '',
+    })).filter((x) => x.titolo),
+  })).filter((m) => m.id > 0).slice(0, 80);
+  return { ruoli: list(c.ruoli, 40, 80), moduli, relazioni_ai: c.relazioni_ai !== false };
+}
 function sanitizeProfilo(p) {
   p = p && typeof p === 'object' ? p : {};
-  return { settore: t(p.settore, 80), dimensione: t(p.dimensione, 40), numero_dipendenti: Math.max(0, Math.min(100000, parseInt(p.numero_dipendenti, 10) || 0)), numero_sedi: Math.max(0, Math.min(1000, parseInt(p.numero_sedi, 10) || 0)), reparti: list(p.reparti, 20, 60), sistemi_esistenti: list(p.sistemi_esistenti, 20, 80), obiettivi: t(p.obiettivi, 400), criticita: t(p.criticita, 400), marchio: sanitizeMarchio(p.marchio) };
+  return { settore: t(p.settore, 80), dimensione: t(p.dimensione, 40), numero_dipendenti: Math.max(0, Math.min(100000, parseInt(p.numero_dipendenti, 10) || 0)), numero_sedi: Math.max(0, Math.min(1000, parseInt(p.numero_sedi, 10) || 0)), reparti: list(p.reparti, 20, 60), sistemi_esistenti: list(p.sistemi_esistenti, 20, 80), obiettivi: t(p.obiettivi, 400), criticita: t(p.criticita, 400), marchio: sanitizeMarchio(p.marchio), configurazione: sanitizeConfigurazione(p.configurazione) };
 }
 
 // ── prompt ───────────────────────────────────────────────────────────────────────────────────────────────────────

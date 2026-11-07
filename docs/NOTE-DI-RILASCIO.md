@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.34 — 7 novembre 2026
+
+**L'analisi può riprodurre un tenant esistente, ruoli e flussi compresi.** Il confronto con zucca mostrava ancora tre differenze (flussi di Note e Report, ruoli, permessi e relazioni in più). Erano residui di una vecchia analisi di ottobre su zucca; l'analisi non aveva modo di dichiararli.
+
+- **`profilo.configurazione`** (Super Admin → Analisi): elenco ordinato dei ruoli del tenant (il colore dipende dalla posizione) e, per modulo, i permessi e il flusso con il testo di ogni azione (`azione`, `ritorna_etichetta`, `colore` su ogni passaggio). Se c'è, è l'unica fonte per ruoli, permessi e flussi: i processi restano documentazione. Se manca, tutto funziona come prima.
+- **`relazioni_ai: false`** salta la proposta di relazioni dell'AI, che non è ripetibile e aggiungeva relazioni a zucca assenti.
+- Test nuovi in `workflow-ritorni.test.js`.
+
 ## 0.4.33 — 7 novembre 2026
 
 **L'analisi porta con sé il marchio e i ritorni indietro del flusso.** Dal confronto tra un tenant nato da un'analisi e zucca restavano tre differenze che non erano limiti ma mancanze dell'analisi.

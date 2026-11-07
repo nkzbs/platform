@@ -207,7 +207,7 @@ function setCreazione(id, patch) {
   db.prepare('UPDATE process_analyses SET creazione = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify({ ...cur, ...patch }), id);
 }
 
-async function creaTenantInBackground({ id, name, slug, domain, actor, processi, escludi, marchio }) {
+async function creaTenantInBackground({ id, name, slug, domain, actor, processi, escludi, marchio, configurazione }) {
   const t0 = Date.now(), segni = []; // [{ fase, t }]
   const segna = (fase) => { segni.push({ fase, t: Date.now() }); setCreazione(id, { fase }); };
   const tempi = () => { const out = {}; segni.forEach((s, i) => { const fine = (segni[i + 1] ? segni[i + 1].t : Date.now()); out[s.fase] = Math.round((fine - s.t) / 100) / 10; }); return out; };
@@ -225,7 +225,7 @@ async function creaTenantInBackground({ id, name, slug, domain, actor, processi,
     if (moduleIds.length && (!installed || installed.modules !== moduleIds.length)) avvisi.push({ tipo: 'moduli', testo: 'Installati ' + (installed ? installed.modules : 0) + ' moduli su ' + moduleIds.length + ': i mancanti si aggiungono dalla Libreria.' });
     segna('ruoli');
     let config = null;
-    try { config = await analysis.deps.applyConfig({ tenantSlug: tenant.slug, processi, installedRegistryModuleIds: moduleIds, actor }); }
+    try { config = await analysis.deps.applyConfig({ tenantSlug: tenant.slug, processi, installedRegistryModuleIds: moduleIds, actor, configurazione }); }
     catch (e) { console.error('[analyses] ruoli e stati non applicati (non bloccante):', e.message); avvisi.push({ tipo: 'config', testo: 'Ruoli e stati del flusso non applicati: ' + e.message + '. Si impostano dal Builder, o riprova qui sotto.' }); }
     // ruoli dei moduli, report (spenti) e potenziamenti AI proposti, tranne quelli tolti: il tenant li completa senza sovrascrivere nulla
     let setup = null;
@@ -260,7 +260,7 @@ router.post('/:id/create-tenant', requireAuth, (req, res) => {
   const valid = new Set(analysis.libraryModules().map((m) => m.id));
   const processi = analysis.sanitizeProcessi(json(r.processi, []), valid);
   setCreazione(r.id, { fase: 'container', inizio: Date.now(), nome: name, slug, tempi: {}, errore: null, avvisi: [] });
-  creaTenantInBackground({ id: r.id, name, slug, domain, actor: req.user.username, processi, escludi: (json(r.scelte, {}).escludi) || [], marchio: analysis.sanitizeProfilo(json(r.profilo, {})).marchio }); // senza await: la pagina segue l'avanzamento
+  creaTenantInBackground({ id: r.id, name, slug, domain, actor: req.user.username, processi, escludi: (json(r.scelte, {}).escludi) || [], marchio: analysis.sanitizeProfilo(json(r.profilo, {})).marchio, configurazione: analysis.sanitizeProfilo(json(r.profilo, {})).configurazione }); // senza await: la pagina segue l'avanzamento
   res.status(202).json({ avviata: true });
 });
 
@@ -288,7 +288,7 @@ router.post('/:id/retry-config', requireAuth, async (req, res) => {
   const moduleIds = analysis.withDependencies([...new Set(processi.flatMap((p) => [p.registry_module_id, ...(p.moduli_extra || [])]).filter(Boolean))]);
   const avvisi = [];
   let config = null, setup = null;
-  try { config = await analysis.deps.applyConfig({ tenantSlug: r.tenant_slug, processi, installedRegistryModuleIds: moduleIds, actor: req.user.username }); }
+  try { config = await analysis.deps.applyConfig({ tenantSlug: r.tenant_slug, processi, installedRegistryModuleIds: moduleIds, actor: req.user.username, configurazione: analysis.sanitizeProfilo(json(r.profilo, {})).configurazione }); }
   catch (e) { avvisi.push({ tipo: 'config', testo: 'Ancora non riuscito — ruoli e stati del flusso: ' + e.message + '.' }); }
   try { setup = await analysis.deps.setupTenant(r.tenant_slug, analysis.pacchettoTenant(moduleIds, escludi)); }
   catch (e) { avvisi.push({ tipo: 'setup', testo: 'Ancora non riuscito — ruoli dei moduli/report/AI: ' + e.message + '.' }); }

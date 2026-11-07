@@ -57,13 +57,13 @@ function buildWorkflowSteps(passaggi, roleLookup) {
     stateKeys.push(key);
     steps.push({
       id: genId('wst'), block_type: 'workflow_state',
-      key, label: titolo, color: PALETTE[i % PALETTE.length], initial: i === 0,
+      key, label: titolo, color: (step && step.colore) || PALETTE[i % PALETTE.length], initial: i === 0,
     });
   });
 
   for (let i = 1; i < stateKeys.length; i++) {
     const passaggio = passaggi[i] || {};
-    const label = (passaggio.titolo || `Passaggio ${i + 1}`).toString().trim();
+    const label = (passaggio.azione || passaggio.titolo || `Passaggio ${i + 1}`).toString().trim();
     const roleLabel = (passaggio.ruolo || '').toString().trim().toLowerCase();
     const info = roleLabel ? roleLookup.get(roleLabel) : null;
     const roles = info && info.tipo === 'utente' ? [info.slug] : [];
@@ -79,7 +79,7 @@ function buildWorkflowSteps(passaggi, roleLookup) {
     const j = bersaglio ? passaggi.findIndex((x) => x && slugify(x.titolo || x.ruolo) === bersaglio) : -1;
     if (j < 0 || j === i) return;
     const info = passaggio.ruolo ? roleLookup.get(String(passaggio.ruolo).trim().toLowerCase()) : null;
-    steps.push({ id: genId('wtr'), block_type: 'workflow_transition', from: stateKeys[i], to: stateKeys[j], label: 'Torna a «' + (passaggi[j].titolo || passaggi[j].ruolo) + '»', roles: info && info.tipo === 'utente' ? [info.slug] : [] });
+    steps.push({ id: genId('wtr'), block_type: 'workflow_transition', from: stateKeys[i], to: stateKeys[j], label: passaggio.ritorna_etichetta || ('Torna a «' + (passaggi[j].titolo || passaggi[j].ruolo) + '»'), roles: info && info.tipo === 'utente' ? [info.slug] : [] });
   });
   return steps;
 }
@@ -118,7 +118,7 @@ function buildPermissionsStep(ruoliCoinvolti, roleLookup) {
 // applicarli (mai sovrascrivere un workflow/permessi già presenti — controllo ora
 // dentro core/backend/src/routes/modules.js, non più qui) e a validarli con schema-v3
 // prima di scrivere.
-async function applyAnalysisConfigToTenant({ tenantSlug, processi, installedRegistryModuleIds, actor }) {
+async function applyAnalysisConfigToTenant({ tenantSlug, processi, installedRegistryModuleIds, actor, configurazione }) {
   const result = { roles_created: [], modules_configured: [], skipped: [] };
   if (!Array.isArray(processi) || processi.length === 0) return result;
 
@@ -126,9 +126,17 @@ async function applyAnalysisConfigToTenant({ tenantSlug, processi, installedRegi
   // per-modulo), solo tipo:'utente', mai duplicati/built-in. Dedup qui (per slug)
   // prima di mandarli: /roles/internal/sync è comunque idempotente lato tenant,
   // ma evita di mandare due volte lo stesso ruolo scritto in due processi diversi.
+  // Con una configurazione esatta (analisi che riproduce un tenant) i ruoli sono QUELLI, nell'ordine dato, e nient'altro.
+  const cfg = configurazione && ((configurazione.ruoli || []).length || (configurazione.moduli || []).length) ? configurazione : null;
   const roleCandidates = new Map();
   let colorIdx = 0;
-  processi.forEach((p) => {
+  if (cfg) (cfg.ruoli || []).forEach((nome) => {
+    const slug = slugify(nome);
+    if (!slug || BUILT_IN_ROLES.includes(slug) || roleCandidates.has(slug)) return;
+    roleCandidates.set(slug, { slug, label: nome, color: PALETTE[colorIdx % PALETTE.length] });
+    colorIdx++;
+  });
+  if (!cfg) processi.forEach((p) => {
     (p.ruoli_coinvolti || []).forEach((r) => {
       if (!r || !r.nome || (r.tipo && r.tipo !== 'utente')) return;
       const label = String(r.nome).trim();
@@ -154,7 +162,17 @@ async function applyAnalysisConfigToTenant({ tenantSlug, processi, installedRegi
   const installedSet = new Set(installedRegistryModuleIds || []);
   const seenModules = new Set();
   const configs = [];
-  for (const p of processi) {
+  if (cfg) {
+    const lookupCfg = new Map((cfg.ruoli || []).map((n) => [String(n).trim().toLowerCase(), { tipo: 'utente', slug: slugify(n) }]));
+    for (const m of cfg.moduli || []) {
+      if (!installedSet.has(m.id) || seenModules.has(m.id)) continue;
+      seenModules.add(m.id);
+      const workflow_steps = m.passaggi && m.passaggi.length ? buildWorkflowSteps(m.passaggi, lookupCfg) : [];
+      const permissions_step = buildPermissionsStep((m.permessi || []).map((nome) => ({ nome, tipo: 'utente' })), lookupCfg);
+      configs.push({ registry_module_id: m.id, workflow_steps, permissions_step });
+    }
+  }
+  for (const p of (cfg ? [] : processi)) {
     if (!p.registry_module_id || !installedSet.has(p.registry_module_id)) continue;
     if (seenModules.has(p.registry_module_id)) {
       result.skipped.push({ registry_module_id: p.registry_module_id, reason: 'processo_duplicato_stesso_modulo' });
@@ -202,7 +220,7 @@ async function applyAnalysisConfigToTenant({ tenantSlug, processi, installedRegi
   // core/backend) valida e scrive — mai sovrascrive una relazione già presente.
   result.relations_created = [];
   try {
-    const relazioni = await require('./analysis').proponiRelazioni(processi, installedRegistryModuleIds);
+    const relazioni = cfg && cfg.relazioni_ai === false ? [] : await require('./analysis').proponiRelazioni(processi, installedRegistryModuleIds);
     if (relazioni.length > 0) {
       const relResult = await callTenantAPI(tenantSlug, 'POST', '/api/modules/internal/apply-relations-batch', {
         relations: relazioni.map((r) => ({ registry_module_id: r.da, target_registry_module_id: r.verso })),
