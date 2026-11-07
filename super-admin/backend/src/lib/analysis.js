@@ -55,7 +55,7 @@ function sanitizeProcesso(p, validIds) {
     passaggi: (Array.isArray(p.passaggi) ? p.passaggi : []).slice(0, 20).map((s) => ({ titolo: t(s && s.titolo, 100), ruolo: t(s && s.ruolo, 60), descrizione: t(s && s.descrizione, 300), tipo: TIPI_PASSAGGIO.includes(s && s.tipo) ? s.tipo : 'step', ritorna_a: t(s && s.ritorna_a, 100) })).filter((s) => s.titolo || s.descrizione),
     eccezioni: list(p.eccezioni, 12, 200), documenti_collegati: list(p.documenti_collegati, 12, 120), sistemi_coinvolti: list(p.sistemi_coinvolti, 12, 80), kpi: list(p.kpi, 12, 160),
     callout: (Array.isArray(p.callout) ? p.callout : []).slice(0, 12).map((c) => ({ tipo: TIPI_CALLOUT.includes(c && c.tipo) ? c.tipo : 'nota', testo: t(c && c.testo, 300) })).filter((c) => c.testo),
-    registry_module_id, moduli_extra: extra, manca: list(p.manca, 8, 160), registry_module_reasoning: t(p.registry_module_reasoning, 300), copertura,
+    senza_flusso: p.senza_flusso === true, registry_module_id, moduli_extra: extra, manca: list(p.manca, 8, 160), registry_module_reasoning: t(p.registry_module_reasoning, 300), copertura,
   };
 }
 function sanitizeProcessi(arr, validIds) { return (Array.isArray(arr) ? arr : []).slice(0, MAX_PROCESSI).map((p) => sanitizeProcesso(p, validIds)).filter((p) => p.nome); }
@@ -426,14 +426,14 @@ function pacchettoTenant(ids, escludi, configurazione) {
 }
 
 // ── blueprint: cosa copre la Libreria e cosa va costruito (solo conteggi dal contenuto dell'analisi) ─────────────────
-function blueprint(processi) {
+function blueprint(processi, configurazione) {
   const c = { coperto: 0, da_valutare: 0, da_costruire: 0 };
   processi.forEach((p) => { c[p.copertura] = (c[p.copertura] || 0) + 1; });
   const diretti = [...new Set(processi.flatMap((p) => [p.registry_module_id, ...(p.moduli_extra || [])]).filter(Boolean))];
   const moduliIds = withDependencies(diretti); // più i moduli che quelli richiedono
   const nomi = (ids) => ids.map((id) => (db.prepare('SELECT name FROM registry_modules WHERE id = ?').get(id) || {}).name).filter(Boolean);
   const ruoli = new Set(); processi.forEach((p) => (p.ruoli_coinvolti || []).forEach((r) => { if (r.tipo === 'utente') ruoli.add(r.nome.toLowerCase()); }));
-  return { processi: processi.length, ...c, proposte: proposte(moduliIds), moduli_ids: moduliIds, moduli_collegati: nomi(moduliIds.filter((id) => !diretti.includes(id))), ruoli_utente: ruoli.size, da_costruire: processi.filter((p) => p.copertura === 'da_costruire').map((p) => p.nome), manca: processi.filter((p) => (p.manca || []).length).map((p) => ({ processo: p.nome, voci: p.manca })) };
+  return { processi: processi.length, ...c, proposte: proposte(moduliIds), moduli_ids: moduliIds, moduli_collegati: nomi(moduliIds.filter((id) => !diretti.includes(id))), ruoli_utente: configurazione && configurazione.ruoli && configurazione.ruoli.length ? configurazione.ruoli.length : ruoli.size, ai_attiva: !!(configurazione && configurazione.ai_attiva), widget_dashboard: configurazione && configurazione.dashboard ? configurazione.dashboard.length : 0, da_costruire: processi.filter((p) => p.copertura === 'da_costruire').map((p) => p.nome), manca: processi.filter((p) => (p.manca || []).length).map((p) => ({ processo: p.nome, voci: p.manca })) };
 }
 
 module.exports = { deps, applicaSuggerimento, proponiCorrezioni, applicaCorrezioni, controllaCorrezioni, approfondisci, applicaApprofondimento, proponiRelazioni, analizzaAttivita, chiarisci, withDependencies, proposte, pacchettoTenant, libraryModules, sanitizeProcesso, sanitizeProcessi, sanitizeProfilo, suggestProcesso, suggestProcessi, blueprint, COPERTURE };

@@ -125,7 +125,8 @@ function CalloutField({ value, onChange, disabled }) {
 }
 
 // Un processo ha ancora da compilare qualcosa di importante?
-export const needsEnrichment = (p) => !p.scopo || !p.evento_innesco || !p.input || !p.output || !(p.passaggi && p.passaggi.length)
+// Un processo dichiarato «senza flusso» (non fa avanzare record in stati: una pagina di report, le attività…) è completo anche senza passaggi.
+export const needsEnrichment = (p) => !p.scopo || !p.evento_innesco || !p.input || !p.output || !(p.senza_flusso || (p.passaggi && p.passaggi.length))
 
 // Cosa applicare di un suggerimento a un processo: SOLO i campi ancora vuoti, mai ciò che è già scritto. Usata dal bottone del singolo processo e da «Completa tutti».
 export function applySuggestion(p, s) {
@@ -249,6 +250,9 @@ export default function ProcessoEditor({ processo, onChange, onRemove, modules, 
           <div className="bg-surface-page/60 rounded-lg p-3 border border-gray-800/60 space-y-3">
             <RuoliField value={p.ruoli_coinvolti} onChange={(v) => onChange({ ruoli_coinvolti: v })} />
             <PassaggiField value={p.passaggi} onChange={(v) => onChange({ passaggi: v })} ruoliDisponibili={ruoliDisponibili} />
+            {!(p.passaggi || []).length && (
+              <label className="flex items-center gap-2 text-xs text-gray-400 mt-1.5"><input type="checkbox" checked={!!p.senza_flusso} onChange={(e) => onChange({ senza_flusso: e.target.checked })} /> Questo processo non ha un flusso a passaggi (non fa avanzare record): non va completato con l'AI</label>
+            )}
           </div>
           <div className="bg-surface-page/60 rounded-lg p-3 border border-gray-800/60 space-y-3">
             <StringListField label="Eccezioni" value={p.eccezioni} onChange={(v) => onChange({ eccezioni: v })} placeholder="Es. Lavoro urgente: salta il preventivo" />

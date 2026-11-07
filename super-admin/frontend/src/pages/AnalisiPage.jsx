@@ -377,8 +377,8 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
         {a.auto.fase === 'errore' && <div className="mb-4 bg-red-900/20 border border-red-900/40 rounded-lg p-3 text-sm text-red-300">Non sono riuscito a compilare l'analisi: {a.auto.errore}. Puoi completarla a mano dai dettagli.</div>}
         <section className={card}>
           <h2 className="text-sm font-semibold text-ink mb-3">Ecco cosa ho preparato</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3">
-            {[['Processi', b.processi], ['Moduli', b.moduli_ids.length], ['Ruoli utente', b.ruoli_utente], ['Report (spenti)', report.length]].map(([l, v]) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mb-3">
+            {[['Processi', b.processi], ['Moduli', b.moduli_ids.length], ['Ruoli utente', b.ruoli_utente], ['Report (spenti)', report.length], ...(b.ai_attiva ? [['AI generale', 'accesa']] : []), ...(b.widget_dashboard ? [['Widget Dashboard', b.widget_dashboard]] : [])].map(([l, v]) => (
               <div key={l} className="bg-surface-page rounded-lg p-3 border border-gray-800"><div className="text-[11px] text-gray-500">{l}</div><div className="text-xl font-semibold text-ink">{v}</div></div>
             ))}
           </div>

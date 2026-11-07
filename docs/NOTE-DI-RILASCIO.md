@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.36 — 7 novembre 2026
+
+**La pagina dell'analisi dice le cose giuste.** Dopo la copia di zucca il riepilogo mostrava «5 processi non sono completi» e «Ruoli utente 3» anche se l'analisi era completa.
+
+- **Processo «senza flusso»** (`senza_flusso`, casella nell'editor del processo quando non ha passaggi): non fa avanzare record in stati (Attività, Report, Privacy), quindi non conta più come incompleto e non va completato con l'AI, che inventerebbe passaggi.
+- **Riepilogo**: «Ruoli utente» conta i ruoli della `configurazione` quando c'è (11 per zucca, prima 3 dai processi); compaiono anche «AI generale» e «Widget Dashboard».
+- Test nuovo in `workflow-ritorni.test.js`.
+
 ## 0.4.35 — 7 novembre 2026
 
 **L'analisi porta anche l'AI e la Dashboard.** Il confronto delle impostazioni (non solo dei moduli) tra zucca e un tenant nato dall'analisi ha mostrato due differenze: zucca ha l'interruttore generale dell'AI acceso e 5 widget in Dashboard, il tenant nuovo no.

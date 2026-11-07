@@ -21,7 +21,7 @@ const row = (id) => db.prepare('SELECT * FROM process_analyses WHERE id = ?').ge
 const json = (s, d) => { try { return JSON.parse(s); } catch (e) { return d; } };
 function full(r) {
   const processi = json(r.processi, []);
-  return { id: r.id, name: r.name, descrizione: r.descrizione, profilo: json(r.profilo, {}), processi, tenant_slug: r.tenant_slug, auto: json(r.auto, null), scelte: json(r.scelte, {}), creazione: (json(r.creazione, null) || null), created_at: r.created_at, updated_at: r.updated_at, blueprint: analysis.blueprint(processi) };
+  return { id: r.id, name: r.name, descrizione: r.descrizione, profilo: json(r.profilo, {}), processi, tenant_slug: r.tenant_slug, auto: json(r.auto, null), scelte: json(r.scelte, {}), creazione: (json(r.creazione, null) || null), created_at: r.created_at, updated_at: r.updated_at, blueprint: analysis.blueprint(processi, analysis.sanitizeProfilo(json(r.profilo, {})).configurazione) };
 }
 const aiError = (res, e) => res.status(e.status || 500).json({ error: e.message, code: e.code });
 

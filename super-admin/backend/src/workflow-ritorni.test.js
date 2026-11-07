@@ -66,6 +66,14 @@ test('AI generale spenta di default; i widget della Dashboard si puliscono; il p
   const pk = analysis.pacchettoTenant([], [], { ai_attiva: true, dashboard: c.dashboard });
   eq(pk.ai_master, true); eq(pk.dashboard.length, 1); eq(analysis.pacchettoTenant([], [], c).ai_master, undefined);
 });
+test('«senza flusso» si conserva; il riepilogo conta i ruoli della configurazione e riporta AI e widget', () => {
+  eq(analysis.sanitizeProcesso({ nome: 'X', senza_flusso: true }, null).senza_flusso, true);
+  eq(analysis.sanitizeProcesso({ nome: 'X', senza_flusso: 'si' }, null).senza_flusso, false);
+  const proc = [{ copertura: 'da_valutare', ruoli_coinvolti: [{ nome: 'A', tipo: 'utente' }] }];
+  eq(analysis.blueprint(proc).ruoli_utente, 1);
+  const b = analysis.blueprint(proc, { ruoli: ['A', 'B', 'C'], ai_attiva: true, dashboard: [{}, {}] });
+  eq([b.ruoli_utente, b.ai_attiva, b.widget_dashboard], [3, true, 2]);
+});
 
 console.log(`\n${passed} passati, ${failed} falliti`);
 process.exit(failed ? 1 : 0);
