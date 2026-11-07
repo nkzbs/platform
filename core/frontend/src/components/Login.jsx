@@ -149,12 +149,16 @@ function Login({ onLogin, tenantName, logoUrl, hidePlatformName }) {
   // già approvato altrove, nessun asset nuovo da azzeccare.
   return (
     <div className="min-h-screen bg-surface-page flex items-center justify-center p-4">
-      <GlassPageBackground>
-        <div className="glass-panel p-8 w-full" style={{ width: 'min(24rem, 100%)' }}>
-          {brandHeader}
-          {formBlock}
-        </div>
-      </GlassPageBackground>
+      {/* La larghezza sta sul contenitore, non solo sulla scheda: senza, il contenitore dello sfondo prende la larghezza del contenuto più largo (la scheda ne restava
+          appoggiata a sinistra, fuori centro) e il nome più lungo la spostava di più. */}
+      <div style={{ width: 'min(24rem, 100%)' }}>
+        <GlassPageBackground>
+          <div className="glass-panel p-8 w-full">
+            {brandHeader}
+            {formBlock}
+          </div>
+        </GlassPageBackground>
+      </div>
     </div>
   )
 }

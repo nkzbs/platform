@@ -148,6 +148,12 @@ router.post('/openapi_it/test', requireAuth, requireAdmin, async (req, res) => {
   } catch (e) { res.status(e.status || 500).json({ ok: false, error: e.message, code: e.code }); }
 });
 
+// Quali servizi di OpenAPI.it la chiave collegata può usare: una lettura gratuita per servizio, mai un controllo a pagamento (vedi lib/openapi-it.js).
+router.post('/openapi_it/servizi', requireAuth, requireAdmin, async (req, res) => {
+  try { res.json({ ok: true, ...(await require('../lib/openapi-it').verificaServizi()) }); }
+  catch (e) { res.status(e.status || 500).json({ ok: false, error: e.message, code: e.code }); }
+});
+
 router.post('/:id/toggle', requireAuth, requireAdmin, (req, res) => {
   if (!CATALOG.some((c) => c.id === req.params.id)) return res.status(404).json({ error: 'Connessione non trovata' });
   const existing = db.prepare('SELECT connected FROM connections WHERE integration_id = ?').get(req.params.id);

@@ -2,6 +2,17 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.49 — 7 novembre 2026
+
+**«Controlla i servizi» di OpenAPI.it, per sapere cosa la chiave collegata può usare davvero.** Con più prodotti da attivare nella console (Risk, Catasto, Visure Camerali…) serviva un modo per vedere cosa è abilitato senza spendere credito.
+
+- **Pulsante in Impostazioni → Connessioni → OpenAPI.it** (visibile a connessione attiva) e rotta `POST /api/connections/openapi_it/servizi` (solo amministratori). Per ogni servizio chiede il token con lo scope di **una lettura gratuita** (l'elenco delle proprie richieste, o un elenco di servizio) e la prova: esito *attivo*, *non abilitato* (con il motivo che dà OpenAPI.it), *token ottenuto* (Real Estate, che è quello della valutazione) o *da verificare*. **Nessun controllo a pagamento parte mai.**
+- **L'elenco dei servizi è un dato** (`SERVIZI` in `lib/openapi-it.js`: nome, dominio, rotta): per un prodotto in più si aggiunge una riga. Oggi: Real Estate, Catasto, Risk (report patrimoniale e report sulla persona), Visure camerali. I domini sono quelli del catalogo: nota che le visure camerali stanno su `visurecamerali.openapi.it`, un dominio `.it` diverso dagli altri. In ambiente di prova gli host hanno il prefisso `test.`.
+- **La chiave non esce mai** dalla risposta; l'ambiente (prova o produzione) è scritto nel risultato.
+- Test nuovo `openapi-servizi.test.js` con un OpenAPI.it finto: non collegato, esiti misti, solo letture, host di prova e di produzione, nessuna credenziale nella risposta.
+- **Login fuori centro, corretto.** Nella schermata di accesso la scheda restava appoggiata a sinistra (di circa 80-110 px, di più con un nome lungo): il contenitore dello sfondo prendeva la larghezza del suo contenuto più largo (550 px) e non quella della scheda (384 px). Ora la larghezza sta sul contenitore: misurato in locale, la scheda è centrata (scostamento 0).
+- **Da sapere**: Real Estate non ha una lettura gratuita nota, quindi si controlla solo che il token si ottenga. Il Catasto «ricerca per codice fiscale» che è nel codice costa 23,70 € a richiesta e non è collegato a nessun pulsante. Il catalogo e i prezzi sono nella memoria di progetto.
+
 ## 0.4.48 — 7 novembre 2026
 
 **La scheda di Immobili vale ora per Clienti, Trattative, Provvigioni, Quote societarie, Richieste privacy e Contatti.** Pacchetto Mediazione immobiliare alla versione 2, più un riquadro «Collegati» generico.

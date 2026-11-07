@@ -156,4 +156,40 @@ async function esitoRicerca(id) {
   return data;
 }
 
-module.exports = { credenziali, valoreAlMq, valoreAlMqAvanzato, comparabili, omi, ricercaPerCF, esitoRicerca };
+
+// ── Controllo dei servizi attivi ─────────────────────────────────────────────────────────────────────────────────────────────────
+// Quali prodotti di OpenAPI.it la chiave collegata può usare davvero. Per ognuno si chiede il token con lo scope di UNA lettura gratuita (l'elenco delle proprie richieste,
+// o un elenco di servizio) e la si prova: nessun controllo a pagamento parte. L'elenco dei servizi è un dato (nome, dominio, rotta): per un prodotto in più si aggiunge una riga.
+// `dominio` è senza il prefisso `test.` dell'ambiente di prova, che si aggiunge da solo. `lettura: null` = nessuna lettura gratuita nota: si controlla solo che il token si ottenga.
+const SERVIZI = [
+  { id: 'real_estate', nome: 'Real Estate (valutazione immobiliare)', dominio: 'realestate.openapi.com', rotta: '/IT-omi', lettura: null },
+  { id: 'catasto', nome: 'Catasto (visure e immobili)', dominio: 'catasto.openapi.com', rotta: '/territorio', lettura: true },
+  { id: 'risk_patrimoniale', nome: 'Risk — report patrimoniale sulla persona', dominio: 'risk.openapi.com', rotta: '/IT-patrimoniale-persona/', scope: '/IT-patrimoniale-persona', lettura: true },
+  { id: 'risk_report', nome: 'Risk — report sulla persona', dominio: 'risk.openapi.com', rotta: '/IT-report-persona/', scope: '/IT-report-persona', lettura: true },
+  { id: 'visure_camerali', nome: 'Visure camerali (società, soci)', dominio: 'visurecamerali.openapi.it', rotta: '/ordinaria-impresa-individuale', lettura: true },
+];
+
+async function verificaServizi() {
+  const c = credenziali();
+  if (!c) throw Object.assign(new Error('OpenAPI.it non collegato: imposta email e API key in Impostazioni → Connessioni.'), { status: 503, code: 'not_connected' });
+  const out = [];
+  for (const sv of SERVIZI) {
+    const host = (c.sandbox ? 'test.' : '') + sv.dominio;
+    const base = { id: sv.id, nome: sv.nome };
+    let token;
+    try { token = await ottieniToken(c, ['GET:' + host + (sv.scope || sv.rotta)]); }
+    catch (e) { out.push({ ...base, stato: 'non_abilitato', dettaglio: String((e && e.message) || 'Token non ottenuto').slice(0, 200) }); continue; }
+    if (!sv.lettura) { out.push({ ...base, stato: 'token_ok', dettaglio: 'Il token si ottiene; nessuna lettura gratuita da provare (è il servizio usato dalla valutazione).' }); continue; }
+    try {
+      const res = await fetch('https://' + host + sv.rotta, { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(15000) });
+      const dati = await res.json().catch(() => null);
+      const msg = String((dati && (dati.message || dati.error)) || '').slice(0, 160);
+      if (res.ok) out.push({ ...base, stato: 'attivo', dettaglio: 'La lettura di prova è riuscita.' });
+      else if (res.status === 401 || res.status === 403) out.push({ ...base, stato: 'non_abilitato', dettaglio: msg || 'Non autorizzato (' + res.status + ').' });
+      else out.push({ ...base, stato: 'incerto', dettaglio: 'Il servizio ha risposto ' + res.status + (msg ? ': ' + msg : '') + '. Il token c\'è: si capisce provando un controllo vero.' });
+    } catch (e) { out.push({ ...base, stato: 'incerto', dettaglio: 'Nessuna risposta dal servizio (' + String((e && e.message) || e).slice(0, 80) + ').' }); }
+  }
+  return { ambiente: c.sandbox ? 'prova' : 'produzione', servizi: out };
+}
+
+module.exports = { SERVIZI, verificaServizi, credenziali, valoreAlMq, valoreAlMqAvanzato, comparabili, omi, ricercaPerCF, esitoRicerca };

@@ -46,6 +46,7 @@ function ConnessioniTab({ token, user, features = {} }) {
   const [credForm, setCredForm] = useState({})
   const [saving, setSaving] = useState(false)
   const [waTest, setWaTest] = useState(null) // { busy } oppure { esito, dettaglio, error }
+  const [serviziOa, setServiziOa] = useState(null) // controllo dei servizi OpenAPI.it: { busy } oppure { ambiente, servizi } oppure { error }
 
   const loadConnections = async () => { const data = await api.get('/connections'); if (data) setConnections(data) }
   const loadGoogleStatus = async () => { const data = await api.get('/integrazioni/google/status'); if (data) setGoogleStatus(data) }
@@ -60,6 +61,13 @@ function ConnessioniTab({ token, user, features = {} }) {
     const res = await api.post('/connections/whatsapp_callmebot/test', {})
     if (!res.ok) { setWaTest({ error: (res.data && res.data.error) || 'Prova non riuscita' }); return }
     setWaTest({ esito: res.data.esito, risultati: res.data.risultati })
+  }
+  // Quali servizi di OpenAPI.it la chiave collegata può usare davvero: una lettura gratuita per servizio, nessun controllo a pagamento.
+  const controllaServizi = async () => {
+    setServiziOa({ busy: true })
+    const res = await api.post('/connections/openapi_it/servizi', {})
+    if (!res.ok) { setServiziOa({ error: (res.data && res.data.error) || 'Controllo non riuscito' }); return }
+    setServiziOa({ ambiente: res.data.ambiente, servizi: res.data.servizi })
   }
   const toggle = (id) => { const next = openFor === id ? null : id; setOpenFor(next); if (next) setCredForm(initialCredForm(next)) }
 
@@ -164,6 +172,12 @@ function ConnessioniTab({ token, user, features = {} }) {
                           {waTest && waTest.busy ? 'Invio...' : 'Invia messaggio di prova'}
                         </button>
                       )}
+                      {row.id === 'openapi_it' && row.connected && (
+                        <button onClick={controllaServizi} disabled={serviziOa && serviziOa.busy}
+                          className="text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-3 py-1.5 rounded-lg transition">
+                          {serviziOa && serviziOa.busy ? 'Controllo…' : 'Controlla i servizi'}
+                        </button>
+                      )}
                       {row.connected && (
                         <button onClick={() => toggleConnGeneric(row.id)} className="text-xs text-gray-500 hover:text-red-400 transition px-2 py-1.5">Disconnetti</button>
                       )}
@@ -171,6 +185,22 @@ function ConnessioniTab({ token, user, features = {} }) {
                         <span className="text-[10px] text-gray-600 ml-auto">attuali: {Object.keys(row.intg.credentials_masked).join(', ')}</span>
                       )}
                     </div>
+                    {row.id === 'openapi_it' && serviziOa && !serviziOa.busy && (
+                      <div className={'text-xs mt-3 p-3 rounded-lg border ' + (serviziOa.error ? 'bg-amber-900/20 text-amber-400 border-amber-900/40' : 'bg-surface-page text-gray-300 border-gray-800')}>
+                        {serviziOa.error ? serviziOa.error : (
+                          <>
+                            <div className="font-medium mb-1.5">Servizi di OpenAPI.it con la chiave collegata (ambiente di {serviziOa.ambiente})</div>
+                            {serviziOa.servizi.map((sv) => (
+                              <div key={sv.id} className="flex items-start gap-1.5 py-0.5">
+                                <span className={sv.stato === 'attivo' || sv.stato === 'token_ok' ? 'text-green-400' : sv.stato === 'non_abilitato' ? 'text-red-400' : 'text-amber-400'}>{sv.stato === 'attivo' || sv.stato === 'token_ok' ? '✓' : sv.stato === 'non_abilitato' ? '✗' : '?'}</span>
+                                <span><span className="text-ink">{sv.nome}</span> <span className="text-gray-500">— {sv.stato === 'attivo' ? 'attivo' : sv.stato === 'token_ok' ? 'token ottenuto' : sv.stato === 'non_abilitato' ? 'non abilitato' : 'da verificare'}. {sv.dettaglio}</span></span>
+                              </div>
+                            ))}
+                            <div className="text-gray-600 mt-1.5">Per abilitare un servizio attivalo nella console di openapi.com (alcuni chiedono la verifica dell'identità e un contratto).</div>
+                          </>
+                        )}
+                      </div>
+                    )}
                     {row.id === 'whatsapp_callmebot' && waTest && !waTest.busy && (
                       <div className={'text-xs mt-3 p-3 rounded-lg border ' + (waTest.error || waTest.esito !== 'inviato' ? 'bg-amber-900/20 text-amber-400 border-amber-900/40' : 'bg-green-900/20 text-green-400 border-green-900/40')}>
                         {waTest.error ? waTest.error : (
