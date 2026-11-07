@@ -52,16 +52,25 @@ function sanitizeProcesso(p, validIds) {
     codice: t(p.codice, 20), nome: t(p.nome, 80), reparto: t(p.reparto, 60), scopo: t(p.scopo, 300),
     evento_innesco: t(p.evento_innesco, 300), input: t(p.input, 300), output: t(p.output, 300),
     ruoli_coinvolti: (Array.isArray(p.ruoli_coinvolti) ? p.ruoli_coinvolti : []).slice(0, 12).map((r) => ({ nome: t(r && r.nome, 60), tipo: TIPI_RUOLO.includes(r && r.tipo) ? r.tipo : 'utente' })).filter((r) => r.nome),
-    passaggi: (Array.isArray(p.passaggi) ? p.passaggi : []).slice(0, 20).map((s) => ({ titolo: t(s && s.titolo, 100), ruolo: t(s && s.ruolo, 60), descrizione: t(s && s.descrizione, 300), tipo: TIPI_PASSAGGIO.includes(s && s.tipo) ? s.tipo : 'step' })).filter((s) => s.titolo || s.descrizione),
+    passaggi: (Array.isArray(p.passaggi) ? p.passaggi : []).slice(0, 20).map((s) => ({ titolo: t(s && s.titolo, 100), ruolo: t(s && s.ruolo, 60), descrizione: t(s && s.descrizione, 300), tipo: TIPI_PASSAGGIO.includes(s && s.tipo) ? s.tipo : 'step', ritorna_a: t(s && s.ritorna_a, 100) })).filter((s) => s.titolo || s.descrizione),
     eccezioni: list(p.eccezioni, 12, 200), documenti_collegati: list(p.documenti_collegati, 12, 120), sistemi_coinvolti: list(p.sistemi_coinvolti, 12, 80), kpi: list(p.kpi, 12, 160),
     callout: (Array.isArray(p.callout) ? p.callout : []).slice(0, 12).map((c) => ({ tipo: TIPI_CALLOUT.includes(c && c.tipo) ? c.tipo : 'nota', testo: t(c && c.testo, 300) })).filter((c) => c.testo),
     registry_module_id, moduli_extra: extra, manca: list(p.manca, 8, 160), registry_module_reasoning: t(p.registry_module_reasoning, 300), copertura,
   };
 }
 function sanitizeProcessi(arr, validIds) { return (Array.isArray(arr) ? arr : []).slice(0, MAX_PROCESSI).map((p) => sanitizeProcesso(p, validIds)).filter((p) => p.nome); }
+// Il marchio dell'azienda che il tenant riceve alla nascita (impostazioni del tenant, non dei moduli): tutto facoltativo.
+// Il logo è un indirizzo https o un'immagine incorporata PNG/JPEG/WebP (la stessa regola del tenant, che la ricontrolla).
+function sanitizeMarchio(m) {
+  m = m && typeof m === 'object' ? m : {};
+  const logo = String(m.logo_url == null ? '' : m.logo_url).trim();
+  const logoOk = /^https:\/\//i.test(logo) || (/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(logo) && logo.length < 950000);
+  const colore = String(m.accent_color == null ? '' : m.accent_color).trim();
+  return { ragione_sociale: t(m.ragione_sociale, 120), indirizzo: t(m.indirizzo, 200), piva: t(m.piva, 30), logo_url: logoOk ? logo : '', accent_color: /^#[0-9a-fA-F]{6}$/.test(colore) ? colore : '' };
+}
 function sanitizeProfilo(p) {
   p = p && typeof p === 'object' ? p : {};
-  return { settore: t(p.settore, 80), dimensione: t(p.dimensione, 40), numero_dipendenti: Math.max(0, Math.min(100000, parseInt(p.numero_dipendenti, 10) || 0)), numero_sedi: Math.max(0, Math.min(1000, parseInt(p.numero_sedi, 10) || 0)), reparti: list(p.reparti, 20, 60), sistemi_esistenti: list(p.sistemi_esistenti, 20, 80), obiettivi: t(p.obiettivi, 400), criticita: t(p.criticita, 400) };
+  return { settore: t(p.settore, 80), dimensione: t(p.dimensione, 40), numero_dipendenti: Math.max(0, Math.min(100000, parseInt(p.numero_dipendenti, 10) || 0)), numero_sedi: Math.max(0, Math.min(1000, parseInt(p.numero_sedi, 10) || 0)), reparti: list(p.reparti, 20, 60), sistemi_esistenti: list(p.sistemi_esistenti, 20, 80), obiettivi: t(p.obiettivi, 400), criticita: t(p.criticita, 400), marchio: sanitizeMarchio(p.marchio) };
 }
 
 // ── prompt ───────────────────────────────────────────────────────────────────────────────────────────────────────

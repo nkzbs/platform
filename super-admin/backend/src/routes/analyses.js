@@ -207,7 +207,7 @@ function setCreazione(id, patch) {
   db.prepare('UPDATE process_analyses SET creazione = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify({ ...cur, ...patch }), id);
 }
 
-async function creaTenantInBackground({ id, name, slug, domain, actor, processi, escludi }) {
+async function creaTenantInBackground({ id, name, slug, domain, actor, processi, escludi, marchio }) {
   const t0 = Date.now(), segni = []; // [{ fase, t }]
   const segna = (fase) => { segni.push({ fase, t: Date.now() }); setCreazione(id, { fase }); };
   const tempi = () => { const out = {}; segni.forEach((s, i) => { const fine = (segni[i + 1] ? segni[i + 1].t : Date.now()); out[s.fase] = Math.round((fine - s.t) / 100) / 10; }); return out; };
@@ -231,6 +231,11 @@ async function creaTenantInBackground({ id, name, slug, domain, actor, processi,
     let setup = null;
     try { setup = await analysis.deps.setupTenant(tenant.slug, analysis.pacchettoTenant(moduleIds, escludi)); }
     catch (e) { console.error('[analyses] ruoli dei moduli, report e AI non applicati (non bloccante):', e.message); avvisi.push({ tipo: 'setup', testo: 'Ruoli dei moduli, report e AI non applicati: ' + e.message + '. Si impostano dal Builder e da Impostazioni → Report, o riprova qui sotto.' }); }
+    // il marchio dell'azienda (ragione sociale, logo, colore…) se l'analisi lo porta: sono impostazioni del tenant, non dei moduli
+    if (marchio && Object.values(marchio).some(Boolean)) {
+      try { await require('../lib/tenant-api-client').callTenantAPI(tenant.slug, 'POST', '/api/internal-setup/azienda', marchio); }
+      catch (e) { console.error('[analyses] marchio non applicato (non bloccante):', e.message); avvisi.push({ tipo: 'marchio', testo: 'Marchio dell\'azienda non applicato: ' + e.message + '. Si imposta da Impostazioni → Aspetto.' }); }
+    }
     // i campi, i documenti e gli abbinamenti del verticale (seed del core) si applicano ora che i moduli ci sono: da soli arriverebbero ai riavvii successivi
     try { await require('../lib/tenant-api-client').callTenantAPI(tenant.slug, 'POST', '/api/internal-setup/seed'); }
     catch (e) { console.error('[analyses] seed del verticale non applicati (non bloccante):', e.message); avvisi.push({ tipo: 'seed', testo: 'Campi e documenti del verticale non applicati subito: arrivano al prossimo riavvio del tenant (' + e.message + ').' }); }
@@ -255,7 +260,7 @@ router.post('/:id/create-tenant', requireAuth, (req, res) => {
   const valid = new Set(analysis.libraryModules().map((m) => m.id));
   const processi = analysis.sanitizeProcessi(json(r.processi, []), valid);
   setCreazione(r.id, { fase: 'container', inizio: Date.now(), nome: name, slug, tempi: {}, errore: null, avvisi: [] });
-  creaTenantInBackground({ id: r.id, name, slug, domain, actor: req.user.username, processi, escludi: (json(r.scelte, {}).escludi) || [] }); // senza await: la pagina segue l'avanzamento
+  creaTenantInBackground({ id: r.id, name, slug, domain, actor: req.user.username, processi, escludi: (json(r.scelte, {}).escludi) || [], marchio: analysis.sanitizeProfilo(json(r.profilo, {})).marchio }); // senza await: la pagina segue l'avanzamento
   res.status(202).json({ avviata: true });
 });
 

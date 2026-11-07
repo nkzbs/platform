@@ -2,6 +2,16 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.33 — 7 novembre 2026
+
+**L'analisi porta con sé il marchio e i ritorni indietro del flusso.** Dal confronto tra un tenant nato da un'analisi e zucca restavano tre differenze che non erano limiti ma mancanze dell'analisi.
+
+- **Marchio nel profilo dell'analisi** (`profilo.marchio`: ragione sociale, indirizzo, P.IVA, logo, colore): alla fine della creazione Super Admin lo applica al tenant con `POST /api/internal-setup/azienda` (solo secret interno). Regola dei file `internal-setup`: si completa, non si sovrascrive; logo o colore non validi si scartano dicendolo. La regola sul logo sta ora in `core/backend/src/lib/azienda.js`, usata anche dalle Impostazioni. Il logo non ha ancora un campo nell'interfaccia di Analisi: si imposta dal tenant (Impostazioni → Aspetto).
+- **Ritorno indietro nei flussi** (`ritorna_a` su un passaggio): il generatore aggiunge la transizione «Torna a …» con i ruoli del passaggio (es. «documenti da rifare» di Clienti). Prima nascevano solo gli avanzamenti in fila.
+- **Note e Report**: nell'analisi di zucca sono processi a sé. Note ha il flusso Bozza, Condivisa, Archiviata; Report no, perché è una pagina a widget senza record da far avanzare.
+- Test nuovi: `workflow-ritorni.test.js` (Super Admin) e il caso `/azienda` in `internal-setup.test.js`.
+- **Non coperto**: logo, P.IVA e indirizzo di zucca (non forniti, restano vuoti e quindi assenti dai PDF).
+
 ## 0.4.32 — 7 novembre 2026
 
 **Un tenant nato dall'analisi ora arriva completo, non dopo due riavvii.** Provando l'analisi di zucca su un tenant di prova (copia dell'analisi, poi eliminato) è emerso che Clienti restava a 6 campi, senza documenti né abbinamento: i seed del verticale si applicavano solo all'avvio del tenant, quando i moduli non erano ancora installati, e un solo giro non bastava perché la scheda di Immobili cita campi di Clienti che si estende dopo. Dopo due riavvii il tenant di prova coincideva con zucca (Clienti a 24 campi, 3 documenti, abbinamento, allegati).

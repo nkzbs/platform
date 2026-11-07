@@ -55,4 +55,28 @@ router.post('/seed', async (req, res) => {
   catch (e) { res.status(500).json({ error: 'Seed del verticale non applicati: ' + e.message }); }
 });
 
+// Il marchio dell'azienda alla nascita del tenant (da Analisi): ragione sociale, indirizzo, P.IVA, logo, colore. Regola di questo file: si COMPLETA,
+// non si sovrascrive: un campo già compilato resta com'è. Logo non valido o colore non valido: quel campo si salta e si dice quale.
+router.post('/azienda', (req, res) => {
+  const b = req.body || {}, out = { impostati: [], saltati: [] };
+  const attuale = db.prepare('SELECT ragione_sociale, indirizzo, piva, logo_url, accent_color FROM tenant_settings WHERE id = 1').get() || {};
+  const { logoValido } = require('../lib/azienda');
+  const nuovi = {};
+  for (const k of ['ragione_sociale', 'indirizzo', 'piva', 'logo_url', 'accent_color']) {
+    const v = typeof b[k] === 'string' ? b[k].trim() : '';
+    if (!v) continue;
+    if (attuale[k]) { out.saltati.push(k + ': già compilato'); continue; }
+    if (k === 'logo_url' && !logoValido(v)) { out.saltati.push('logo_url: non valido'); continue; }
+    if (k === 'accent_color' && !/^#[0-9a-fA-F]{6}$/.test(v)) { out.saltati.push('accent_color: non valido'); continue; }
+    nuovi[k] = v; out.impostati.push(k);
+  }
+  const chiavi = Object.keys(nuovi);
+  if (chiavi.length) {
+    db.prepare('UPDATE tenant_settings SET ' + chiavi.map((k) => k + ' = ?').join(', ') + ' WHERE id = 1').run(...chiavi.map((k) => nuovi[k]));
+    if (nuovi.accent_color) require('../pwa-icon').apply(); // l'icona dell'app si ricolora subito, come dalle impostazioni
+    logAudit('analisi', 'tenant.marchio_da_analisi', null, { campi: chiavi });
+  }
+  res.json(out);
+});
+
 module.exports = router;

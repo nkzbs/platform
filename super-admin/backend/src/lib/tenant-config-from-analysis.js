@@ -72,6 +72,15 @@ function buildWorkflowSteps(passaggi, roleLookup) {
       from: stateKeys[i - 1], to: stateKeys[i], label, roles,
     });
   }
+  // Ritorni: un passaggio con `ritorna_a` (il titolo di un passaggio precedente) permette di tornare indietro da quello stato
+  // (es. «documenti da rifare»). Una transizione in più, con gli stessi ruoli del passaggio; titoli che non esistono si ignorano.
+  passaggi.forEach((passaggio, i) => {
+    const bersaglio = passaggio && passaggio.ritorna_a ? slugify(passaggio.ritorna_a) : '';
+    const j = bersaglio ? passaggi.findIndex((x) => x && slugify(x.titolo || x.ruolo) === bersaglio) : -1;
+    if (j < 0 || j === i) return;
+    const info = passaggio.ruolo ? roleLookup.get(String(passaggio.ruolo).trim().toLowerCase()) : null;
+    steps.push({ id: genId('wtr'), block_type: 'workflow_transition', from: stateKeys[i], to: stateKeys[j], label: 'Torna a «' + (passaggi[j].titolo || passaggi[j].ruolo) + '»', roles: info && info.tipo === 'utente' ? [info.slug] : [] });
+  });
   return steps;
 }
 
@@ -214,4 +223,4 @@ async function applyAnalysisConfigToTenant({ tenantSlug, processi, installedRegi
   return result;
 }
 
-module.exports = { applyAnalysisConfigToTenant };
+module.exports = { applyAnalysisConfigToTenant, buildWorkflowSteps };

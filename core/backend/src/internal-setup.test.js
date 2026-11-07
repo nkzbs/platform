@@ -35,6 +35,17 @@ async function main() {
     eq((await fetch(BASE + '/api/internal-setup/seed', { method: 'POST' })).status, 401);
     for (let i = 0; i < 2; i++) { const r = await fetch(BASE + '/api/internal-setup/seed', { method: 'POST', headers: { 'x-internal-secret': SECRET } }); eq(r.status, 200); eq((await r.json()).ok, true); }
   });
+  await test('/azienda: imposta il marchio vuoto, scarta logo e colore non validi, non sovrascrive ciò che c\'è già', async () => {
+    const dbm = require('./db');
+    const invia = (corpo, secret = SECRET) => fetch(BASE + '/api/internal-setup/azienda', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-internal-secret': secret }, body: JSON.stringify(corpo) });
+    eq((await invia({}, 'sbagliato')).status, 401);
+    const r1 = await (await invia({ ragione_sociale: 'Agenzia Prova', piva: '123', logo_url: 'javascript:alert(1)', accent_color: 'rosso', indirizzo: '' })).json();
+    eq(r1.impostati.sort(), ['piva', 'ragione_sociale']); ok(r1.saltati.some((x) => /logo_url/.test(x)) && r1.saltati.some((x) => /accent_color/.test(x)), JSON.stringify(r1.saltati));
+    const r2 = await (await invia({ ragione_sociale: 'Altro nome', accent_color: '#16355B', logo_url: 'https://esempio.it/logo.png' })).json();
+    eq(r2.impostati.sort(), ['accent_color', 'logo_url']); ok(r2.saltati.some((x) => /ragione_sociale: già compilato/.test(x)), JSON.stringify(r2.saltati));
+    const riga = dbm.prepare('SELECT ragione_sociale, piva, accent_color, logo_url FROM tenant_settings WHERE id = 1').get();
+    eq([riga.ragione_sociale, riga.piva, riga.accent_color, riga.logo_url], ['Agenzia Prova', '123', '#16355B', 'https://esempio.it/logo.png']);
+  });
   await test('dichiara i ruoli dei moduli installati, accende le funzioni che servono, crea i report SPENTI', async () => {
     eq(feat.isEnabled('riepilogo_mattino'), false);
     const r = await (await post({

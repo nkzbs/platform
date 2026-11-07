@@ -313,7 +313,7 @@ function Sidebar({ page, onNavigate, onLogout, payload, token }) {
                 <span className="w-7 h-7 rounded-full bg-cp-primary text-white text-[11px] font-semibold flex items-center justify-center flex-shrink-0">{initials}</span>
                 <div className="min-w-0">
                   <div className="text-sm text-ink font-medium truncate">{username}</div>
-                  <div className="text-xs text-gray-500">{payload && payload.role} · Platform 0.4.32</div>
+                  <div className="text-xs text-gray-500">{payload && payload.role} · Platform 0.4.33</div>
                 </div>
               </button>
               <div className="flex items-center gap-3">
