@@ -81,7 +81,8 @@ function sanitizeConfigurazione(c) {
       colore: /^#[0-9a-fA-F]{6}$/.test(String(x && x.colore)) ? x.colore : '',
     })).filter((x) => x.titolo),
   })).filter((m) => m.id > 0).slice(0, 80);
-  return { ruoli: list(c.ruoli, 40, 80), moduli, relazioni_ai: c.relazioni_ai !== false };
+  return { ruoli: list(c.ruoli, 40, 80), moduli, relazioni_ai: c.relazioni_ai !== false, ai_attiva: c.ai_attiva === true,
+    dashboard: (Array.isArray(c.dashboard) ? c.dashboard : []).slice(0, 30).map((w) => ({ type: t(w && w.type, 20), modulo: t(w && w.modulo, 60), campo: t(w && w.campo, 60), aggregazione: t(w && w.aggregazione, 10), etichetta: t(w && w.etichetta, 80) })).filter((w) => w.type && w.modulo) };
 }
 function sanitizeProfilo(p) {
   p = p && typeof p === 'object' ? p : {};
@@ -411,7 +412,7 @@ function proposte(ids) {
 }
 
 // Il pacchetto da mandare al tenant appena creato: ruoli dei moduli installati + le proposte NON tolte da chi ha l'analisi.
-function pacchettoTenant(ids, escludi) {
+function pacchettoTenant(ids, escludi, configurazione) {
   const out = new Set(escludi || []), p = proposte(ids);
   const ai = {};
   p.ai.filter((x) => !out.has(x.key)).forEach((x) => { (ai[x.slug] = ai[x.slug] || []).push(x.feature); });
@@ -419,6 +420,8 @@ function pacchettoTenant(ids, escludi) {
     module_roles: moduliDichiarati(ids).map((m) => ({ slug: m.slug, ...m.decl })),
     ai: Object.entries(ai).map(([slug, features]) => ({ slug, features })),
     reports: p.report.filter((x) => !out.has(x.key)).map((x) => ({ tipo: x.tipo, nome: x.nome, params: x.params })),
+    ...(configurazione && configurazione.ai_attiva ? { ai_master: true } : {}),
+    ...(configurazione && configurazione.dashboard && configurazione.dashboard.length ? { dashboard: configurazione.dashboard } : {}),
   };
 }
 

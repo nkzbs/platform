@@ -83,6 +83,14 @@ async function main() {
     const coda = rep.addDefinition('coda', 'Nuovi ticket').id; rep.saveSettings(coda, { stato: 'nuovo' });
     const t2 = rep.build(coda).text; ok(/Accesso mail/.test(t2) && !/importo da verificare|€|NaN/.test(t2), t2);
   });
+  await test('AI generale e Dashboard solo su richiesta esplicita; la Dashboard non si sovrascrive', async () => {
+    eq(ai.masterOn(), false);
+    let r = await (await post({})).json(); eq(ai.masterOn(), false, 'senza richiesta l\'AI resta spenta'); eq(r.dashboard, 0);
+    r = await (await post({ ai_master: true, dashboard: [{ type: 'kpi', modulo: 'ticket', etichetta: 'Ticket' }, { type: 'table', modulo: 'timbr' }, { type: 'boh', modulo: 'ticket' }, { type: 'kpi', modulo: 'non_installato' }] })).json();
+    eq(ai.masterOn(), true); eq(r.ai_master, true); eq(r.dashboard, 2); ok(r.saltati.filter((x) => /dashboard/.test(x)).length === 2, JSON.stringify(r.saltati));
+    eq(db.prepare("SELECT COUNT(*) c FROM dashboard_widgets WHERE page = 'dashboard'").get().c, 2);
+    r = await (await post({ dashboard: [{ type: 'kpi', modulo: 'ticket' }] })).json(); eq(r.dashboard, 0, 'Dashboard già piena: non si tocca');
+  });
 
   console.log(`\n${'='.repeat(60)}\n${passed} passati, ${failed} falliti su ${passed + failed} test.`);
   try { fs.unlinkSync(process.env.DB_PATH); } catch (e) {}

@@ -44,6 +44,18 @@ router.post('/apply', (req, res) => {
     if (upd.error) out.saltati.push('report ' + created.id + ': ' + upd.error);
     out.reports.push(created.id);
   }
+  // L'AI: l'interruttore generale nasce SPENTO (manda dati a un servizio esterno). Si accende solo se l'analisi lo dice esplicitamente.
+  if (b.ai_master === true && !moduleAi.masterOn()) { moduleAi.setMaster(true); out.ai_master = true; }
+  // La Dashboard: i widget dell'analisi, solo se la Dashboard è ancora vuota e il modulo del widget è installato.
+  out.dashboard = 0;
+  if (Array.isArray(b.dashboard) && !db.prepare("SELECT 1 FROM dashboard_widgets WHERE page = 'dashboard'").get()) {
+    const ins = db.prepare("INSERT INTO dashboard_widgets (type, module_slug, field, aggregation, label, color, sort_order, page) VALUES (?, ?, ?, ?, ?, '#2563EB', ?, 'dashboard')");
+    b.dashboard.slice(0, 30).forEach((w, i) => {
+      if (!w || !['kpi', 'table', 'chart', 'list'].includes(w.type) || !installed(w.modulo)) { out.saltati.push('dashboard: widget ' + (i + 1) + ' non valido o modulo non installato'); return; }
+      ins.run(w.type, w.modulo, w.campo || null, ['sum', 'count', 'avg', 'min', 'max'].includes(w.aggregazione) ? w.aggregazione : 'sum', String(w.etichetta || w.modulo).slice(0, 80), i);
+      out.dashboard++;
+    });
+  }
   logAudit('analisi', 'tenant.setup_da_analisi', null, { ruoli: out.module_roles.length, ai: out.ai.length, report: out.reports.length });
   res.json(out);
 });

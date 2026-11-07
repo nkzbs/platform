@@ -2,6 +2,16 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.35 — 7 novembre 2026
+
+**L'analisi porta anche l'AI e la Dashboard.** Il confronto delle impostazioni (non solo dei moduli) tra zucca e un tenant nato dall'analisi ha mostrato due differenze: zucca ha l'interruttore generale dell'AI acceso e 5 widget in Dashboard, il tenant nuovo no.
+
+- **`configurazione.ai_attiva`**: l'AI generale nasce SPENTA (manda dati a un servizio esterno) e si accende solo se l'analisi lo dice esplicitamente. `POST /api/internal-setup/apply` accetta `ai_master: true`.
+- **`configurazione.dashboard`**: widget (tipo, modulo, campo, aggregazione, etichetta) creati alla nascita, solo se la Dashboard è vuota e il modulo è installato; valori non validi si saltano dicendolo.
+- Test nuovi in `internal-setup.test.js` e `workflow-ritorni.test.js`.
+- **Non si copia**: la connessione OpenAPI.it di zucca (chiave segreta: si inserisce nel tenant), i record e lo storico, l'ordine di menu dei moduli (differisce di pochi punti).
+- **Per averlo nei tenant nuovi serve l'Aggiorna** di un tenant (ricostruisce l'immagine del core).
+
 ## 0.4.34 — 7 novembre 2026
 
 **L'analisi può riprodurre un tenant esistente, ruoli e flussi compresi.** Il confronto con zucca mostrava ancora tre differenze (flussi di Note e Report, ruoli, permessi e relazioni in più). Erano residui di una vecchia analisi di ottobre su zucca; l'analisi non aveva modo di dichiararli.

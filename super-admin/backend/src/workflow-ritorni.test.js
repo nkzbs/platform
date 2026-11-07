@@ -60,6 +60,12 @@ test('la configurazione si pulisce: id validi, colori validi, relazioni AI acces
   eq(c.ruoli, ['A', 'B']); eq(c.moduli.length, 1); eq(c.moduli[0].id, 7); eq(c.moduli[0].passaggi.length, 1); eq(c.moduli[0].passaggi[0].colore, ''); eq(c.relazioni_ai, true);
   eq(analysis.sanitizeProfilo({ configurazione: { relazioni_ai: false } }).configurazione.relazioni_ai, false);
 });
+test('AI generale spenta di default; i widget della Dashboard si puliscono; il pacchetto li porta al tenant', () => {
+  const c = analysis.sanitizeProfilo({ configurazione: { ai_attiva: 'si', dashboard: [{ type: 'kpi', modulo: 'immobili' }, { type: '', modulo: 'x' }] } }).configurazione;
+  eq(c.ai_attiva, false); eq(c.dashboard.length, 1);
+  const pk = analysis.pacchettoTenant([], [], { ai_attiva: true, dashboard: c.dashboard });
+  eq(pk.ai_master, true); eq(pk.dashboard.length, 1); eq(analysis.pacchettoTenant([], [], c).ai_master, undefined);
+});
 
 console.log(`\n${passed} passati, ${failed} falliti`);
 process.exit(failed ? 1 : 0);

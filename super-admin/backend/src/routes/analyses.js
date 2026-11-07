@@ -229,7 +229,7 @@ async function creaTenantInBackground({ id, name, slug, domain, actor, processi,
     catch (e) { console.error('[analyses] ruoli e stati non applicati (non bloccante):', e.message); avvisi.push({ tipo: 'config', testo: 'Ruoli e stati del flusso non applicati: ' + e.message + '. Si impostano dal Builder, o riprova qui sotto.' }); }
     // ruoli dei moduli, report (spenti) e potenziamenti AI proposti, tranne quelli tolti: il tenant li completa senza sovrascrivere nulla
     let setup = null;
-    try { setup = await analysis.deps.setupTenant(tenant.slug, analysis.pacchettoTenant(moduleIds, escludi)); }
+    try { setup = await analysis.deps.setupTenant(tenant.slug, analysis.pacchettoTenant(moduleIds, escludi, configurazione)); }
     catch (e) { console.error('[analyses] ruoli dei moduli, report e AI non applicati (non bloccante):', e.message); avvisi.push({ tipo: 'setup', testo: 'Ruoli dei moduli, report e AI non applicati: ' + e.message + '. Si impostano dal Builder e da Impostazioni → Report, o riprova qui sotto.' }); }
     // il marchio dell'azienda (ragione sociale, logo, colore…) se l'analisi lo porta: sono impostazioni del tenant, non dei moduli
     if (marchio && Object.values(marchio).some(Boolean)) {
@@ -290,7 +290,7 @@ router.post('/:id/retry-config', requireAuth, async (req, res) => {
   let config = null, setup = null;
   try { config = await analysis.deps.applyConfig({ tenantSlug: r.tenant_slug, processi, installedRegistryModuleIds: moduleIds, actor: req.user.username, configurazione: analysis.sanitizeProfilo(json(r.profilo, {})).configurazione }); }
   catch (e) { avvisi.push({ tipo: 'config', testo: 'Ancora non riuscito — ruoli e stati del flusso: ' + e.message + '.' }); }
-  try { setup = await analysis.deps.setupTenant(r.tenant_slug, analysis.pacchettoTenant(moduleIds, escludi)); }
+  try { setup = await analysis.deps.setupTenant(r.tenant_slug, analysis.pacchettoTenant(moduleIds, escludi, analysis.sanitizeProfilo(json(r.profilo, {})).configurazione)); }
   catch (e) { avvisi.push({ tipo: 'setup', testo: 'Ancora non riuscito — ruoli dei moduli/report/AI: ' + e.message + '.' }); }
   const c = creazioneDi(r) || {};
   // Gli avvisi vecchi su config/setup si tolgono (hanno appena riprovato, qualunque esito);
