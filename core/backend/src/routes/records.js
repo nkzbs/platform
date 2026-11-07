@@ -890,6 +890,19 @@ function runTransition(user, slug, id, to) {
 
   if (Array.isArray(transition.roles) && transition.roles.length > 0 && !transition.roles.includes(user.role)) return err(403, 'Il tuo ruolo non può eseguire questa transizione');
 
+  // Requisiti dello stato di arrivo (blocco `state_requirements`): se il blocco è «bloccante» e manca qualcosa, il passaggio non avviene e si dice cosa manca.
+  // Se non è bloccante sono solo un promemoria nella scheda (shared/requisiti-stato.js, lo stesso calcolo).
+  const requisiti = require('../requisiti-stato');
+  const bloccoRequisiti = requisiti.bloccoPerStato(schema.state_requirements, to);
+  if (bloccoRequisiti && bloccoRequisiti.bloccante) {
+    const allegati = db.prepare('SELECT tipo FROM record_attachments WHERE module_slug = ? AND record_id = ?').all(slug, existing.id);
+    const manca = requisiti.valutaRequisiti(bloccoRequisiti, beforeData, allegati).filter((v) => !v.ok).map((v) => v.label);
+    if (manca.length) {
+      const stato = (workflow.states || []).find((x) => x.key === to);
+      return { status: 400, body: { error: 'Per passare a «' + ((stato && stato.label) || to) + '» manca: ' + manca.join(', ') + '.', mancano: manca } };
+    }
+  }
+
   // Validazione bloccante opzionale sulla transizione (es. "dare == avere" prima di
   // confermare un movimento contabile) — riusa la stessa sandbox di espressioni dei
   // campi computed, ma qui il risultato blocca il salvataggio invece di limitarsi a

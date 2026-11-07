@@ -2,6 +2,17 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.44 — 7 novembre 2026
+
+**«Per passare a… manca» sulla scheda, dichiarato nello schema e non nel codice.** Ultimo punto del piano di modularità sulla scheda Immobili.
+
+- **Blocco di schema `state_requirements`**: per uno stato di arrivo (`stato`) elenca i requisiti, ognuno di un tipo: un **campo** compilato (anche una relazione o l'esito salvato di un'azione esterna), **uno tra più campi**, un **allegato** di un certo tipo. Un solo calcolo, puro, in `shared/requisiti-stato.js`, usato da server e scheda.
+- **Scheda**: sotto il percorso dello stato compare, per ogni passaggio possibile da dove si trova il record, un riquadro con i requisiti spuntati o no: «Per passare a «In vendita» manca …» (giallo) oppure «Tutto pronto per passare a …» (verde).
+- **Bloccante o promemoria**: con `bloccante` spuntato (dal Builder) il server rifiuta il passaggio e risponde con ciò che manca (`400`, «Per passare a «X» manca: a, b.»); senza è solo un promemoria. Il Builder conserva il blocco e permette di scegliere lo stato, spuntare «Bloccante», rinominare e togliere i requisiti.
+- **Pacchetto Mediazione immobiliare**: nuova estensione `requisiti_stato` su Immobili, solo promemoria. **In mandato**: proprietario, indirizzo o comune, tipologia di incarico. **In vendita**: prezzo richiesto, valutazione di mercato, scheda di acquisizione firmata, foto. Arriva a zucca con l'Aggiorna.
+- Test nuovo `requisiti-stato.test.js` (ogni tipo di requisito, passaggi possibili, blocco sul server con e senza allegato, non bloccante, il blocco del pacchetto).
+- **Piano di modularità**: tutti e tre i punti sono fatti (pacchetti, azione esterna, requisiti). Resta lo spostamento dei pacchetti dal repository del core a Super Admin.
+
 ## 0.4.43 — 7 novembre 2026
 
 **La «Valutazione di mercato» non è più codice scritto per Immobili: è un'azione esterna dichiarata nello schema del modulo.** Era l'ultima eccezione nella scheda: il pulsante e le rotte (`/immobili/:id/valuta`, `/immobili/:id/valutazione/pdf`) conoscevano il modulo e i suoi campi. Il commento nel codice lo ammetteva («finché non esiste un secondo caso»).

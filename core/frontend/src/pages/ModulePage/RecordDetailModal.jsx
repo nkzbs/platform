@@ -8,6 +8,7 @@ import FormDrawer from '../../components/FormDrawer'
 import Select from '../../components/Select'
 import FieldEditorInput from './FieldEditorInput'
 import { parseSchemaFrontend } from '../../lib/schema-v3-frontend'
+import { requisitiDallo } from '../../lib/requisiti-stato'
 import AbbinamentiSezione from '../../components/AbbinamentiSezione'
 
 function VaultPinGate({ token, userId, onUnlocked }) {
@@ -714,6 +715,17 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                 })}
               </div>
             )}
+            {workflow && requisitiDallo(record.data._stato, workflow, schema && schema.state_requirements, record.data, attachments).map((r) => (
+              <div key={r.stato} className={'rounded-lg border p-3 mb-4 text-xs ' + (r.pronto ? 'bg-green-900/20 border-green-900/40 text-green-300' : 'bg-amber-900/20 border-amber-900/40 text-amber-300')}>
+                <div className="font-semibold mb-1.5">
+                  {r.pronto ? 'Tutto pronto per passare a «' + r.label + '»' : 'Per passare a «' + r.label + '» manca'}
+                  {r.bloccante && !r.pronto && <span className="font-normal opacity-80"> · senza, il passaggio non è permesso</span>}
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  {r.voci.map((v) => <span key={v.label} className={'flex items-center gap-1 ' + (v.ok ? 'opacity-70' : '')}><Icon name={v.ok ? 'check' : 'x'} size={11} />{v.label}</span>)}
+                </div>
+              </div>
+            ))}
             {datiChiave.length > 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
                 {datiChiave.map((f) => (

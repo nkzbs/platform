@@ -26,7 +26,7 @@ const BLOCK_TYPE_CATEGORY = {
   workflow_state: 'Workflow', workflow_transition: 'Workflow',
   permissions: 'Permessi', validazione_creazione: 'Permessi',
   report_aggregate: 'Calcolo', yearly_breakdown: 'Calcolo', category_pivot: 'Calcolo', weekly_breakdown: 'Calcolo',
-  connection_required: 'Automazione', automation: 'Automazione', document_action: 'Automazione', external_action: 'Automazione', match_view: 'Layout form',
+  connection_required: 'Automazione', automation: 'Automazione', document_action: 'Automazione', external_action: 'Automazione', state_requirements: 'Workflow', match_view: 'Layout form',
   branch_create: 'Layout form', period_view: 'Layout form', parent_children_view: 'Layout form', view_tabs: 'Layout form', view: 'Layout form',
 }
 
@@ -39,7 +39,7 @@ const BLOCK_TYPE_CATEGORY = {
 const BLOCK_TYPE_LABEL = {
   field: 'Campo', relation: 'Relazione', workflow_state: 'Stato workflow', workflow_transition: 'Transizione workflow',
   permissions: 'Permessi', validazione_creazione: 'Validazione alla creazione', allegati: 'Allegati',
-  connection_required: 'Richiede connessione', automation: 'Automazione', document_action: 'Documento da modello', external_action: 'Azione esterna', match_view: 'Abbinamento',
+  connection_required: 'Richiede connessione', automation: 'Automazione', document_action: 'Documento da modello', external_action: 'Azione esterna', state_requirements: 'Requisiti dello stato', match_view: 'Abbinamento',
   branch_create: 'Crea in filiale', period_view: 'Vista periodo',
   parent_children_view: 'Vista padre/figli', yearly_breakdown: 'Riepilogo annuale', category_pivot: 'Pivot categoria',
   weekly_breakdown: 'Riepilogo settimanale', view_tabs: 'Tab di vista', report_aggregate: 'Report aggregato', view: 'Vista', api_source: 'Fonte esterna',
@@ -412,6 +412,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
         branch_creates: draft.branch_creates || [],
         document_actions: draft.document_actions || [],
         external_actions: draft.external_actions || [],
+        state_requirements: draft.state_requirements || [],
         match_views: draft.match_views || [],
         period_views: draft.period_views || [],
         parent_children_views: draft.parent_children_views || [],
@@ -2058,6 +2059,32 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                         </div>
                       </div>
                       )}
+                    </div>
+                  )
+                }
+
+                if (step.block_type === 'state_requirements') {
+                  const stati = (schema.steps || []).filter((st) => st.block_type === 'workflow_state')
+                  const req = step.requisiti || []
+                  const inp = 'w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-700 focus:border-violet-500 transition placeholder-gray-600'
+                  return (
+                    <div className="space-y-2">
+                      <label className="text-xs text-gray-400 block">Per passare a questo stato</label>
+                      <select value={step.stato || ''} onChange={(e) => updateStep(idx, 'stato', e.target.value)} className={inp}>
+                        <option value="">— scegli lo stato —</option>
+                        {stati.map((st) => <option key={st.key} value={st.key}>{st.label || st.key}</option>)}
+                      </select>
+                      <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
+                        <input type="checkbox" checked={step.bloccante || false} onChange={(e) => updateStep(idx, 'bloccante', e.target.checked)} className="accent-accent" />Bloccante: senza i requisiti il passaggio non è permesso (altrimenti sono solo un promemoria)
+                      </label>
+                      {req.map((r, ri) => (
+                        <div key={ri} className="flex items-center gap-2">
+                          <input value={r.label || ''} onChange={(e) => updateStep(idx, 'requisiti', req.map((x, i) => (i === ri ? { ...x, label: e.target.value } : x)))} placeholder="Come si chiama il requisito" className={inp} />
+                          <span className="text-[11px] text-gray-500 whitespace-nowrap">{r.tipo === 'allegato' ? 'allegato' : r.tipo === 'uno_di' ? 'uno di' : 'campo'}</span>
+                          <button type="button" onClick={() => updateStep(idx, 'requisiti', req.filter((_, i) => i !== ri))} aria-label="Togli il requisito" className="text-gray-500 hover:text-red-400"><Icon name="x" size={12} /></button>
+                        </div>
+                      ))}
+                      <div className="text-[11px] text-gray-500 leading-snug">I requisiti sono un campo compilato, un allegato di un certo tipo o uno tra più campi. Si aggiungono dal pacchetto del verticale; qui si rinominano e si tolgono.</div>
                     </div>
                   )
                 }

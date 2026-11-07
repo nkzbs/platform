@@ -526,6 +526,73 @@
           "richiede_messaggio": "Per valutare l'immobile serve almeno l'indirizzo o il comune: compilali da «Modifica» e riprova."
         }
       ]
+    },
+    {
+      "key": "requisiti_stato",
+      "_nota": "«Per passare a… manca» sulla scheda dell'immobile: cosa serve per passare a «In mandato» e a «In vendita». Sono un promemoria (non bloccano il passaggio): per bloccarlo basta spuntare «Bloccante» nel blocco, dal Builder.",
+      "richiede": {
+        "immobili": [
+          "proprietario",
+          "indirizzo",
+          "comune",
+          "tipologia_incarico",
+          "prezzo_richiesto"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "state_requirements",
+          "stato": "in_mandato",
+          "bloccante": false,
+          "requisiti": [
+            {
+              "label": "Proprietario",
+              "tipo": "campo",
+              "campo": "proprietario"
+            },
+            {
+              "label": "Indirizzo o comune",
+              "tipo": "uno_di",
+              "campi": [
+                "indirizzo",
+                "comune"
+              ]
+            },
+            {
+              "label": "Tipologia di incarico",
+              "tipo": "campo",
+              "campo": "tipologia_incarico"
+            }
+          ]
+        },
+        {
+          "block_type": "state_requirements",
+          "stato": "in_vendita",
+          "bloccante": false,
+          "requisiti": [
+            {
+              "label": "Prezzo richiesto",
+              "tipo": "campo",
+              "campo": "prezzo_richiesto"
+            },
+            {
+              "label": "Valutazione di mercato",
+              "tipo": "campo",
+              "campo": "report_valutazione"
+            },
+            {
+              "label": "Scheda di acquisizione firmata",
+              "tipo": "allegato",
+              "valore": "scheda_immobile_firmata"
+            },
+            {
+              "label": "Foto",
+              "tipo": "allegato",
+              "valore": "Foto"
+            }
+          ]
+        }
+      ]
     }
   ],
   "clienti": [
