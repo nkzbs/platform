@@ -461,6 +461,71 @@
           ]
         }
       ]
+    },
+    {
+      "key": "valutazione_mercato",
+      "_nota": "Il pulsante «Valutazione di mercato» (azione esterna): prima era codice scritto per Immobili, ora è un blocco di schema che il core esegue con l'adattatore `valutazione_immobiliare`. Campi e codici tipologia sono dati di questo pacchetto.",
+      "richiede": {
+        "immobili": [
+          "titolo",
+          "indirizzo",
+          "comune",
+          "provincia",
+          "tipologia",
+          "superficie_mq",
+          "stima_valore",
+          "stima_eur_mq",
+          "stima_data",
+          "stima_fonte"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "external_action",
+          "key": "valutazione",
+          "label": "Valutazione di mercato",
+          "icon": "sparkles",
+          "descrizione": "Stima il valore con le quotazioni di mercato (OpenAPI.it) e prepara il report con il PDF",
+          "adapter": "valutazione_immobiliare",
+          "connection": "openapi_it",
+          "campi": {
+            "titolo": "titolo",
+            "indirizzo": "indirizzo",
+            "comune": "comune",
+            "provincia": "provincia",
+            "tipologia": "tipologia",
+            "superficie": "superficie_mq"
+          },
+          "esito": {
+            "valore": "stima_valore",
+            "al_mq": "stima_eur_mq",
+            "data": "stima_data",
+            "fonte": "stima_fonte"
+          },
+          "tipologie": {
+            "Appartamento": 20,
+            "Bilocale": 20,
+            "Trilocale": 20,
+            "Villa": 1,
+            "Casa indipendente": 1,
+            "Attico": 19,
+            "Ufficio": 6,
+            "Negozio": 5,
+            "Box/Garage": 13,
+            "Terreno": 20,
+            "Altro": 20
+          },
+          "tipologia_predefinita": 20,
+          "risultato_in": "report_valutazione",
+          "vista": "valutazione_immobiliare",
+          "pdf": true,
+          "richiede_uno_di": [
+            "indirizzo",
+            "comune"
+          ],
+          "richiede_messaggio": "Per valutare l'immobile serve almeno l'indirizzo o il comune: compilali da «Modifica» e riprova."
+        }
+      ]
     }
   ],
   "clienti": [
@@ -468,14 +533,66 @@
       "key": "profilo_mediazione",
       "_nota": "Il profilo del cliente di un'agenzia di mediazione: tipo di soggetto, venditore o acquirente, cosa cerca. Prima stavano solo nel Clienti di zucca (aggiunti a mano nel Builder): qui diventano un'estensione del Clienti generico, così lo stesso risultato nasce su qualunque tenant senza una copia del modulo nella Libreria.",
       "aggiungi": [
-        { "block_type": "field", "key": "data_nascita", "label": "Data di nascita", "type": "date" },
-        { "block_type": "field", "key": "tipo_soggetto", "label": "Tipo soggetto", "type": "select", "options": ["Persona fisica", "Società"] },
-        { "block_type": "field", "key": "codice_fiscale_piva", "label": "Codice Fiscale / P.IVA", "type": "text" },
-        { "block_type": "field", "key": "tipo_cliente", "label": "Tipo cliente", "type": "select", "options": ["Venditore", "Acquirente"] },
-        { "block_type": "field", "key": "esigenza_acquisto", "label": "Esigenza (per Acquirente)", "type": "select", "options": ["Ha già individuato l'immobile", "Cerca immobile"] },
-        { "block_type": "field", "key": "ricerca_tipologia", "label": "Tipologia immobile ricercata", "type": "text" },
-        { "block_type": "field", "key": "ricerca_budget_max", "label": "Budget massimo ricerca", "type": "currency" },
-        { "block_type": "field", "key": "ricerca_zona", "label": "Zona/città ricercata", "type": "text" }
+        {
+          "block_type": "field",
+          "key": "data_nascita",
+          "label": "Data di nascita",
+          "type": "date"
+        },
+        {
+          "block_type": "field",
+          "key": "tipo_soggetto",
+          "label": "Tipo soggetto",
+          "type": "select",
+          "options": [
+            "Persona fisica",
+            "Società"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "codice_fiscale_piva",
+          "label": "Codice Fiscale / P.IVA",
+          "type": "text"
+        },
+        {
+          "block_type": "field",
+          "key": "tipo_cliente",
+          "label": "Tipo cliente",
+          "type": "select",
+          "options": [
+            "Venditore",
+            "Acquirente"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "esigenza_acquisto",
+          "label": "Esigenza (per Acquirente)",
+          "type": "select",
+          "options": [
+            "Ha già individuato l'immobile",
+            "Cerca immobile"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_tipologia",
+          "label": "Tipologia immobile ricercata",
+          "type": "text"
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_budget_max",
+          "label": "Budget massimo ricerca",
+          "type": "currency"
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_zona",
+          "label": "Zona/città ricercata",
+          "type": "text"
+        }
       ]
     },
     {

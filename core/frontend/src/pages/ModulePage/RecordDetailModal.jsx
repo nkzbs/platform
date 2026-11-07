@@ -187,7 +187,6 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
     api.get('/records/' + mod.slug + '/' + recordId).then((data) => {
       if (cancelled || !data) return
       setRecord(data)
-      if (data.data && data.data.report_valutazione) setReportValutazione(data.data.report_valutazione)
     })
     api.get('/modules/' + mod.slug + '/children-modules').then((data) => { if (!cancelled && data) setChildren(data) })
     if (!cancelled && allegatiConfig) {
@@ -426,38 +425,43 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
     if (onDeleted) onDeleted()
   }
 
-  // Valutazione di mercato (2026-11-01, verticale Mediazione immobiliare) — vedi il
-  // commento sulla rotta POST /records/immobili/:id/valuta: deliberatamente specifica a
-  // Immobili, non un bottone generico, finché non esiste un secondo caso che giustifichi
-  // un vero primitivo "azione esterna su un record esistente".
-  const [valutando, setValutando] = useState(false)
+  // Azioni esterne (blocco `external_action` del modulo, dichiarato dal pacchetto del verticale o dal Builder): un pulsante sul record che chiama un servizio
+  // esterno tramite un adattatore e scrive l'esito sul record. Il blocco dice come si chiama, quale connessione serve, quali campi servono, dove sta l'esito e con
+  // quale vista mostrarlo (VISTE_AZIONE): qui non ci sono nomi di moduli né di servizi.
+  const azioniEsterne = (schema && schema.external_actions) || []
+  const [inEsecuzione, setInEsecuzione] = useState(null) // chiave dell'azione in corso
   // Perché un'azione non può partire (una frase, visibile in cima alla scheda e non solo in un avviso che sparisce): { testo, azione? }
   const [avviso, setAvviso] = useState(null)
-  // OpenAPI.it è collegato? (null = non lo so ancora). Senza connessione la valutazione non può partire: lo si dice prima, non dopo un errore.
-  const [openapiCollegato, setOpenapiCollegato] = useState(null)
+  // Le connessioni che le azioni richiedono sono collegate? (null = non lo so ancora). Lo si dice prima, non dopo un errore.
+  const [connessioni, setConnessioni] = useState(null)
+  const connessioniRichieste = [...new Set(azioniEsterne.map((az) => az.connection).filter(Boolean))].join(',')
   useEffect(() => {
-    if (mod.slug !== 'immobili') return
-    api.get('/connections').then((list) => { if (Array.isArray(list)) setOpenapiCollegato(!!(list.find((c) => c.id === 'openapi_it') || {}).connected) })
-  }, [mod.slug]) // eslint-disable-line react-hooks/exhaustive-deps
-  // Report dell'ultima valutazione (dettaglio/comparabili/OMI) — idratato da
-  // record.data.report_valutazione al caricamento (vedi la rotta: ora è salvato sul
-  // record, non solo i 4 campi stima_*), così riaprendo il dettaglio in futuro resta
-  // disponibile senza richiamare OpenAPI.it. Aggiornato in memoria dopo ogni nuova
-  // valutazione, che però lo riscrive anche sul record.
-  const [reportValutazione, setReportValutazione] = useState(null)
-  const valutaImmobile = async () => {
+    if (!connessioniRichieste) return
+    api.get('/connections').then((list) => { if (Array.isArray(list)) setConnessioni(Object.fromEntries(connessioniRichieste.split(',').map((id) => [id, !!(list.find((c) => c.id === id) || {}).connected]))) })
+  }, [connessioniRichieste]) // eslint-disable-line react-hooks/exhaustive-deps
+  const datoPresente = (d, k) => d[k] !== undefined && d[k] !== null && d[k] !== ''
+  const eseguiAzione = async (az) => {
     const d = (record && record.data) || {}
-    if (!(d.indirizzo || d.comune)) { setAvviso({ testo: 'Per valutare l\'immobile serve almeno l\'indirizzo o il comune: compilali da «Modifica» e riprova.', azione: 'modifica' }); return }
-    if (openapiCollegato === false) { setAvviso({ testo: 'OpenAPI.it non è collegato: senza la sua chiave la valutazione non può partire. Si collega da Impostazioni → Connessioni.' }); return }
+    if (Array.isArray(az.richiede_uno_di) && az.richiede_uno_di.length && !az.richiede_uno_di.some((k) => datoPresente(d, k))) { setAvviso({ testo: az.richiede_messaggio || 'Mancano dei dati per «' + az.label + '»: compilali da «Modifica» e riprova.', azione: 'modifica' }); return }
+    if (az.connection && connessioni && connessioni[az.connection] === false) { setAvviso({ testo: 'La connessione «' + az.connection + '» non è collegata: senza di lei «' + az.label + '» non può partire. Si collega da Impostazioni → Connessioni.' }); return }
     setAvviso(null)
-    setValutando(true)
-    const res = await api.post('/records/immobili/' + recordId + '/valuta', {})
-    setValutando(false)
-    if (!res.ok) { setAvviso({ testo: 'Valutazione non riuscita: ' + ((res.data && res.data.error) || 'errore sconosciuto') + '.' }); return }
+    setInEsecuzione(az.key)
+    const res = await api.post('/records/' + mod.slug + '/' + recordId + '/azione/' + az.key, {})
+    setInEsecuzione(null)
+    if (!res.ok) { setAvviso({ testo: '«' + az.label + '» non è riuscita: ' + ((res.data && res.data.error) || 'errore sconosciuto') + '.' }); return }
     setRecord(res.data.record)
-    setReportValutazione({ dettaglio: res.data.dettaglio, comparabili: res.data.comparabili, omi: res.data.omi, fotovoltaico: res.data.fotovoltaico, zonaSismicaUfficiale: res.data.zonaSismicaUfficiale, considerazioni: res.data.considerazioni })
-    toast('Valutazione aggiornata')
+    toast(az.label + ': fatto')
     if (onSaved) onSaved(res.data.record)
+  }
+  // PDF dell'esito di un'azione: nasce sul server da ciò che è già salvato sul record (nessuna nuova chiamata al servizio).
+  const scaricaAzionePdf = async (az) => {
+    const r = await fetch(API + '/records/' + mod.slug + '/' + recordId + '/azione/' + az.key + '/pdf', { method: 'POST', headers: { Authorization: 'Bearer ' + token } })
+    if (!r.ok) { const j = await r.json().catch(() => ({})); toast(j.error || 'Creazione del PDF non riuscita', 'error'); return }
+    const url = URL.createObjectURL(await r.blob())
+    const a = document.createElement('a')
+    a.href = url; a.download = az.key + '-' + recordId + '.pdf'
+    document.body.appendChild(a); a.click(); a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 2000)
   }
 
   // Documenti da modello (blocco `document_action` del modulo, dichiarato dal Builder). Due
@@ -521,16 +525,6 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
       setTimeout(() => URL.revokeObjectURL(url), 2000)
     } finally { setLavorandoFirma(false) }
   }
-  // PDF del report di valutazione: nasce sul server dal report già salvato sul record (nessun credito consumato).
-  const scaricaValutazione = async () => {
-    const r = await fetch(API + '/records/immobili/' + recordId + '/valutazione/pdf', { method: 'POST', headers: { Authorization: 'Bearer ' + token } })
-    if (!r.ok) { const j = await r.json().catch(() => ({})); toast(j.error || 'Creazione del PDF non riuscita', 'error'); return }
-    const url = URL.createObjectURL(await r.blob())
-    const a = document.createElement('a')
-    a.href = url; a.download = 'valutazione-' + recordId + '.pdf'
-    document.body.appendChild(a); a.click(); a.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 2000)
-  }
   const registraFirmato = async () => {
     if (!bozzaDoc.file) { toast('Scegli prima il file firmato (PDF o foto)', 'error'); return }
     setLavorandoFirma(true)
@@ -570,11 +564,11 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
       wide
       headerExtra={(
         <>
-          {!editing && record && mod.slug === 'immobili' && (
-            <button onClick={valutaImmobile} disabled={valutando} title="Stima il valore con le quotazioni di mercato (OpenAPI.it) e prepara il report con il PDF" className={'text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1' + (openapiCollegato === false || !((record.data || {}).indirizzo || (record.data || {}).comune) ? ' opacity-60' : '')}>
-              <Icon name="sparkles" size={12} />{valutando ? 'Valuto…' : 'Valutazione di mercato'}
+          {!editing && record && azioniEsterne.map((az) => (
+            <button key={az.key} onClick={() => eseguiAzione(az)} disabled={inEsecuzione !== null} title={az.descrizione || undefined} className={'text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1' + (az.connection && connessioni && connessioni[az.connection] === false ? ' opacity-60' : '')}>
+              <Icon name={az.icon || 'sparkles'} size={12} />{inEsecuzione === az.key ? 'Un attimo…' : az.label}
             </button>
-          )}
+          ))}
           {!editing && record && !bozzaDoc && documenti.length === 1 && documenti.map((az) => (
             <button key={az.key} onClick={() => apriDocumento(az)} disabled={docInPreparazione !== null} title={az.delivery === 'firma' ? 'Si scarica il PDF da firmare e poi si ricarica la scansione firmata' : 'Prepara l\'email: il testo si rivede e si modifica prima di spedirla'} className="text-xs text-accent hover:opacity-80 disabled:opacity-50 transition flex items-center gap-1">
               <Icon name={az.icon || 'mail'} size={12} />{docInPreparazione === az.key ? 'Preparo…' : az.label}{az.delivery !== 'firma' && docInPreparazione !== az.key && <span className="text-gray-500"> · email</span>}
@@ -645,9 +639,13 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                 <button onClick={() => setAvviso(null)} aria-label="Chiudi l'avviso" className="flex-shrink-0 opacity-70 hover:opacity-100"><Icon name="x" size={12} /></button>
               </div>
             )}
-            {mod.slug === 'immobili' && reportValutazione && (
-              <ReportValutazione onPdf={scaricaValutazione} dati={record.data} report={reportValutazione} titolo={record.data.titolo} indirizzo={[record.data.indirizzo, record.data.comune, record.data.provincia].filter(Boolean).join(', ')} />
-            )}
+            {azioniEsterne.map((az) => {
+              const Vista = az.vista && VISTE_AZIONE[az.vista]
+              const esito = az.risultato_in && record.data[az.risultato_in]
+              if (!Vista || !esito) return null
+              const C = az.campi || {}
+              return <Vista key={az.key} report={esito} dati={record.data} campi={C} titolo={record.data[C.titolo]} indirizzo={[C.indirizzo, C.comune, C.provincia].map((k) => record.data[k]).filter(Boolean).join(', ')} onPdf={az.pdf ? () => scaricaAzionePdf(az) : null} />
+            })}
             <AbbinamentiSezione api={api} slug={mod.slug} recordId={recordId} definizioni={schema && schema.match_views} />
             {bozzaDoc && (
               <div ref={pannelloDocRef} className="glass-panel p-4 mb-5 border-accent/30">
@@ -1222,12 +1220,12 @@ function SezioneReport({ titolo, sotto, children }) {
 const pctIt = (n) => (n == null || n === '' || isNaN(Number(n)) ? '—' : String(Math.round(Number(n) * 10) / 10).replace('.', ',') + '%')
 
 // Report di valutazione: stessa struttura del PDF (riquadri con le quotazioni, valore stimato, considerazioni, tabelle e barre).
-function ReportValutazione({ report, titolo, indirizzo, onPdf, dati = {} }) {
+function ReportValutazione({ report, titolo, indirizzo, onPdf, dati = {}, campi = {} }) {
   const d = (report && report.dettaglio) || {}
   const q = d.quotazione || {}
   const med = parseFloat(String(q.med || '').replace(/[^0-9.]/g, '')) || null
   const demo = d.demografico || {}
-  const mq = parseFloat(dati.superficie_mq) || null
+  const mq = parseFloat(dati[campi.superficie]) || null
   const comparabili = (report && report.comparabili) || []
   const omiRow = report && report.omi
   const dinamicita = d.capoluoghi_vendite_zona && typeof d.capoluoghi_vendite_zona === 'object' ? Object.entries(d.capoluoghi_vendite_zona) : []
@@ -1238,7 +1236,8 @@ function ReportValutazione({ report, titolo, indirizzo, onPdf, dati = {} }) {
   const zonaSismicaUff = report && report.zonaSismicaUfficiale
   const considerazioni = report && report.considerazioni
   const norm = (x) => String(x || '').toLowerCase().replace(/[^a-zà-ú0-9]/g, '')
-  const altroLuogo = dati.comune && d.citta && norm(dati.comune) !== norm(d.citta)
+  const comuneRecord = dati[campi.comune]
+  const altroLuogo = comuneRecord && d.citta && norm(comuneRecord) !== norm(d.citta)
   const pop = demo.pop || {}, stock = demo.stock || {}
   const territorio = [
     demo.rischio_sismico && ['Rischio sismico (OpenAPI.it)', demo.rischio_sismico],
@@ -1273,7 +1272,7 @@ function ReportValutazione({ report, titolo, indirizzo, onPdf, dati = {} }) {
 
       {altroLuogo && (
         <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-300 text-[11px] px-3 py-2">
-          I dati di mercato si riferiscono a «{d.formatted || d.citta}», che non coincide con il comune dell'immobile ({dati.comune}). Controlla l'indirizzo e rifai la valutazione prima di usarli.
+          I dati di mercato si riferiscono a «{d.formatted || d.citta}», che non coincide con il comune dell'immobile ({comuneRecord}). Controlla l'indirizzo e rifai la valutazione prima di usarli.
         </div>
       )}
 
@@ -1347,3 +1346,6 @@ function ReportValutazione({ report, titolo, indirizzo, onPdf, dati = {} }) {
 }
 
 export default RecordDetailModal
+
+// Le viste con cui mostrare l'esito di un'azione esterna (campo `vista` del blocco). Un elenco chiuso, come gli adattatori sul server.
+const VISTE_AZIONE = { valutazione_immobiliare: ReportValutazione }

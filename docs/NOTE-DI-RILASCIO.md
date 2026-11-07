@@ -2,6 +2,18 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.43 — 7 novembre 2026
+
+**La «Valutazione di mercato» non è più codice scritto per Immobili: è un'azione esterna dichiarata nello schema del modulo.** Era l'ultima eccezione nella scheda: il pulsante e le rotte (`/immobili/:id/valuta`, `/immobili/:id/valutazione/pdf`) conoscevano il modulo e i suoi campi. Il commento nel codice lo ammetteva («finché non esiste un secondo caso»).
+
+- **Blocco di schema `external_action`**: un pulsante sul record che chiama un servizio esterno e scrive l'esito sul record. Dichiara il nome, l'icona, l'**adattatore** da usare, la **connessione** richiesta, i campi che legge (`campi`) e quelli in cui scrive (`esito`), dove tiene l'esito (`risultato_in`), la **vista** con cui mostrarlo e se produce un PDF. Il Builder lo conserva e mostra una scheda con il nome del pulsante; si aggiunge dal pacchetto del verticale.
+- **Rotte generiche** `POST /api/records/:slug/:id/azione/:key` e `…/pdf` (solo amministratori, con l'accesso al modulo). Gli adattatori sono un **elenco chiuso** nel core (`lib/azioni-esterne/`): un blocco non può caricare codice a piacere; un adattatore sconosciuto dà un errore chiaro. Se il servizio fallisce non si scrive nulla sul record.
+- **Adattatore `valutazione_immobiliare`**: la logica di prima, spostata senza cambiare il comportamento (quotazioni OpenAPI.it, comparabili, OMI, fotovoltaico, zona sismica, considerazioni). Non conosce nomi di campi: i codici delle tipologie sono nel blocco, quindi dati del pacchetto.
+- **Interfaccia**: i pulsanti e la vista dell'esito nascono dai blocchi del modulo, non da `slug === 'immobili'`; l'avviso «connessione non collegata» vale per la connessione dichiarata dal blocco; i dati minimi richiesti (`richiede_uno_di`) si controllano prima di chiamare.
+- **Pacchetto Mediazione immobiliare**: nuova estensione `valutazione_mercato` che aggiunge il blocco a Immobili. Su zucca arriva con l'Aggiorna, senza cambiare i dati già valutati: il report salvato sul record (`report_valutazione`) è lo stesso.
+- Test nuovo `azioni-esterne.test.js` (adattatori chiusi, esecuzione con servizio finto, errori, nessuna scrittura se fallisce) e `valutazione-pdf.test.js` sulle rotte nuove.
+- **Prossimo passo del piano**: i requisiti per stato («per passare a… manca»).
+
 ## 0.4.42 — 7 novembre 2026
 
 **I dati di un verticale diventano un pacchetto che l'analisi sceglie, e il core non porta più nessun nome di settore.** Prima il motore dei seed leggeva file con «immobiliare» nel nome: con un secondo verticale si sarebbe dovuto modificare il core.

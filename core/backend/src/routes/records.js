@@ -942,113 +942,48 @@ router.post('/:slug/:id/transition', requireAuth, requireModuleAccess, (req, res
   res.status(out.status).json(out.body);
 });
 
-// Valutazione di mercato di un Immobile via OpenAPI.it (2026-11-01, verticale Mediazione
-// immobiliare) — deliberatamente specifica a 'immobili', non un'azione generica su record:
-// le Source scriptabili (vedi /:slug/sources/:key/search sopra) servono solo a PROPORRE un
-// nuovo record da un'API esterna, non ad arricchirne uno già esistente con un connettore che
-// ha bisogno di credenziali sigillate (token OAuth, non un semplice fetch pubblico come fa
-// uno script Source). Un vero primitivo generico "azione esterna su un record esistente" non
-// esiste ancora in Platform — se servirà un secondo caso concreto, si generalizza allora;
-// inventarne uno ora per un solo caso sarebbe un'astrazione prematura.
-router.post('/immobili/:id/valuta', requireAuth, requireAdmin, async (req, res) => {
-  const schema = getModuleSchema('immobili');
-  if (!schema) return res.status(404).json({ error: 'Modulo Immobili non installato' });
-  const existing = db.prepare("SELECT * FROM records WHERE id = ? AND module_slug = 'immobili'").get(req.params.id);
-  if (!existing) return res.status(404).json({ error: 'Immobile non trovato' });
-  const data = JSON.parse(existing.data);
-  const indirizzo = [data.indirizzo, data.comune, data.provincia].filter(Boolean).join(', ');
-  if (!indirizzo.trim()) return res.status(400).json({ error: 'Serve almeno un indirizzo o un comune per valutare l\'immobile.' });
+// ─── Azioni esterne (blocco di schema `external_action`) ──────────────────────────────────────────────────────────────
+// Un pulsante sul record che chiama un servizio esterno tramite un adattatore (lib/azioni-esterne/) e scrive l'esito sul record. Il blocco dice quale adattatore
+// e come i campi del modulo si collegano a lui: qui non ci sono nomi di moduli. Solo amministratori (usano il credito del servizio), con l'accesso al modulo.
+function contestoAzione(req) {
+  const schema = getModuleSchema(req.params.slug);
+  if (!schema) return { errore: [404, 'Modulo non trovato'] };
+  const config = (schema.external_actions || []).find((x) => x.key === req.params.key);
+  if (!config) return { errore: [404, 'Azione non trovata in questo modulo'] };
+  const adattatore = require('../lib/azioni-esterne').adattatore(config.adapter);
+  if (!adattatore) return { errore: [400, 'Questa azione usa un adattatore che il core non conosce: «' + String(config.adapter).slice(0, 60) + '»'] };
+  const record = db.prepare('SELECT * FROM records WHERE id = ? AND module_slug = ?').get(req.params.id, req.params.slug);
+  if (!record) return { errore: [404, 'Record non trovato'] };
+  let dati; try { dati = JSON.parse(record.data); } catch (e) { return { errore: [500, 'Record illeggibile'] }; }
+  return { config, adattatore, record, dati };
+}
 
-  // Tipologia del modulo -> codice tipologia OpenAPI.it (vedi lib/openapi-it.js). Un
-  // fallback ragionevole (20, abitazioni civili) se la tipologia non è tra quelle mappate
-  // o non è stata scelta — non blocca la valutazione per questo.
-  const TYPE_MAP = { Appartamento: 20, Bilocale: 20, Trilocale: 20, Villa: 1, 'Casa indipendente': 1, Attico: 19, Ufficio: 6, Negozio: 5, 'Box/Garage': 13, Terreno: 20, Altro: 20 };
-  const type = TYPE_MAP[data.tipologia] || 20;
-
-  const openapiIt = require('../lib/openapi-it');
-  let result;
-  try {
-    result = await openapiIt.valoreAlMqAvanzato({ address: indirizzo, forSale: true, type });
-  } catch (e) {
-    return res.status(e.status || 500).json({ error: e.message, code: e.code });
-  }
-  const dettaglio = result.data || {};
-  const q = dettaglio.quotazione || {};
-  const eurMq = parseFloat(String(q.med || '').replace(/[^0-9.]/g, '')) || null;
-  const superficie = parseFloat(data.superficie_mq) || null;
-  const stimaValore = eurMq && superficie ? Math.round(eurMq * superficie) : null;
-
-  // Comparabili e OMI partono dalle coordinate che la valutazione avanzata ha già
-  // trovato — a differenza della quotazione, che si basa sull'indirizzo, queste due
-  // vogliono lat/lng. Nessuna delle due blocca la valutazione se fallisce (es. zona
-  // senza annunci comparabili vicini, o fuori da una zona OMI): un avviso basta,
-  // la stima principale resta comunque valida e già scritta.
-  // fotovoltaico e zonaSismica (2026-11-01, fase 1 del report più ricco): due fonti
-  // pubbliche gratuite (JRC PVGIS, ISPRA), non OpenAPI.it — stesso principio di comparabili/
-  // OMI, nessuna blocca la valutazione principale se non risponde o non copre il punto.
-  const rischiTerritorio = require('../lib/rischi-territorio');
-  let comparabili = null, omiZona = null, fotovoltaico = null, zonaSismicaUff = null;
-  const coord = dettaglio.coordinate;
-  if (coord && coord.lat && coord.lng) {
-    try { comparabili = (await openapiIt.comparabili({ lat: coord.lat, lng: coord.lng, forSale: true })).data || []; }
-    catch (e) { console.error('[valuta immobile] comparabili non riuscito:', e.message); }
-    try { omiZona = (await openapiIt.omi({ lat: coord.lat, lng: coord.lng })).data || null; }
-    catch (e) { console.error('[valuta immobile] OMI non riuscito:', e.message); }
-    try { fotovoltaico = await rischiTerritorio.fotovoltaico({ lat: coord.lat, lng: coord.lng }); }
-    catch (e) { console.error('[valuta immobile] fotovoltaico (PVGIS) non riuscito:', e.message); }
-    try { zonaSismicaUff = await rischiTerritorio.zonaSismica({ lat: coord.lat, lng: coord.lng }); }
-    catch (e) { console.error('[valuta immobile] zona sismica (ISPRA) non riuscita:', e.message); }
-  }
-
-  // Considerazioni del valutatore — paragrafo generato dall'AI già configurata (Mistral,
-  // Impostazioni → Assistente AI), best-effort: se non configurata o la chiamata fallisce,
-  // il report resta valido senza questo paragrafo (vedi lib/ai-valutazione.js).
-  const aiValutazione = require('../lib/ai-valutazione');
-  const demo = dettaglio.demografico || {};
-  const dinamicitaAnni = demo.capoluoghi_vendite_zona && typeof demo.capoluoghi_vendite_zona === 'object' ? Object.values(demo.capoluoghi_vendite_zona) : [];
-  const ultimaDinamicita = dinamicitaAnni.length ? dinamicitaAnni[dinamicitaAnni.length - 1].dinamicita_mercato_residenziale : null;
-  const tempiVendita = Array.isArray(dettaglio.tempistiche) && Array.isArray(dettaglio.tempistiche[0]) ? dettaglio.tempistiche[0] : [];
-  const tempoVenditaMedio = tempiVendita.length ? Math.round(tempiVendita.reduce((s, t) => s + (t.media_giorni || 0), 0) / tempiVendita.length) : null;
-  const considerazioni = await aiValutazione.considerazioni({
-    tipologia: data.tipologia, comune: dettaglio.citta || data.comune, zona: dettaglio.nome, // la città del report: i numeri sono di quel luogo, non del comune scritto sul record
-    superficie_mq: superficie, quotazione_min: q.min, quotazione_media: eurMq, quotazione_max: q.max, valore_stimato: stimaValore,
-    rischio_sismico: demo.rischio_sismico, zona_sismica_ufficiale: zonaSismicaUff && zonaSismicaUff.zona,
-    dinamicita_mercato: ultimaDinamicita, tempo_vendita_giorni: tempoVenditaMedio, comparabili_count: (comparabili || []).length,
-  });
-
-  // Scritto sul record (non solo ritornato) così resta visibile da subito, e soprattutto
-  // così in futuro — quando l'immobile passa a "Venduto" — si può confrontare questa stima
-  // col prezzo reale incassato: lo scarto tra le due, su più vendite vere, è l'inizio di un
-  // correttivo proprio di questo tenant, non un numero generico preso da fuori.
-  //
-  // report_valutazione (2026-11-01, segnalato dal vivo: "non ti pare molto scarno?" — il
-  // pannello spariva riaprendo il record, perché solo i 4 campi stima_* sopra erano scritti):
-  // una chiave NON dichiarata nello schema del modulo, quindi non compare come campo nella
-  // lista/nel form — stessa tecnica di dati accessori già in uso altrove nel codice. Vive nel
-  // blob `data` del record così il pannello (e lo "Stampa o salva in PDF") restano disponibili
-  // riaprendo il dettaglio in futuro, senza richiamare OpenAPI.it (e senza consumarne credito).
-  const next = { ...data, stima_valore: stimaValore, stima_eur_mq: eurMq, stima_data: new Date().toISOString().slice(0, 10), stima_fonte: 'OpenAPI.it — quotazioni di zona (avanzata)', report_valutazione: { dettaglio, comparabili, omi: omiZona, fotovoltaico, zonaSismicaUfficiale: zonaSismicaUff, considerazioni } };
-  db.prepare('UPDATE records SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify(next), existing.id);
-  const updated = db.prepare('SELECT * FROM records WHERE id = ?').get(existing.id);
-  logAudit(req.user.username, 'record.valuta_immobile', 'immobili#' + existing.id, { eur_mq: eurMq, stima_valore: stimaValore });
-  res.json({ ok: true, record: { ...updated, data: JSON.parse(updated.data) }, dettaglio, comparabili, omi: omiZona, fotovoltaico, zonaSismicaUfficiale: zonaSismicaUff, considerazioni });
+router.post('/:slug/:id/azione/:key', requireAuth, requireAdmin, requireModuleAccess, async (req, res) => {
+  const ctx = contestoAzione(req);
+  if (ctx.errore) return res.status(ctx.errore[0]).json({ error: ctx.errore[1] });
+  let out;
+  try { out = await ctx.adattatore.esegui({ dati: ctx.dati, config: ctx.config, utente: req.user }); }
+  catch (e) { return res.status(e.status || 500).json({ error: e.message, code: e.code }); }
+  const next = { ...ctx.dati, ...out.patch };
+  db.prepare('UPDATE records SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify(next), ctx.record.id);
+  const updated = db.prepare('SELECT * FROM records WHERE id = ?').get(ctx.record.id);
+  logAudit(req.user.username, 'record.azione_esterna', req.params.slug + '#' + ctx.record.id, { azione: ctx.config.key, ...(out.audit || {}) });
+  res.json({ ok: true, record: { ...updated, data: JSON.parse(updated.data) }, ...(out.risposta || {}) });
 });
 
-// PDF del report di valutazione: parte dal report già salvato sul record (nessuna chiamata a
-// OpenAPI.it, nessun credito consumato). Per rifare i dati si rilancia prima la valutazione.
-router.post('/immobili/:id/valutazione/pdf', requireAuth, requireAdmin, async (req, res) => {
-  const existing = db.prepare("SELECT * FROM records WHERE id = ? AND module_slug = 'immobili'").get(req.params.id);
-  if (!existing) return res.status(404).json({ error: 'Immobile non trovato' });
-  const data = JSON.parse(existing.data);
-  if (!data.report_valutazione) return res.status(400).json({ error: 'Questo immobile non è ancora stato valutato: avvia prima la valutazione.' });
+// PDF dell'esito di un'azione esterna (se l'adattatore lo prevede): parte da ciò che è già salvato sul record, senza richiamare il servizio.
+router.post('/:slug/:id/azione/:key/pdf', requireAuth, requireAdmin, requireModuleAccess, async (req, res) => {
+  const ctx = contestoAzione(req);
+  if (ctx.errore) return res.status(ctx.errore[0]).json({ error: ctx.errore[1] });
+  if (typeof ctx.adattatore.pdf !== 'function') return res.status(400).json({ error: 'Questa azione non produce un PDF' });
   try {
     const identita = await require('../lib/identita-pdf').caricaIdentita(db);
-    const pdf = await require('../lib/report-valutazione-pdf').creaPdfReport({ record: { id: existing.id, data }, report: data.report_valutazione, ...identita });
-    logAudit(req.user.username, 'record.scarica_valutazione', 'immobili#' + existing.id, {});
-    res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="valutazione-' + existing.id + '.pdf"', 'Cache-Control': 'no-store' });
+    const pdf = await ctx.adattatore.pdf({ id: ctx.record.id, dati: ctx.dati, config: ctx.config, identita });
+    logAudit(req.user.username, 'record.scarica_azione_esterna', req.params.slug + '#' + ctx.record.id, { azione: ctx.config.key });
+    res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="' + req.params.key + '-' + ctx.record.id + '.pdf"', 'Cache-Control': 'no-store' });
     res.send(pdf);
   } catch (e) {
-    res.status(500).json({ error: 'Creazione del PDF non riuscita' });
+    res.status(e.status || 500).json({ error: e.status ? e.message : 'Creazione del PDF non riuscita' });
   }
 });
 

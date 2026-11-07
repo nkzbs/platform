@@ -35,7 +35,9 @@ async function main() {
   const db = require('./db');
   const { applicaSeed } = require('./seed-blocchi-verticale');
   const { percorsiUsati, SEGNAPOSTI_FISSI } = require('./lib/modello-documento');
-  const estensioni = require('./pacchetti/mediazione-immobiliare/estensioni.json');
+  const estensioniPacchetto = require('./pacchetti/mediazione-immobiliare/estensioni.json');
+  // la valutazione di mercato (azione esterna) ha il suo test: qui il modulo di prova non ha i campi che quel blocco cita
+  const estensioni = { ...estensioniPacchetto, immobili: estensioniPacchetto.immobili.filter((e) => e.key !== 'valutazione_mercato') };
   const documenti = require('./pacchetti/mediazione-immobiliare/documenti.json');
   const scheda = documenti.immobili.find((d) => d.key === 'scheda_immobile_completa');
   const est = estensioni.immobili[0];

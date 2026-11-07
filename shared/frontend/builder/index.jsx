@@ -26,7 +26,7 @@ const BLOCK_TYPE_CATEGORY = {
   workflow_state: 'Workflow', workflow_transition: 'Workflow',
   permissions: 'Permessi', validazione_creazione: 'Permessi',
   report_aggregate: 'Calcolo', yearly_breakdown: 'Calcolo', category_pivot: 'Calcolo', weekly_breakdown: 'Calcolo',
-  connection_required: 'Automazione', automation: 'Automazione', document_action: 'Automazione', match_view: 'Layout form',
+  connection_required: 'Automazione', automation: 'Automazione', document_action: 'Automazione', external_action: 'Automazione', match_view: 'Layout form',
   branch_create: 'Layout form', period_view: 'Layout form', parent_children_view: 'Layout form', view_tabs: 'Layout form', view: 'Layout form',
 }
 
@@ -39,7 +39,7 @@ const BLOCK_TYPE_CATEGORY = {
 const BLOCK_TYPE_LABEL = {
   field: 'Campo', relation: 'Relazione', workflow_state: 'Stato workflow', workflow_transition: 'Transizione workflow',
   permissions: 'Permessi', validazione_creazione: 'Validazione alla creazione', allegati: 'Allegati',
-  connection_required: 'Richiede connessione', automation: 'Automazione', document_action: 'Documento da modello', match_view: 'Abbinamento',
+  connection_required: 'Richiede connessione', automation: 'Automazione', document_action: 'Documento da modello', external_action: 'Azione esterna', match_view: 'Abbinamento',
   branch_create: 'Crea in filiale', period_view: 'Vista periodo',
   parent_children_view: 'Vista padre/figli', yearly_breakdown: 'Riepilogo annuale', category_pivot: 'Pivot categoria',
   weekly_breakdown: 'Riepilogo settimanale', view_tabs: 'Tab di vista', report_aggregate: 'Report aggregato', view: 'Vista', api_source: 'Fonte esterna',
@@ -411,6 +411,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
         // successiva li cancellava per davvero (2026-10-15, scoperto dal vivo).
         branch_creates: draft.branch_creates || [],
         document_actions: draft.document_actions || [],
+        external_actions: draft.external_actions || [],
         match_views: draft.match_views || [],
         period_views: draft.period_views || [],
         parent_children_views: draft.parent_children_views || [],
@@ -2057,6 +2058,17 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                         </div>
                       </div>
                       )}
+                    </div>
+                  )
+                }
+
+                if (step.block_type === 'external_action') {
+                  const inp = 'w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-700 focus:border-violet-500 transition placeholder-gray-600'
+                  return (
+                    <div className="space-y-2">
+                      <label className="text-xs text-gray-400 block">Nome del pulsante</label>
+                      <input value={step.label || ''} onChange={(e) => updateStep(idx, 'label', e.target.value)} placeholder="es. Valutazione di mercato" className={inp} />
+                      <div className="text-[11px] text-gray-500 leading-snug">Un pulsante sul record che chiama un servizio esterno{step.connection ? ' (connessione «' + step.connection + '»)' : ''} tramite l'adattatore «{step.adapter || '—'}» e scrive l'esito sul record. Quali campi legge e dove scrive sono dichiarati nel blocco (si cambiano dal pacchetto del verticale).</div>
                     </div>
                   )
                 }
