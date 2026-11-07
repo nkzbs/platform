@@ -21,7 +21,7 @@
       "titolo": "Per iniziare — il tuo lavoro di ogni giorno",
       "passi": [
         "Apri la **Dashboard**: «Da fare» ti dice cosa è in ritardo, cosa scade oggi e cosa nei prossimi giorni.",
-        "Prima di una visita guarda il calendario delle **Visite**; dopo, segnala come conclusa e scrivi l'esito.",
+        "Prima di una visita guarda il calendario delle **Attività**; dopo, segnala come fatta e scrivi l'esito.",
         "Quando arriva un nuovo cliente, crealo in **Clienti** con codice fiscale e un recapito: ti servono per i documenti.",
         "Per ogni immobile in mandato tieni aggiornati prezzo e foto: sono ciò che serve per proporlo."
       ]
@@ -52,17 +52,6 @@
       ],
       "consigli": [
         "Il report di valutazione sta in una sezione chiusa sotto i dati chiave: aprilo solo quando serve."
-      ]
-    },
-    "visite": {
-      "scopo": "Il planner delle visite agli immobili.",
-      "come_si_usa": [
-        "Crea la visita scegliendo immobile, cliente, data e ora.",
-        "Vedi tutto nel **Calendario**: tocca un giorno per l'elenco, una visita per aprirla. «Elenco» riporta alla tabella.",
-        "A visita fatta usa «Segna come conclusa» e scegli l'esito: se è «Interessato», apri una trattativa."
-      ],
-      "consigli": [
-        "Le visite di oggi compaiono anche nella Dashboard, in «Da fare»."
       ]
     },
     "trattative": {
@@ -104,10 +93,18 @@
         "Per chiuderla («Completata») scrivi la risposta data al richiedente."
       ]
     },
-    "interazioni": {
-      "scopo": "Telefonate, incontri e messaggi con i clienti.",
+    "attivita": {
+      "scopo": "Tutto ciò che devi fare: visite, telefonate, incontri, sopralluoghi, promemoria. Un'attività può riguardare un cliente, un immobile o una trattativa (anche più cose insieme).",
       "come_si_usa": [
-        "Annota ogni contatto; quando è svolto, scrivi l'esito."
+        "Crea l'attività scegliendo il **tipo** (Visita, Telefonata, Incontro…), il giorno e l'ora, e **a chi o a cosa** si riferisce: cliente, immobile, trattativa.",
+        "Se scegli una **trattativa**, immobile e cliente si compilano da soli dalla trattativa.",
+        "Vedi tutto nel **Calendario**: tocca un giorno per l'elenco, un'attività per aprirla. «Elenco» riporta alla tabella.",
+        "Quando è fatta, scrivi l'**esito** e usa «Segna come fatto»: sparisce da «Da fare». Se è stata rimandata o annullata, scegli l'esito «Rimandata o annullata» e chiudila."
+      ],
+      "consigli": [
+        "Nella scheda di un cliente, di un immobile o di una trattativa trovi in «Collegati» tutte le sue attività.",
+        "Le attività di oggi e dei prossimi giorni compaiono nella Dashboard, in «Da fare».",
+        "Le visite e i contatti che avevi prima sono diventati attività (di tipo Visita, Telefonata…): i vecchi moduli sono spenti, non cancellati."
       ]
     }
   },
@@ -118,7 +115,7 @@
         "**Clienti**: crea il proprietario e fagli firmare privacy e incarico.",
         "**Immobili**: inserisci l'immobile e fai la valutazione di mercato.",
         "**Immobili → In vendita**: l'app ti ricorda cosa manca (prezzo, valutazione, scheda di acquisizione firmata).",
-        "**Visite**: porta i clienti interessati a vedere l'immobile.",
+        "**Attività**: pianifica le visite e porta i clienti interessati a vedere l'immobile.",
         "**Trattative**: apri la trattativa, poi preliminare e rogito.",
         "**Provvigioni**: alla chiusura nascono le provvigioni da fatturare e incassare."
       ]
@@ -170,6 +167,10 @@
     {
       "termine": "Scaglione",
       "significato": "La fascia di prezzo che decide la percentuale di provvigione proposta."
+    },
+    {
+      "termine": "Attività",
+      "significato": "Una cosa da fare con data e ora: una visita, una telefonata, un incontro, un promemoria. Si collega a un cliente, un immobile o una trattativa."
     }
   ]
 }

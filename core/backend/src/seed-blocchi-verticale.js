@@ -155,11 +155,17 @@ async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs
           if (r && x.block_type === 'field' && x.type === 'computed' && x.expr === r.da) { ricalcolati.push(r); return { ...x, expr: r.a }; }
           return x;
         });
+        // `rinomina`: [{ key, da, a }] cambia l'etichetta di un campo SOLO se è ancora quella di prima (`da`): un nome scelto dall'utente non si tocca.
+        const rinominati = [];
+        for (let i = 0; i < stepsRicalcolati.length; i++) {
+          const x = stepsRicalcolati[i], r = (az.rinomina || []).find((y) => y.key === x.key);
+          if (r && ['field', 'relation'].includes(x.block_type) && x.label === r.da) { stepsRicalcolati[i] = { ...x, label: r.a }; rinominati.push(r.key); }
+        }
         const inFondo = ricalcolati.filter((r) => r.in_fondo).map((r) => r.key);
         const stepsConvertiti = inFondo.length ? [...stepsRicalcolati.filter((x) => !(x.block_type === 'field' && inFondo.includes(x.key))), ...inFondo.map((k) => stepsRicalcolati.find((x) => x.block_type === 'field' && x.key === k))] : stepsRicalcolati;
         const nuoviDaConvertire = daConvertire.filter((c) => !schema.steps.some((x) => x.key === c.key))
           .map((c) => ({ id: cfg.idPrefisso + Math.random().toString(36).slice(2, 10), block_type: 'field', key: c.key, label: c.label || c.key, type: c.type || 'multiselect', options: c.options }));
-        if (!daAggiungere.length && !daConvertire.length && !ricalcolati.length) { segna(chiave); esiti.push({ slug, key: az.key, esito: 'nulla da fare' }); continue; } // formule già cambiate dall'utente (o già giuste): niente da pubblicare
+        if (!daAggiungere.length && !daConvertire.length && !ricalcolati.length && !rinominati.length) { segna(chiave); esiti.push({ slug, key: az.key, esito: 'nulla da fare' }); continue; } // formule già cambiate dall'utente (o già giuste): niente da pubblicare
         const bozzaE = await callAs(admin, 'PUT', '/builder/' + slug + '/draft', { schema: { version: 3, steps: [...stepsConvertiti, ...nuoviDaConvertire, ...daAggiungere] } });
         if (!bozzaE.ok) { console.error('[seed-blocchi] bozza ' + slug + '/' + az.key + ' fallita:', JSON.stringify(bozzaE.data)); esiti.push({ slug, key: az.key, esito: 'errore bozza' }); continue; }
         const pubE = await callAs(admin, 'POST', '/builder/' + slug + '/publish', {});
@@ -323,6 +329,47 @@ async function assegnaSezioni(seed = {}, { callAs = require('./lib/internal-api'
   return esiti;
 }
 
+// Le MIGRAZIONI del verticale (parte «migrazioni» del pacchetto): i record di un modulo che non serve più passano in un altro modulo, una volta sola (marcatore `migrazione:<da>><a>`).
+//   { da: 'visite', a: 'attivita', campi: { campo_di_arrivo: 'campo_di_partenza' }, fissi: { campo: valore }, dividi_data_ora: { da, data, ora }, stati: { stato_di_partenza: stato_di_arrivo }, spegni: true }
+// I record si creano dal server vero (permessi e storico come sempre); quelli di partenza restano com'erano, segnati `_migrato` col nuovo id, e il modulo di partenza si SPEGNE (non si cancella: si può riaccendere).
+// Un modulo di partenza assente non è un errore (niente da spostare); uno di arrivo senza i campi citati si riprova dopo.
+async function migraModuli(seed = {}, { callAs = require('./lib/internal-api').callAs } = {}) {
+  const esiti = [];
+  const admin = db.prepare("SELECT * FROM users WHERE role = 'admin' LIMIT 1").get();
+  for (const [nome, m] of Object.entries(seed)) {
+    if (nome.startsWith('_') || !m || !m.da || !m.a) continue;
+    const chiave = 'migrazione:' + m.da + '>' + m.a;
+    if (gia(chiave) || !admin) continue;
+    const dest = chiaviDelModulo(m.a), src = chiaviDelModulo(m.da);
+    if (!src || !dest) continue;
+    const citati = [...Object.keys(m.campi || {}), ...Object.keys(m.fissi || {}), ...(m.dividi_data_ora ? [m.dividi_data_ora.data, m.dividi_data_ora.ora] : [])];
+    if (citati.some((k) => !dest.has(k))) continue;
+    const righe = db.prepare("SELECT id, data FROM records WHERE module_slug = ? ORDER BY id").all(m.da);
+    let spostati = 0, errori = 0;
+    for (const r of righe) {
+      let d; try { d = JSON.parse(r.data); } catch (e) { continue; }
+      if (d._migrato) continue;
+      const nuovo = { ...(m.fissi || {}) };
+      for (const [a, da] of Object.entries(m.campi || {})) if (d[da] !== undefined && d[da] !== null && d[da] !== '') nuovo[a] = d[da];
+      if (m.dividi_data_ora && d[m.dividi_data_ora.da]) {
+        const t = String(d[m.dividi_data_ora.da]).match(/^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}:\d{2}))?/);
+        if (t) { nuovo[m.dividi_data_ora.data] = t[1]; if (t[2]) nuovo[m.dividi_data_ora.ora] = t[2]; }
+      }
+      if (m.stati) { const st = m.stati[d._stato]; if (st) nuovo._stato = st; }
+      if (d._demo) nuovo._demo = d._demo;
+      const out = await callAs(admin, 'POST', '/records/' + m.a, nuovo);
+      if (!out.ok) { errori++; console.error('[seed-blocchi] migrazione ' + m.da + ' → ' + m.a + ': record ' + r.id + ' non spostato:', JSON.stringify(out.data)); continue; }
+      if (nuovo._demo) db.prepare("UPDATE records SET data = json_set(data, '$._demo', 1) WHERE id = ?").run(out.data.id);
+      db.prepare("UPDATE records SET data = json_set(data, '$._migrato', ?) WHERE id = ?").run(out.data.id, r.id);
+      spostati++;
+    }
+    if (errori) { esiti.push({ slug: m.da, esito: 'errori', spostati, errori }); continue; } // niente marcatore: al prossimo avvio si completano quelli rimasti
+    if (m.spegni) db.prepare('UPDATE modules SET active = 0 WHERE slug = ?').run(m.da);
+    segna(chiave); esiti.push({ slug: m.da, esito: 'applicato', spostati, verso: m.a });
+  }
+  return esiti;
+}
+
 // I «ruoli del modulo» del verticale (parte «ruoli» del pacchetto): si dichiarano solo se il modulo esiste, è installato, NON ne ha già una (si completa,
 // non si sovrascrive) e ha tutti i campi che la dichiarazione cita. Una volta sola per modulo (marcatore `ruoli:<slug>`); se il modulo non c'è ancora, ci riprova al giro dopo.
 function dichiaraRuoli(seed = {}) {
@@ -351,7 +398,7 @@ const MAX_GIRI = 4;
 // ── Pacchetti di verticale ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 // Un pacchetto è un insieme di dati con una parte per tipo di blocco; ogni parte ha la stessa forma di sempre (`{ <modulo>: [...] }`). Il core NON ne contiene: li
 // custodisce Super Admin (accanto all'analisi) e li INVIA al tenant, che li tiene qui (`pacchetti_ricevuti`) per riapplicarli ai riavvii anche senza Super Admin.
-const PARTI = ['estensioni', 'documenti', 'abbinamenti', 'moduli', 'ruoli', 'relazioni', 'proprieta', 'sezioni', 'dimostrativi', 'guida']; // `dimostrativi` e `guida` non sono blocchi applicati all'avvio: li leggono lib/dati-dimostrativi.js e routes/guida.js su richiesta
+const PARTI = ['estensioni', 'documenti', 'abbinamenti', 'moduli', 'ruoli', 'relazioni', 'proprieta', 'sezioni', 'dimostrativi', 'guida', 'migrazioni']; // `dimostrativi` e `guida` non sono blocchi applicati all'avvio: li leggono lib/dati-dimostrativi.js e routes/guida.js su richiesta
 const SLUG_PACCHETTO = /^[a-z0-9][a-z0-9-]{0,59}$/;
 const LIMITE_PACCHETTO = 2000000; // byte di JSON: un pacchetto vero è di poche decine di KB
 db.exec('CREATE TABLE IF NOT EXISTS pacchetti_attivi (slug TEXT PRIMARY KEY, attivato_il TEXT DEFAULT CURRENT_TIMESTAMP)');
@@ -424,6 +471,7 @@ async function giroPacchetto(slug) {
   try { conta(await assegnaSezioni(P.sezioni), (e) => 'sezioni del modulo ' + e.slug + ' assegnate (' + e.campi + ' impostazioni)'); } catch (e) { console.error('[seed-blocchi] sezioni: non riuscito:', e.message); }
   try { conta(await impostaProprieta(P.proprieta), (e) => 'proprietà del modulo ' + e.slug + ' impostate'); } catch (e) { console.error('[seed-blocchi] proprietà dei moduli: non riuscito:', e.message); }
   try { conta(dichiaraRuoli(P.ruoli), (e) => 'ruoli del modulo ' + e.slug + ' dichiarati'); } catch (e) { console.error('[seed-blocchi] ruoli dei moduli: non riuscito:', e.message); }
+  try { conta(await migraModuli(P.migrazioni), (e) => e.spostati + ' record di «' + e.slug + '» spostati in «' + e.verso + '»'); } catch (e) { console.error('[seed-blocchi] migrazioni: non riuscito:', e.message); }
   return applicati;
 }
 
@@ -453,4 +501,4 @@ async function run() {
   try { if (aggiungiWidgetAgenda()) console.log('[seed-blocchi] widget «Da fare» aggiunto alla Dashboard'); } catch (e) { console.error('[seed-blocchi] widget Da fare non aggiunto:', e.message); }
 }
 
-module.exports = { aggiungiWidgetAgenda, pacchettiDisponibili, leggiPacchetto, riceviPacchetto, statoPacchetti, pacchettiAttivi, attivaPacchetto, marcatoriDelPacchetto, migraDaMarcatori, applicaSeed, modelloApplicabile, abbinamentoApplicabile, TIPI, dichiaraRuoli, creaModuli, riallineaRelazioni, impostaProprieta, assegnaSezioni, run };
+module.exports = { migraModuli, aggiungiWidgetAgenda, pacchettiDisponibili, leggiPacchetto, riceviPacchetto, statoPacchetti, pacchettiAttivi, attivaPacchetto, marcatoriDelPacchetto, migraDaMarcatori, applicaSeed, modelloApplicabile, abbinamentoApplicabile, TIPI, dichiaraRuoli, creaModuli, riallineaRelazioni, impostaProprieta, assegnaSezioni, run };

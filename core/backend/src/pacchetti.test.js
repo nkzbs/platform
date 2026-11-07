@@ -16,7 +16,7 @@ process.env.UPLOAD_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'pk-uploads-'));
 const SECRET = process.env.INTERNAL_API_SECRET;
 const CARTELLA_SA = path.join(__dirname, '../../../super-admin/backend/src/pacchetti/mediazione-immobiliare');
 const parte = (n) => JSON.parse(fs.readFileSync(path.join(CARTELLA_SA, n + '.json'), 'utf8'));
-const PARTI = ['estensioni', 'documenti', 'abbinamenti', 'moduli', 'ruoli', 'relazioni', 'proprieta', 'sezioni', 'dimostrativi', 'guida'];
+const PARTI = ['estensioni', 'documenti', 'abbinamenti', 'moduli', 'ruoli', 'relazioni', 'proprieta', 'sezioni', 'dimostrativi', 'guida', 'migrazioni'];
 const VERO = Object.fromEntries(PARTI.map((n) => [n, parte(n)]));
 const VUOTO = Object.fromEntries(PARTI.map((n) => [n, {}]));
 

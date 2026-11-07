@@ -2,6 +2,21 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.60 — 7 novembre 2026
+
+**Attività come unico modulo: visite, telefonate, incontri e promemoria stanno nello stesso posto, collegati a clienti, immobili e trattative.**
+
+- **Il modello**: un'**Attività** ha un *tipo* (Visita, Telefonata, Incontro, Sopralluogo, Messaggio, Promemoria), *Quando* (data) e ora, chi se ne occupa, esito, e **tre collegamenti facoltativi: cliente, immobile, trattativa**. Un cliente con più immobili e più trattative ha così le sue attività in un'unica lista, e le schede di cliente, immobile e trattativa le mostrano in «Collegati». Il riquadro «per passare a Fatto» ricorda che servono un collegamento e l'esito (promemoria, non blocco).
+- **Calendario unico** (blocco `calendar_view` sulle Attività): tutte le attività insieme, quelle fatte sbarrate. «Da fare» della Dashboard legge già le Attività, quindi la Dashboard non cambia.
+- **Eredita dalla relazione** (nuova proprietà `eredita` sul blocco relazione, `lib/eredita-relazione.js`, applicata dal server a creazione e salvataggio): scegliendo una **trattativa**, immobile e cliente si compilano da lì se sono vuoti, mai sopra un valore scritto.
+- **Migrazione dei dati** (nuova parte `migrazioni` del pacchetto, `migraModuli`): i record di Visite e Interazioni passano in Attività una volta sola (visita → tipo Visita, programmata → da fare, conclusa → fatto; interazione → stesso tipo, data e ora separate, pianificata → da fare, svolta → fatto; le dimostrative restano dimostrative). I record di partenza restano, segnati `_migrato`; **i moduli vecchi si spengono, non si cancellano** (si riaccendono da Impostazioni → Moduli). Un modulo spento esce da «Collegati» e dall'agenda.
+- **`rinomina`** nelle estensioni: «Scadenza» diventa «Quando» solo se si chiama ancora così (un nome scelto dall'utente non si tocca).
+- **Pacchetto** alla versione 9: modulo base `attivita` (per i tenant che non l'hanno), estensione `attivita_unificata`, ruoli, sezioni, migrazioni, dati dimostrativi e guida riscritti; Visite non si crea più sui tenant nuovi.
+- **«Annullata» come esito, non come stato** (scelta per non toccare i report «in ritardo», che conoscono un solo stato «fatto»): si chiude l'attività come fatta con l'esito «Rimandata o annullata».
+- Test: `attivita-unificata.test.js` (rinomina, migrazione una volta sola, modulo assente, campi mancanti, eredita) più i test dei moduli e della guida aggiornati. Provato su un tenant locale: 6 record migrati, modulo Visite spento, calendario e «Collegati» corretti. La guida illustrata in PDF è aggiornata.
+- **Da fare a mano**: nell'analisi «Mediazione immobiliare» (Super Admin) togliere i moduli Visite e Interazioni, così i tenant nuovi nascono già con le sole Attività.
+- **Non fatto**: campi diversi a seconda del tipo (oggi sono uguali per tutti e facoltativi); colori per tipo nel calendario; l'attività su una trattativa non compare ancora nella scheda del cliente della trattativa (solo se collegata anche al cliente, cosa che `eredita` fa da sola quando la trattativa ha un cliente).
+
 ## 0.4.59 — 7 novembre 2026
 
 **La mappa di OpenStreetMap nella scheda dell'immobile.**

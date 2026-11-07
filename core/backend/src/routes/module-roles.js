@@ -22,7 +22,8 @@ router.get('/queues', requireAuth, (req, res) => {
 // L'«agenda del giorno» per la dashboard: i moduli che hanno acceso le scadenze negli Avvisi e dichiarato il campo `scadenza` (visite, provvigioni da incassare…).
 // Come per le code, nessun dato di righe: il widget le legge dall'elenco normale del modulo, che rispetta i permessi di chi guarda.
 router.get('/agenda', requireAuth, (req, res) => {
-  res.json(roles.list({ use: 'avvisi' }).filter((m) => m.avvisi.scadenze && m.roles.scadenza).map((m) => ({
+  const acceso = (slug) => !!db.prepare('SELECT 1 FROM modules WHERE slug = ? AND installed = 1 AND active = 1').get(slug); // un modulo spento (es. dopo una migrazione) non entra nell'agenda
+  res.json(roles.list({ use: 'avvisi' }).filter((m) => m.avvisi.scadenze && m.roles.scadenza && acceso(m.module_slug)).map((m) => ({
     module_slug: m.module_slug, name: m.name, scadenza: m.roles.scadenza, descrizione: m.roles.descrizione || '', stato: m.roles.stato || '_stato', fatto: m.avvisi.states.fatto || '',
     noun_s: m.avvisi.noun_s,
   })));

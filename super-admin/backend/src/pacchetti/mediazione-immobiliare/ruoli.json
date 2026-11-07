@@ -51,5 +51,27 @@
       "noun_s": "provvigione",
       "noun_p": "provvigioni"
     }
+  },
+  "attivita": {
+    "kind": "pratica",
+    "uses": [
+      "avvisi"
+    ],
+    "roles": {
+      "descrizione": "titolo",
+      "scadenza": "scadenza"
+    },
+    "avvisi": {
+      "states": {
+        "nuovo": "",
+        "da_fare": "",
+        "fatto": "fatto"
+      },
+      "nuovo": false,
+      "scadenze": true,
+      "label": "attività",
+      "noun_s": "attività",
+      "noun_p": "attività"
+    }
   }
 }

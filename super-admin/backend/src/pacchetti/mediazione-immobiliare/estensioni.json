@@ -1212,5 +1212,142 @@
         }
       ]
     }
+  ],
+  "attivita": [
+    {
+      "key": "attivita_unificata",
+      "_nota": "Attività = l'unico posto per visite, telefonate, incontri e promemoria. Un tipo, tre collegamenti facoltativi (cliente, immobile, trattativa), data e ora, esito, calendario. Collegando una trattativa, immobile e cliente si compilano dalla trattativa se sono vuoti. «Annullata o rimandata» è un esito: l'attività si chiude come fatta.",
+      "richiede": {
+        "attivita": [
+          "titolo",
+          "scadenza",
+          "priorita",
+          "descrizione"
+        ]
+      },
+      "rinomina": [
+        {
+          "key": "scadenza",
+          "da": "Scadenza",
+          "a": "Quando"
+        }
+      ],
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "tipo",
+          "label": "Tipo",
+          "type": "select",
+          "options": [
+            "Visita",
+            "Telefonata",
+            "Incontro",
+            "Sopralluogo",
+            "Messaggio",
+            "Promemoria"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "ora",
+          "label": "Ora (es. 15:30)",
+          "type": "text"
+        },
+        {
+          "block_type": "field",
+          "key": "agente",
+          "label": "Chi se ne occupa",
+          "type": "text"
+        },
+        {
+          "block_type": "field",
+          "key": "esito",
+          "label": "Esito",
+          "type": "select",
+          "options": [
+            "Interessato",
+            "Da pensarci",
+            "Non interessato",
+            "Raggiunto",
+            "Non risponde",
+            "Da richiamare",
+            "Rimandata o annullata"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "prossimo_contatto",
+          "label": "Da risentire il",
+          "type": "date"
+        },
+        {
+          "block_type": "relation",
+          "key": "cliente",
+          "label": "Cliente",
+          "type": "many_to_one",
+          "target_module": "clienti",
+          "display_mode": "select_inline",
+          "display_field": "nome"
+        },
+        {
+          "block_type": "relation",
+          "key": "immobile",
+          "label": "Immobile",
+          "type": "many_to_one",
+          "target_module": "immobili",
+          "display_mode": "select_inline",
+          "display_field": "titolo"
+        },
+        {
+          "block_type": "relation",
+          "key": "trattativa",
+          "label": "Trattativa",
+          "type": "many_to_one",
+          "target_module": "trattative",
+          "display_mode": "select_inline",
+          "display_field": "titolo",
+          "eredita": {
+            "immobile": "immobile",
+            "cliente": "cliente"
+          }
+        },
+        {
+          "block_type": "calendar_view",
+          "key": "calendario",
+          "label": "Attività",
+          "date_field": "scadenza",
+          "time_field": "ora",
+          "title_field": "titolo",
+          "subtitle_fields": [
+            "tipo",
+            "cliente",
+            "immobile",
+            "agente"
+          ],
+          "done_state": "fatto"
+        },
+        {
+          "block_type": "state_requirements",
+          "stato": "fatto",
+          "bloccante": false,
+          "requisiti": [
+            {
+              "label": "Un collegamento (cliente, immobile o trattativa)",
+              "tipo": "uno_di",
+              "campi": [
+                "cliente",
+                "immobile",
+                "trattativa"
+              ]
+            },
+            {
+              "label": "Esito",
+              "tipo": "campo",
+              "campo": "esito"
+            }
+          ]
+        }
+      ]
+    }
   ]
 }

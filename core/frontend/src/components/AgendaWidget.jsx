@@ -24,6 +24,7 @@ export default function AgendaWidget({ token, onNavigate }) {
         const recs = await api.get('/records/' + m.module_slug)
         for (const r of Array.isArray(recs) ? recs : []) {
           const d = r.data || {}
+          if (d._migrato) continue // già spostata in un altro modulo
           const quando = String(d[m.scadenza] || '').slice(0, 10)
           if (!/^\d{4}-\d{2}-\d{2}$/.test(quando)) continue
           if (m.fatto && (d[m.stato] === m.fatto)) continue

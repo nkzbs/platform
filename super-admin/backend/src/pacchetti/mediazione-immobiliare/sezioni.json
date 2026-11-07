@@ -254,5 +254,28 @@
       "data_ora",
       "prossimo_contatto"
     ]
+  },
+  "attivita": {
+    "sezioni": {
+      "Quando e con chi": [
+        "tipo",
+        "scadenza",
+        "ora",
+        "agente"
+      ],
+      "Esito": [
+        "esito",
+        "prossimo_contatto"
+      ],
+      "Dettagli": [
+        "priorita",
+        "descrizione"
+      ]
+    },
+    "dati_chiave": [
+      "tipo",
+      "scadenza",
+      "ora"
+    ]
   }
 }

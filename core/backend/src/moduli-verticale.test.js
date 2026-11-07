@@ -41,12 +41,16 @@ async function main() {
     for (const r of sc.relations) ok(def.richiede.includes(r.target_module), 'la relazione ' + r.key + ' cita ' + r.target_module + ' che non è tra i richiesti');
     eq(def.steps.filter((s) => s.block_type === 'workflow_state' && s.initial).length, 1);
   });
-  await test('Visite: il calendario è dichiarato nello schema, cita solo campi e relazioni che esistono e sopravvive all\'andata e ritorno del Builder', () => {
-    const def = SEED.visite, sc = parseSchemaNormalized(JSON.stringify({ version: 3, steps: def.steps }));
+  await test('Attività: l\'estensione dichiara il calendario, cita solo campi e relazioni che esistono (base + aggiunti) e sopravvive all\'andata e ritorno del Builder', () => {
+    const base = SEED.attivita, est = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/estensioni.json').attivita.find((x) => x.key === 'attivita_unificata');
+    const sc = parseSchemaNormalized(JSON.stringify({ version: 3, steps: [...base.steps, ...est.aggiungi.map((b, i) => ({ id: 'e' + i, ...b }))] }));
     eq(sc.calendar_views.length, 1); const c = sc.calendar_views[0];
     const chiavi = new Set([...sc.fields.map((f) => f.key), ...sc.relations.map((r) => r.key)]);
     for (const k of [c.date_field, c.time_field, c.title_field, ...c.subtitle_fields]) ok(chiavi.has(k), 'il calendario cita «' + k + '» che non esiste');
     ok(sc.workflow.states.some((st) => st.key === c.done_state), 'stato concluso inesistente');
+    const tr = sc.relations.find((r) => r.key === 'trattativa'); eq(tr.eredita, { immobile: 'immobile', cliente: 'cliente' }, 'eredita dalla trattativa');
+    for (const k of Object.keys(tr.eredita)) ok(chiavi.has(k), 'eredita verso un campo che non c\'è: ' + k);
+    for (const r of est.aggiungi.filter((b) => b.block_type === 'state_requirements').flatMap((b) => b.requisiti)) for (const k of (r.campi || [r.campo])) ok(chiavi.has(k), 'requisito su «' + k + '» inesistente');
     const { toV3 } = require('./schema-v3');
     eq(parseSchemaNormalized(JSON.stringify(toV3(sc))).calendar_views.map((x) => x.key), ['calendario'], 'andata e ritorno');
   });
@@ -60,7 +64,7 @@ async function main() {
   await test('senza i moduli che cita non si crea nulla; con Clienti e Immobili si crea (crea, bozza, pubblica) una volta sola', async () => {
     eq(await seedEngine.creaModuli(SEED, { callAs: finto() }), []); eq(chiamate, []);
     add('clienti', [F('nome')]); eq(await seedEngine.creaModuli(SEED, { callAs: finto() }), [], 'manca Immobili'); add('immobili', [F('titolo')]);
-    const nuovi = Object.keys(SEED).filter((k) => !k.startsWith('_')); // i moduli del pacchetto che richiedono solo Clienti e Immobili (oggi: Quote societarie e Visite)
+    const nuovi = Object.keys(SEED).filter((k) => !k.startsWith('_') && SEED[k].richiede.every((r) => ['clienti', 'immobili'].includes(r))); // i moduli del pacchetto che richiedono solo Clienti e Immobili (oggi: Quote societarie)
     eq((await seedEngine.creaModuli(SEED, { callAs: finto() })).map((e) => e.esito), nuovi.map(() => 'applicato'));
     eq(chiamate.slice(0, 3), ['POST /modules/create', 'PUT /builder/' + nuovi[0] + '/draft', 'POST /builder/' + nuovi[0] + '/publish']);
     eq(chiamate.length, 3 * nuovi.length);

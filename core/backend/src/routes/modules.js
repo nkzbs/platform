@@ -643,7 +643,7 @@ router.get('/:slug', requireAuth, (req, res) => {
 // questo modulo. Derivato a runtime dallo schema — nessuna configurazione duplicata,
 // funziona identico per ogni fork/verticale senza codice specifico.
 router.get('/:slug/children-modules', requireAuth, (req, res) => {
-  const installed = db.prepare('SELECT slug, name, icon, color, schema_json FROM modules WHERE installed = 1').all();
+  const installed = db.prepare('SELECT slug, name, icon, color, schema_json FROM modules WHERE installed = 1 AND active = 1').all(); // un modulo spento (es. dopo una migrazione) non compare tra i «Collegati»
   const children = [];
   installed.forEach((m) => {
     if (m.slug === req.params.slug) return;

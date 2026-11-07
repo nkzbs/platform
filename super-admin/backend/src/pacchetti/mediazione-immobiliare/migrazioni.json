@@ -1,0 +1,46 @@
+{
+  "_descrizione": "Cosa si sposta quando un modulo del verticale sparisce in favore di un altro (una volta sola; il modulo di partenza si spegne, non si cancella, e i suoi record restano, segnati `_migrato`). Visite e Interazioni diventano Attività con tipo.",
+  "visite": {
+    "da": "visite",
+    "a": "attivita",
+    "campi": {
+      "titolo": "oggetto",
+      "scadenza": "data_visita",
+      "ora": "ora",
+      "agente": "agente",
+      "esito": "esito",
+      "descrizione": "note",
+      "immobile": "immobile",
+      "cliente": "cliente"
+    },
+    "fissi": {
+      "tipo": "Visita"
+    },
+    "stati": {
+      "programmata": "da_fare",
+      "conclusa": "fatto"
+    },
+    "spegni": true
+  },
+  "interazioni": {
+    "da": "interazioni",
+    "a": "attivita",
+    "campi": {
+      "titolo": "tipo",
+      "tipo": "tipo",
+      "cliente": "cliente",
+      "descrizione": "esito",
+      "prossimo_contatto": "prossimo_contatto"
+    },
+    "dividi_data_ora": {
+      "da": "data_ora",
+      "data": "scadenza",
+      "ora": "ora"
+    },
+    "stati": {
+      "pianificata": "da_fare",
+      "svolta": "fatto"
+    },
+    "spegni": true
+  }
+}

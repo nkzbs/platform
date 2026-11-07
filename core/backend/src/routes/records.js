@@ -7,6 +7,7 @@ const { fireTrigger } = require('../automation-engine');
 const { logAudit } = require('../audit-log');
 const { encryptFields, decryptFields } = require('../crypto-fields');
 const { controllaValidazioni } = require('../validazioni-campo');
+const { applicaEredita } = require('../lib/eredita-relazione');
 const { attachComputedFields: attachComputedFieldsShared } = require('../computed-fields');
 const { runSourceScript } = require('../source-engine');
 const { ruleFor, ownedOrAllowed, filterViewable, isOwnRecord } = require('../permissions');
@@ -697,7 +698,7 @@ router.post('/:slug', requireAuth, requireModuleAccess, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const rule = ruleFor(schema, req.user.role);
   if (rule && !rule.create) return res.status(403).json({ error: 'Non hai i permessi per creare record in questo modulo' });
-  const withDefaults = applyDefaults(req.body, schema.fields);
+  const withDefaults = applicaEredita(db, schema, applyDefaults(req.body, schema.fields));
   const uniqueError = checkUnique(req.params.slug, schema.fields, withDefaults, null);
   if (uniqueError) return res.status(400).json(uniqueError);
   const campoError = controllaValidazioni(schema.fields, withDefaults);
@@ -846,11 +847,12 @@ router.put('/:slug/:id', requireAuth, requireModuleAccess, (req, res) => {
   // invariato) farebbe scattare tutte le automazioni "modifica_campo" del modulo.
   const beforeData = JSON.parse(existing.data);
 
-  const uniqueError = checkUnique(req.params.slug, schema.fields, req.body, req.params.id);
+  const corpo = applicaEredita(db, schema, req.body);
+  const uniqueError = checkUnique(req.params.slug, schema.fields, corpo, req.params.id);
   if (uniqueError) return res.status(400).json(uniqueError);
-  const campoError = controllaValidazioni(schema.fields, req.body, beforeData);
+  const campoError = controllaValidazioni(schema.fields, corpo, beforeData);
   if (campoError) return res.status(400).json(campoError);
-  const safeBody = encryptFields(req.body, schema.fields);
+  const safeBody = encryptFields(corpo, schema.fields);
   db.prepare('UPDATE records SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND module_slug = ?').run(JSON.stringify(safeBody), req.params.id, req.params.slug);
   const record = db.prepare('SELECT * FROM records WHERE id = ?').get(req.params.id);
   const decryptedData = decryptFields(JSON.parse(record.data), schema.fields);

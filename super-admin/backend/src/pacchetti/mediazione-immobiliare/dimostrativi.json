@@ -131,15 +131,18 @@
     },
     {
       "alias": "contatto",
-      "modulo": "interazioni",
+      "modulo": "attivita",
       "stato": "pianificata",
       "relazioni": {
-        "cliente": "acquirente"
+        "cliente": "acquirente",
+        "trattativa": "trattativa"
       },
       "campi": {
+        "titolo": "Visita dimostrativa",
         "tipo": "Visita",
-        "data_ora": "{oggi+3}T10:00",
-        "prossimo_contatto": "{oggi+3}"
+        "scadenza": "{oggi+3}",
+        "ora": "10:00",
+        "descrizione": "Attività inventata per mostrare il portale."
       }
     }
   ]

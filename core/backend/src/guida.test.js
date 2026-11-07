@@ -34,7 +34,7 @@ async function main() {
   });
   await test('la guida del pacchetto reale: forma giusta, capitoli solo per moduli del pacchetto, ogni passo è testo non vuoto', () => {
     const G = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/guida.json');
-    const conosciuti = new Set(['clienti', 'immobili', 'trattative', 'provvigioni', 'quote_societarie', 'richieste_privacy', 'interazioni', ...Object.keys(require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/moduli.json')).filter((k) => !k.startsWith('_'))]);
+    const conosciuti = new Set(['clienti', 'immobili', 'trattative', 'provvigioni', 'quote_societarie', 'richieste_privacy', 'attivita', ...Object.keys(require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/moduli.json')).filter((k) => !k.startsWith('_'))]);
     ok(G.introduzione.titolo && G.introduzione.testo.length, 'introduzione');
     for (const [k, c] of Object.entries(G.capitoli)) { ok(conosciuti.has(k), 'capitolo di un modulo sconosciuto: ' + k); ok(c.scopo && c.come_si_usa.length, k + ': scopo e passi'); for (const p of [...c.come_si_usa, ...(c.consigli || [])]) ok(typeof p === 'string' && p.trim(), k + ': passo vuoto'); }
     ok(G.per_ruolo.default && G.per_ruolo.admin, 'passi per ruolo'); ok(G.flussi.length && G.flussi.every((f) => f.titolo && f.passi.length), 'flussi'); ok(G.glossario.every((x) => x.termine && x.significato), 'glossario');

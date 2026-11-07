@@ -1,5 +1,5 @@
 {
-  "_descrizione": "Moduli NUOVI del verticale Mediazione immobiliare che non hanno un omonimo generico (per questo non stanno nella Libreria): li crea seed-blocchi-verticale.js solo se mancano, mai li sovrascrive, e solo dove esistono i moduli che citano (`richiede`). Il documento di cessione sta in documenti-immobiliare.json. Visite: il planner delle visite agli immobili (immobile, cliente, data e ora, esito); entra nell'agenda «Da fare» della Dashboard tramite i ruoli.",
+  "_descrizione": "Moduli NUOVI del verticale Mediazione immobiliare che non hanno un omonimo generico (per questo non stanno nella Libreria): li crea seed-blocchi-verticale.js solo se mancano, mai li sovrascrive, e solo dove esistono i moduli che citano (`richiede`). Il documento di cessione sta in documenti-immobiliare.json. Attività: la base (titolo, scadenza, priorità, stati) per i tenant che non l'hanno già; tipo, collegamenti, calendario ed esito li aggiunge l'estensione `attivita_unificata`. Sostituisce Visite e Interazioni (vedi migrazioni.json).",
   "quote_societarie": {
     "nome": "Quote societarie",
     "icon": "building",
@@ -132,129 +132,99 @@
       }
     ]
   },
-  "visite": {
-    "nome": "Visite",
+  "attivita": {
+    "nome": "Attività",
     "icon": "calendar",
     "color": "#0EA5E9",
     "richiede": [
       "clienti",
-      "immobili"
+      "immobili",
+      "trattative"
     ],
     "steps": [
       {
-        "id": "fld_oggetto",
+        "id": "fld_titolo",
         "block_type": "field",
-        "key": "oggetto",
-        "label": "Titolo (es. Visita via Roma 3)",
-        "type": "text"
-      },
-      {
-        "id": "rel_immobile",
-        "block_type": "relation",
-        "key": "immobile",
-        "label": "Immobile",
-        "type": "many_to_one",
-        "target_module": "immobili",
-        "display_mode": "select_inline",
-        "display_field": "titolo",
+        "key": "titolo",
+        "label": "Titolo",
+        "type": "text",
         "required": true
       },
       {
-        "id": "rel_cliente",
-        "block_type": "relation",
-        "key": "cliente",
-        "label": "Cliente interessato",
-        "type": "many_to_one",
-        "target_module": "clienti",
-        "display_mode": "select_inline",
-        "display_field": "nome",
-        "required": true
+        "id": "fld_scadenza",
+        "block_type": "field",
+        "key": "scadenza",
+        "label": "Scadenza",
+        "type": "date"
       },
       {
-        "id": "fld_data",
+        "id": "fld_priorita",
         "block_type": "field",
-        "key": "data_visita",
-        "label": "Data della visita",
-        "type": "date",
-        "required": true
-      },
-      {
-        "id": "fld_ora",
-        "block_type": "field",
-        "key": "ora",
-        "label": "Ora (es. 15:30)",
-        "type": "text"
-      },
-      {
-        "id": "fld_agente",
-        "block_type": "field",
-        "key": "agente",
-        "label": "Chi accompagna",
-        "type": "text"
-      },
-      {
-        "id": "fld_esito",
-        "block_type": "field",
-        "key": "esito",
-        "label": "Esito",
+        "key": "priorita",
+        "label": "Priorità",
         "type": "select",
         "options": [
-          "Interessato",
-          "Da pensarci",
-          "Non interessato",
-          "Rimandata o annullata"
+          "Bassa",
+          "Media",
+          "Alta"
         ]
       },
       {
-        "id": "fld_note",
+        "id": "fld_descrizione",
         "block_type": "field",
-        "key": "note",
-        "label": "Note",
+        "key": "descrizione",
+        "label": "Descrizione",
         "type": "textarea"
       },
       {
-        "id": "wst_prog",
+        "id": "wst_dafare",
         "block_type": "workflow_state",
-        "key": "programmata",
-        "label": "Programmata",
+        "key": "da_fare",
+        "label": "Da fare",
         "color": "#0EA5E9",
         "initial": true
       },
       {
-        "id": "wst_conclusa",
+        "id": "wst_incorso",
         "block_type": "workflow_state",
-        "key": "conclusa",
-        "label": "Conclusa",
+        "key": "in_corso",
+        "label": "In corso",
+        "color": "#F59E0B"
+      },
+      {
+        "id": "wst_fatto",
+        "block_type": "workflow_state",
+        "key": "fatto",
+        "label": "Fatto",
         "color": "#10B981"
       },
       {
         "id": "wtr_1",
         "block_type": "workflow_transition",
-        "from": "programmata",
-        "to": "conclusa",
-        "label": "Segna come conclusa"
+        "from": "da_fare",
+        "to": "in_corso",
+        "label": "Inizia"
       },
       {
         "id": "wtr_2",
         "block_type": "workflow_transition",
-        "from": "conclusa",
-        "to": "programmata",
-        "label": "Riprogramma"
+        "from": "in_corso",
+        "to": "fatto",
+        "label": "Segna come fatto"
       },
       {
-        "id": "cal_visite",
-        "block_type": "calendar_view",
-        "key": "calendario",
-        "label": "Visite",
-        "date_field": "data_visita",
-        "time_field": "ora",
-        "title_field": "oggetto",
-        "subtitle_fields": [
-          "immobile",
-          "cliente",
-          "agente"
-        ],
-        "done_state": "conclusa"
+        "id": "wtr_3",
+        "block_type": "workflow_transition",
+        "from": "da_fare",
+        "to": "fatto",
+        "label": "Segna come fatto"
+      },
+      {
+        "id": "wtr_4",
+        "block_type": "workflow_transition",
+        "from": "fatto",
+        "to": "da_fare",
+        "label": "Riapri"
       }
     ]
   }
