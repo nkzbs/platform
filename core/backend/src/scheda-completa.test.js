@@ -35,8 +35,8 @@ async function main() {
   const db = require('./db');
   const { applicaSeed } = require('./seed-blocchi-verticale');
   const { percorsiUsati, SEGNAPOSTI_FISSI } = require('./lib/modello-documento');
-  const estensioni = require('./seeds/estensioni-immobiliare.json');
-  const documenti = require('./seeds/documenti-immobiliare.json');
+  const estensioni = require('./pacchetti/mediazione-immobiliare/estensioni.json');
+  const documenti = require('./pacchetti/mediazione-immobiliare/documenti.json');
   const scheda = documenti.immobili.find((d) => d.key === 'scheda_immobile_completa');
   const est = estensioni.immobili[0];
   const estC = estensioni.clienti.find((e) => e.key === 'anagrafica_scheda');

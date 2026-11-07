@@ -80,6 +80,10 @@ test('i report della configurazione arrivano al tenant in coda a quelli proposti
   const pk = analysis.pacchettoTenant([], [], c);
   eq(pk.reports.map((r) => r.tipo), ['ricorrenze']); eq(pk.reports[0].params, { giorni_prima: 7 });
 });
+test('i pacchetti di verticale della configurazione: solo nomi validi, senza doppioni', () => {
+  eq(analysis.sanitizeProfilo({ configurazione: { pacchetti: ['mediazione-immobiliare', 'mediazione-immobiliare', '../x', 'Maiuscole', '', 5] } }).configurazione.pacchetti, ['mediazione-immobiliare']);
+  eq(analysis.sanitizeProfilo({}).configurazione.pacchetti, []);
+});
 
 console.log(`\n${passed} passati, ${failed} falliti`);
 process.exit(failed ? 1 : 0);

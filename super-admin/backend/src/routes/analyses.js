@@ -207,7 +207,7 @@ function setCreazione(id, patch) {
   db.prepare('UPDATE process_analyses SET creazione = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify({ ...cur, ...patch }), id);
 }
 
-async function creaTenantInBackground({ id, name, slug, domain, actor, processi, escludi, marchio, configurazione }) {
+async function creaTenantInBackground({ id, name, slug, domain, actor, processi, escludi, marchio, configurazione, pacchetti }) {
   const t0 = Date.now(), segni = []; // [{ fase, t }]
   const segna = (fase) => { segni.push({ fase, t: Date.now() }); setCreazione(id, { fase }); };
   const tempi = () => { const out = {}; segni.forEach((s, i) => { const fine = (segni[i + 1] ? segni[i + 1].t : Date.now()); out[s.fase] = Math.round((fine - s.t) / 100) / 10; }); return out; };
@@ -236,9 +236,12 @@ async function creaTenantInBackground({ id, name, slug, domain, actor, processi,
       try { await require('../lib/tenant-api-client').callTenantAPI(tenant.slug, 'POST', '/api/internal-setup/azienda', marchio); }
       catch (e) { console.error('[analyses] marchio non applicato (non bloccante):', e.message); avvisi.push({ tipo: 'marchio', testo: 'Marchio dell\'azienda non applicato: ' + e.message + '. Si imposta da Impostazioni → Aspetto.' }); }
     }
-    // i campi, i documenti e gli abbinamenti del verticale (seed del core) si applicano ora che i moduli ci sono: da soli arriverebbero ai riavvii successivi
-    try { await require('../lib/tenant-api-client').callTenantAPI(tenant.slug, 'POST', '/api/internal-setup/seed'); }
-    catch (e) { console.error('[analyses] seed del verticale non applicati (non bloccante):', e.message); avvisi.push({ tipo: 'seed', testo: 'Campi e documenti del verticale non applicati subito: arrivano al prossimo riavvio del tenant (' + e.message + ').' }); }
+    // i pacchetti di verticale che l'analisi sceglie (campi, documenti, abbinamenti, sezioni… dei moduli di un settore): si attivano e si applicano ora che i moduli ci sono.
+    // Senza pacchetti non c'è niente da applicare. Un pacchetto sconosciuto al core dà un avviso con quelli disponibili, non ferma la creazione.
+    for (const slug of (pacchetti || [])) {
+      try { await require('../lib/tenant-api-client').callTenantAPI(tenant.slug, 'POST', '/api/internal-setup/pacchetto', { slug }); }
+      catch (e) { console.error('[analyses] pacchetto ' + slug + ' non applicato (non bloccante):', e.message); avvisi.push({ tipo: 'pacchetto', testo: 'Il pacchetto «' + slug + '» non è stato applicato del tutto: ' + e.message + '. Arriva al prossimo riavvio del tenant.' }); }
+    }
     segni.push({ fase: 'fine', t: Date.now() });
     const t = tempi(); delete t.fine;
     setCreazione(id, { fase: 'finita', fine: Date.now(), secondi: Math.round((Date.now() - t0) / 100) / 10, tempi: t, moduli_installati: installed ? installed.modules : 0, report_creati: setup ? setup.reports.length : 0, moduli_dichiarati: setup ? setup.module_roles.length : 0, ruoli_creati: config ? config.roles_created.length : 0, moduli_configurati: config ? config.modules_configured.length : 0, avvisi });
@@ -260,7 +263,7 @@ router.post('/:id/create-tenant', requireAuth, (req, res) => {
   const valid = new Set(analysis.libraryModules().map((m) => m.id));
   const processi = analysis.sanitizeProcessi(json(r.processi, []), valid);
   setCreazione(r.id, { fase: 'container', inizio: Date.now(), nome: name, slug, tempi: {}, errore: null, avvisi: [] });
-  creaTenantInBackground({ id: r.id, name, slug, domain, actor: req.user.username, processi, escludi: (json(r.scelte, {}).escludi) || [], marchio: analysis.sanitizeProfilo(json(r.profilo, {})).marchio, configurazione: analysis.sanitizeProfilo(json(r.profilo, {})).configurazione }); // senza await: la pagina segue l'avanzamento
+  creaTenantInBackground({ id: r.id, name, slug, domain, actor: req.user.username, processi, escludi: (json(r.scelte, {}).escludi) || [], marchio: analysis.sanitizeProfilo(json(r.profilo, {})).marchio, configurazione: analysis.sanitizeProfilo(json(r.profilo, {})).configurazione, pacchetti: analysis.sanitizeProfilo(json(r.profilo, {})).configurazione.pacchetti }); // senza await: la pagina segue l'avanzamento
   res.status(202).json({ avviata: true });
 });
 

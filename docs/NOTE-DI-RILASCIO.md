@@ -2,6 +2,16 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.42 — 7 novembre 2026
+
+**I dati di un verticale diventano un pacchetto che l'analisi sceglie, e il core non porta più nessun nome di settore.** Prima il motore dei seed leggeva file con «immobiliare» nel nome: con un secondo verticale si sarebbe dovuto modificare il core.
+
+- **Cartella `core/backend/src/pacchetti/<nome>/`** con una parte per tipo di blocco (documenti, abbinamenti, estensioni, moduli, ruoli, relazioni, proprietà, sezioni). I file di Mediazione immobiliare si sono spostati in `pacchetti/mediazione-immobiliare/` (stesso contenuto, nomi neutri). Per un altro verticale basta un'altra cartella.
+- **Attivazione per tenant** (tabella `pacchetti_attivi`): il tenant applica solo i pacchetti attivi. Li sceglie l'analisi (`configurazione.pacchetti`) alla creazione, con la nuova rotta `POST /api/internal-setup/pacchetto` (secret interno; 404 con l'elenco dei disponibili se il nome non esiste).
+- **Nessuna migrazione da fare a mano**: un tenant che aveva già applicato blocchi di un pacchetto (zucca) lo riconosce dai marcatori e lo attiva da solo al riavvio. Un tenant senza pacchetti (Finance) non applica più nulla invece di leggere i seed a ogni avvio.
+- Test nuovi: `pacchetti.test.js` (cartella, attivazione, riconoscimento dai marcatori, rotta) e un caso in `workflow-ritorni.test.js`.
+- **Da sapere**: per i tenant nuovi dall'analisi serve `configurazione.pacchetti = ["mediazione-immobiliare"]` nell'analisi (dopo il deploy di Super Admin). I pacchetti stanno ancora nel repository del core: spostarli in Super Admin, accanto all'analisi, è il passo successivo.
+
 ## 0.4.41 — 7 novembre 2026
 
 **Il dettaglio di un record si legge dall'alto verso il basso invece di essere un elenco di 95 righe.** Primo passo della scheda Immobili più chiara, fatto con mattoni generici (valgono per ogni modulo), non con una pagina su misura.

@@ -1,11 +1,10 @@
 'use strict';
-// Applica ai moduli di un tenant i blocchi dichiarati nei seed di un verticale (i valori di
-// partenza di un progetto stanno nei seed, mai nel codice): le azioni «documento da modello»
-// (seeds/documenti-immobiliare.json), gli «abbinamenti» (seeds/abbinamenti-immobiliare.json) e le
-// «estensioni» di un modulo (seeds/estensioni-immobiliare.json: campi nuovi, calcoli, automazioni e
-// `converti`, che trasforma campi di testo o scelta in elenchi a scelta multipla).
-// Sostituisce i testi che stavano in lib/doc-cliente.js e lib/doc-immobile.js e le rotte legate
-// agli slug di un solo verticale.
+// Applica ai moduli di un tenant i blocchi di un PACCHETTO di verticale. Un pacchetto è una cartella di dati in
+// `pacchetti/<nome>/` (mai codice): `documenti` (azioni «documento da modello»), `abbinamenti`, `estensioni` (campi nuovi,
+// calcoli, automazioni e `converti`), `moduli` (moduli nuovi), `ruoli`, `relazioni`, `proprieta`, `sezioni`. Il tenant applica
+// solo i pacchetti ATTIVI (tabella `pacchetti_attivi`, scelti dall'analisi alla creazione); un tenant con già applicato qualcosa di un
+// pacchetto (marcatori in `seed_applicati`) lo ha attivo da solo. Nel codice non c'è nessun nome di verticale: per un altro verticale
+// basta un'altra cartella.
 //
 // Regole, tutte pensate per non fare danni:
 //  - UNA volta sola per blocco: dopo l'applicazione resta un marcatore (tabella `seed_applicati`).
@@ -17,6 +16,7 @@
 //    scrittura diretta su schema_json.
 //  - Idempotente e senza effetti dove non c'è niente da fare: ogni avvio costa qualche lettura.
 const path = require('path');
+const fs = require('fs');
 const db = require('./db');
 const { percorsiUsati, SEGNAPOSTI_FISSI } = require('./lib/modello-documento');
 
@@ -90,9 +90,9 @@ function estensioneApplicabile(est, steps, moduliPerSlug) {
 }
 
 const TIPI = {
-  estensione: { prefisso: 'estensione', applicabile: estensioneApplicabile, file: 'estensioni-immobiliare.json', nome: 'estensione', idPrefisso: 'ext_' },
-  document_action: { prefisso: 'azione_documento', applicabile: modelloApplicabile, file: 'documenti-immobiliare.json', nome: 'documento', idPrefisso: 'doc_' },
-  match_view: { prefisso: 'abbinamento', applicabile: abbinamentoApplicabile, file: 'abbinamenti-immobiliare.json', nome: 'abbinamento', idPrefisso: 'mtc_' },
+  estensione: { prefisso: 'estensione', applicabile: estensioneApplicabile, parte: 'estensioni', nome: 'estensione', idPrefisso: 'ext_' },
+  document_action: { prefisso: 'azione_documento', applicabile: modelloApplicabile, parte: 'documenti', nome: 'documento', idPrefisso: 'doc_' },
+  match_view: { prefisso: 'abbinamento', applicabile: abbinamentoApplicabile, parte: 'abbinamenti', nome: 'abbinamento', idPrefisso: 'mtc_' },
 };
 
 // Tutte le chiavi di un modulo installato (campi, calcoli, relazioni), o null se non c'è.
@@ -204,10 +204,10 @@ async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs
   return esiti;
 }
 
-// I moduli NUOVI del verticale (seeds/moduli-immobiliare.json): quelli senza un omonimo generico, che non stanno quindi nella Libreria. Si creano dalle rotte vere del Builder
+// I moduli NUOVI del verticale (parte «moduli» del pacchetto): quelli senza un omonimo generico, che non stanno quindi nella Libreria. Si creano dalle rotte vere del Builder
 // (crea, bozza, pubblica), solo se mancano e solo se esistono i moduli che citano (`richiede`); mai si sovrascrive un modulo che c'è già. Un modulo rimasto vuoto per un errore a
 // metà si completa al giro dopo. Una volta sola per modulo (marcatore `modulo:<slug>`).
-async function creaModuli(seed = require('./seeds/moduli-immobiliare.json'), { callAs = require('./lib/internal-api').callAs } = {}) {
+async function creaModuli(seed = {}, { callAs = require('./lib/internal-api').callAs } = {}) {
   const esiti = [];
   const admin = db.prepare("SELECT * FROM users WHERE role = 'admin' LIMIT 1").get();
   for (const [slug, def] of Object.entries(seed)) {
@@ -230,9 +230,9 @@ async function creaModuli(seed = require('./seeds/moduli-immobiliare.json'), { c
   return esiti;
 }
 
-// Le relazioni da riallineare (seeds/relazioni-immobiliare.json): una relazione che cita un modulo che nel tenant non esiste (né come slug né come slug della Libreria) mentre il modulo giusto
+// Le relazioni da riallineare (parte «relazioni» del pacchetto): una relazione che cita un modulo che nel tenant non esiste (né come slug né come slug della Libreria) mentre il modulo giusto
 // c'è con un altro slug. Passa da bozza e pubblicazione del Builder; una volta sola per relazione (marcatore `relazione:<modulo>:<chiave>`); se il modulo giusto non c'è ancora, ci riprova.
-async function riallineaRelazioni(seed = require('./seeds/relazioni-immobiliare.json'), { callAs = require('./lib/internal-api').callAs } = {}) {
+async function riallineaRelazioni(seed = {}, { callAs = require('./lib/internal-api').callAs } = {}) {
   const esiti = [];
   const admin = db.prepare("SELECT * FROM users WHERE role = 'admin' LIMIT 1").get();
   const esiste = (slug) => !!db.prepare('SELECT 1 FROM modules WHERE installed = 1 AND (slug = ? OR registry_slug = ?)').get(slug, slug);
@@ -261,9 +261,9 @@ async function riallineaRelazioni(seed = require('./seeds/relazioni-immobiliare.
   return esiti;
 }
 
-// Le proprietà di modulo del verticale (seeds/proprieta-immobiliare.json: oggi solo `quick_toggle`, il cerchio rapido in tabella). Una volta sola per modulo (marcatore `proprieta:<slug>`):
+// Le proprietà di modulo del verticale (parte «proprieta» del pacchetto: oggi solo `quick_toggle`, il cerchio rapido in tabella). Una volta sola per modulo (marcatore `proprieta:<slug>`):
 // se poi qualcuno le cambia dal Builder, al riavvio non tornano indietro. Il modulo che non c'è (ancora) si riprova.
-async function impostaProprieta(seed = require('./seeds/proprieta-immobiliare.json'), { callAs = require('./lib/internal-api').callAs } = {}) {
+async function impostaProprieta(seed = {}, { callAs = require('./lib/internal-api').callAs } = {}) {
   const esiti = [];
   const admin = db.prepare("SELECT * FROM users WHERE role = 'admin' LIMIT 1").get();
   for (const [slug, prop] of Object.entries(seed)) {
@@ -278,9 +278,9 @@ async function impostaProprieta(seed = require('./seeds/proprieta-immobiliare.js
   return esiti;
 }
 
-// Le sezioni e i dati chiave del dettaglio (seeds/sezioni-immobiliare.json): una proprietà `sezione` sui campi (per raggrupparli nella scheda) e `dato_chiave` (in evidenza in alto). Solo sui campi che
+// Le sezioni e i dati chiave del dettaglio (parte «sezioni» del pacchetto): una proprietà `sezione` sui campi (per raggrupparli nella scheda) e `dato_chiave` (in evidenza in alto). Solo sui campi che
 // esistono e che non hanno già un valore (si completa, non si sovrascrive), da bozza e pubblicazione del Builder, una volta sola per modulo (marcatore `sezioni:<slug>`).
-async function assegnaSezioni(seed = require('./seeds/sezioni-immobiliare.json'), { callAs = require('./lib/internal-api').callAs } = {}) {
+async function assegnaSezioni(seed = {}, { callAs = require('./lib/internal-api').callAs } = {}) {
   const esiti = [];
   const admin = db.prepare("SELECT * FROM users WHERE role = 'admin' LIMIT 1").get();
   for (const [slug, def] of Object.entries(seed)) {
@@ -311,9 +311,9 @@ async function assegnaSezioni(seed = require('./seeds/sezioni-immobiliare.json')
   return esiti;
 }
 
-// I «ruoli del modulo» del verticale (seeds/ruoli-immobiliare.json): si dichiarano solo se il modulo esiste, è installato, NON ne ha già una (si completa,
+// I «ruoli del modulo» del verticale (parte «ruoli» del pacchetto): si dichiarano solo se il modulo esiste, è installato, NON ne ha già una (si completa,
 // non si sovrascrive) e ha tutti i campi che la dichiarazione cita. Una volta sola per modulo (marcatore `ruoli:<slug>`); se il modulo non c'è ancora, ci riprova al giro dopo.
-function dichiaraRuoli(seed = require('./seeds/ruoli-immobiliare.json')) {
+function dichiaraRuoli(seed = {}) {
   const moduleRoles = require('./module-roles');
   const esiti = [];
   for (const [slug, dich] of Object.entries(seed)) {
@@ -335,28 +335,83 @@ function dichiaraRuoli(seed = require('./seeds/ruoli-immobiliare.json')) {
 // stesso giro aggiunge solo più avanti (la scheda di Immobili cita campi di Clienti, che si estende dopo). Si
 // ripete finché c'è qualcosa da applicare, al massimo MAX_GIRI volte; ogni giro è comunque idempotente.
 const MAX_GIRI = 4;
+
+// ── Pacchetti di verticale ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+// Una cartella `pacchetti/<nome>/` con una parte per tipo di blocco. Ogni parte ha la stessa forma di prima (`{ <modulo>: [...] }`).
+const CARTELLA = path.join(__dirname, 'pacchetti');
+const PARTI = ['estensioni', 'documenti', 'abbinamenti', 'moduli', 'ruoli', 'relazioni', 'proprieta', 'sezioni'];
+const SLUG_PACCHETTO = /^[a-z0-9][a-z0-9-]{0,59}$/;
+db.exec('CREATE TABLE IF NOT EXISTS pacchetti_attivi (slug TEXT PRIMARY KEY, attivato_il TEXT DEFAULT CURRENT_TIMESTAMP)');
+
+function pacchettiDisponibili() {
+  try { return fs.readdirSync(CARTELLA, { withFileTypes: true }).filter((d) => d.isDirectory() && SLUG_PACCHETTO.test(d.name)).map((d) => d.name).sort(); } catch (e) { return []; }
+}
+function leggiPacchetto(slug) {
+  const out = {};
+  for (const parte of PARTI) {
+    out[parte] = {};
+    if (!SLUG_PACCHETTO.test(String(slug))) continue;
+    try { out[parte] = JSON.parse(fs.readFileSync(path.join(CARTELLA, slug, parte + '.json'), 'utf8')); } catch (e) { /* parte assente: pacchetto senza quel tipo di blocco */ }
+  }
+  return out;
+}
+const pacchettiAttivi = () => { const d = new Set(pacchettiDisponibili()); return db.prepare('SELECT slug FROM pacchetti_attivi ORDER BY slug').all().map((r) => r.slug).filter((x) => d.has(x)); };
+// Attiva un pacchetto (se esiste). Ritorna true/false; ripetere non fa danni.
+function attivaPacchetto(slug) {
+  if (!pacchettiDisponibili().includes(slug)) return false;
+  db.prepare('INSERT OR IGNORE INTO pacchetti_attivi (slug) VALUES (?)').run(slug);
+  return true;
+}
+// I marcatori che l'applicazione di un pacchetto lascia in `seed_applicati`: servono a riconoscere un tenant che ne ha già applicato uno.
+function marcatoriDelPacchetto(slug) {
+  const P = leggiPacchetto(slug), m = [];
+  const perModulo = (parte, f) => { for (const [mod, v] of Object.entries(P[parte] || {})) if (!mod.startsWith('_')) f(mod, v); };
+  perModulo('estensioni', (mod, l) => (Array.isArray(l) ? l : []).forEach((x) => m.push('estensione:' + mod + ':' + x.key)));
+  perModulo('documenti', (mod, l) => (Array.isArray(l) ? l : []).forEach((x) => m.push('azione_documento:' + mod + ':' + x.key)));
+  perModulo('abbinamenti', (mod, l) => (Array.isArray(l) ? l : []).forEach((x) => m.push('abbinamento:' + mod + ':' + x.key)));
+  perModulo('relazioni', (mod, l) => (Array.isArray(l) ? l : []).forEach((x) => m.push('relazione:' + mod + ':' + x.chiave)));
+  perModulo('moduli', (mod) => m.push('modulo:' + mod));
+  perModulo('ruoli', (mod) => m.push('ruoli:' + mod));
+  perModulo('proprieta', (mod) => m.push('proprieta:' + mod));
+  perModulo('sezioni', (mod) => m.push('sezioni:' + mod));
+  return m;
+}
+// Un tenant nato prima dei pacchetti ha già i marcatori di quello che gli è stato applicato: ha quel pacchetto attivo, senza che nessuno lo debba dire.
+function migraDaMarcatori() {
+  const attivi = new Set(pacchettiAttivi()), fatti = new Set(db.prepare('SELECT chiave FROM seed_applicati').all().map((r) => r.chiave)), migrati = [];
+  for (const slug of pacchettiDisponibili()) {
+    if (attivi.has(slug)) continue;
+    if (marcatoriDelPacchetto(slug).some((c) => fatti.has(c)) && attivaPacchetto(slug)) migrati.push(slug);
+  }
+  return migrati;
+}
+
+// Un giro di tutti i tipi di blocco di UN pacchetto; ritorna quanti ne ha applicati.
+async function giroPacchetto(slug) {
+  const P = leggiPacchetto(slug); let applicati = 0;
+  const conta = (esiti, testo) => esiti.filter((e) => e.esito === 'applicato').forEach((e) => { applicati++; console.log('[seed-blocchi] ' + slug + ': ' + testo(e)); });
+  try { conta(await creaModuli(P.moduli), (e) => 'modulo «' + e.slug + '» creato'); } catch (e) { console.error('[seed-blocchi] moduli nuovi: non riuscito:', e.message); }
+  for (const [tipo, cfg] of Object.entries(TIPI)) {
+    try { conta(await applicaSeed(P[cfg.parte], { tipo }), (e) => cfg.nome + ' «' + e.key + '» aggiunto al modulo ' + e.slug); }
+    catch (e) { console.error('[seed-blocchi] ' + cfg.nome + ': non riuscito:', e.message); }
+  }
+  try { conta(await riallineaRelazioni(P.relazioni), (e) => 'relazione «' + e.key + '» di ' + e.slug + ' riallineata'); } catch (e) { console.error('[seed-blocchi] relazioni: non riuscito:', e.message); }
+  try { conta(await assegnaSezioni(P.sezioni), (e) => 'sezioni del modulo ' + e.slug + ' assegnate (' + e.campi + ' impostazioni)'); } catch (e) { console.error('[seed-blocchi] sezioni: non riuscito:', e.message); }
+  try { conta(await impostaProprieta(P.proprieta), (e) => 'proprietà del modulo ' + e.slug + ' impostate'); } catch (e) { console.error('[seed-blocchi] proprietà dei moduli: non riuscito:', e.message); }
+  try { conta(dichiaraRuoli(P.ruoli), (e) => 'ruoli del modulo ' + e.slug + ' dichiarati'); } catch (e) { console.error('[seed-blocchi] ruoli dei moduli: non riuscito:', e.message); }
+  return applicati;
+}
+
+// Applica i pacchetti attivi del tenant (all'avvio e a fine creazione). Senza pacchetti attivi non fa niente.
 async function run() {
+  migraDaMarcatori().forEach((slug) => console.log('[seed-blocchi] pacchetto «' + slug + '» riconosciuto come già applicato: attivo'));
+  const pacchetti = pacchettiAttivi();
+  if (!pacchetti.length) return;
   for (let giro = 1; giro <= MAX_GIRI; giro++) {
     let applicati = 0;
-    try { (await creaModuli()).filter((e) => e.esito === 'applicato').forEach((e) => { applicati++; console.log('[seed-blocchi] modulo «' + e.slug + '» creato'); }); }
-    catch (e) { console.error('[seed-blocchi] moduli nuovi: non riuscito:', e.message); }
-    for (const [tipo, cfg] of Object.entries(TIPI)) {
-      try {
-        const seed = require(path.join(__dirname, 'seeds', cfg.file));
-        const esiti = await applicaSeed(seed, { tipo });
-        esiti.filter((e) => e.esito === 'applicato').forEach((e) => { applicati++; console.log('[seed-blocchi] ' + cfg.nome + ' «' + e.key + '» aggiunto al modulo ' + e.slug); });
-      } catch (e) { console.error('[seed-blocchi] ' + cfg.nome + ': non riuscito:', e.message); }
-    }
-    try { (await riallineaRelazioni()).filter((e) => e.esito === 'applicato').forEach((e) => { applicati++; console.log('[seed-blocchi] relazione «' + e.key + '» di ' + e.slug + ' riallineata'); }); }
-    catch (e) { console.error('[seed-blocchi] relazioni: non riuscito:', e.message); }
-    try { (await assegnaSezioni()).filter((e) => e.esito === 'applicato').forEach((e) => { applicati++; console.log('[seed-blocchi] sezioni del modulo ' + e.slug + ' assegnate (' + e.campi + ' impostazioni)'); }); }
-    catch (e) { console.error('[seed-blocchi] sezioni: non riuscito:', e.message); }
-    try { (await impostaProprieta()).filter((e) => e.esito === 'applicato').forEach((e) => { applicati++; console.log('[seed-blocchi] proprietà del modulo ' + e.slug + ' impostate'); }); }
-    catch (e) { console.error('[seed-blocchi] proprietà dei moduli: non riuscito:', e.message); }
-    try { dichiaraRuoli().forEach((e) => { applicati++; console.log('[seed-blocchi] ruoli del modulo ' + e.slug + ' dichiarati'); }); }
-    catch (e) { console.error('[seed-blocchi] ruoli dei moduli: non riuscito:', e.message); }
+    for (const slug of pacchetti) applicati += await giroPacchetto(slug);
     if (!applicati) break;
   }
 }
 
-module.exports = { applicaSeed, modelloApplicabile, abbinamentoApplicabile, TIPI, dichiaraRuoli, creaModuli, riallineaRelazioni, impostaProprieta, assegnaSezioni, run };
+module.exports = { pacchettiDisponibili, leggiPacchetto, pacchettiAttivi, attivaPacchetto, marcatoriDelPacchetto, migraDaMarcatori, applicaSeed, modelloApplicabile, abbinamentoApplicabile, TIPI, dichiaraRuoli, creaModuli, riallineaRelazioni, impostaProprieta, assegnaSezioni, run };

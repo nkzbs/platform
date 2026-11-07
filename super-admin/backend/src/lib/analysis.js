@@ -82,6 +82,8 @@ function sanitizeConfigurazione(c) {
     })).filter((x) => x.titolo),
   })).filter((m) => m.id > 0).slice(0, 80);
   return { ruoli: list(c.ruoli, 40, 80), moduli, relazioni_ai: c.relazioni_ai !== false, ai_attiva: c.ai_attiva === true,
+    // pacchetti di verticale da attivare alla nascita del tenant (nomi delle cartelle `pacchetti/` del core)
+    pacchetti: [...new Set((Array.isArray(c.pacchetti) ? c.pacchetti : []).filter((x) => typeof x === 'string').map((x) => x.trim()).filter((x) => /^[a-z0-9][a-z0-9-]{0,59}$/.test(x)))].slice(0, 5),
     // report da creare SPENTI alla nascita del tenant, oltre a quelli proposti dai moduli: { tipo, nome, params } (il tenant ne valida tipo e parametri)
     report: (Array.isArray(c.report) ? c.report : []).slice(0, 20).map((r) => ({ tipo: t(r && r.tipo, 40), nome: t(r && r.nome, 40), params: r && r.params && typeof r.params === 'object' && !Array.isArray(r.params) ? JSON.parse(JSON.stringify(r.params)) : {} })).filter((r) => r.tipo),
     dashboard: (Array.isArray(c.dashboard) ? c.dashboard : []).slice(0, 30).map((w) => ({ type: t(w && w.type, 20), modulo: t(w && w.modulo, 60), campo: t(w && w.campo, 60), aggregazione: t(w && w.aggregazione, 10), etichetta: t(w && w.etichetta, 80), config: { date_field: t(w && w.config && w.config.date_field, 60), periodo: t(w && w.config && w.config.periodo, 12) } })).filter((w) => w.type && w.modulo) };

@@ -71,6 +71,16 @@ router.post('/seed', async (req, res) => {
   catch (e) { res.status(500).json({ error: 'Seed del verticale non applicati: ' + e.message }); }
 });
 
+// Attiva un pacchetto di verticale (cartella `pacchetti/<nome>/`, dati dei moduli di un settore) e lo applica subito. Scelto dall'analisi alla creazione del tenant.
+// Un pacchetto che non esiste è un errore chiaro (404), non un silenzio; ripetere la chiamata non fa danni.
+router.post('/pacchetto', async (req, res) => {
+  const slug = String((req.body && req.body.slug) || '');
+  const seeds = require('../seed-blocchi-verticale');
+  if (!seeds.attivaPacchetto(slug)) return res.status(404).json({ error: 'Pacchetto «' + slug.slice(0, 60) + '» sconosciuto: disponibili ' + (seeds.pacchettiDisponibili().join(', ') || 'nessuno') });
+  try { await seeds.run(); res.json({ ok: true, attivi: seeds.pacchettiAttivi() }); }
+  catch (e) { res.status(500).json({ error: 'Pacchetto attivato ma non applicato del tutto: ' + e.message }); }
+});
+
 // Il marchio dell'azienda alla nascita del tenant (da Analisi): ragione sociale, indirizzo, P.IVA, logo, colore. Regola di questo file: si COMPLETA,
 // non si sovrascrive: un campo già compilato resta com'è. Logo non valido o colore non valido: quel campo si salta e si dice quale.
 router.post('/azienda', (req, res) => {
