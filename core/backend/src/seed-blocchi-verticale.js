@@ -204,13 +204,21 @@ async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs
   return esiti;
 }
 
+// Un solo giro non basta su un tenant appena nato: un blocco può citare i campi di un altro modulo che il suo
+// stesso giro aggiunge solo più avanti (la scheda di Immobili cita campi di Clienti, che si estende dopo). Si
+// ripete finché c'è qualcosa da applicare, al massimo MAX_GIRI volte; ogni giro è comunque idempotente.
+const MAX_GIRI = 4;
 async function run() {
-  for (const [tipo, cfg] of Object.entries(TIPI)) {
-    try {
-      const seed = require(path.join(__dirname, 'seeds', cfg.file));
-      const esiti = await applicaSeed(seed, { tipo });
-      esiti.filter((e) => e.esito === 'applicato').forEach((e) => console.log('[seed-blocchi] ' + cfg.nome + ' «' + e.key + '» aggiunto al modulo ' + e.slug));
-    } catch (e) { console.error('[seed-blocchi] ' + cfg.nome + ': non riuscito:', e.message); }
+  for (let giro = 1; giro <= MAX_GIRI; giro++) {
+    let applicati = 0;
+    for (const [tipo, cfg] of Object.entries(TIPI)) {
+      try {
+        const seed = require(path.join(__dirname, 'seeds', cfg.file));
+        const esiti = await applicaSeed(seed, { tipo });
+        esiti.filter((e) => e.esito === 'applicato').forEach((e) => { applicati++; console.log('[seed-blocchi] ' + cfg.nome + ' «' + e.key + '» aggiunto al modulo ' + e.slug); });
+      } catch (e) { console.error('[seed-blocchi] ' + cfg.nome + ': non riuscito:', e.message); }
+    }
+    if (!applicati) break;
   }
 }
 

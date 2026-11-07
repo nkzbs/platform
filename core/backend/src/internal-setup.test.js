@@ -31,6 +31,10 @@ async function main() {
   const PRATICA = { kind: 'pratica', uses: ['avvisi'], roles: { descrizione: 'titolo', scadenza: 'scadenza', stato: '_stato' }, avvisi: { states: { nuovo: 'aperto', da_fare: 'in_corso', fatto: 'risolto' }, nuovo: true, scadenze: true, label: 'ticket', noun_s: 'ticket', noun_p: 'ticket' } };
 
   await test('senza il secret interno non entra nessuno', async () => { eq((await post({}, 'sbagliato')).status, 401); eq((await fetch(BASE + '/api/internal-setup/apply', { method: 'POST' })).status, 401); });
+  await test('/seed: senza il secret 401; con il secret applica i seed del verticale (anche a tenant senza i moduli: nessun errore) e ripetere è innocuo', async () => {
+    eq((await fetch(BASE + '/api/internal-setup/seed', { method: 'POST' })).status, 401);
+    for (let i = 0; i < 2; i++) { const r = await fetch(BASE + '/api/internal-setup/seed', { method: 'POST', headers: { 'x-internal-secret': SECRET } }); eq(r.status, 200); eq((await r.json()).ok, true); }
+  });
   await test('dichiara i ruoli dei moduli installati, accende le funzioni che servono, crea i report SPENTI', async () => {
     eq(feat.isEnabled('riepilogo_mattino'), false);
     const r = await (await post({

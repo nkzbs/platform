@@ -48,4 +48,11 @@ router.post('/apply', (req, res) => {
   res.json(out);
 });
 
+// Applica i blocchi dei seed del verticale (campi, documenti, abbinamenti) ora che i moduli sono installati. Senza questa chiamata un tenant
+// appena nato li riceverebbe solo ai riavvii successivi (all'avvio i moduli non c'erano ancora). Idempotente: ripetere non fa danni.
+router.post('/seed', async (req, res) => {
+  try { await require('../seed-blocchi-verticale').run(); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ error: 'Seed del verticale non applicati: ' + e.message }); }
+});
+
 module.exports = router;

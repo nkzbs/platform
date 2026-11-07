@@ -231,6 +231,9 @@ async function creaTenantInBackground({ id, name, slug, domain, actor, processi,
     let setup = null;
     try { setup = await analysis.deps.setupTenant(tenant.slug, analysis.pacchettoTenant(moduleIds, escludi)); }
     catch (e) { console.error('[analyses] ruoli dei moduli, report e AI non applicati (non bloccante):', e.message); avvisi.push({ tipo: 'setup', testo: 'Ruoli dei moduli, report e AI non applicati: ' + e.message + '. Si impostano dal Builder e da Impostazioni → Report, o riprova qui sotto.' }); }
+    // i campi, i documenti e gli abbinamenti del verticale (seed del core) si applicano ora che i moduli ci sono: da soli arriverebbero ai riavvii successivi
+    try { await require('../lib/tenant-api-client').callTenantAPI(tenant.slug, 'POST', '/api/internal-setup/seed'); }
+    catch (e) { console.error('[analyses] seed del verticale non applicati (non bloccante):', e.message); avvisi.push({ tipo: 'seed', testo: 'Campi e documenti del verticale non applicati subito: arrivano al prossimo riavvio del tenant (' + e.message + ').' }); }
     segni.push({ fase: 'fine', t: Date.now() });
     const t = tempi(); delete t.fine;
     setCreazione(id, { fase: 'finita', fine: Date.now(), secondi: Math.round((Date.now() - t0) / 100) / 10, tempi: t, moduli_installati: installed ? installed.modules : 0, report_creati: setup ? setup.reports.length : 0, moduli_dichiarati: setup ? setup.module_roles.length : 0, ruoli_creati: config ? config.roles_created.length : 0, moduli_configurati: config ? config.modules_configured.length : 0, avvisi });

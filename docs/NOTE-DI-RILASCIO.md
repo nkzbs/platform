@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.32 — 7 novembre 2026
+
+**Un tenant nato dall'analisi ora arriva completo, non dopo due riavvii.** Provando l'analisi di zucca su un tenant di prova (copia dell'analisi, poi eliminato) è emerso che Clienti restava a 6 campi, senza documenti né abbinamento: i seed del verticale si applicavano solo all'avvio del tenant, quando i moduli non erano ancora installati, e un solo giro non bastava perché la scheda di Immobili cita campi di Clienti che si estende dopo. Dopo due riavvii il tenant di prova coincideva con zucca (Clienti a 24 campi, 3 documenti, abbinamento, allegati).
+
+- **Seed in più giri** (`seed-blocchi-verticale.js`): `run()` ripete finché c'è qualcosa da applicare, al massimo 4 giri; ogni giro resta idempotente.
+- **Fine della creazione** (Super Admin → Analisi → Crea il tenant): chiama `POST /api/internal-setup/seed` sul tenant appena nato (solo con il secret interno). Se non riesce non blocca: compare un avviso e i seed arrivano al riavvio.
+- Test nuovi in `internal-setup.test.js` (la rotta e la ripetizione innocua).
+- **Differenze rimaste rispetto a zucca**: Note, Report e Richieste Privacy nascono senza i flussi che zucca ha dalla vecchia analisi di ottobre (stati «Registrazione richiesta», «Raccolta dati vendite»…, poco sensati per quei moduli); Clienti ha 2 transizioni invece di 3 (nasce dai 3 passaggi dell'analisi). Logo, colore e dati azienda non si copiano.
+
 ## 0.4.31 — 7 novembre 2026
 
 **Il Clienti di zucca non ha più bisogno di una copia nella Libreria.** Per far nascere da un'analisi un tenant uguale a zucca, i moduli di zucca erano stati pubblicati nella Libreria: cinque di loro (Clienti, Attività, Note, Report, Richieste Privacy) avevano un omonimo generico, cioè un doppione. I moduli sono generici apposta: la specificità di un verticale si applica come estensione, non come copia.
