@@ -169,6 +169,13 @@
 :root[data-theme="light"] .border-red-900\/50 { border-color: rgb(252 165 165); }
 :root[data-theme="light"] .border-yellow-900\/40 { border-color: rgb(252 211 77); }
 
+/* «Zuccà Banner» (Impostazioni → Aspetto → Carattere): build di GFS Didot, SIL Open Font License 1.1 (licenza accanto ai file in core/backend/assets/fonts/zucca-banner).
+   I file sono serviti dal backend (/api/fonts/...), pubblici perché servono anche alla schermata di accesso; il browser li scarica solo se il carattere è scelto. */
+@font-face { font-family: 'Zuccà Banner'; font-style: normal; font-weight: 400; font-display: swap; src: url('/api/fonts/zucca-banner/Zucca_Banner_Regular.otf') format('opentype'); }
+@font-face { font-family: 'Zuccà Banner'; font-style: normal; font-weight: 500 900; font-display: swap; src: url('/api/fonts/zucca-banner/Zucca_Banner_Bold.otf') format('opentype'); }
+@font-face { font-family: 'Zuccà Banner'; font-style: italic; font-weight: 400; font-display: swap; src: url('/api/fonts/zucca-banner/Zucca_Banner_Italic.otf') format('opentype'); }
+@font-face { font-family: 'Zuccà Banner'; font-style: italic; font-weight: 500 900; font-display: swap; src: url('/api/fonts/zucca-banner/Zucca_Banner_Bold_Italic.otf') format('opentype'); }
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', ui-sans-serif, sans-serif;
   /* Prima trasparente: il colore vero veniva solo da un div wrapper interno,
@@ -179,6 +186,9 @@ body {
      richiesto per le pagine Artifact. */
   background-color: rgb(var(--surface-page));
 }
+
+/* Il carattere scelto in Aspetto (App.jsx imposta data-font-app sulla radice). */
+:root[data-font-app="zucca_banner"] body { font-family: 'Zuccà Banner', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', ui-sans-serif, serif; }
 
 /* "Liquid Glass" (2026-10-30) — introdotto su un'area sola (Dashboard) per
    validare la direzione prima di estenderla. Un pannello di vetro ha bisogno

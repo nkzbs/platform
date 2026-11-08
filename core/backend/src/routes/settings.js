@@ -8,11 +8,11 @@ const router = express.Router();
 // Riga singola (id fisso 1, vedi db.js) — intestazione azienda usata nei documenti
 // stampabili. GET aperta a ogni utente autenticato (serve anche a chi compone/vede
 // un'anteprima di stampa, non solo all'admin che la modifica).
-const AZIENDA_COLUMNS = 'ragione_sociale, indirizzo, piva, logo_url, accent_color, hide_platform_name, login_headline, login_subheadline, login_body, login_hero_image_url, app_name, app_logo_url';
+const AZIENDA_COLUMNS = 'ragione_sociale, indirizzo, piva, logo_url, accent_color, hide_platform_name, login_headline, login_subheadline, login_body, login_hero_image_url, app_name, app_logo_url, font_app';
 
 router.get('/azienda', requireAuth, (req, res) => {
   const row = db.prepare('SELECT ' + AZIENDA_COLUMNS + ' FROM tenant_settings WHERE id = 1').get();
-  res.json(row || { ragione_sociale: null, indirizzo: null, piva: null, logo_url: null, accent_color: null, hide_platform_name: 0, login_headline: null, login_subheadline: null, login_body: null, login_hero_image_url: null, app_name: null, app_logo_url: null });
+  res.json(row || { ragione_sociale: null, indirizzo: null, piva: null, logo_url: null, accent_color: null, hide_platform_name: 0, login_headline: null, login_subheadline: null, login_body: null, login_hero_image_url: null, app_name: null, app_logo_url: null, font_app: null });
 });
 
 router.put('/azienda', requireAuth, requireAdmin, (req, res) => {
@@ -22,6 +22,8 @@ router.put('/azienda', requireAuth, requireAdmin, (req, res) => {
   // Nome dell'app: una riga corta, senza a capo (compare nella barra laterale, nel login e nel titolo della scheda del browser).
   const appName = typeof req.body.app_name === 'string' ? req.body.app_name.replace(/[\r\n]+/g, ' ').trim().slice(0, 40) : '';
   const { app_logo_url } = req.body;
+  const fontApp = require('../lib/caratteri').valida(req.body.font_app);
+  if (fontApp === undefined) return res.status(400).json({ error: 'Carattere non riconosciuto.' });
   if (app_logo_url && !require('../lib/azienda').logoValido(app_logo_url)) {
     return res.status(400).json({ error: 'Il logo dell\'app deve essere un\'immagine PNG, JPEG o WebP (fino a circa 700 KB) o un indirizzo https.' });
   }
@@ -37,6 +39,7 @@ router.put('/azienda', requireAuth, requireAdmin, (req, res) => {
   // L'identità dell'app si cambia solo se la richiesta la porta (un client vecchio che rimanda la riga senza questi campi non li azzera).
   if ('app_name' in req.body) db.prepare('UPDATE tenant_settings SET app_name = ? WHERE id = 1').run(appName || null);
   if ('app_logo_url' in req.body) db.prepare('UPDATE tenant_settings SET app_logo_url = ? WHERE id = 1').run(app_logo_url || null);
+  if ('font_app' in req.body) db.prepare('UPDATE tenant_settings SET font_app = ? WHERE id = 1').run(fontApp);
   const row = db.prepare('SELECT ' + AZIENDA_COLUMNS + ' FROM tenant_settings WHERE id = 1').get();
   res.json(row);
 });

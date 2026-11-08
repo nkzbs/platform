@@ -165,7 +165,7 @@ app.use('/__root_public', rootPublicRouter);
 
 app.get('/health', (req, res) => res.json({
   status: 'ok',
-  version: '0.4.66',
+  version: '0.4.67',
   tenant: process.env.TENANT_SLUG || 'unknown',
   name: process.env.TENANT_NAME || 'Platform Core'
 }));
@@ -180,10 +180,17 @@ app.get('/health', (req, res) => res.json({
 // letta qui SENZA autenticazione perché deve comparire già sulla schermata di
 // login, prima che esista un token — né l'uno né l'altro sono dati sensibili
 // (sono già visibili a chiunque apra l'app).
+// I file dei caratteri scelti in Aspetto (lib/caratteri.js): pubblici, perché servono anche alla schermata di accesso. Solo i nomi dell'elenco, mai un percorso scritto da fuori.
+app.get('/api/fonts/:cartella/:file', (req, res) => {
+  const file = require('./lib/caratteri').percorso(req.params.cartella, req.params.file);
+  if (!file) return res.status(404).end();
+  res.set('Cache-Control', 'public, max-age=86400').type('font/otf').sendFile(file);
+});
+
 app.get('/api/tenant-info', (req, res) => {
-  let branding = { logo_url: null, app_name: null, app_logo_url: null, accent_color: null, hide_platform_name: 0, login_headline: null, login_subheadline: null, login_body: null, login_hero_image_url: null };
+  let branding = { font_app: null, logo_url: null, app_name: null, app_logo_url: null, accent_color: null, hide_platform_name: 0, login_headline: null, login_subheadline: null, login_body: null, login_hero_image_url: null };
   try {
-    const row = db.prepare('SELECT logo_url, app_name, app_logo_url, accent_color, hide_platform_name, login_headline, login_subheadline, login_body, login_hero_image_url FROM tenant_settings WHERE id = 1').get();
+    const row = db.prepare('SELECT font_app, logo_url, app_name, app_logo_url, accent_color, hide_platform_name, login_headline, login_subheadline, login_body, login_hero_image_url FROM tenant_settings WHERE id = 1').get();
     if (row) branding = row;
   } catch (e) { /* tabella non ancora pronta: fallback ai default, mai bloccare il login */ }
   let enabledFeatures = {};
@@ -195,6 +202,7 @@ app.get('/api/tenant-info', (req, res) => {
     ai: aiOn, // interruttore generale dell'AI (Impostazioni → AI): mostra o nasconde «Chiedi ai dati»
     name: process.env.TENANT_NAME || null,
     logo_url: branding.logo_url,
+    font_app: branding.font_app || null, // il carattere scelto in Aspetto (vuoto = predefinito)
     app_name: branding.app_name || null, // il nome che l'utente ha scelto al posto di «Platform»
     app_logo_url: branding.app_logo_url || null, // il logo dell'app (sidebar e login); se manca vale il logo dell'azienda
     accent_color: branding.accent_color,

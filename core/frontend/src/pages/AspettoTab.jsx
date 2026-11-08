@@ -50,6 +50,11 @@ export default function AspettoTab({ token }) {
     lettore.readAsDataURL(file)
   }
 
+  const scegliCarattere = async (font_app) => {
+    const ok = await salvaAzienda({ font_app: font_app || null })
+    if (ok) document.documentElement.dataset.fontApp = font_app || '' // subito, senza ricaricare
+  }
+
   const scegliLogoApp = (e) => {
     const file = e.target.files && e.target.files[0]
     e.target.value = ''
@@ -100,6 +105,25 @@ export default function AspettoTab({ token }) {
             {azienda.app_logo_url && <button onClick={() => salvaAzienda({ app_logo_url: null })} className="text-xs text-gray-500 hover:text-gray-300">Togli</button>}
           </div>
         </div>
+      </div>
+
+      <p className="text-sm text-gray-500 mt-6 mb-3">Il carattere dell'app: cambia testi e titoli ovunque (anche nella schermata di accesso) e nei titoli dei PDF.</p>
+      <div className="glass-panel p-4 grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Carattere dell'app">
+        {[
+          { chiave: '', nome: 'Predefinito', nota: 'Inter: leggibile anche in piccolo, adatto alle tabelle.', stile: { fontFamily: "'Inter', sans-serif" } },
+          { chiave: 'zucca_banner', nome: 'Zuccà Banner', nota: 'Serif con grazie, elegante nei titoli; a corpo piccolo è più sottile.', stile: { fontFamily: "'Zuccà Banner', serif" } },
+        ].map((o) => {
+          const attivo = (azienda.font_app || '') === o.chiave
+          return (
+            <button key={o.chiave || 'predefinito'} type="button" role="radio" aria-checked={attivo} onClick={() => scegliCarattere(o.chiave)}
+              className={'text-left rounded-lg border p-3 transition ' + (attivo ? 'border-accent bg-accent/10' : 'border-gray-800 hover:border-gray-600')}>
+              <div className="text-ink text-lg leading-tight" style={o.stile}>{o.nome}</div>
+              <div className="text-sm text-gray-400 mt-1" style={o.stile}>Casa con giardino, 3 locali — € 235.000</div>
+              <div className="text-[11px] text-gray-500 mt-1.5">{o.nota}{attivo ? ' · In uso' : ''}</div>
+            </button>
+          )
+        })}
+        <div className="sm:col-span-2 text-[11px] text-gray-600">Zuccà Banner è una versione rinominata di GFS Didot (Greek Font Society), con licenza SIL Open Font License 1.1: non è un disegno esclusivo.</div>
       </div>
 
       <p className="text-sm text-gray-500 mt-6 mb-3">I dati dell'azienda compaiono nell'intestazione dei PDF (per esempio il report di valutazione).</p>

@@ -10,6 +10,9 @@ const ALTEZZA_FASCIA = 78;
 const GRIGIO = '#57534e', CHIARO = '#f5f5f4', LINEA = '#e7e5e4', TESTO = '#1c1917';
 const FONT_TITOLO = 'Times-Bold';
 
+// Il carattere dei titoli: quello scelto in Aspetto (grassetto), altrimenti Times in grassetto.
+const fontTitolo = (doc) => (doc._carattere && doc._carattere.bold) || FONT_TITOLO;
+
 const coloreValido = (c) => (/^#[0-9a-f]{6}$/i.test(String(c || '')) ? c : '#1f4e79');
 
 function rgb(colore) { const n = parseInt(coloreValido(colore).slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
@@ -56,13 +59,15 @@ async function caricaLogo(url) {
 
 // Dati dell'azienda e logo del tenant, pronti per i generatori di PDF. `db` = la connessione del tenant.
 async function caricaIdentita(db) {
-  const t = db.prepare('SELECT ragione_sociale, indirizzo, piva, logo_url, accent_color FROM tenant_settings WHERE id = 1').get() || {};
-  return { azienda: { nome: t.ragione_sociale, indirizzo: t.indirizzo, piva: t.piva, colore: t.accent_color }, logo: await caricaLogo(t.logo_url) };
+  const t = db.prepare('SELECT ragione_sociale, indirizzo, piva, logo_url, accent_color, font_app FROM tenant_settings WHERE id = 1').get() || {};
+  return { azienda: { nome: t.ragione_sociale, indirizzo: t.indirizzo, piva: t.piva, colore: t.accent_color, carattere: t.font_app || null }, logo: await caricaLogo(t.logo_url) };
 }
 
 // Fascia colorata in cima alla pagina corrente. A destra: etichetta del documento e data.
 function intestazione(doc, { azienda = {}, logo = null, etichetta = 'DOCUMENTO', data = '' }) {
   const colore = coloreValido(azienda.colore);
+  // Se in Aspetto è scelto un carattere dell'app, titoli e piè di pagina lo usano (lib/caratteri.js); altrimenti restano Times.
+  if (!doc._carattere) doc._carattere = require('./caratteri').registraPdf(doc, azienda.carattere) || { nessuno: true };
   const W = doc.page.width - M * 2;
   const sf = doc.linearGradient(0, 0, doc.page.width, ALTEZZA_FASCIA); sf.stop(0, colore).stop(0.5, colore).stop(1, tinta(colore, 0.78)); // a sinistra il colore pieno: un logo con il suo fondo si fonde con la fascia
   doc.rect(0, 0, doc.page.width, ALTEZZA_FASCIA).fill(sf);
@@ -82,7 +87,7 @@ function intestazione(doc, { azienda = {}, logo = null, etichetta = 'DOCUMENTO',
     } catch (e) { /* logo illeggibile: si scrive il nome */ }
   }
   if (!logoLargo) {
-    doc.font(FONT_TITOLO).fontSize(16).fillColor('#ffffff').text(azienda.nome || etichetta, xTesto, 22, { width: 270, lineBreak: false });
+    doc.font(fontTitolo(doc)).fontSize(16).fillColor('#ffffff').text(azienda.nome || etichetta, xTesto, 22, { width: 270, lineBreak: false });
     if (azienda.nome) doc.font('Helvetica').fontSize(9).fillColor('#f3f4f6').text([azienda.indirizzo, azienda.piva && 'P.IVA ' + azienda.piva].filter(Boolean).join(' · '), xTesto, 42, { width: 280, lineBreak: false });
   }
   // Etichetta del documento in una pillola, data sotto.
@@ -98,7 +103,7 @@ function titoloSezione(doc, testo, colore) {
   const W = doc.page.width - M * 2;
   const y = doc.y;
   doc.rect(M, y, 4, 15).fill(colore);
-  doc.font(FONT_TITOLO).fontSize(14).fillColor(TESTO).text(testo, M + 12, y, { width: W - 12 });
+  doc.font(fontTitolo(doc)).fontSize(14).fillColor(TESTO).text(testo, M + 12, y, { width: W - 12 });
 }
 
 // Su ogni pagina: filetto, nome dell'azienda in corsivo (o `riserva`) e «Pagina N di M». Da chiamare prima di doc.end().
@@ -110,7 +115,7 @@ function pieDiPagina(doc, { azienda = {}, riserva = '', colore }) {
     doc.switchToPage(i);
     doc.page.margins.bottom = 0; // scrivere nel margine in basso non deve aprire una pagina nuova
     doc.moveTo(M, doc.page.height - 44).lineTo(M + W, doc.page.height - 44).lineWidth(0.6).strokeColor(tinta(c, 0.3)).stroke();
-    if (azienda.nome) doc.font('Times-Italic').fontSize(11.5).fillColor(c).text(azienda.nome, M, doc.page.height - 38, { width: W - 100, lineBreak: false });
+    if (azienda.nome) doc.font((doc._carattere && doc._carattere.italic) || 'Times-Italic').fontSize(11.5).fillColor(c).text(azienda.nome, M, doc.page.height - 38, { width: W - 100, lineBreak: false });
     else doc.font('Helvetica').fontSize(8).fillColor('#78716c').text(riserva, M, doc.page.height - 36, { width: W - 100, lineBreak: false });
     doc.font('Helvetica').fontSize(8.5).fillColor('#44403c').text('Pagina ' + (i + 1) + ' di ' + count, M + W - 90, doc.page.height - 36, { width: 90, align: 'right', lineBreak: false });
   }

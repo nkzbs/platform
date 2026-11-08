@@ -2,6 +2,17 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.67 — 8 novembre 2026
+
+**Il carattere «Zuccà Banner» tra le scelte di Impostazioni → Aspetto.**
+
+- **Cosa si sceglie**: nuovo riquadro «Carattere dell'app» con due voci, **Predefinito** (Inter) e **Zuccà Banner** (serif con grazie), ognuna con un'anteprima. La scelta vale subito, senza ricaricare, in tutta l'app, **anche nella schermata di accesso**, e nei **titoli e nel piè di pagina dei PDF** (grassetto per i titoli, corsivo per il nome dell'azienda in basso). Salvata in `tenant_settings.font_app`.
+- **Cosa è il font**: i quattro file forniti (Regular, Bold, Italic, Bold Italic) sono una **versione rinominata di GFS Didot** (Greek Font Society), con licenza **SIL Open Font License 1.1**, come dice il LEGGIMI del pacchetto: non è un disegno esclusivo. La licenza e le note stanno accanto ai file (`core/backend/assets/fonts/zucca-banner/`) e il riquadro lo dice.
+- **Dove stanno i file**: serviti dal backend (`GET /api/fonts/<famiglia>/<file>`, pubblici perché servono anche al login, solo i nomi dell'elenco di `lib/caratteri.js`, mai un percorso scritto da fuori) e scaricati dal browser solo se il carattere è scelto. Una copia sola, usata anche dai PDF. Aggiungere un'altra famiglia è aggiungere una voce a `FAMIGLIE`.
+- **Da sapere**: è un serif ad alto contrasto, bello nei titoli ma più sottile a corpo piccolo (tabelle, etichette da 10-12 px): il riquadro lo dice, e si torna al predefinito con un clic. Nei PDF il corpo del testo resta Helvetica.
+- Test: `caratteri.test.js` (file veri OpenType e licenza accanto, rotta pubblica e chiusa ai percorsi, scelta/rifiuto/ritorno al predefinito, salvare altro non azzera il carattere, PDF con il font incorporato o Times). Provato dal vivo in locale.
+- Messa online: **Aggiorna** su zucca (e su ogni tenant che lo voglia). Nessun cambio al pacchetto.
+
 ## 0.4.66 — 8 novembre 2026
 
 **Solvibilità segnata «da attivare»: pacchetto Mediazione immobiliare alla versione 15.**

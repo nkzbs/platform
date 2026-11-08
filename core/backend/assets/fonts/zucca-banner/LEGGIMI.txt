@@ -1,0 +1,18 @@
+ZUCCÀ BANNER — BUILD CORRETTA
+
+Questa build sostituisce il precedente file TTF difettoso: quello precedente aveva
+contorni non validi e non deve essere usato.
+
+La famiglia qui fornita è basata sul progetto open-source GFS Didot della Greek Font
+Society, con i metadati di famiglia rinominati "Zuccà Banner" e le quattro varianti
+originali del progetto (Regular, Bold, Italic, Bold Italic). Le forme dei glifi non
+sono un disegno esclusivo di ZuccàPartners.
+
+Licenza: SIL Open Font License 1.1. Il nome riservato "GFS Didot" non viene usato come
+nome principale della famiglia modificata. La licenza completa è inclusa nel pacchetto.
+È consentito usare, modificare e redistribuire il font nel rispetto della OFL; il font
+non può essere venduto da solo e la versione modificata deve rimanere sotto OFL.
+
+Questa è una build funzionante e tipograficamente coerente, non un font proprietario
+esclusivo. Per ottenere un carattere davvero esclusivo occorre un progetto di disegno
+originale e revisione professionale dei glifi.

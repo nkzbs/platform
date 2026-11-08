@@ -147,6 +147,7 @@ export default function App() {
     setHidePlatformName(!!data.app_name || !!data.hide_platform_name)
     if (hex2rgbTriplet(data.accent_color)) accentoScelto.current = hex2rgbTriplet(data.accent_color).split(' ').map(Number)
     applicaAccento()
+    document.documentElement.dataset.fontApp = data.font_app || '' // il carattere scelto in Aspetto (vuoto = predefinito)
     document.title = data.app_name ? data.app_name : (data.name ? data.name + ' — Platform' : 'Platform')
   }
 
