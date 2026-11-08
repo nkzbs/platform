@@ -59,7 +59,7 @@ function riassumi(elementi, lat, lon) {
     const p = el.lat !== undefined ? { lat: el.lat, lon: el.lon } : el.center;
     const chiave = categoriaDi(el.tags || {});
     if (!p || !chiave || !isFinite(p.lat) || !isFinite(p.lon)) continue;
-    per[chiave].push({ nome: String((el.tags && (el.tags.name || el.tags.operator)) || '').slice(0, 80), metri: Math.round(distanzaMetri(lat, lon, p.lat, p.lon)) });
+    per[chiave].push({ nome: String((el.tags && (el.tags.name || el.tags.operator)) || '').slice(0, 80), metri: Math.round(distanzaMetri(lat, lon, p.lat, p.lon)), lat: p.lat, lon: p.lon });
   }
   return CATEGORIE.map((c) => {
     const v = per[c.chiave].sort((a, b) => a.metri - b.metri);
@@ -78,7 +78,7 @@ async function chiedi(lat, lon) {
 async function cerca(lat, lon, { adesso = Date.now() } = {}) {
   lat = Number(lat); lon = Number(lon);
   if (!isFinite(lat) || !isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
-  const chiave = lat.toFixed(3) + '|' + lon.toFixed(3);
+  const chiave = 'v2|' + lat.toFixed(3) + '|' + lon.toFixed(3); // v2: ogni luogo porta le sue coordinate (per segnarli sulla mappa del report)
   const c = db.prepare('SELECT json, ts FROM servizi_cache WHERE chiave = ?').get(chiave);
   if (c && adesso - c.ts < 7 * GIORNI) return { raggio: RAGGIO, categorie: JSON.parse(c.json) };
   try {
@@ -96,7 +96,7 @@ const inCorso = new Map(); const fallite = new Map();
 function stato(lat, lon, { adesso = Date.now() } = {}) {
   lat = Number(lat); lon = Number(lon);
   if (!isFinite(lat) || !isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return { valido: false };
-  const chiave = lat.toFixed(3) + '|' + lon.toFixed(3);
+  const chiave = 'v2|' + lat.toFixed(3) + '|' + lon.toFixed(3);
   const c = db.prepare('SELECT json, ts FROM servizi_cache WHERE chiave = ?').get(chiave);
   if (c && adesso - c.ts < 7 * GIORNI) return { valido: true, pronto: true, raggio: RAGGIO, categorie: JSON.parse(c.json) };
   if (inCorso.has(chiave)) return { valido: true, in_corso: true };

@@ -63,12 +63,20 @@ async function caricaIdentita(db) {
   return { azienda: { nome: t.ragione_sociale, indirizzo: t.indirizzo, piva: t.piva, colore: t.accent_color, carattere: t.font_app || null }, logo: await caricaLogo(t.logo_url) };
 }
 
+// Larghezza della pillola dell'etichetta: il testo (maiuscolo, con la spaziatura) più il respiro ai lati, tra 118 e 230 punti.
+function larghezzaPillola(doc, etichetta) {
+  doc.font('Helvetica').fontSize(9);
+  const testo = String(etichetta).toUpperCase();
+  return Math.min(230, Math.max(118, Math.ceil(doc.widthOfString(testo) + testo.length * 0.8 + 28)));
+}
+
 // Fascia colorata in cima alla pagina corrente. A destra: etichetta del documento e data.
 function intestazione(doc, { azienda = {}, logo = null, etichetta = 'DOCUMENTO', data = '' }) {
   const colore = coloreValido(azienda.colore);
   // Se in Aspetto è scelto un carattere dell'app, titoli e piè di pagina lo usano (lib/caratteri.js); altrimenti restano Times.
   if (!doc._carattere) doc._carattere = require('./caratteri').registraPdf(doc, azienda.carattere) || { nessuno: true };
   const W = doc.page.width - M * 2;
+  const lp = larghezzaPillola(doc, etichetta); // calcolata prima di scegliere il carattere dei titoli: misurare cambia il carattere corrente
   const sf = doc.linearGradient(0, 0, doc.page.width, ALTEZZA_FASCIA); sf.stop(0, colore).stop(0.5, colore).stop(1, tinta(colore, 0.78)); // a sinistra il colore pieno: un logo con il suo fondo si fonde con la fascia
   doc.rect(0, 0, doc.page.width, ALTEZZA_FASCIA).fill(sf);
   // Riflesso diagonale appena percettibile, come sulla carta intestata.
@@ -87,11 +95,11 @@ function intestazione(doc, { azienda = {}, logo = null, etichetta = 'DOCUMENTO',
     } catch (e) { /* logo illeggibile: si scrive il nome */ }
   }
   if (!logoLargo) {
-    doc.font(fontTitolo(doc)).fontSize(16).fillColor('#ffffff').text(azienda.nome || etichetta, xTesto, 22, { width: 270, lineBreak: false });
+    doc.font(fontTitolo(doc)).fontSize(16).fillColor('#ffffff').text(azienda.nome || etichetta, xTesto, 22, { width: Math.max(120, Math.min(270, M + W - lp - 14 - xTesto)), lineBreak: false });
     if (azienda.nome) doc.font('Helvetica').fontSize(9).fillColor('#f3f4f6').text([azienda.indirizzo, azienda.piva && 'P.IVA ' + azienda.piva].filter(Boolean).join(' · '), xTesto, 42, { width: 280, lineBreak: false });
   }
-  // Etichetta del documento in una pillola, data sotto.
-  const lp = 118, xp = M + W - lp;
+  // Etichetta del documento in una pillola, data sotto. La pillola si allarga quanto serve al testo (prima era fissa e «REPORT DI VALUTAZIONE» andava a capo fuori dal bordo).
+  const xp = M + W - lp;
   doc.roundedRect(xp, 16, lp, 24, 12).lineWidth(0.9).strokeColor('#ffffff').stroke();
   doc.font('Helvetica').fontSize(9).fillColor('#ffffff').text(String(etichetta).toUpperCase(), xp, 24, { width: lp, align: 'center', lineBreak: false, characterSpacing: 0.8 });
   if (data) doc.font('Helvetica').fontSize(9).fillColor('#f3f4f6').text(data, xp - 40, 48, { width: lp + 40, align: 'right', lineBreak: false });
@@ -121,4 +129,4 @@ function pieDiPagina(doc, { azienda = {}, riserva = '', colore }) {
   }
 }
 
-module.exports = { scurisci, accento, tinta, M, ALTEZZA_FASCIA, GRIGIO, CHIARO, LINEA, TESTO, FONT_TITOLO, coloreValido, caricaLogo, caricaIdentita, intestazione, titoloSezione, pieDiPagina };
+module.exports = { larghezzaPillola, scurisci, accento, tinta, M, ALTEZZA_FASCIA, GRIGIO, CHIARO, LINEA, TESTO, FONT_TITOLO, coloreValido, caricaLogo, caricaIdentita, intestazione, titoloSezione, pieDiPagina };

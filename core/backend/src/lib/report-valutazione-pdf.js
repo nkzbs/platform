@@ -1,21 +1,34 @@
 'use strict';
 // PDF «Report di valutazione» con grafica: intestazione con logo e colore dell'azienda, riquadri
-// con le quotazioni, tabelle (OMI, comparabili) e barre (mercato, tempi, annunci). Parte dal report
-// GIÀ salvato sul record, non chiama nessun servizio. L'identità grafica (fascia, logo, piè di pagina)
+// con le quotazioni, tabelle (OMI, comparabili), barre (mercato, tempi, annunci) e la mappa di OpenStreetMap con i luoghi utili vicini.
+// Parte dal report GIÀ salvato sul record: non chiama OpenAPI.it (nessun credito consumato). Per la mappa chiede solo le tessere a OpenStreetMap (lib/mappa-pdf.js,
+// gratuite, con cache) e legge i luoghi vicini dalla cache di lib/servizi-vicini.js (se non ci sono ancora li fa cercare in secondo plano: il report non aspetta). L'identità grafica (fascia, logo, piè di pagina)
 // è in lib/identita-pdf.js, comune a tutti i PDF. Nessun nome di azienda qui:
 // logo, colore e dati vengono da `azienda` (Impostazioni → Azienda).
 
 const PDFDocument = require('pdfkit');
 
 const { M, GRIGIO, CHIARO, LINEA, TESTO, coloreValido, caricaLogo, intestazione, pieDiPagina } = require('./identita-pdf');
+const mappaPdf = require('./mappa-pdf');
 
 const num = (n) => (n == null || n === '' || isNaN(Number(n)) ? '—' : String(Math.round(Number(n))).replace(/\B(?=(\d{3})+(?!\d))/g, '.'));
 const euro = (n) => (num(n) === '—' ? '—' : num(n) + ' €');
 const pct = (n) => (n == null || n === '' || isNaN(Number(n)) ? '—' : String(Math.round(Number(n) * 10) / 10).replace('.', ',') + '%');
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-zà-ú0-9]/g, '');
 
-// → Promise<Buffer>
-function creaPdfReport({ record, report, azienda = {}, logo = null }) {
+// → Promise<Buffer>. Prima raccoglie mappa e luoghi vicini (senza mai bloccare il report se non ci sono), poi costruisce il PDF.
+async function creaPdfReport(args) {
+  const co = ((args.report || {}).dettaglio || {}).coordinate || {};
+  const haCoordinate = isFinite(Number(co.lat)) && isFinite(Number(co.lng)) && co.lat != null && co.lng != null;
+  let mappa = null, servizi = null, serviziInCorso = false;
+  if (haCoordinate) {
+    try { const sv = require('./servizi-vicini').stato(co.lat, co.lng); if (sv.pronto) servizi = sv.categorie; else serviziInCorso = !!sv.in_corso; } catch (e) { /* senza luoghi vicini il report resta valido */ }
+    try { mappa = await mappaPdf.preparaMappa(co.lat, co.lng, { w: 595.28 - M * 2, h: 250 }); } catch (e) { mappa = null; }
+  }
+  return costruisciPdf({ ...args, mappa, servizi, serviziInCorso, haCoordinate });
+}
+
+function costruisciPdf({ record, report, azienda = {}, logo = null, mappa = null, servizi = null, serviziInCorso = false, haCoordinate = false }) {
   return new Promise((resolve, reject) => {
     const d = (record && record.data) || {};
     const r = report || {};
@@ -191,6 +204,30 @@ function creaPdfReport({ record, report, azienda = {}, logo = null }) {
     if (r.fotovoltaico && r.fotovoltaico.kwh_per_kwp_anno) terr.push(['Resa fotovoltaico (PVGIS)', num(r.fotovoltaico.kwh_per_kwp_anno) + ' kWh/anno per kW installato']);
     if (r.fotovoltaico && r.fotovoltaico.irraggiamento_kwh_mq_anno) terr.push(['Irraggiamento medio', num(r.fotovoltaico.irraggiamento_kwh_mq_anno) + ' kWh/m² all\'anno']);
     if (terr.length) { titoloSezione('Territorio'); terr.forEach(([e, v]) => riga(e, v)); }
+
+    // ── Mappa e luoghi utili vicini ──
+    if (haCoordinate) {
+      spazio(40 + 258 + 90); // titolo, mappa e legenda restano insieme
+      titoloSezione('Dove si trova e cosa c\'è intorno');
+      const yMappa = doc.y;
+      const segnati = mappaPdf.disegnaMappa(doc, mappa, { x: M, y: yMappa, w: W, h: 250, colore, luoghi: servizi });
+      doc.y = yMappa + 258;
+      if (servizi && segnati.length) {
+        spazio(Math.ceil(segnati.length / 2) * 26 + 24); // la legenda non si spezza a metà
+        const colW = (W - 14) / 2, yL = doc.y;
+        segnati.forEach((l, i) => {
+          const cx = M + (i % 2) * (colW + 14), cy = yL + Math.floor(i / 2) * 26;
+          doc.circle(cx + 7, cy + 6, 6.5).fill(mappaPdf.COLORI[l.chiave] || '#475569');
+          doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#ffffff').text(String(l.n), cx + 0.5, cy + 3.4, { width: 13, align: 'center', lineBreak: false });
+          doc.font('Helvetica-Bold').fontSize(8.5).fillColor(TESTO).text(l.label, cx + 18, cy, { width: colW - 18, lineBreak: false });
+          doc.font('Helvetica').fontSize(8.5).fillColor(GRIGIO).text((l.nome ? String(l.nome).slice(0, 30) + ' · ' : '') + l.metri + ' m · ~' + l.minuti + ' min' + (l.quanti > 1 ? ' · ' + l.quanti + ' in zona' : ''), cx + 18, cy + 11, { width: colW - 18, lineBreak: false });
+        });
+        doc.y = yL + Math.ceil(segnati.length / 2) * 26 + 2;
+        doc.font('Helvetica-Oblique').fontSize(7.5).fillColor(GRIGIO).text('Il luogo più vicino per ogni tipo, entro 1 km dall\'immobile (cerchio tratteggiato); «in zona» = quanti ce ne sono nel raggio. I minuti sono a piedi, stimati dalla distanza in linea d\'aria. Luoghi: OpenStreetMap.', M, doc.y, { width: W });
+      } else {
+        doc.font('Helvetica-Oblique').fontSize(8.5).fillColor(GRIGIO).text(serviziInCorso ? 'I luoghi utili vicini (supermercati, farmacie, scuole, sanità, trasporti, verde) si stanno cercando: rigenera il report tra un minuto per vederli sulla mappa.' : 'I luoghi utili vicini non sono disponibili in questo momento.', M, doc.y, { width: W });
+      }
+    }
 
     const pop = demo.pop || {}, stock = demo.stock || {};
     const zona = [

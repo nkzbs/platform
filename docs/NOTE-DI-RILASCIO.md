@@ -2,6 +2,18 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.70 — 8 novembre 2026
+
+**Il report di valutazione: la mappa di OpenStreetMap con i luoghi utili vicini, e l'intestazione sistemata.**
+
+- **Mappa nel PDF** (`lib/mappa-pdf.js`): nuova sezione «Dove si trova e cosa c'è intorno» con la mappa di OpenStreetMap centrata sull'immobile (spillo del colore dell'azienda), il **cerchio di 1 km** tratteggiato e i **luoghi utili segnati con un numero colorato**: il supermercato, la farmacia, la scuola, la struttura sanitaria, la fermata e il parco più vicini. Sotto una **legenda** con nome, distanza in metri, minuti a piedi (stima dalla linea d'aria) e quanti ce ne sono nel raggio. Fonte «© OpenStreetMap contributors» sulla mappa, come richiesto dalla licenza.
+- **Come si procura i dati**: le tessere della mappa si scaricano da OpenStreetMap con un User-Agent che dice cos'è, due alla volta, e restano in cache 14 giorni (`tile_cache`); non partono né l'indirizzo né dati del proprietario, solo le coordinate. I luoghi vengono dalla stessa cache dei «Servizi vicini» della scheda (se si è già aperta la scheda dell'immobile ci sono): se non ci sono ancora, **il report non aspetta** (il servizio può metterci 30-40 secondi), parte la ricerca in secondo plano e il report dice «rigenera il report tra un minuto». Se le tessere non arrivano, il riquadro lo dice e la legenda resta. Nessun credito di OpenAPI.it consumato.
+- **Intestazione**: la pillola «REPORT DI VALUTAZIONE» andava a capo e usciva dal bordo; ora **si allarga al testo** (tra 118 e 230 punti), e il nome dell'azienda non finisce mai sotto di lei. Vale per tutti i PDF che usano l'identità comune.
+- `servizi-vicini`: ogni luogo porta ora le sue coordinate (la cache cambia chiave: le voci vecchie si rifanno una volta).
+- Test: `mappa-pdf.test.js` (9 prove: coordinate e scala, tessere necessarie, cache e un'unica richiesta, luoghi numerati, report con mappa e legenda, senza luoghi in cache, senza tessere, senza coordinate, pillola). Provato con le tessere vere di OpenStreetMap e letto il PDF a occhio.
+- Messa online: **Aggiorna** su zucca. Nessun cambio al pacchetto.
+- **Non fatto**: più luoghi per categoria sulla mappa (oggi uno, il più vicino), il percorso a piedi vero, la mappa nei documenti da modello.
+
 ## 0.4.69 — 8 novembre 2026
 
 **«Da fare» della Dashboard: la casella per segnare una riga come fatta.**
