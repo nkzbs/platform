@@ -212,7 +212,7 @@
         "admin"
       ],
       "titolo": "Da completare (tocca a te)",
-      "testo": "In Impostazioni → Aspetto metti logo, colore, P.IVA e indirizzo: compaiono su tutti i documenti. In Connessioni collega OpenAPI.it per la valutazione con dati reali e, se vuoi, per fattura elettronica, firma a distanza, PEC, verifica del soggetto e controllo catastale: finché non sono attivi, quei pulsanti dicono «da attivare». Resta da fare anche gli auguri ai clienti (serve il tuo testo)."
+      "testo": "In Impostazioni → Aspetto metti logo, colore, P.IVA e indirizzo: compaiono su tutti i documenti. In Connessioni collega OpenAPI.it per la valutazione con dati reali e, se vuoi, per fattura elettronica, firma a distanza, PEC, verifica del soggetto e solvibilità (con il credit score per le società) e controllo catastale: finché non sono attivi, quei pulsanti dicono «da attivare». Resta da fare anche gli auguri ai clienti (serve il tuo testo)."
     },
     {
       "pagina": "guida",

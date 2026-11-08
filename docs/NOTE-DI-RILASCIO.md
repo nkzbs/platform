@@ -2,6 +2,18 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.66 — 8 novembre 2026
+
+**Solvibilità segnata «da attivare»: pacchetto Mediazione immobiliare alla versione 15.**
+
+- **«Verifica del soggetto e solvibilità»** (Clienti): il segnaposto già presente cambia etichetta e descrizione. Per le **persone fisiche** non esiste un credit score vero: valgono negatività, protesti e report persona (CRIF). Serve Risk di OpenAPI.it (con «Verifica dell'identità» e «Contratto informazioni commerciali»), il consenso del cliente e la conferma del costo.
+- **«Credit score società»** (Clienti, nuovo segnaposto «da attivare»): semaforo di affidabilità a 3 classi dalla partita IVA (start, advanced o top, da circa 0,06 a 0,19 € più IVA a richiesta), con la visura camerale facoltativa (Visure Camerali).
+- Nessun servizio è collegato: i due pulsanti dicono cosa serve per accenderli (sandbox gratuito prima). Un passo del giro guidato riservato agli admin li elenca tra le cose da completare.
+- **Nuovo `riscrivi` nelle estensioni** (`seed-blocchi-verticale.js`): `[{ block_type, key, proprieta: { nome: { da, a } } }]` cambia un testo di un blocco già pubblicato solo se vale ancora `da`; un testo scelto dall'utente dal Builder non si tocca. Una sola volta, come le altre estensioni. (`imposta` dà solo ciò che manca, `riscrivi` aggiorna ciò che c'è.)
+- Test: `provvigioni-avvisi.test.js` (19 prove, una nuova: testi aggiornati solo se ancora quelli di prima, testo dell'utente intatto, segnaposto completi, installazioni nuove già col testo nuovo).
+- **Non fatto**: il collegamento vero a Risk (flusso asincrono, consenso registrato prima di ogni richiesta, conferma del costo, tetto di spesa): si fa in sandbox appena il servizio risulta attivo.
+- Messa online: Super Admin (pacchetto v15) e **Aggiorna** su zucca.
+
 ## 0.4.65 — 8 novembre 2026
 
 **Dati di esempio ordinati e coerenti, con «da attivare» dove OpenAPI non c'è, e la guida a portata del «?»: pacchetto Mediazione immobiliare alla versione 14.**

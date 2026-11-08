@@ -173,6 +173,15 @@ async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs
           for (const [k, v] of Object.entries(r.proprieta || {})) if (x[k] === undefined && !(k === 'on_signed_state' && !statiModulo.has(v))) nuove[k] = v;
           if (Object.keys(nuove).length) { stepsRicalcolati[i] = { ...x, ...nuove }; impostati.push(r.key); }
         }
+        // `riscrivi`: [{ block_type, key, proprieta: { nome: { da, a } } }] cambia il TESTO di una proprietà di un blocco già presente solo se vale ancora `da` (il testo di prima del pacchetto):
+        // un testo cambiato dall'utente dal Builder non si tocca. Per aggiornare etichette e descrizioni di un blocco già pubblicato (`imposta` dà solo ciò che manca).
+        for (let i = 0; i < stepsRicalcolati.length; i++) {
+          const x = stepsRicalcolati[i], r = (az.riscrivi || []).find((y) => y.block_type === x.block_type && y.key === x.key);
+          if (!r) continue;
+          const nuove = {};
+          for (const [k, v] of Object.entries(r.proprieta || {})) if (v && x[k] === v.da && v.a !== v.da) nuove[k] = v.a;
+          if (Object.keys(nuove).length) { stepsRicalcolati[i] = { ...x, ...nuove }; impostati.push(r.key); }
+        }
         const inFondo = ricalcolati.filter((r) => r.in_fondo).map((r) => r.key);
         const stepsConvertiti = inFondo.length ? [...stepsRicalcolati.filter((x) => !(x.block_type === 'field' && inFondo.includes(x.key))), ...inFondo.map((k) => stepsRicalcolati.find((x) => x.block_type === 'field' && x.key === k))] : stepsRicalcolati;
         const nuoviDaConvertire = daConvertire.filter((c) => !schema.steps.some((x) => x.key === c.key))

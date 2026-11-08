@@ -237,6 +237,19 @@ async function main() {
     const nuovo = tutte.immobili.find((e) => e.key === 'mappa_osm').aggiungi[0]; assertEq(nuovo.servizi, true, 'le installazioni nuove partono già con i servizi');
   });
 
+  await test('solvibilità: i testi del segnaposto «Verifica del soggetto» si aggiornano solo se sono ancora quelli di prima; un testo scelto dall\'utente resta', async () => {
+    const OLD = { id: 'xs1', block_type: 'external_action', key: 'verifica_soggetto', label: 'Verifica del soggetto', icon: 'search', descrizione: 'Controlla il nuovo cliente dal codice fiscale (negatività, protesti, report persona)', adapter: 'da_attivare', servizio_richiesto: 'Risk', come_attivare: 'x' };
+    mk('clienti_a', [F('nome', 'Nome'), OLD]); mk('clienti_b', [F('nome', 'Nome'), { ...OLD, id: 'xs2', label: 'Il mio nome', descrizione: 'Testo mio' }]);
+    const ext = scegli(tutte.clienti, ['verifica_soggetto_testi']);
+    const esiti = await applicaSeed({ clienti_a: ext, clienti_b: ext }, { tipo: 'estensione' });
+    assertEq(esiti.map((e) => e.slug + ':' + e.esito), ['clienti_a:applicato', 'clienti_b:nulla da fare']);
+    const a = schemaDi('clienti_a').steps.find((x) => x.key === 'verifica_soggetto'), b = schemaDi('clienti_b').steps.find((x) => x.key === 'verifica_soggetto');
+    assertEq(a.label, 'Verifica del soggetto e solvibilità'); assertTrue(/solvibil|CRIF/.test(a.descrizione + a.label) && /Credit score società/.test(a.descrizione), a.descrizione);
+    assertEq([b.label, b.descrizione], ['Il mio nome', 'Testo mio']);
+    const cs = tutte.clienti.find((e) => e.key === 'credit_score_societa').aggiungi[0]; assertTrue(cs.adapter === 'da_attivare' && /Risk/.test(cs.servizio_richiesto) && cs.come_attivare, 'credit score società: segnaposto completo');
+    const nuovo = tutte.clienti.find((e) => e.key === 'verifica_soggetto').aggiungi[0]; assertEq(nuovo.label, 'Verifica del soggetto e solvibilità', 'le installazioni nuove partono già con il testo nuovo');
+  });
+
   console.log(`\n${passed} passati, ${failed} falliti`);
   process.exit(failed ? 1 : 0);
 }

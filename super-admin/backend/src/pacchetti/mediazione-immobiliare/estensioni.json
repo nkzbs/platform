@@ -1454,7 +1454,7 @@
     },
     {
       "key": "verifica_soggetto",
-      "_nota": "Segnaposto «da attivare»: la verifica del soggetto richiede Risk attivo in OpenAPI.it. Quando c'è, si cambia `adapter` con quello vero.",
+      "_nota": "Segnaposto «da attivare»: la verifica del soggetto richiede Risk attivo in OpenAPI.it. Quando c'è, si cambia `adapter` con quello vero. Dalla versione 15 l'etichetta e la descrizione parlano anche di solvibilità (persone: negatività, protesti, CRIF); le installazioni già fatte le aggiornano con `riscrivi` solo se i testi sono ancora quelli di prima.",
       "richiede": {
         "clienti": [
           "nome"
@@ -1464,11 +1464,57 @@
         {
           "block_type": "external_action",
           "key": "verifica_soggetto",
-          "label": "Verifica del soggetto",
+          "label": "Verifica del soggetto e solvibilità",
           "icon": "search",
-          "descrizione": "Controlla il nuovo cliente dal codice fiscale (negatività, protesti, report persona)",
+          "descrizione": "Controlla chi compra o vende dal codice fiscale: negatività, protesti e report persona (CRIF) per le persone fisiche; per le società il credit score è nel pulsante «Credit score società»",
           "adapter": "da_attivare",
           "servizio_richiesto": "il servizio Risk di OpenAPI.it (con «Verifica dell'identità» e «Contratto informazioni commerciali»), il consenso del cliente e la conferma del costo",
+          "come_attivare": "Attivalo nella console di OpenAPI.it e controllalo da Impostazioni → Connessioni → OpenAPI.it («Controlla i servizi»); poi la funzione verrà collegata."
+        }
+      ]
+    },
+    {
+      "key": "verifica_soggetto_testi",
+      "_nota": "Aggiorna etichetta e descrizione del segnaposto «Verifica del soggetto» già presente (solo se sono ancora quelle di prima).",
+      "richiede": {
+        "clienti": [
+          "nome"
+        ]
+      },
+      "riscrivi": [
+        {
+          "block_type": "external_action",
+          "key": "verifica_soggetto",
+          "proprieta": {
+            "label": {
+              "da": "Verifica del soggetto",
+              "a": "Verifica del soggetto e solvibilità"
+            },
+            "descrizione": {
+              "da": "Controlla il nuovo cliente dal codice fiscale (negatività, protesti, report persona)",
+              "a": "Controlla chi compra o vende dal codice fiscale: negatività, protesti e report persona (CRIF) per le persone fisiche; per le società il credit score è nel pulsante «Credit score società»"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "key": "credit_score_societa",
+      "_nota": "Segnaposto «da attivare»: il credit score di una società (semaforo a 3 classi) richiede Risk di OpenAPI.it. Per le persone fisiche non esiste un credit score: vale «Verifica del soggetto e solvibilità» (CRIF, protesti, negatività).",
+      "richiede": {
+        "clienti": [
+          "nome"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "external_action",
+          "key": "credit_score_societa",
+          "label": "Credit score società",
+          "icon": "search",
+          "descrizione": "Dalla partita IVA dà un semaforo di affidabilità a 3 classi della società (start, advanced o top); si può aggiungere la visura camerale",
+          "adapter": "da_attivare",
+          "servizio_richiesto": "il servizio Risk di OpenAPI.it (credit score società, da circa 0,06 a 0,19 € più IVA a richiesta) e, per la visura, Visure Camerali; serve la conferma del costo",
           "come_attivare": "Attivalo nella console di OpenAPI.it e controllalo da Impostazioni → Connessioni → OpenAPI.it («Controlla i servizi»); poi la funzione verrà collegata."
         }
       ]
