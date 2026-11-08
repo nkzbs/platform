@@ -25,15 +25,15 @@ export default function PercorsoWidget({ token, moduleSlug, label, modules, onNa
         <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">{label || (modulo && modulo.name) || 'Percorso'}</div>
         <button type="button" onClick={() => apriModulo(onNavigate, moduleSlug, [])} className="text-xs text-accent hover:underline">Apri {modulo ? modulo.name.toLowerCase() : 'il modulo'} →</button>
       </div>
-      <div className="flex gap-2 sm:gap-3">
+      <div className="grid grid-cols-3 gap-x-2 gap-y-3 sm:flex sm:gap-3">
         {stati.map((s) => {
           const n = conta(s.key)
           return (
             <button key={s.key} type="button" onClick={() => apriModulo(onNavigate, moduleSlug, [{ campo: '_stato', op: '=', valore: s.key }])} title={'Apri: ' + s.label}
-              className={'flex-1 min-w-0 text-left rounded-lg px-1.5 py-1 hover:bg-white/[0.04] transition' + (records !== null && n === 0 ? ' opacity-55' : '')}>
+              className={'sm:flex-1 min-w-0 text-left rounded-lg px-1.5 py-1 hover:bg-white/[0.04] transition' + (records !== null && n === 0 ? ' opacity-55' : '')}>
               <div className="text-2xl font-bold text-ink leading-tight">{records === null ? '…' : n}</div>
               <div className="h-1.5 rounded bg-gray-800 my-1.5 overflow-hidden"><div className="h-full rounded" style={{ width: records === null ? 0 : Math.max(n ? 8 : 0, Math.round((n / tot) * 100)) + '%', backgroundColor: s.color || 'rgb(var(--accent))' }} /></div>
-              <div className="text-[11.5px] text-gray-500 truncate">{s.label}</div>
+              <div className="text-[11.5px] text-gray-500 leading-tight sm:truncate">{s.label}</div>
             </button>
           )
         })}

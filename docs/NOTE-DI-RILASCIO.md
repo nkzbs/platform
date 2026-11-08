@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.78 — 9 novembre 2026
+
+**Il campo «Superficie box/garage (mq)» arriva anche sui tenant esistenti, e il Percorso a fasi si legge bene su telefono.**
+
+- Il campo era stato messo in un'estensione già applicata su zucca, quindi lì non è mai arrivato (il valore 27 era sul record ma senza campo da modificare). Ora ha una estensione propria (`superficie_box`, pacchetto v18).
+- Il **Percorso a fasi** su schermi stretti usa una griglia a tre colonne con le etichette che vanno a capo (prima si tagliavano: «Da…», «In…»).
+- Su zucca ho aggiunto alla Dashboard, dopo «Da fare», il Percorso degli immobili e «Da sistemare» (provvigioni scadute, immobili da valutare, clienti da verificare, dati cliente scaduti, rogiti entro 30 giorni).
+- Messa online: deploy + **Aggiorna** su zucca.
+
 ## 0.4.77 — 9 novembre 2026
 
 **Dashboard: nuovi widget standard e numeri che si cliccano.**

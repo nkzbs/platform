@@ -913,12 +913,6 @@
         },
         {
           "block_type": "field",
-          "key": "superficie_box_mq",
-          "label": "Superficie box/garage (mq)",
-          "type": "number"
-        },
-        {
-          "block_type": "field",
           "key": "pavimenti_altro",
           "label": "Pavimenti — altro",
           "type": "text"
@@ -1323,6 +1317,23 @@
             "risultato_in": "controllo_catastale",
             "connection": "openapi_it"
           }
+        }
+      ]
+    },
+    {
+      "key": "superficie_box",
+      "_nota": "Superficie del box/garage in mq: serve alla stima ragionata del report di valutazione (box a quotazione OMI delle autorimesse).",
+      "richiede": {
+        "immobili": [
+          "titolo"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "superficie_box_mq",
+          "label": "Superficie box/garage (mq)",
+          "type": "number"
         }
       ]
     }
