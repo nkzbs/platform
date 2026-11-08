@@ -13,6 +13,7 @@ Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la 
 - **SMS**: SMS v2 di OpenAPI.it (`POST /IT-messages`, sandbox gratuito). Se il servizio non è abilitato o manca il mittente, **gli SMS si saltano e lo dice, la mail parte lo stesso**; appena il servizio è abilitato, gli SMS partono da soli. Ogni SMS è una spesa nel registro di OpenAPI (listino «da 0,036 €» a segmento da 160 caratteri).
 - Test: `messaggi-clienti.test.js` (8, con mail e SMS finti). Non provato dal vivo: la prima mail e il primo SMS veri.
 - Messa online: deploy + **Aggiorna** su zucca. Gli auguri automatici restano spenti finché non li accendi.
+- **Guida illustrata PDF finale** (43 pagine, versione 0.4.80): testi nuovi su quote dentro il Cliente, messaggi ai clienti, funzioni che si accendono da sole (solvibilità, credit score, catasto), stima ragionata, Dashboard.
 
 ## 0.4.79 — 9 novembre 2026
 
