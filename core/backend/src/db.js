@@ -816,6 +816,8 @@ db.exec(`CREATE TABLE IF NOT EXISTS api_tokens (
 // confermato con un codice reale (vedi routes/auth.js POST /2fa/confirm) — un
 // secret "in sospeso" da /2fa/setup non abilita nulla da solo.
 ensureColumn('users', 'totp_secret', 'TEXT');
+// Il giro guidato del verticale (routes/guida.js): quando questa persona l'ha concluso o saltato. Vuoto = non l'ha ancora visto.
+ensureColumn('users', 'giro_visto_at', 'TEXT');
 ensureColumn('users', 'totp_enabled', 'INTEGER DEFAULT 0');
 // JSON: array di hash bcrypt, mai il codice in chiaro dopo la generazione iniziale
 // (mostrato una sola volta all'attivazione). Ogni codice usato viene rimosso

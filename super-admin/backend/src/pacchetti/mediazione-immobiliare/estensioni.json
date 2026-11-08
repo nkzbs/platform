@@ -694,6 +694,40 @@
           ]
         }
       ]
+    },
+    {
+      "key": "riepilogo_settimanale",
+      "_nota": "Ogni 7 giorni (06:00 UTC): una notifica con le trattative nuove degli ultimi 7 giorni e quante ce ne sono in ogni stato.",
+      "richiede": {
+        "trattative": [
+          "titolo"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "automation",
+          "label": "Riepilogo settimanale delle trattative",
+          "trigger": {
+            "evento": "schedulato",
+            "schedulazione": {
+              "tipo": "ogni_N_giorni",
+              "giorni": 7,
+              "ora": 6
+            }
+          },
+          "azioni": [
+            {
+              "target": "__interno__",
+              "azione": "notifica_riepilogo",
+              "config": {
+                "giorni": 7,
+                "titolo": "Trattative",
+                "roles": []
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "immobili": [
@@ -1093,6 +1127,123 @@
           "paese": "it"
         }
       ]
+    },
+    {
+      "key": "avviso_documenti_mancanti",
+      "_nota": "Ogni 7 giorni (06:00 UTC), per gli immobili in mandato: avvisa cosa manca per metterli in vendita (prezzo, valutazione, scheda firmata, foto). Legge i requisiti dello stato «in vendita».",
+      "richiede": {
+        "immobili": [
+          "titolo"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "automation",
+          "label": "Cosa manca per mettere in vendita",
+          "trigger": {
+            "evento": "schedulato",
+            "schedulazione": {
+              "tipo": "ogni_N_giorni",
+              "giorni": 7,
+              "ora": 6
+            },
+            "modalita": "per_record",
+            "filtro": [
+              {
+                "campo": "_stato",
+                "op": "==",
+                "valore": "in_mandato"
+              }
+            ]
+          },
+          "azioni": [
+            {
+              "target": "__interno__",
+              "azione": "notifica_requisiti_mancanti",
+              "config": {
+                "stato": "in_vendita",
+                "messaggio": "«{{titolo}}»: per metterlo in vendita mancano {{mancano}}.",
+                "roles": []
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "avviso_richieste_compatibili",
+      "_nota": "Quando un immobile passa «in mandato» (da quel momento si può proporre) avvisa se ci sono richieste di acquirenti compatibili: stesse regole dell'elenco «Richieste compatibili» (budget come vincolo, tipologia e zona).",
+      "richiede": {
+        "immobili": [
+          "titolo",
+          "tipologia",
+          "prezzo_richiesto",
+          "comune"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "automation",
+          "label": "Richieste compatibili per l'immobile in mandato",
+          "trigger": {
+            "evento": "cambio_stato",
+            "stato": "in_mandato"
+          },
+          "azioni": [
+            {
+              "target": "__interno__",
+              "azione": "notifica_abbinamenti",
+              "config": {
+                "abbinamento": "richieste_compatibili",
+                "messaggio": "«{{titolo}}» è in mandato: {{n}} richieste compatibili ({{nomi}}).",
+                "roles": []
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "controllo_catastale",
+      "_nota": "Segnaposto «da attivare»: il controllo automatico dei dati catastali richiede il servizio Catasto di OpenAPI.it.",
+      "richiede": {
+        "immobili": [
+          "titolo"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "external_action",
+          "key": "controllo_catastale",
+          "label": "Controllo dati catastali",
+          "icon": "search",
+          "descrizione": "Verifica foglio, particella e subalterno e confronta rendita e categoria con il Catasto",
+          "adapter": "da_attivare",
+          "servizio_richiesto": "il servizio Catasto di OpenAPI.it (con la conferma del costo per ogni visura)",
+          "come_attivare": "Attivalo nella console di OpenAPI.it e controllalo da Impostazioni → Connessioni → OpenAPI.it («Controlla i servizi»); poi la funzione verrà collegata."
+        }
+      ]
+    },
+    {
+      "key": "stato_alla_firma_scheda",
+      "_nota": "DA TERMINARE (serve un nuovo evento): oggi la firma della scheda è un allegato («scheda_immobile_firmata») e il motore delle automazioni non sa reagire a un allegato caricato. Finché non c'è, il passaggio di stato resta manuale e la scheda ricorda cosa manca.",
+      "richiede": {
+        "immobili": [
+          "titolo"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "external_action",
+          "key": "stato_alla_firma_scheda",
+          "label": "Passaggio di stato alla firma",
+          "icon": "check",
+          "descrizione": "Quando la scheda firmata è caricata, porta l'immobile allo stato successivo",
+          "adapter": "da_attivare",
+          "servizio_richiesto": "un nuovo evento del motore («allegato caricato») che oggi non esiste: è lavoro da fare in Platform, non qualcosa da attivare da te",
+          "come_attivare": "Dimmi se vuoi che lo costruisca: serve un evento «allegato caricato» e la scelta dello stato di arrivo."
+        }
+      ]
     }
   ],
   "clienti": [
@@ -1372,6 +1523,69 @@
           ]
         }
       ]
+    },
+    {
+      "key": "avviso_documenti_mancanti",
+      "_nota": "Ogni 7 giorni (06:00 UTC), per i clienti con i documenti già inviati: avvisa cosa manca per la verifica (documento d'identità, privacy firmata). Legge i requisiti dello stato «cliente verificato».",
+      "richiede": {
+        "clienti": [
+          "nome"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "automation",
+          "label": "Documenti mancanti per la verifica del cliente",
+          "trigger": {
+            "evento": "schedulato",
+            "schedulazione": {
+              "tipo": "ogni_N_giorni",
+              "giorni": 7,
+              "ora": 6
+            },
+            "modalita": "per_record",
+            "filtro": [
+              {
+                "campo": "_stato",
+                "op": "==",
+                "valore": "documenti_inviati"
+              }
+            ]
+          },
+          "azioni": [
+            {
+              "target": "__interno__",
+              "azione": "notifica_requisiti_mancanti",
+              "config": {
+                "stato": "cliente_verificato",
+                "messaggio": "{{nome}}: per la verifica mancano {{mancano}}.",
+                "roles": []
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "auguri_cliente",
+      "_nota": "DA TERMINARE (serve il tuo intervento): gli auguri al cliente vanno spediti solo a chi ha dato il consenso alle comunicazioni commerciali, con un testo scelto da te. Oggi il compleanno arriva come avviso all'agente (report «Ricorrenze»).",
+      "richiede": {
+        "clienti": [
+          "nome"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "external_action",
+          "key": "auguri_cliente",
+          "label": "Auguri al cliente",
+          "icon": "gift",
+          "descrizione": "Manda gli auguri di compleanno ai clienti che hanno dato il consenso alle comunicazioni commerciali",
+          "adapter": "da_attivare",
+          "servizio_richiesto": "il tuo intervento: scegli il testo degli auguri e conferma che il consenso alle comunicazioni commerciali sia raccolto e registrato per ogni cliente",
+          "come_attivare": "Scrivi il testo e dimmi quando metterlo in funzione: va collegato all'invio delle email del tenant e limitato ai clienti con «Comunicazioni commerciali» spuntato."
+        }
+      ]
     }
   ],
   "quote_societarie": [
@@ -1620,6 +1834,54 @@
               "label": "Esito",
               "tipo": "campo",
               "campo": "esito"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "avviso_in_agenda",
+      "_nota": "Ogni giorno alle 06:00 UTC: un avviso per ogni attività con la data di oggi non ancora fatta («In agenda oggi»).",
+      "richiede": {
+        "attivita": [
+          "titolo",
+          "scadenza",
+          "tipo",
+          "ora"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "automation",
+          "label": "Attività in agenda oggi",
+          "trigger": {
+            "evento": "schedulato",
+            "schedulazione": {
+              "tipo": "giornaliero",
+              "ora": 6
+            },
+            "modalita": "per_record",
+            "filtro": [
+              {
+                "campo": "scadenza",
+                "op": "==",
+                "valore": "_oggi_"
+              },
+              {
+                "campo": "_stato",
+                "op": "!=",
+                "valore": "fatto"
+              }
+            ]
+          },
+          "azioni": [
+            {
+              "target": "__interno__",
+              "azione": "notifica_interna",
+              "config": {
+                "message": "In agenda oggi: {{tipo}} — {{titolo}} {{ora}}",
+                "roles": []
+              }
             }
           ]
         }

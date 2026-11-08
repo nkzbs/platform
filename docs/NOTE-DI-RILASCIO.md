@@ -2,6 +2,18 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.62 — 8 novembre 2026
+
+**Più avvisi automatici, un giro guidato per ogni verticale e i segnaposto «da terminare»: pacchetto Mediazione immobiliare alla versione 11.**
+
+- **Giro guidato del verticale** (`guida.json` → `giro`, `routes/guida.js`, `lib/giro.js`): il pacchetto dichiara i passi (`pagina`, `titolo`, `testo`, `target` e `ruoli` facoltativi). **Parte da solo la prima volta** che una persona entra (e mai davanti ai «Primi passi» di un tenant vuoto), e si rifà quando si vuole dal pulsante **«Fai il giro guidato»** nella Guida. Segnato per persona (`users.giro_visto_at`, `POST /api/guida/giro/visto`) quando lo conclude o lo salta. Un passo su una pagina che chi guarda non ha (modulo non installato, ruolo diverso) si salta; senza passi del verticale resta il giro generico di Platform. Il motore (`ProductTour`) è quello di prima. **Chi c'era già lo vedrà una volta sola, alla prossima apertura**, e può saltarlo.
+- **Tre nuove azioni di avviso** del motore automazioni, generiche (`lib/avvisi-automatici.js`, elencate in `INTERNAL_ACTIONS`): `notifica_requisiti_mancanti` (cosa manca per passare a uno stato, allegati compresi), `notifica_abbinamenti` (quanti record compatibili secondo un `match_view`) e `notifica_riepilogo` (nuovi e per stato in un modulo). Non scrivono nulla se non c'è niente da dire. **Il Builder non ha ancora una scheda di configurazione per queste tre**: si dichiarano nel pacchetto (o come dati) e funzionano.
+- **Nel pacchetto**: avviso «in agenda oggi» per le Attività (ogni giorno, 06:00 UTC); «cosa manca per la verifica» sui Clienti e «cosa manca per mettere in vendita» sugli Immobili (ogni 7 giorni); avviso di **richieste compatibili** quando un immobile va in mandato; **riepilogo settimanale** delle Trattative.
+- **Segnaposto «da attivare»** (stessi pulsanti dei servizi OpenAPI, con scritto cosa serve): **Controllo dati catastali** (serve il servizio Catasto di OpenAPI.it); **Auguri al cliente** (serve il tuo testo e il consenso alle comunicazioni commerciali); **Passaggio di stato alla firma** (serve un nuovo evento «allegato caricato» del motore: è lavoro da fare in Platform, non da attivare). Un passo del giro, riservato agli admin, elenca cosa resta da completare.
+- Test: `provvigioni-avvisi.test.js` (16 prove), `guida.test.js` (giro: unione, ruoli, partenza da solo, «visto», giro reale del pacchetto), `giro.test.js` lato frontend. Provato dal vivo in locale: il giro parte da solo, il passo si legge, dopo «Salta» e ricaricamento non riparte, il pulsante nella Guida lo rifà.
+- **Non fatto**: auguri ai clienti veri e propri, controllo catastale, passaggio di stato alla firma (vedi sopra); scheda di configurazione delle nuove azioni nel Builder.
+- Messa online: Super Admin (pacchetto v11) e **Aggiorna** su zucca. Le estensioni si applicano al primo avvio.
+
 ## 0.4.61 — 8 novembre 2026
 
 **Provvigioni più complete e avvisi automatici per Trattative e Clienti: il pacchetto Mediazione immobiliare passa alla versione 10.**

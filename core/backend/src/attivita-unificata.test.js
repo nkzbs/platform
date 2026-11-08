@@ -12,7 +12,7 @@ const ok = (c, m) => { if (!c) throw new Error(m || 'atteso true'); };
 
 const db = require('./db'); const seed = require('./seed-blocchi-verticale'); const { parseSchemaNormalized } = require('./schema-v3'); const { applicaEredita } = require('./lib/eredita-relazione');
 const PK = '../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/';
-const EST = require(PK + 'estensioni.json').attivita, MIG = require(PK + 'migrazioni.json'), MODULI = require(PK + 'moduli.json');
+const EST = require(PK + 'estensioni.json').attivita.filter((e) => e.key === 'attivita_unificata'), MIG = require(PK + 'migrazioni.json'), MODULI = require(PK + 'moduli.json');
 const F = (key, type = 'text', label) => ({ id: 'f_' + key, block_type: 'field', key, label: label || key, type });
 const R = (key, target) => ({ id: 'r_' + key, block_type: 'relation', key, label: key, type: 'many_to_one', target_module: target, display_field: 'nome' });
 const add = (slug, steps) => db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES (?, ?, 'box', '#000', 1, 1, 80, ?)").run(slug, slug, JSON.stringify({ version: 3, steps }));

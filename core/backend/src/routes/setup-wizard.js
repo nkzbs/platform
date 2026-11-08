@@ -31,3 +31,5 @@ router.post('/chiudi', requireAuth, requireAdmin, (req, res) => { chiudi(); res.
 
 module.exports = router;
 module.exports.chiudi = chiudi;
+// Vero se i Primi passi sono (o stanno per essere) davanti a un admin: il giro guidato non parte da solo sopra di essi.
+module.exports.daMostrare = () => !chiuso() && db.prepare('SELECT COUNT(*) c FROM records').get().c === 0;

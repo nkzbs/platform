@@ -172,5 +172,50 @@
       "termine": "Attività",
       "significato": "Una cosa da fare con data e ora: una visita, una telefonata, un incontro, un promemoria. Si collega a un cliente, un immobile o una trattativa."
     }
+  ],
+  "giro": [
+    {
+      "pagina": "dashboard",
+      "titolo": "Da qui si comincia",
+      "testo": "Questa è la Dashboard: ogni mattina apri questa pagina. «Da fare» ti dice cosa è in ritardo, cosa scade oggi e cosa nei prossimi giorni: visite, telefonate, scadenze delle provvigioni."
+    },
+    {
+      "pagina": "clienti",
+      "titolo": "I clienti",
+      "testo": "Chi vende, chi compra, chi cerca casa. Crea il cliente con codice fiscale e un recapito; se cerca casa scrivi budget, zona e tipologia: dalla sua scheda vedi subito gli immobili adatti. Da qui spedisci anche i documenti da firmare (privacy e incarico, antiriciclaggio)."
+    },
+    {
+      "pagina": "immobili",
+      "titolo": "Gli immobili",
+      "testo": "Ogni immobile in mandato ha la sua scheda completa, la mappa, le foto e la valutazione di mercato con il report in PDF. Per metterlo in vendita la scheda ti dice cosa manca; quando entra in mandato ti avvisa se c'è già una richiesta compatibile."
+    },
+    {
+      "pagina": "trattative",
+      "titolo": "Le trattative",
+      "testo": "Dalla proposta al rogito. In alto vedi dove si trova la pratica e cosa manca per fare il passo successivo; alla firma del preliminare nascono da sole le provvigioni, una per parte. Ogni settimana ricevi un riepilogo e un avviso se una trattativa è ferma."
+    },
+    {
+      "pagina": "provvigioni",
+      "titolo": "Le provvigioni",
+      "testo": "Percentuale, scaglioni, minimo garantito, trattenuta all'agente e IVA: l'importo si calcola da solo. Se cambia il prezzo concordato, le provvigioni ancora da fatturare si allineano entro un giorno."
+    },
+    {
+      "pagina": "attivita",
+      "titolo": "Le attività",
+      "testo": "Visite, telefonate, incontri e promemoria stanno qui, collegati a cliente, immobile e trattativa. Il calendario le mostra tutte insieme; ogni mattina ricevi l'avviso di quelle di oggi. Dopo una visita, segnala come fatta e scrivi l'esito."
+    },
+    {
+      "pagina": "impostazioni",
+      "ruoli": [
+        "admin"
+      ],
+      "titolo": "Da completare (tocca a te)",
+      "testo": "In Impostazioni → Aspetto metti logo, colore, P.IVA e indirizzo: compaiono su tutti i documenti. In Connessioni collega OpenAPI.it per la valutazione con dati reali e, se vuoi, per fattura elettronica, firma a distanza, PEC, verifica del soggetto e controllo catastale: finché non sono attivi, quei pulsanti dicono «da attivare». Restano da fare anche gli auguri ai clienti (serve il tuo testo) e il passaggio di stato alla firma della scheda."
+    },
+    {
+      "pagina": "guida",
+      "titolo": "Se ti serve aiuto",
+      "testo": "La Guida spiega ogni modulo e i flussi di lavoro, con le cose da fare per ruolo. Da qui puoi rifare questo giro quando vuoi, con il pulsante «Fai il giro guidato»."
+    }
   ]
 }

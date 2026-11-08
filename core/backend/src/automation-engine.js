@@ -487,6 +487,21 @@ function runAzioni(azioni, recordData, moduleSlug, automationLabel, recordId, lo
       return;
     }
 
+    // Avvisi generici (lib/avvisi-automatici.js): requisiti mancanti per uno stato, abbinamenti trovati, riepilogo del modulo.
+    // Come notifica_interna, ma il testo lo calcola l'azione; se non c'è niente da dire non scrive nessuna notifica.
+    if (az.target === '__interno__' && require('./lib/avvisi-automatici').AZIONI.includes(az.azione)) {
+      const cfgObj = (az.config && typeof az.config === 'object') ? az.config : {};
+      try {
+        const testo = require('./lib/avvisi-automatici').testoAvviso(az.azione, cfgObj, moduleSlug, recordId, recordData);
+        if (!testo) return;
+        if (dryRun) { dryLog.push({ desc: az.azione + ': ' + testo.slice(0, 60) }); return; }
+        const notifRoles = Array.isArray(cfgObj.roles) ? cfgObj.roles : [];
+        db.prepare('INSERT INTO notifications (message, module_slug, record_id, roles, category) VALUES (?, ?, ?, ?, ?)').run(testo, moduleSlug, recordId || null, JSON.stringify(notifRoles), cfgObj.category || null);
+        db.prepare('INSERT INTO automation_logs (module_slug, automation_label, trigger_desc, action_desc, esito, record_id) VALUES (?, ?, ?, ?, ?, ?)').run(moduleSlug, automationLabel, logged.triggerDesc, az.azione + ': ' + testo.slice(0, 60), 'eseguito', recordId || null);
+      } catch (e) { console.error('automation-engine: ' + az.azione + ' fallita:', e.message); }
+      return;
+    }
+
     // invia_notifica: invia un messaggio WhatsApp via CallMeBot a tutti i destinatari
     // (modulo 'whatsapp_destinatari') sottoscritti a cfg.trigger_tag. Azione generica
     // disponibile in QUALSIASI modulo — non hardcoded su spese/rate come in hearth.

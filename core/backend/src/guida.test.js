@@ -40,6 +40,31 @@ async function main() {
     ok(G.per_ruolo.default && G.per_ruolo.admin, 'passi per ruolo'); ok(G.flussi.length && G.flussi.every((f) => f.titolo && f.passi.length), 'flussi'); ok(G.glossario.every((x) => x.termine && x.significato), 'glossario');
   });
 
+  console.log('\n--- giro guidato ---');
+  const H = { Authorization: 'Bearer ' + login.token };
+  const giro = () => fetch(BASE + '/api/guida/giro', { headers: H }).then((r) => r.json());
+  await test('senza passi nei pacchetti il giro è vuoto e non parte', async () => { const g = await giro(); eq(g.passi, []); eq(g.mostra, false); });
+  await test('i passi dei pacchetti attivi si uniscono; incompleti e di altri ruoli restano fuori', async () => {
+    seeds.riceviPacchetto('ggg', 1, { guida: { giro: [
+      { pagina: 'dashboard', titolo: 'Da qui', testo: 'Prima pagina' }, { pagina: 'clienti', titolo: 'Senza testo' }, { pagina: 'impostazioni', titolo: 'Solo admin', testo: 'x', ruoli: ['admin'] },
+      { pagina: 'guida', titolo: 'Per altri', testo: 'x', ruoli: ['contabile'] }] } });
+    seeds.attivaPacchetto('ggg');
+    const g = await giro(); eq(g.passi.map((p) => p.pagina), ['dashboard', 'impostazioni']);
+  });
+  await test('non parte da solo davanti ai Primi passi (admin, tenant vuoto)', async () => { eq((await giro()).mostra, false); });
+  await test('tenant in uso: parte da solo la prima volta, dopo «visto» non più', async () => {
+    require('./db').prepare("INSERT INTO records (module_slug, data) VALUES ('x', '{}')").run();
+    eq((await giro()).mostra, true);
+    eq((await fetch(BASE + '/api/guida/giro/visto', { method: 'POST', headers: H })).status, 200);
+    const g = await giro(); eq(g.mostra, false); eq(g.passi.length, 2);
+  });
+  await test('il giro del pacchetto reale: passi completi, pagine note, ruoli ammessi', () => {
+    const G = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/guida.json');
+    const note = new Set(['dashboard', 'impostazioni', 'guida', ...Object.keys(G.capitoli)]);
+    ok(G.giro.length >= 5, 'giro troppo corto');
+    for (const p of G.giro) { ok(p.titolo && p.testo, 'passo incompleto: ' + p.pagina); ok(note.has(p.pagina), 'pagina sconosciuta: ' + p.pagina); ok(!p.ruoli || p.ruoli.every((r) => typeof r === 'string'), 'ruoli'); }
+  });
+
   console.log(`\n${'='.repeat(60)}\n${passed} passati, ${failed} falliti su ${passed + failed} test.`);
   try { fs.unlinkSync(process.env.DB_PATH); } catch (e) {}
   process.exit(failed > 0 ? 1 : 0);

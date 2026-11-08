@@ -34,20 +34,34 @@ async function main() {
   const db = require('./db');
   const { applicaSeed } = require('./seed-blocchi-verticale');
   const { eseguiAutomazioneSchedulata } = require('./scheduler');
+  const { fireTrigger } = require('./automation-engine');
   const { getAutomationSteps } = require('./schema-v3');
   const tutte = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/estensioni.json');
   const scegli = (lista, chiavi) => chiavi.map((k) => lista.find((e) => e.key === k));
   const seed = {
     provvigioni: scegli(tutte.provvigioni, ['due_parti', 'scaglioni', 'scaglioni_nel_totale', 'minimo_garantito_campo', 'minimo_garantito_nel_totale', 'trattenute_agente', 'allinea_al_prezzo']),
-    trattative: scegli(tutte.trattative, ['solleciti_per_stato']),
-    clienti: scegli(tutte.clienti, ['conservazione_scaduta']),
+    trattative: scegli(tutte.trattative, ['solleciti_per_stato', 'riepilogo_settimanale']),
+    clienti: scegli(tutte.clienti, ['conservazione_scaduta', 'avviso_documenti_mancanti', 'auguri_cliente']),
+    immobili: scegli(tutte.immobili, ['avviso_documenti_mancanti', 'avviso_richieste_compatibili', 'controllo_catastale', 'stato_alla_firma_scheda']),
+    attivita: scegli(tutte.attivita, ['avviso_in_agenda']),
   };
 
   const mk = (slug, steps) => db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES (?, ?, 'box', '#000', 1, 1, 70, ?)").run(slug, slug, JSON.stringify({ version: 3, steps }));
   const rec = (slug, data) => db.prepare('INSERT INTO records (module_slug, data) VALUES (?, ?)').run(slug, JSON.stringify(data)).lastInsertRowid;
   const schemaDi = (slug) => JSON.parse(db.prepare('SELECT schema_json FROM modules WHERE slug = ?').get(slug).schema_json);
 
-  mk('clienti', [F('nome', 'Nome'), F('conservazione_fino_al', 'Conservazione fino al', 'date')]);
+  const stato = (key, iniziale) => ({ id: 'ws_' + key, block_type: 'workflow_state', key, label: key, ...(iniziale ? { initial: true } : {}) });
+  mk('clienti', [F('nome', 'Nome'), F('conservazione_fino_al', 'Conservazione fino al', 'date'), F('privacy_firmata_il', 'Privacy firmata il', 'date'),
+    F('tipo_cliente', 'Tipo', 'select', { options: ['Venditore', 'Acquirente'] }), F('ricerca_tipologia', 'Cerca tipologia'), F('ricerca_budget_max', 'Budget massimo', 'currency'), F('ricerca_zona', 'Zona'),
+    stato('documenti_inviati', true), stato('cliente_verificato'),
+    { id: 'wt_c', block_type: 'workflow_transition', from: 'documenti_inviati', to: 'cliente_verificato', label: 'Verifica' },
+    { id: 'req_c', block_type: 'state_requirements', stato: 'cliente_verificato', bloccante: false, requisiti: [{ label: 'Documento d\'identità', tipo: 'allegato', valore: 'Documento di identità' }, { label: 'Privacy firmata', tipo: 'campo', campo: 'privacy_firmata_il' }] }]);
+  mk('immobili', [F('titolo', 'Titolo'), F('tipologia', 'Tipologia'), F('prezzo_richiesto', 'Prezzo', 'currency'), F('comune', 'Comune'),
+    stato('in_mandato', true), stato('in_vendita'), { id: 'wt_i', block_type: 'workflow_transition', from: 'in_mandato', to: 'in_vendita', label: 'Metti in vendita' },
+    { id: 'req_i', block_type: 'state_requirements', stato: 'in_vendita', bloccante: false, requisiti: [{ label: 'Foto', tipo: 'allegato', valore: 'Foto' }, { label: 'Prezzo richiesto', tipo: 'campo', campo: 'prezzo_richiesto' }] },
+    { id: 'mv_i', block_type: 'match_view', key: 'richieste_compatibili', label: 'Richieste compatibili', target_module: 'clienti', display_field: 'nome', target_filter: { field: 'tipo_cliente', equals: 'Acquirente' },
+      rules: [{ mine: 'tipologia', theirs: 'ricerca_tipologia', op: 'testo', label: 'Tipologia' }, { mine: 'prezzo_richiesto', theirs: 'ricerca_budget_max', op: 'theirs>=mine', label: 'Nel budget', required: true }] }]);
+  mk('attivita', [F('titolo', 'Titolo'), F('scadenza', 'Quando', 'date'), F('tipo', 'Tipo'), F('ora', 'Ora'), stato('da_fare', true), stato('fatto'), { id: 'wt_a', block_type: 'workflow_transition', from: 'da_fare', to: 'fatto', label: 'Fatto' }]);
   mk('provvigioni', [
     F('descrizione', 'Descrizione'), { id: 'r1', block_type: 'relation', key: 'trattativa', label: 'Trattativa', type: 'many_to_one', target_module: 'trattative', display_field: 'titolo' },
     { id: 'r2', block_type: 'relation', key: 'cliente', label: 'Cliente', type: 'many_to_one', target_module: 'clienti', display_field: 'nome' },
@@ -65,11 +79,12 @@ async function main() {
   console.log('\n--- applicazione del seed ---');
   await test('le estensioni si applicano nell\'ordine giusto e passano dalla validazione', async () => {
     const esiti = await applicaSeed(seed, { tipo: 'estensione' });
-    const mie = esiti.filter((e) => ['provvigioni', 'trattative', 'clienti'].includes(e.slug) && e.key !== 'allegati');
+    const mie = esiti.filter((e) => ['provvigioni', 'trattative', 'clienti', 'immobili', 'attivita'].includes(e.slug) && e.key !== 'allegati');
     assertEq(mie.map((e) => e.slug + ':' + e.key + ':' + e.esito), [
       'provvigioni:due_parti:applicato', 'provvigioni:scaglioni:applicato', 'provvigioni:scaglioni_nel_totale:applicato', 'provvigioni:minimo_garantito_campo:applicato',
       'provvigioni:minimo_garantito_nel_totale:applicato', 'provvigioni:trattenute_agente:applicato', 'provvigioni:allinea_al_prezzo:applicato',
-      'trattative:solleciti_per_stato:applicato', 'clienti:conservazione_scaduta:applicato']);
+      'trattative:solleciti_per_stato:applicato', 'trattative:riepilogo_settimanale:applicato', 'clienti:conservazione_scaduta:applicato', 'clienti:avviso_documenti_mancanti:applicato', 'clienti:auguri_cliente:applicato',
+      'immobili:avviso_documenti_mancanti:applicato', 'immobili:avviso_richieste_compatibili:applicato', 'immobili:controllo_catastale:applicato', 'immobili:stato_alla_firma_scheda:applicato', 'attivita:avviso_in_agenda:applicato']);
   });
   await test('secondo avvio: niente da fare', async () => { assertEq(await applicaSeed(seed, { tipo: 'estensione' }), []); });
 
@@ -143,6 +158,65 @@ async function main() {
     const n = notifiche().filter((m) => m.includes('conservazione'));
     assertEq(n.length, 1);
     assertTrue(n[0].includes('Scaduto Rossi'));
+  });
+
+  console.log('\n--- avvisi: requisiti mancanti, abbinamenti, riepilogo, agenda, segnaposto ---');
+  const nuoveDa = (prima) => notifiche().slice(prima);
+  await test('clienti con documenti inviati: avvisa cosa manca (allegato e campo); con tutto a posto no', async () => {
+    const mancante = rec('clienti', { nome: 'Incompleto Neri', _stato: 'documenti_inviati', privacy_firmata_il: '2026-01-01' });
+    const ok = rec('clienti', { nome: 'Completo Gialli', _stato: 'documenti_inviati', privacy_firmata_il: '2026-01-01' });
+    const up = db.prepare("INSERT INTO uploads (original_name, stored_name, mime_type, size) VALUES ('id.pdf', 'x', 'application/pdf', 1)").run().lastInsertRowid;
+    db.prepare("INSERT INTO record_attachments (module_slug, record_id, upload_id, tipo) VALUES ('clienti', ?, ?, 'Documento di identità')").run(ok, up);
+    const prima = notifiche().length;
+    const { mod, auto } = automazione('clienti', 'Documenti mancanti per la verifica del cliente'); eseguiAutomazioneSchedulata(mod, auto);
+    const n = nuoveDa(prima);
+    assertEq(n.length, 1);
+    assertTrue(n[0].includes('Incompleto Neri') && n[0].includes('Documento d\'identità') && !n[0].includes('Privacy'), n[0]);
+    assertTrue(mancante > 0);
+  });
+  await test('immobile in mandato: avvisa cosa manca per la vendita', async () => {
+    rec('immobili', { titolo: 'Villa Rosa', _stato: 'in_mandato', prezzo_richiesto: 300000 });
+    const prima = notifiche().length;
+    const { mod, auto } = automazione('immobili', 'Cosa manca per mettere in vendita'); eseguiAutomazioneSchedulata(mod, auto);
+    const n = nuoveDa(prima);
+    assertEq(n.length, 1);
+    assertTrue(n[0].includes('Villa Rosa') && n[0].includes('Foto') && !n[0].includes('Prezzo'), n[0]);
+  });
+  await test('immobile in mandato: avvisa delle richieste compatibili (budget vincolante), niente se non ce ne sono', async () => {
+    rec('clienti', { nome: 'Acquirente Verdi', tipo_cliente: 'Acquirente', ricerca_tipologia: 'Villa', ricerca_budget_max: 350000, _stato: 'cliente_verificato' });
+    rec('clienti', { nome: 'Acquirente Poveri', tipo_cliente: 'Acquirente', ricerca_tipologia: 'Villa', ricerca_budget_max: 100000, _stato: 'cliente_verificato' });
+    const compatibile = rec('immobili', { titolo: 'Villa Bella', tipologia: 'Villa', prezzo_richiesto: 300000, _stato: 'in_mandato' });
+    const lontano = rec('immobili', { titolo: 'Castello', tipologia: 'Castello', prezzo_richiesto: 9000000, _stato: 'in_mandato' });
+    const prima = notifiche().length;
+    fireTrigger('immobili', 'cambio_stato', { titolo: 'Villa Bella', tipologia: 'Villa', prezzo_richiesto: 300000, _stato: 'in_mandato' }, compatibile, { stato: 'in_mandato' });
+    fireTrigger('immobili', 'cambio_stato', { titolo: 'Castello', tipologia: 'Castello', prezzo_richiesto: 9000000, _stato: 'in_mandato' }, lontano, { stato: 'in_mandato' });
+    const n = nuoveDa(prima);
+    assertEq(n.length, 1);
+    assertTrue(n[0].includes('Villa Bella') && n[0].includes('1 richieste') && n[0].includes('Acquirente Verdi') && !n[0].includes('Poveri'), n[0]);
+  });
+  await test('riepilogo: nuove e per stato, solo gli stati che hanno schede', async () => {
+    const prima = notifiche().length;
+    const { mod, auto } = automazione('trattative', 'Riepilogo settimanale delle trattative'); eseguiAutomazioneSchedulata(mod, auto);
+    const n = nuoveDa(prima);
+    assertEq(n.length, 1);
+    assertTrue(/^Trattative, ultimi 7 giorni: \d+ nuove\./.test(n[0]) && n[0].includes('In corso') && n[0].includes('Preliminare firmato'), n[0]);
+  });
+  await test('agenda: solo le attività di oggi non ancora fatte', async () => {
+    const oggi = new Date().toISOString().slice(0, 10);
+    rec('attivita', { titolo: 'Visita via Dante', tipo: 'Visita', ora: '15:30', scadenza: oggi, _stato: 'da_fare' });
+    rec('attivita', { titolo: 'Già fatta', tipo: 'Telefonata', scadenza: oggi, _stato: 'fatto' });
+    rec('attivita', { titolo: 'Domani', tipo: 'Visita', scadenza: '2099-01-01', _stato: 'da_fare' });
+    const prima = notifiche().length;
+    const { mod, auto } = automazione('attivita', 'Attività in agenda oggi'); eseguiAutomazioneSchedulata(mod, auto);
+    const n = nuoveDa(prima);
+    assertEq(n.length, 1);
+    assertTrue(n[0].includes('Visita via Dante') && n[0].includes('15:30'), n[0]);
+  });
+  await test('segnaposto «da attivare»: catasto, auguri e passaggio di stato dicono cosa serve', async () => {
+    const trova = (slug, key) => schemaDi(slug).steps.find((x) => x.block_type === 'external_action' && x.key === key);
+    for (const [slug, key] of [['immobili', 'controllo_catastale'], ['clienti', 'auguri_cliente'], ['immobili', 'stato_alla_firma_scheda']]) {
+      const b = trova(slug, key); assertTrue(b && b.adapter === 'da_attivare' && b.servizio_richiesto && b.come_attivare, 'segnaposto incompleto: ' + key);
+    }
   });
 
   console.log(`\n${passed} passati, ${failed} falliti`);

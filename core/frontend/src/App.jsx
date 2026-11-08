@@ -12,6 +12,7 @@ import DashboardPage from './pages/DashboardPage'
 import SetupWizard from './components/SetupWizard'
 import ProductTour from './components/ProductTour'
 import { ONBOARDING_STEPS } from './components/onboardingSteps'
+import { costruisciGiro, PAGINE_FISSE } from './lib/giro'
 
 // Pagine caricate a richiesta (2026-11-06, velocità): prima tutto stava in un unico bundle da
 // 1,09 MB (271 KB compressi) scaricato e analizzato ad ogni apertura, anche da telefono. La
@@ -86,8 +87,12 @@ export default function App() {
   // dall'hamburger nella barra in alto (nascosto sopra md, dove la sidebar è
   // sempre visibile come prima).
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const [showTour, setShowTour] = useState(false) // il giro guidato: parte a richiesta, mai da solo
-  const finishTour = () => { setShowTour(false); setMobileNavOpen(false); setCurrentPage('dashboard') }
+  const [showTour, setShowTour] = useState(false) // il giro guidato: parte a richiesta (Guida, Primi passi) e, se il verticale ne ha uno, da solo la prima volta
+  const [giro, setGiro] = useState({ passi: [], mostra: false }) // il giro del verticale dichiarato dal pacchetto (/api/guida/giro)
+  const finishTour = () => {
+    setShowTour(false); setMobileNavOpen(false); setCurrentPage('dashboard')
+    if (giro.passi.length) { fetch(API + '/guida/giro/visto', { method: 'POST', headers: { Authorization: 'Bearer ' + token } }).catch(() => {}); setGiro((g) => ({ ...g, mostra: false })) }
+  }
 
   const loadModules = async () => {
     if (!token) return
@@ -146,6 +151,11 @@ export default function App() {
   }
 
   useEffect(() => { loadModules() }, [token])
+  useEffect(() => { // il giro del verticale: chiedilo dopo l'accesso
+    if (!token) { setGiro({ passi: [], mostra: false }); return }
+    fetch(API + '/guida/giro', { headers: { Authorization: 'Bearer ' + token } }).then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d && Array.isArray(d.passi)) setGiro({ passi: d.passi, mostra: !!d.mostra }) }).catch(() => {})
+  }, [token])
   useEffect(() => { loadTenantName() }, [])
 
   const logout = () => {
@@ -218,6 +228,10 @@ export default function App() {
   if (!token) return <IdentitaAppContext.Provider value={identita}><Login onLogin={onLogin} tenantName={tenantName} logoUrl={tenantLogoUrl} hidePlatformName={hidePlatformName} /></IdentitaAppContext.Provider>
 
   const currentModule = installedModules.find((m) => m.slug === currentPage)
+  // I passi del giro: quelli del verticale (solo per le pagine che chi guarda ha davvero), altrimenti il giro generico di Platform.
+  const passiGiro = costruisciGiro(giro.passi, [...PAGINE_FISSE, ...installedModules.map((m) => m.slug)])
+  const stepsGiro = passiGiro.length ? passiGiro : ONBOARDING_STEPS
+  useEffect(() => { if (giro.mostra && passiGiro.length && installedModules.length) setShowTour(true) }, [giro.mostra, passiGiro.length, installedModules.length]) // eslint-disable-line react-hooks/exhaustive-deps
   const allModulesForBuilder = installedModules
 
   return (
@@ -289,7 +303,7 @@ export default function App() {
       <ToastContainer />
       {token && user && <SetupWizard token={token} user={user} onNavigate={setCurrentPage} onOpenBuilderNewModule={openBuilderNewModule} onStartTour={() => setShowTour(true)} />}
       {showTour && (
-        <ProductTour steps={ONBOARDING_STEPS} currentPage={currentPage} onNavigate={setCurrentPage} onFinish={finishTour}
+        <ProductTour steps={stepsGiro} currentPage={currentPage} onNavigate={setCurrentPage} onFinish={finishTour}
           onStepChange={(step) => setMobileNavOpen(window.innerWidth < 768 && !!step.target && step.target.startsWith('sidebar'))} />
       )}
     </div>
