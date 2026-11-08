@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import AiutoGuida from '../components/AiutoGuida'
 import RiepilogoMensile from '../components/RiepilogoMensile'
 import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
@@ -21,7 +22,7 @@ import Portal from '../components/Portal'
 // altrove (riepilogo mensile, pivot categoria, andamento settimanale, aggregato
 // singolo) — qui si sceglie liberamente quali vedere insieme, invece di doverli
 // trovare sparsi sulla pagina di ogni singolo modulo.
-function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, features = {} }) {
+function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, onStartTour, features = {} }) {
   const api = useApi(token)
   const [editMode, setEditMode] = useState(false)
   // Mese scelto con le frecce della Checklist ('AAAA-MM', null = quello di partenza): il Riepilogo mensile lo segue.
@@ -374,7 +375,10 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, f
     <GlassPageBackground>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
-          <h1 className="text-lg font-bold text-ink tracking-[-0.35px]">{page === 'report' ? 'Report' : 'Dashboard'}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-bold text-ink tracking-[-0.35px]">{page === 'report' ? 'Report' : 'Dashboard'}</h1>
+            {page !== 'report' && onNavigate && <AiutoGuida token={token} user={user} onNavigate={onNavigate} onStartTour={onStartTour} />}
+          </div>
           <p className="text-gray-500 text-sm mt-0.5">{page === 'report' ? 'Pannelli aggregati — componi tu quali vedere.' : 'Benvenuto, ' + (user && user.display_name)}</p>
         </div>
         {/* I widget sono condivisi da tutta l'istanza (vedi commento sopra) — modificarli

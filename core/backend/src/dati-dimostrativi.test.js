@@ -110,6 +110,18 @@ async function main() {
     const r = await carica({ conferma: true }); eq(r.status, 402); eq((await r.json()).code, 'tetto_superato'); eq(chiamate.length, n); eq(DD.totaleDemo(), 0);
     S.impostazioni({ tetto_mensile: null }); sandbox = true;
   });
+  await test('escludi toglie le righe del servizio che combaciano (nomi finti della prova); se_manca mette un record «da attivare» quando la fonte non dà niente o non riesce', async () => {
+    const SE = [{ modulo: 'clienti', campi: { nome: 'Società di esempio (da attivare)', tipo_soggetto: 'Società', note: 'DA ATTIVARE: servizio Visure Camerali' } }];
+    const DIM2 = { fonti: [{ ...DIM.fonti[0], escludi: [{ campo: 'denominazione', regex: '^alfa' }], se_manca: SE }], statici: [] };
+    E.riceviPacchetto('prova', 2, { ...VUOTO, dimostrativi: DIM2 }); E.attivaPacchetto('prova');
+    let j = await (await carica({ conferma: true })).json();
+    eq(demoDi('clienti').map((c) => c.nome).sort(), ['BETA S.P.A.'], 'ALFA esclusa; il segnaposto non serve perché la fonte ha dato dati'); eq(j.creati, { clienti: 1 });
+    await fetch(U, { method: 'DELETE', headers: H });
+    impreseFallisce = true; j = await (await carica({ conferma: true })).json(); impreseFallisce = false;
+    eq(demoDi('clienti').map((c) => c.nome), ['Società di esempio (da attivare)']); ok(/DA ATTIVARE/.test(demoDi('clienti')[0].note), 'dice cosa serve'); ok(j.avvisi.some((a) => /non è riuscita/.test(a)), 'il guasto si dice comunque');
+    await fetch(U, { method: 'DELETE', headers: H });
+    E.riceviPacchetto('prova', 3, { ...VUOTO, dimostrativi: DIM }); E.attivaPacchetto('prova');
+  });
   await test('solo l\'amministratore; il pacchetto vero ha dimostrativi ben formati (alias risolvibili, fonti con id unici)', async () => {
     eq((await fetch(U)).status, 401); eq((await fetch(U, { method: 'DELETE' })).status, 401);
     const d = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/dimostrativi.json'), 'utf8'));
@@ -117,6 +129,10 @@ async function main() {
     const visti = new Set();
     for (const st of d.statici) { for (const rif of Object.values(st.relazioni || {})) ok(visti.has(rif) || /^fonte:/.test(rif) && ids.includes(rif.slice(6).split('#')[0]), 'riferimento «' + rif + '» non risolvibile in ' + st.alias); if (st.alias) visti.add(st.alias); }
     ok(d.statici.some((s) => s.modulo === 'trattative') && d.statici.some((s) => s.modulo === 'provvigioni'), 'trattativa e provvigione');
+    ok(d.fonti.every((f) => Array.isArray(f.se_manca) && f.se_manca.every((m) => m.modulo && /da attivare/i.test(JSON.stringify(m.campi)))), 'ogni fonte dice «da attivare» se non dà dati');
+    ok(d.fonti.every((f) => (f.escludi || []).every((e) => { try { new RegExp(e.regex); return !!e.campo; } catch (x) { return false; } })), 'escludi ben formati');
+    eq(d.statici.filter((s) => s.modulo === 'immobili').map((s) => s.stato).sort(), ['da_valutare', 'in_mandato', 'in_trattativa', 'in_vendita'], 'immobili in stati diversi');
+    eq(d.statici.filter((s) => s.modulo === 'trattative').map((s) => s.stato).sort(), ['incontro_profilazione', 'preliminare_firmato', 'trattativa_in_corso'], 'una trattativa per fase');
   });
 
   console.log(`\n${passed} passati, ${failed} falliti`);

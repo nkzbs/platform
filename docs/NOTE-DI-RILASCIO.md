@@ -2,6 +2,18 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.65 — 8 novembre 2026
+
+**Dati di esempio ordinati e coerenti, con «da attivare» dove OpenAPI non c'è, e la guida a portata del «?»: pacchetto Mediazione immobiliare alla versione 14.**
+
+- **Dati dimostrativi riscritti** (`dimostrativi.json`): 4 clienti (2 venditori, 2 acquirenti con cosa cercano), **4 immobili in stati diversi** (Da valutare, In mandato, In vendita, In trattativa) con indirizzi veri del Garda, **3 trattative una per fase**, 2 provvigioni a due parti (con trattenuta all'agente e minimo garantito) e **5 attività** distribuite nella settimana, tutte collegate tra loro (cliente, immobile, trattativa). Prima c'era una sola trattativa senza immobile. Tutto marcato «(dimostrativo)» e `_demo`, e si toglie insieme da Impostazioni → Connessioni → OpenAPI.it.
+- **Dati veri di OpenAPI.it dove il servizio c'è**: imprese dalle visure camerali e annunci vicini a un indirizzo (come prima, con il piano dei costi da confermare prima del caricamento).
+- **«Da attivare» dove non ci sono** (nuovo `se_manca` nelle fonti): se un servizio non è abilitato, non risponde o non dà dati, al suo posto si crea un record che dice cosa serve (per esempio «Società di esempio (da attivare: imprese dalle visure camerali)» o «Annunci di zona (da attivare)», con il servizio OpenAPI da accendere). Il guasto si dice comunque negli avvisi del caricamento.
+- **`escludi`** nelle fonti: toglie le righe che combaciano con un'espressione (qui i nomi finti dell'ambiente di prova di OpenAPI.it, come «xxx Openapi xxxxx»).
+- **La guida a portata del «?»**: il punto interrogativo dei moduli apre il capitolo di quel modulo e ora ha in fondo **«Apri tutta la guida»** e **«Fai il giro guidato»**. Nuovo **«?» anche sulla Dashboard** (`AiutoGuida.jsx`): introduzione del verticale e «Per iniziare» per il ruolo di chi guarda, con gli stessi due pulsanti. Due passi nuovi nella guida dell'admin: i dati di esempio e il «?».
+- Test: `dati-dimostrativi.test.js` (10 prove, due nuove: `escludi`, `se_manca` e la forma del set reale: immobili in 4 stati, una trattativa per fase, ogni fonte con il suo «da attivare»).
+- **Non fatto**: i dati attuali di zucca non si cambiano da soli. Per averli nuovi: togliere i record presenti e premere «Carica dati dimostrativi» (serve l'accesso del tenant e, per i dati di OpenAPI, la conferma del costo).
+
 ## 0.4.64 — 8 novembre 2026
 
 **Servizi vicini sotto la mappa dell'immobile: pacchetto Mediazione immobiliare alla versione 13.**

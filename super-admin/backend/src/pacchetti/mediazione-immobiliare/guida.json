@@ -14,7 +14,9 @@
         "Controlla in Impostazioni → Aspetto il nome, il logo e il colore dell'app.",
         "Collega OpenAPI.it in Impostazioni → Connessioni: serve per la valutazione di mercato. Prima in ambiente di prova, poi in produzione; imposta un tetto di spesa mensile.",
         "Invita gli agenti da Utenti e dai a ciascuno il ruolo giusto.",
-        "Dalla Dashboard aggiungi o togli i widget: «Da fare» mostra le scadenze di oggi."
+        "Dalla Dashboard aggiungi o togli i widget: «Da fare» mostra le scadenze di oggi.",
+        "Per provare il portale con dati di esempio: Impostazioni → Connessioni → OpenAPI.it → «Dati dimostrativi». Carica clienti, immobili, trattative, provvigioni e attività collegati (con i dati veri di OpenAPI.it dove il servizio è attivo, altrimenti un segnaposto «da attivare») e si tolgono tutti insieme con un solo pulsante.",
+        "Il punto interrogativo accanto al titolo di ogni pagina apre la guida di quella pagina; da lì puoi aprire tutta la guida o rifare il giro guidato."
       ]
     },
     "default": {

@@ -42,6 +42,8 @@ function valoreModello(modello, dati, adesso = new Date()) {
   const pulito = out.trim().replace(/^[\s,·-]+|[\s,·-]+$/g, '');
   return manca && !pulito ? undefined : pulito;
 }
+// `escludi`: [{ campo, regex }] toglie le righe del servizio il cui `campo` combacia (es. nomi finti dell'ambiente di prova di OpenAPI.it).
+const escluso = (fonte, riga) => (fonte.escludi || []).some((e) => { try { return e && e.campo && new RegExp(e.regex, 'i').test(String((riga || {})[e.campo] == null ? '' : riga[e.campo])); } catch (x) { return false; } });
 const rendiCampi = (campi, dati, adesso) => { const o = {}; for (const [k, m] of Object.entries(campi || {})) { const v = valoreModello(m, dati, adesso); if (v !== undefined) o[k] = v; } return o; };
 
 const campiDelModulo = (slug) => {
@@ -113,7 +115,7 @@ async function carica({ utente, adesso = new Date(), callAs = require('./interna
       if (f.tipo === 'imprese') {
         const r = await openapi.cercaImprese({ provincia: f.provincia, limite: f.limite || 10 });
         registra('visure_ricerca_imprese', 'Dati dimostrativi: imprese in provincia di ' + f.provincia);
-        for (const impresa of ((r && r.data) || []).slice(0, f.limite || 10)) {
+        for (const impresa of ((r && r.data) || []).filter((x) => !escluso(f, x)).slice(0, f.limite || 10)) {
           const id = await creaRecord(admin, callAs, f.modulo, rendiCampi(f.campi, impresa, adesso), avvisi);
           if (id) { perFonte[f.id].push(id); conteggio(f.modulo); }
         }
@@ -125,7 +127,7 @@ async function carica({ utente, adesso = new Date(), callAs = require('./interna
           if (!co || !co.lat || !co.lng) { avvisi.push('Nessuna coordinata per «' + indirizzo + '»: nessun annuncio caricato per quell\'indirizzo.'); continue; }
           const a = await openapi.comparabili({ lat: co.lat, lng: co.lng, raggioMetri: f.raggio_metri || 3000, limite: f.per_indirizzo || 4, forSale: true });
           registra('real_estate_comparabili', 'Dati dimostrativi: annunci vicino a ' + indirizzo);
-          for (const annuncio of ((a && a.data) || []).slice(0, f.per_indirizzo || 4)) {
+          for (const annuncio of ((a && a.data) || []).filter((x) => !escluso(f, x)).slice(0, f.per_indirizzo || 4)) {
             const id = await creaRecord(admin, callAs, f.modulo, rendiCampi(f.campi, annuncio, adesso), avvisi);
             if (id) { perFonte[f.id].push(id); conteggio(f.modulo); }
           }
@@ -134,6 +136,14 @@ async function carica({ utente, adesso = new Date(), callAs = require('./interna
       if (!perFonte[f.id].length) avvisi.push('La fonte «' + f.id + '» non ha dato nessun dato.');
     } catch (e) {
       avvisi.push('La fonte «' + f.id + '» non è riuscita: ' + String(e.message).slice(0, 160) + (e.status === 403 || e.status === 401 ? ' (probabilmente il servizio non è abilitato: «Controlla i servizi»)' : ''));
+    }
+    // `se_manca`: [{ modulo, campi, stato? }] record da creare quando la fonte non ha dato niente (servizio non abilitato, ambiente di prova vuoto): servono a dire «da attivare» invece di lasciare un buco.
+    if (!perFonte[f.id].length && Array.isArray(f.se_manca)) {
+      for (const m of f.se_manca) {
+        const dati = rendiCampi(m.campi, {}, adesso); if (m.stato) dati._stato = m.stato;
+        const id = await creaRecord(admin, callAs, m.modulo, dati, avvisi);
+        if (id) { perFonte[f.id].push(id); conteggio(m.modulo); }
+      }
     }
   }
 

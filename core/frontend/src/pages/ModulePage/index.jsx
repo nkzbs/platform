@@ -32,7 +32,7 @@ import { StepChainEditor } from '@shared/builder/StepChainEditor.jsx'
 import GlassPageBackground from '../../components/GlassPageBackground'
 import Portal from '../../components/Portal'
 
-function ModulePage({ module: mod, token, user, onNavigate }) {
+function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
   const api = useApi(token)
   const [records, setRecords] = useState([])
   const [schema, setSchema] = useState(null)
@@ -594,7 +594,7 @@ function ModulePage({ module: mod, token, user, onNavigate }) {
           <div className="min-w-0">
             <div className="flex items-center gap-2 min-w-0">
               <h1 className="text-lg font-bold text-ink tracking-[-0.35px] truncate">{mod.name}</h1>
-              <AiutoModulo mod={mod} token={token} />
+              <AiutoModulo mod={mod} token={token} onNavigate={onNavigate} onStartTour={onStartTour} />
             </div>
             <div className="text-xs text-gray-500">{search.trim() ? displayRecords.length + ' / ' + records.length : records.length} record</div>
           </div>

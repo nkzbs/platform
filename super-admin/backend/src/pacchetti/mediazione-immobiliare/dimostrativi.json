@@ -1,5 +1,5 @@
 {
-  "_descrizione": "Dati dimostrativi di Mediazione immobiliare: cosa prelevare da OpenAPI.it (imprese dalle visure camerali, annunci vicino a un indirizzo) e quali record inventati aggiungere per collegarli. Ogni record porta `_demo` e si toglie tutto da Impostazioni → Connessioni → OpenAPI.it. Forma e regole nei commenti di core/backend/src/lib/dati-dimostrativi.js.",
+  "_descrizione": "Dati dimostrativi di Mediazione immobiliare: un set coerente di record inventati (clienti, immobili in stati diversi, una trattativa per fase, provvigioni, attività collegate) più, dove il servizio è disponibile, dati veri da OpenAPI.it (imprese dalle visure camerali, annunci vicino a un indirizzo). Se un servizio non è abilitato o non dà dati, al suo posto compare un record «da attivare» che dice cosa serve (`se_manca`). Ogni record porta `_demo` e si toglie tutto da Impostazioni → Connessioni → OpenAPI.it. Forma e regole nei commenti di core/backend/src/lib/dati-dimostrativi.js.",
   "fonti": [
     {
       "id": "societa",
@@ -13,7 +13,24 @@
         "tipo_cliente": "Venditore",
         "indirizzo": "{comune}",
         "note": "Dato dimostrativo: impresa trovata nelle visure camerali (OpenAPI.it)."
-      }
+      },
+      "escludi": [
+        {
+          "campo": "denominazione",
+          "regex": "xxx"
+        }
+      ],
+      "se_manca": [
+        {
+          "modulo": "clienti",
+          "campi": {
+            "nome": "Società di esempio (da attivare: imprese dalle visure camerali)",
+            "tipo_soggetto": "Società",
+            "tipo_cliente": "Venditore",
+            "note": "DA ATTIVARE: qui compaiono le imprese vere trovate nelle visure camerali. Serve il servizio Visure Camerali di OpenAPI.it (attivalo nella console e controllalo da Impostazioni → Connessioni → OpenAPI.it, «Controlla i servizi»)."
+          }
+        }
+      ]
     },
     {
       "id": "annunci",
@@ -60,12 +77,25 @@
         "stima_fonte": "Dato dimostrativo: annuncio vicino a un indirizzo (OpenAPI.it)",
         "note": "Dato dimostrativo: annuncio di zona, non un immobile dell'agenzia.",
         "_stato": "in_mandato"
-      }
+      },
+      "se_manca": [
+        {
+          "modulo": "immobili",
+          "stato": "da_valutare",
+          "campi": {
+            "titolo": "Annunci di zona (da attivare)",
+            "tipologia": "Altro",
+            "comune": "Desenzano del Garda",
+            "stima_fonte": "Da attivare: valutazione e annunci vicini con dati reali (servizio Real Estate di OpenAPI.it)",
+            "note": "DA ATTIVARE: qui compaiono gli annunci veri vicino a un indirizzo e la valutazione di mercato con dati reali. Serve il servizio Real Estate di OpenAPI.it in produzione (oggi, in prova, i dati sono limitati)."
+          }
+        }
+      ]
     }
   ],
   "statici": [
     {
-      "alias": "acquirente",
+      "alias": "acq1",
       "modulo": "clienti",
       "campi": {
         "nome": "Anna Esempio (dimostrativo)",
@@ -77,11 +107,27 @@
         "ricerca_tipologia": "Villa",
         "ricerca_budget_max": 900000,
         "ricerca_zona": "Desenzano del Garda",
-        "note": "Cliente inventato per la dimostrazione."
+        "note": "Dato dimostrativo, inventato."
       }
     },
     {
-      "alias": "venditore",
+      "alias": "acq2",
+      "modulo": "clienti",
+      "campi": {
+        "nome": "Luca Verdi (dimostrativo)",
+        "email": "luca.verdi@example.com",
+        "telefono": "+39 000 000 0003",
+        "tipo_soggetto": "Persona fisica",
+        "tipo_cliente": "Acquirente",
+        "esigenza_acquisto": "Cerca immobile",
+        "ricerca_tipologia": "Bilocale",
+        "ricerca_budget_max": 260000,
+        "ricerca_zona": "Sirmione",
+        "note": "Dato dimostrativo, inventato."
+      }
+    },
+    {
+      "alias": "ven1",
       "modulo": "clienti",
       "campi": {
         "nome": "Mario Esempio (dimostrativo)",
@@ -89,60 +135,277 @@
         "telefono": "+39 000 000 0002",
         "tipo_soggetto": "Persona fisica",
         "tipo_cliente": "Venditore",
-        "note": "Cliente inventato per la dimostrazione."
+        "note": "Dato dimostrativo, inventato."
       }
     },
     {
-      "alias": "trattativa",
+      "alias": "ven2",
+      "modulo": "clienti",
+      "campi": {
+        "nome": "Giulia Bianchi (dimostrativo)",
+        "email": "giulia.bianchi@example.com",
+        "telefono": "+39 000 000 0004",
+        "tipo_soggetto": "Persona fisica",
+        "tipo_cliente": "Venditore",
+        "note": "Dato dimostrativo, inventato."
+      }
+    },
+    {
+      "alias": "imm_villa",
+      "modulo": "immobili",
+      "stato": "in_vendita",
+      "relazioni": {
+        "proprietario": "ven1"
+      },
+      "campi": {
+        "titolo": "Villa con giardino (dimostrativo)",
+        "tipologia": "Villa",
+        "indirizzo": "Via Marconi 10, Desenzano del Garda",
+        "comune": "Desenzano del Garda",
+        "provincia": "BS",
+        "superficie_mq": 220,
+        "locali": 6,
+        "prezzo_richiesto": 780000,
+        "note": "Dato dimostrativo, inventato."
+      }
+    },
+    {
+      "alias": "imm_bilo",
+      "modulo": "immobili",
+      "stato": "in_mandato",
+      "relazioni": {
+        "proprietario": "ven2"
+      },
+      "campi": {
+        "titolo": "Bilocale vista lago (dimostrativo)",
+        "tipologia": "Bilocale",
+        "indirizzo": "Via Roma 20, Sirmione",
+        "comune": "Sirmione",
+        "provincia": "BS",
+        "superficie_mq": 58,
+        "locali": 2,
+        "prezzo_richiesto": 235000,
+        "note": "Dato dimostrativo, inventato."
+      }
+    },
+    {
+      "alias": "imm_attico",
+      "modulo": "immobili",
+      "stato": "in_trattativa",
+      "relazioni": {
+        "proprietario": "ven1"
+      },
+      "campi": {
+        "titolo": "Attico in centro (dimostrativo)",
+        "tipologia": "Attico",
+        "indirizzo": "Piazza Municipio 1, Peschiera del Garda",
+        "comune": "Peschiera del Garda",
+        "provincia": "BS",
+        "superficie_mq": 110,
+        "locali": 4,
+        "prezzo_richiesto": 430000,
+        "note": "Dato dimostrativo, inventato."
+      }
+    },
+    {
+      "alias": "imm_trilo",
+      "modulo": "immobili",
+      "stato": "da_valutare",
+      "relazioni": {
+        "proprietario": "ven2"
+      },
+      "campi": {
+        "titolo": "Trilocale da valutare (dimostrativo)",
+        "tipologia": "Trilocale",
+        "indirizzo": "Via Dante 5, Lonato del Garda",
+        "comune": "Lonato del Garda",
+        "provincia": "BS",
+        "superficie_mq": 85,
+        "locali": 3,
+        "note": "Dato dimostrativo, inventato."
+      }
+    },
+    {
+      "alias": "trat_attico",
       "modulo": "trattative",
       "stato": "preliminare_firmato",
       "relazioni": {
-        "cliente": "acquirente",
-        "venditore": "venditore",
-        "acquirente": "acquirente",
-        "immobile": "fonte:annunci#0"
+        "cliente": "acq2",
+        "venditore": "ven1",
+        "acquirente": "acq2",
+        "immobile": "imm_attico"
       },
       "campi": {
-        "titolo": "Trattativa dimostrativa",
+        "titolo": "Attico Peschiera - Luca Verdi (dimostrativo)",
         "tipo": "Vendita",
-        "prezzo_concordato": 860000,
-        "data_incontro": "{oggi-30}",
-        "data_preliminare": "{oggi+10}",
-        "data_rogito": "{oggi+45}",
-        "note": "Trattativa inventata per la dimostrazione."
+        "prezzo_concordato": 425000,
+        "prov_venditore_perc": 3,
+        "prov_acquirente_perc": 2,
+        "data_incontro": "{oggi-40}",
+        "data_preliminare": "{oggi-5}",
+        "data_rogito": "{oggi+40}",
+        "note": "Dato dimostrativo, inventato."
       }
     },
     {
-      "alias": "provvigione",
+      "alias": "trat_villa",
+      "modulo": "trattative",
+      "stato": "trattativa_in_corso",
+      "relazioni": {
+        "cliente": "acq1",
+        "venditore": "ven1",
+        "acquirente": "acq1",
+        "immobile": "imm_villa"
+      },
+      "campi": {
+        "titolo": "Villa Desenzano - Anna Esempio (dimostrativo)",
+        "tipo": "Vendita",
+        "prezzo_concordato": 760000,
+        "prov_venditore_perc": 3,
+        "prov_acquirente_perc": 2,
+        "data_incontro": "{oggi-12}",
+        "note": "Dato dimostrativo, inventato."
+      }
+    },
+    {
+      "alias": "trat_bilo",
+      "modulo": "trattative",
+      "stato": "incontro_profilazione",
+      "relazioni": {
+        "cliente": "acq2",
+        "venditore": "ven2",
+        "immobile": "imm_bilo"
+      },
+      "campi": {
+        "titolo": "Bilocale Sirmione - primo incontro (dimostrativo)",
+        "tipo": "Vendita",
+        "data_incontro": "{oggi+2}",
+        "note": "Dato dimostrativo, inventato."
+      }
+    },
+    {
+      "alias": "prov_v",
       "modulo": "provvigioni",
       "stato": "da_fatturare",
       "relazioni": {
-        "trattativa": "trattativa",
-        "cliente": "venditore"
+        "trattativa": "trat_attico",
+        "cliente": "ven1"
       },
       "campi": {
-        "descrizione": "Provvigione dimostrativa (venditore)",
+        "descrizione": "Provvigione venditore - Attico Peschiera (dimostrativo)",
         "tipo": "Provvigione preliminare",
         "parte": "Venditore",
         "percentuale": 3,
-        "base_imponibile": 860000,
-        "data_scadenza": "{oggi+20}"
+        "base_imponibile": 425000,
+        "agente": "Agente dimostrativo",
+        "trattenuta_agente_perc": 40,
+        "data_scadenza": "{oggi+40}"
       }
     },
     {
-      "alias": "contatto",
-      "modulo": "attivita",
-      "stato": "pianificata",
+      "alias": "prov_a",
+      "modulo": "provvigioni",
+      "stato": "da_fatturare",
       "relazioni": {
-        "cliente": "acquirente",
-        "trattativa": "trattativa"
+        "trattativa": "trat_attico",
+        "cliente": "acq2"
       },
       "campi": {
-        "titolo": "Visita dimostrativa",
+        "descrizione": "Provvigione acquirente - Attico Peschiera (dimostrativo)",
+        "tipo": "Provvigione preliminare",
+        "parte": "Acquirente",
+        "percentuale": 2,
+        "base_imponibile": 425000,
+        "minimo_garantito": 10000,
+        "data_scadenza": "{oggi+40}"
+      }
+    },
+    {
+      "alias": "att1",
+      "modulo": "attivita",
+      "stato": "da_fare",
+      "relazioni": {
+        "cliente": "acq1",
+        "immobile": "imm_villa",
+        "trattativa": "trat_villa"
+      },
+      "campi": {
+        "titolo": "Visita Villa con giardino",
         "tipo": "Visita",
-        "scadenza": "{oggi+3}",
+        "scadenza": "{oggi}",
         "ora": "10:00",
-        "descrizione": "Attività inventata per mostrare il portale."
+        "agente": "Agente dimostrativo",
+        "descrizione": "Portare planimetria e attestato energetico."
+      }
+    },
+    {
+      "alias": "att2",
+      "modulo": "attivita",
+      "stato": "da_fare",
+      "relazioni": {
+        "cliente": "acq1",
+        "trattativa": "trat_villa"
+      },
+      "campi": {
+        "titolo": "Telefonata per l'offerta",
+        "tipo": "Telefonata",
+        "scadenza": "{oggi+1}",
+        "ora": "17:30",
+        "agente": "Agente dimostrativo",
+        "descrizione": "Sentire Anna sull'offerta."
+      }
+    },
+    {
+      "alias": "att3",
+      "modulo": "attivita",
+      "stato": "da_fare",
+      "relazioni": {
+        "cliente": "acq2",
+        "immobile": "imm_bilo",
+        "trattativa": "trat_bilo"
+      },
+      "campi": {
+        "titolo": "Primo incontro Bilocale Sirmione",
+        "tipo": "Incontro",
+        "scadenza": "{oggi+2}",
+        "ora": "15:00",
+        "agente": "Agente dimostrativo"
+      }
+    },
+    {
+      "alias": "att4",
+      "modulo": "attivita",
+      "stato": "da_fare",
+      "relazioni": {
+        "cliente": "ven2",
+        "immobile": "imm_trilo"
+      },
+      "campi": {
+        "titolo": "Sopralluogo Trilocale Lonato",
+        "tipo": "Sopralluogo",
+        "scadenza": "{oggi+6}",
+        "ora": "11:00",
+        "agente": "Agente dimostrativo",
+        "descrizione": "Foto e misure per la valutazione."
+      }
+    },
+    {
+      "alias": "att5",
+      "modulo": "attivita",
+      "stato": "fatto",
+      "relazioni": {
+        "cliente": "acq2",
+        "immobile": "imm_attico",
+        "trattativa": "trat_attico"
+      },
+      "campi": {
+        "titolo": "Telefonata dopo il preliminare",
+        "tipo": "Telefonata",
+        "scadenza": "{oggi-3}",
+        "ora": "09:30",
+        "agente": "Agente dimostrativo",
+        "esito": "Raggiunto",
+        "descrizione": "Confermati data del rogito e documenti."
       }
     }
   ]

@@ -274,7 +274,7 @@ export default function App() {
             lasciare libero in fondo. */}
         <div className="p-4 md:p-8 pb-28 md:pb-8">
         <Suspense fallback={<div className="py-16 text-center text-sm text-gray-500">Caricamento…</div>}>
-        {currentPage === 'dashboard' && <DashboardPage user={user} modules={installedModules} token={token} features={features} onNavigate={setCurrentPage} />}
+        {currentPage === 'dashboard' && <DashboardPage user={user} modules={installedModules} token={token} features={features} onNavigate={setCurrentPage} onStartTour={() => setShowTour(true)} />}
         {currentPage === 'report' && <DashboardPage user={user} modules={installedModules} token={token} page="report" />}
         {currentPage === 'libreria' && user && user.role === 'admin' && <LibreriaPage token={token} onFeaturesChanged={loadTenantName} onRefresh={loadModules} onOpenInBuilder={openInBuilder} onCreateNewModule={openBuilderNewModule} />}
         {currentPage === 'builder' && user && user.role === 'admin' && <BuilderPage token={token} allModules={allModulesForBuilder} onModulesChanged={loadModules} preselectSlug={builderPreselect} onPreselectHandled={() => setBuilderPreselect(null)} openNewModule={builderOpenNew} onNewModuleHandled={() => setBuilderOpenNew(false)} />}
@@ -296,7 +296,7 @@ export default function App() {
             sopra, solo con un tab diverso. */}
         {(currentPage === 'impostazioni' || currentPage === 'account' || currentPage === 'sito_web' || currentPage === 'export_dati' || currentPage === 'connessioni' || currentPage === 'movimenti') && user &&
           <ImpostazioniPage token={token} user={user} features={features} modules={installedModules} onOpenInBuilder={openInBuilder} onCreateNewModule={openBuilderNewModule} onFeaturesChanged={loadTenantName} onUserUpdate={updateUser} initialTab={currentPage === 'impostazioni' ? undefined : currentPage} />}
-        {currentModule && !['dashboard', 'utenti', 'report'].includes(currentPage) && <ModulePage module={currentModule} token={token} user={user} onNavigate={setCurrentPage} />}
+        {currentModule && !['dashboard', 'utenti', 'report'].includes(currentPage) && <ModulePage module={currentModule} token={token} user={user} onNavigate={setCurrentPage} onStartTour={() => setShowTour(true)} />}
         </Suspense>
         </div>
       </main>
