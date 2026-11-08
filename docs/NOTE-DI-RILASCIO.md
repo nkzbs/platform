@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.79 — 9 novembre 2026
+
+**La versione di Platform si vede sempre sotto il titolo.** Prima compariva solo quando il nome «Platform» non era nascosto; sui tenant che mostrano il nome dello studio (zucca) non si vedeva. Ora sotto il titolo in barra laterale c'è sempre «Platform 0.4.79», anche nel menu da telefono. Solo frontend: deploy + **Aggiorna** su zucca.
+
 ## 0.4.78 — 9 novembre 2026
 
 **Il campo «Superficie box/garage (mq)» arriva anche sui tenant esistenti, e il Percorso a fasi si legge bene su telefono.**
