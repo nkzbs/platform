@@ -58,6 +58,18 @@ async function main() {
     ok(/Times-Bold/.test(senza.toString('latin1')) && !/Zucc/i.test(senza.toString('latin1')), 'senza carattere resta Times');
   });
 
+  await test('logo in versione chiara: si carica, esce in tenant-info (anche senza accesso), un file non valido è rifiutato, salvare altro non lo azzera, si toglie', async () => {
+    const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    const leggi = async () => (await (await fetch(BASE + '/api/settings/azienda', { headers: H })).json());
+    const put = (extra) => leggi().then((b) => fetch(BASE + '/api/settings/azienda', { method: 'PUT', headers: H, body: JSON.stringify({ ...b, ...extra }) }));
+    eq((await leggi()).app_logo_chiaro_url, null, 'di partenza nessuno');
+    eq((await put({ app_logo_chiaro_url: PNG })).status, 200); eq((await (await fetch(BASE + '/api/tenant-info')).json()).app_logo_chiaro_url, PNG);
+    eq((await put({ app_logo_chiaro_url: 'data:text/html;base64,PGgxPng8L2gxPg==' })).status, 400, 'solo immagini'); eq((await leggi()).app_logo_chiaro_url, PNG, 'invariato dopo il rifiuto');
+    const b = await leggi(); const { app_logo_chiaro_url, ...senza } = b; await fetch(BASE + '/api/settings/azienda', { method: 'PUT', headers: H, body: JSON.stringify({ ...senza, ragione_sociale: 'Agenzia Logo' }) });
+    eq((await leggi()).app_logo_chiaro_url, PNG, 'salvare altro non lo azzera');
+    eq((await put({ app_logo_chiaro_url: null })).status, 200); eq((await (await fetch(BASE + '/api/tenant-info')).json()).app_logo_chiaro_url, null);
+  });
+
   console.log(`\n${'='.repeat(60)}\n${passed} passati, ${failed} falliti su ${passed + failed} test.`);
   try { fs.unlinkSync(process.env.DB_PATH); } catch (e) {}
   process.exit(failed > 0 ? 1 : 0);

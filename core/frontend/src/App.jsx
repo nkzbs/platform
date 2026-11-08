@@ -82,6 +82,8 @@ export default function App() {
   const [aiOn, setAiOn] = useState(false) // interruttore generale dell'AI
   const [features, setFeatures] = useState({}) // funzioni facoltative accese su questo progetto (da /api/tenant-info)
   const [tenantLogoUrl, setTenantLogoUrl] = useState('')
+  const [tenantLogoChiaroUrl, setTenantLogoChiaroUrl] = useState('') // versione chiara del logo, per il tema scuro (Aspetto)
+  const [temaScuro, setTemaScuro] = useState(() => (document.documentElement.getAttribute('data-theme') || 'dark') !== 'light')
   const [hidePlatformName, setHidePlatformName] = useState(false)
   // Sidebar come drawer off-canvas sotto md — chiusa di default, aperta
   // dall'hamburger nella barra in alto (nascosto sopra md, dove la sidebar è
@@ -130,7 +132,7 @@ export default function App() {
     document.documentElement.style.setProperty('--accent', accentoLeggibile(accentoScelto.current, tema).join(' '))
   }
   useEffect(() => {
-    const obs = new MutationObserver(applicaAccento)
+    const obs = new MutationObserver(() => { applicaAccento(); setTemaScuro((document.documentElement.getAttribute('data-theme') || 'dark') !== 'light') })
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
     return () => obs.disconnect()
   }, [])
@@ -144,6 +146,7 @@ export default function App() {
     setFeatures(data.features || {})
     setAiOn(!!data.ai)
     setTenantLogoUrl(data.app_logo_url || data.logo_url || '')
+    setTenantLogoChiaroUrl(data.app_logo_chiaro_url || '')
     setHidePlatformName(!!data.app_name || !!data.hide_platform_name)
     if (hex2rgbTriplet(data.accent_color)) accentoScelto.current = hex2rgbTriplet(data.accent_color).split(' ').map(Number)
     applicaAccento()
@@ -224,9 +227,11 @@ export default function App() {
 
 
   // L'identità dell'app (logo e iniziale del nome) per chi non riceve props: lo sfondo sfumato dietro ogni pagina e il login.
-  const identita = { logoUrl: tenantLogoUrl, letter: hidePlatformName && tenantName ? tenantName.trim()[0] : undefined }
+  // Sul tema scuro, se c'è, si mostra la versione chiara del logo (quella scura sparirebbe sullo sfondo).
+  const logoMostrato = temaScuro && tenantLogoChiaroUrl ? tenantLogoChiaroUrl : tenantLogoUrl
+  const identita = { logoUrl: logoMostrato, letter: hidePlatformName && tenantName ? tenantName.trim()[0] : undefined }
 
-  if (!token) return <IdentitaAppContext.Provider value={identita}><Login onLogin={onLogin} tenantName={tenantName} logoUrl={tenantLogoUrl} hidePlatformName={hidePlatformName} /></IdentitaAppContext.Provider>
+  if (!token) return <IdentitaAppContext.Provider value={identita}><Login onLogin={onLogin} tenantName={tenantName} logoUrl={logoMostrato} hidePlatformName={hidePlatformName} /></IdentitaAppContext.Provider>
 
   const currentModule = installedModules.find((m) => m.slug === currentPage)
   // I passi del giro: quelli del verticale (solo per le pagine che chi guarda ha davvero), altrimenti il giro generico di Platform.
@@ -238,7 +243,7 @@ export default function App() {
   return (
     <IdentitaAppContext.Provider value={identita}>
     <div className="flex min-h-screen bg-surface-page">
-      <Sidebar modules={installedModules} currentPage={currentPage} onNavigate={setCurrentPage} user={user} onLogout={logout} tenantName={tenantName} logoUrl={tenantLogoUrl} hidePlatformName={hidePlatformName} features={features} token={token}
+      <Sidebar modules={installedModules} currentPage={currentPage} onNavigate={setCurrentPage} user={user} onLogout={logout} tenantName={tenantName} logoUrl={logoMostrato} hidePlatformName={hidePlatformName} features={features} token={token}
         mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)} collapsed />
       {/* Rail su desktop (md:ml-14, spazio riservato), dock flottante su mobile (nessun
           margine, pb-28 sotto perché non copra l'ultimo pezzo di pagina) — richiesto dal

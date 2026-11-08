@@ -2,6 +2,16 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.68 — 8 novembre 2026
+
+**Il logo dell'app in versione chiara, per il tema scuro.**
+
+- **Nuovo campo in Impostazioni → Aspetto**: «Logo dell'app in versione chiara (per il tema scuro)», accanto al logo dell'app. Sul **tema scuro** barra laterale e schermata di accesso mostrano la versione chiara; sul tema chiaro quella normale. Se la versione chiara non c'è, vale sempre il logo normale (come prima). Si carica, si cambia e si toglie quando si vuole: nulla è scritto nel codice, quindi se il logo cambia basta ricaricare i due file. Salvato in `tenant_settings.app_logo_chiaro_url` (stesse regole di formato e peso degli altri loghi), letto da `/api/tenant-info` quindi anche al login; l'app segue il cambio di tema senza ricaricare.
+- **I PDF non cambiano**: usano il «Logo» dell'azienda (sezione sotto), che sta già in un riquadro bianco sulla fascia, quindi va bene la versione normale.
+- Test: `caratteri.test.js` (una prova nuova: caricamento, lettura senza accesso, rifiuto di un file non immagine, salvare altro non lo azzera, rimozione).
+- Messa online: **Aggiorna** su zucca. Nessun cambio al pacchetto.
+- Nota pratica: un PNG esportato con un fondo quasi trasparente (come i due loghi di zucca, con un velo al 13% sull'intero riquadro) mostra un leggero riquadro sul tema scuro: meglio esportare con fondo del tutto trasparente.
+
 ## 0.4.67 — 8 novembre 2026
 
 **Il carattere «Zuccà Banner» tra le scelte di Impostazioni → Aspetto.**

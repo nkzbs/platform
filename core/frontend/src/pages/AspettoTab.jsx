@@ -66,6 +66,17 @@ export default function AspettoTab({ token }) {
     lettore.readAsDataURL(file)
   }
 
+  const scegliLogoChiaro = (e) => {
+    const file = e.target.files && e.target.files[0]
+    e.target.value = ''
+    if (!file) return
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) { setErrore('Il logo deve essere PNG, JPEG o WebP.'); return }
+    if (file.size > 650 * 1024) { setErrore('Immagine troppo pesante (massimo circa 650 KB): riducila e riprova.'); return }
+    const lettore = new FileReader()
+    lettore.onload = () => salvaAzienda({ app_logo_chiaro_url: lettore.result })
+    lettore.readAsDataURL(file)
+  }
+
   if (!azienda) return <p className="text-sm text-gray-500">Carico…</p>
 
   const colore = azienda.accent_color || '#2563EB'
@@ -104,6 +115,18 @@ export default function AspettoTab({ token }) {
             </label>
             {azienda.app_logo_url && <button onClick={() => salvaAzienda({ app_logo_url: null })} className="text-xs text-gray-500 hover:text-gray-300">Togli</button>}
           </div>
+        </div>
+        <div>
+          <span className="text-xs text-gray-500">Logo dell'app in versione chiara (per il tema scuro)</span>
+          <div className="mt-1 flex items-center gap-3">
+            {azienda.app_logo_chiaro_url ? <img src={azienda.app_logo_chiaro_url} alt="Logo dell'app, versione chiara" className="h-12 max-w-[200px] object-contain rounded border border-gray-800 bg-slate-900 p-1" /> : <span className="text-xs text-gray-600">Nessuno: sul tema scuro resta il logo normale</span>}
+            <label className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 cursor-pointer">
+              {azienda.app_logo_chiaro_url ? 'Cambia' : 'Carica'}
+              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={scegliLogoChiaro} className="hidden" />
+            </label>
+            {azienda.app_logo_chiaro_url && <button onClick={() => salvaAzienda({ app_logo_chiaro_url: null })} className="text-xs text-gray-500 hover:text-gray-300">Togli</button>}
+          </div>
+          <span className="text-[11px] text-gray-600">Un logo chiaro (per esempio bianco su fondo trasparente) compare al posto di quello normale quando l'app è in tema scuro. Si cambia o si toglie quando vuoi: se il logo cambia, basta ricaricare i due file.</span>
         </div>
       </div>
 

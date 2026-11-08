@@ -539,6 +539,7 @@ ensureColumn('tenant_settings', 'setup_wizard', 'TEXT DEFAULT NULL'); // 'done' 
 ensureColumn('tenant_settings', 'hide_platform_name', 'INTEGER DEFAULT 0');
 // Identità dell'app (Impostazioni → Aspetto): il nome mostrato al posto di «Platform» e un logo dell'app (sidebar e login) diverso da quello dei documenti.
 ensureColumn('tenant_settings', 'app_name', 'TEXT');
+ensureColumn('tenant_settings', 'app_logo_chiaro_url', 'TEXT'); // il logo dell'app in versione chiara, per il tema scuro (Aspetto); vuoto = si usa il logo normale
 ensureColumn('tenant_settings', 'font_app', 'TEXT'); // il carattere dell'app scelto in Aspetto (chiave di lib/caratteri.js); vuoto = predefinito
 ensureColumn('tenant_settings', 'app_logo_url', 'TEXT');
 // CMS pagina di accesso (2026-08-15) — richiesto dall'utente esplicitamente
