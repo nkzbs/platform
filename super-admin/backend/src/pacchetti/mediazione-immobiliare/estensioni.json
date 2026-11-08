@@ -1226,22 +1226,19 @@
     },
     {
       "key": "stato_alla_firma_scheda",
-      "_nota": "DA TERMINARE (serve un nuovo evento): oggi la firma della scheda è un allegato («scheda_immobile_firmata») e il motore delle automazioni non sa reagire a un allegato caricato. Finché non c'è, il passaggio di stato resta manuale e la scheda ricorda cosa manca.",
+      "_nota": "Quando la «Scheda di acquisizione (da firmare)» torna firmata, l'immobile passa da solo da «Da valutare» a «In mandato» (proprietà `on_signed_state` del documento, già gestita dal server alla consegna del firmato). Vale solo se il passaggio esiste nel workflow; altrimenti la scheda firmata si salva e lo stato resta com'è. Non tocca un'impostazione già scelta dal Builder.",
       "richiede": {
         "immobili": [
           "titolo"
         ]
       },
-      "aggiungi": [
+      "imposta": [
         {
-          "block_type": "external_action",
-          "key": "stato_alla_firma_scheda",
-          "label": "Passaggio di stato alla firma",
-          "icon": "check",
-          "descrizione": "Quando la scheda firmata è caricata, porta l'immobile allo stato successivo",
-          "adapter": "da_attivare",
-          "servizio_richiesto": "un nuovo evento del motore («allegato caricato») che oggi non esiste: è lavoro da fare in Platform, non qualcosa da attivare da te",
-          "come_attivare": "Dimmi se vuoi che lo costruisca: serve un evento «allegato caricato» e la scelta dello stato di arrivo."
+          "block_type": "document_action",
+          "key": "scheda_immobile_completa",
+          "proprieta": {
+            "on_signed_state": "in_mandato"
+          }
         }
       ]
     }

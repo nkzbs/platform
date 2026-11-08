@@ -161,11 +161,23 @@ async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs
           const x = stepsRicalcolati[i], r = (az.rinomina || []).find((y) => y.key === x.key);
           if (r && ['field', 'relation'].includes(x.block_type) && x.label === r.da) { stepsRicalcolati[i] = { ...x, label: r.a }; rinominati.push(r.key); }
         }
+        // `imposta`: [{ block_type, key, proprieta: { nome: valore } }] dà a un blocco già presente le proprietà che NON ha ancora (mai sopra un valore scelto
+        // dall'utente, nemmeno vuoto di proposito: si guarda solo se manca del tutto). Serve per un blocco creato in una versione precedente del pacchetto
+        // (es. `on_signed_state` di un documento da firmare). `on_signed_state` si imposta solo se lo stato esiste nel workflow del modulo.
+        const impostati = [];
+        const statiModulo = new Set(schema.steps.filter((x) => x.block_type === 'workflow_state').map((x) => x.key));
+        for (let i = 0; i < stepsRicalcolati.length; i++) {
+          const x = stepsRicalcolati[i], r = (az.imposta || []).find((y) => y.block_type === x.block_type && y.key === x.key);
+          if (!r) continue;
+          const nuove = {};
+          for (const [k, v] of Object.entries(r.proprieta || {})) if (x[k] === undefined && !(k === 'on_signed_state' && !statiModulo.has(v))) nuove[k] = v;
+          if (Object.keys(nuove).length) { stepsRicalcolati[i] = { ...x, ...nuove }; impostati.push(r.key); }
+        }
         const inFondo = ricalcolati.filter((r) => r.in_fondo).map((r) => r.key);
         const stepsConvertiti = inFondo.length ? [...stepsRicalcolati.filter((x) => !(x.block_type === 'field' && inFondo.includes(x.key))), ...inFondo.map((k) => stepsRicalcolati.find((x) => x.block_type === 'field' && x.key === k))] : stepsRicalcolati;
         const nuoviDaConvertire = daConvertire.filter((c) => !schema.steps.some((x) => x.key === c.key))
           .map((c) => ({ id: cfg.idPrefisso + Math.random().toString(36).slice(2, 10), block_type: 'field', key: c.key, label: c.label || c.key, type: c.type || 'multiselect', options: c.options }));
-        if (!daAggiungere.length && !daConvertire.length && !ricalcolati.length && !rinominati.length) { segna(chiave); esiti.push({ slug, key: az.key, esito: 'nulla da fare' }); continue; } // formule già cambiate dall'utente (o già giuste): niente da pubblicare
+        if (!daAggiungere.length && !daConvertire.length && !ricalcolati.length && !rinominati.length && !impostati.length) { segna(chiave); esiti.push({ slug, key: az.key, esito: 'nulla da fare' }); continue; } // formule già cambiate dall'utente (o già giuste): niente da pubblicare
         const bozzaE = await callAs(admin, 'PUT', '/builder/' + slug + '/draft', { schema: { version: 3, steps: [...stepsConvertiti, ...nuoviDaConvertire, ...daAggiungere] } });
         if (!bozzaE.ok) { console.error('[seed-blocchi] bozza ' + slug + '/' + az.key + ' fallita:', JSON.stringify(bozzaE.data)); esiti.push({ slug, key: az.key, esito: 'errore bozza' }); continue; }
         const pubE = await callAs(admin, 'POST', '/builder/' + slug + '/publish', {});

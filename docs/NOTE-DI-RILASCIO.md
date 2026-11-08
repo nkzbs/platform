@@ -2,6 +2,17 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.63 — 8 novembre 2026
+
+**Passaggio di stato alla firma della scheda: pacchetto Mediazione immobiliare alla versione 12.**
+
+- Quando la «Scheda di acquisizione (da firmare)» torna firmata, l'immobile passa da solo da «Da valutare» a «In mandato». **Correzione di quanto scritto nella 0.4.62**: non serviva un nuovo evento «allegato caricato». Il server sa già cambiare stato alla consegna di un documento firmato (`on_signed_state` del documento, con tutti i controlli del passaggio); mancava solo impostarlo su quel documento, che sui tenant esistenti era stato creato senza.
+- **Nuovo `imposta` nelle estensioni** (`seed-blocchi-verticale.js`): `[{ block_type, key, proprieta }]` dà a un blocco già presente le proprietà che non ha, mai sopra un valore già scelto (`on_signed_state` solo se lo stato esiste nel workflow). Una sola volta, come le altre estensioni.
+- Il segnaposto «Passaggio di stato alla firma» della 0.4.62 sparisce: non serve più. Restano «da attivare» solo Controllo catastale (OpenAPI) e Auguri al cliente (il tuo testo e il consenso).
+- Se il passaggio non esiste nel workflow del modulo (stato diverso da «Da valutare»), la scheda firmata si salva e lo stato resta com'è, senza errori.
+- Test: `provvigioni-avvisi.test.js` (17 prove: impostazione una sola volta, valore già scelto intatto).
+- Messa online: Super Admin (pacchetto v12) e **Aggiorna** su zucca.
+
 ## 0.4.62 — 8 novembre 2026
 
 **Più avvisi automatici, un giro guidato per ogni verticale e i segnaposto «da terminare»: pacchetto Mediazione immobiliare alla versione 11.**

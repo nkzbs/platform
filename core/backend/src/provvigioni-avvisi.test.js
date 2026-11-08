@@ -57,6 +57,7 @@ async function main() {
     { id: 'wt_c', block_type: 'workflow_transition', from: 'documenti_inviati', to: 'cliente_verificato', label: 'Verifica' },
     { id: 'req_c', block_type: 'state_requirements', stato: 'cliente_verificato', bloccante: false, requisiti: [{ label: 'Documento d\'identità', tipo: 'allegato', valore: 'Documento di identità' }, { label: 'Privacy firmata', tipo: 'campo', campo: 'privacy_firmata_il' }] }]);
   mk('immobili', [F('titolo', 'Titolo'), F('tipologia', 'Tipologia'), F('prezzo_richiesto', 'Prezzo', 'currency'), F('comune', 'Comune'),
+    { id: 'da_i', block_type: 'document_action', key: 'scheda_immobile_completa', label: 'Scheda di acquisizione', icon: 'file', delivery: 'firma', body: 'Scheda di {{titolo}}', signed_type: 'scheda_immobile_firmata' },
     stato('in_mandato', true), stato('in_vendita'), { id: 'wt_i', block_type: 'workflow_transition', from: 'in_mandato', to: 'in_vendita', label: 'Metti in vendita' },
     { id: 'req_i', block_type: 'state_requirements', stato: 'in_vendita', bloccante: false, requisiti: [{ label: 'Foto', tipo: 'allegato', valore: 'Foto' }, { label: 'Prezzo richiesto', tipo: 'campo', campo: 'prezzo_richiesto' }] },
     { id: 'mv_i', block_type: 'match_view', key: 'richieste_compatibili', label: 'Richieste compatibili', target_module: 'clienti', display_field: 'nome', target_filter: { field: 'tipo_cliente', equals: 'Acquirente' },
@@ -212,11 +213,22 @@ async function main() {
     assertEq(n.length, 1);
     assertTrue(n[0].includes('Visita via Dante') && n[0].includes('15:30'), n[0]);
   });
-  await test('segnaposto «da attivare»: catasto, auguri e passaggio di stato dicono cosa serve', async () => {
+  await test('segnaposto «da attivare»: catasto e auguri dicono cosa serve', async () => {
     const trova = (slug, key) => schemaDi(slug).steps.find((x) => x.block_type === 'external_action' && x.key === key);
-    for (const [slug, key] of [['immobili', 'controllo_catastale'], ['clienti', 'auguri_cliente'], ['immobili', 'stato_alla_firma_scheda']]) {
+    for (const [slug, key] of [['immobili', 'controllo_catastale'], ['clienti', 'auguri_cliente']]) {
       const b = trova(slug, key); assertTrue(b && b.adapter === 'da_attivare' && b.servizio_richiesto && b.come_attivare, 'segnaposto incompleto: ' + key);
     }
+  });
+  await test('scheda firmata: il documento ha on_signed_state «in_mandato»; un valore già scelto non si tocca', async () => {
+    const doc = () => schemaDi('immobili').steps.find((x) => x.block_type === 'document_action' && x.key === 'scheda_immobile_completa');
+    assertEq(doc().on_signed_state, 'in_mandato');
+    // un modulo dove l'utente ha già scelto un altro stato: l'estensione non lo cambia
+    mk('immobili_b', [F('titolo', 'Titolo'), stato('in_mandato', true), stato('in_vendita'), { id: 'wt_b', block_type: 'workflow_transition', from: 'in_mandato', to: 'in_vendita', label: 'Vendita' },
+      { id: 'da_b', block_type: 'document_action', key: 'scheda_immobile_completa', label: 'Scheda', icon: 'file', delivery: 'firma', body: 'Scheda', signed_type: 'scheda_immobile_firmata', on_signed_state: 'in_vendita' }]);
+    const est = scegli(tutte.immobili, ['stato_alla_firma_scheda']);
+    const esiti = await applicaSeed({ immobili_b: est }, { tipo: 'estensione' });
+    assertEq(esiti.map((e) => e.esito), ['nulla da fare']);
+    assertEq(schemaDi('immobili_b').steps.find((x) => x.key === 'scheda_immobile_completa').on_signed_state, 'in_vendita');
   });
 
   console.log(`\n${passed} passati, ${failed} falliti`);

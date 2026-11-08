@@ -187,7 +187,7 @@
     {
       "pagina": "immobili",
       "titolo": "Gli immobili",
-      "testo": "Ogni immobile in mandato ha la sua scheda completa, la mappa, le foto e la valutazione di mercato con il report in PDF. Per metterlo in vendita la scheda ti dice cosa manca; quando entra in mandato ti avvisa se c'è già una richiesta compatibile."
+      "testo": "Ogni immobile in mandato ha la sua scheda completa, la mappa, le foto e la valutazione di mercato con il report in PDF. Quando la scheda di acquisizione torna firmata l'immobile passa da solo a «In mandato». Per metterlo in vendita la scheda ti dice cosa manca; quando entra in mandato ti avvisa se c'è già una richiesta compatibile."
     },
     {
       "pagina": "trattative",
@@ -210,7 +210,7 @@
         "admin"
       ],
       "titolo": "Da completare (tocca a te)",
-      "testo": "In Impostazioni → Aspetto metti logo, colore, P.IVA e indirizzo: compaiono su tutti i documenti. In Connessioni collega OpenAPI.it per la valutazione con dati reali e, se vuoi, per fattura elettronica, firma a distanza, PEC, verifica del soggetto e controllo catastale: finché non sono attivi, quei pulsanti dicono «da attivare». Restano da fare anche gli auguri ai clienti (serve il tuo testo) e il passaggio di stato alla firma della scheda."
+      "testo": "In Impostazioni → Aspetto metti logo, colore, P.IVA e indirizzo: compaiono su tutti i documenti. In Connessioni collega OpenAPI.it per la valutazione con dati reali e, se vuoi, per fattura elettronica, firma a distanza, PEC, verifica del soggetto e controllo catastale: finché non sono attivi, quei pulsanti dicono «da attivare». Resta da fare anche gli auguri ai clienti (serve il tuo testo)."
     },
     {
       "pagina": "guida",
