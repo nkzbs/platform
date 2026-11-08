@@ -6,7 +6,7 @@ const reactHooks = require('eslint-plugin-react-hooks');
 
 module.exports = [
   { linterOptions: { reportUnusedDisableDirectives: 'off' } },
-  { ignores: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/coverage/**', 'scripts/**', 'infra/**', 'eslint.config.js'] },
+  { ignores: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/coverage/**', 'scripts/**', 'infra/**', 'docs/guida-utente/strumenti/**', 'eslint.config.js'] },
   js.configs.recommended,
   {
     languageOptions: { ecmaVersion: 2023, sourceType: 'commonjs', globals: { ...globals.node, ...globals.es2021 } },
