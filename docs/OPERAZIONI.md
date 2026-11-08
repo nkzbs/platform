@@ -285,3 +285,24 @@ Invece di girare una password, si manda un **link monouso**: la persona sceglie 
 - **Dal tenant** (Impostazioni → Utenti & Ruoli → «Invita»): nome, ruolo (anche personalizzati), email facoltativa. **Da Super Admin** (Tenant → scheda Credenziali → «Invita», e dopo «Crea il tenant» dell'Analisi): per il primo admin; Super Admin crea l'invito nel tenant con il secret interno.
 - **Consegna**: copia il link; «Apri WhatsApp» (`wa.me` con il messaggio già scritto) e «Condividi su Telegram» (`t.me/share`) — nessun invio automatico, perché né WhatsApp (CallMeBot scrive solo al proprietario; la Business API vuole modelli approvati) né i bot Telegram possono scrivere per primi a una persona nuova; **email** dalla posta di Super Admin (SMTP, vedi sopra), solo se configurata.
 - **Difese della mail**: il tenant la chiede a Super Admin con un token firmato col SUO segreto (il segreto condiviso non basta); il testo è fisso; il link deve essere `https://<dominio di quel tenant>/invito/<token>`; al massimo 30 al giorno per tenant (contatore in memoria: si azzera al riavvio di Super Admin).
+
+## Passare OpenAPI.it dalla prova alla produzione
+
+Nella console di OpenAPI: attiva i servizi che servono (Real Estate, Visure Camerali, Risk, Catasto, e per le funzioni «da attivare» SDI, eSignature, PEC) e crea la **chiave di produzione** (di norma diversa da quella di prova). In Platform: Impostazioni → Connessioni → OpenAPI.it → email e chiave nuova, ambiente da «prova» a «produzione», **Controlla i servizi**, **tetto di spesa mensile** e prezzi. Oggi funzionano subito valutazione di mercato (comparabili e OMI) e ricerca imprese; le funzioni «da attivare» vanno anche collegate nel codice (si provano prima in prova, gratuita). Prezzi e stima mensile: [`COSTI-OPENAPI.md`](COSTI-OPENAPI.md).
+
+## Server MCP
+
+Non ha un indirizzo web: è un programma locale (`mcp-server/`) che Claude Code o Claude Desktop avviano sul computer. Token da Impostazioni → Il mio account → Token API; poi `claude mcp add platform --env PLATFORM_URL=https://<tenant>.platform-core.it --env PLATFORM_API_TOKEN=plat_... -- node <percorso>/mcp-server/src/index.js`. Non funziona da claude.ai nel browser né dal telefono (servirebbe un MCP remoto, non costruito).
+
+## Rifare la guida illustrata in PDF
+
+Script e istruzioni in `docs/guida-utente/strumenti/` (LEGGIMI). Serve Chrome, un ambiente locale con i dati di esempio e un solo accesso (il server limita i tentativi).
+
+## Servizi vicini e mappa: cosa aspettarsi
+
+La prima volta per un indirizzo l'elenco richiede anche 30-40 secondi (Overpass pubblico): compare da solo; poi resta 7 giorni in cache. Se il servizio non risponde si riprova riaprendo la scheda (un guasto non si ripete per 2 minuti). Il report PDF non aspetta: se i luoghi non ci sono ancora, lo dice e si rigenera dopo un minuto.
+
+## Tag e push forzati
+
+Spostare un tag già pubblicato richiede un push forzato (`git push --force origin <tag>`): si fa solo con un via libera esplicito. Il 08/11/2026 `v0.4.61` è stato spostato sul commit realmente online (`082d2a8`).
+

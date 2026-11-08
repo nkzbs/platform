@@ -2,6 +2,23 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.60 – 0.4.71 — 8 novembre 2026
+
+**Il perché delle scelte di queste versioni** (cosa è stato costruito: `NOTE-DI-RILASCIO.md`; come: `ARCHITETTURA.md`).
+
+- **Gli avvisi sono solo notifiche in app**, mai messaggi ai clienti, e quello sulla conservazione dei dati **non cancella nulla**: cancellare dati personali o spedire una comunicazione è una decisione di una persona (consenso, GDPR), non di un'automazione.
+- **Servizi vicini da OpenStreetMap (Overpass), non da un servizio a chiave**: gratuito, nessun conto da aprire, e per un elenco del «più vicino» basta. **I minuti a piedi sono una stima** dalla linea d'aria: un percorso vero richiede un servizio con chiave o un nostro server di routing, e non vale la complicazione. Il servizio pubblico può metterci 30-40 secondi: per questo la scheda non aspetta (ricerca in secondo plano, cache 7 giorni) e il report PDF **non aspetta mai** i luoghi.
+- **Mappa nel PDF con tessere di OpenStreetMap scaricate dal server**, poche e in cache: l'uso è leggero, con User-Agent dichiarato e fonte citata. Se non arrivano il report si fa lo stesso.
+- **Il passaggio di stato alla firma della scheda usa `on_signed_state`** (già nel server per i documenti da firmare), non un nuovo evento «allegato caricato»: avevo scritto il contrario e sbagliavo; mancava solo impostarlo su quel documento.
+- **Estensioni `imposta` e `riscrivi`**: aggiornare un tenant già in uso senza mai sovrascrivere ciò che l'utente ha scelto dal Builder.
+- **Il giro guidato è dato del pacchetto**, parte da solo **una volta per persona**, mai davanti ai «Primi passi» di un tenant vuoto, e si rifà dal pulsante nella Guida: nessun testo di settore nel codice.
+- **Il carattere Zuccà Banner è GFS Didot rinominato (SIL OFL 1.1)**, non un disegno esclusivo: la licenza sta accanto ai file e il riquadro lo dice. Vale per l'interfaccia e per i titoli dei PDF, non per il corpo dei PDF.
+- **Il logo chiaro è un campo a parte**, caricato dall'utente: non si ricolora mai il logo normale.
+- **La casella «fatto» nel «Da fare» fa il passaggio di stato vero**, non un campo scritto a mano: così valgono ruoli, requisiti e automazioni. Se il modulo rifiuta, la riga resta e dice perché.
+- **Solvibilità: solo segnaposto «da attivare»**. Per le persone non esiste un credit score (CRIF, protesti, negatività), per le società sì (semaforo a 3 classi); nessuna verifica su una persona senza consenso registrato e parere del DPO. Costi per azione: `COSTI-OPENAPI.md`, da confermare nella console.
+- **Dati dimostrativi coerenti, con «da attivare» dove OpenAPI manca** (`se_manca`): meglio un record che dice cosa serve di un buco.
+- **Nei `package-lock.json` la riga di `iconv-lite` segue il numero di rilascio**: con il valore «giusto» (0.4.24) `npm ci` fallisce. Non correggerla a mano.
+
 ## 0.4.28 — 6 novembre 2026
 
 **Documenti impaginati con stile, e report nella UI con la stessa grafica.** Su indicazione dell'utente (mockup di riferimento): i PDF dei documenti non sono più testo in colonna ma schede.
