@@ -2,6 +2,16 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.73 — 8 novembre 2026
+
+**Non pagare due volte per distrazione, e i moduli nascosti si riconoscono.**
+
+- **«Già eseguita su questa scheda»**: se l'azione a pagamento (per esempio «Valutazione di mercato») ha già un risultato salvato sul record, la **conferma del costo lo scrive in chiaro** («Il risultato è salvato e si può riaprire, e rifare il PDF, senza spendere. Rifarla costa di nuovo») e il pulsante diventa **«Rifai e paga di nuovo»**. Il server lo segnala (`gia_eseguita` nella risposta di conferma): ogni pressione resta una nuova richiesta a pagamento, ma non si può più rifare per caso.
+- **Elenco dei moduli** (Impostazioni → Moduli): un modulo spento o nascosto porta ora la scritta **«nascosto»**, non solo l'icona dell'occhio.
+- **Su zucca** (fatto a mano, non è codice): **Interazioni e Visite**, i due moduli vecchi già spenti e vuoti dopo l'unificazione, sono stati **eliminati**; resta Attività.
+- Test: `openapi-spese.test.js` (una prova nuova: «già eseguita» su record con report, assente su record nuovo).
+- Messa online: **Aggiorna** su zucca (insieme alla 0.4.72).
+
 ## 0.4.72 — 8 novembre 2026
 
 **Servizi vicini senza vicoli ciechi, indirizzi copiati dagli atti che la mappa capisce, e la mappa che dice quando non trova.**

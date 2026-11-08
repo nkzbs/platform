@@ -409,6 +409,7 @@ function ModuliTab({ token }) {
             <div className="flex-1 min-w-0">
               <div className="text-sm text-ink font-medium truncate flex items-center gap-1.5">
                 {m.name}
+                {!m.active && <span title="Spento o nascosto: non compare nel menu" className="text-[9px] px-1.5 py-0.5 rounded-full bg-gray-800 text-gray-400 flex-shrink-0">nascosto</span>}
                 {overlay[m.slug] === 'customized' && (
                   <span title="Modificato rispetto al modello di partenza" className="text-[9px] px-1.5 py-0.5 rounded-full bg-cp-purple/30 text-cp-purple flex-shrink-0">personalizzato</span>
                 )}

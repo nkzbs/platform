@@ -44,6 +44,11 @@ async function main() {
     eq([j.code, j.costo, j.noto, j.ambiente, j.speso_mese, j.tetto], ['conferma_costo', null, false, 'produzione', 0, null]); ok(/Valutazione/.test(j.nome));
     eq(chiamate, 0); eq((await spese()).produzione.richieste, 0); eq(JSON.parse(db.prepare('SELECT data FROM records WHERE id = ?').get(id).data).valore, undefined);
   });
+  await test('già eseguita: se il report è già salvato sul record la conferma lo dice (così non si paga due volte per distrazione); su un record nuovo no', async () => {
+    const nuovo = await (await azione(rec())).json(); eq(nuovo.gia_eseguita, false);
+    const fatto = db.prepare("INSERT INTO records (module_slug, data) VALUES ('case', ?)").run(JSON.stringify({ via: 'Via Roma 2', mq: 90, rep: { dettaglio: { quotazione: { med: 2000 } } } })).lastInsertRowid;
+    const j = await (await azione(fatto)).json(); eq([j.code, j.gia_eseguita], ['conferma_costo', true]);
+  });
   await test('con la conferma esegue e registra la spesa; un prezzo scritto dall\'utente entra nel contatore del mese', async () => {
     eq((await imposta({ prezzi: { valutazione_immobiliare: 0.5 } })).status, 200);
     const j = await (await azione(rec())).json(); eq([j.costo, j.noto], [0.5, true], 'ora il prezzo è noto');

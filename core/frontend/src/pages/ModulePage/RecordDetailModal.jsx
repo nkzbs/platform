@@ -682,8 +682,13 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                       ? 'La richiesta costa circa ' + euro(confermaCosto.costo) + ' (listino, IVA esclusa). Spesa del mese: ' + euro(confermaCosto.speso_mese) + (confermaCosto.tetto ? ' su un tetto di ' + euro(confermaCosto.tetto) : '') + '.'
                       : 'Il prezzo di questa richiesta non è indicato nel listino: si registra a 0 € finché non lo scrivi in Impostazioni → Connessioni → OpenAPI.it. Spesa del mese: ' + euro(confermaCosto.speso_mese) + '.'}
                 </div>
+                {confermaCosto.gia_eseguita && (
+                  <div className="mb-2 leading-snug text-ink bg-amber-400/15 border border-amber-500/50 rounded-md px-2.5 py-1.5" role="alert">
+                    <b>Già eseguita su questa scheda.</b> Il risultato è salvato e si può riaprire (e rifare il PDF) senza spendere.{confermaCosto.ambiente === 'prova' ? '' : ' Rifarla costa di nuovo.'}
+                  </div>
+                )}
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => eseguiAzione(confermaCosto.az, true)} className="bg-accent hover:opacity-90 text-white px-3 py-1.5 rounded-lg font-medium">Procedi</button>
+                  <button type="button" onClick={() => eseguiAzione(confermaCosto.az, true)} className="bg-accent hover:opacity-90 text-white px-3 py-1.5 rounded-lg font-medium">{confermaCosto.gia_eseguita && confermaCosto.ambiente !== 'prova' ? 'Rifai e paga di nuovo' : 'Procedi'}</button>
                   <button type="button" onClick={() => setConfermaCosto(null)} className="bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-lg">Annulla</button>
                 </div>
               </div>
