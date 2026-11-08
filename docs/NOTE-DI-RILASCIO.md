@@ -2,6 +2,17 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.69 — 8 novembre 2026
+
+**«Da fare» della Dashboard: la casella per segnare una riga come fatta.**
+
+- Prima una riga usciva dall'elenco solo se la si apriva e si premeva «Segna come fatto» nella scheda. Ora **ogni riga ha una casella** a sinistra: spuntarla fa lo **stesso passaggio di stato** del pulsante nella scheda (stesso ruolo, stessi requisiti, stesse automazioni) e la riga esce subito, con il conteggio aggiornato. Cliccare il titolo apre il modulo come prima.
+- **Se il modulo non lo permette** (il passaggio non esiste da dove si trova la riga, o manca qualcosa di bloccante) la riga **resta**, la casella torna vuota e compare il motivo scritto dal server, con «Apri» per andare alla scheda. Succede per esempio a una provvigione «da fatturare»: lo stato «fatto» è «incassata», che non si raggiunge direttamente.
+- La casella compare solo se il modulo ha dichiarato quale stato vale «fatto» (Builder → Ruoli del modulo → Avvisi): senza non si saprebbe dove portare la riga.
+- Test: `AgendaWidget.test.jsx` (4 prove: spunta e la riga esce col passaggio giusto, rifiuto con motivo, nessuna casella senza stato «fatto», il titolo non segna).
+- Messa online: **Aggiorna** su zucca. Nessun cambio al pacchetto.
+- **Non fatto**: annullare la spunta dal widget (si riapre dalla scheda), e un esito da scegliere al volo per le Attività (la scheda lo ricorda ma non lo blocca).
+
 ## 0.4.68 — 8 novembre 2026
 
 **Il logo dell'app in versione chiara, per il tema scuro.**
