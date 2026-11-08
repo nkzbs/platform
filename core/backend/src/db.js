@@ -421,6 +421,8 @@ db.exec(`
 // bidirezionale (es. Attivo<->Sospeso) è uno stato generico, non un "pagato".
 // Default 1 (comportamento invariato ovunque già lo usi), spegnibile da Builder.
 ensureColumn('modules', 'quick_toggle', 'INTEGER DEFAULT 1');
+// Modulo attivo ma tolto dal menu laterale: i suoi dati restano raggiungibili dalle schede collegate (es. «Quote societarie» dentro il Cliente). Diverso da `active = 0`, che lo spegne del tutto.
+ensureColumn('modules', 'menu_nascosto', 'INTEGER DEFAULT 0');
 ensureColumn('modules', 'group_name', 'TEXT DEFAULT NULL');
 ensureColumn('modules', 'group_order', 'INTEGER DEFAULT 0');
 // Vista della lista record: 'table' (default) o 'card_grid' — griglia di card colorate

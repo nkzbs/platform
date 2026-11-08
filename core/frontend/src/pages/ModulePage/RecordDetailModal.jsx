@@ -807,11 +807,11 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                 })}
               </div>
             )}
-            {children.some((c) => (childData[c.module_slug] || []).length > 0) && (
+            {children.some((c) => (childData[c.module_slug] || []).length > 0 || c.menu_nascosto) && (
               <div className="mb-4 bg-surface-page border border-gray-800 rounded-lg px-3 py-2.5">
                 <div className="text-xs font-semibold text-gray-400 mb-1.5 flex items-center gap-1.5"><Icon name="link" size={11} />Collegati</div>
                 <div className="flex flex-wrap gap-x-5 gap-y-1">
-                  {children.filter((c) => (childData[c.module_slug] || []).length > 0).map((c) => (
+                  {children.filter((c) => (childData[c.module_slug] || []).length > 0 || c.menu_nascosto).map((c) => (
                     <button key={c.module_slug} type="button" onClick={() => { setOpenSection('child:' + c.module_slug); setTimeout(() => { const el = document.getElementById('collegati-' + c.module_slug); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 50) }}
                       className="text-sm text-ink hover:text-accent transition flex items-center gap-1.5">
                       <Icon name={c.module_icon || 'box'} size={12} className="text-gray-500" />{c.module_name} <span className="text-accent font-semibold">{(childData[c.module_slug] || []).length}</span>

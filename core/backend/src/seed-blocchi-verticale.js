@@ -305,7 +305,7 @@ async function impostaProprieta(seed = {}, { callAs = require('./lib/internal-ap
     if (slug.startsWith('_') || !prop || typeof prop !== 'object') continue;
     const chiave = 'proprieta:' + slug;
     if (gia(chiave) || !admin || !db.prepare('SELECT 1 FROM modules WHERE slug = ? AND installed = 1').get(slug)) continue;
-    const corpo = {}; if (prop.quick_toggle !== undefined) corpo.quick_toggle = !!prop.quick_toggle;
+    const corpo = {}; if (prop.quick_toggle !== undefined) corpo.quick_toggle = !!prop.quick_toggle; if (prop.menu_nascosto !== undefined) corpo.menu_nascosto = !!prop.menu_nascosto;
     const r = await callAs(admin, 'PATCH', '/modules/' + slug, corpo);
     if (!r.ok) { console.error('[seed-blocchi] proprietà di ' + slug + ' non impostate:', JSON.stringify(r.data)); esiti.push({ slug, esito: 'errore' }); continue; }
     segna(chiave); esiti.push({ slug, esito: 'applicato' });

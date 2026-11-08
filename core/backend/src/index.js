@@ -25,6 +25,7 @@ const recordsRoutes = require('./routes/records');
 const builderRoutes = require('./routes/builder');
 const uploadsRoutes = require('./routes/uploads');
 const connectionsRoutes = require('./routes/connections');
+const messaggiRoutes = require('./routes/messaggi');
 const automationsRoutes = require('./routes/automations');
 const dashboardRoutes = require('./routes/dashboard');
 const auditRoutes = require('./routes/audit');
@@ -105,6 +106,7 @@ const routeMounts = [
   ['/receipt-match', require('./routes/receipt-match')],
   ['/uploads', uploadsRoutes],
   ['/connections', connectionsRoutes],
+  ['/messaggi', messaggiRoutes],
   ['/automations', automationsRoutes],
   ['/dashboard', dashboardRoutes],
   ['/audit-log', auditRoutes],
@@ -165,7 +167,7 @@ app.use('/__root_public', rootPublicRouter);
 
 app.get('/health', (req, res) => res.json({
   status: 'ok',
-  version: '0.4.79',
+  version: '0.4.80',
   tenant: process.env.TENANT_SLUG || 'unknown',
   name: process.env.TENANT_NAME || 'Platform Core'
 }));
@@ -249,6 +251,7 @@ app.listen(PORT, () => {
   console.log('Platform Core [' + (process.env.TENANT_SLUG || 'default') + '] running on port ' + PORT);
   startScheduler();
   startReports(); // il controllo ogni minuto parte sempre; se la funzione è spenta non fa niente
+  require('./lib/messaggi-clienti').avviaAuguri(); // auguri di compleanno (spenti finché non si attivano nelle impostazioni)
   startMonitor(); // il giorno 2 alle 9: "come sta andando" su WhatsApp, per i widget che lo hanno acceso
   startAvvisi(); // ogni minuto: righe nuove in "da smistare" (da qualunque via) -> un messaggio WhatsApp
   startGmailPoller();

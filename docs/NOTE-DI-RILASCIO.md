@@ -2,6 +2,18 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.80 — 9 novembre 2026
+
+**Quote societarie dentro il Cliente; auguri di compleanno e invio di massa, per mail e SMS.**
+
+- **Quote societarie nella scheda del cliente**: il modulo resta com'è (una quota lega società, socio e acquirente: serve ancora una riga per quota) ma **sparisce dal menu laterale** (nuova proprietà di modulo `menu_nascosto`: attivo, tolto dal menu). Nella scheda di ogni cliente, tra i «Collegati», compare sempre «Quote societarie» con l'elenco (come società, socio o acquirente) e «Aggiungi riga». Prima i «Collegati» comparivano solo se già con righe. Impostazioni → Moduli mostra «nascosto». Pacchetto v19 (`proprieta`: `quote_societarie.menu_nascosto`).
+- **Messaggi ai clienti** (Impostazioni → Messaggi ai clienti): mittente degli SMS (alias registrato e approvato nella console di OpenAPI.it), tetto di messaggi al giorno (predefinito 200), riga di disiscrizione in fondo alle mail, e il **registro** di tutto ciò che è partito, saltato, fermato o non riuscito.
+- **Auguri di compleanno automatici**: ogni giorno dalle 09:00 (ora italiana), a chi compie gli anni **e ha «Consenso comunicazioni commerciali»**, mail e/o SMS con il tuo testo ({nome}, {cognome}). **Spenti finché non li attivi**; una sola volta all'anno per cliente; chi è saltato (senza consenso o senza contatto) è nel registro con il motivo. Il pulsante «Auguri al cliente» li manda subito a quel cliente.
+- **Invio di massa**: pulsante «Messaggio» nella lista Clienti (solo admin): scrive a **tutti i clienti che vedi nella lista** (filtri e ricerca compresi). Prima c'è l'**anteprima** (chi riceve, chi è saltato e perché, quanti SMS e quanto costano, un esempio col nome), poi la conferma; il server ricontrolla il consenso per ognuno. Il tetto giornaliero si ferma e lascia scritto il resto nel registro.
+- **SMS**: SMS v2 di OpenAPI.it (`POST /IT-messages`, sandbox gratuito). Se il servizio non è abilitato o manca il mittente, **gli SMS si saltano e lo dice, la mail parte lo stesso**; appena il servizio è abilitato, gli SMS partono da soli. Ogni SMS è una spesa nel registro di OpenAPI (listino «da 0,036 €» a segmento da 160 caratteri).
+- Test: `messaggi-clienti.test.js` (8, con mail e SMS finti). Non provato dal vivo: la prima mail e il primo SMS veri.
+- Messa online: deploy + **Aggiorna** su zucca. Gli auguri automatici restano spenti finché non li accendi.
+
 ## 0.4.79 — 9 novembre 2026
 
 **La versione di Platform si vede sempre sotto il titolo.** Prima compariva solo quando il nome «Platform» non era nascosto; sui tenant che mostrano il nome dello studio (zucca) non si vedeva. Ora sotto il titolo in barra laterale c'è sempre «Platform 0.4.79», anche nel menu da telefono. Solo frontend: deploy + **Aggiorna** su zucca.

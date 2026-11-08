@@ -29,6 +29,7 @@ const domini = (sandbox) => ({
   catasto: (sandbox ? 'test.' : '') + 'catasto.openapi.it', // secondo lo schema ufficiale (console.openapi.com/oas) il catasto sta su un dominio .it
   risk: (sandbox ? 'test.' : '') + 'risk.openapi.com',
   esignature: (sandbox ? 'test.' : '') + 'esignature.openapi.com',
+  sms: (sandbox ? 'test.' : '') + 'sms.openapi.com',
   visurecamerali: (sandbox ? 'test.' : '') + 'visurecamerali.openapi.it', // le visure camerali stanno su un dominio .it
 });
 

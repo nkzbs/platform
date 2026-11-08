@@ -816,3 +816,9 @@ Codice potato dopo lo spegnimento di Platform (2 ottobre 2026): vedi [`DECISIONI
 
 - **Decisione**: il numero di un widget e l'elenco aperto dal suo clic usano la stessa funzione di filtro (`filtroWidget.js`). I nuovi widget (Percorso, Segnali) sono standard: nessun nome di modulo o campo nel codice, tutto viene dalla configurazione del widget.
 - **Perché**: se il widget dice «3 scadute» e l'elenco ne mostra 4, la Dashboard perde fiducia.
+
+## 0.4.80 — Messaggi ai clienti: consenso sempre, SMS che si accende da solo
+
+- **Decisione**: ogni messaggio commerciale (auguri, invio di massa) parte solo a chi ha il consenso alle comunicazioni commerciali, controllato dal server per ogni destinatario; un tetto giornaliero e un registro completo (anche dei saltati). Gli auguri automatici nascono spenti.
+- **Canali**: mail (Resend) e SMS (SMS v2 di OpenAPI.it). Un canale non disponibile si salta e lo si dice, l'altro parte. L'invio di massa usa la lista filtrata che l'utente sta guardando, con anteprima e conferma obbligatorie.
+- **Quote societarie** non sono state fuse nel Cliente come campi (una società ha più soci, un cliente più quote): restano un modulo, nascosto dal menu (`menu_nascosto`) e presentato dentro il Cliente.

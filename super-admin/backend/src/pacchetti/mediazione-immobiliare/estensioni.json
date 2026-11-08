@@ -1819,6 +1819,47 @@
           }
         }
       ]
+    },
+    {
+      "key": "collega_auguri",
+      "_nota": "Collega «Auguri al cliente» ai messaggi veri (adattatore `messaggio_cliente`): mail e/o SMS (SMS v2 di OpenAPI.it) SOLO a chi ha «Consenso comunicazioni commerciali». Il pulsante invia subito gli auguri a quel cliente; lo stesso blocco (`automatico: compleanno`) è la sorgente degli auguri automatici del giorno e dell'invio di massa dalla lista Clienti. Testo, canali, mittente SMS e tetto giornaliero si scelgono in Impostazioni → Messaggi ai clienti; gli auguri automatici restano SPENTI finché non li attivi lì.",
+      "richiede": {
+        "clienti": [
+          "nome"
+        ]
+      },
+      "riscrivi": [
+        {
+          "block_type": "external_action",
+          "key": "auguri_cliente",
+          "proprieta": {
+            "adapter": {
+              "da": "da_attivare",
+              "a": "messaggio_cliente"
+            },
+            "descrizione": {
+              "da": "Manda gli auguri di compleanno ai clienti che hanno dato il consenso alle comunicazioni commerciali",
+              "a": "Manda ora gli auguri di compleanno a questo cliente (mail e/o SMS) se ha dato il consenso alle comunicazioni commerciali"
+            }
+          }
+        }
+      ],
+      "imposta": [
+        {
+          "block_type": "external_action",
+          "key": "auguri_cliente",
+          "proprieta": {
+            "campi": {
+              "nome": "nome",
+              "email": "email",
+              "telefono": "telefono",
+              "consenso": "consenso_marketing",
+              "data_nascita": "data_nascita"
+            },
+            "automatico": "compleanno"
+          }
+        }
+      ]
     }
   ],
   "quote_societarie": [

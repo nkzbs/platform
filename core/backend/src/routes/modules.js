@@ -643,7 +643,7 @@ router.get('/:slug', requireAuth, (req, res) => {
 // questo modulo. Derivato a runtime dallo schema — nessuna configurazione duplicata,
 // funziona identico per ogni fork/verticale senza codice specifico.
 router.get('/:slug/children-modules', requireAuth, (req, res) => {
-  const installed = db.prepare('SELECT slug, name, icon, color, schema_json FROM modules WHERE installed = 1 AND active = 1').all(); // un modulo spento (es. dopo una migrazione) non compare tra i «Collegati»
+  const installed = db.prepare('SELECT slug, name, icon, color, menu_nascosto, schema_json FROM modules WHERE installed = 1 AND active = 1').all(); // un modulo spento (es. dopo una migrazione) non compare tra i «Collegati»
   const children = [];
   installed.forEach((m) => {
     if (m.slug === req.params.slug) return;
@@ -651,7 +651,7 @@ router.get('/:slug/children-modules', requireAuth, (req, res) => {
     try { schema = parseSchemaNormalized(m.schema_json); } catch (e) { return; }
     (schema.relations || []).forEach((r) => {
       if (r.type === 'many_to_one' && r.target_module === req.params.slug) {
-        children.push({ module_slug: m.slug, module_name: m.name, module_icon: m.icon, module_color: m.color, relation_key: r.key, relation_label: r.label, display_mode: r.display_mode || 'tab' });
+        children.push({ module_slug: m.slug, module_name: m.name, module_icon: m.icon, module_color: m.color, menu_nascosto: !!m.menu_nascosto, relation_key: r.key, relation_label: r.label, display_mode: r.display_mode || 'tab' });
       }
     });
   });
@@ -660,7 +660,7 @@ router.get('/:slug/children-modules', requireAuth, (req, res) => {
 
 // Aggiorna icona/colore di un modulo esistente (scelti dal set predefinito nel Builder)
 router.patch('/:slug', requireAuth, requireAdmin, (req, res) => {
-  const { icon, color, quick_toggle, name, group_name, group_order, active, list_view, batch_upload_field, batch_upload_category_field } = req.body;
+  const { icon, color, quick_toggle, menu_nascosto, name, group_name, group_order, active, list_view, batch_upload_field, batch_upload_category_field } = req.body;
   const mod = db.prepare('SELECT id FROM modules WHERE slug = ?').get(req.params.slug);
   if (!mod) return res.status(404).json({ error: 'Modulo non trovato' });
   if (icon) db.prepare('UPDATE modules SET icon = ? WHERE slug = ?').run(icon, req.params.slug);
@@ -670,6 +670,7 @@ router.patch('/:slug', requireAuth, requireAdmin, (req, res) => {
   // modo per scriverla. Non è un confine di sicurezza: solo convenienza di
   // navigazione, i permessi veri restano i ruoli/regole per-modulo già esistenti.
   if (active !== undefined) db.prepare('UPDATE modules SET active = ? WHERE slug = ?').run(active ? 1 : 0, req.params.slug);
+  if (menu_nascosto !== undefined) db.prepare('UPDATE modules SET menu_nascosto = ? WHERE slug = ?').run(menu_nascosto ? 1 : 0, req.params.slug);
   if (quick_toggle !== undefined) db.prepare('UPDATE modules SET quick_toggle = ? WHERE slug = ?').run(quick_toggle ? 1 : 0, req.params.slug);
   // Rinomina SOLO il nome visualizzato — mai lo slug. Lo slug è la chiave stabile usata
   // da relazioni (target_module), formule (sum_children(slug.campo)) e dai record già

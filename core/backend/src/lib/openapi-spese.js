@@ -31,6 +31,7 @@ const SERVIZI = {
   catasto_elenco_note: { nome: 'Catasto — elenco delle note', prezzo: 10.90 },
   catasto_visura_immobile: { nome: 'Catasto — visura di un immobile (prezzo non indicato nelle pagine pubbliche: scrivilo tu da Prezzi)', prezzo: null },
   catasto_ispezione_nazionale: { nome: 'Catasto — immobili di una persona dal codice fiscale (ispezione nazionale)', prezzo: 23.70 },
+  sms_italia: { nome: 'SMS Italia (SMS v2): costo per segmento da 160 caratteri; listino «da 0,036»', prezzo: 0.036 },
   risk_verifica_cf: { nome: 'Risk — verifica del codice fiscale', prezzo: 0.0081 },
   risk_report_persona: { nome: 'Risk — report sulla persona (cautelativo: le pagine di OpenAPI indicano 3,10 e 3,60)', prezzo: 3.60 },
   risk_patrimoniale_persona: { nome: 'Risk — report patrimoniale sulla persona', prezzo: null },

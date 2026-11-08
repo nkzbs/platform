@@ -40,4 +40,4 @@ function htmlDaTesto(testo) {
   return '<div style="font-family:system-ui,-apple-system,sans-serif;color:#1c1917;white-space:pre-wrap;line-height:1.6;max-width:640px">' + righe.join('<br>') + '</div>';
 }
 
-module.exports = { invia, htmlDaTesto };
+module.exports = { invia, htmlDaTesto, credenziali };

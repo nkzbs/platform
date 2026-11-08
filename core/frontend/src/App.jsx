@@ -243,7 +243,7 @@ export default function App() {
   return (
     <IdentitaAppContext.Provider value={identita}>
     <div className="flex min-h-screen bg-surface-page">
-      <Sidebar modules={installedModules} currentPage={currentPage} onNavigate={setCurrentPage} user={user} onLogout={logout} tenantName={tenantName} logoUrl={logoMostrato} hidePlatformName={hidePlatformName} features={features} token={token}
+      <Sidebar modules={installedModules.filter((m) => !m.menu_nascosto)} currentPage={currentPage} onNavigate={setCurrentPage} user={user} onLogout={logout} tenantName={tenantName} logoUrl={logoMostrato} hidePlatformName={hidePlatformName} features={features} token={token}
         mobileOpen={mobileNavOpen} onMobileClose={() => setMobileNavOpen(false)} collapsed />
       {/* Rail su desktop (md:ml-14, spazio riservato), dock flottante su mobile (nessun
           margine, pb-28 sotto perché non copra l'ultimo pezzo di pagina) — richiesto dal

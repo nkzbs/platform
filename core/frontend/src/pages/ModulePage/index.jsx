@@ -32,6 +32,7 @@ import { StepChainEditor } from '@shared/builder/StepChainEditor.jsx'
 import GlassPageBackground from '../../components/GlassPageBackground'
 import Portal from '../../components/Portal'
 import { leggiApertura, passaTutti } from '../../lib/filtroWidget'
+import MessaggioMassivoModal from '../../components/MessaggioMassivoModal'
 
 function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
   const api = useApi(token)
@@ -257,6 +258,7 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
   const [activeFilterTab, setActiveFilterTab] = useState(null)
   // Filtri applicati dal clic su un widget della Dashboard (o dai chip dello stato qui sotto): stesso filtro che il widget ha usato per contare, così numero e righe coincidono.
   const [filtriNav, setFiltriNav] = useState([])
+  const [messaggioMassivo, setMessaggioMassivo] = useState(false) // invio di massa ai clienti della lista (solo moduli con un'azione `messaggio_cliente`)
   // Il filtro si legge UNA volta (poi sparisce dalla memoria): un ref lo tiene per questo modulo, così un secondo giro dell'effetto (React lo fa due volte in sviluppo) non lo perde.
   const aperturaRef = React.useRef({ slug: null, filtri: [] })
   useEffect(() => {
@@ -632,6 +634,11 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
                   <Icon name="upload" size={14} />{batchUploading ? 'Caricamento...' : 'Carica file'}
                 </button>
               </>
+            )}
+            {user && user.role === 'admin' && schema && (schema.external_actions || []).some((x) => x.adapter === 'messaggio_cliente') && (
+              <button onClick={() => setMessaggioMassivo(true)} title="Scrivi un messaggio (mail e/o SMS) ai clienti che vedi in questa lista: partirà solo a chi ha il consenso alle comunicazioni commerciali" className="bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                <Icon name="mail" size={14} />Messaggio
+              </button>
             )}
             {canCreate && (
               <button onClick={() => { setShowImport(true); resetImport() }} className="bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2" title="Importa CSV">
@@ -1236,6 +1243,9 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
           onCreated={() => { setBranchCreateOpen(null); loadRecords(); toast('Creato') }} />
       )}
 
+      {messaggioMassivo && schema && (
+        <MessaggioMassivoModal token={token} slug={mod.slug} azione={(schema.external_actions.find((x) => x.adapter === 'messaggio_cliente') || {}).key} ids={displayRecords.map((r) => r.id)} onClose={() => setMessaggioMassivo(false)} />
+      )}
       {showImport && (
         <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
