@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.75 — 8 novembre 2026
+
+**La mail del backup settimanale ha una grafica curata.**
+
+- Intestazione nel blu e nel carattere serif dell'identità comune, tre riquadri con **data, dimensione e «cifrata»**, tre passi numerati per riaprire la copia, il comando `openssl` in un **blocco scuro a righe con la barra rovesciata** (si incolla e funziona; non si spezza a metà), avviso giallo «solo il database, non i file caricati». Colori espliciti: leggibile anche nei client in tema scuro.
+- Solo Super Admin: nessun cambiamento per i tenant. Il testo semplice della mail e la cifratura non cambiano (10 test di `weekly-backup-mail.test.js` verdi).
+- Messa online: deploy del Super Admin (`redeploy-nas.sh backend`), nessun Aggiorna su zucca.
+
 ## 0.4.74 — 8 novembre 2026
 
 **La «stima ragionata» del report: il valore in evidenza non è più la sola media di zona.**

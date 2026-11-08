@@ -164,6 +164,37 @@ async function notifyAIBudget({ level, spentEur, budgetEur, tenantSlug }) {
   }
 }
 
+// Grafica della mail del backup: colori espliciti (leggibile in chiaro e in scuro anche nei client che reinterpretano i colori), cifre in evidenza,
+// passi numerati e il comando in un blocco a sé che scorre di lato invece di spezzarsi a metà.
+function htmlBackupSettimanale({ tenantName, backupDate, sizeMb, attachmentName, comando }) {
+  const colore = '#16355B';
+  const cella = (e, v) => `<td style="padding:14px 16px;border:1px solid #e3e7ee;background:#f6f8fb;border-radius:8px;" width="33%"><div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#6b7686;">${e}</div><div style="font-size:16px;font-weight:600;color:#1a2433;margin-top:4px;">${v}</div></td>`;
+  const passo = (n, t) => `<tr><td valign="top" width="30" style="padding:0 0 12px;"><div style="width:22px;height:22px;line-height:22px;border-radius:11px;background:${colore};color:#fff;font-size:12px;font-weight:600;text-align:center;">${n}</div></td><td style="padding:0 0 12px;font-size:15px;line-height:1.5;color:#1a2433;">${t}</td></tr>`;
+  return `<!doctype html>
+<html><head><meta charset="utf-8"><meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light"></head>
+<body style="margin:0;padding:0;background:#eef1f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f6;padding:32px 16px;"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #dfe4ec;">
+<tr><td style="background:${colore};padding:26px 28px;">
+<div style="font-family:Georgia,'Times New Roman',serif;color:#ffffff;font-size:24px;font-weight:700;">Backup settimanale</div>
+<div style="color:#c9d6ea;font-size:14px;margin-top:4px;">${esc(tenantName)}</div>
+</td></tr>
+<tr><td style="padding:24px 28px 8px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="8" style="margin:-8px;"><tr>${cella('Data', esc(backupDate))}${cella('Dimensione', esc(sizeMb) + ' MB')}${cella('Copia', 'cifrata')}</tr></table>
+<p style="margin:18px 0 10px;font-size:15px;line-height:1.5;color:#1a2433;">In allegato la copia del database, compressa e cifrata (<b>${esc(attachmentName)}</b>). Per riaprirla:</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+${passo(1, 'Prendi la <b>passphrase</b>: Super Admin → Tenant → Backup → «Mostra passphrase».')}
+${passo(2, 'Salva l\'allegato in una cartella e apri il <b>Terminale</b> in quella cartella.')}
+${passo(3, 'Incolla questo comando e inserisci la passphrase:')}
+</table>
+<div style="margin:2px 0 18px;padding:14px 16px;background:#101828;border-radius:8px;overflow-x:auto;"><code style="font-family:Menlo,Consolas,'Courier New',monospace;font-size:12.5px;line-height:1.6;color:#e6edf7;white-space:pre;">${esc(comando.replace(' -out ', ' \\\n  -out ').replace(' && ', ' \\\n  && '))}</code></div>
+<div style="padding:12px 16px;background:#fff7e6;border-left:4px solid #e0a100;border-radius:4px;font-size:13.5px;line-height:1.5;color:#5c4400;margin-bottom:20px;">Contiene solo il database: <b>non</b> i file caricati (documenti, PDF, foto).</div>
+</td></tr>
+<tr><td style="padding:14px 28px;background:#f6f8fb;border-top:1px solid #e3e7ee;"><span style="font-size:12px;color:#6b7686;">Platform Super Admin — backup settimanale</span></td></tr>
+</table></td></tr></table>
+</body></html>`;
+}
+
 // Mail settimanale con la copia cifrata del database di un tenant in allegato (vedi weekly-backup-mail.js).
 async function sendWeeklyBackupMail({ tenantName, tenantSlug, attachmentName, attachment, sizeMb, backupDate }) {
   const to = process.env.NOTIFY_EMAIL_TO;
@@ -174,16 +205,7 @@ async function sendWeeklyBackupMail({ tenantName, tenantSlug, attachmentName, at
   const text = 'In allegato la copia del database di "' + tenantName + '" del ' + backupDate + ' (' + sizeMb + ' MB, compressa e cifrata).\n\n'
     + 'Per riaprirla serve la passphrase (Super Admin → Tenant → Backup → "Mostra passphrase"). Poi, da Terminale:\n' + comando + '\n\n'
     + 'Contiene solo il database, NON i file caricati (documenti, PDF, foto).';
-  const html = wrapMailHtml({
-    accentColor: '#2563eb',
-    title: 'Backup settimanale — ' + tenantName,
-    lines: [
-      'In allegato la copia del database di <b>' + tenantName + '</b> del ' + backupDate + ' (' + sizeMb + ' MB, compressa e cifrata).',
-      'Per riaprirla serve la <b>passphrase</b> (Super Admin → Tenant → Backup → «Mostra passphrase»). Poi, da Terminale:<br><code style="font-size:12px;word-break:break-all;">' + comando + '</code>',
-      'Contiene solo il database, <b>non</b> i file caricati (documenti, PDF, foto).',
-    ],
-    footer: 'Platform Super Admin — backup settimanale',
-  });
+  const html = htmlBackupSettimanale({ tenantName, backupDate, sizeMb, attachmentName, comando });
   try {
     await t.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to, subject, text, html, attachments: [{ filename: attachmentName, content: attachment }] });
     return { sent: true };
@@ -211,4 +233,4 @@ async function sendInviteMail({ to, nome, tenantName, link, ore }) {
   } catch (e) { console.error('[notifier] invio invito fallito:', e.message); return { sent: false, reason: 'La mail non è partita: ' + e.message }; }
 }
 
-module.exports = { sendInviteMail, notifyBackupResult, notifyBackupVerifyFailure, notifyAIBudget, sendWeeklyBackupMail };
+module.exports = { htmlBackupSettimanale, sendInviteMail, notifyBackupResult, notifyBackupVerifyFailure, notifyAIBudget, sendWeeklyBackupMail };
