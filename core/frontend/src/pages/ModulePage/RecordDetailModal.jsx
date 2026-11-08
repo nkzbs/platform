@@ -805,7 +805,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
             )}
             {((schema && schema.map_views) || []).map((mv) => {
               const indirizzo = (mv.campi || []).map((k) => record.data[k]).filter((v) => (typeof v === 'string' && v.trim()) || typeof v === 'number').join(', ')
-              return indirizzo ? <MappaOSM key={mv.key || mv.label} token={token} titolo={mv.label} indirizzo={indirizzo} paese={mv.paese} /> : null
+              return indirizzo ? <MappaOSM key={mv.key || mv.label} token={token} titolo={mv.label} indirizzo={indirizzo} paese={mv.paese} servizi={!!mv.servizi} /> : null
             })}
             {azioniEsterne.map((az) => {
               const voce = az.vista && VISTE_AZIONE[az.vista]

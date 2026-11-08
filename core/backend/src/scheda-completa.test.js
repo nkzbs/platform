@@ -66,7 +66,7 @@ async function main() {
   let esiti;
   await test('si applica: nuovi campi del tipo giusto e caselle trasformate in elenchi a scelta multipla', async () => {
     esiti = await applicaSeed(estensioni, { tipo: 'estensione' });
-    assertEq(esiti.filter((e) => (e.slug === 'immobili' || e.slug === 'clienti') && e.key !== 'allegati' && e.key !== 'profilo_mediazione' && e.key !== 'verifica_soggetto' && e.key !== 'invio_pec' && e.key !== 'mappa_osm' && e.key !== 'conservazione_scaduta' && !['avviso_documenti_mancanti', 'avviso_richieste_compatibili', 'controllo_catastale', 'stato_alla_firma_scheda', 'auguri_cliente'].includes(e.key)).map((e) => e.slug + ':' + e.esito), ['immobili:applicato', 'clienti:applicato']);
+    assertEq(esiti.filter((e) => (e.slug === 'immobili' || e.slug === 'clienti') && e.key !== 'allegati' && e.key !== 'profilo_mediazione' && e.key !== 'verifica_soggetto' && e.key !== 'invio_pec' && e.key !== 'mappa_osm' && e.key !== 'conservazione_scaduta' && !['avviso_documenti_mancanti', 'avviso_richieste_compatibili', 'controllo_catastale', 'stato_alla_firma_scheda', 'auguri_cliente', 'servizi_vicini'].includes(e.key)).map((e) => e.slug + ':' + e.esito), ['immobili:applicato', 'clienti:applicato']);
     assertEq(campo('immobili', 'data_sopralluogo').type, 'date');
     assertEq(campo('immobili', 'prezzo_consigliato').type, 'currency');
     assertEq(campo('immobili', 'valore_ipe').type, 'number');

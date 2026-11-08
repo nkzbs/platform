@@ -42,7 +42,7 @@ async function main() {
     provvigioni: scegli(tutte.provvigioni, ['due_parti', 'scaglioni', 'scaglioni_nel_totale', 'minimo_garantito_campo', 'minimo_garantito_nel_totale', 'trattenute_agente', 'allinea_al_prezzo']),
     trattative: scegli(tutte.trattative, ['solleciti_per_stato', 'riepilogo_settimanale']),
     clienti: scegli(tutte.clienti, ['conservazione_scaduta', 'avviso_documenti_mancanti', 'auguri_cliente']),
-    immobili: scegli(tutte.immobili, ['avviso_documenti_mancanti', 'avviso_richieste_compatibili', 'controllo_catastale', 'stato_alla_firma_scheda']),
+    immobili: scegli(tutte.immobili, ['avviso_documenti_mancanti', 'avviso_richieste_compatibili', 'controllo_catastale', 'stato_alla_firma_scheda', 'servizi_vicini']),
     attivita: scegli(tutte.attivita, ['avviso_in_agenda']),
   };
 
@@ -56,7 +56,8 @@ async function main() {
     stato('documenti_inviati', true), stato('cliente_verificato'),
     { id: 'wt_c', block_type: 'workflow_transition', from: 'documenti_inviati', to: 'cliente_verificato', label: 'Verifica' },
     { id: 'req_c', block_type: 'state_requirements', stato: 'cliente_verificato', bloccante: false, requisiti: [{ label: 'Documento d\'identità', tipo: 'allegato', valore: 'Documento di identità' }, { label: 'Privacy firmata', tipo: 'campo', campo: 'privacy_firmata_il' }] }]);
-  mk('immobili', [F('titolo', 'Titolo'), F('tipologia', 'Tipologia'), F('prezzo_richiesto', 'Prezzo', 'currency'), F('comune', 'Comune'),
+  mk('immobili', [F('titolo', 'Titolo'), F('tipologia', 'Tipologia'), F('prezzo_richiesto', 'Prezzo', 'currency'), F('comune', 'Comune'), F('indirizzo', 'Indirizzo'),
+    { id: 'mp_i', block_type: 'map_view', key: 'posizione', label: 'Dove si trova', campi: ['indirizzo', 'comune'], paese: 'it' },
     { id: 'da_i', block_type: 'document_action', key: 'scheda_immobile_completa', label: 'Scheda di acquisizione', icon: 'file', delivery: 'firma', body: 'Scheda di {{titolo}}', signed_type: 'scheda_immobile_firmata' },
     stato('in_mandato', true), stato('in_vendita'), { id: 'wt_i', block_type: 'workflow_transition', from: 'in_mandato', to: 'in_vendita', label: 'Metti in vendita' },
     { id: 'req_i', block_type: 'state_requirements', stato: 'in_vendita', bloccante: false, requisiti: [{ label: 'Foto', tipo: 'allegato', valore: 'Foto' }, { label: 'Prezzo richiesto', tipo: 'campo', campo: 'prezzo_richiesto' }] },
@@ -85,7 +86,7 @@ async function main() {
       'provvigioni:due_parti:applicato', 'provvigioni:scaglioni:applicato', 'provvigioni:scaglioni_nel_totale:applicato', 'provvigioni:minimo_garantito_campo:applicato',
       'provvigioni:minimo_garantito_nel_totale:applicato', 'provvigioni:trattenute_agente:applicato', 'provvigioni:allinea_al_prezzo:applicato',
       'trattative:solleciti_per_stato:applicato', 'trattative:riepilogo_settimanale:applicato', 'clienti:conservazione_scaduta:applicato', 'clienti:avviso_documenti_mancanti:applicato', 'clienti:auguri_cliente:applicato',
-      'immobili:avviso_documenti_mancanti:applicato', 'immobili:avviso_richieste_compatibili:applicato', 'immobili:controllo_catastale:applicato', 'immobili:stato_alla_firma_scheda:applicato', 'attivita:avviso_in_agenda:applicato']);
+      'immobili:avviso_documenti_mancanti:applicato', 'immobili:avviso_richieste_compatibili:applicato', 'immobili:controllo_catastale:applicato', 'immobili:stato_alla_firma_scheda:applicato', 'immobili:servizi_vicini:applicato', 'attivita:avviso_in_agenda:applicato']);
   });
   await test('secondo avvio: niente da fare', async () => { assertEq(await applicaSeed(seed, { tipo: 'estensione' }), []); });
 
@@ -229,6 +230,11 @@ async function main() {
     const esiti = await applicaSeed({ immobili_b: est }, { tipo: 'estensione' });
     assertEq(esiti.map((e) => e.esito), ['nulla da fare']);
     assertEq(schemaDi('immobili_b').steps.find((x) => x.key === 'scheda_immobile_completa').on_signed_state, 'in_vendita');
+  });
+
+  await test('mappa dell\'immobile: l\'estensione accende i servizi vicini sulla mappa già presente', async () => {
+    assertEq(schemaDi('immobili').steps.find((x) => x.block_type === 'map_view' && x.key === 'posizione').servizi, true);
+    const nuovo = tutte.immobili.find((e) => e.key === 'mappa_osm').aggiungi[0]; assertEq(nuovo.servizi, true, 'le installazioni nuove partono già con i servizi');
   });
 
   console.log(`\n${passed} passati, ${failed} falliti`);

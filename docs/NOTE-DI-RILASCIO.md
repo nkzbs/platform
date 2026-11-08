@@ -2,6 +2,20 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.64 — 8 novembre 2026
+
+**Servizi vicini sotto la mappa dell'immobile: pacchetto Mediazione immobiliare alla versione 13.**
+
+- **Cosa si vede**: sotto la mappa, per supermercati, farmacie, scuole, ospedali e medici, fermate e stazioni, parchi: **il più vicino** (nome, distanza in metri, minuti a piedi) e **quanti ce ne sono entro 1 km**.
+- **Da dove vengono i dati**: OpenStreetMap (servizio Overpass), **gratuito e senza chiave**; non serve OpenAPI. La voce era finita per errore tra le cose di OpenAPI nella lista dell'analisi. Al servizio arrivano solo le coordinate del punto, mai l'indirizzo né dati del proprietario.
+- **I minuti a piedi sono una stima** (distanza in linea d'aria × 1,25, a 80 metri al minuto), non un percorso calcolato: il percorso vero è il pulsante «Percorso» della mappa. Un calcolo di percorso vero richiederebbe un servizio con chiave (es. OpenRouteService) oppure un server di routing nostro: non fatto.
+- **Il servizio pubblico è lento**: provato l'8/11/2026, anche una richiesta banale ha impiegato 30-40 secondi. Per questo la scheda **non aspetta**: il server cerca in secondo plano, la pagina mostra «Cerco i servizi vicini…» e richiede ogni 5 secondi (al massimo 2 minuti). Il risultato resta in **cache 7 giorni** per una cella di circa 100 metri, quindi dalla seconda apertura è immediato. Se il servizio non risponde, compare «non disponibili ora» e si può riprovare riaprendo la scheda; un guasto non si ripete per 2 minuti.
+- **Come si accende**: proprietà `servizi` del blocco `map_view` (casella nel Builder: «Mostra anche i servizi vicini»). Nel pacchetto: estensione `servizi_vicini` per le installazioni esistenti (usa `imposta`), `mappa_osm` la porta già accesa per le nuove.
+- Tecnica: `lib/servizi-vicini.js`, `GET /api/geocode/servizi` (risponde subito: pronto, in corso o non disponibile), tabella `servizi_cache`.
+- Test: `servizi-vicini.test.js` (8 prove: più vicino per categoria, minuti, cache, errori, una richiesta alla volta, stato in corso/guasto) e una prova nel test delle estensioni. Provato dal vivo in locale con il servizio vero.
+- **Non fatto**: percorso vero a piedi o in auto (serve un servizio di routing), altre categorie (ristoranti, banche, palestre: basta aggiungerle alla lista `CATEGORIE`), servizi nel PDF del report di valutazione.
+- Messa online: Super Admin (pacchetto v13) e **Aggiorna** su zucca.
+
 ## 0.4.63 — 8 novembre 2026
 
 **Passaggio di stato alla firma della scheda: pacchetto Mediazione immobiliare alla versione 12.**

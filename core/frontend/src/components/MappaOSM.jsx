@@ -6,7 +6,7 @@ import { griglia, urlTessera, ZOOM_MIN, ZOOM_MAX } from '../lib/tile-osm'
 // Mappa di OpenStreetMap nella scheda (blocco `map_view`): l'indirizzo scritto nella scheda si cerca su Nominatim (dal nostro server, con cache) e le tessere si disegnano qui,
 // senza librerie. Se l'indirizzo non si trova la mappa non compare. Fonte da citare: «© OpenStreetMap contributors».
 const TILE = 256
-export default function MappaOSM({ token, titolo, indirizzo, paese }) {
+export default function MappaOSM({ token, titolo, indirizzo, paese, servizi }) {
   const api = useApi(token)
   const [punto, setPunto] = useState(undefined) // undefined = sto cercando, null = non trovato, {lat,lon} = trovato
   const [z, setZ] = useState(16)
@@ -16,6 +16,22 @@ export default function MappaOSM({ token, titolo, indirizzo, paese }) {
     api.get('/geocode?q=' + encodeURIComponent(indirizzo) + (paese ? '&paese=' + encodeURIComponent(paese) : '')).then((r) => { if (!annullato) setPunto(r && r.trovato ? { lat: r.lat, lon: r.lon } : null) }).catch(() => { if (!annullato) setPunto(null) })
     return () => { annullato = true }
   }, [indirizzo, paese]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Servizi vicini (opzionale): il server li cerca in secondo plano (il servizio pubblico può metterci 30-40 secondi): si richiede ogni 5 secondi, al massimo per 2 minuti.
+  const [elenco, setElenco] = useState(undefined) // undefined = cerco, null = non disponibile, { categorie } = pronto
+  useEffect(() => {
+    if (!servizi || !punto) return undefined
+    let annullato = false, timer = null, tentativi = 0
+    setElenco(undefined)
+    const chiedi = () => api.get('/geocode/servizi?lat=' + punto.lat + '&lon=' + punto.lon).then((r) => {
+      if (annullato) return
+      if (r && r.disponibile) setElenco(r)
+      else if (r && r.in_corso && ++tentativi < 24) timer = setTimeout(chiedi, 5000)
+      else setElenco(null)
+    }).catch(() => { if (!annullato) setElenco(null) })
+    chiedi()
+    return () => { annullato = true; if (timer) clearTimeout(timer) }
+  }, [servizi, punto && punto.lat, punto && punto.lon]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (punto === null) return null
   const g = punto ? griglia(punto.lat, punto.lon, z) : null
@@ -43,6 +59,23 @@ export default function MappaOSM({ token, titolo, indirizzo, paese }) {
           </>
         )}
       </div>
+      {servizi && punto && (
+        <div className="px-3 py-2.5 border-t border-gray-800">
+          <div className="text-xs font-semibold text-gray-400 mb-1.5">Servizi vicini <span className="font-normal text-gray-500">(entro 1 km, a piedi: stima)</span></div>
+          {elenco === undefined && <div className="text-[11px] text-gray-500">Cerco i servizi vicini… può servire qualche decina di secondi la prima volta.</div>}
+          {elenco === null && <div className="text-[11px] text-gray-500">Servizi vicini non disponibili ora: il servizio di OpenStreetMap non ha risposto. Riapri la scheda più tardi.</div>}
+          {elenco && (
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+              {elenco.categorie.map((c) => (
+                <li key={c.chiave} className="text-[11px] text-gray-400 flex items-baseline justify-between gap-2">
+                  <span className="truncate">{c.label}</span>
+                  <span className="text-gray-500 flex-shrink-0 text-right">{c.piu_vicino ? (c.piu_vicino.nome ? c.piu_vicino.nome + ' · ' : '') + c.piu_vicino.metri + ' m, ~' + c.piu_vicino.minuti + ' min' + (c.quanti > 1 ? ' (' + c.quanti + ')' : '') : 'nessuno nel raggio'}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   )
 }

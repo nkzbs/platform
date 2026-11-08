@@ -2135,6 +2135,10 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                           <button key={f.key} type="button" onClick={() => updateStep(idx, 'campi', on ? scelti.filter((k) => k !== f.key) : [...scelti, f.key])} className={'text-xs px-2.5 py-1 rounded-full border transition ' + (on ? 'border-accent text-accent bg-accent/10' : 'border-gray-700 text-gray-400 hover:border-gray-500')}>{on ? (scelti.indexOf(f.key) + 1) + '. ' : ''}{f.label || f.key}</button>
                         ) })}
                       </div>
+                      <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                        <input type="checkbox" checked={!!step.servizi} onChange={(e) => updateStep(idx, 'servizi', e.target.checked)} />
+                        Mostra anche i servizi vicini (supermercati, farmacie, scuole, sanità, trasporti, verde), con distanza e minuti a piedi stimati
+                      </label>
                       <div className="text-[11px] text-gray-500 leading-snug">Nella scheda compare una mappa di OpenStreetMap con l'indirizzo. L'indirizzo scritto viene cercato su Nominatim (gratuito, senza chiave); la mappa non si vede se l'indirizzo non si trova.</div>
                     </div>
                   )

@@ -1105,7 +1105,7 @@
     },
     {
       "key": "mappa_osm",
-      "_nota": "La mappa dell'immobile nella scheda (OpenStreetMap, gratuita e senza chiave): l'indirizzo scritto nella scheda si cerca su Nominatim dal server, con cache. Se l'indirizzo non si trova la mappa non compare.",
+      "_nota": "La mappa dell'immobile nella scheda (OpenStreetMap, gratuita e senza chiave): l'indirizzo scritto nella scheda si cerca su Nominatim dal server, con cache. Se l'indirizzo non si trova la mappa non compare. Con `servizi`: sotto la mappa l'elenco dei servizi vicini (vedi l'estensione `servizi_vicini`).",
       "richiede": {
         "immobili": [
           "indirizzo",
@@ -1124,7 +1124,27 @@
             "comune",
             "provincia"
           ],
-          "paese": "it"
+          "paese": "it",
+          "servizi": true
+        }
+      ]
+    },
+    {
+      "key": "servizi_vicini",
+      "_nota": "Servizi vicini sotto la mappa dell'immobile: supermercati, farmacie, scuole, sanità, trasporti, verde entro 1 km, con il più vicino per ognuno, la distanza e i minuti a piedi (stima dalla distanza in linea d'aria). Da OpenStreetMap (Overpass), gratuito e senza chiave; il servizio pubblico può metterci 30-40 secondi la prima volta, poi l'elenco resta in cache per 7 giorni. Dà la proprietà `servizi` alla mappa già presente (le installazioni nuove l'hanno già da `mappa_osm`).",
+      "richiede": {
+        "immobili": [
+          "indirizzo",
+          "comune"
+        ]
+      },
+      "imposta": [
+        {
+          "block_type": "map_view",
+          "key": "posizione",
+          "proprieta": {
+            "servizi": true
+          }
         }
       ]
     },
