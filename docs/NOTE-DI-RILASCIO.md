@@ -2,6 +2,17 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.74 — 8 novembre 2026
+
+**La «stima ragionata» del report: il valore in evidenza non è più la sola media di zona.**
+
+- **Perché**: il report mostrava come «valore stimato» la quotazione media di zona × i mq (~140.000 €), cioè la media di tutto il patrimonio della zona, anche vecchio e in cattivo stato. Per un immobile in ottimo stato con box era molto sotto il mercato reale.
+- **Come si calcola ora** (`lib/stima-ragionata.js`, funzione pura): abitazione = mq × fascia OMI «abitazioni civili» scelta dallo **stato dell'edificio** della scheda (Ottimo → ottimo, Buono → normale, Da ristrutturare → scadente, se l'OMI non la ha si usa la normale e lo dice); **box/garage** = mq × OMI autorimesse, solo se nella scheda è scritta la superficie (nuovo campo **«Superficie box/garage (mq)»**, in «Dimensioni e composizione»); cantina, solaio e portico non si quotano e il report lo dichiara. Controllo con la **mediana degli annunci vicini** (prezzi richiesti, più alti dei venduti) e la quotazione media di zona, indicata come stima più prudente.
+- **Nel PDF**: il riquadro «VALORE STIMATO» usa la stima ragionata, e una sezione «Come si arriva alla stima» elenca fonte per fonte. Senza OMI o senza superficie il report torna al vecchio calcolo.
+- **Nessun costo**: usa solo i dati OMI e i comparabili già salvati nel report. **Per aggiornare un report esistente basta riscaricare il PDF**, senza rifare «Valutazione di mercato» (3 €).
+- Pacchetto verticale v16 (campo nuovo). Test: `stima-ragionata.test.js`.
+- Messa online: **Aggiorna** su zucca (insieme a 0.4.72 e 0.4.73).
+
 ## 0.4.73 — 8 novembre 2026
 
 **Non pagare due volte per distrazione, e i moduli nascosti si riconoscono.**

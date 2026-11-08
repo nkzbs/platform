@@ -913,6 +913,12 @@
         },
         {
           "block_type": "field",
+          "key": "superficie_box_mq",
+          "label": "Superficie box/garage (mq)",
+          "type": "number"
+        },
+        {
+          "block_type": "field",
           "key": "pavimenti_altro",
           "label": "Pavimenti — altro",
           "type": "text"

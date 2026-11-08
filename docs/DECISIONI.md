@@ -794,3 +794,9 @@ Finance in uso reale, con la prima giornata di test dal vivo. Si parte dalla 0.1
 ## 0.1.0
 
 Codice potato dopo lo spegnimento di Platform (2 ottobre 2026): vedi [`DECISIONI.md`](DECISIONI.md).
+
+## 0.4.74 — La stima del report è «ragionata», non la sola media di zona
+
+- **Decisione**: il valore in evidenza del report di valutazione si calcola da fonti già salvate nel report (OMI per stato, autorimesse OMI per il box con superficie scritta, controllo con annunci), non dalla sola quotazione media di zona.
+- **Perché**: la media di zona è la più prudente e per un immobile in ottimo stato con box sottostimava di ~40%. Le regole sono scritte e visibili nel PDF.
+- **Vincolo**: nessuna nuova richiesta a OpenAPI: rigenerare il PDF è gratuito. Cantina, solaio, portico non si quotano. È una stima indicativa, mai una perizia.

@@ -38,6 +38,7 @@
         "superficie_giardino_mq",
         "sfogo_esterno",
         "pertinenze_box",
+        "superficie_box_mq",
         "posto_auto",
         "numero_posti_auto"
       ],

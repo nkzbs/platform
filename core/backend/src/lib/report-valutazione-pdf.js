@@ -10,6 +10,7 @@ const PDFDocument = require('pdfkit');
 
 const { M, GRIGIO, CHIARO, LINEA, TESTO, coloreValido, caricaLogo, intestazione, pieDiPagina } = require('./identita-pdf');
 const mappaPdf = require('./mappa-pdf');
+const { stimaRagionata } = require('./stima-ragionata');
 
 const num = (n) => (n == null || n === '' || isNaN(Number(n)) ? '—' : String(Math.round(Number(n))).replace(/\B(?=(\d{3})+(?!\d))/g, '.'));
 const euro = (n) => (num(n) === '—' ? '—' : num(n) + ' €');
@@ -129,7 +130,16 @@ function costruisciPdf({ record, report, azienda = {}, logo = null, mappa = null
       doc.font('Times-Bold').fontSize(22).fillColor(i === 1 ? '#ffffff' : TESTO).text(v, x + 12, boxY + 26, { width: bw - 24, lineBreak: false });
     });
     doc.y = boxY + 66;
-    if (mq && med) {
+    const sr = stimaRagionata({ dati: d, report: r });
+    if (sr) {
+      const y = doc.y;
+      const arr = (v) => Math.round(v / 1000) * 1000;
+      doc.roundedRect(M, y, W, 44, 6).lineWidth(1.2).strokeColor(colore).stroke();
+      doc.font('Helvetica').fontSize(9).fillColor(GRIGIO).text('VALORE STIMATO (stima ragionata, ' + num(mq) + ' mq)', M + 14, y + 8, { width: W - 28, lineBreak: false });
+      doc.font('Times-Bold').fontSize(20).fillColor(colore).text(euro(arr(sr.totale.med)), M + 14, y + 21, { width: 200, lineBreak: false });
+      doc.font('Helvetica').fontSize(9.5).fillColor(GRIGIO).text('Intervallo: ' + euro(arr(sr.totale.min)) + ' – ' + euro(arr(sr.totale.max)), M + 220, y + 25, { width: W - 234, align: 'right', lineBreak: false });
+      doc.y = y + 54;
+    } else if (mq && med) {
       const y = doc.y;
       doc.roundedRect(M, y, W, 44, 6).lineWidth(1.2).strokeColor(colore).stroke();
       doc.font('Helvetica').fontSize(9).fillColor(GRIGIO).text('VALORE STIMATO (media × ' + num(mq) + ' mq)', M + 14, y + 8, { width: W - 28, lineBreak: false });
@@ -138,6 +148,25 @@ function costruisciPdf({ record, report, azienda = {}, logo = null, mappa = null
       doc.y = y + 54;
     } else {
       doc.font('Helvetica-Oblique').fontSize(9).fillColor(GRIGIO).text('Valore stimato non calcolabile: manca la superficie dell\'immobile.', M, doc.y, { width: W });
+    }
+
+    // ── Stima ragionata: come si arriva al valore, fonte per fonte ──
+    if (sr) {
+      titoloSezione('Come si arriva alla stima', 6);
+      const righeSr = [];
+      const a = sr.appartamento;
+      righeSr.push(['Abitazione: ' + num(a.mq) + ' mq × OMI abitazioni civili «' + a.condizione.toLowerCase() + '» (' + num(a.eur_mq_min) + ' – ' + num(a.eur_mq_max) + ' €/mq)', euro(a.min) + ' – ' + euro(a.max)]);
+      sr.pertinenze.forEach((p) => righeSr.push([p.nome + ': ' + num(p.mq) + ' mq × OMI ' + String(p.fonte || '').toLowerCase() + ' (' + num(p.eur_mq_min) + ' – ' + num(p.eur_mq_max) + ' €/mq)', euro(p.min) + ' – ' + euro(p.max)]));
+      righeSr.push(['Totale (valore centrale ' + euro(Math.round(sr.totale.med / 1000) * 1000) + ')', euro(sr.totale.min) + ' – ' + euro(sr.totale.max)]);
+      tabella([{ titolo: 'Voce', w: 70 }, { titolo: 'Valore', w: 30, dx: true }], righeSr);
+      doc.moveDown(0.5);
+      const conf = [];
+      if (sr.annunci) conf.push('Controllo con gli annunci vicini: mediana di ' + sr.annunci.n + ' immobili simili ' + num(sr.annunci.mediana_eur_mq) + ' €/mq, cioè circa ' + euro(Math.round(sr.annunci.valore / 1000) * 1000) + ' sulla tua superficie. Sono prezzi richiesti: le vendite reali di solito chiudono più in basso.');
+      if (sr.zona) conf.push('Quotazione media di zona: ' + num(sr.zona.eur_mq) + ' €/mq, cioè circa ' + euro(Math.round(sr.zona.valore / 1000) * 1000) + '. È la stima più prudente: la media di tutto il patrimonio della zona, senza considerare lo stato e le pertinenze di questo immobile.');
+      sr.note.forEach((n) => conf.push(n));
+      conf.push('Stima indicativa, non è una perizia.');
+      doc.font('Helvetica').fontSize(9).fillColor(GRIGIO);
+      conf.forEach((t) => { spazio(doc.heightOfString(t, { width: W }) + 6); doc.text(t, M, doc.y, { width: W }); doc.moveDown(0.3); });
     }
 
     // ── Considerazioni ──
