@@ -206,4 +206,4 @@ function startScheduler() {
   console.log('Scheduler trigger temporale avviato (intervallo: 1 min)');
 }
 
-module.exports = { startScheduler };
+module.exports = { startScheduler, eseguiAutomazioneSchedulata };

@@ -183,6 +183,153 @@
           "come_attivare": "Attivalo nella console di OpenAPI.it e controllalo da Impostazioni → Connessioni → OpenAPI.it («Controlla i servizi»); poi la funzione verrà collegata."
         }
       ]
+    },
+    {
+      "key": "minimo_garantito_campo",
+      "_nota": "Il campo «Minimo garantito» della provvigione: se l'importo calcolato è più basso, vale il minimo. Il calcolo lo cambia l'estensione dopo, perché una formula vede solo i campi che la precedono.",
+      "richiede": {
+        "provvigioni": [
+          "importo_netto"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "minimo_garantito",
+          "label": "Minimo garantito",
+          "type": "currency"
+        }
+      ]
+    },
+    {
+      "key": "minimo_garantito_nel_totale",
+      "_nota": "L'importo netto (e quindi IVA e totale) non scende sotto il minimo garantito, se indicato. Cambia le formule SOLO se sono ancora quelle degli scaglioni (una formula modificata dal Builder non si tocca).",
+      "richiede": {
+        "provvigioni": [
+          "importo",
+          "base_imponibile",
+          "percentuale_applicata",
+          "importo_netto",
+          "iva",
+          "totale",
+          "minimo_garantito"
+        ]
+      },
+      "ricalcola": [
+        {
+          "key": "importo_netto",
+          "da": "if(percentuale_applicata > 0, round(base_imponibile * percentuale_applicata / 100, 2), importo)",
+          "a": "if(minimo_garantito > if(percentuale_applicata > 0, round(base_imponibile * percentuale_applicata / 100, 2), importo), minimo_garantito, if(percentuale_applicata > 0, round(base_imponibile * percentuale_applicata / 100, 2), importo))",
+          "in_fondo": true
+        },
+        {
+          "key": "iva",
+          "da": "round(importo_netto * 0.22, 2)",
+          "a": "round(importo_netto * 0.22, 2)",
+          "in_fondo": true
+        },
+        {
+          "key": "totale",
+          "da": "round(importo_netto * 1.22, 2)",
+          "a": "round(importo_netto * 1.22, 2)",
+          "in_fondo": true
+        }
+      ]
+    },
+    {
+      "key": "trattenute_agente",
+      "_nota": "Quanto della provvigione va all'agente: percentuale di trattenuta, importo trattenuto e quanto resta all'agenzia. Si calcola sull'importo netto (prima dell'IVA).",
+      "richiede": {
+        "provvigioni": [
+          "importo_netto"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "agente",
+          "label": "Agente",
+          "type": "text"
+        },
+        {
+          "block_type": "field",
+          "key": "trattenuta_agente_perc",
+          "label": "Trattenuta all'agente (%)",
+          "type": "number"
+        },
+        {
+          "block_type": "field",
+          "key": "trattenuta_agente",
+          "label": "Importo all'agente",
+          "type": "computed",
+          "expr": "round(importo_netto * trattenuta_agente_perc / 100, 2)"
+        },
+        {
+          "block_type": "field",
+          "key": "netto_agenzia",
+          "label": "Resta all'agenzia",
+          "type": "computed",
+          "expr": "round(importo_netto - trattenuta_agente, 2)"
+        }
+      ]
+    },
+    {
+      "key": "allinea_al_prezzo",
+      "_nota": "Se il prezzo concordato della trattativa cambia, le provvigioni ancora «da fatturare» generate per parte (con trattativa e parte indicate) riprendono il nuovo prezzo: importi, IVA e totale seguono da soli. Controllo ogni giorno alle 05:00 UTC. Una provvigione già fatturata non si tocca.",
+      "richiede": {
+        "provvigioni": [
+          "base_imponibile",
+          "trattativa",
+          "parte"
+        ],
+        "trattative": [
+          "prezzo_concordato"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "automation",
+          "label": "Provvigioni allineate al prezzo concordato",
+          "trigger": {
+            "evento": "schedulato",
+            "schedulazione": {
+              "tipo": "giornaliero",
+              "ora": 5
+            },
+            "modalita": "per_record",
+            "filtro": [
+              {
+                "campo": "_stato",
+                "op": "==",
+                "valore": "da_fatturare"
+              },
+              {
+                "campo": "trattativa",
+                "op": "!=",
+                "valore": null
+              },
+              {
+                "campo": "parte",
+                "op": "!=",
+                "valore": null
+              }
+            ]
+          },
+          "azioni": [
+            {
+              "target": "__interno__",
+              "azione": "aggiorna_record",
+              "config": {
+                "modulo": "provvigioni",
+                "id_field": "__self__",
+                "campo": "base_imponibile",
+                "operazione": "set",
+                "valore": "relazione:trattativa:trattative:prezzo_concordato"
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "trattative": [
@@ -463,6 +610,88 @@
           "adapter": "da_attivare",
           "servizio_richiesto": "il servizio eSignature (Firma Digitale) di OpenAPI.it",
           "come_attivare": "Attivalo nella console di OpenAPI.it e controllalo da Impostazioni → Connessioni → OpenAPI.it («Controlla i servizi»); poi la funzione verrà collegata."
+        }
+      ]
+    },
+    {
+      "key": "solleciti_per_stato",
+      "_nota": "Controllo ogni 7 giorni (06:00 UTC), un avviso per trattativa: rogito con la data già passata e preliminare ancora da chiudere; trattativa ancora «in corso» dopo 30 giorni dalla creazione. Sono notifiche in app a tutti i ruoli: nessun messaggio al cliente.",
+      "richiede": {
+        "trattative": [
+          "titolo",
+          "data_rogito"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "automation",
+          "label": "Sollecito: rogito oltre la data prevista",
+          "trigger": {
+            "evento": "schedulato",
+            "schedulazione": {
+              "tipo": "ogni_N_giorni",
+              "giorni": 7,
+              "ora": 6
+            },
+            "modalita": "per_record",
+            "filtro": [
+              {
+                "campo": "_stato",
+                "op": "==",
+                "valore": "preliminare_firmato"
+              },
+              {
+                "campo": "data_rogito",
+                "op": "<",
+                "valore": "_oggi_"
+              }
+            ]
+          },
+          "azioni": [
+            {
+              "target": "__interno__",
+              "azione": "notifica_interna",
+              "config": {
+                "message": "La data del rogito è passata e la trattativa «{{titolo}}» non è ancora chiusa: aggiorna la data o completa il rogito.",
+                "roles": []
+              }
+            }
+          ]
+        },
+        {
+          "block_type": "automation",
+          "label": "Sollecito: trattativa ferma da oltre 30 giorni",
+          "trigger": {
+            "evento": "schedulato",
+            "schedulazione": {
+              "tipo": "ogni_N_giorni",
+              "giorni": 7,
+              "ora": 6
+            },
+            "modalita": "per_record",
+            "filtro": [
+              {
+                "campo": "_stato",
+                "op": "==",
+                "valore": "trattativa_in_corso"
+              },
+              {
+                "campo": "_creato_at",
+                "op": "<",
+                "valore": "_ore_fa:720"
+              }
+            ]
+          },
+          "azioni": [
+            {
+              "target": "__interno__",
+              "azione": "notifica_interna",
+              "config": {
+                "message": "La trattativa «{{titolo}}» è in corso da più di 30 giorni: sentire le parti o chiuderla.",
+                "roles": []
+              }
+            }
+          ]
         }
       ]
     }
@@ -1094,6 +1323,53 @@
           "adapter": "da_attivare",
           "servizio_richiesto": "il servizio PEC di OpenAPI.it",
           "come_attivare": "Attivalo nella console di OpenAPI.it e controllalo da Impostazioni → Connessioni → OpenAPI.it («Controlla i servizi»); poi la funzione verrà collegata."
+        }
+      ]
+    },
+    {
+      "key": "conservazione_scaduta",
+      "_nota": "Avviso settimanale (06:00 UTC) per ogni cliente con la data di conservazione dei dati già passata. Non cancella nulla: la decisione (cancellare, o rinnovare il consenso) resta a una persona.",
+      "richiede": {
+        "clienti": [
+          "nome",
+          "conservazione_fino_al"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "automation",
+          "label": "Conservazione dei dati scaduta",
+          "trigger": {
+            "evento": "schedulato",
+            "schedulazione": {
+              "tipo": "ogni_N_giorni",
+              "giorni": 7,
+              "ora": 6
+            },
+            "modalita": "per_record",
+            "filtro": [
+              {
+                "campo": "conservazione_fino_al",
+                "op": "!=",
+                "valore": null
+              },
+              {
+                "campo": "conservazione_fino_al",
+                "op": "<",
+                "valore": "_oggi_"
+              }
+            ]
+          },
+          "azioni": [
+            {
+              "target": "__interno__",
+              "azione": "notifica_interna",
+              "config": {
+                "message": "La conservazione dei dati di {{nome}} è scaduta: cancella i dati o rinnova il consenso.",
+                "roles": []
+              }
+            }
+          ]
         }
       ]
     }

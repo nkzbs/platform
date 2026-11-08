@@ -2,6 +2,21 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.61 — 8 novembre 2026
+
+**Provvigioni più complete e avvisi automatici per Trattative e Clienti: il pacchetto Mediazione immobiliare passa alla versione 10.**
+
+- **Minimo garantito** (Provvigioni): se l'importo calcolato è più basso del minimo, vale il minimo; IVA e totale seguono. Senza minimo nulla cambia. Si applica in due passi (campo, poi formule) perché una formula vede solo i campi che la precedono; le formule si cambiano solo se sono ancora quelle degli scaglioni.
+- **Trattenute all'agente** (Provvigioni): agente, percentuale di trattenuta, *importo all'agente* e *resta all'agenzia*, calcolati sull'importo netto.
+- **Provvigioni allineate al prezzo concordato**: ogni giorno alle 05:00 UTC le provvigioni ancora *da fatturare*, generate per parte (con trattativa e parte indicate), riprendono il prezzo concordato della trattativa; importi, IVA e totale seguono. Una provvigione fatturata, una senza parte o senza trattativa non si tocca. Il cambio arriva quindi **entro un giorno**, non all'istante.
+- **Solleciti per stato** (Trattative), controllo ogni 7 giorni alle 06:00 UTC: rogito con data passata e preliminare ancora da chiudere; trattativa «in corso» da più di 30 giorni. Sono **notifiche in app per tutti i ruoli**, nessun messaggio al cliente.
+- **Conservazione dei dati scaduta** (Clienti), stesso ritmo: un avviso per ogni cliente con la data di conservazione già passata. **Non cancella niente**: cancellare o rinnovare il consenso resta una decisione di una persona.
+- `scheduler.js` esporta `eseguiAutomazioneSchedulata` (per i test).
+- Test: `provvigioni-avvisi.test.js` (10 prove: ordine di applicazione, minimo, trattenute, allineamento col prezzo e i casi che non devono muoversi, solleciti, conservazione).
+- Correzione: nei `package-lock.json` di Super Admin e provisioner la versione di `iconv-lite` era stata cambiata per errore insieme al numero di rilascio; è tornata a 0.4.24 (quella vera).
+- **Non fatto**, perché serve altro: controllo dei dati catastali (servizio Catasto di OpenAPI.it), passaggio di stato alla firma della scheda (la firma è un allegato, non un evento che il motore sa leggere), avviso sugli allegati mancanti per tipo di cliente, avviso quando entra un immobile compatibile con una richiesta, riepilogo di avanzamento per periodo (il report esistente conosce solo importi), auguri ai clienti (serve il consenso alle comunicazioni commerciali e l'invio email).
+- Messa online: Super Admin (pacchetto v10) e poi **Aggiorna** su zucca. Le estensioni si applicano al primo avvio, una volta sola.
+
 ## 0.4.60 — 7 novembre 2026
 
 **Attività come unico modulo: visite, telefonate, incontri e promemoria stanno nello stesso posto, collegati a clienti, immobili e trattative.**
