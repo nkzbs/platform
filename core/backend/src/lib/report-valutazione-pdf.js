@@ -225,7 +225,7 @@ function costruisciPdf({ record, report, azienda = {}, logo = null, mappa = null
         doc.y = yL + Math.ceil(segnati.length / 2) * 26 + 2;
         doc.font('Helvetica-Oblique').fontSize(7.5).fillColor(GRIGIO).text('Il luogo più vicino per ogni tipo, entro 1 km dall\'immobile (cerchio tratteggiato); «in zona» = quanti ce ne sono nel raggio. I minuti sono a piedi, stimati dalla distanza in linea d\'aria. Luoghi: OpenStreetMap.', M, doc.y, { width: W });
       } else {
-        doc.font('Helvetica-Oblique').fontSize(8.5).fillColor(GRIGIO).text(serviziInCorso ? 'I luoghi utili vicini (supermercati, farmacie, scuole, sanità, trasporti, verde) si stanno cercando: rigenera il report tra un minuto per vederli sulla mappa.' : 'I luoghi utili vicini non sono disponibili in questo momento.', M, doc.y, { width: W });
+        doc.font('Helvetica-Oblique').fontSize(8.5).fillColor(GRIGIO).text('I luoghi utili vicini (supermercati, farmacie, scuole, sanità, trasporti, verde) si stanno cercando: rigenera il report tra un minuto per vederli sulla mappa.', M, doc.y, { width: W });
       }
     }
 

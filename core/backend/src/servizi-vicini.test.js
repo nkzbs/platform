@@ -8,6 +8,7 @@ let passed = 0, failed = 0;
 async function test(name, fn) { try { await fn(); console.log('  ✓ ' + name); passed++; } catch (e) { console.error('  ✗ ' + name + '\n    ' + e.message); failed++; } }
 const eq = (a, e, m) => { if (JSON.stringify(a) !== JSON.stringify(e)) throw new Error(`${m || ''}: atteso ${JSON.stringify(e)}, ottenuto ${JSON.stringify(a)}`); };
 const ok = (c, m) => { if (!c) throw new Error(m || 'atteso true'); };
+const ok2 = ok;
 const srv = require('./lib/servizi-vicini'); srv._pausa = 5;
 
 async function main() {
@@ -51,12 +52,31 @@ async function main() {
   await test('più ricerche insieme partono una alla volta', async () => {
     await Promise.all([[40, 10], [41, 11], [42, 12], [43, 13]].map(([a, b]) => srv.cerca(a, b))); eq(maxContemporanee, 1);
   });
-  await test('stato: la prima volta avvia la ricerca e risponde «in corso», poi dalla cache; un guasto non si ripete subito', async () => {
+  await test('stato: la prima volta avvia la ricerca e risponde «in corso», poi dalla cache; dopo un guasto la pagina non ha un vicolo cieco', async () => {
     const n = urls.length;
     const a = srv.stato(10.1, 20.2); eq([a.valido, a.in_corso], [true, true]); const b = srv.stato(10.1, 20.2); eq(b.in_corso, true); await srv._attese(); eq(urls.length, n + 1, 'una sola richiesta per due domande');
     const c = srv.stato(10.1, 20.2); eq(c.pronto, true); eq(c.categorie.length, 6);
-    modo = 'errore'; srv.stato(11.1, 21.2); await srv._attese(); const d = srv.stato(11.1, 21.2); eq([d.in_corso, d.errore], [false, true]); eq(urls.length, n + 2, 'nessuna nuova richiesta subito dopo il guasto'); modo = 'ok';
+    modo = 'errore'; const m = urls.length; srv.stato(11.1, 21.2); await srv._attese(); eq(urls.length, m + srv._endpoint.length, 'ha provato tutte le copie del servizio');
+    const d = srv.stato(11.1, 21.2); eq([d.in_corso, d.errore], [true, undefined], 'dopo il guasto è «in corso», mai «non disponibile»'); eq(urls.length, m + srv._endpoint.length, 'nessuna nuova richiesta subito dopo il guasto');
+    modo = 'ok'; const dopo = srv.stato(11.1, 21.2, { adesso: Date.now() + 20000 }); eq(dopo.in_corso, true); await srv._attese(); eq(srv.stato(11.1, 21.2).pronto, true, 'dopo la pausa riprova da solo e arriva');
     eq(srv.stato('x', 1).valido, false);
+  });
+  await test('copie del servizio: se la prima è piena (502) o non risponde si passa alla successiva; un 200 con avvertenza di errore non è «nessun luogo» e non va in cache', async () => {
+    const ok = JSON.stringify({ elements: ELEMENTI }), tentativi = [];
+    const orig = srv._fetch; srv._fetch = async (url) => {
+      tentativi.push(url.split('?')[0]);
+      if (/openstreetmap\.fr/.test(url)) return { ok: false, status: 502, json: async () => ({}) };
+      if (/lz4/.test(url)) return { ok: true, json: async () => ({ remark: 'runtime error: Query timed out in "query" at line 1', elements: [] }) };
+      return { ok: true, json: async () => JSON.parse(ok) };
+    };
+    const r = await srv.cerca(44.1, 11.1); ok2(r && r.categorie.find((c) => c.chiave === 'farmacia').quanti === 1, 'arriva dalla terza copia');
+    eq(tentativi.length, 3); ok2(/openstreetmap\.fr/.test(tentativi[0]) && /lz4/.test(tentativi[1]) && /overpass-api\.de/.test(tentativi[2]), 'ordine delle copie: ' + tentativi.join(' → '));
+    srv._fetch = async () => ({ ok: true, json: async () => ({ remark: 'runtime error: out of memory', elements: [] }) });
+    eq(await srv.cerca(44.2, 11.2), null, 'avvertenza di errore = errore, non «nessun luogo»'); eq(srv.stato(44.2, 11.2).pronto, undefined, 'e non resta in cache');
+    srv._fetch = orig;
+  });
+  await test('le copie del servizio: europee prima, la copia russa solo per ultima, nessun indirizzo nella richiesta', () => {
+    const e = srv._endpoint; ok(e.length >= 4, 'più copie'); ok(/openstreetmap\.fr/.test(e[0]), 'prima la francese'); ok(/mail\.ru/.test(e[e.length - 1]), 'la russa per ultima'); ok(e.every((u) => /^https:\/\//.test(u)));
   });
   await test('minuti a piedi: almeno 1, 80 m al minuto con percorso ≈ 1,25 volte la linea d\'aria', () => { eq(srv.minutiAPiedi(10), 1); eq(srv.minutiAPiedi(640), 10); eq(srv.minutiAPiedi(1000), 16); });
   console.log(`\n${'='.repeat(60)}\n${passed} passati, ${failed} falliti su ${passed + failed} test.`);

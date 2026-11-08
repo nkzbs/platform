@@ -9,6 +9,11 @@ const GIORNO = 86400000;
 
 db.exec('CREATE TABLE IF NOT EXISTS geocode_cache (q TEXT PRIMARY KEY, lat REAL, lon REAL, nome TEXT, ts INTEGER NOT NULL)');
 
+// Come si scrive un civico negli atti: «n.ro 3», «n° 3», «nr. 3», «civ. 3», «numero 3». Il servizio non li capisce e non trova l'indirizzo. Si toglie SOLO la sigla e solo quando
+// è seguita da una cifra (mai un «n» da solo, mai una parola che ci somiglia: «Via N. Sauro 5», «Via Civitavecchia 3», «Piazza 4 Novembre 2» restano come sono).
+const PREFISSO_CIVICO = /(?<![\p{L}\d])(?:n\s*\.?\s*ro|nr|n\s*[°º]|num(?:ero)?|civ(?:ico)?)\.?\s*(?=\d)|(?<![\p{L}\d])n\.\s*(?=\d)/giu;
+const ripulisciCivico = (q) => String(q || '').replace(PREFISSO_CIVICO, '').replace(/\s+,/g, ',').replace(/\s+/g, ' ').trim();
+
 const normalizza = (q) => String(q || '').replace(/\s+/g, ' ').trim().toLowerCase().slice(0, 200);
 
 // Una sola richiesta di rete alla volta, a un secondo l'una dall'altra.
@@ -30,8 +35,8 @@ async function chiedi(q, paese) {
   return { lat: parseFloat(r.lat), lon: parseFloat(r.lon), nome: String(r.display_name || '').slice(0, 200) };
 }
 
-// Ritorna { lat, lon, nome } oppure null (indirizzo non trovato o servizio non raggiungibile).
-async function cerca(testo, { paese = '', adesso = Date.now() } = {}) {
+// Cerca UN testo (una sola chiave di cache); ritorna { lat, lon, nome } oppure null (non trovato o servizio non raggiungibile).
+async function cercaUno(testo, { paese = '', adesso = Date.now() } = {}) {
   const q = normalizza(testo);
   if (q.length < 3) return null;
   const chiave = q + (paese ? '|' + paese : '');
@@ -46,4 +51,12 @@ async function cerca(testo, { paese = '', adesso = Date.now() } = {}) {
   }
 }
 
-module.exports = { cerca, normalizza, _fetch: (...a) => fetch(...a), _pausa: PAUSA_MS };
+// Prima l'indirizzo senza «n.ro», «n°», «civ.»…; se così non si trova (e il testo era diverso) anche come è stato scritto: ripulire non deve mai far perdere un indirizzo che prima si trovava.
+async function cerca(testo, opzioni = {}) {
+  const ripulito = ripulisciCivico(testo);
+  const r = await cercaUno(ripulito, opzioni);
+  if (r || normalizza(ripulito) === normalizza(testo)) return r;
+  return cercaUno(testo, opzioni);
+}
+
+module.exports = { cerca, normalizza, ripulisciCivico, _fetch: (...a) => fetch(...a), _pausa: PAUSA_MS };

@@ -17,23 +17,31 @@ export default function MappaOSM({ token, titolo, indirizzo, paese, servizi }) {
     return () => { annullato = true }
   }, [indirizzo, paese]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Servizi vicini (opzionale): il server li cerca in secondo plano (il servizio pubblico può metterci 30-40 secondi): si richiede ogni 5 secondi, al massimo per 2 minuti.
-  const [elenco, setElenco] = useState(undefined) // undefined = cerco, null = non disponibile, { categorie } = pronto
+  // Servizi vicini (opzionale): il server li cerca in secondo plano (il servizio pubblico è spesso pieno e può metterci anche uno o due minuti) e riprova da solo se fallisce: la pagina
+  // richiede ogni 6 secondi finché è aperta, senza mai arrendersi e senza mai dire «non disponibile». Una risposta di rete che salta si ritenta come tutte le altre.
+  const [elenco, setElenco] = useState(undefined) // undefined = sto cercando, { categorie } = pronto
+  const [attese, setAttese] = useState(0)
   useEffect(() => {
     if (!servizi || !punto) return undefined
-    let annullato = false, timer = null, tentativi = 0
-    setElenco(undefined)
+    let annullato = false, timer = null, giri = 0
+    setElenco(undefined); setAttese(0)
     const chiedi = () => api.get('/geocode/servizi?lat=' + punto.lat + '&lon=' + punto.lon).then((r) => {
       if (annullato) return
-      if (r && r.disponibile) setElenco(r)
-      else if (r && r.in_corso && ++tentativi < 24) timer = setTimeout(chiedi, 5000)
-      else setElenco(null)
-    }).catch(() => { if (!annullato) setElenco(null) })
+      if (r && r.disponibile) { setElenco(r); return }
+      setAttese(++giri); timer = setTimeout(chiedi, 6000)
+    }).catch(() => { if (!annullato) { setAttese(++giri); timer = setTimeout(chiedi, 6000) } })
     chiedi()
     return () => { annullato = true; if (timer) clearTimeout(timer) }
   }, [servizi, punto && punto.lat, punto && punto.lon]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (punto === null) return null
+  if (punto === null) {
+    return (
+      <div className="mb-4 bg-surface-page border border-amber-500/40 rounded-lg px-3 py-2.5 flex items-start gap-2">
+        <Icon name="map-pin" size={13} className="text-amber-500 mt-0.5 flex-shrink-0" />
+        <div className="text-xs text-gray-400 leading-snug"><span className="text-ink font-medium">La mappa non trova «{indirizzo}».</span> Scrivi via e numero civico nei due campi separati, senza «n.ro» o «n°», e controlla il comune.</div>
+      </div>
+    )
+  }
   const g = punto ? griglia(punto.lat, punto.lon, z) : null
   return (
     <div className="mb-4 bg-surface-page border border-gray-800 rounded-lg overflow-hidden">
@@ -62,8 +70,7 @@ export default function MappaOSM({ token, titolo, indirizzo, paese, servizi }) {
       {servizi && punto && (
         <div className="px-3 py-2.5 border-t border-gray-800">
           <div className="text-xs font-semibold text-gray-400 mb-1.5">Servizi vicini <span className="font-normal text-gray-500">(entro 1 km, a piedi: stima)</span></div>
-          {elenco === undefined && <div className="text-[11px] text-gray-500">Cerco i servizi vicini… può servire qualche decina di secondi la prima volta.</div>}
-          {elenco === null && <div className="text-[11px] text-gray-500">Servizi vicini non disponibili ora: il servizio di OpenStreetMap non ha risposto. Riapri la scheda più tardi.</div>}
+          {elenco === undefined && <div className="text-[11px] text-gray-500">{attese < 10 ? 'Cerco i servizi vicini… la prima volta può servire anche un minuto.' : 'Sto ancora cercando i servizi vicini: il servizio di OpenStreetMap è molto richiesto, riprovo da solo e li mostro appena arrivano.'}</div>}
           {elenco && (
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
               {elenco.categorie.map((c) => (

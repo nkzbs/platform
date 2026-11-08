@@ -34,6 +34,20 @@ async function main() {
   await test('più ricerche insieme partono una alla volta', async () => {
     modo = 'ok'; await Promise.all(['Via A 1 Roma', 'Via B 2 Roma', 'Via C 3 Roma', 'Via D 4 Roma'].map((q) => geo.cerca(q))); eq(maxContemporanee, 1, 'mai due richieste insieme');
   });
+  await test('civico scritto come negli atti («n.ro 3», «n° 3», «nr. 3», «civ. 3», «numero 3»): si toglie solo la sigla, e solo prima di una cifra', () => {
+    const r = geo.ripulisciCivico;
+    eq(r('Via San Benedetto n.ro 3, Brescia, BS'), 'Via San Benedetto 3, Brescia, BS'); eq(r('Corso Garibaldi n° 12/A, Milano'), 'Corso Garibaldi 12/A, Milano'); eq(r('Viale Italia nr. 5'), 'Viale Italia 5');
+    eq(r('Via Dante, civ. 7'), 'Via Dante, 7'); eq(r('Via San Benedetto numero 3'), 'Via San Benedetto 3'); eq(r('Via Cesare n. 10'), 'Via Cesare 10'); eq(r('VIA ROMA N.RO 4'), 'VIA ROMA 4');
+    for (const intatto of ['Via Roma, 3', 'Via N. Sauro 5', 'Piazza 4 Novembre 2', 'Via XX Settembre 20', 'Viale Nazario Sauro 1', 'Via Civitavecchia 3', 'Via Numa Pompilio 4', 'Via Mario N 3', 'Via Nino Bixio 8']) eq(r(intatto), intatto, 'non deve toccare «' + intatto + '»');
+  });
+  await test('cerca: prima l\'indirizzo ripulito; se così non si trova prova anche quello scritto (ripulire non fa perdere un indirizzo che si trovava); un indirizzo normale parte una volta sola', async () => {
+    const richieste = []; const orig = geo._fetch;
+    geo._fetch = async (url) => { const q = decodeURIComponent(url.split('q=')[1].split('&')[0]); richieste.push(q); const trovato = q === 'via san benedetto 3, brescia' || q === 'via rara n.ro 9, luogo'; return { ok: true, json: async () => (trovato ? [{ lat: '45.5', lon: '10.2', display_name: 'Via, Brescia' }] : []) }; };
+    const a = await geo.cerca('Via San Benedetto n.ro 3, Brescia'); eq([a.lat, a.lon], [45.5, 10.2]); eq(richieste, ['via san benedetto 3, brescia'], 'trovato al primo colpo, con il civico ripulito');
+    richieste.length = 0; const b = await geo.cerca('Via Rara n.ro 9, Luogo'); ok(b && b.lat === 45.5, 'trovato come era scritto'); eq(richieste, ['via rara 9, luogo', 'via rara n.ro 9, luogo'], 'prima ripulito, poi come scritto');
+    richieste.length = 0; await geo.cerca('Via Roma 3, Milano'); eq(richieste.length, 1, 'un indirizzo normale una richiesta sola');
+    geo._fetch = orig;
+  });
   console.log(`\n${'='.repeat(60)}\n${passed} passati, ${failed} falliti su ${passed + failed} test.`);
   try { fs.unlinkSync(process.env.DB_PATH); } catch (e) {}
   process.exit(failed > 0 ? 1 : 0);

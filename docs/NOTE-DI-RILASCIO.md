@@ -2,6 +2,17 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.72 — 8 novembre 2026
+
+**Servizi vicini senza vicoli ciechi, indirizzi copiati dagli atti che la mappa capisce, e la mappa che dice quando non trova.**
+
+- **I servizi vicini arrivano sempre**: il servizio pubblico di Overpass era spesso pieno («502, query workers busy») e la scheda finiva su «Servizi vicini non disponibili ora… riapri più tardi». Quel messaggio **non esiste più**. Ora il server prova **una copia del servizio dopo l'altra** (prima le europee: quella francese risponde in pochi secondi, poi la tedesca, poi le altre; la copia di un servizio russo solo per ultima, con le sole coordinate di un punto) e, se tutte falliscono, **riprova da solo dopo 15 secondi**. La pagina chiede ogni 6 secondi finché è aperta e scrive «Cerco i servizi vicini…», poi «Sto ancora cercando… riprovo da solo»: mai «non disponibile». Una risposta del servizio con un'avvertenza di errore (timeout, memoria) non è più scambiata per «nessun luogo» e non finisce in cache.
+- **Civico scritto come negli atti** (`lib/geocodifica.js`): «Via San Benedetto **n.ro 3**» faceva fallire la ricerca dell'indirizzo, quindi **la mappa non compariva**. Ora «n.ro», «nr.», «n°», «n.», «civ.», «numero» si tolgono, **solo prima di una cifra**: «Via N. Sauro 5», «Via Civitavecchia 3», «Piazza 4 Novembre 2», «Via XX Settembre 20» restano come sono. Si cerca prima l'indirizzo ripulito; se non si trova, anche quello scritto: ripulire non fa mai perdere un indirizzo che prima si trovava.
+- **La mappa dice quando non trova l'indirizzo**: prima spariva in silenzio; ora un riquadro dice «La mappa non trova «…». Scrivi via e numero civico nei due campi, senza «n.ro» o «n°»».
+- Il report PDF, se i luoghi non ci sono ancora, dice sempre «si stanno cercando: rigenera tra un minuto» (non più «non disponibili»).
+- Test: `servizi-vicini.test.js` (10 prove: passaggio alla copia successiva, avvertenza di errore non scambiata per «nessun luogo», nessun vicolo cieco, ordine delle copie) e `geocodifica.test.js` (7: civico ripulito, mai toccati gli indirizzi normali, prima ripulito poi scritto). Provato con il servizio vero: l'elenco arriva in meno di 6 secondi dalla copia francese.
+- Messa online: **Aggiorna** su zucca.
+
 ## 0.4.71 — 8 novembre 2026
 
 **«Servizi vicini» leggibili anche in una scheda stretta, e la guida illustrata in PDF aggiornata.**
