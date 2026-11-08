@@ -6,7 +6,7 @@ Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la 
 
 **La mail del backup settimanale ha una grafica curata.**
 
-- Intestazione nel blu e nel carattere serif dell'identità comune, tre riquadri con **data, dimensione e «cifrata»**, tre passi numerati per riaprire la copia, il comando `openssl` in un **blocco scuro a righe con la barra rovesciata** (si incolla e funziona; non si spezza a metà), avviso giallo «solo il database, non i file caricati». Colori espliciti: leggibile anche nei client in tema scuro.
+- Intestazione nel **viola di Platform** (il colore dell'icona; il blu è di zucca, non di Platform) e nel carattere serif, tre riquadri con **data, dimensione e «cifrata»**, tre passi numerati per riaprire la copia, il comando `openssl` in un **blocco scuro a righe con la barra rovesciata** (si incolla e funziona; non si spezza a metà), avviso giallo «solo il database, non i file caricati». Colori espliciti: leggibile anche nei client in tema scuro.
 - Solo Super Admin: nessun cambiamento per i tenant. Il testo semplice della mail e la cifratura non cambiano (10 test di `weekly-backup-mail.test.js` verdi).
 - Messa online: deploy del Super Admin (`redeploy-nas.sh backend`), nessun Aggiorna su zucca.
 

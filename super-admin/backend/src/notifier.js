@@ -167,7 +167,7 @@ async function notifyAIBudget({ level, spentEur, budgetEur, tenantSlug }) {
 // Grafica della mail del backup: colori espliciti (leggibile in chiaro e in scuro anche nei client che reinterpretano i colori), cifre in evidenza,
 // passi numerati e il comando in un blocco a sé che scorre di lato invece di spezzarsi a metà.
 function htmlBackupSettimanale({ tenantName, backupDate, sizeMb, attachmentName, comando }) {
-  const colore = '#16355B';
+  const colore = '#584aec'; // viola-indaco di Platform (icona dell'app), NON il blu di un tenant
   const cella = (e, v) => `<td style="padding:14px 16px;border:1px solid #e3e7ee;background:#f6f8fb;border-radius:8px;" width="33%"><div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#6b7686;">${e}</div><div style="font-size:16px;font-weight:600;color:#1a2433;margin-top:4px;">${v}</div></td>`;
   const passo = (n, t) => `<tr><td valign="top" width="30" style="padding:0 0 12px;"><div style="width:22px;height:22px;line-height:22px;border-radius:11px;background:${colore};color:#fff;font-size:12px;font-weight:600;text-align:center;">${n}</div></td><td style="padding:0 0 12px;font-size:15px;line-height:1.5;color:#1a2433;">${t}</td></tr>`;
   return `<!doctype html>
@@ -177,7 +177,7 @@ function htmlBackupSettimanale({ tenantName, backupDate, sizeMb, attachmentName,
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #dfe4ec;">
 <tr><td style="background:${colore};padding:26px 28px;">
 <div style="font-family:Georgia,'Times New Roman',serif;color:#ffffff;font-size:24px;font-weight:700;">Backup settimanale</div>
-<div style="color:#c9d6ea;font-size:14px;margin-top:4px;">${esc(tenantName)}</div>
+<div style="color:#e4e1fb;font-size:14px;margin-top:4px;">${esc(tenantName)}</div>
 </td></tr>
 <tr><td style="padding:24px 28px 8px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="8" style="margin:-8px;"><tr>${cella('Data', esc(backupDate))}${cella('Dimensione', esc(sizeMb) + ' MB')}${cella('Copia', 'cifrata')}</tr></table>
