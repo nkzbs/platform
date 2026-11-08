@@ -13,7 +13,7 @@ Stima dell'8 novembre 2026. I prezzi sono **di listino, IVA esclusa**, letti dal
 
 | Azione in Platform | Servizio OpenAPI | Prezzo unitario (€ + IVA) | Note |
 |---|---|---|---|
-| **Valutazione di mercato** (pulsante sull'immobile) | Valutazione avanzata €/mq | n.d. | Non trovato. Il servizio «Start» (3 valori al mq) costa da 2,00 (singola) a 0,26 (50.000/anno) |
+| **Valutazione di mercato** (pulsante sull'immobile) | Valutazione avanzata €/mq (Advanced Quotation) | **3,00** singola; a scaglioni annui 2,50 (300 chiamate), 1,00 (1.000), 0,79 (5.000), 0,67 (10.000), 0,39 (50.000) | Dalla pagina prodotto (8/11): una pagina di ricerca indicava «da 0,05», che non coincide: vale il prezzo di listino, da confermare nella console. Il servizio «Start» (solo 3 valori al mq) costa da 2,00 a 0,26 |
 | ↳ annunci comparabili | Real Estate Comparables | 0,12 singola; 0,09 → 0,032 a scaglioni annui (1.000 → 100.000 chiamate); **30 gratis al mese** | Scaglioni annuali da pagare in anticipo |
 | ↳ quotazioni OMI | OMI Real Estate Quotations | 0,02 dopo **1.440 gratis al giorno** | Di fatto gratuita per un'agenzia |
 | ↳ fotovoltaico, zona sismica, mappa, luoghi vicini | PVGIS, ISPRA, OpenStreetMap | 0 | Non passano da OpenAPI |
@@ -47,7 +47,7 @@ Fonti: pagine prodotto di OpenAPI ([Person](https://openapi.com/products/crif-pe
 | 1 | Cliente: acquisizione e verifica | Persona fisica: verifica CF + eventi negativi + Person Report. Società: credit score + (facoltativa) visura | Persona: 0,0081 + 0,054 + 3,10 ≈ **3,16** (base) fino a +18 se serve il Top Person Report. Società: **0,06** (Start), con visura circa +2,90 |
 | 2 | Cliente: società e cessione di quote | Visura camerale (soci, vigenza), credit score | **circa 3** (visura da confermare) + 0,06–0,42 |
 | 3 | Immobile: scheda di acquisizione | Catasto: indirizzo, foglio, particella (+ estratto mappa) | **0,70** base; **7,60** con l'estratto di mappa |
-| 4 | Valutazione dell'immobile | Valutazione avanzata (n.d.) + comparabili + OMI | **n.d. + 0,03–0,12** (OMI gratis); stima prudente 0,30–2,10 se la valutazione avanzata costa come la Start |
+| 4 | Valutazione dell'immobile | Valutazione avanzata + comparabili + OMI | **3,00 + 0,12 = circa 3,12** a singola richiesta (OMI gratis; i comparabili sono gratis le prime 30 al mese: **3,00**); con un abbonamento annuale la valutazione scende fino a 0,39 |
 | 5 | Abbinamento domanda e offerta | Niente (calcolo interno) | 0 |
 | 6 | Trattativa | Firma elettronica del preliminare (+ PEC se serve) | **0,14** per firma, più 0,05 a PEC |
 | 7 | Provvigioni | Fattura elettronica (invio, archiviazione, firma) | **0,07–0,125** per fattura |
@@ -62,17 +62,17 @@ Ipotesi: un'agenzia con **20 valutazioni, 15 clienti persona, 5 clienti società
 
 | Voce | Quantità | Unitario | Mese |
 |---|---|---|---|
-| Valutazioni: comparabili (OMI gratis; avanzata n.d., stimata come la Start 0,26–2,00) | 20 | 0,03–0,12 + 0,26–2,00 | **5,8–42,4** |
+| Valutazioni: avanzata 3,00 + comparabili 0,12 (30 gratis al mese; OMI gratis) | 20 | 3,00–3,12 | **60,0–62,4** |
 | Clienti persona: verifica CF + eventi negativi + Person Report | 15 | 3,16 | **47,4** |
 | Clienti società: credit score Start | 5 | 0,06 | **0,3** |
 | Catasto: indirizzo + foglio + particella | 20 | 0,70 | **14,0** |
 | Catasto: estratto di mappa su 5 pratiche | 5 | 6,90 | **34,5** |
 | Fatture elettroniche (invio + archiviazione + firma) | 10 | 0,08–0,125 | **0,8–1,3** |
 | Firme elettroniche | 26 | 0,14 | **3,6** |
-| **Totale base** | | | **circa 106–143** |
+| **Totale base** | | | **circa 160–165** |
 | In più, se per 3 clienti al mese serve il Top Person Report (18,00) | 3 | 18,00 | **+54** |
 
-Quindi **da circa 100 a 200 € al mese + IVA**, a seconda di quanto si approfondiscono i clienti e il catasto. Le voci che pesano sono le verifiche sulle persone e gli estratti catastali; la valutazione, il credit score delle società, le fatture e le firme costano pochi euro. Gli scaglioni annuali (pagati in anticipo) abbassano i prezzi delle chiamate frequenti (comparabili, SDI, valutazione), ma non quelli dei report a pezzo.
+Quindi **da circa 160 a 220 € al mese + IVA**, a seconda di quanto si approfondiscono i clienti e il catasto. Le voci che pesano sono la valutazione avanzata (3 € l'una a richiesta singola), le verifiche sulle persone e gli estratti catastali; il credit score delle società, le fatture e le firme costano pochi euro. Gli scaglioni annuali (pagati in anticipo) abbassano i prezzi delle chiamate frequenti (valutazione avanzata, comparabili, SDI), ma non quelli dei report a pezzo: con 20 valutazioni al mese (240 l'anno) conviene confrontare il prezzo a richiesta singola (3,00) con il piano da 300 chiamate (2,50 l'una, da pagare in anticipo).
 
 ## Regole d'uso di Platform che tengono la spesa sotto controllo
 
