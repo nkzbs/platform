@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.71 — 8 novembre 2026
+
+**«Servizi vicini» leggibili anche in una scheda stretta, e la guida illustrata in PDF aggiornata.**
+
+- **Servizi vicini** (`MappaOSM.jsx`): nel pannello laterale stretto il nome della categoria si troncava («Ferma…») e un nome lungo usciva dal riquadro. Ora ogni voce è su **due righe**: la categoria sopra, il luogo con distanza e minuti sotto, che va a capo se serve.
+- **Guida illustrata** (`docs/guida-utente/Guida-illustrata.pdf`): rifatta alla versione 0.4.71, **42 pagine e 51 schermate** prese da un ambiente locale di prova. Nuovi capitoli e passi: il giro guidato; la casella «fatto» nel «Da fare»; il «?» della Dashboard con i due pulsanti; gli avvisi della campanella; la mappa e i servizi vicini; il report PDF con la mappa e i luoghi numerati; minimo garantito, trattenuta all'agente e allineamento al prezzo concordato nelle Provvigioni; solvibilità, credit score società e le altre funzioni «da attivare»; carattere e logo in versione chiara in Aspetto; dalla prova alla produzione e dati dimostrativi in OpenAPI. Tolto il capitolo dei Contatti (ora sono Attività).
+- **Per rifarla** (`docs/guida-utente/strumenti/`): script delle schermate (Chrome in modalità senza finestra), dei dati di esempio e del PDF, con un LEGGIMI. Le schermate intermedie non si conservano.
+- Messa online: **Aggiorna** su zucca (solo il pannello dei servizi cambia).
+
 ## 0.4.70 — 8 novembre 2026
 
 **Il report di valutazione: la mappa di OpenStreetMap con i luoghi utili vicini, e l'intestazione sistemata.**

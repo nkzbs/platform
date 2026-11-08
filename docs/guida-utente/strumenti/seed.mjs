@@ -1,0 +1,28 @@
+import fs from 'fs'
+const B='http://localhost:3000/api', PK='/Users/nimakarimpour/Desktop/platform/super-admin/backend/src/pacchetti/mediazione-immobiliare/'
+const j=async(m,p,b,t,h={})=>{const r=await fetch(B+p,{method:m,headers:{'Content-Type':'application/json',...(t?{Authorization:'Bearer '+t}:{}),...h},body:b?JSON.stringify(b):undefined});return {s:r.status,d:await r.json().catch(()=>({}))}}
+const {d:{token:T}}=await j('POST','/auth/login',{username:'admin',password:'admin1234'})
+const f=(key,label,type='text',x={})=>({id:'f_'+key,block_type:'field',key,label,type,...x})
+const r=(key,label,target,disp)=>({id:'r_'+key,block_type:'relation',key,label,type:'many_to_one',target_module:target,display_mode:'select_inline',display_field:disp})
+const stati=(l)=>l.flatMap(([k,lab,ini],i)=>[{id:'s_'+k,block_type:'workflow_state',key:k,label:lab,...(ini?{initial:true}:{})}]).concat(l.slice(1).flatMap(([k,lab],i)=>[{id:'tf_'+k,block_type:'workflow_transition',from:l[i][0],to:k,label:lab},{id:'tb_'+k,block_type:'workflow_transition',from:k,to:l[i][0],label:'Torna a «'+l[i][1]+'»'}]))
+const MOD={
+ clienti:{name:'Clienti',icon:'users',color:'#10B981',steps:[f('nome','Nome','text',{required:true}),f('email','Email','email'),f('telefono','Telefono','phone'),f('azienda','Azienda'),f('indirizzo','Indirizzo'),f('note','Note','textarea'),f('consenso_marketing','Consenso comunicazioni commerciali','checkbox'),f('consenso_terzi','Consenso a partner e portali','checkbox'),f('privacy_firmata_il','Privacy firmata il','date'),f('privacy_versione','Versione informativa'),f('conservazione_fino_al','Conservazione fino al','date'),...stati([['verifica','Verifica identità cliente',1],['documenti_inviati','Documenti inviati'],['cliente_verificato','Cliente verificato']])]},
+ immobili:{name:'Immobili',icon:'home',color:'#2563EB',steps:[f('titolo','Titolo','text',{required:true}),f('tipologia','Tipologia','select',{options:['Appartamento','Villa','Attico','Ufficio','Negozio','Terreno']}),f('indirizzo','Indirizzo'),f('comune','Comune'),f('provincia','Provincia'),f('cap','CAP'),f('superficie_mq','Superficie (mq)','number'),f('locali','Locali','number'),f('prezzo_richiesto','Prezzo richiesto','currency'),f('tipologia_incarico','Tipologia di incarico','select',{options:['Esclusiva','Non esclusiva']}),f('stima_valore','Stima di mercato','currency'),f('stima_eur_mq','Stima €/mq','currency'),f('stima_data','Data della stima','date'),f('stima_fonte','Fonte della stima'),r('proprietario','Proprietario','clienti','nome'),...stati([['in_mandato','In mandato',1],['in_vendita','In vendita'],['in_trattativa','In trattativa'],['venduto','Venduto']])]},
+ trattative:{name:'Trattative',icon:'git-branch',color:'#F59E0B',steps:[f('titolo','Titolo','text',{required:true}),f('tipo','Tipo','select',{options:['Vendita','Acquisto']}),r('immobile','Immobile','immobili','titolo'),f('prezzo_concordato','Prezzo concordato','currency'),f('data_incontro','Data incontro','date'),f('data_preliminare','Data del preliminare','date'),f('data_rogito','Data del rogito','date'),f('professionisti_coinvolti','Professionisti coinvolti'),f('note','Note','textarea'),...stati([['trattativa_in_corso','Trattativa in corso',1],['preliminare_firmato','Preliminare firmato'],['rogito_completato','Rogito completato'],['chiusa','Chiusa']])]},
+ provvigioni:{name:'Provvigioni',icon:'wallet',color:'#8B5CF6',steps:[f('descrizione','Descrizione','text',{required:true}),r('trattativa','Trattativa','trattative','titolo'),r('cliente','Cliente','clienti','nome'),f('tipo','Tipo','select',{options:['Provvigione di vendita']}),f('importo','Importo','currency'),f('data_scadenza','Scadenza','date'),f('data_incasso','Data di incasso','date'),f('note','Note','textarea'),...stati([['da_fatturare','Da fatturare',1],['fatturata','Fatturata'],['incassata','Incassata']])]},
+ richieste_privacy:{name:'Richieste privacy',icon:'shield',color:'#EF4444',steps:[r('cliente','Cliente','clienti','nome'),f('tipo','Tipo di richiesta','select',{options:['Accesso','Rettifica','Cancellazione']}),f('data_richiesta','Ricevuta il','date'),f('risposta','Risposta data','textarea'),...stati([['ricevuta','Ricevuta',1],['in_lavorazione','In lavorazione'],['completata','Completata']])]},}
+for (const [slug,m] of Object.entries(MOD)) {
+  await j('POST','/modules/create',{name:m.name,slug,icon:m.icon,color:m.color},T)
+  const d=await j('PUT','/builder/'+slug+'/draft',{schema:{version:3,steps:m.steps}},T); const p=await j('POST','/builder/'+slug+'/publish',{},T)
+  console.log(slug,d.s,p.s,p.s!==200?JSON.stringify(p.d).slice(0,200):'')
+}
+// rimuovi i moduli di esempio che non servono alla guida
+for (const s of ['persone_prova']) await j('DELETE','/modules/'+s,null,T)
+// aspetto
+console.log('azienda',(await j('PUT','/settings/azienda',{ragione_sociale:'Agenzia Esempio Immobiliare',indirizzo:'Via Roma 1, Brescia',piva:'01234567890',accent_color:'#16355B'},T)).s)
+console.log('nome',(await j('PUT','/settings/azienda',{ragione_sociale:'Agenzia Esempio Immobiliare',indirizzo:'Via Roma 1, Brescia',piva:'01234567890',accent_color:'#16355B',app_name:'Agenzia Esempio'},T)).s)
+// pacchetto
+const parti={}; for (const p of ['estensioni','documenti','abbinamenti','moduli','ruoli','relazioni','proprieta','sezioni','dimostrativi','guida','migrazioni']) parti[p]=JSON.parse(fs.readFileSync(PK+p+'.json','utf8'))
+const pv=JSON.parse(fs.readFileSync(PK+'pacchetto.json','utf8'))
+const sec=process.env.SECRET||'dev_internal_secret_local_only'
+for (let i=0;i<2;i++) console.log('pacchetto',(await j('POST','/internal-setup/pacchetto',{slug:'mediazione-immobiliare',versione:pv.versione,parti},null,{'x-internal-secret':sec})).s)

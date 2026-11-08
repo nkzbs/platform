@@ -65,11 +65,11 @@ export default function MappaOSM({ token, titolo, indirizzo, paese, servizi }) {
           {elenco === undefined && <div className="text-[11px] text-gray-500">Cerco i servizi vicini… può servire qualche decina di secondi la prima volta.</div>}
           {elenco === null && <div className="text-[11px] text-gray-500">Servizi vicini non disponibili ora: il servizio di OpenStreetMap non ha risposto. Riapri la scheda più tardi.</div>}
           {elenco && (
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
               {elenco.categorie.map((c) => (
-                <li key={c.chiave} className="text-[11px] text-gray-400 flex items-baseline justify-between gap-2">
-                  <span className="truncate">{c.label}</span>
-                  <span className="text-gray-500 flex-shrink-0 text-right">{c.piu_vicino ? (c.piu_vicino.nome ? c.piu_vicino.nome + ' · ' : '') + c.piu_vicino.metri + ' m, ~' + c.piu_vicino.minuti + ' min' + (c.quanti > 1 ? ' (' + c.quanti + ')' : '') : 'nessuno nel raggio'}</span>
+                <li key={c.chiave} className="text-[11px] leading-snug">
+                  <div className="text-gray-300 font-medium">{c.label}</div>
+                  <div className="text-gray-500 break-words">{c.piu_vicino ? (c.piu_vicino.nome ? c.piu_vicino.nome + ' · ' : '') + c.piu_vicino.metri + ' m, ~' + c.piu_vicino.minuti + ' min' + (c.quanti > 1 ? ' (' + c.quanti + ' in zona)' : '') : 'nessuno nel raggio'}</div>
                 </li>
               ))}
             </ul>
