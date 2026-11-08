@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Anteprima Dashboard — widget standard</title>
+<style>
+:root{--bg:#0b0d14;--card:rgba(255,255,255,.055);--bd:rgba(255,255,255,.12);--tx:#eceff6;--mu:#9aa3b5;--ac:#7c6cf5;--ok:#34d399;--wa:#fbbf24;--er:#f87171;--g1:rgba(88,74,236,.28);--g2:rgba(20,184,166,.18)}
+[data-t=light]{--bg:#f3f4f8;--card:#fff;--bd:#e1e4ec;--tx:#1a2030;--mu:#6b7487;--ac:#584aec;--ok:#0f9d6e;--wa:#b7791f;--er:#d33f3f;--g1:rgba(88,74,236,.10);--g2:rgba(20,184,166,.08)}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(900px 500px at 8% -10%,var(--g1),transparent),radial-gradient(800px 500px at 100% 100%,var(--g2),transparent),var(--bg);color:var(--tx);font:14px/1.45 Georgia,'Times New Roman',serif;padding:20px 16px 48px}
+.w{max-width:1040px;margin:0 auto}.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:18px;font:13px system-ui,sans-serif}
+.bar button{background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:7px 12px;cursor:pointer;font:inherit}.bar button.on{border-color:var(--ac);color:var(--ac)}
+h1{font-size:24px;margin:0 0 2px}.sub{color:var(--mu);margin:0 0 16px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(12,1fr)}.c12{grid-column:span 12}.c8{grid-column:span 8}.c6{grid-column:span 6}.c4{grid-column:span 4}.c3{grid-column:span 3}
+@media(max-width:760px){.c8,.c6,.c4,.c3{grid-column:span 12}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:16px 18px;cursor:pointer;transition:border-color .15s,transform .15s;backdrop-filter:blur(8px)}
+.card:hover{border-color:var(--ac);transform:translateY(-1px)}
+.t{font:600 11px system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);margin:0 0 10px;display:flex;justify-content:space-between;gap:8px}.t i{font-style:normal;text-transform:none;letter-spacing:0;color:var(--ac);font-weight:500}
+.big{font-size:34px;line-height:1.1;font-weight:700}.sm{color:var(--mu);font-size:12.5px;margin-top:4px}
+.row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--bd)}.row:first-of-type{border-top:0}
+.h{font:600 12px system-ui,sans-serif;color:var(--mu);width:46px;flex:none}.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.tag{font:600 10.5px system-ui,sans-serif;border-radius:999px;padding:2px 8px;border:1px solid}
+.er{color:var(--er);border-color:var(--er)}.wa{color:var(--wa);border-color:var(--wa)}.ok{color:var(--ok);border-color:var(--ok)}
+.fasi{display:flex;gap:6px}.fase{flex:1;min-width:0}.fase b{display:block;font-size:26px}.fase span{font:11.5px system-ui,sans-serif;color:var(--mu);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bb{height:6px;border-radius:3px;background:var(--bd);margin:8px 0 6px;overflow:hidden}.bb u{display:block;height:100%;background:var(--ac);border-radius:3px}
+.seg{display:flex;flex-wrap:wrap;gap:8px}.seg .p{display:flex;gap:6px;align-items:center;border:1px solid var(--bd);border-radius:10px;padding:7px 11px;font:13px system-ui,sans-serif}.seg b{font-size:15px}
+.muted{display:flex;gap:14px;flex-wrap:wrap;color:var(--mu);font:12.5px system-ui,sans-serif;padding:2px 4px}
+.note{margin-top:22px;color:var(--mu);font:12.5px/1.5 system-ui,sans-serif;border-top:1px solid var(--bd);padding-top:12px}
+.v{display:none}.v.on{display:block}
+</style></head>
+<body><div class="w">
+<div class="bar"><b>Anteprima:</b>
+<button id="b1" class="on" onclick="v(1)">A · Completa</button><button id="b2" onclick="v(2)">B · Asciutta</button>
+<span style="flex:1"></span><button id="tt" onclick="th()">Tema chiaro / scuro</button></div>
+
+<div id="v1" class="v on">
+<h1>Dashboard</h1><p class="sub">Benvenuto, Admin · lunedì 9 novembre</p>
+<div class="grid">
+ <div class="card c12"><p class="t">Oggi <i>Apri l'agenda →</i></p>
+  <div class="row"><span class="h">10:00</span><span class="dot" style="background:var(--ac)"></span><span style="flex:1"><b>Visita</b> · Anna Esempio · Via San Benedetto 3</span><span class="tag ok">confermata</span></div>
+  <div class="row"><span class="h">15:30</span><span class="dot" style="background:var(--ac)"></span><span style="flex:1"><b>Telefonata</b> · Mario Rossi · aggiornamento mandato</span></div>
+  <div class="row"><span class="h">scaduta</span><span class="dot" style="background:var(--er)"></span><span style="flex:1"><b>Provvigione Rossi</b> · da incassare 4.200 €</span><span class="tag er">3 giorni</span></div>
+ </div>
+ <div class="card c12"><p class="t">Percorso degli immobili <i>Apri gli immobili →</i></p>
+  <div class="fasi">
+   <div class="fase"><b>2</b><div class="bb"><u style="width:30%"></u></div><span>Da valutare</span></div>
+   <div class="fase"><b>3</b><div class="bb"><u style="width:45%"></u></div><span>In mandato</span></div>
+   <div class="fase"><b>4</b><div class="bb"><u style="width:60%"></u></div><span>In vendita</span></div>
+   <div class="fase"><b>1</b><div class="bb"><u style="width:15%"></u></div><span>In trattativa</span></div>
+   <div class="fase"><b>7</b><div class="bb"><u style="width:100%;background:var(--ok)"></u></div><span>Venduto</span></div>
+  </div></div>
+ <div class="card c4"><p class="t">Trattative aperte <i>→</i></p><div class="big">3</div><div class="sm">1.240.000 € in corso</div><div class="sm">Prossimo: rogito 22 dic</div></div>
+ <div class="card c4"><p class="t">Provvigioni <i>→</i></p><div class="big">18.400 €</div><div class="sm">da incassare</div><div class="sm"><span class="tag er">3.200 € scadute</span> <span class="tag ok" style="margin-left:4px">6.100 € incassate ▲ 12%</span></div></div>
+ <div class="card c4"><p class="t">Cercano casa <i>→</i></p><div class="big">5</div><div class="sm">richieste attive</div><div class="sm"><span class="tag wa">2 senza immobile compatibile</span></div></div>
+ <div class="card c12"><p class="t">Da sistemare</p>
+  <div class="seg"><span class="p"><b style="color:var(--wa)">2</b>mandati in scadenza</span><span class="p"><b style="color:var(--er)">1</b>trattativa ferma da 30 giorni</span><span class="p"><b style="color:var(--wa)">1</b>cliente con dati scaduti</span><span class="p"><b style="color:var(--wa)">4</b>documenti mancanti</span></div></div>
+ <div class="c12 muted"><span>Rogiti del mese: nessuno</span><span>Preliminari del mese: nessuno</span><span>Incassato nel mese: 0 €</span></div>
+</div></div>
+
+<div id="v2" class="v">
+<h1>Dashboard</h1><p class="sub">Benvenuto, Admin · lunedì 9 novembre</p>
+<div class="grid">
+ <div class="card c8"><p class="t">Oggi <i>Apri l'agenda →</i></p>
+  <div class="row"><span class="h">10:00</span><span class="dot" style="background:var(--ac)"></span><span style="flex:1"><b>Visita</b> · Anna Esempio · Via San Benedetto 3</span></div>
+  <div class="row"><span class="h">15:30</span><span class="dot" style="background:var(--ac)"></span><span style="flex:1"><b>Telefonata</b> · Mario Rossi</span></div>
+  <div class="row"><span class="h">scaduta</span><span class="dot" style="background:var(--er)"></span><span style="flex:1"><b>Provvigione Rossi</b></span><span class="tag er">3 giorni</span></div></div>
+ <div class="card c4"><p class="t">Provvigioni <i>→</i></p><div class="big">18.400 €</div><div class="sm">da incassare</div><div class="sm"><span class="tag er">3.200 € scadute</span></div></div>
+ <div class="card c12"><p class="t">Percorso degli immobili <i>→</i></p>
+  <div class="fasi"><div class="fase"><b>2</b><span>Da valutare</span></div><div class="fase"><b>3</b><span>In mandato</span></div><div class="fase"><b>4</b><span>In vendita</span></div><div class="fase"><b>1</b><span>In trattativa</span></div><div class="fase"><b>7</b><span>Venduto</span></div></div></div>
+ <div class="c12 muted"><span>3 trattative aperte (1.240.000 €)</span><span>5 richieste, 2 senza abbinamento</span><span>4 documenti mancanti</span></div>
+</div></div>
+
+<div class="note"><b>Widget standard</b> (disponibili in ogni verticale, senza nomi di moduli nel codice): <b>Contatore</b> (numero, somma o confronto, con soglie di colore), <b>Elenco</b> (righe da un modulo con filtro e ordinamento: «Oggi», «Scadute»), <b>Percorso a fasi</b> (un conteggio per stato di un modulo) e <b>Segnali</b> (gruppo di conteggi con soglia). Ogni riquadro apre il modulo già filtrato. I contatori a zero si riducono a una riga grigia. Colore e carattere seguono Impostazioni → Aspetto. Dati inventati.</div>
+</div>
+<script>
+function v(n){document.getElementById('v1').classList.toggle('on',n==1);document.getElementById('v2').classList.toggle('on',n==2);document.getElementById('b1').classList.toggle('on',n==1);document.getElementById('b2').classList.toggle('on',n==2)}
+function th(){var d=document.documentElement;d.dataset.t=d.dataset.t==='light'?'':'light'}
+document.querySelectorAll('.card').forEach(function(c){c.title='Il clic apre la sezione già filtrata'})
+</script></body></html>

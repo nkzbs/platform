@@ -811,3 +811,8 @@ Codice potato dopo lo spegnimento di Platform (2 ottobre 2026): vedi [`DECISIONI
 - **Decisione**: un'azione esterna con un adattatore che dichiara `disponibile` resta tra «Altre funzioni» (da attivare) finché la chiave collegata non può ottenere il token del servizio, poi diventa un pulsante normale: nessun intervento sul codice né sul pacchetto quando il servizio viene attivato. La conferma del costo arriva solo dopo, mai per una funzione non attiva.
 - **Asincrone**: le richieste lente (report persona, visura catastale) si pagano una volta e si ricontrollano gratis (`senzaCosto`).
 - **Fatture**: Fatture in Cloud, non l'SDI di OpenAPI.
+
+## 0.4.77 — Un solo filtro per contare e per aprire
+
+- **Decisione**: il numero di un widget e l'elenco aperto dal suo clic usano la stessa funzione di filtro (`filtroWidget.js`). I nuovi widget (Percorso, Segnali) sono standard: nessun nome di modulo o campo nel codice, tutto viene dalla configurazione del widget.
+- **Perché**: se il widget dice «3 scadute» e l'elenco ne mostra 4, la Dashboard perde fiducia.

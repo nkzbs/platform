@@ -2,6 +2,18 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.77 — 9 novembre 2026
+
+**Dashboard: nuovi widget standard e numeri che si cliccano.**
+
+- **Percorso a fasi** (`PercorsoWidget`): un conteggio per ogni stato del flusso di un modulo, con barra proporzionale. Serve solo il modulo; ogni fase apre il modulo filtrato su quello stato.
+- **Segnali** (`SegnaliWidget`): un gruppo di conteggi con soglia (etichetta, modulo, filtri, tono). Le voci a zero spariscono («tutto a posto» se sono tutte a zero). Le voci si scrivono come testo JSON dal modale del widget (un editor a campi arriverà dal Builder).
+- **Il clic apre il modulo già filtrato**: il filtro (`lib/filtroWidget.js`: uguale, diverso, vuoto, compilato, scaduto, entro N giorni, questo mese, minore/maggiore) è lo stesso per contare nel widget e per filtrare l'elenco, quindi il numero e le righe coincidono. Nell'elenco di un modulo i riquadri degli **stati del flusso in alto sono ora filtri** (un clic filtra, un altro mostra tutti) e un avviso dice quando c'è un filtro arrivato dalla Dashboard.
+- **Contatori** (Numero, Numero con soglia): si cliccano e, a zero, diventano piccoli e grigi («niente per ora») invece di un «0» enorme.
+- Il widget «Da fare» esisteva già e resta com'è (già generico e cliccabile).
+- Nessun cambiamento ai dati né al pacchetto verticale. Le Dashboard già personalizzate non si toccano: i widget nuovi si aggiungono da **Modifica layout**. Test: `filtroWidget.test.js` (4).
+- Messa online: deploy di frontend e backend (basta il core del tenant: **Aggiorna** su zucca).
+
 ## 0.4.76 — 8 novembre 2026
 
 **Verifica della persona, credit score e controllo catastale sono collegati a OpenAPI.it: appena attivi i servizi, partono da soli.**

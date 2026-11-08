@@ -14,6 +14,9 @@ import YearlyBreakdownView from './ModulePage/YearlyBreakdownView'
 import CategoryPivotView from './ModulePage/CategoryPivotView'
 import WeeklyBreakdownView from './ModulePage/WeeklyBreakdownView'
 import Portal from '../components/Portal'
+import PercorsoWidget from '../components/PercorsoWidget'
+import SegnaliWidget from '../components/SegnaliWidget'
+import { apriModulo } from '../lib/filtroWidget'
 
 // ─── DASHBOARD / REPORT ─────────────────────────────────────────────────────────
 // Stesso motore widget per due pagine — page='dashboard' (default, invariato) o
@@ -65,6 +68,9 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, o
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user && user.role])
   const [widgetData, setWidgetData] = useState({})
+  // Segnali: l'elenco delle voci si scrive come testo JSON (avanzato; il Builder avrà un editor a campi). Esempio: [{"etichetta":"Mandati in scadenza","modulo":"immobili","filtri":[{"campo":"scadenza_incarico","op":"entro_giorni","valore":30}],"tono":"avviso"}]
+  const [segnaliTesto, setSegnaliTesto] = useState('[\n  {"etichetta": "Scadute", "modulo": "", "filtri": [{"campo": "", "op": "scaduto"}], "tono": "errore"}\n]')
+  const segnaliVoci = (() => { try { const v = JSON.parse(segnaliTesto); return Array.isArray(v) && v.length && v.every((x) => x && x.etichetta && x.modulo) ? v : null } catch (e) { return null } })()
   // Configurazione del widget Checklist multi-modulo — separata da newWidget perché
   // ha una forma diversa (più moduli, non uno) e diventa la 'config' JSON del widget.
   const [checklistConfig, setChecklistConfig] = useState({ sources: [], period: 'questo_mese', giorno_cutoff: 1, from: '', to: '', apri_dettaglio: false })
@@ -271,6 +277,8 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, o
   // I widget di finanza compaiono solo se il progetto ha moduli di spese o entrate (o se stai modificando uno di quelli)
   const showFinanza = declared.length > 0 || ['riepilogo_mensile', 'come_sta_andando'].includes(newWidget.type)
   const TYPE_HELP = {
+    percorso: 'Un conteggio per ogni stato del flusso di un modulo (per esempio Da valutare, In mandato, In vendita…). Ogni fase si clicca e apre il modulo filtrato su quello stato.',
+    segnali: 'Un gruppo di conteggi con soglia («da sistemare»): ogni voce conta i record che passano uno o più filtri, sparisce se è a zero e si clicca per aprire l\'elenco filtrato.',
     kpi: 'Un numero grande: la somma, la media o il conteggio di un campo di un modulo.',
     periodo: 'Come il numero, ma per un periodo (oggi, settimana, mese) e con un colore se supera una soglia.',
     aggregate_value: 'Un numero calcolato da una formula o da un aggregato definito nel Builder.',
@@ -292,6 +300,8 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, o
     if (!w.label) w.label = w.module_slug || (w.type === 'checklist' ? 'Checklist' : w.type === 'come_sta_andando' ? 'Come sta andando' : w.type === 'coda' ? 'Coda' : w.type === 'agenda' ? 'Da fare' : w.type === 'timbrature_rapide' ? 'Timbrature' : 'Widget')
     if (w.type === 'checklist') w.config = checklistConfig
     if (w.type === 'periodo') w.config = periodoConfig
+    if (w.type === 'segnali') w.config = { voci: segnaliVoci || [] }
+    if (!w.label && w.type === 'segnali') w.label = 'Da sistemare'
     if (w.type === 'riepilogo_mensile') w.config = riepilogoConfig
     if (REPORT_WIDGET_TYPES.includes(w.type)) w.config = reportBlockConfig
     if (w.type === 'come_sta_andando') {
@@ -311,6 +321,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, o
     setNewWidget({ type: w.type, module_slug: w.module_slug || '', field: w.field || '', aggregation: w.aggregation || 'sum', label: w.label || '', color: w.color || '#2563EB', roles: w.roles || [], user_ids: w.user_ids || [] })
     const cfg = w.config || {}
     if (w.type === 'checklist') setChecklistConfig({ sources: cfg.sources || [], period: cfg.period || 'questo_mese', giorno_cutoff: cfg.giorno_cutoff || 1, from: cfg.from || '', to: cfg.to || '', apri_dettaglio: !!cfg.apri_dettaglio })
+    if (w.type === 'segnali') setSegnaliTesto(JSON.stringify(cfg.voci || [], null, 2))
     if (w.type === 'periodo') setPeriodoConfig({ date_field: cfg.date_field || '', periodo: cfg.periodo || 'mese', soglia: cfg.soglia ?? '', soglia_operatore: cfg.soglia_operatore || '>', colore_soglia: cfg.colore_soglia || '#F87171' })
     if (w.type === 'riepilogo_mensile') setRiepilogoConfig({
       giorno_cutoff: cfg.giorno_cutoff || 27,
@@ -430,7 +441,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, o
           // slegati invece di uno. Ora il wrapper porta il vetro (come checklist/coda/
           // riepilogo_mensile) e InsightsCard non disegna più un proprio sfondo.
           return (
-            <div key={w.id} className={(!isAperto(w) ? 'max-lg:[&>*:not(.wbar)]:hidden ' : '') + (['yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? 'relative' : 'glass-panel overflow-hidden relative') + (['checklist', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? ' col-span-full' : ['coda', 'agenda'].includes(w.type) ? ' col-span-full' : ['come_sta_andando', 'riepilogo_mensile'].includes(w.type) ? ' col-span-full sm:col-span-1 lg:col-span-3' : ' lg:col-span-2')}>
+            <div key={w.id} className={(!isAperto(w) ? 'max-lg:[&>*:not(.wbar)]:hidden ' : '') + (['yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? 'relative' : 'glass-panel overflow-hidden relative') + (['checklist', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'percorso', 'segnali'].includes(w.type) ? ' col-span-full' : ['coda', 'agenda'].includes(w.type) ? ' col-span-full' : ['come_sta_andando', 'riepilogo_mensile'].includes(w.type) ? ' col-span-full sm:col-span-1 lg:col-span-3' : ' lg:col-span-2')}>
               {['come_sta_andando', 'checklist', 'coda', 'riepilogo_mensile'].includes(w.type) && !editMode && (
                 /* "Liquid Glass" (2026-10-31) — questa barra, da chiusa, sta DENTRO la card già
                    di vetro (.glass-panel sul wrapper, sopra): prima aveva un suo sfondo opaco
@@ -456,15 +467,18 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, o
                   <button onClick={() => removeWidget(w.id)} className="w-6 h-6 flex items-center justify-center bg-red-900/40 hover:bg-red-900/60 text-red-400 rounded text-xs"><Icon name="x" size={10} /></button>
                 </div>
               )}
-              {w.type === 'kpi' && (
-                <div className="p-5">
-                  <div className="text-xs text-gray-500 mb-2 uppercase tracking-wider">{w.label}{w.field ? ' · ' + (AGGREGATION_LABELS[w.aggregation] || 'Somma') : ''}</div>
-                  <div className="text-3xl font-bold mb-1" style={{ color: w.color }}>
-                    {w.field ? (data.value || 0).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : (data.count || 0)}
-                  </div>
-                  <div className="text-xs text-gray-500">{data.count || 0} record totali</div>
-                </div>
-              )}
+              {w.type === 'kpi' && (() => {
+                const zero = !(w.field ? data.value : data.count)
+                return (
+                  <button type="button" disabled={!w.module_slug || editMode} onClick={() => apriModulo(onNavigate, w.module_slug, [])} title={w.module_slug ? 'Apri il modulo' : undefined} className="p-5 w-full text-left hover:bg-white/[0.03] transition disabled:cursor-default">
+                    <div className="text-xs text-gray-500 mb-2 uppercase tracking-wider">{w.label}{w.field ? ' · ' + (AGGREGATION_LABELS[w.aggregation] || 'Somma') : ''}</div>
+                    <div className={(zero ? 'text-xl font-semibold ' : 'text-3xl font-bold ') + 'mb-1'} style={{ color: zero ? undefined : w.color, opacity: zero ? 0.55 : 1 }}>
+                      {w.field ? (data.value || 0).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : (data.count || 0)}
+                    </div>
+                    <div className="text-xs text-gray-500">{zero ? 'Niente per ora' : (data.count || 0) + ' record totali'}</div>
+                  </button>
+                )
+              })()}
               {w.type === 'table' && (
                 <div>
                   <div className="px-5 pt-4 pb-2 border-b border-gray-800">
@@ -486,6 +500,8 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, o
                 return <RiepilogoMensile data={data} label={w.label} nomeMese={new Date(anno, mese, 1).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })} />
               })()}
               {w.type === 'agenda' && <AgendaWidget token={token} onNavigate={onNavigate} />}
+              {w.type === 'percorso' && w.module_slug && <PercorsoWidget token={token} moduleSlug={w.module_slug} label={w.label} modules={modules} onNavigate={onNavigate} />}
+              {w.type === 'segnali' && <SegnaliWidget token={token} config={w.config} label={w.label} onNavigate={onNavigate} />}
               {w.type === 'coda' && <QueueWidget token={token} onNavigate={onNavigate} modules={modules} user={user} />}
               {w.type === 'timbrature_rapide' && <TimbratureWidget token={token} user={user} onNavigate={onNavigate} />}
               {w.type === 'come_sta_andando' && <InsightsCard token={token} widgetId={w.id} title={w.label} onNavigate={features.movimenti ? onNavigate : undefined} />}
@@ -495,14 +511,15 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, o
               {w.type === 'periodo' && (() => {
                 const cfg = w.config || {}
                 const color = data.allarme && cfg.colore_soglia ? cfg.colore_soglia : w.color
+                const zero = !(w.field ? data.value : data.count)
                 return (
-                  <div className="p-5">
+                  <button type="button" disabled={!w.module_slug || editMode} onClick={() => apriModulo(onNavigate, w.module_slug, [])} title={w.module_slug ? 'Apri il modulo' : undefined} className="p-5 w-full text-left hover:bg-white/[0.03] transition disabled:cursor-default">
                     <div className="text-xs text-gray-500 mb-2 uppercase tracking-wider">{w.label}{w.field ? ' · ' + (AGGREGATION_LABELS[w.aggregation] || 'Somma') : ''}</div>
-                    <div className="text-3xl font-bold mb-1" style={{ color }}>
+                    <div className={(zero ? 'text-xl font-semibold ' : 'text-3xl font-bold ') + 'mb-1'} style={{ color: zero ? undefined : color, opacity: zero ? 0.55 : 1 }}>
                       {w.field ? (data.value || 0).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : (data.count || 0)}
                     </div>
-                    <div className="text-xs text-gray-500">{PERIODO_LABELS[cfg.periodo] || 'sempre'} · {data.count || 0} record{data.allarme && <span className="ml-1" style={{ color: cfg.colore_soglia || '#F87171' }}>⚠</span>}</div>
-                  </div>
+                    <div className="text-xs text-gray-500">{PERIODO_LABELS[cfg.periodo] || 'sempre'} · {zero ? 'niente per ora' : (data.count || 0) + ' record'}{data.allarme && <span className="ml-1" style={{ color: cfg.colore_soglia || '#F87171' }}>⚠</span>}</div>
+                  </button>
                 )
               })()}
               {w.type === 'aggregate_value' && (
@@ -552,6 +569,8 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, o
                   </optgroup>
                   <optgroup label="Elenchi">
                     <option value="table">Tabella — ultime righe di un modulo</option>
+                    <option value="percorso">Percorso a fasi — un conteggio per stato di un modulo</option>
+                    <option value="segnali">Segnali — conteggi con soglia, da sistemare</option>
                     <option value="checklist">Checklist — righe da spuntare, da più moduli</option>
                     <option value="agenda">Da fare — scadenze di oggi e dei prossimi giorni</option>
                     <option value="coda">Coda — righe nello stato «nuovo» dei moduli</option>
@@ -609,7 +628,14 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, o
                   )
                 })()}
               </div>
-              {!['checklist', 'riepilogo_mensile', 'come_sta_andando', 'coda', 'agenda', 'timbrature_rapide', ...REPORT_WIDGET_TYPES].includes(newWidget.type) && (
+              {newWidget.type === 'segnali' && (
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">Voci (testo JSON)</label>
+                  <textarea rows={8} className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg outline-none border border-gray-800 focus:border-accent transition font-mono text-xs" value={segnaliTesto} onChange={(e) => setSegnaliTesto(e.target.value)} spellCheck={false} />
+                  <div className="text-[11px] text-gray-500 mt-1">Ogni voce: <code>etichetta</code>, <code>modulo</code> (slug), <code>filtri</code> (campo + op: =, !=, vuoto, non_vuoto, scaduto, entro_giorni, questo_mese, &lt;, &gt;) e <code>tono</code> (avviso, errore, ok). {segnaliVoci ? 'Il testo è valido.' : 'Il testo non è ancora valido: servono etichetta e modulo per ogni voce.'}</div>
+                </div>
+              )}
+              {!['checklist', 'riepilogo_mensile', 'come_sta_andando', 'coda', 'agenda', 'timbrature_rapide', 'segnali', ...REPORT_WIDGET_TYPES].includes(newWidget.type) && (
                 <div>
                   <label className="text-xs text-gray-400 block mb-1">Modulo</label>
                   <select className="w-full bg-surface-page text-ink px-4 py-3 rounded-lg outline-none border border-gray-800 focus:border-accent transition" value={newWidget.module_slug} onChange={(e) => setNewWidget({ ...newWidget, module_slug: e.target.value, field: '' })}>
@@ -963,6 +989,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, o
                 newWidget.type === 'checklist' ? checklistConfig.sources.filter((s) => s.module_slug && s.amount_field && s.status_field).length === 0
                 : newWidget.type === 'riepilogo_mensile' ? !(riepilogoConfig.entrate.modulo && riepilogoConfig.gruppi.some((g) => g.modulo && g.campo_importo))
                 : REPORT_WIDGET_TYPES.includes(newWidget.type) ? !(reportBlockConfig.source_module && reportBlockConfig.block_key)
+                : newWidget.type === 'segnali' ? !segnaliVoci
                 : newWidget.type === 'come_sta_andando' || newWidget.type === 'coda' || newWidget.type === 'agenda' || newWidget.type === 'timbrature_rapide' ? false
                 : !newWidget.module_slug
               } className="flex-1 bg-accent hover:opacity-90 disabled:opacity-50 text-white py-3 rounded-lg transition font-medium">{editingWidgetId ? 'Salva modifiche' : 'Aggiungi'}</button>

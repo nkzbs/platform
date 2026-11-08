@@ -31,6 +31,7 @@ import FormulaEditor from '@shared/builder/FormulaEditor.jsx'
 import { StepChainEditor } from '@shared/builder/StepChainEditor.jsx'
 import GlassPageBackground from '../../components/GlassPageBackground'
 import Portal from '../../components/Portal'
+import { leggiApertura, passaTutti } from '../../lib/filtroWidget'
 
 function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
   const api = useApi(token)
@@ -254,6 +255,16 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
   // legge (altrimenti è un ReferenceError da temporal dead zone, non solo un problema di
   // stile — "Cannot access before initialization" a runtime, non un semplice warning).
   const [activeFilterTab, setActiveFilterTab] = useState(null)
+  // Filtri applicati dal clic su un widget della Dashboard (o dai chip dello stato qui sotto): stesso filtro che il widget ha usato per contare, così numero e righe coincidono.
+  const [filtriNav, setFiltriNav] = useState([])
+  // Il filtro si legge UNA volta (poi sparisce dalla memoria): un ref lo tiene per questo modulo, così un secondo giro dell'effetto (React lo fa due volte in sviluppo) non lo perde.
+  const aperturaRef = React.useRef({ slug: null, filtri: [] })
+  useEffect(() => {
+    const f = leggiApertura(mod.slug)
+    if (f) aperturaRef.current = { slug: mod.slug, filtri: f }
+    else if (aperturaRef.current.slug !== mod.slug) aperturaRef.current = { slug: mod.slug, filtri: [] }
+    setFiltriNav(aperturaRef.current.filtri)
+  }, [mod.slug]) // eslint-disable-line react-hooks/exhaustive-deps
   const [navMonth, setNavMonth] = useState(() => {
     const n = new Date()
     if (n.getDate() >= 27) return n.getMonth() === 11 ? { y: n.getFullYear() + 1, m: 0 } : { y: n.getFullYear(), m: n.getMonth() + 1 }
@@ -289,6 +300,7 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
     const _ftf = schema && (schema.fields || []).find((f) => f.filter_tab && f.type === 'select')
     const _dnf = schema && (schema.fields || []).find((f) => f.date_nav && (f.type === 'date' || f.type === 'datetime'))
     if (_ftf && activeFilterTab !== null) list = list.filter((r) => r.data[_ftf.key] === activeFilterTab)
+    if (filtriNav.length) list = list.filter((r) => passaTutti(r, filtriNav))
     if (_dnf) list = list.filter((r) => {
       const raw = String(r.data[_dnf.key] || '')
       if (!raw || raw.length < 7) return false
@@ -296,7 +308,7 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
     })
     return list
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [records, search, sortField, sortDir, relatedCache, schema, activeFilterTab, navMonth])
+  }, [records, search, sortField, sortDir, relatedCache, schema, activeFilterTab, navMonth, filtriNav])
 
   const totalPages = Math.ceil(displayRecords.length / PER_PAGE) || 1
   const pagedRecords = displayRecords.slice((page - 1) * PER_PAGE, page * PER_PAGE)
@@ -765,13 +777,20 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
 
       {workflow && (
         <div className="flex items-center gap-2 mb-4 flex-wrap">
-          {workflow.states.map((s) => (
-            <div key={s.key} className="flex items-center gap-1.5 px-3 py-1.5 glass-pill">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-              <span className="text-xs text-gray-400">{s.label}</span>
-              <span className="text-xs text-gray-600">{records.filter((r) => r.data._stato === s.key).length}</span>
-            </div>
-          ))}
+          {workflow.states.map((s) => {
+            const attivo = filtriNav.length === 1 && filtriNav[0].campo === '_stato' && filtriNav[0].op === '=' && filtriNav[0].valore === s.key
+            return (
+              <button type="button" key={s.key} onClick={() => setFiltriNav(attivo ? [] : [{ campo: '_stato', op: '=', valore: s.key }])} title={attivo ? 'Mostra tutti' : 'Mostra solo: ' + s.label}
+                className={'flex items-center gap-1.5 px-3 py-1.5 glass-pill transition hover:border-accent' + (attivo ? ' ring-1 ring-accent' : '')}>
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                <span className="text-xs text-gray-400">{s.label}</span>
+                <span className="text-xs text-gray-600">{records.filter((r) => r.data._stato === s.key).length}</span>
+              </button>
+            )
+          })}
+          {filtriNav.length > 0 && !(filtriNav.length === 1 && filtriNav[0].campo === '_stato') && (
+            <button type="button" onClick={() => setFiltriNav([])} className="text-xs text-accent underline ml-1">Filtro dalla Dashboard attivo: mostra tutti</button>
+          )}
         </div>
       )}
 
