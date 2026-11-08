@@ -800,3 +800,8 @@ Codice potato dopo lo spegnimento di Platform (2 ottobre 2026): vedi [`DECISIONI
 - **Decisione**: il valore in evidenza del report di valutazione si calcola da fonti già salvate nel report (OMI per stato, autorimesse OMI per il box con superficie scritta, controllo con annunci), non dalla sola quotazione media di zona.
 - **Perché**: la media di zona è la più prudente e per un immobile in ottimo stato con box sottostimava di ~40%. Le regole sono scritte e visibili nel PDF.
 - **Vincolo**: nessuna nuova richiesta a OpenAPI: rigenerare il PDF è gratuito. Cantina, solaio, portico non si quotano. È una stima indicativa, mai una perizia.
+
+## 0.4.75 — Il colore di Platform è il viola-indaco, non il blu
+
+- **Decisione**: le comunicazioni che parlano a nome di Platform (mail di sistema e backup di Super Admin) usano il viola-indaco `#584aec`, il colore dell'icona. Il blu `#16355B` è l'identità del tenant zucca e vale solo per i documenti di quel tenant.
+- **Perché**: la prima versione della mail del backup usava per errore il blu di zucca.
