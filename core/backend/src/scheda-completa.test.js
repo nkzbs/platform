@@ -37,7 +37,7 @@ async function main() {
   const { percorsiUsati, SEGNAPOSTI_FISSI } = require('./lib/modello-documento');
   const estensioniPacchetto = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/estensioni.json');
   // la valutazione di mercato (azione esterna) ha il suo test: qui il modulo di prova non ha i campi che quel blocco cita
-  const SENZA = ['valutazione_mercato', 'requisiti_stato']; // hanno i loro test: il modulo di prova non ha i campi che citano
+  const SENZA = ['valutazione_mercato', 'requisiti_stato', 'collega_risk', 'collega_catasto']; // hanno i loro test: il modulo di prova non ha i campi che citano
   const estensioni = { immobili: estensioniPacchetto.immobili.filter((e) => !SENZA.includes(e.key)), clienti: estensioniPacchetto.clienti.filter((e) => !SENZA.includes(e.key)) };
   const documenti = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/documenti.json');
   const scheda = documenti.immobili.find((d) => d.key === 'scheda_immobile_completa');

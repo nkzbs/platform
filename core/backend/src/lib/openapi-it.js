@@ -8,7 +8,7 @@
 //     con scadenza (max 1 anno; qui ne chiediamo uno da 30 giorni, rigenerato quando
 //     serve, mai copiato a mano).
 //  2) Il token Bearer così ottenuto autentica le chiamate vere sui domini per-prodotto
-//     (realestate.openapi.com / catasto.openapi.com, o i loro equivalenti test.*).
+//     (realestate.openapi.com / catasto.openapi.it, o i loro equivalenti test.*).
 // Le credenziali (email, api_key, ambiente) vivono SOLO in connections.credentials
 // (sigillate, stesso meccanismo di Stripe/Mailchimp/Resend) — mai lette qui in chiaro
 // se non dentro il processo del server.
@@ -26,7 +26,9 @@ function credenziali() {
 const domini = (sandbox) => ({
   oauth: (sandbox ? 'test.' : '') + 'oauth.openapi.com',
   realestate: (sandbox ? 'test.' : '') + 'realestate.openapi.com',
-  catasto: (sandbox ? 'test.' : '') + 'catasto.openapi.com',
+  catasto: (sandbox ? 'test.' : '') + 'catasto.openapi.it', // secondo lo schema ufficiale (console.openapi.com/oas) il catasto sta su un dominio .it
+  risk: (sandbox ? 'test.' : '') + 'risk.openapi.com',
+  esignature: (sandbox ? 'test.' : '') + 'esignature.openapi.com',
   visurecamerali: (sandbox ? 'test.' : '') + 'visurecamerali.openapi.it', // le visure camerali stanno su un dominio .it
 });
 
@@ -142,7 +144,7 @@ async function omi({ lat, lng }) {
 // Asincrona: ritorna subito un id con stato "in corso", l'esito va letto dopo con GET /ipotecarie/{id}.
 async function ricercaPerCF({ cfOPiva, richiedente, motivo }) {
   const d = credenziali() && domini(credenziali().sandbox);
-  const scopePost = 'POST:' + (d ? d.catasto : 'catasto.openapi.com') + '/ipotecarie-ispezione_nazionale';
+  const scopePost = 'POST:' + (d ? d.catasto : 'catasto.openapi.it') + '/ipotecarie-ispezione_nazionale';
   return chiamata('catasto', '/ipotecarie-ispezione_nazionale', { cf_piva: cfOPiva, richiedente, motivo: motivo || 'verifica preliminare per compravendita' }, scopePost);
 }
 
@@ -165,13 +167,53 @@ async function cercaImprese({ provincia, limite = 10 }) {
   return chiamataGet('visurecamerali', '/impresa', { provincia, limit: limite }, scope);
 }
 
+// ── Chiamate generiche per i servizi collegati dalle azioni esterne (Risk, Catasto, Visure, eSignature) ───────────────────────────────────────────
+// `scopi`: elenco di [metodo, percorso] che il token deve poter usare (il nome dello scope è «METODO:dominio/percorso», come nelle altre funzioni). Se il servizio non è abilitato
+// sulla chiave, il token non si ottiene: è il segnale che usiamo per dire «da attivare».
+const scopiDi = (c, dominio, scopi) => scopi.map(([m, p]) => m + ':' + domini(c.sandbox)[dominio] + p);
+
+async function chiama({ dominio, metodo = 'GET', percorso, corpo, query, scopi, binario = false, timeout = 30000 }) {
+  const c = credenziali();
+  if (!c) throw Object.assign(new Error('OpenAPI.it non collegato: imposta email e API key in Impostazioni → Connessioni.'), { status: 503, code: 'not_connected' });
+  const d = domini(c.sandbox);
+  const token = await ottieniToken(c, scopiDi(c, dominio, scopi || [[metodo, percorso]]));
+  const qs = Object.entries(query || {}).filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
+  const res = await fetch('https://' + d[dominio] + percorso + (qs ? '?' + qs : ''), {
+    method: metodo,
+    headers: { Authorization: 'Bearer ' + token, ...(corpo ? { 'Content-Type': 'application/json' } : {}) },
+    body: corpo ? JSON.stringify(corpo) : undefined,
+    signal: AbortSignal.timeout(timeout),
+  });
+  if (binario && res.ok) return { status: res.status, tipo: res.headers.get('content-type') || '', buffer: Buffer.from(await res.arrayBuffer()) };
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw Object.assign(new Error((data && data.message) || 'Richiesta OpenAPI.it non riuscita (' + res.status + ')'), { status: res.status, data });
+  return data;
+}
+
+// Il servizio è abilitato sulla chiave collegata? Lo si capisce provando a ottenere il token con gli scope che servono: nessuna richiesta a pagamento parte.
+// Il risultato resta in memoria 10 minuti se positivo e 2 se negativo, così il pulsante risponde subito e «Controlla i servizi» non viene chiamato a ogni clic.
+const statoServizi = {};
+async function servizioAttivo(chiave, dominio, scopi) {
+  const c = credenziali();
+  if (!c) return { ok: false, motivo: 'OpenAPI.it non è collegato (Impostazioni → Connessioni).' };
+  const k = (c.sandbox ? 'p:' : 'r:') + chiave;
+  const g = statoServizi[k];
+  if (g && g.fino > Date.now()) return g.esito;
+  let esito;
+  try { await ottieniToken(c, scopiDi(c, dominio, scopi)); esito = { ok: true }; }
+  catch (e) { esito = { ok: false, motivo: 'Il servizio non è abilitato sulla chiave collegata (' + String((e && e.message) || 'token non ottenuto').slice(0, 120) + ').' }; }
+  statoServizi[k] = { fino: Date.now() + (esito.ok ? 10 * 60000 : 2 * 60000), esito };
+  return esito;
+}
+const dimenticaStatoServizi = () => { for (const k of Object.keys(statoServizi)) delete statoServizi[k]; };
+
 // ── Controllo dei servizi attivi ─────────────────────────────────────────────────────────────────────────────────────────────────
 // Quali prodotti di OpenAPI.it la chiave collegata può usare davvero. Per ognuno si chiede il token con lo scope di UNA lettura gratuita (l'elenco delle proprie richieste,
 // o un elenco di servizio) e la si prova: nessun controllo a pagamento parte. L'elenco dei servizi è un dato (nome, dominio, rotta): per un prodotto in più si aggiunge una riga.
 // `dominio` è senza il prefisso `test.` dell'ambiente di prova, che si aggiunge da solo. `lettura: null` = nessuna lettura gratuita nota: si controlla solo che il token si ottenga.
 const SERVIZI = [
   { id: 'real_estate', nome: 'Real Estate (valutazione immobiliare)', dominio: 'realestate.openapi.com', rotta: '/IT-omi', lettura: null },
-  { id: 'catasto', nome: 'Catasto (visure e immobili)', dominio: 'catasto.openapi.com', rotta: '/territorio', lettura: true },
+  { id: 'catasto', nome: 'Catasto (visure e immobili)', dominio: 'catasto.openapi.it', rotta: '/territorio', lettura: true },
   { id: 'risk_patrimoniale', nome: 'Risk — report patrimoniale sulla persona', dominio: 'risk.openapi.com', rotta: '/IT-patrimoniale-persona/', scope: '/IT-patrimoniale-persona', lettura: true },
   { id: 'risk_report', nome: 'Risk — report sulla persona', dominio: 'risk.openapi.com', rotta: '/IT-report-persona/', scope: '/IT-report-persona', lettura: true },
   { id: 'visure_camerali', nome: 'Visure camerali (società, soci)', dominio: 'visurecamerali.openapi.it', rotta: '/ordinaria-impresa-individuale', lettura: true },
@@ -200,4 +242,4 @@ async function verificaServizi() {
   return { ambiente: c.sandbox ? 'prova' : 'produzione', servizi: out };
 }
 
-module.exports = { SERVIZI, verificaServizi, cercaImprese, credenziali, valoreAlMq, valoreAlMqAvanzato, comparabili, omi, ricercaPerCF, esitoRicerca };
+module.exports = { chiama, servizioAttivo, dimenticaStatoServizi, SERVIZI, verificaServizi, cercaImprese, credenziali, valoreAlMq, valoreAlMqAvanzato, comparabili, omi, ricercaPerCF, esitoRicerca };

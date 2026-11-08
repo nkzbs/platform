@@ -805,3 +805,9 @@ Codice potato dopo lo spegnimento di Platform (2 ottobre 2026): vedi [`DECISIONI
 
 - **Decisione**: le comunicazioni che parlano a nome di Platform (mail di sistema e backup di Super Admin) usano il viola-indaco `#584aec`, il colore dell'icona. Il blu `#16355B` è l'identità del tenant zucca e vale solo per i documenti di quel tenant.
 - **Perché**: la prima versione della mail del backup usava per errore il blu di zucca.
+
+## 0.4.76 — I servizi esterni si accendono da soli quando la chiave è abilitata
+
+- **Decisione**: un'azione esterna con un adattatore che dichiara `disponibile` resta tra «Altre funzioni» (da attivare) finché la chiave collegata non può ottenere il token del servizio, poi diventa un pulsante normale: nessun intervento sul codice né sul pacchetto quando il servizio viene attivato. La conferma del costo arriva solo dopo, mai per una funzione non attiva.
+- **Asincrone**: le richieste lente (report persona, visura catastale) si pagano una volta e si ricontrollano gratis (`senzaCosto`).
+- **Fatture**: Fatture in Cloud, non l'SDI di OpenAPI.

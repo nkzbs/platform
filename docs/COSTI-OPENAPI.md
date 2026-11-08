@@ -7,7 +7,7 @@ Stima dell'8 novembre 2026. I prezzi sono **di listino, IVA esclusa**, letti dal
 1. **Nella console di OpenAPI**: attiva i servizi che servono (vedi sotto) e crea la chiave di produzione. La chiave di prova e quella di produzione sono di norma due cose diverse (da verificare nella tua console).
 2. **In Platform** (Impostazioni → Connessioni → OpenAPI.it): scrivi email e **chiave di produzione**, cambia l'ambiente da «prova» a «produzione», premi «Controlla i servizi», imposta un **tetto di spesa mensile** e i prezzi.
 3. **Quello che oggi funziona subito**: valutazione di mercato (Real Estate), annunci comparabili, OMI, ricerca imprese. Per queste basta il passo 1 e 2.
-4. **Quello che oggi è «da attivare»** (verifica del soggetto e solvibilità, credit score società, controllo catastale, fatturazione SDI, firma elettronica, PEC): attivare il servizio **non basta**, serve anche collegarlo (un adattatore nel codice, in sandbox prima). Il sandbox di OpenAPI è gratuito, quindi si prova tutto senza spendere.
+4. **Verifica del soggetto e solvibilità, credit score società e controllo catastale** sono già collegati (versione 0.4.76): restano tra «Altre funzioni» finché la chiave non è abilitata al servizio e **passano da sole tra i pulsanti appena lo è** (il controllo si ricorda per 10 minuti: dopo l'attivazione servono al massimo 10 minuti). Firma elettronica e PEC restano «da attivare» (adattatore da scrivere); le fatture useranno Fatture in Cloud. Il sandbox di OpenAPI è gratuito.
 
 ## Prezzi unitari per azione
 
@@ -34,7 +34,7 @@ Stima dell'8 novembre 2026. I prezzi sono **di listino, IVA esclusa**, letti dal
 | ↳ estratto di mappa, elaborato planimetrico, dettaglio nota | Catasto | 6,90 | |
 | ↳ elenco delle note | Catasto | 10,90 | |
 | ↳ immobili di una persona dal codice fiscale | Catasto (ispezione nazionale) | 23,70 | |
-| **Fattura elettronica** (provvigioni) | Fatturazione Elettronica SDI | invio 0,07 singola, 0,025 con abbonamento (anche «da 0,02»); archiviazione 0,035; firma 0,02 | Tre pagine, tre cifre vicine |
+| **Fattura elettronica** (provvigioni) | **Fatture in Cloud** (non OpenAPI) | secondo il tuo piano di Fatture in Cloud | Decisione dell'8/11: le fatture si emettono con Fatture in Cloud; il servizio SDI di OpenAPI non serve e non va attivato |
 | **Firma elettronica** (preliminare, privacy e incarico) | eSignature | da 0,14 | Non è chiaro se per firma o per richiesta; la firma avanzata con OTP via SMS: n.d. |
 | **PEC** | PEC Massiva | 0,05 a messaggio + canone annuo (flat: 1.500 in offerta) | La PEC singola: n.d. |
 
@@ -50,7 +50,7 @@ Fonti: pagine prodotto di OpenAPI ([Person](https://openapi.com/products/crif-pe
 | 4 | Valutazione dell'immobile | Valutazione avanzata + comparabili + OMI | **3,00 + 0,12 = circa 3,12** a singola richiesta (OMI gratis; i comparabili sono gratis le prime 30 al mese: **3,00**); con un abbonamento annuale la valutazione scende fino a 0,39 |
 | 5 | Abbinamento domanda e offerta | Niente (calcolo interno) | 0 |
 | 6 | Trattativa | Firma elettronica del preliminare (+ PEC se serve) | **0,14** per firma, più 0,05 a PEC |
-| 7 | Provvigioni | Fattura elettronica (invio, archiviazione, firma) | **0,07–0,125** per fattura |
+| 7 | Provvigioni | Fattura elettronica con Fatture in Cloud (non OpenAPI) | secondo il piano di Fatture in Cloud |
 | 8 | Contatti e visite / Attività | Niente (avvisi in app); SMS solo se lo vorrai | 0 |
 | 9-15 | Promemoria, post-vendita, GDPR, documenti, note, report | Niente | 0 |
 

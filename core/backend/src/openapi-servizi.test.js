@@ -58,7 +58,7 @@ async function main() {
     eq(per, { real_estate: 'token_ok', catasto: 'attivo', risk_patrimoniale: 'non_abilitato', risk_report: 'incerto', visure_camerali: 'non_abilitato' });
     ok(/Scope non consentito/.test(j.servizi.find((s) => s.id === 'visure_camerali').dettaglio), 'il motivo di OpenAPI.it arriva all\'utente');
     ok(chiamate.every((c) => c.startsWith('POST ') ? /\/tokens$/.test(c) : c.startsWith('GET ')), 'solo token e letture: ' + chiamate.join(' | '));
-    ok(chiamate.some((c) => /GET https:\/\/test\.catasto\.openapi\.com\/territorio/.test(c)) && chiamate.some((c) => /test\.risk\.openapi\.com\/IT-patrimoniale-persona\//.test(c)) && chiamate.some((c) => /test\.oauth\.openapi\.com\/tokens/.test(c)), 'host di prova');
+    ok(chiamate.some((c) => /GET https:\/\/test\.catasto\.openapi\.it\/territorio/.test(c)) && chiamate.some((c) => /test\.risk\.openapi\.com\/IT-patrimoniale-persona\//.test(c)) && chiamate.some((c) => /test\.oauth\.openapi\.com\/tokens/.test(c)), 'host di prova');
   });
   await test('la chiave non compare mai nella risposta; in produzione gli host non hanno il prefisso di prova', async () => {
     const testo = await (await post()).text(); ok(!testo.includes(CHIAVE) && !testo.includes('a@b.it'), 'la risposta contiene le credenziali');

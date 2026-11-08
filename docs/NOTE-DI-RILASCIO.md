@@ -2,6 +2,21 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.76 — 8 novembre 2026
+
+**Verifica della persona, credit score e controllo catastale sono collegati a OpenAPI.it: appena attivi i servizi, partono da soli.**
+
+- **Come funziona**: «Verifica del soggetto e solvibilità» (Risk, report sulla persona), «Credit score società» (Risk, semaforo start/advanced) e «Controllo dati catastali» (Catasto, visura dell'immobile) hanno un adattatore vero. Finché la chiave collegata non è abilitata al servizio restano tra **«Altre funzioni»** con la frase «da attivare» (nessuna richiesta, nessun costo, nessuna conferma); quando il servizio è abilitato **passano da sole tra i pulsanti**. Il controllo (`GET /api/records/:modulo/azioni-stato`, nuovo) prova solo a ottenere il token con gli scope del servizio, resta in memoria 10 minuti.
+- **Verifica della persona**: richiede l'informativa privacy firmata (`privacy_firmata_il`), un codice fiscale valido e conferma del costo. Il report è asincrono: si paga **una volta**, poi lo stesso pulsante ricontrolla **senza costo** finché non è pronto; compare il pulsante **«Report PDF»**. Nome e cognome si ricavano da «Nome Cognome» (primo nome, resto cognome).
+- **Credit score società**: dalla partita IVA o dal codice fiscale, scrive semaforo, rating e fido sul cliente.
+- **Controllo catastale**: richiede provincia, comune, foglio e particella (il subalterno se c'è), confronta categoria e rendita con la scheda; stesso schema (si paga una volta, ricontrollo gratuito). La risposta si legge in modo tollerante: se categoria e rendita non si trovano, l'esito lo dice.
+- **Costi**: nuove voci in listino (verifica CF 0,0081, report persona 3,60 cautelativo, credit score start 0,06 e advanced 0,15); la visura catastale ha prezzo «non noto» da scrivere in Prezzi.
+- **Fatture**: useremo **Fatture in Cloud**, non l'SDI di OpenAPI (tolto da `docs/COSTI-OPENAPI.md`). Firma elettronica, PEC e fatture restano «da attivare».
+- **Dominio del Catasto corretto**: secondo lo schema ufficiale è `catasto.openapi.it` (prima `.com`).
+- Pacchetto verticale v17. Test: `risk-collegati.test.js` (8, con un finto OpenAPI), aggiornati `openapi-servizi.test.js` e `scheda-completa.test.js`.
+- **Non provato dal vivo**: i collegamenti sono scritti sugli schemi ufficiali e provati con un finto servizio; la prima richiesta vera (a pagamento) può richiedere un ritocco. Il tetto mensile e la conferma del costo limitano il rischio.
+- Messa online: deploy di backend, frontend e provisioner + **Aggiorna** su zucca.
+
 ## 0.4.75 — 8 novembre 2026
 
 **La mail del backup settimanale ha una grafica curata.**

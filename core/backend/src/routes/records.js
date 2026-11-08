@@ -670,6 +670,21 @@ router.post('/:slug/import', requireAuth, requireModuleAccess, (req, res) => {
   res.json({ created, skipped, errors });
 });
 
+// Quali azioni esterne del modulo possono partire ORA: { <chiave>: { ok, motivo } }. Lo chiede la scheda per mettere tra «Altre funzioni» (da attivare) quelle il cui servizio non è ancora abilitato.
+// Nessuna richiesta a pagamento: l'adattatore controlla solo se la chiave collegata può ottenere il token del servizio (risposta in memoria 10 minuti).
+router.get('/:slug/azioni-stato', requireAuth, requireModuleAccess, async (req, res) => {
+  const schema = getModuleSchema(req.params.slug);
+  if (!schema) return res.status(404).json({ error: 'Modulo non trovato' });
+  const out = {};
+  for (const config of schema.external_actions || []) {
+    const adattatore = require('../lib/azioni-esterne').adattatore(config.adapter);
+    if (!adattatore || typeof adattatore.disponibile !== 'function') continue;
+    try { const d = await adattatore.disponibile({ config, dati: {} }); out[config.key] = { ok: !!d.ok, motivo: d.ok ? null : d.motivo || null }; }
+    catch (e) { out[config.key] = { ok: false, motivo: e.message }; }
+  }
+  res.json(out);
+});
+
 router.get('/:slug/:id', requireAuth, requireModuleAccess, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const record = db.prepare('SELECT * FROM records WHERE id = ? AND module_slug = ?').get(req.params.id, req.params.slug);
@@ -983,8 +998,16 @@ router.post('/:slug/:id/azione/:key', requireAuth, requireAdmin, requireModuleAc
   if (ctx.errore) return res.status(ctx.errore[0]).json({ error: ctx.errore[1] });
   // Se l'azione consuma un servizio a pagamento (l'adattatore dichiara `servizio`): prima si conferma il costo (409 con importo, spesa del mese e tetto), poi si controlla il tetto
   // mensile, e a esecuzione riuscita la spesa si registra. La conferma è richiesta DAL SERVER: un client non può saltarla.
-  const spese = ctx.adattatore.servizio ? require('../lib/openapi-spese') : null;
-  const st = spese ? spese.stima(ctx.adattatore.servizio) : null;
+  // Un adattatore può dichiarare `disponibile`: se il servizio non è (ancora) abilitato la funzione resta «da attivare» PRIMA di chiedere conferma e senza costo; appena il servizio è attivo parte da sola.
+  if (typeof ctx.adattatore.disponibile === 'function') {
+    let d; try { d = await ctx.adattatore.disponibile({ config: ctx.config, dati: ctx.dati }); } catch (e) { d = { ok: false, motivo: e.message }; }
+    if (!d.ok) return res.status(501).json({ error: '«' + (ctx.config.label || 'Questa funzione') + '» è da attivare: ' + (d.motivo || 'il servizio non è disponibile') + (ctx.config.come_attivare ? ' ' + ctx.config.come_attivare : ''), code: 'da_attivare' });
+  }
+  // `servizioPer` sceglie la voce di listino in base al blocco; `senzaCosto` dice che questa pressione non spende (per esempio il ricontrollo di una richiesta già pagata).
+  const nomeServizio = typeof ctx.adattatore.servizioPer === 'function' ? ctx.adattatore.servizioPer({ config: ctx.config, dati: ctx.dati }) : ctx.adattatore.servizio;
+  const gratis = typeof ctx.adattatore.senzaCosto === 'function' && ctx.adattatore.senzaCosto({ config: ctx.config, dati: ctx.dati });
+  const spese = nomeServizio && !gratis ? require('../lib/openapi-spese') : null;
+  const st = spese ? spese.stima(nomeServizio) : null;
   if (spese) {
     const mese = spese.riepilogo(), amb = spese.ambiente();
     if (!(req.body && req.body.conferma === true)) return res.status(409).json({ error: 'Conferma il costo prima di eseguire.', code: 'conferma_costo', gia_eseguita: !!(ctx.config.risultato_in && ctx.dati[ctx.config.risultato_in]), servizio: st.servizio, nome: st.nome, costo: st.costo, noto: st.noto, ambiente: amb, speso_mese: mese.produzione.speso, tetto: mese.tetto });

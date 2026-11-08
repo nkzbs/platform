@@ -1267,6 +1267,64 @@
           }
         }
       ]
+    },
+    {
+      "key": "collega_catasto",
+      "_nota": "Collega «Controllo dati catastali» al servizio Catasto di OpenAPI.it (adattatore `controllo_catastale`): chiede la visura dell'immobile da provincia, comune, foglio, particella e subalterno e confronta categoria e rendita con la scheda. Resta tra «Altre funzioni» finché la chiave non è abilitata al servizio, poi passa da sola tra i pulsanti. La richiesta si paga una volta; premendo di nuovo si ricontrolla senza spesa.",
+      "richiede": {
+        "immobili": [
+          "titolo"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "controllo_catastale_data",
+          "label": "Controllo catastale — data",
+          "type": "date"
+        },
+        {
+          "block_type": "field",
+          "key": "controllo_catastale_esito",
+          "label": "Controllo catastale — esito",
+          "type": "text"
+        }
+      ],
+      "riscrivi": [
+        {
+          "block_type": "external_action",
+          "key": "controllo_catastale",
+          "proprieta": {
+            "adapter": {
+              "da": "da_attivare",
+              "a": "controllo_catastale"
+            }
+          }
+        }
+      ],
+      "imposta": [
+        {
+          "block_type": "external_action",
+          "key": "controllo_catastale",
+          "proprieta": {
+            "campi": {
+              "provincia": "provincia",
+              "comune": "comune",
+              "foglio": "foglio_catastale",
+              "particella": "particella_catastale",
+              "subalterno": "subalterno_catastale",
+              "categoria": "categoria_catastale",
+              "rendita": "rendita_catastale"
+            },
+            "esito": {
+              "esito": "controllo_catastale_esito",
+              "data": "controllo_catastale_data"
+            },
+            "risultato_in": "controllo_catastale",
+            "connection": "openapi_it"
+          }
+        }
+      ]
     }
   ],
   "clienti": [
@@ -1653,6 +1711,101 @@
           "adapter": "da_attivare",
           "servizio_richiesto": "il tuo intervento: scegli il testo degli auguri e conferma che il consenso alle comunicazioni commerciali sia raccolto e registrato per ogni cliente",
           "come_attivare": "Scrivi il testo e dimmi quando metterlo in funzione: va collegato all'invio delle email del tenant e limitato ai clienti con «Comunicazioni commerciali» spuntato."
+        }
+      ]
+    },
+    {
+      "key": "collega_risk",
+      "_nota": "Collega «Verifica del soggetto e solvibilità» e «Credit score società» al servizio Risk di OpenAPI.it (adattatori `verifica_persona` e `credit_score_societa`). Il pulsante resta tra «Altre funzioni» finché la chiave collegata non è abilitata al servizio, poi passa da solo tra i pulsanti: nessun altro intervento. La verifica di una persona richiede l'informativa privacy firmata (campo privacy_firmata_il) e la conferma del costo.",
+      "richiede": {
+        "clienti": [
+          "nome"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "verifica_data",
+          "label": "Verifica del soggetto — data",
+          "type": "date"
+        },
+        {
+          "block_type": "field",
+          "key": "verifica_esito",
+          "label": "Verifica del soggetto — esito",
+          "type": "text"
+        },
+        {
+          "block_type": "field",
+          "key": "credit_score_data",
+          "label": "Credit score società — data",
+          "type": "date"
+        },
+        {
+          "block_type": "field",
+          "key": "credit_score_esito",
+          "label": "Credit score società — esito",
+          "type": "text"
+        }
+      ],
+      "riscrivi": [
+        {
+          "block_type": "external_action",
+          "key": "verifica_soggetto",
+          "proprieta": {
+            "adapter": {
+              "da": "da_attivare",
+              "a": "verifica_persona"
+            }
+          }
+        },
+        {
+          "block_type": "external_action",
+          "key": "credit_score_societa",
+          "proprieta": {
+            "adapter": {
+              "da": "da_attivare",
+              "a": "credit_score_societa"
+            }
+          }
+        }
+      ],
+      "imposta": [
+        {
+          "block_type": "external_action",
+          "key": "verifica_soggetto",
+          "proprieta": {
+            "campi": {
+              "nome": "nome",
+              "codice_fiscale": "codice_fiscale_piva",
+              "tipo_soggetto": "tipo_soggetto",
+              "consenso": "privacy_firmata_il"
+            },
+            "esito": {
+              "esito": "verifica_esito",
+              "data": "verifica_data"
+            },
+            "risultato_in": "verifica_persona",
+            "pdf": true,
+            "connection": "openapi_it"
+          }
+        },
+        {
+          "block_type": "external_action",
+          "key": "credit_score_societa",
+          "proprieta": {
+            "campi": {
+              "codice": "codice_fiscale_piva",
+              "tipo_soggetto": "tipo_soggetto"
+            },
+            "esito": {
+              "esito": "credit_score_esito",
+              "data": "credit_score_data"
+            },
+            "risultato_in": "credit_score_societa",
+            "livello": "start",
+            "connection": "openapi_it"
+          }
         }
       ]
     }

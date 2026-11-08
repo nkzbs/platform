@@ -451,6 +451,13 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   const [avviso, setAvviso] = useState(null)
   // Le connessioni che le azioni richiedono sono collegate? (null = non lo so ancora). Lo si dice prima, non dopo un errore.
   const [connessioni, setConnessioni] = useState(null)
+  // Quali azioni possono partire ora (il servizio esterno è abilitato?). Quelle che dicono di no finiscono tra «Altre funzioni»; quando il servizio si attiva passano da sole tra i pulsanti.
+  const [statoAzioni, setStatoAzioni] = useState(null)
+  useEffect(() => {
+    if (!mod || !azioniEsterne.length) return
+    api.get('/records/' + mod.slug + '/azioni-stato').then((r) => { if (r && typeof r === 'object' && !r.error) setStatoAzioni(r) }).catch(() => {})
+  }, [mod && mod.slug]) // eslint-disable-line react-hooks/exhaustive-deps
+  const inAttesa = (az) => az.adapter === 'da_attivare' || !!(statoAzioni && statoAzioni[az.key] && statoAzioni[az.key].ok === false)
   const connessioniRichieste = [...new Set(azioniEsterne.map((az) => az.connection).filter(Boolean))].join(',')
   useEffect(() => {
     if (!connessioniRichieste) return
@@ -462,7 +469,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   const euro = (n) => Number(n).toLocaleString('it-IT', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 })
   const eseguiAzione = async (az, conferma = false) => {
     const d = (record && record.data) || {}
-    if (az.adapter === 'da_attivare') { setConfermaCosto(null); setAvviso({ testo: '«' + az.label + '» è da attivare' + (az.servizio_richiesto ? ': serve ' + az.servizio_richiesto : '') + '. ' + (az.come_attivare || 'Quando il servizio è attivo, la funzione parte da qui senza altre modifiche.') }); return }
+    if (inAttesa(az)) { setConfermaCosto(null); setAvviso({ testo: '«' + az.label + '» è da attivare' + (az.adapter !== 'da_attivare' && statoAzioni && statoAzioni[az.key] && statoAzioni[az.key].motivo ? ': ' + statoAzioni[az.key].motivo : az.servizio_richiesto ? ': serve ' + az.servizio_richiesto : '') + '. ' + (az.come_attivare || 'Quando il servizio è attivo, la funzione parte da qui senza altre modifiche.') }); return }
     if (Array.isArray(az.richiede_uno_di) && az.richiede_uno_di.length && !az.richiede_uno_di.some((k) => datoPresente(d, k))) { setAvviso({ testo: az.richiede_messaggio || 'Mancano dei dati per «' + az.label + '»: compilali da «Modifica» e riprova.', azione: 'modifica' }); return }
     if (az.connection && connessioni && connessioni[az.connection] === false) { setAvviso({ testo: 'La connessione «' + az.connection + '» non è collegata: senza di lei «' + az.label + '» non può partire. Si collega da Impostazioni → Connessioni.' }); return }
     setAvviso(null); setConfermaCosto(null)
@@ -588,18 +595,23 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
       wide
       headerExtra={(
         <>
-          {!editing && record && azioniEsterne.filter((az) => az.adapter !== 'da_attivare').map((az) => (
+          {!editing && record && azioniEsterne.filter((az) => !inAttesa(az)).map((az) => (
             <button key={az.key} onClick={() => eseguiAzione(az)} disabled={inEsecuzione !== null} title={az.descrizione || undefined} className={'text-xs border border-gray-700 hover:border-accent text-accent rounded-lg px-3 py-2 min-h-[36px] whitespace-nowrap flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50 transition' + (az.adapter === 'da_attivare' || (az.connection && connessioni && connessioni[az.connection] === false) ? ' opacity-60' : '')}>
               <Icon name={az.icon || 'sparkles'} size={12} />{inEsecuzione === az.key ? 'Un attimo…' : az.label}
             </button>
           ))}
-          {!editing && record && azioniEsterne.some((az) => az.adapter === 'da_attivare') && (
+          {!editing && record && azioniEsterne.filter((az) => az.pdf && !az.vista && !inAttesa(az) && az.risultato_in && record.data[az.risultato_in] && record.data[az.risultato_in].id).map((az) => (
+            <button key={az.key + '-pdf'} onClick={() => scaricaAzionePdf(az)} title="Scarica il PDF del report (nessun costo)" className="text-xs border border-gray-700 hover:border-accent text-accent rounded-lg px-3 py-2 min-h-[36px] whitespace-nowrap flex items-center gap-1.5 flex-shrink-0 transition">
+              <Icon name="file" size={12} />{az.label.split(' ')[0] === 'Verifica' ? 'Report PDF' : 'PDF'}
+            </button>
+          ))}
+          {!editing && record && azioniEsterne.some((az) => inAttesa(az)) && (
             <div className="relative flex-shrink-0">
               <button onClick={() => setMenuFunz((x) => !x)} aria-haspopup="menu" aria-expanded={menuFunz} className="text-xs border border-gray-700 hover:border-accent text-accent rounded-lg px-3 py-2 min-h-[36px] whitespace-nowrap flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50 transition"><Icon name="sparkles" size={12} />Altre funzioni<Icon name="chevron-down" size={11} /></button>
               {menuFunz && (
                 <div role="menu" className="fixed left-3 right-3 top-auto mt-1 z-30 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:w-80 bg-surface-card border border-gray-700 rounded-lg shadow-lg py-1">
                   <div className="px-3 py-1.5 text-[11px] text-gray-500">Previste, ma legate a un servizio esterno ancora da attivare.</div>
-                  {azioniEsterne.filter((az) => az.adapter === 'da_attivare').map((az) => (
+                  {azioniEsterne.filter((az) => inAttesa(az)).map((az) => (
                     <button key={az.key} role="menuitem" onClick={() => { setMenuFunz(false); eseguiAzione(az) }} className="w-full text-left px-3 py-2 hover:bg-white/5 transition flex items-start gap-2">
                       <Icon name={az.icon || 'sparkles'} size={13} className="mt-0.5 text-gray-500 flex-shrink-0" />
                       <span className="flex-1 min-w-0"><span className="block text-xs text-ink">{az.label} <span className="ml-1 text-[10px] uppercase tracking-wide bg-amber-400/15 border border-amber-500/50 text-ink rounded px-1.5 py-0.5">da attivare</span></span><span className="block text-[11px] text-gray-500">{az.descrizione}</span></span>

@@ -85,7 +85,9 @@
         "agibilita",
         "planimetria_conforme",
         "documenti_disponibili",
-        "altri_documenti_note"
+        "altri_documenti_note",
+        "controllo_catastale_data",
+        "controllo_catastale_esito"
       ],
       "Spese e vincoli": [
         "spese_condominiali_importo",
@@ -161,6 +163,12 @@
       ],
       "Note": [
         "note"
+      ],
+      "Verifiche": [
+        "verifica_data",
+        "verifica_esito",
+        "credit_score_data",
+        "credit_score_esito"
       ]
     },
     "dati_chiave": [
