@@ -9,6 +9,7 @@ Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la 
 - Intestazione nel **viola di Platform** (il colore dell'icona; il blu è di zucca, non di Platform) e nel carattere serif, tre riquadri con **data, dimensione e «cifrata»**, tre passi numerati per riaprire la copia, il comando `openssl` in un **blocco scuro a righe con la barra rovesciata** (si incolla e funziona; non si spezza a metà), avviso giallo «solo il database, non i file caricati». Colori espliciti: leggibile anche nei client in tema scuro.
 - Solo Super Admin: nessun cambiamento per i tenant. Il testo semplice della mail e la cifratura non cambiano (10 test di `weekly-backup-mail.test.js` verdi).
 - Messa online: deploy del Super Admin (`redeploy-nas.sh backend`), nessun Aggiorna su zucca.
+- **Guida illustrata PDF rigenerata** (43 pagine, versione 0.4.75): nuova figura e testo della **stima ragionata**, avviso «Già eseguita» / «Rifai e paga di nuovo», servizi vicini che non dicono più «non disponibili», civico «n.ro». Le schermate vecchie sono state riprese dal PDF precedente (ordine delle figure di `cap.js`); quelle nuove vengono dal report vero generato con i dati di Via San Benedetto. Nel report, le frasi di controllo scrivono «euro» per esteso (il simbolo si sovrapponeva alla parola dopo).
 
 ## 0.4.74 — 8 novembre 2026
 

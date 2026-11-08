@@ -161,8 +161,8 @@ function costruisciPdf({ record, report, azienda = {}, logo = null, mappa = null
       tabella([{ titolo: 'Voce', w: 70 }, { titolo: 'Valore', w: 30, dx: true }], righeSr);
       doc.moveDown(0.5);
       const conf = [];
-      if (sr.annunci) conf.push('Controllo con gli annunci vicini: mediana di ' + sr.annunci.n + ' immobili simili ' + num(sr.annunci.mediana_eur_mq) + ' €/mq, cioè circa ' + euro(Math.round(sr.annunci.valore / 1000) * 1000) + ' sulla tua superficie. Sono prezzi richiesti: le vendite reali di solito chiudono più in basso.');
-      if (sr.zona) conf.push('Quotazione media di zona: ' + num(sr.zona.eur_mq) + ' €/mq, cioè circa ' + euro(Math.round(sr.zona.valore / 1000) * 1000) + '. È la stima più prudente: la media di tutto il patrimonio della zona, senza considerare lo stato e le pertinenze di questo immobile.');
+      if (sr.annunci) conf.push('Controllo con gli annunci vicini: mediana di ' + sr.annunci.n + ' immobili simili ' + num(sr.annunci.mediana_eur_mq) + ' €/mq, cioè circa ' + num(Math.round(sr.annunci.valore / 1000) * 1000) + ' euro' + ' sulla tua superficie. Sono prezzi richiesti: le vendite reali di solito chiudono più in basso.');
+      if (sr.zona) conf.push('Quotazione media di zona: ' + num(sr.zona.eur_mq) + ' €/mq, cioè circa ' + num(Math.round(sr.zona.valore / 1000) * 1000) + ' euro' + '. È la stima più prudente: la media di tutto il patrimonio della zona, senza considerare lo stato e le pertinenze di questo immobile.');
       sr.note.forEach((n) => conf.push(n));
       conf.push('Stima indicativa, non è una perizia.');
       doc.font('Helvetica').fontSize(9).fillColor(GRIGIO);
