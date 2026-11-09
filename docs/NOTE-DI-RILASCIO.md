@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.89 — 9 novembre 2026
+
+**«Aggiorna» non dà più KO per un avvio lento, e un fallimento lascia traccia.** Segnalato dall'utente: la prima pressione dava KO, la seconda partiva. Causa più probabile (vista su Finance, dalla 0.4.37 alla 0.4.81): dopo un salto di versione il primo avvio del tenant fa le migrazioni del database e supera il minuto, mentre Super Admin aspettava al massimo 60 secondi.
+- L'attesa del tenant sale da 60 secondi a **3 minuti**; dopo ~1 minuto il popup dice «il tenant sta ancora partendo (migrazioni…)» invece di restare muto.
+- Un aggiornamento **fallito** o un tenant che **non risponde** ora si registrano nel registro attività (`tenant.redeploy_fallito`, `tenant.redeploy_non_risponde`) con il motivo: prima il motivo restava solo nel popup di chi premeva. Se il KO si ripete, il registro dice se era la build o l'avvio.
+- Non risolto: se la causa vera è un errore di scarico/build (rete verso GitHub o npm), servirà un nuovo tentativo automatico della build; si deciderà leggendo il registro.
+
 ## 0.4.88 — 9 novembre 2026
 
 **Il tenant nato dall'analisi si apre su una Dashboard già utile.** Prima, senza una configurazione scritta a mano, la Dashboard di un tenant nuovo era vuota.

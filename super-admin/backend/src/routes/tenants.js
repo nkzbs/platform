@@ -536,12 +536,15 @@ async function redeployTenant(tenant, { force, actor, log }) {
   // Con un log attivo (popup di Super Admin) aspetto che il tenant risponda davvero, così "AGGIORNATO" vuol dire che è su e non solo che il container è partito.
   if (log) {
     say('Attendo che il tenant risponda…')
+    // Dopo un salto di versione il primo avvio fa le migrazioni del database e può superare il minuto (visto su Finance, 0.4.37 → 0.4.81): si aspetta fino a 3 minuti,
+    // dicendo ogni tanto che sta ancora partendo, invece di dare KO per un tenant che sta solo finendo di avviarsi.
     let up = false
-    for (let i = 0; i < 40 && !up; i++) {
+    for (let i = 0; i < 120 && !up; i++) {
       await new Promise((r) => setTimeout(r, 1500))
       try { const r = await fetch('http://platform-' + tenant.slug + ':80/api/tenant-info', { signal: AbortSignal.timeout(3000) }); up = r.ok } catch (e) { /* ancora in avvio */ }
+      if (!up && i === 39) say('Il tenant sta ancora partendo (migrazioni del database dopo un salto di versione): aspetto ancora un po\'…')
     }
-    if (!up) { say('Il tenant non risponde entro 60 secondi: controlla nei Dettagli.'); return { ok: true, healthy: false } }
+    if (!up) { say('Il tenant non risponde dopo 3 minuti: controlla nei Dettagli.'); logAudit(actor || 'system', 'tenant.redeploy_non_risponde', tenant.slug, { attesa_secondi: 180 }); return { ok: true, healthy: false } }
     say('Il tenant risponde correttamente.')
   }
   // I pacchetti di verticale del tenant (custoditi qui in Super Admin) si riallineano alla versione corrente. Best-effort: un errore non ferma l'aggiornamento.
@@ -585,6 +588,8 @@ router.post('/:slug/redeploy', requireAuth, requireTenantScope, async (req, res)
       if (result.ok) syncNginxDomains().catch(() => {});
       send({ done: true, ok: !!result.ok, healthy: result.healthy, skipped: result.skipped, active_session: result.active_session });
     } catch (err) {
+      // un aggiornamento fallito si registra con il motivo (prima restava solo nel popup di chi premeva): serve a capire perché la prima volta dà KO e la seconda no
+      try { logAudit(req.user.username, 'tenant.redeploy_fallito', slug, { errore: String(err.message).slice(0, 300) }); } catch (e) { /* il registro non deve nascondere l'errore vero */ }
       send({ msg: 'Errore: ' + err.message, at: new Date().toISOString() });
       send({ done: true, ok: false, error: err.message });
     } finally {
