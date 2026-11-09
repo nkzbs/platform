@@ -20,7 +20,7 @@ Prima volta? Servono solo due cose già impostate in Super Admin: la **chiave AI
 *Segno che è andata bene*: ogni bozza dice «Controllo superato» e il percorso degli stati ha senso per l'attività.
 
 ## 3. Creare il tenant — riquadro «Crea il tenant»
-Scegli nome e indirizzo (minuscole e trattini) e premi **Crea il tenant**. In 1-3 minuti nascono container, database, dominio, moduli della Libreria, **moduli generati approvati**, ruoli degli utenti, stati dei flussi, report (spenti), guida d'uso e un primo controllo.
+Scegli nome e indirizzo (minuscole e trattini) e premi **Crea il tenant**. In 1-3 minuti nascono container, database, dominio, moduli della Libreria, **moduli generati approvati**, ruoli degli utenti, stati dei flussi, report (spenti), guida d'uso, una **Dashboard di base** («Da fare», un numero per i moduli principali, il percorso degli stati, le scadenze passate) e un primo controllo.
 Alla fine compare l'**accesso amministratore iniziale** (si vede **una sola volta**: copialo; se lo perdi c'è «Genera una nuova password»).
 
 *Segno che è andata bene*: «Tenant creato», nessun avviso in giallo; sotto compare **Quanto è operativo**.

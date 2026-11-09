@@ -100,6 +100,8 @@ router.post('/guida', (req, res) => {
   db.prepare("INSERT INTO guida_tenant (id, contenuto) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET contenuto = excluded.contenuto, modificata_il = CURRENT_TIMESTAMP").run(JSON.stringify(g));
   res.json({ ok: true, capitoli: Object.keys(g.capitoli).length, flussi: g.flussi.length, passi_giro: g.giro.length });
 });
+//   POST /api/internal-setup/dashboard { forza? }  una Dashboard di base dai moduli (solo se la Dashboard è ancora vuota; con forza aggiunge comunque)
+router.post('/dashboard', (req, res) => res.json({ ok: true, ...require('../lib/dashboard-base').crea({ soloSeVuota: !(req.body && req.body.forza) }) }));
 router.get('/verifica', (req, res) => res.json(require('../lib/verifica-tenant').verifica()));
 router.post('/collaudo', (req, res) => res.json(require('../lib/collaudo-tenant').avvia()));
 router.get('/collaudo', (req, res) => res.json(require('../lib/collaudo-tenant').stato() || { stato: 'mai_eseguito' }));

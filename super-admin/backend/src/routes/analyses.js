@@ -316,6 +316,7 @@ async function creaTenantInBackground({ id, name, slug, domain, actor, processi,
     try {
       const tapi = require('../lib/tenant-api-client').callTenantAPI;
       await tapi(tenant.slug, 'POST', '/api/internal-setup/guida', { solo_se_vuota: true });
+      await tapi(tenant.slug, 'POST', '/api/internal-setup/dashboard', {}); // una Dashboard di base dai moduli (solo se è ancora vuota)
       const v = await tapi(tenant.slug, 'GET', '/api/internal-setup/verifica');
       operativo = { punteggio: v.punteggio, controlli: v.controlli, superati: v.superati, problemi: (v.problemi || []).slice(0, 25), da_completare_a_mano: (v.da_completare_a_mano || []).slice(0, 25) };
       try { await tapi(tenant.slug, 'POST', '/api/internal-setup/collaudo', {}); operativo.collaudo = 'avviato'; } catch (e) { operativo.collaudo = 'non avviato: ' + e.message; }

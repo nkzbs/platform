@@ -2,6 +2,12 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.88 — 9 novembre 2026
+
+**Il tenant nato dall'analisi si apre su una Dashboard già utile.** Prima, senza una configurazione scritta a mano, la Dashboard di un tenant nuovo era vuota.
+- Alla creazione dall'analisi nasce una **Dashboard di base** scritta dai moduli: «**Da fare**» (scadenze di tutti i moduli), un **numero** per i primi tre moduli, il **percorso degli stati** dei moduli che hanno un flusso (fino a tre) e «**Da sistemare**» con le scadenze passate (ogni campo data con «scad» nel nome). Non tocca una Dashboard già fatta; poi si ritocca con «Modifica layout».
+- Codice `lib/dashboard-base.js`, rotta interna `POST /api/internal-setup/dashboard`, prove `dashboard-base.test.js`.
+
 ## 0.4.87 — 9 novembre 2026
 
 **L'analisi dei processi costruisce anche i moduli che la Libreria non ha, e consegna un tenant già verificato.** Prima ciò che la Libreria non copriva restava «da costruire» solo come nota; ora si può far scrivere all'AI e approvare.
