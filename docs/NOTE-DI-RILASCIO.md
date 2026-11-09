@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.93 — 9 novembre 2026
+
+**«Controlla i servizi»: Risk ed eSignature risultano attivi.** La prova elenca le richieste fatte; con zero richieste OpenAPI.it risponde 404 «no requests linked to this username», e prima veniva segnato «da verificare». Ora è «attivo, nessuna richiesta ancora». Non verificato: una richiesta vera a Risk o eSignature.
+
 ## 0.4.92 — 9 novembre 2026
 
 **«Controlla i servizi» di OpenAPI.it: la prova delle Visure camerali usava un percorso sbagliato.** Dava «non abilitato» anche con il servizio attivo; ora prova la ricerca gratuita delle imprese (`/impresa`), la stessa che usa il resto di Platform. PEC Massiva resta «non abilitato» sul conto di zucca: lo scope (`POST ws.pecmassiva.com/send`) risulta corretto dalla documentazione, quindi il servizio va attivato nella console di openapi.com (attivazione a pagamento, poi costo per messaggio). Non verificato: l'esito reale dopo l'aggiornamento.

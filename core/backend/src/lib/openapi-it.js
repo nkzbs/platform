@@ -245,6 +245,8 @@ async function verificaServizi() {
       const dati = await res.json().catch(() => null);
       const msg = String((dati && (dati.message || dati.error)) || '').slice(0, 160);
       if (res.ok) return { ...base, stato: 'attivo', dettaglio: 'La lettura di prova è riuscita.' };
+      // «no requests/signatures linked to this username»: il servizio ci ha riconosciuti, semplicemente non c'è ancora nulla da elencare.
+      if (res.status === 404 && /no (requests|signatures|invoices|results)\b.*linked to this username/i.test(msg)) return { ...base, stato: 'attivo', dettaglio: 'Il servizio ti riconosce; non hai ancora fatto nessuna richiesta.' };
       if (res.status === 401 || res.status === 403) return { ...base, stato: 'non_abilitato', dettaglio: msg || 'Non autorizzato (' + res.status + ').' };
       return { ...base, stato: 'incerto', dettaglio: 'Il servizio ha risposto ' + res.status + (msg ? ': ' + msg : '') + '. Il token c\'è: si capisce provando un controllo vero.' };
     } catch (e) { return { ...base, stato: 'incerto', dettaglio: 'Nessuna risposta dal servizio (' + String((e && e.message) || e).slice(0, 80) + ').' }; }
