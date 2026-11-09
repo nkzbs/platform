@@ -859,3 +859,9 @@ Codice potato dopo lo spegnimento di Platform (2 ottobre 2026): vedi [`DECISIONI
 - Il controllo di coerenza è condiviso (`shared/`) perché Super Admin e tenant devono dire la stessa cosa: una bozza «valida» per l'uno non può risultare rotta per l'altro.
 - Alla nascita il tenant esegue guida, controllo e collaudo da solo: così «operativo» è un numero letto, non una sensazione.
 
+## 0.4.91 — Tre funzioni nuove, con la prudenza dovuta a ciò che costa o non si ritira
+
+- **Decisione**: firma elettronica, PEC e fattura elettronica sono adattatori di azione esterna come i precedenti (elenco chiuso, niente nomi di modulo, dichiarano i campi nel blocco). Restano «da attivare» senza costo finché il servizio non è abilitato.
+- **Prudenza**: la fattura è un atto fiscale e la PEC non si ritira, quindi la conferma del costo mostra anche **cosa parte** (riepilogo dell'adattatore), una fattura consegnata non si rifà, il numero si consuma solo a invio riuscito e l'XML si valida con lo schema ufficiale prima di fidarsi.
+- **Non provate con il servizio vero**: scritte da documentazione pubblica parziale e prove con un servizio finto. Prima uso in `sandbox`; gli errori del servizio arrivano all'utente tal quali, così si correggono con il messaggio in mano.
+

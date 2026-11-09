@@ -55,7 +55,7 @@ async function main() {
     rifiutaToken = ['visurecamerali'];
     const r = await post(); eq(r.status, 200); const j = await r.json(); eq(j.ambiente, 'prova');
     const per = Object.fromEntries(j.servizi.map((s) => [s.id, s.stato]));
-    eq(per, { real_estate: 'token_ok', catasto: 'attivo', risk_patrimoniale: 'non_abilitato', risk_report: 'incerto', visure_camerali: 'non_abilitato' });
+    eq(per, { real_estate: 'token_ok', catasto: 'attivo', risk_patrimoniale: 'non_abilitato', risk_report: 'incerto', esignature: 'incerto', sdi_fatture: 'token_ok', pec_massiva: 'token_ok', visure_camerali: 'non_abilitato' });
     ok(/Scope non consentito/.test(j.servizi.find((s) => s.id === 'visure_camerali').dettaglio), 'il motivo di OpenAPI.it arriva all\'utente');
     ok(chiamate.every((c) => c.startsWith('POST ') ? /\/tokens$/.test(c) : c.startsWith('GET ')), 'solo token e letture: ' + chiamate.join(' | '));
     ok(chiamate.some((c) => /GET https:\/\/test\.catasto\.openapi\.it\/territorio/.test(c)) && chiamate.some((c) => /test\.risk\.openapi\.com\/IT-patrimoniale-persona\//.test(c)) && chiamate.some((c) => /test\.oauth\.openapi\.com\/tokens/.test(c)), 'host di prova');

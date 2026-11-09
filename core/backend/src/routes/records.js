@@ -1010,7 +1010,7 @@ router.post('/:slug/:id/azione/:key', requireAuth, requireAdmin, requireModuleAc
   const st = spese ? spese.stima(nomeServizio) : null;
   if (spese) {
     const mese = spese.riepilogo(), amb = spese.ambiente();
-    if (!(req.body && req.body.conferma === true)) return res.status(409).json({ error: 'Conferma il costo prima di eseguire.', code: 'conferma_costo', gia_eseguita: !!(ctx.config.risultato_in && ctx.dati[ctx.config.risultato_in]), servizio: st.servizio, nome: st.nome, costo: st.costo, noto: st.noto, ambiente: amb, speso_mese: mese.produzione.speso, tetto: mese.tetto });
+    if (!(req.body && req.body.conferma === true)) return res.status(409).json({ error: 'Conferma il costo prima di eseguire.', code: 'conferma_costo', gia_eseguita: !!(ctx.config.risultato_in && ctx.dati[ctx.config.risultato_in]), riepilogo: typeof ctx.adattatore.riepilogo === 'function' ? ctx.adattatore.riepilogo({ dati: ctx.dati, config: ctx.config, slug: req.params.slug, id: ctx.record.id }) : null, servizio: st.servizio, nome: st.nome, costo: st.costo, noto: st.noto, ambiente: amb, speso_mese: mese.produzione.speso, tetto: mese.tetto });
     if (amb === 'produzione' && mese.tetto !== null && st.costo !== null && mese.produzione.speso + st.costo > mese.tetto) return res.status(402).json({ error: 'Questa richiesta supera il tetto di spesa mensile (' + mese.tetto.toFixed(2) + ' €, già spesi ' + mese.produzione.speso.toFixed(2) + ' €). Si cambia in Impostazioni → Connessioni → OpenAPI.it.', code: 'tetto_superato', tetto: mese.tetto, speso_mese: mese.produzione.speso });
   }
   let out;

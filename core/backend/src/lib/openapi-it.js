@@ -20,7 +20,10 @@ function credenziali() {
   const c = require('../secrets-at-rest').unseal(row.credentials);
   if (!c || !c.email || !c.api_key) return null;
   const sandbox = String(c.ambiente || 'sandbox').trim().toLowerCase() !== 'produzione';
-  return { email: c.email, apiKey: c.api_key, sandbox };
+  // la casella PEC Massiva (facoltativa) serve solo all'invio di PEC: utente e password stanno sigillati con il resto, mai restituiti da nessuna rotta
+  return { email: c.email, apiKey: c.api_key, sandbox, pec: c.pec_utente && c.pec_password ? { utente: String(c.pec_utente).trim(), password: String(c.pec_password) } : null,
+    // dati dell'azienda che servono alla fattura elettronica e che il tenant non ha altrove (facoltativi: senza, la fattura dice cosa manca)
+    fiscale: { codice_fiscale: String(c.sdi_codice_fiscale || '').trim(), regime: String(c.sdi_regime_fiscale || '').trim().toUpperCase(), cap: String(c.sdi_cap || '').trim(), comune: String(c.sdi_comune || '').trim(), provincia: String(c.sdi_provincia || '').trim(), iban: String(c.sdi_iban || '').trim() } };
 }
 
 const domini = (sandbox) => ({
@@ -31,6 +34,8 @@ const domini = (sandbox) => ({
   esignature: (sandbox ? 'test.' : '') + 'esignature.openapi.com',
   sms: (sandbox ? 'test.' : '') + 'sms.openapi.com',
   visurecamerali: (sandbox ? 'test.' : '') + 'visurecamerali.openapi.it', // le visure camerali stanno su un dominio .it
+  invoice: (sandbox ? 'test.' : '') + 'invoice.openapi.com', // fatturazione elettronica (SDI)
+  pecmassiva: (sandbox ? 'test.' : '') + 'ws.pecmassiva.com', // PEC Massiva: invio di PEC (il dominio non è di openapi.com)
 });
 
 // Token in cache per processo, per ambiente — mai nel DB: si rigenera da solo a ogni
@@ -173,7 +178,7 @@ async function cercaImprese({ provincia, limite = 10 }) {
 // sulla chiave, il token non si ottiene: è il segnale che usiamo per dire «da attivare».
 const scopiDi = (c, dominio, scopi) => scopi.map(([m, p]) => m + ':' + domini(c.sandbox)[dominio] + p);
 
-async function chiama({ dominio, metodo = 'GET', percorso, corpo, query, scopi, binario = false, timeout = 30000 }) {
+async function chiama({ dominio, metodo = 'GET', percorso, corpo, xml, tipoRichiesto, query, scopi, binario = false, timeout = 30000 }) {
   const c = credenziali();
   if (!c) throw Object.assign(new Error('OpenAPI.it non collegato: imposta email e API key in Impostazioni → Connessioni.'), { status: 503, code: 'not_connected' });
   const d = domini(c.sandbox);
@@ -181,8 +186,9 @@ async function chiama({ dominio, metodo = 'GET', percorso, corpo, query, scopi, 
   const qs = Object.entries(query || {}).filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
   const res = await fetch('https://' + d[dominio] + percorso + (qs ? '?' + qs : ''), {
     method: metodo,
-    headers: { Authorization: 'Bearer ' + token, ...(corpo ? { 'Content-Type': 'application/json' } : {}) },
-    body: corpo ? JSON.stringify(corpo) : undefined,
+    // `xml`: il corpo è un file XML già pronto (fattura elettronica); `tipoRichiesto`: Content-Type da mandare su una GET (il servizio lo usa per scegliere XML o PDF)
+    headers: { Authorization: 'Bearer ' + token, ...(xml ? { 'Content-Type': 'application/xml' } : corpo ? { 'Content-Type': 'application/json' } : tipoRichiesto ? { 'Content-Type': tipoRichiesto } : {}) },
+    body: xml ? xml : corpo ? JSON.stringify(corpo) : undefined,
     signal: AbortSignal.timeout(timeout),
   });
   if (binario && res.ok) return { status: res.status, tipo: res.headers.get('content-type') || '', buffer: Buffer.from(await res.arrayBuffer()) };
@@ -217,6 +223,9 @@ const SERVIZI = [
   { id: 'catasto', nome: 'Catasto (visure e immobili)', dominio: 'catasto.openapi.it', rotta: '/territorio', lettura: true },
   { id: 'risk_patrimoniale', nome: 'Risk — report patrimoniale sulla persona', dominio: 'risk.openapi.com', rotta: '/IT-patrimoniale-persona/', scope: '/IT-patrimoniale-persona', lettura: true },
   { id: 'risk_report', nome: 'Risk — report sulla persona', dominio: 'risk.openapi.com', rotta: '/IT-report-persona/', scope: '/IT-report-persona', lettura: true },
+  { id: 'esignature', nome: 'eSignature (firma elettronica a distanza)', dominio: 'esignature.openapi.com', rotta: '/signatures', lettura: true },
+  { id: 'sdi_fatture', nome: 'Fatturazione elettronica (SDI)', dominio: 'invoice.openapi.com', rotta: '/IT-invoices', lettura: null },
+  { id: 'pec_massiva', nome: 'PEC Massiva (invio di PEC)', dominio: 'ws.pecmassiva.com', rotta: '/send', metodo: 'POST', lettura: null },
   { id: 'visure_camerali', nome: 'Visure camerali (società, soci)', dominio: 'visurecamerali.openapi.it', rotta: '/ordinaria-impresa-individuale', lettura: true },
 ];
 
@@ -228,7 +237,7 @@ async function verificaServizi() {
     const host = (c.sandbox ? 'test.' : '') + sv.dominio;
     const base = { id: sv.id, nome: sv.nome };
     let token;
-    try { token = await ottieniToken(c, ['GET:' + host + (sv.scope || sv.rotta)]); }
+    try { token = await ottieniToken(c, [(sv.metodo || 'GET') + ':' + host + (sv.scope || sv.rotta)]); }
     catch (e) { return { ...base, stato: 'non_abilitato', dettaglio: String((e && e.message) || 'Token non ottenuto').slice(0, 200) }; }
     if (!sv.lettura) return { ...base, stato: 'token_ok', dettaglio: 'Il token si ottiene; nessuna lettura gratuita da provare (è il servizio usato dalla valutazione).' };
     try {

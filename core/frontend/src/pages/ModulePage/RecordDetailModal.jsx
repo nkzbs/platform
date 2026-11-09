@@ -694,6 +694,9 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                       ? 'La richiesta costa circa ' + euro(confermaCosto.costo) + ' (listino, IVA esclusa). Spesa del mese: ' + euro(confermaCosto.speso_mese) + (confermaCosto.tetto ? ' su un tetto di ' + euro(confermaCosto.tetto) : '') + '.'
                       : 'Il prezzo di questa richiesta non è indicato nel listino: si registra a 0 € finché non lo scrivi in Impostazioni → Connessioni → OpenAPI.it. Spesa del mese: ' + euro(confermaCosto.speso_mese) + '.'}
                 </div>
+                {confermaCosto.riepilogo && (
+                  <div className="mb-2 leading-snug text-ink bg-surface-card border border-gray-700 rounded-md px-2.5 py-1.5"><b>Cosa parte:</b> {confermaCosto.riepilogo}</div>
+                )}
                 {confermaCosto.gia_eseguita && (
                   <div className="mb-2 leading-snug text-ink bg-amber-400/15 border border-amber-500/50 rounded-md px-2.5 py-1.5" role="alert">
                     <b>Già eseguita su questa scheda.</b> Il risultato è salvato e si può riaprire (e rifare il PDF) senza spendere.{confermaCosto.ambiente === 'prova' ? '' : ' Rifarla costa di nuovo.'}

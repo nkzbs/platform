@@ -85,6 +85,14 @@ const CATALOG = [
       { key: 'email', label: 'Email dell\'account openapi.com', placeholder: 'tua@email.it' },
       { key: 'api_key', label: 'API Key', placeholder: 'ottenuta dalla console openapi.com' },
       { key: 'ambiente', label: 'Ambiente ("sandbox" o "produzione")', placeholder: 'sandbox' },
+      { key: 'pec_utente', label: 'Casella PEC Massiva — utente (facoltativo: serve solo per inviare PEC)', placeholder: 'nome@pecmassiva.com' },
+      { key: 'pec_password', label: 'Casella PEC Massiva — password (facoltativo)', tipo: 'password', placeholder: 'password della casella PEC' },
+      { key: 'sdi_cap', label: 'Fattura elettronica — CAP dell\'azienda (facoltativo)', placeholder: '25121' },
+      { key: 'sdi_comune', label: 'Fattura elettronica — comune dell\'azienda (facoltativo)', placeholder: 'Brescia' },
+      { key: 'sdi_provincia', label: 'Fattura elettronica — provincia (sigla, facoltativo)', placeholder: 'BS' },
+      { key: 'sdi_regime_fiscale', label: 'Fattura elettronica — regime fiscale (facoltativo, predefinito RF01 ordinario)', placeholder: 'RF01' },
+      { key: 'sdi_codice_fiscale', label: 'Fattura elettronica — codice fiscale dell\'azienda (facoltativo)', placeholder: 'se diverso dalla partita IVA' },
+      { key: 'sdi_iban', label: 'Fattura elettronica — IBAN per i bonifici (facoltativo)', placeholder: 'IT60X0542811101000000123456' },
     ] },
 ];
 

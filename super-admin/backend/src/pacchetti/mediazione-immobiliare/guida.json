@@ -40,7 +40,8 @@
       ],
       "consigli": [
         "Un cliente società ha come codice fiscale la partita IVA: il campo accetta entrambi.",
-        "Gli **Auguri** si mandano dal menu Documenti; i compleanni li trovi nel report Ricorrenze."
+        "Gli **Auguri** si mandano dal menu Documenti; i compleanni li trovi nel report Ricorrenze.",
+        "**Invia via PEC** (menu «Altre funzioni», quando il servizio PEC Massiva è abilitato e la casella è scritta in Connessioni → OpenAPI.it): manda per posta certificata il testo di «Privacy + Incarico» all'indirizzo PEC del cliente. Costa 0,05 € a invio e si conferma prima."
       ]
     },
     "immobili": {
@@ -65,7 +66,8 @@
         "Alla chiusura l'app può generare le **provvigioni**, divise tra venditore e acquirente."
       ],
       "consigli": [
-        "Le percentuali di provvigione per parte si impostano sulla trattativa."
+        "Le percentuali di provvigione per parte si impostano sulla trattativa.",
+        "**Firma elettronica** (menu «Altre funzioni», quando il servizio eSignature è abilitato): carica il PDF del preliminare tra gli allegati con il tipo **«Altro»** e premi «Firma elettronica». A venditore e acquirente arriva per email un link e un codice per firmare. Premendo di nuovo si ricontrolla (senza costo); quando hanno firmato tutti, il documento firmato entra tra gli allegati come «Contratto preliminare» e il passaggio a «Preliminare firmato» si sblocca da solo. Servono nome, cognome ed email di entrambi."
       ]
     },
     "provvigioni": {
@@ -77,7 +79,8 @@
         "Se è scaduta e non pagata, dal menu Documenti spedisci il **Sollecito di pagamento**."
       ],
       "consigli": [
-        "La fattura elettronica è prevista ma «da attivare»: richiede il servizio SDI di OpenAPI.it."
+        "La fattura elettronica è prevista ma «da attivare»: richiede il servizio SDI di OpenAPI.it.",
+        "**Fattura elettronica** (menu «Altre funzioni», quando il servizio SDI è abilitato): prima di inviare l'app mostra un riepilogo (numero, cliente, imponibile, IVA 22%, totale) e il costo, e chiede conferma. Una fattura inviata allo SDI non si ritira: si corregge solo con una nota di credito. Premendo di nuovo si ricontrolla la consegna; se lo SDI la scarta, l'app dice il motivo e la si rimanda con lo stesso numero. Servono i dati dell'azienda (ragione sociale, partita IVA e indirizzo in Impostazioni → Aspetto; CAP, comune e IBAN in Connessioni → OpenAPI.it) e CAP e comune del cliente."
       ]
     },
     "quote_societarie": {

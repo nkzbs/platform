@@ -169,6 +169,16 @@
         "verifica_esito",
         "credit_score_data",
         "credit_score_esito"
+      ],
+      "Fatturazione": [
+        "cap",
+        "comune",
+        "provincia",
+        "codice_destinatario"
+      ],
+      "Posta certificata": [
+        "pec_invio_data",
+        "pec_invio_esito"
       ]
     },
     "dati_chiave": [
@@ -203,6 +213,10 @@
       ],
       "Note": [
         "note"
+      ],
+      "Firma elettronica": [
+        "firma_data",
+        "firma_esito"
       ]
     },
     "dati_chiave": [
@@ -233,6 +247,10 @@
       ],
       "Note": [
         "note"
+      ],
+      "Fattura elettronica": [
+        "fattura_data",
+        "fattura_esito"
       ]
     },
     "dati_chiave": [

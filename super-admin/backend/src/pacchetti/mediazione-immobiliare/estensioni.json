@@ -330,6 +330,76 @@
           ]
         }
       ]
+    },
+    {
+      "key": "collega_sdi",
+      "_nota": "Collega «Fattura elettronica» al servizio Fatturazione Elettronica (SDI) di OpenAPI.it (adattatore `fattura_elettronica`): emette la fattura della provvigione (imponibile = importo netto, IVA 22%) intestata al cliente, la manda allo SDI e, premendo di nuovo, ne ricontrolla la consegna. Prima di inviare mostra un riepilogo (numero, importi, cliente) e chiede conferma: una fattura inviata non si ritira. Servono i dati dell'azienda (ragione sociale, partita IVA e indirizzo in Impostazioni → Aspetto; CAP, comune, provincia, regime fiscale e IBAN in Connessioni → OpenAPI.it) e quelli del cliente (CAP, comune). Il pulsante resta tra «Altre funzioni» finché il servizio non è abilitato.",
+      "richiede": {
+        "provvigioni": [
+          "descrizione"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "fattura_data",
+          "label": "Fattura elettronica — data",
+          "type": "date"
+        },
+        {
+          "block_type": "field",
+          "key": "fattura_esito",
+          "label": "Fattura elettronica — esito",
+          "type": "text"
+        }
+      ],
+      "riscrivi": [
+        {
+          "block_type": "external_action",
+          "key": "fattura_elettronica",
+          "proprieta": {
+            "adapter": {
+              "da": "da_attivare",
+              "a": "fattura_elettronica"
+            }
+          }
+        }
+      ],
+      "imposta": [
+        {
+          "block_type": "external_action",
+          "key": "fattura_elettronica",
+          "proprieta": {
+            "campi": {
+              "descrizione": "descrizione",
+              "imponibile": "importo_netto",
+              "totale": "totale",
+              "scadenza": "data_scadenza"
+            },
+            "aliquota_iva": 22,
+            "cliente": {
+              "relazione": "cliente",
+              "campi": {
+                "nome": "nome",
+                "codice_fiscale": "codice_fiscale_piva",
+                "tipo_soggetto": "tipo_soggetto",
+                "indirizzo": "indirizzo",
+                "cap": "cap",
+                "comune": "comune",
+                "provincia": "provincia",
+                "pec": "pec",
+                "codice_destinatario": "codice_destinatario"
+              }
+            },
+            "esito": {
+              "esito": "fattura_esito",
+              "data": "fattura_data"
+            },
+            "risultato_in": "fattura_elettronica",
+            "connection": "openapi_it"
+          }
+        }
+      ]
     }
   ],
   "trattative": [
@@ -726,6 +796,74 @@
               }
             }
           ]
+        }
+      ]
+    },
+    {
+      "key": "collega_firma",
+      "_nota": "Collega «Firma elettronica» al servizio eSignature di OpenAPI.it (adattatore `firma_elettronica`): si carica il PDF del preliminare tra gli allegati con il tipo «Altro» e si preme «Firma elettronica»: a venditore e acquirente arriva un link e un codice per email; premendo di nuovo si ricontrolla (senza costo) e, quando hanno firmato tutti, il documento firmato entra tra gli allegati come «Contratto preliminare», che sblocca «Preliminare firmato». Il pulsante resta tra «Altre funzioni» finché il servizio non è abilitato sulla chiave.",
+      "richiede": {
+        "trattative": [
+          "titolo"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "firma_data",
+          "label": "Firma elettronica — data",
+          "type": "date"
+        },
+        {
+          "block_type": "field",
+          "key": "firma_esito",
+          "label": "Firma elettronica — esito",
+          "type": "text"
+        }
+      ],
+      "riscrivi": [
+        {
+          "block_type": "external_action",
+          "key": "firma_elettronica",
+          "proprieta": {
+            "adapter": {
+              "da": "da_attivare",
+              "a": "firma_elettronica"
+            }
+          }
+        }
+      ],
+      "imposta": [
+        {
+          "block_type": "external_action",
+          "key": "firma_elettronica",
+          "proprieta": {
+            "allegato_da_firmare": "Altro",
+            "allegato_firmato": "Contratto preliminare",
+            "firmatari": [
+              {
+                "relazione": "venditore",
+                "ruolo": "Venditore"
+              },
+              {
+                "relazione": "acquirente",
+                "ruolo": "Acquirente"
+              }
+            ],
+            "campi_firmatario": {
+              "nome": "nome",
+              "email": "email",
+              "telefono": "telefono"
+            },
+            "titolo": "titolo",
+            "esito": {
+              "esito": "firma_esito",
+              "data": "firma_data"
+            },
+            "risultato_in": "firma_elettronica",
+            "autenticazione": "email",
+            "connection": "openapi_it"
+          }
         }
       ]
     }
@@ -1858,6 +1996,95 @@
             },
             "automatico": "compleanno"
           }
+        }
+      ]
+    },
+    {
+      "key": "collega_pec",
+      "_nota": "Collega «Invia via PEC» al servizio PEC Massiva di OpenAPI.it (adattatore `invio_pec`): manda per PEC il testo del documento «Privacy + Incarico» all'indirizzo PEC del cliente. Serve la casella PEC Massiva (utente e password in Impostazioni → Connessioni → OpenAPI.it) oltre al servizio abilitato; finché mancano, il pulsante resta tra «Altre funzioni» e dice cosa serve. Costa 0,05 € a invio e si conferma prima.",
+      "richiede": {
+        "clienti": [
+          "nome",
+          "pec"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "pec_invio_data",
+          "label": "Ultima PEC inviata — data",
+          "type": "date"
+        },
+        {
+          "block_type": "field",
+          "key": "pec_invio_esito",
+          "label": "Ultima PEC inviata — esito",
+          "type": "text"
+        }
+      ],
+      "riscrivi": [
+        {
+          "block_type": "external_action",
+          "key": "invio_pec",
+          "proprieta": {
+            "adapter": {
+              "da": "da_attivare",
+              "a": "invio_pec"
+            }
+          }
+        }
+      ],
+      "imposta": [
+        {
+          "block_type": "external_action",
+          "key": "invio_pec",
+          "proprieta": {
+            "campi": {
+              "pec": "pec"
+            },
+            "documento": "privacy_incarico",
+            "esito": {
+              "esito": "pec_invio_esito",
+              "data": "pec_invio_data"
+            },
+            "risultato_in": "invio_pec",
+            "connection": "openapi_it"
+          }
+        }
+      ]
+    },
+    {
+      "key": "dati_fatturazione",
+      "_nota": "I dati del cliente che la fattura elettronica richiede oltre a nome, codice fiscale o partita IVA e indirizzo: CAP, comune, provincia, e il codice destinatario SDI (7 caratteri) se il cliente ne ha uno; senza codice destinatario la fattura va alla PEC del cliente o nel suo cassetto fiscale.",
+      "richiede": {
+        "clienti": [
+          "nome"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "cap",
+          "label": "CAP",
+          "type": "text"
+        },
+        {
+          "block_type": "field",
+          "key": "comune",
+          "label": "Comune",
+          "type": "text"
+        },
+        {
+          "block_type": "field",
+          "key": "provincia",
+          "label": "Provincia (sigla)",
+          "type": "text"
+        },
+        {
+          "block_type": "field",
+          "key": "codice_destinatario",
+          "label": "Codice destinatario SDI (facoltativo)",
+          "type": "text"
         }
       ]
     }
