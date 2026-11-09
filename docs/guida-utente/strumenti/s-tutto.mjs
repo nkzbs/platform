@@ -17,6 +17,17 @@ try{
     await passo('101-giro-3',async()=>{ await b.clic('Avanti',{sel:'button',esatto:true}); await b.pausa(900); await b.clic('Avanti',{sel:'button',esatto:true}); await b.pausa(1400) })
     await b.clic('Salta',{sel:'button',esatto:true}); await b.pausa(500); b._giro=false
   }
+  if(sezione('dashboard')){
+    await b.accedi()
+    await passo('01-dashboard',async()=>{ await b.pausa(1500) })
+    await passo('110-percorso-clic',async()=>{ await b.clic('In mandato',{sel:'button,a,div,span'}); await b.pausa(1500) })
+    await b.accedi()
+    await passo('02-dashboard-modifica',async()=>{ await b.clic('Modifica layout') })
+    await b.accedi()
+    await passo('93-dashboard-aggiungi-widget',async()=>{ await b.clic('Modifica layout'); await b.clic('Aggiungi widget',{sel:'button'}); await b.pausa(900) })
+    await b.accedi()
+    await passo('111-segnali-clic',async()=>{ await b.clic('provvigioni scadute',{sel:'button,a,div,span'}); await b.pausa(1500) })
+  }
   if(sezione('base')){
     await passo('90-login',async()=>{ await b.vai('http://localhost:5173'); await b.ev(`localStorage.removeItem('platform_token');localStorage.removeItem('platform_user');true`); await b.vai('http://localhost:5173'); await b.pausa(800) })
     await b.accedi()

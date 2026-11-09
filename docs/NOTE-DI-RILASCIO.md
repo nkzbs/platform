@@ -14,6 +14,7 @@ Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la 
 - Test: `messaggi-clienti.test.js` (8, con mail e SMS finti). Non provato dal vivo: la prima mail e il primo SMS veri.
 - Messa online: deploy + **Aggiorna** su zucca. Gli auguri automatici restano spenti finché non li accendi.
 - **Guida illustrata PDF finale** (43 pagine, versione 0.4.80): testi nuovi su quote dentro il Cliente, messaggi ai clienti, funzioni che si accendono da sole (solvibilità, credit score, catasto), stima ragionata, Dashboard.
+- **Guida illustrata: nuova parte «Come si lavora»** (55 pagine): schema di come sono legate le schede (Cliente, Immobile, Trattativa, Provvigione, Attività, Quote), una vendita seguita dall'inizio alla fine con «cosa cambia» in ogni passo, la Dashboard nuova (Percorso e Segnali cliccabili, filtro dalla Dashboard) con schermate rifatte, giornate tipo e «quando l'app ti ferma».
 
 ## 0.4.79 — 9 novembre 2026
 
