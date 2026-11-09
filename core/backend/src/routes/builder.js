@@ -140,6 +140,12 @@ router.post('/dati-esempio', requireAuth, requireAdmin, (req, res) => {
 });
 router.delete('/dati-esempio', requireAuth, requireAdmin, (req, res) => res.json({ ok: true, ...require('../lib/dati-esempio').rimuovi() }));
 
+// Gli adattatori delle azioni esterne (elenco chiuso, lib/azioni-esterne/): per il menu del Builder, con se consumano un servizio a pagamento e se producono un PDF.
+router.get('/azioni-esterne', requireAuth, requireAdmin, (req, res) => {
+  const az = require('../lib/azioni-esterne');
+  res.json({ adattatori: az.nomiAdattatori().map((nome) => { const a = az.adattatore(nome) || {}; return { nome, servizio: a.servizio || null, pdf: typeof a.pdf === 'function' }; }) });
+});
+
 router.post('/formula/check', requireAuth, requireAdmin, (req, res) => {
   const { expr, steps, context } = req.body;
   if (Array.isArray(steps) && steps.length > 0) {

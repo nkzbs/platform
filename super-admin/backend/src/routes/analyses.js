@@ -224,7 +224,8 @@ async function generaModuliInBackground(id, pianoDato) {
     setModuli(id, { piano }); agg({ fase: 'bozze', totale: piano.length, fatti: 0 });
     const prima = moduliDi(row(id)).generati; const generati = [];
     let fatti = 0;
-    const res = await generatore.costruisci({ nomeAttivita: r.name, descrizione: r.descrizione, processi, disponibili, esistenti, piano, onModulo: (m) => { fatti++; agg({ fase: 'bozze', fatti, ultimo: m.name }); } });
+    const ruoli = [...new Set(processi.flatMap((p) => (p.ruoli_coinvolti || []).filter((x) => x && x.nome && (!x.tipo || x.tipo === 'utente')).map((x) => require('../lib/tenant-config-from-analysis').slugify(x.nome))).filter((x) => x && x !== 'admin' && x !== 'user'))]; // gli stessi nomi con cui nascono i ruoli del tenant
+    const res = await generatore.costruisci({ nomeAttivita: r.name, descrizione: r.descrizione, processi, disponibili, esistenti, piano, ruoli, onModulo: (m) => { fatti++; agg({ fase: 'bozze', fatti, ultimo: m.name }); } });
     for (const m of res.moduli) { const v = prima.find((x) => x.slug === m.slug); generati.push({ ...m, approvato: v ? v.approvato : m.problemi.length === 0 }); }
     setModuli(id, { generati });
     agg({ fase: 'finita', fine: Date.now(), errore: null });

@@ -84,5 +84,33 @@ const risposte = (lista) => { const chiamate = []; gen.deps.isConfigured = () =>
     ok(r.moduli.length === 2 && r.moduli[0].slug === 'ordini' && r.moduli[1].slug === 'righe', r.moduli.map((m) => m.slug).join());
     ok(r.moduli.every((m) => m.problemi.length === 0), JSON.stringify(r.moduli.map((m) => m.problemi)));
   });
+  await test('permessi per ruolo: solo ruoli dell\'analisi, i non citati restano in sola lettura, owner_field solo se la relazione esiste', () => {
+    const base = [{ block_type: 'field', key: 'titolo', label: 'T', type: 'text' }, { block_type: 'relation', key: 'agente', label: 'Agente', type: 'many_to_one', target_module: 'clienti', display_field: 'nome' }];
+    const s = gen.sanitizzaSchema({ steps: [...base, { block_type: 'permissions', rules: [
+      { role: 'agente_vendite', view: true, view_own_only: true, owner_field: 'agente', create: true, edit: true, delete: true },
+      { role: 'ruolo_inventato', view: true, create: true },
+      { role: 'contabile', view: true, owner_field: 'relazione_che_non_c_e', create: true, edit: false },
+    ] }] }, 'm', { ruoli: ['agente_vendite', 'contabile', 'magazziniere'] });
+    const p = s.steps.find((b) => b.block_type === 'permissions'); ok(p, 'blocco permessi');
+    const per = Object.fromEntries(p.rules.map((r) => [r.role, r]));
+    ok(!per.ruolo_inventato, 'ruolo non dell\'analisi');
+    ok(per.agente_vendite.owner_field === 'agente' && per.agente_vendite.view_own_only === true && per.agente_vendite.delete === true, JSON.stringify(per.agente_vendite));
+    ok(per.contabile.owner_field === undefined && per.contabile.create === true, JSON.stringify(per.contabile));
+    ok(per.magazziniere && per.magazziniere.view === true && per.magazziniere.create === false && per.magazziniere.edit === false, 'ruolo non citato: sola lettura ' + JSON.stringify(per.magazziniere));
+    ok(per.user && per.user.view === true && per.user.create === false, 'anche «user» ha una riga, altrimenti resta chiuso fuori');
+    ok(!gen.sanitizzaSchema({ steps: [...base, { block_type: 'permissions', rules: [{ role: 'contabile', view: true }] }] }, 'm').steps.some((b) => b.block_type === 'permissions'), 'senza ruoli noti nessun blocco permessi');
+    ok(gen.controllaBozza('m', 'M', s, clienti, ['agente_vendite', 'contabile', 'magazziniere']).filter((x) => /permess|ruolo/i.test(x)).length === 0, 'il controllo accetta i ruoli dell\'analisi');
+  });
+  await test('aggiorna_record con operazione: increment e decrement vogliono un numero', () => {
+    const az = (c) => gen.sanitizzaSchema({ steps: [{ block_type: 'field', key: 'a', label: 'A', type: 'text' }, { block_type: 'workflow_state', key: 'x', label: 'X', initial: true }, { block_type: 'automation', label: 'u', trigger: { evento: 'cambio_stato', stato: 'x' }, azioni: [{ azione: 'aggiorna_record', config: c }] }] }, 'm').steps.find((b) => b.block_type === 'automation');
+    ok(az({ modulo: 'magazzino', campo: 'giacenza', operazione: 'decrement', valore: '2' }).azioni[0].config.operazione === 'decrement', 'decrement');
+    ok(az({ modulo: 'magazzino', campo: 'giacenza', operazione: 'increment', valore: 'tanto' }) === undefined, 'incremento non numerico scartato');
+    ok(az({ modulo: 'magazzino', campo: 'stato_x', valore: 'ok' }).azioni[0].config.operazione === undefined, 'set predefinito');
+  });
+  await test('la richiesta al modello elenca i ruoli e accetta il blocco permessi', async () => {
+    const c = risposte([buono('clienti')]);
+    await gen.generaModulo({ voce: { slug: 'ordini', nome: 'Ordini', scopo: 'o', collegato_a: [], processi: [] }, nomeAttivita: 'B', processi: [], altri: clienti, ruoli: ['agente_vendite'] });
+    ok(/Ruoli \(usa solo questi in permissions\): agente_vendite/.test(c[0].user), c[0].user.slice(-200));
+  });
   console.log(`\n${passati} passati, ${falliti} falliti`); process.exit(falliti ? 1 : 0);
 })();

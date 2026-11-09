@@ -2,6 +2,16 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.96 — 9 novembre 2026
+
+**Il Builder ha gli editor che mancavano e il generatore di moduli scrive anche i permessi.**
+- **Azione esterna** (Builder, blocco «Azione esterna»): ora si modificano a mano nome e descrizione del pulsante, adattatore (menu dall'elenco chiuso del server, con costo e PDF), connessione richiesta, dove resta il risultato completo sul record, servizio richiesto e «come si attiva», le tipologie con il codice di riserva e i «Collegamenti dell'adattatore» (campi da mandare, esito, dati del cliente…) come JSON controllato prima di salvare. Prima si poteva solo cambiare il nome.
+- **Relazione → «Eredita dal record collegato»:** coppie «mio campo ← campo del record collegato», che si compilano da sole se il tuo campo è vuoto.
+- **Mappa → Paese (2 lettere):** restringe la ricerca dell'indirizzo.
+- **Generatore di moduli (Analisi):** scrive il blocco **permessi** con una riga per ogni ruolo dell'analisi (chi lavora crea e modifica, chi controlla vede; «solo i miei» solo se la relazione indicata esiste). I ruoli non citati dal modello restano in sola lettura (e anche «user»), per non chiudere nessuno fuori. Nelle automazioni «aggiorna record» ora accetta anche **aumenta/diminuisci** un numero.
+- Nuova rotta `GET /api/builder/azioni-esterne` (solo admin).
+- **Non verificato:** gli editor non sono stati provati a mano nel browser (compilano e la rotta ha il suo test); il generatore con l'AI vera resta mai provato su un racconto reale. Serve ridistribuire Super Admin e fare Aggiorna sui tenant.
+
 ## 0.4.95 — 9 novembre 2026
 
 **Analytics di Super Admin torna a registrare la foto giornaliera.** Sul database di produzione la tabella `metrics_snapshots` ha ancora la vecchia colonna obbligatoria `total_partners` (dei partner, rimossi), e ogni foto falliva con «NOT NULL constraint failed». Ora la foto riempie con 0 le colonne obbligatorie rimaste da versioni vecchie. Test: `analytics-snapshot.test.js`. Non verificato online: serve ridistribuire Super Admin (`bash scripts/redeploy-nas.sh backend`); le foto dei giorni persi non si recuperano.

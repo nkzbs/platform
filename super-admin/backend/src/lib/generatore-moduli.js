@@ -26,7 +26,8 @@ const ICONE = ['home', 'users', 'box', 'store', 'tool', 'plug', 'zap', 'user', '
 const AZIONI_AMMESSE = ['crea_record', 'aggiorna_record', 'notifica_interna'];
 
 // ── pulizia di ciò che arriva dal modello ──
-function sanitizzaSchema(raw, slug) {
+function sanitizzaSchema(raw, slug, opz) {
+  const ruoliNoti = (opz && Array.isArray(opz.ruoli)) ? opz.ruoli.filter((r) => IDENT.test(r)) : [];
   const src = Array.isArray(raw) ? raw : (raw && Array.isArray(raw.steps) ? raw.steps : []);
   const out = []; let n = 0; const id = () => 'blk_' + (++n);
   const chiavi = new Set();
@@ -75,7 +76,10 @@ function sanitizzaSchema(raw, slug) {
       if (a.azione === 'notifica_interna') return { target: '__interno__', azione: 'notifica_interna', config: { message: t(c.message, 300) || 'Aggiornamento', roles: [] } };
       const modulo = chiaveValida(c.modulo); if (!modulo) return null;
       if (a.azione === 'crea_record') { const dati = {}; for (const [k, v] of Object.entries(c.dati && typeof c.dati === 'object' ? c.dati : {})) { const kk = k.startsWith('_') ? k : chiaveValida(k); if (kk && (typeof v === 'string' || typeof v === 'number')) dati[kk] = typeof v === 'string' ? t(v, 120) : v; } return { target: '__interno__', azione: 'crea_record', config: { modulo, dati } }; }
-      const campo = chiaveValida(c.campo); return campo ? { target: '__interno__', azione: 'aggiorna_record', config: { modulo, id_field: t(c.id_field, 60) || '__self__', campo, valore: t(c.valore, 120) } } : null;
+      const campo = chiaveValida(c.campo); if (!campo) return null;
+      const operazione = ['set', 'increment', 'decrement'].includes(c.operazione) ? c.operazione : 'set';
+      if (operazione !== 'set' && !Number.isFinite(parseFloat(c.valore))) return null; // aumentare o diminuire chiede un numero
+      return { target: '__interno__', azione: 'aggiorna_record', config: { modulo, id_field: t(c.id_field, 60) || '__self__', campo, valore: t(c.valore, 120), ...(operazione !== 'set' ? { operazione } : {}) } };
     }).filter(Boolean);
     if (azioni.length) out.push({ id: id(), block_type: 'automation', label: t(b.label, 80) || 'Automazione', trigger: { evento: 'cambio_stato', stato: chiaveValida(tr.stato) }, azioni });
   }
@@ -84,15 +88,33 @@ function sanitizzaSchema(raw, slug) {
     out.push({ id: id(), block_type: 'document_action', key, label: t(b.label, 60) || key, icon: 'mail', subject: t(b.subject, 160) || t(b.label, 60), body: String(b.body).slice(0, 4000), ...(b.recipient ? { recipient: String(b.recipient).split('.').map(chiaveValida).filter(Boolean).join('.') } : {}) });
   }
   for (const b of prima('calendar_view')) { const d = chiaveValida(b.date_field); if (d) out.push({ id: id(), block_type: 'calendar_view', key: chiaveValida(b.key) || 'calendario', label: t(b.label, 60) || 'Calendario', date_field: d, title_field: chiaveValida(b.title_field) || undefined }); }
+  // Permessi per ruolo: solo ruoli che nascono dall'analisi (mai nomi inventati). Chi non è citato dal modello riceve la sola lettura (non «niente»: la matrice esclude chi non ha una riga),
+  // così nessun ruolo resta chiuso fuori per una dimenticanza. «Solo i miei» (owner_field) vale solo se la relazione indicata esiste in questo modulo.
+  if (ruoliNoti.length) {
+    const relazioni = new Set(out.filter((b) => b.block_type === 'relation').map((b) => b.key));
+    const date = new Map();
+    for (const b of prima('permissions')) for (const r of (Array.isArray(b.rules) ? b.rules : [])) {
+      const role = chiaveValida(r && r.role); if (!ruoliNoti.includes(role) || date.has(role)) continue;
+      const regola = { role, view: r.view !== false, view_own_only: r.view_own_only === true, create: r.create === true, edit: r.edit === true, delete: r.delete === true };
+      const of = chiaveValida(r.owner_field); if (of && relazioni.has(of)) regola.owner_field = of;
+      if (!regola.view) { regola.create = false; regola.edit = false; regola.delete = false; regola.view_own_only = false; }
+      date.set(role, regola);
+    }
+    if (date.size) {
+      for (const role of ruoliNoti) if (!date.has(role)) date.set(role, { role, view: true, view_own_only: false, create: false, edit: false, delete: false });
+      if (!date.has('user')) date.set('user', { role: 'user', view: true, view_own_only: false, create: false, edit: false, delete: false });
+      out.push({ id: id(), block_type: 'permissions', rules: [...date.values()] });
+    }
+  }
   return { version: 3, steps: out };
 }
 
 // ── controllo: la bozza insieme agli altri moduli (quelli della Libreria che si installeranno e le altre bozze) ──
 // `esistenti`: [{ slug, nome, steps }]. Ritorna i problemi della sola bozza, in italiano.
-function controllaBozza(slug, nome, schema, esistenti) {
+function controllaBozza(slug, nome, schema, esistenti, ruoli) {
   const mods = {}; for (const e of (esistenti || [])) if (e.slug !== slug) mods[e.slug] = { slug: e.slug, nome: e.nome, steps: e.steps };
   mods[slug] = { slug, nome, steps: schema.steps };
-  const { righe } = controllaModuli(mods, { ruoli: new Set(['admin']), soloModuli: [slug] });
+  const { righe } = controllaModuli(mods, { ruoli: new Set(['admin', 'user', ...(ruoli || [])]), soloModuli: [slug] });
   const problemi = righe.filter((r) => !r.ok).map((r) => r.blocco + ': ' + r.messaggio);
   if (!schema.steps.some((b) => b.block_type === 'field')) problemi.push('Il modulo non ha nessun campo.');
   return problemi;
@@ -106,6 +128,7 @@ const CATALOGO = `Linguaggio dei blocchi (ognuno è un oggetto JSON dentro "step
 - {"block_type":"state_requirements","stato":"chiusa","bloccante":true,"requisiti":[{"label":"Importo","tipo":"campo","campo":"importo"},{"label":"Contratto","tipo":"allegato","valore":"Contratto"}]}  (cosa serve per ARRIVARE a quello stato)
 - {"block_type":"allegati","label":"Allegati","types":["Contratto","Documento di identità"]}
 - {"block_type":"automation","label":"...","trigger":{"evento":"cambio_stato","stato":"firmata"},"azioni":[{"target":"__interno__","azione":"crea_record","config":{"modulo":"slug_altro_modulo","dati":{"campo_altro":"campo:campo_di_questo_modulo","_stato":"stato_iniziale_altro"}}},{"target":"__interno__","azione":"notifica_interna","config":{"message":"testo","roles":[]}}]}
+- {"block_type":"permissions","rules":[{"role":"slug_ruolo","view":true,"view_own_only":false,"owner_field":"chiave_relazione_di_questo_modulo","create":true,"edit":true,"delete":false}]}  (chi può fare cosa, solo per i ruoli elencati sotto «Ruoli»; "owner_field" solo se il ruolo deve vedere i soli record collegati a lui tramite una relazione di questo modulo)
 - {"block_type":"document_action","key":"lettera","label":"Lettera","subject":"Oggetto {{campo}}","body":"Testo con {{campo}} e {{relazione.campo}}","recipient":"campo_email"}
 - {"block_type":"calendar_view","key":"calendario","label":"Calendario","date_field":"campo_data","title_field":"campo_titolo"}`;
 
@@ -117,6 +140,8 @@ const REGOLE = `Regole:
 - Una relazione deve puntare a un modulo dell'elenco "Altri moduli" e "display_field" deve essere un campo di quel modulo.
 - Usa requisiti, allegati, automazioni e documenti solo dove il processo li richiede davvero: non riempire per riempire.
 - I testi dei documenti possono usare solo campi che esistono nel modulo o nei moduli collegati.
+- Le azioni di un'automazione sono: crea_record, aggiorna_record (con "operazione": "set" per scrivere un valore, "increment" o "decrement" per sommare o togliere un numero a un campo) e notifica_interna.
+- Se sotto c'è l'elenco «Ruoli», aggiungi un blocco permissions con una riga per ruolo: chi lavora il processo può creare e modificare, chi controlla soltanto può vedere; "delete" solo dove è davvero normale cancellare. Senza elenco non mettere permissions.
 - In italiano.`;
 
 const PIANO_SPEC = `Sei un analista software. Ti do i processi di un'attività e l'elenco dei moduli già disponibili. Indica quali MODULI NUOVI servono per gestire i processi, quando nessun modulo dell'elenco li copre.
@@ -161,16 +186,16 @@ async function pianifica({ nomeAttivita, descrizione, processi, disponibili }) {
 }
 
 // 2. la bozza di UN modulo, con ciclo di correzione. `altri`: [{ slug, nome, steps }] già noti (Libreria e bozze fatte).
-async function generaModulo({ voce, nomeAttivita, processi, altri }) {
+async function generaModulo({ voce, nomeAttivita, processi, altri, ruoli }) {
   const elencoAltri = (altri || []).map((m) => riassuntoModulo({ slug: m.slug, nome: m.nome, campi: campiDi(m.steps) })).join('\n') || '(nessuno)';
   const usati = (voce.processi && voce.processi.length ? voce.processi : (processi || []).map((_, i) => i + 1)).map((n) => (processi || [])[n - 1]).filter(Boolean);
-  const base = 'Attività: ' + redact(t(nomeAttivita, 80)) + '\nModulo da progettare: «' + voce.nome + '» (slug «' + voce.slug + '») — ' + redact(t(voce.scopo, 200)) + (voce.collegato_a && voce.collegato_a.length ? '\nDeve collegarsi a: ' + voce.collegato_a.join(', ') : '') + '\n\nProcessi che lo usano:\n' + (usati.map((p, i) => riassuntoProcesso(p, i)).join('\n') || '(nessuno in particolare)') + '\n\nAltri moduli (puoi collegarti solo a questi):\n' + elencoAltri;
+  const base = 'Attività: ' + redact(t(nomeAttivita, 80)) + '\nModulo da progettare: «' + voce.nome + '» (slug «' + voce.slug + '») — ' + redact(t(voce.scopo, 200)) + (voce.collegato_a && voce.collegato_a.length ? '\nDeve collegarsi a: ' + voce.collegato_a.join(', ') : '') + '\n\nProcessi che lo usano:\n' + (usati.map((p, i) => riassuntoProcesso(p, i)).join('\n') || '(nessuno in particolare)') + '\n\nAltri moduli (puoi collegarti solo a questi):\n' + elencoAltri + (ruoli && ruoli.length ? '\n\nRuoli (usa solo questi in permissions): ' + ruoli.join(', ') : '');
   let precedente = null, problemi = [], schema = null, nome = voce.nome, icona = 'box';
   for (let tentativo = 1; tentativo <= MAX_TENTATIVI; tentativo++) {
     const richiesta = base + (precedente ? '\n\nLa bozza precedente ha questi problemi, correggili tutti e rimanda il modulo COMPLETO:\n' + problemi.slice(0, 14).map((p) => '- ' + p).join('\n') + '\n\nBozza precedente:\n' + JSON.stringify(precedente).slice(0, 7000) : '');
     const out = await chiedi(MODULO_SPEC, richiesta, 5000);
-    schema = sanitizzaSchema(out, voce.slug); nome = t(out && out.nome, 60) || voce.nome; icona = ICONE.includes(out && out.icona) ? out.icona : 'box';
-    problemi = controllaBozza(voce.slug, nome, schema, altri);
+    schema = sanitizzaSchema(out, voce.slug, { ruoli }); nome = t(out && out.nome, 60) || voce.nome; icona = ICONE.includes(out && out.icona) ? out.icona : 'box';
+    problemi = controllaBozza(voce.slug, nome, schema, altri, ruoli);
     if (!problemi.length) return { slug: voce.slug, name: nome, icon: icona, color: COLORI[Math.abs([...voce.slug].reduce((a, c) => a + c.charCodeAt(0), 0)) % COLORI.length], schema, problemi: [], tentativi: tentativo };
     precedente = { nome, steps: schema.steps };
   }
@@ -178,20 +203,20 @@ async function generaModulo({ voce, nomeAttivita, processi, altri }) {
 }
 
 // 3. tutto insieme: le bozze si fanno in ordine (chi non dipende da nessuno prima), ognuna vede le precedenti; alla fine si ricontrolla il gruppo intero.
-async function costruisci({ nomeAttivita, descrizione, processi, disponibili, esistenti, piano, onModulo }) {
+async function costruisci({ nomeAttivita, descrizione, processi, disponibili, esistenti, piano, onModulo, ruoli }) {
   const voci = piano || await pianifica({ nomeAttivita, descrizione, processi, disponibili });
   const ordinati = [...voci].sort((a, b) => a.collegato_a.filter((x) => voci.some((v) => v.slug === x)).length - b.collegato_a.filter((x) => voci.some((v) => v.slug === x)).length);
   const fatti = []; const altri = [...(esistenti || [])];
   for (const v of ordinati) {
     // collegamenti verso bozze non ancora fatte: si passano come moduli «annunciati» con il campo nome, così la relazione regge
     const annunciati = voci.filter((x) => x.slug !== v.slug && !fatti.some((f) => f.slug === x.slug)).map((x) => ({ slug: x.slug, nome: x.nome, steps: [{ block_type: 'field', key: 'nome' }] }));
-    const m = await generaModulo({ voce: v, nomeAttivita, processi, altri: [...altri, ...annunciati] });
+    const m = await generaModulo({ voce: v, nomeAttivita, processi, altri: [...altri, ...annunciati], ruoli });
     fatti.push(m); altri.push({ slug: m.slug, nome: m.name, steps: m.schema.steps });
     if (onModulo) onModulo(m);
   }
   // ricontrollo del gruppo: una relazione verso una bozza fatta dopo può non reggere (campo mostrato diverso)
   const gruppo = {}; for (const e of (esistenti || [])) gruppo[e.slug] = e; for (const m of fatti) gruppo[m.slug] = { slug: m.slug, nome: m.name, steps: m.schema.steps };
-  for (const m of fatti) m.problemi = controllaBozza(m.slug, m.name, m.schema, Object.values(gruppo));
+  for (const m of fatti) m.problemi = controllaBozza(m.slug, m.name, m.schema, Object.values(gruppo), ruoli);
   return { piano: voci, moduli: fatti };
 }
 

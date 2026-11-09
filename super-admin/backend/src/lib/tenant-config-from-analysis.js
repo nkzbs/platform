@@ -241,4 +241,4 @@ async function applyAnalysisConfigToTenant({ tenantSlug, processi, installedRegi
   return result;
 }
 
-module.exports = { applyAnalysisConfigToTenant, buildWorkflowSteps };
+module.exports = { applyAnalysisConfigToTenant, buildWorkflowSteps, slugify };

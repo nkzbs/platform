@@ -81,6 +81,15 @@ async function main() {
     for (const k of citati) ok(e.richiede.immobili.includes(k), 'il campo «' + k + '» è citato dal blocco ma non tra quelli richiesti dall\'estensione');
   });
 
+  await test('il Builder può chiedere l\'elenco degli adattatori (solo admin), con costo e PDF', async () => {
+    eq((await fetch(BASE + '/api/builder/azioni-esterne')).status, 401);
+    const r = await (await fetch(BASE + '/api/builder/azioni-esterne', { headers: H })).json();
+    const per = Object.fromEntries(r.adattatori.map((a) => [a.nome, a]));
+    ok(per.valutazione_immobiliare && per.fattura_elettronica && per.da_attivare, 'adattatori: ' + Object.keys(per).join());
+    ok(per.fattura_elettronica.servizio === 'sdi_fattura' && per.da_attivare.servizio === null, 'costo dichiarato');
+    ok(r.adattatori.every((a) => typeof a.pdf === 'boolean'), 'pdf booleano');
+  });
+
   console.log(`\n${passed} passati, ${failed} falliti`);
   try { fs.unlinkSync(process.env.DB_PATH); } catch (e) {}
   process.exit(failed ? 1 : 0);

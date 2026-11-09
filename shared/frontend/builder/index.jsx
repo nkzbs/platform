@@ -11,6 +11,7 @@ import AutomationActionsList from '../AutomationActionsList.jsx'
 import ModelCanvas from './ModelCanvas'
 import BottomPanel from './BottomPanel'
 import PropertiesPanel from './PropertiesPanel'
+import ExternalActionEditor from './ExternalActionEditor'
 import BuilderPreviewPanel from './BuilderPreviewPanel'
 import { computeValidations } from './validation'
 
@@ -1514,6 +1515,32 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                         <div className="text-[10px] text-gray-600 mt-1">Il valore mostrato per ogni riferimento a questa relazione, es. il nome del cliente invece del suo id.</div>
 
                         <div className="mt-3 pt-3 border-t border-gray-800">
+                          <div className="text-xs text-gray-400 mb-1.5">Eredita dal record collegato</div>
+                          {Object.entries(step.eredita || {}).map(([mio, loro]) => (
+                            <div key={mio} className="flex items-center gap-2 mb-1.5">
+                              <select className="flex-1 bg-surface-page text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" value={mio}
+                                onChange={(e) => { const nuovo = {}; for (const [a, b2] of Object.entries(step.eredita)) nuovo[a === mio ? e.target.value : a] = b2; updateStep(idx, 'eredita', nuovo) }}>
+                                {((fieldCache.find((m) => m.slug === selected) || {}).fields || []).map((f) => <option key={f.key} value={f.key}>{f.label || f.key}</option>)}
+                              </select>
+                              <span className="text-gray-500 text-xs">←</span>
+                              <select className="flex-1 bg-surface-page text-ink px-2 py-1.5 rounded-lg text-xs outline-none border border-gray-700" value={loro}
+                                onChange={(e) => updateStep(idx, 'eredita', { ...step.eredita, [mio]: e.target.value })}>
+                                {(fieldCache.find((m) => m.slug === step.target_module)?.fields || []).map((f) => <option key={f.key} value={f.key}>{f.label || f.key}</option>)}
+                              </select>
+                              <button onClick={() => { const nuovo = { ...step.eredita }; delete nuovo[mio]; updateStep(idx, 'eredita', Object.keys(nuovo).length ? nuovo : undefined) }} className="text-red-400/60 hover:text-red-400"><Icon name="trash" size={12} /></button>
+                            </div>
+                          ))}
+                          <button type="button" className="text-xs text-accent hover:underline"
+                            onClick={() => {
+                              const miei = ((fieldCache.find((m) => m.slug === selected) || {}).fields || []).filter((f) => !(f.key in (step.eredita || {})))
+                              const loro = fieldCache.find((m) => m.slug === step.target_module)?.fields || []
+                              if (!miei.length || !loro.length) return
+                              updateStep(idx, 'eredita', { ...(step.eredita || {}), [miei[0].key]: loro[0].key })
+                            }}>+ Aggiungi un campo da ereditare</button>
+                          <div className="text-[10px] text-gray-600 mt-1">Quando scegli il record collegato, i tuoi campi ancora vuoti si compilano con quelli del record collegato. Un valore già scritto non si tocca mai.</div>
+                        </div>
+
+                        <div className="mt-3 pt-3 border-t border-gray-800">
                           <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
                             <input type="checkbox" checked={step.display_mode === 'embedded_inline'}
                               onChange={(e) => updateStep(idx, 'display_mode', e.target.checked ? 'embedded_inline' : 'tab')}
@@ -2139,20 +2166,15 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                         <input type="checkbox" checked={!!step.servizi} onChange={(e) => updateStep(idx, 'servizi', e.target.checked)} />
                         Mostra anche i servizi vicini (supermercati, farmacie, scuole, sanità, trasporti, verde), con distanza e minuti a piedi stimati
                       </label>
+                      <label className="text-xs text-gray-400 block">Paese dell'indirizzo (2 lettere, es. it) — restringe la ricerca; vuoto = tutto il mondo</label>
+                      <input value={step.paese || ''} maxLength={2} onChange={(e) => updateStep(idx, 'paese', e.target.value.toLowerCase().replace(/[^a-z]/g, '') || undefined)} placeholder="it" className={inp + ' w-24'} />
                       <div className="text-[11px] text-gray-500 leading-snug">Nella scheda compare una mappa di OpenStreetMap con l'indirizzo. L'indirizzo scritto viene cercato su Nominatim (gratuito, senza chiave); la mappa non si vede se l'indirizzo non si trova.</div>
                     </div>
                   )
                 }
 
                 if (step.block_type === 'external_action') {
-                  const inp = 'w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-700 focus:border-violet-500 transition placeholder-gray-600'
-                  return (
-                    <div className="space-y-2">
-                      <label className="text-xs text-gray-400 block">Nome del pulsante</label>
-                      <input value={step.label || ''} onChange={(e) => updateStep(idx, 'label', e.target.value)} placeholder="es. Valutazione di mercato" className={inp} />
-                      <div className="text-[11px] text-gray-500 leading-snug">Un pulsante sul record che chiama un servizio esterno{step.connection ? ' (connessione «' + step.connection + '»)' : ''} tramite l'adattatore «{step.adapter || '—'}» e scrive l'esito sul record. Quali campi legge e dove scrive sono dichiarati nel blocco (si cambiano dal pacchetto del verticale).</div>
-                    </div>
-                  )
+                  return <ExternalActionEditor key={step.id} step={step} idx={idx} updateStep={updateStep} api={api} campiModulo={(fieldCache.find((m) => m.slug === selected) || {}).fields || []} />
                 }
 
                 if (step.block_type === 'match_view') {

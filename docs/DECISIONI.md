@@ -871,3 +871,7 @@ Codice potato dopo lo spegnimento di Platform (2 ottobre 2026): vedi [`DECISIONI
 - Un 404 «no requests/signatures linked to this username» è **attivo**: il servizio ti riconosce, non c'è ancora nulla da elencare (0.4.93).
 - Le Visure camerali si provano con la ricerca gratuita `/impresa`, non con un percorso di visura a pagamento (0.4.92).
 - PEC Massiva e Visure camerali sono **fuori dall'elenco** (0.4.94): nessuna funzione in uso le richiede e sul conto di zucca non sono attive (PEC Massiva: 99 € di attivazione + 0,05 €/messaggio, decisione dell'utente). L'adattatore «Invia via PEC» resta e controlla il servizio al momento dell'invio; per rimetterle nell'elenco basta riaggiungere le voci in `SERVIZI` (`core/backend/src/lib/openapi-it.js`).
+
+## 0.4.96 — Permessi generati: «sola lettura» per chi il modello non cita
+
+La matrice dei permessi chiude fuori ogni ruolo senza una riga (tranne `admin`). Se il modello ne dimenticasse uno, quel ruolo non vedrebbe più il modulo. Per questo il generatore (`lib/generatore-moduli.js`) accetta solo ruoli che nascono dall'analisi, dà **sola lettura** a quelli non citati (e a `user`), e usa «solo i miei» (`owner_field`) solo con una relazione che esiste davvero nel modulo. Le azioni delle automazioni restano un elenco chiuso (crea, aggiorna con set/increment/decrement, notifica interna): le altre hanno una configurazione che il modello non può indovinare.
