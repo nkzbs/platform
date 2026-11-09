@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.95 — 9 novembre 2026
+
+**Analytics di Super Admin torna a registrare la foto giornaliera.** Sul database di produzione la tabella `metrics_snapshots` ha ancora la vecchia colonna obbligatoria `total_partners` (dei partner, rimossi), e ogni foto falliva con «NOT NULL constraint failed». Ora la foto riempie con 0 le colonne obbligatorie rimaste da versioni vecchie. Test: `analytics-snapshot.test.js`. Non verificato online: serve ridistribuire Super Admin (`bash scripts/redeploy-nas.sh backend`); le foto dei giorni persi non si recuperano.
+
 ## 0.4.94 — 9 novembre 2026
 
 **«Controlla i servizi» non elenca più PEC Massiva e Visure camerali.** Nessuna funzione in uso li richiede e sul conto di zucca non sono attivi: restavano due ✗ che sembravano un problema. L'invio via PEC resta nel codice e funziona se un giorno si attiva PEC Massiva (si controlla al momento dell'invio); per rimetterli nell'elenco basta riaggiungere le due voci in `SERVIZI` (`lib/openapi-it.js`).

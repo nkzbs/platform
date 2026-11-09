@@ -25,14 +25,18 @@ async function captureSnapshot(dateStr) {
     currency: 'EUR',
   };
 
+  // Nei database nati prima della rimozione dei partner la tabella ha ancora colonne obbligatorie senza valore (es. total_partners): si riempiono con 0, altrimenti la foto del giorno fallisce.
+  const vecchie = db.prepare('PRAGMA table_info(metrics_snapshots)').all().filter((c) => c.notnull && c.dflt_value === null && !c.pk && !(c.name in snapshot)).map((c) => c.name);
+  const colonne = [...Object.keys(snapshot), ...vecchie];
+  const valori = { ...snapshot, ...Object.fromEntries(vecchie.map((n) => [n, 0])) };
   db.prepare(`
-    INSERT INTO metrics_snapshots (snapshot_date, total_tenants, total_modules_installed, currency)
-    VALUES (@snapshot_date, @total_tenants, @total_modules_installed, @currency)
+    INSERT INTO metrics_snapshots (${colonne.join(', ')})
+    VALUES (${colonne.map((n) => '@' + n).join(', ')})
     ON CONFLICT(snapshot_date) DO UPDATE SET
       total_tenants = excluded.total_tenants,
       total_modules_installed = excluded.total_modules_installed,
       currency = excluded.currency
-  `).run(snapshot);
+  `).run(valori);
 
   return snapshot;
 }
