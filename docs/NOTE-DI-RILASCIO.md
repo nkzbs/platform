@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.92 — 9 novembre 2026
+
+**«Controlla i servizi» di OpenAPI.it: la prova delle Visure camerali usava un percorso sbagliato.** Dava «non abilitato» anche con il servizio attivo; ora prova la ricerca gratuita delle imprese (`/impresa`), la stessa che usa il resto di Platform. PEC Massiva resta «non abilitato» sul conto di zucca: lo scope (`POST ws.pecmassiva.com/send`) risulta corretto dalla documentazione, quindi il servizio va attivato nella console di openapi.com (attivazione a pagamento, poi costo per messaggio). Non verificato: l'esito reale dopo l'aggiornamento.
+
 ## 0.4.91 — 9 novembre 2026
 
 **Le tre funzioni di zucca ancora «da attivare» ora hanno il loro collegamento: firma elettronica, PEC e fattura elettronica.** Ognuna resta tra «Altre funzioni» finché il servizio non è abilitato sulla chiave di OpenAPI.it (nessuna richiesta, nessun costo), poi passa tra i pulsanti normali. Arrivano a zucca con «Aggiorna» (pacchetto di settore alla versione 21).
