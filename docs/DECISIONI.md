@@ -865,3 +865,9 @@ Codice potato dopo lo spegnimento di Platform (2 ottobre 2026): vedi [`DECISIONI
 - **Prudenza**: la fattura è un atto fiscale e la PEC non si ritira, quindi la conferma del costo mostra anche **cosa parte** (riepilogo dell'adattatore), una fattura consegnata non si rifà, il numero si consuma solo a invio riuscito e l'XML si valida con lo schema ufficiale prima di fidarsi.
 - **Non provate con il servizio vero**: scritte da documentazione pubblica parziale e prove con un servizio finto. Prima uso in `sandbox`; gli errori del servizio arrivano all'utente tal quali, così si correggono con il messaggio in mano.
 
+
+## 0.4.92–0.4.94 — «Controlla i servizi»: cosa mostra e perché
+
+- Un 404 «no requests/signatures linked to this username» è **attivo**: il servizio ti riconosce, non c'è ancora nulla da elencare (0.4.93).
+- Le Visure camerali si provano con la ricerca gratuita `/impresa`, non con un percorso di visura a pagamento (0.4.92).
+- PEC Massiva e Visure camerali sono **fuori dall'elenco** (0.4.94): nessuna funzione in uso le richiede e sul conto di zucca non sono attive (PEC Massiva: 99 € di attivazione + 0,05 €/messaggio, decisione dell'utente). L'adattatore «Invia via PEC» resta e controlla il servizio al momento dell'invio; per rimetterle nell'elenco basta riaggiungere le voci in `SERVIZI` (`core/backend/src/lib/openapi-it.js`).
