@@ -847,3 +847,8 @@ Codice potato dopo lo spegnimento di Platform (2 ottobre 2026): vedi [`DECISIONI
 - **Decisione**: la guida d'uso diventa un dato del tenant (tabella `guida_tenant`), non più solo un file di pacchetto. Si genera in modo **deterministico** dai moduli: sempre vera, mai inventata, senza costi né AI. La rifinitura (tono, esempi di settore) è un passo separato, a mano o con l'AI.
 - Precedenza: tenant > pacchetti. Così un tenant creato dall'analisi ha una guida completa dal primo giorno e un pacchetto di settore resta un'integrazione.
 
+## 0.4.86 — Dati di esempio: scritti direttamente, marcati, rimovibili
+
+- **Decisione**: i dati di esempio non passano dalle rotte dei record (che farebbero scattare automazioni, notifiche e mail) ma si inseriscono direttamente con la marcatura `_demo`, la stessa dei dati dimostrativi di OpenAPI.it: una sola rimozione per entrambi, nessun rischio per i dati veri.
+- Sono sempre generici (valori ricavati dai tipi di campo, non da nomi di settore). Per mostrare un settore in modo più credibile restano i dati dimostrativi di un pacchetto.
+

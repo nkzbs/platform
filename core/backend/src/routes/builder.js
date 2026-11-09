@@ -132,6 +132,14 @@ router.get('/verifica', requireAuth, requireAdmin, (req, res) => {
 router.post('/collaudo', requireAuth, requireAdmin, (req, res) => res.json(require('../lib/collaudo-tenant').avvia()));
 router.get('/collaudo', requireAuth, requireAdmin, (req, res) => res.json(require('../lib/collaudo-tenant').stato() || { stato: 'mai_eseguito' }));
 
+// Dati di esempio generati dallo schema (lib/dati-esempio.js): si caricano, si contano e si tolgono tutti insieme (portano `_demo: true`).
+router.get('/dati-esempio', requireAuth, requireAdmin, (req, res) => { const d = require('../lib/dati-esempio'); res.json({ presenti: d.conta(), totale: d.totaleDemo() }); });
+router.post('/dati-esempio', requireAuth, requireAdmin, (req, res) => {
+  try { res.json({ ok: true, ...require('../lib/dati-esempio').carica({ quanti: req.body && req.body.quanti, utenteId: req.user.id }) }); }
+  catch (e) { res.status(e.status || 500).json({ error: e.message, code: e.code }); }
+});
+router.delete('/dati-esempio', requireAuth, requireAdmin, (req, res) => res.json({ ok: true, ...require('../lib/dati-esempio').rimuovi() }));
+
 router.post('/formula/check', requireAuth, requireAdmin, (req, res) => {
   const { expr, steps, context } = req.body;
   if (Array.isArray(steps) && steps.length > 0) {

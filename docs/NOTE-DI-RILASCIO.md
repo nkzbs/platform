@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.86 — 9 novembre 2026
+
+**Dati di esempio generati dallo schema.** In Impostazioni → Moduli, sotto «Controlla il tenant», il riquadro **Dati di esempio** carica qualche scheda inventata in ogni modulo (da 1 a 30 per modulo, di solito 5) per provare o mostrare un tenant appena costruito, senza inserire a mano decine di schede.
+- Valori plausibili per tipo di campo (nomi e cognomi, città, importi, date vicine a oggi, scelte a rotazione, codici fiscali e partite IVA **validi e diversi tra loro**), schede **collegate** tra loro dalle relazioni (i record citati nascono prima di chi li cita) e **distribuite su tutti gli stati** del flusso.
+- Si scrivono direttamente, **senza far partire automazioni, notifiche o mail**, e portano `_demo: true`: «Togli i dati di esempio» le cancella tutte insieme e non tocca i dati veri. Non si caricano due volte di fila.
+- Rotte (solo amministratori): `GET/POST/DELETE /api/builder/dati-esempio`; codice `lib/dati-esempio.js`, prove `dati-esempio.test.js`.
+
 ## 0.4.85 — 9 novembre 2026
 
 **La guida d'uso si scrive da sola dai moduli, dentro il tenant.** Prima guida, giro guidato e glossario esistevano solo come file di un pacchetto di settore: un tenant nuovo non li aveva.

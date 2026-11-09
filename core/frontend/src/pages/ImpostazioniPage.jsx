@@ -24,6 +24,7 @@ import AspettoTab from './AspettoTab'
 import MessaggiClientiTab from './MessaggiClientiTab'
 import GuidaTenantTab from './GuidaTenantTab'
 import VerificaTenantPanel from '../components/VerificaTenantPanel'
+import DatiEsempioPanel from '../components/DatiEsempioPanel'
 import GlassPageBackground from '../components/GlassPageBackground'
 
 // "Il mio account" unito qui (2026-08-29, richiesto esplicitamente dall'utente) —
@@ -443,6 +444,7 @@ function ModuliTab({ token }) {
   return (
     <div>
       <VerificaTenantPanel token={token} />
+      <DatiEsempioPanel token={token} />
       <p className="text-sm text-gray-500 mb-4">Ordine e visibilità nella sidebar — un modulo nascosto resta installato con i suoi dati, solo non compare nel menu.</p>
       <div className="space-y-1.5">
         {modules.map((m, i) => (
