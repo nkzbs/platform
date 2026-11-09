@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.98 — 9 novembre 2026
+
+**L'archivio pubblicato dal Builder classico torna a registrare le cartelle nuove di Drive.** Il poller di Drive scriveva in continuo «cartella "Ricevute" non registrata: Questo modulo non ha lo schema nel formato atteso»: la rotta delle cartelle (`field-options.js`) leggeva solo lo schema v3 (`steps[]`), mentre il Builder classico salva `fields[]` piatto (la forma di quasi tutti i moduli, già gestita da `option-lists.js`). Ora legge entrambe. Test: caso v2 in `field-options.test.js`. Non verificato online: serve «Aggiorna» su Finance (e zucca) e poi guardare che la riga nei log non compaia più e le cartelle appaiano in Archivio.
+
 ## 0.4.97 — 9 novembre 2026
 
 **«Verifica del soggetto» (Risk) non resta più «da attivare» con Risk attivo.** Per capire se il servizio era abilitato l'adattatore chiedeva il token anche con uno scope che non usa mai (la verifica del codice fiscale, un altro prodotto): se l'account non lo ha, il token falliva e il pulsante rispondeva 501 «da attivare» anche con Risk attivo e «Controlla i servizi» tutto ✓. Ora chiede solo gli scope del report sulla persona. Test: `verifica-persona-scopi.test.js`. Non verificato: un report vero (ogni richiesta si paga). Serve «Aggiorna» su zucca e Finance.

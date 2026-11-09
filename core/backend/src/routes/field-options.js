@@ -35,9 +35,11 @@ function citaValore(node, valore) {
 function applyToSchema(raw, fieldKey, change) {
   let s;
   try { s = JSON.parse(raw); } catch (e) { return { error: 'Schema non leggibile' }; }
-  const steps = Array.isArray(s.steps) ? s.steps : null;
+  // v3 (steps[]) oppure v2 "classico" (fields[] piatto, come lo riscrive il Builder a ogni pubblicazione):
+  // prima si leggeva solo v3 e un archivio pubblicato dal Builder classico rispondeva sempre «schema non nel formato atteso».
+  const steps = Array.isArray(s.steps) ? s.steps.filter((b) => b.block_type === 'field') : (Array.isArray(s.fields) ? s.fields : null);
   if (!steps) return { error: 'Questo modulo non ha lo schema nel formato atteso' };
-  const f = steps.find((b) => b.block_type === 'field' && b.key === fieldKey && b.type === 'select');
+  const f = steps.find((b) => b.key === fieldKey && b.type === 'select');
   if (!f || !Array.isArray(f.options)) return { error: 'Campo a scelta non trovato' };
   change(f, steps);
   return { json: JSON.stringify(s), options: f.options.map(optValue) };

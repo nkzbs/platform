@@ -103,6 +103,14 @@ async function main() {
     assertEq(r.status, 409); assertTrue(/sottocartelle/.test((await r.json()).error));
   });
 
+  console.log('\n--- schema v2 classico (fields[] piatto) ---');
+  await test('aggiungere una cartella funziona anche su uno schema v2, come lo pubblica il Builder classico', async () => {
+    db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('v2', 'v2', 'box', '#000', 1, 1, 70, ?)").run(JSON.stringify({ fields: [{ key: 'titolo', label: 'Titolo', type: 'text' }, { key: 'tipo', label: 'Tipo', type: 'select', options: ['Altro'] }] }));
+    const r = await call('v2', { action: 'add', value: 'Ricevute' });
+    assertEq(r.status, 200);
+    assertEq(JSON.parse(db.prepare("SELECT schema_json FROM modules WHERE slug = 'v2'").get().schema_json).fields[1].options, ['Altro', 'Ricevute']);
+  });
+
   console.log('\n--- chi può ---');
   await test('senza accesso 401; campo che non è una scelta 422; azione sconosciuta 400', async () => {
     assertEq((await fetch(BASE + '/api/field-options/doc/tipo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).status, 401);
