@@ -49,6 +49,8 @@ function ConnessioniTab({ token, user, features = {} }) {
   const [waTest, setWaTest] = useState(null) // { busy } oppure { esito, dettaglio, error }
   const [speseOa, setSpeseOa] = useState(null) // spese di OpenAPI.it: contatore del mese, tetto, prezzi, ultime richieste
   const [demoOa, setDemoOa] = useState(null) // dati dimostrativi: { disponibili, totale, presenti, piano?, busy?, risultato?, errore? }
+  const [mailTest, setMailTest] = useState(null) // prova della posta in uscita: { busy } oppure { ok, via } oppure { error }
+  const [mailTestA, setMailTestA] = useState((user && user.email) || '')
   const [serviziOa, setServiziOa] = useState(null) // controllo dei servizi OpenAPI.it: { busy } oppure { ambiente, servizi } oppure { error }
 
   const loadConnections = async () => { const data = await api.get('/connections'); if (data) setConnections(data) }
@@ -57,7 +59,7 @@ function ConnessioniTab({ token, user, features = {} }) {
   useEffect(() => { loadConnections(); loadGoogleStatus(); loadTelegramStatus() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const credFieldsFor = (id) => { const intg = connections.find((c) => c.id === id); return (intg && intg.cred_fields) || [] }
-  const initialCredForm = (id) => { const f = {}; credFieldsFor(id).forEach((x) => { f[x.key] = '' }); return f }
+  const initialCredForm = (id) => { const f = {}; credFieldsFor(id).forEach((x) => { f[x.key] = x.tipo === 'select' ? x.opzioni[0][0] : '' }); return f }
   // Messaggio di prova WhatsApp: dice, per ogni destinatario, se è davvero partito.
   const testWhatsApp = async () => {
     setWaTest({ busy: true })
@@ -71,6 +73,13 @@ function ConnessioniTab({ token, user, features = {} }) {
     const res = await api.post('/connections/openapi_it/servizi', {})
     if (!res.ok) { setServiziOa({ error: (res.data && res.data.error) || 'Controllo non riuscito' }); return }
     setServiziOa({ ambiente: res.data.ambiente, servizi: res.data.servizi })
+  }
+  // Mail di prova: dice se è partita davvero e da quale canale.
+  const provaMail = async () => {
+    setMailTest({ busy: true })
+    const res = await api.post('/connections/email/test', { to: mailTestA })
+    if (!res.ok) { setMailTest({ error: (res.data && res.data.error) || 'Prova non riuscita' }); return }
+    setMailTest({ ok: true, via: res.data.via })
   }
   const caricaSpeseOa = async () => { const d = await api.get('/connections/openapi_it/spese'); if (d) setSpeseOa(d) }
   const salvaImpostazioniOa = async (corpo) => {
@@ -121,17 +130,29 @@ function ConnessioniTab({ token, user, features = {} }) {
 
   const googleConnected = !!(googleStatus && googleStatus.connected)
   const rows = [
+    ...connections.filter((c) => c.gruppo === 'posta').map((c) => ({ id: c.id, name: c.name || c.id, connected: !!c.connected, intg: c, gruppo: 'posta' })),
     { id: 'google', name: 'Google (Gmail / Calendar / Drive)', connected: googleConnected },
-    ...connections.filter((c) => c.id !== 'google' && c.id !== 'telegram').map((c) => ({ id: c.id, name: c.name || c.id, connected: !!c.connected, intg: c })),
+    ...connections.filter((c) => c.id !== 'google' && c.id !== 'telegram' && c.gruppo !== 'posta').map((c) => ({ id: c.id, name: c.name || c.id, connected: !!c.connected, intg: c })),
     { id: 'telegram', name: 'Telegram (bot)', connected: !!(tgStatus && tgStatus.configured) },
   ]
+  const postaAttiva = rows.filter((r) => r.gruppo === 'posta' && r.connected).map((r) => r.id)
 
   return (
     <div className="max-w-2xl">
       <p className="text-sm text-gray-500 mb-4">Account e servizi esterni collegati a questa istanza — usati dai moduli che ne hanno bisogno (es. Gmail).</p>
       <div className="space-y-2">
-        {rows.map((row) => (
-          <div key={row.id} className="glass-panel p-3">
+        {rows.map((row, i) => (
+          <React.Fragment key={row.id}>
+          {row.gruppo === 'posta' && i === 0 && (
+            <div className="pt-1">
+              <h2 className="text-sm font-semibold text-ink">Posta in uscita</h2>
+              <p className="text-xs text-gray-500 mt-0.5 mb-1">Da qui partono documenti, solleciti, messaggi di massa, auguri e le richieste del Sito Web. Scegli <b>una</b> delle due: l'SMTP è il server di posta del tuo dominio; se le colleghi tutte e due vince l'SMTP.</p>
+            </div>
+          )}
+          {row.gruppo !== 'posta' && i > 0 && rows[i - 1].gruppo === 'posta' && (
+            <div className="pt-4"><h2 className="text-sm font-semibold text-ink">Altri servizi</h2></div>
+          )}
+          <div className="glass-panel p-3">
             <button onClick={() => toggle(row.id)} className="flex items-center gap-1.5 w-full text-left">
               <Icon name="plug" size={13} className={row.connected ? 'text-green-400' : 'text-amber-400'} />
               <span className="text-sm text-ink font-medium">{row.name}</span>
@@ -180,9 +201,16 @@ function ConnessioniTab({ token, user, features = {} }) {
                       {credFieldsFor(row.id).map((f) => (
                         <div key={f.key}>
                           <label className="block text-xs text-gray-500 mb-1">{f.label}</label>
-                          <input type="text" value={credForm[f.key] || ''} onChange={(e) => setCredForm((p) => ({ ...p, [f.key]: e.target.value }))}
-                            placeholder={f.placeholder}
-                            className="w-full bg-surface-card border border-gray-700 rounded-lg px-3 py-2 text-sm text-ink placeholder-gray-600 focus:border-accent focus:outline-none font-mono" />
+                          {f.tipo === 'select' ? (
+                            <select value={credForm[f.key] || f.opzioni[0][0]} onChange={(e) => setCredForm((p) => ({ ...p, [f.key]: e.target.value }))}
+                              className="w-full bg-surface-card border border-gray-700 rounded-lg px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none">
+                              {f.opzioni.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                            </select>
+                          ) : (
+                            <input type={f.tipo === 'password' ? 'password' : 'text'} autoComplete="off" value={credForm[f.key] || ''} onChange={(e) => setCredForm((p) => ({ ...p, [f.key]: e.target.value }))}
+                              placeholder={f.placeholder}
+                              className="w-full bg-surface-card border border-gray-700 rounded-lg px-3 py-2 text-sm text-ink placeholder-gray-600 focus:border-accent focus:outline-none font-mono" />
+                          )}
                         </div>
                       ))}
                       {credFieldsFor(row.id).length === 0 && <div className="text-xs text-gray-500">Nessun campo credenziale definito per questa integrazione.</div>}
@@ -211,6 +239,21 @@ function ConnessioniTab({ token, user, features = {} }) {
                         <span className="text-[10px] text-gray-600 ml-auto">attuali: {Object.keys(row.intg.credentials_masked).join(', ')}</span>
                       )}
                     </div>
+                    {row.gruppo === 'posta' && row.connected && (
+                      <div className="mt-4 pt-4 border-t border-gray-800">
+                        <div className="text-sm text-ink font-medium">Prova di invio</div>
+                        <div className="text-xs text-gray-500 mt-0.5">{postaAttiva[0] === row.id ? 'Questa è la posta che parte adesso.' : 'Questa non parte: è collegata anche l\'altra e vince l\'SMTP.'} La prova usa quella che parte.</div>
+                        <div className="flex gap-2 mt-2 flex-wrap">
+                          <input type="email" value={mailTestA} onChange={(e) => setMailTestA(e.target.value)} placeholder="a chi mandare la prova" className="flex-1 min-w-[12rem] bg-surface-card border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-ink" />
+                          <button onClick={provaMail} disabled={mailTest && mailTest.busy} className="text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-200 px-3 py-1.5 rounded-lg transition">{mailTest && mailTest.busy ? 'Invio…' : 'Invia mail di prova'}</button>
+                        </div>
+                        {mailTest && !mailTest.busy && (
+                          <div className={'text-xs mt-2 p-2.5 rounded-lg border ' + (mailTest.error ? 'bg-amber-900/20 text-amber-400 border-amber-900/40' : 'bg-green-900/20 text-green-400 border-green-900/40')}>
+                            {mailTest.error ? mailTest.error : 'Mail partita via ' + (mailTest.via === 'smtp' ? 'SMTP' : 'Resend') + ': controlla la casella (anche nella posta indesiderata).'}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     {row.id === 'openapi_it' && row.connected && speseOa && speseOa.prezzi && (
                       <div className="mt-4 pt-4 border-t border-gray-800">
                         <div className="flex items-baseline gap-2 flex-wrap">
@@ -333,6 +376,7 @@ function ConnessioniTab({ token, user, features = {} }) {
               </div>
             )}
           </div>
+          </React.Fragment>
         ))}
       </div>
       {features.sito_web && (
@@ -543,7 +587,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
 
           {tab === 'sito_web' && <SitoWebPage token={token} />}
 
-          {tab === 'messaggi' && <MessaggiClientiTab token={token} />}
+          {tab === 'messaggi' && <MessaggiClientiTab token={token} onVai={setTab} />}
           {tab === 'connessioni' && <ConnessioniTab token={token} user={user} features={features} />}
 
           {tab === 'funzioni' && <FeaturesTab token={token} onChanged={onFeaturesChanged} />}

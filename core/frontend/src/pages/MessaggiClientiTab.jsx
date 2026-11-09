@@ -4,7 +4,7 @@ import useApi from '../lib/useApi'
 // Impostazioni → Messaggi ai clienti: mittente degli SMS (alias approvato nella console di OpenAPI.it), tetto di messaggi al giorno, riga di disiscrizione delle mail, auguri di compleanno automatici
 // (spenti finché non li accendi: testo, canali), e il registro di ciò che è partito. Il consenso alle comunicazioni commerciali si controlla sempre, cliente per cliente.
 const STATI = { inviato: 'inviato', fallito: 'non riuscito', saltato: 'saltato', fermato: 'fermato dal tetto' }
-export default function MessaggiClientiTab({ token }) {
+export default function MessaggiClientiTab({ token, onVai }) {
   const api = useApi(token)
   const [d, setD] = useState(null)
   const [registro, setRegistro] = useState([])
@@ -42,15 +42,23 @@ export default function MessaggiClientiTab({ token }) {
         <h2 className="text-base font-semibold text-ink">Messaggi ai clienti</h2>
         <p className="text-sm text-gray-500 mt-1">Auguri di compleanno e invio di massa, per mail e per SMS. Partono <b>solo</b> a chi ha dato il consenso alle comunicazioni commerciali; ogni messaggio finisce nel registro qui sotto.</p>
       </div>
-      <div className="grid sm:grid-cols-2 gap-3 text-sm">
-        <div className="rounded-lg border border-gray-800 p-3"><div className="font-semibold text-ink">Mail</div><div className={d.canali.mail.ok ? 'text-emerald-400' : 'text-amber-400'}>{d.canali.mail.ok ? 'Pronta' : d.canali.mail.motivo}</div></div>
-        <div className="rounded-lg border border-gray-800 p-3"><div className="font-semibold text-ink">SMS (OpenAPI.it)</div><div className={d.canali.sms.ok ? 'text-emerald-400' : 'text-amber-400'}>{d.canali.sms.ok ? 'Pronto' : d.canali.sms.motivo}</div></div>
-      </div>
-      <div className="space-y-3">
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold text-ink">1. Canali: cosa può partire adesso</h3>
+        <div className="grid sm:grid-cols-2 gap-3 text-sm">
+          <div className="rounded-lg border border-gray-800 p-3"><div className="font-semibold text-ink">Mail</div><div className={d.canali.mail.ok ? 'text-emerald-400' : 'text-amber-400'}>{d.canali.mail.ok ? 'Pronta' + (d.canali.mail.via ? ' · ' + (d.canali.mail.via === 'smtp' ? 'SMTP' : 'Resend') : '') : d.canali.mail.motivo}</div>
+            {onVai && <button type="button" onClick={() => onVai('connessioni')} className="mt-1.5 text-xs text-accent hover:underline">{d.canali.mail.ok ? 'Cambia la posta in uscita →' : 'Imposta la posta in uscita (SMTP) →'}</button>}</div>
+          <div className="rounded-lg border border-gray-800 p-3"><div className="font-semibold text-ink">SMS (OpenAPI.it)</div><div className={d.canali.sms.ok ? 'text-emerald-400' : 'text-amber-400'}>{d.canali.sms.ok ? 'Pronto' : d.canali.sms.motivo}</div>
+            {onVai && <button type="button" onClick={() => onVai('connessioni')} className="mt-1.5 text-xs text-accent hover:underline">Collegamento OpenAPI.it →</button>}</div>
+        </div>
+      </section>
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold text-ink">2. Regole di invio</h3>
         <label className="block"><span className="text-xs text-gray-400">Mittente degli SMS (3-11 caratteri, già registrato e approvato nella console di OpenAPI.it)</span><input className={inp} value={bozza.sms_mittente} maxLength={11} onChange={(e) => set('sms_mittente', e.target.value)} placeholder="es. NOMESTUDIO" /></label>
         <label className="block"><span className="text-xs text-gray-400">Messaggi al giorno, al massimo (oggi inviati: {d.inviati_oggi})</span><input type="number" min="1" max="5000" className={inp} value={bozza.tetto_giornaliero} onChange={(e) => set('tetto_giornaliero', e.target.value)} /></label>
         <label className="block"><span className="text-xs text-gray-400">Riga in fondo a ogni mail (per non ricevere più messaggi)</span><input className={inp} value={bozza.footer_mail} onChange={(e) => set('footer_mail', e.target.value)} /></label>
-      </div>
+      </section>
+      <section className="space-y-2">
+      <h3 className="text-sm font-semibold text-ink">3. Auguri di compleanno</h3>
       <div className="rounded-lg border border-gray-800 p-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div><div className="font-semibold text-ink text-sm">Auguri di compleanno automatici</div><div className="text-xs text-gray-500">Ogni giorno dalle 09:00, a chi compie gli anni e ha il consenso. Una volta sola all'anno per cliente.</div></div>
@@ -61,13 +69,14 @@ export default function MessaggiClientiTab({ token }) {
         <label className="block"><span className="text-xs text-gray-400">Testo (mail e SMS). Puoi usare {'{nome}'} e {'{cognome}'}. Per gli SMS tienilo sotto i 160 caratteri: ogni 160 costa un SMS.</span><textarea rows={3} className={inp} value={bozza.auguri.testo} onChange={(e) => setA('testo', e.target.value)} /></label>
         <div className="text-xs text-gray-500">{bozza.auguri.testo.length} caratteri{bozza.auguri.testo.length > 160 ? ' · più di un SMS' : ''}</div>
       </div>
+      </section>
       <div className="flex items-center gap-3 flex-wrap">
         <button type="button" onClick={salva} className="bg-accent hover:opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Salva</button>
         <button type="button" onClick={eseguiOra} className="border border-gray-700 hover:border-accent text-accent px-4 py-2 rounded-lg text-sm transition">Esegui ora gli auguri di oggi</button>
         {msg && <span className="text-sm text-emerald-400">{msg}</span>}{err && <span className="text-sm text-red-400">{err}</span>}
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-ink mb-2">Registro (ultimi 30)</h3>
+        <h3 className="text-sm font-semibold text-ink mb-2">4. Registro (ultimi 30)</h3>
         {registro.length === 0 && <div className="text-sm text-gray-500">Ancora niente.</div>}
         <div className="divide-y divide-gray-800 text-xs">
           {registro.map((r) => (

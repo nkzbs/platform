@@ -2,6 +2,17 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.81 — 9 novembre 2026
+
+**Posta in uscita: SMTP classico, e finalmente si trova.** Prima le mail dei documenti, dei solleciti e dei messaggi ai clienti partivano solo da Resend, e la sua scheda in Connessioni non compariva se non era già collegata: per questo non si trovava dove inserire la posta.
+- **Impostazioni → Connessioni → Posta in uscita** è ora in cima e sempre visibile, con due schede: **SMTP** (server, porta, cifratura SSL/STARTTLS/nessuna, utente, password, mittente, nome del mittente) e **Resend**. Se sono collegate tutte e due, parte l'SMTP; scollegandolo si torna a Resend.
+- **Invia mail di prova**: dalla scheda, a un indirizzo a scelta; dice da quale canale è partita e, se il server rifiuta, cosa ha risposto (mai la password).
+- Passano da qui anche i documenti ai clienti, i solleciti, i messaggi di massa, gli auguri e le richieste del modulo di contatto del Sito Web.
+- **Messaggi ai clienti riordinato** in quattro blocchi numerati (Canali, Regole di invio, Auguri di compleanno, Registro); le card dei canali rimandano alla scheda giusta di Connessioni.
+- Password e chiave API sono campi nascosti; le credenziali restano sigillate nel database come le altre.
+- Prove: nuova suite `email-smtp.test.js` con un finto server SMTP (scelta del canale, invio vero, password sbagliata, server irraggiungibile).
+- **Guida illustrata**: nuova voce «Posta in uscita» in Impostazioni.
+
 ## 0.4.80 — 9 novembre 2026
 
 **Quote societarie dentro il Cliente; auguri di compleanno e invio di massa, per mail e SMS.**

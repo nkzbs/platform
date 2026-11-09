@@ -822,3 +822,11 @@ Codice potato dopo lo spegnimento di Platform (2 ottobre 2026): vedi [`DECISIONI
 - **Decisione**: ogni messaggio commerciale (auguri, invio di massa) parte solo a chi ha il consenso alle comunicazioni commerciali, controllato dal server per ogni destinatario; un tetto giornaliero e un registro completo (anche dei saltati). Gli auguri automatici nascono spenti.
 - **Canali**: mail (Resend) e SMS (SMS v2 di OpenAPI.it). Un canale non disponibile si salta e lo si dice, l'altro parte. L'invio di massa usa la lista filtrata che l'utente sta guardando, con anteprima e conferma obbligatorie.
 - **Quote societarie** non sono state fuse nel Cliente come campi (una società ha più soci, un cliente più quote): restano un modulo, nascosto dal menu (`menu_nascosto`) e presentato dentro il Cliente.
+
+## 0.4.81 — Posta in uscita: SMTP o Resend, un solo punto
+
+- **Decisione**: un'unica porta d'uscita per tutte le mail del prodotto (`lib/email.js`): SMTP classico (nodemailer) oppure Resend. Se sono collegati entrambi vince l'SMTP, perché è la scelta esplicita di chi ha un dominio proprio; scollegarlo riporta a Resend. Nessun invio finto se nessuno dei due è configurato.
+- Le due schede stanno in Connessioni, nel gruppo «Posta in uscita», **sempre visibili** (`sempre_visibile` nel catalogo): prima una connessione non richiesta da un modulo restava nascosta finché non era collegata, e non c'era modo di collegarla.
+- Il modulo di contatto del Sito Web non ha più un suo invio a Resend: usa lo stesso canale.
+- La password SMTP non compare mai negli errori restituiti né nel registro; le credenziali sono sigillate come quelle degli altri servizi.
+

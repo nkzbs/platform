@@ -1,6 +1,6 @@
 {
   "name": "platform-core-backend",
-  "version": "0.4.80",
+  "version": "0.4.81",
   "main": "src/index.js",
   "engines": {
     "node": "22.x"
@@ -18,6 +18,7 @@
     "jsonwebtoken": "^9.0.2",
     "mathjs": "^12.4.0",
     "multer": "^1.4.5-lts.1",
+    "nodemailer": "^10.4.0",
     "otplib": "^12.0.1",
     "pdf-parse": "^1.1.4",
     "pdfkit": "^0.17.2",

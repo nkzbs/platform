@@ -290,6 +290,13 @@ Invece di girare una password, si manda un **link monouso**: la persona sceglie 
 
 Nella console di OpenAPI: attiva i servizi che servono (Real Estate, Visure Camerali, Risk, Catasto, e per le funzioni «da attivare» SDI, eSignature, PEC) e crea la **chiave di produzione** (di norma diversa da quella di prova). In Platform: Impostazioni → Connessioni → OpenAPI.it → email e chiave nuova, ambiente da «prova» a «produzione», **Controlla i servizi**, **tetto di spesa mensile** e prezzi. Oggi funzionano subito valutazione di mercato (comparabili e OMI) e ricerca imprese; le funzioni «da attivare» vanno anche collegate nel codice (si provano prima in prova, gratuita). Prezzi e stima mensile: [`COSTI-OPENAPI.md`](COSTI-OPENAPI.md).
 
+## Posta in uscita (SMTP o Resend)
+
+- Si imposta in **Impostazioni → Connessioni → Posta in uscita**. **SMTP**: server, porta, cifratura, utente, password, indirizzo e nome del mittente. Porta 465 = SSL/TLS, 587 = STARTTLS; Gmail e Outlook vogliono una *password per le app*, non quella della casella. **Resend**: API key e mittente di un dominio verificato su resend.com.
+- Con entrambe collegate parte l'SMTP; «Disconnetti» sull'SMTP riporta a Resend. «Invia mail di prova» dice da quale canale è partita e l'errore del server se rifiuta.
+- Senza nessuna delle due: documenti, solleciti, messaggi ai clienti e richieste del Sito Web non partono e lo dicono (il lead si salva comunque).
+- Codice: `core/backend/src/lib/email.js`, route di prova `POST /api/connections/email/test`, test `email-smtp.test.js`.
+
 ## Server MCP
 
 Non ha un indirizzo web: è un programma locale (`mcp-server/`) che Claude Code o Claude Desktop avviano sul computer. Token da Impostazioni → Il mio account → Token API; poi `claude mcp add platform --env PLATFORM_URL=https://<tenant>.platform-core.it --env PLATFORM_API_TOKEN=plat_... -- node <percorso>/mcp-server/src/index.js`. Non funziona da claude.ai nel browser né dal telefono (servirebbe un MCP remoto, non costruito).

@@ -1,6 +1,6 @@
 {
   "name": "platform-core-frontend",
-  "version": "0.4.80",
+  "version": "0.4.81",
   "type": "module",
   "scripts": {
     "dev": "vite",

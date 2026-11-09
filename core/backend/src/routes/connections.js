@@ -55,10 +55,23 @@ const CATALOG = [
   // WhatsApp/Slack/Mailchimp sopra (credenziali reali in questa tabella, mai
   // finte): senza questa connessione configurata il lead viene comunque
   // salvato, solo l'email non parte (mai un falso "inviata").
-  { id: 'email_resend', name: 'Email (Resend)', desc: 'Invio email dal modulo di contatto del Sito Web', color: '#000000', icon: 'mail',
-    actions: ['Invia email da modulo di contatto'],
+  // Posta in uscita (sempre visibile: serve ai documenti e ai solleciti ai clienti, ai messaggi di massa, agli auguri e al modulo di
+  // contatto del Sito Web). SMTP classico oppure Resend; se sono collegati entrambi vince l'SMTP (lib/email.js).
+  { id: 'email_smtp', name: 'Posta in uscita — SMTP', gruppo: 'posta', sempre_visibile: true, desc: 'Il server di posta del tuo dominio o del tuo provider (Aruba, Gmail, Outlook…)', color: '#584aec', icon: 'mail',
+    actions: ['Invia documenti, solleciti e messaggi ai clienti'],
     cred_fields: [
-      { key: 'api_key', label: 'API Key', placeholder: 're_...' },
+      { key: 'host', label: 'Server SMTP', placeholder: 'smtps.aruba.it' },
+      { key: 'port', label: 'Porta', placeholder: '465 (SSL) oppure 587 (STARTTLS)' },
+      { key: 'cifratura', label: 'Cifratura', tipo: 'select', opzioni: [['ssl', 'SSL/TLS (di solito porta 465)'], ['starttls', 'STARTTLS (di solito porta 587)'], ['nessuna', 'Nessuna (porta 25, sconsigliato)']] },
+      { key: 'user', label: 'Utente', placeholder: 'di solito l\'indirizzo email completo' },
+      { key: 'pass', label: 'Password', tipo: 'password', placeholder: 'password della casella (o password per le app)' },
+      { key: 'from_email', label: 'Indirizzo mittente', placeholder: 'info@tuodominio.it' },
+      { key: 'from_name', label: 'Nome mittente (facoltativo)', placeholder: 'Agenzia Esempio' },
+    ] },
+  { id: 'email_resend', name: 'Posta in uscita — Resend', gruppo: 'posta', sempre_visibile: true, desc: 'Alternativa all\'SMTP: servizio di invio via API (resend.com)', color: '#000000', icon: 'mail',
+    actions: ['Invia documenti, solleciti e messaggi ai clienti'],
+    cred_fields: [
+      { key: 'api_key', label: 'API Key', tipo: 'password', placeholder: 're_...' },
       { key: 'from_email', label: 'Indirizzo mittente (verificato su Resend)', placeholder: 'notifiche@tuodominio.it' },
     ] },
   // 2026-11-01, verticale Mediazione immobiliare (zucca): ricerca immobili per codice
@@ -91,7 +104,7 @@ router.get('/', requireAuth, (req, res) => {
   const rows = db.prepare('SELECT integration_id, connected, connected_at, credentials FROM connections').all();
   const byId = Object.fromEntries(rows.map((r) => [r.integration_id, r]));
   const required = requiredByInstalledModules();
-  const visible = CATALOG.filter((c) => (byId[c.id] && byId[c.id].connected) || required.has(c.id));
+  const visible = CATALOG.filter((c) => (byId[c.id] && byId[c.id].connected) || required.has(c.id) || c.sempre_visibile);
   res.json(visible.map((c) => {
     const row = byId[c.id] || {};
     let creds = null;
@@ -188,6 +201,19 @@ router.delete('/openapi_it/dati-dimostrativi', requireAuth, requireAdmin, (req, 
   const dd = require('../lib/dati-dimostrativi'), out = dd.rimuovi();
   require('../audit-log').logAudit(req.user.username, 'dati_dimostrativi.rimuovi', null, out.rimossi);
   res.json({ ok: true, ...out, presenti: dd.conta() });
+});
+
+// Mail di prova: dice se è partita davvero e da quale canale (SMTP o Resend).
+router.post('/email/test', requireAuth, requireAdmin, async (req, res) => {
+  const email = require('../lib/email');
+  const st = email.stato();
+  if (!st.ok) return res.status(400).json({ error: st.motivo });
+  const a = String((req.body && req.body.to) || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a)) return res.status(400).json({ error: 'Scrivi un indirizzo email valido a cui mandare la prova.' });
+  const out = await email.invia({ to: a, subject: 'Prova di invio da Platform', html: email.htmlDaTesto('Se leggi questo messaggio, la posta in uscita funziona.\n\nPuoi usarla per documenti, solleciti e messaggi ai clienti.') });
+  logAudit(req.user.username, 'connection.email_test', st.via, a);
+  if (!out.ok) return res.status(502).json({ error: out.motivo || 'Invio non riuscito.', via: st.via });
+  res.json({ ok: true, via: st.via });
 });
 
 router.post('/:id/toggle', requireAuth, requireAdmin, (req, res) => {

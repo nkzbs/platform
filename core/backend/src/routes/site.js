@@ -355,46 +355,23 @@ function findFormBlocks(blocks) {
   return found;
 }
 
-// Email reale al form di contatto (2026-09-05, richiesto dall'utente: "il
-// form di contatto deve mandare una mail") — stesso principio già seguito
-// per WhatsApp in automation-engine.js: credenziali VERE lette dalla tabella
-// 'connections' (connettore 'email_resend', mai un secondo posto per le
-// stesse credenziali), nessun invio finto se non configurato. Resend invece
-// di nodemailer/SMTP: una singola richiesta HTTP con fetch nativo (Node 22),
-// coerente con "niente librerie nuove" già seguito ovunque nel motore.
-function getConnectionCredentials(integrationId) {
-  const row = db.prepare('SELECT credentials FROM connections WHERE integration_id = ?').get(integrationId);
-  if (!row || !row.credentials) return null;
-  return require('../secrets-at-rest').unseal(row.credentials);
-}
+// Email reale al form di contatto: l'invio passa da lib/email.js (SMTP classico oppure Resend, a scelta in
+// Impostazioni → Connessioni → Posta in uscita). Nessun invio finto se non configurato.
 function escapeHtmlLite(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 async function sendLeadEmail(page, formBlock, clean) {
-  const creds = getConnectionCredentials('email_resend');
+  const posta = require('../lib/email');
   const settings = db.prepare('SELECT lead_notification_email FROM tenant_settings WHERE id = 1').get();
   const to = settings && settings.lead_notification_email;
-  if (!creds || !creds.api_key || !creds.from_email || !to) return { esito: 'simulato', note: 'email non configurata (connessione email_resend o indirizzo di notifica mancanti)' };
+  if (!posta.stato().ok || !to) return { esito: 'simulato', note: 'email non configurata (Posta in uscita in Impostazioni → Connessioni, o indirizzo di notifica, mancanti)' };
   const rows = Object.entries(clean).map(([k, v]) => {
     const field = (formBlock.config?.fields || []).find((f) => f.key === k);
     return `<tr><td style="padding:4px 16px 4px 0;color:#78716c;white-space:nowrap;vertical-align:top">${escapeHtmlLite(field?.label || k)}</td><td style="padding:4px 0">${escapeHtmlLite(v)}</td></tr>`;
   }).join('');
   const html = `<div style="font-family:sans-serif;color:#1c1917"><h2 style="margin:0 0 12px">Nuova richiesta dal sito</h2><p style="color:#78716c;margin:0 0 16px">Pagina: ${escapeHtmlLite(page.title)}</p><table>${rows}</table></div>`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
-  try {
-    const resp = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + creds.api_key, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: creds.from_email, to: [to], subject: 'Nuova richiesta dal sito — ' + page.title, html }),
-      signal: controller.signal,
-    });
-    return { esito: resp.ok ? 'inviata' : 'errore', note: resp.ok ? null : 'Resend ha risposto ' + resp.status };
-  } catch (err) {
-    return { esito: 'errore', note: err.message };
-  } finally {
-    clearTimeout(timeout);
-  }
+  const out = await posta.invia({ to, subject: 'Nuova richiesta dal sito — ' + page.title, html });
+  return { esito: out.ok ? 'inviata' : 'errore', note: out.ok ? null : out.motivo };
 }
 
 sitePublicRouter.post('/:slug/leads', leadLimiter, async (req, res) => {

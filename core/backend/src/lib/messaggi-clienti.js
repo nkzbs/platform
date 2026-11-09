@@ -72,11 +72,11 @@ function registra({ tipo, modulo, record_id, canale, esito, motivo, utente }) {
   db.prepare('INSERT INTO messaggi_inviati (tipo, modulo, record_id, canale, esito, motivo, utente) VALUES (?, ?, ?, ?, ?, ?, ?)').run(tipo, modulo || null, record_id || null, canale, esito, String(motivo || '').slice(0, 300) || null, utente || null);
 }
 
-// Quali canali possono partire ORA? mail: connessione Resend; sms: servizio abilitato + mittente scritto.
+// Quali canali possono partire ORA? mail: SMTP o Resend (Posta in uscita); sms: servizio abilitato + mittente scritto.
 async function canaliDisponibili() {
   const mail = require('./email');
-  const out = { mail: { ok: !!(mail.credenziali && mail.credenziali() && mail.credenziali().api_key), motivo: 'La mail non è configurata (Impostazioni → Connessioni → Email).' }, sms: { ok: false, motivo: '' } };
-  if (out.mail.ok) out.mail.motivo = null;
+  const st = mail.stato();
+  const out = { mail: { ok: st.ok, via: st.via, motivo: st.motivo }, sms: { ok: false, motivo: '' } };
   const mitt = impostazioni().sms_mittente;
   if (!mitt) out.sms.motivo = 'Manca il mittente degli SMS (Impostazioni → Messaggi ai clienti): deve essere un alias registrato e approvato nella console di OpenAPI.it.';
   else {
