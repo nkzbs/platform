@@ -842,3 +842,8 @@ Codice potato dopo lo spegnimento di Platform (2 ottobre 2026): vedi [`DECISIONI
 - Il collaudo è generico: i valori di prova si ricavano dai tipi di campo e dalle validazioni dichiarate, i flussi dagli stati e passaggi, i requisiti dai blocchi `state_requirements`. Nessun nome di settore.
 - Un risultato basso può essere un falso allarme (per esempio una condizione di automazione che i dati di prova non soddisfano): il messaggio lo dice, e va letto da una persona.
 
+## 0.4.85 — La guida vive nel tenant, generata dallo schema
+
+- **Decisione**: la guida d'uso diventa un dato del tenant (tabella `guida_tenant`), non più solo un file di pacchetto. Si genera in modo **deterministico** dai moduli: sempre vera, mai inventata, senza costi né AI. La rifinitura (tono, esempi di settore) è un passo separato, a mano o con l'AI.
+- Precedenza: tenant > pacchetti. Così un tenant creato dall'analisi ha una guida completa dal primo giorno e un pacchetto di settore resta un'integrazione.
+

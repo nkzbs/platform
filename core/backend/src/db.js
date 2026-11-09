@@ -623,6 +623,8 @@ ensureColumn('tenant_settings', 'digest_last_sent', 'TEXT DEFAULT NULL');
 ensureColumn('tenant_settings', 'report_settings', 'TEXT DEFAULT NULL');
 db.exec('CREATE TABLE IF NOT EXISTS report_sent (kind TEXT NOT NULL, key TEXT NOT NULL, sent_at DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (kind, key))');
 // Bot Telegram (telegram.js): ogni chat collegata appartiene a UN utente dell'app (con i suoi permessi); il codice di collegamento è monouso e dura 10 minuti.
+// La guida d'uso scritta per questo tenant (generata dai moduli e rifinita a mano): una sola riga, contenuto JSON nella forma dei testi dei pacchetti (routes/guida.js).
+db.exec("CREATE TABLE IF NOT EXISTS guida_tenant (id INTEGER PRIMARY KEY CHECK (id = 1), contenuto TEXT NOT NULL, generata_il DATETIME DEFAULT CURRENT_TIMESTAMP, modificata_il DATETIME DEFAULT CURRENT_TIMESTAMP)");
 db.exec('CREATE TABLE IF NOT EXISTS telegram_links (id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id TEXT NOT NULL UNIQUE, user_id INTEGER NOT NULL, label TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)');
 db.exec('CREATE TABLE IF NOT EXISTS telegram_link_codes (code TEXT PRIMARY KEY, user_id INTEGER NOT NULL, expires_at INTEGER NOT NULL)');
 // Azioni proposte dal bot in attesa di un tocco di conferma (valgono 15 minuti, una volta sola, solo per la chat e l'utente che le hanno originate).

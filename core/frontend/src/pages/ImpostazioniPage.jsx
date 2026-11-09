@@ -22,6 +22,7 @@ import MovimentiPage from './MovimentiPage'
 import ListePage from './ListePage'
 import AspettoTab from './AspettoTab'
 import MessaggiClientiTab from './MessaggiClientiTab'
+import GuidaTenantTab from './GuidaTenantTab'
 import VerificaTenantPanel from '../components/VerificaTenantPanel'
 import GlassPageBackground from '../components/GlassPageBackground'
 
@@ -527,6 +528,7 @@ const SETTINGS_GROUPS = [
     { key: 'liste', icon: 'list', label: 'Liste' },
     { key: 'funzioni', icon: 'grid', label: 'Funzioni' },
     { key: 'aspetto', icon: 'palette', label: 'Aspetto' },
+    { key: 'guida', icon: 'info', label: 'Guida' },
   ] },
   { label: 'Collegamenti', items: [
     { key: 'connessioni', icon: 'link', label: 'Connessioni' },
@@ -595,6 +597,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
 
           {tab === 'sito_web' && <SitoWebPage token={token} />}
 
+          {tab === 'guida' && <GuidaTenantTab token={token} />}
           {tab === 'messaggi' && <MessaggiClientiTab token={token} onVai={setTab} />}
           {tab === 'connessioni' && <ConnessioniTab token={token} user={user} features={features} />}
 

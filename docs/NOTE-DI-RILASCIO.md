@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.85 — 9 novembre 2026
+
+**La guida d'uso si scrive da sola dai moduli, dentro il tenant.** Prima guida, giro guidato e glossario esistevano solo come file di un pacchetto di settore: un tenant nuovo non li aveva.
+- **Impostazioni → Guida** (nuova voce): «Genera dai moduli» scrive introduzione, passi per ruolo, **un capitolo per modulo** (a cosa serve, campi obbligatori e controllati, collegamenti con altri moduli, percorso degli stati, cosa serve per ogni passaggio, documenti, cosa fanno da sole le automazioni, allegati, calendario, mappa, abbinamenti), **un percorso per ogni flusso**, il **giro guidato** e il glossario degli stati. Si parte sempre dallo schema: la guida è allineata a ciò che l'app fa davvero. Poi si rifinisce a mano nella stessa pagina (testi, passi del giro, glossario) e si salva.
+- Ciò che il tenant ha scritto **vince** sui testi dei pacchetti; i pacchetti completano il resto. «Togli la guida» riporta ai soli pacchetti.
+- Il «?» accanto al titolo di ogni pagina, la pagina Guida e il giro guidato leggono questa guida senza altro da fare.
+- Rotte (solo amministratori): `GET/PUT/DELETE /api/guida/tenant`, `POST /api/guida/genera` (con `{ solo_se_vuota: true }` non tocca una guida già scritta: serve alla creazione automatica di un tenant). Codice in `lib/guida-generata.js`, tabella `guida_tenant`, prove in `guida-generata.test.js`.
+- Nessuna AI e nessun nome di settore: la bozza è deterministica; l'AI potrà rifinire i testi in un secondo momento.
+
 ## 0.4.84 — 9 novembre 2026
 
 **Collaudo completo: i flussi si provano per davvero, in una copia isolata.** In Impostazioni → Moduli, accanto a «Controlla», il pulsante **Collaudo completo** (circa un minuto) fa ciò che il controllo statico non può:
