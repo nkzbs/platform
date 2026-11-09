@@ -297,6 +297,9 @@ Nella console di OpenAPI: attiva i servizi che servono (Real Estate, Visure Came
 - Senza nessuna delle due: documenti, solleciti, messaggi ai clienti e richieste del Sito Web non partono e lo dicono (il lead si salva comunque).
 - Codice: `core/backend/src/lib/email.js`, route di prova `POST /api/connections/email/test`, test `email-smtp.test.js`.
 
+## Avviare un nuovo progetto da zero
+- Il percorso completo, passo per passo (Analisi → moduli mancanti scritti dall'AI e approvati → tenant → controllo e collaudo → guida → messa in uso) è in **`docs/NUOVO-PROGETTO.md`**.
+
 ## Server MCP
 
 Non ha un indirizzo web: è un programma locale (`mcp-server/`) che Claude Code o Claude Desktop avviano sul computer. Token da Impostazioni → Il mio account → Token API; poi `claude mcp add platform --env PLATFORM_URL=https://<tenant>.platform-core.it --env PLATFORM_API_TOKEN=plat_... -- node <percorso>/mcp-server/src/index.js`. Non funziona da claude.ai nel browser né dal telefono (servirebbe un MCP remoto, non costruito).

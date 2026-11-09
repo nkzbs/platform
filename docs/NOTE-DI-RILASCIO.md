@@ -2,6 +2,18 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.87 — 9 novembre 2026
+
+**L'analisi dei processi costruisce anche i moduli che la Libreria non ha, e consegna un tenant già verificato.** Prima ciò che la Libreria non copriva restava «da costruire» solo come nota; ora si può far scrivere all'AI e approvare.
+- **Super Admin → Analisi → «Moduli da costruire»**: l'AI decide quali moduli nuovi servono (senza duplicare la Libreria) e scrive una bozza per ciascuno nel linguaggio del Builder: campi (con sezioni e dati chiave), relazioni, stati e passaggi, requisiti per stato, allegati, automazioni, documenti da modello, calendario. Ogni bozza si **ripulisce** (solo blocchi noti, chiavi valide, un solo stato iniziale) e si **controlla** con lo stesso controllo di «Controlla il tenant»; se ha problemi il modello li riceve e corregge, fino a 3 tentativi. Si lavora in background; la pagina mostra l'avanzamento.
+- **Tu approvi**: le bozze senza problemi sono già approvate, quelle con problemi no (mostrano cosa non va). Si scartano, si rigenera. Alla creazione del tenant si installano solo le approvate.
+- **Il tenant nasce con tutto**: moduli della Libreria, moduli generati approvati, ruoli, stati, report, e in più la **guida d'uso** scritta dai moduli, il **controllo di coerenza** e il **collaudo completo** in copia isolata (parte da solo). Nell'Analisi, sotto «Crea il tenant», «Quanto è operativo» mostra i due punteggi, i problemi e le cose da completare a mano; «Rilancia il collaudo».
+- Rotte (Super Admin): `GET /api/analyses/:id/moduli`, `POST …/moduli/genera`, `PUT/DELETE …/moduli/:slug`, `GET …/operativo`, `POST …/operativo/collaudo`. Nel tenant (secret interno): `POST /api/internal-setup/guida`, `GET /verifica`, `POST/GET /collaudo`.
+- Il controllo di coerenza vive ora in `shared/verifica-moduli.js` (funzione pura, usata da Super Admin sulle bozze e dal tenant sui moduli installati); `lib/verifica-tenant.js` lo applica ai moduli del database aggiungendo le formule.
+- Nuovo manuale **`docs/NUOVO-PROGETTO.md`**: come avviare un progetto da zero con solo Platform, passo per passo.
+- Prove: `generatore-moduli.test.js` (pulizia di blocchi ostili, correzione al secondo tentativo, stop a 3, piano senza doppioni, ordine di dipendenza) e 3 prove nuove in `analyses.test.js`.
+- **Non verificato con un modello vero**: i prompt sono provati con un modello finto; la qualità delle bozze con la chiave AI di Super Admin va vista alla prima analisi reale.
+
 ## 0.4.86 — 9 novembre 2026
 
 **Dati di esempio generati dallo schema.** In Impostazioni → Moduli, sotto «Controlla il tenant», il riquadro **Dati di esempio** carica qualche scheda inventata in ogni modulo (da 1 a 30 per modulo, di solito 5) per provare o mostrare un tenant appena costruito, senza inserire a mano decine di schede.

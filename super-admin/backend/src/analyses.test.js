@@ -263,6 +263,42 @@ async function main() {
     eq(sporche.processi.length, 0, 'il codice ricontrolla le operazioni che arrivano dal browser: valide quelle di lista, scartate le altre');
   });
 
+  console.log('\n--- moduli generati dall\'AI per ciò che la Libreria non copre ---');
+  const G = require('./lib/generatore-moduli');
+  const bozzaBuona = (nome) => ({ nome, icona: 'box', steps: [{ block_type: 'field', key: 'titolo', label: 'Titolo', type: 'text', required: true }, { block_type: 'field', key: 'importo', label: 'Importo', type: 'currency' }, { block_type: 'workflow_state', key: 'aperta', label: 'Aperta', initial: true }, { block_type: 'workflow_state', key: 'chiusa', label: 'Chiusa' }, { block_type: 'workflow_transition', from: 'aperta', to: 'chiusa', label: 'Chiudi' }] });
+  const bozzaRotta = { nome: 'Rotto', steps: [{ block_type: 'field', key: 'titolo', label: 'Titolo' }, { block_type: 'relation', key: 'x', label: 'X', type: 'many_to_one', target_module: 'non_esiste', display_field: 'nome' }] };
+  let giri = 0;
+  G.deps.isConfigured = () => true;
+  G.deps.callAI = async (prov, { user }) => {
+    giri++;
+    if (/MODULI NUOVI|Moduli già disponibili/.test(user)) return JSON.stringify({ moduli: [{ slug: 'lavorazioni_officina', nome: 'Lavorazioni', scopo: 'Lavori in officina', collegato_a: [], processi: [1] }, { slug: 'garanzie_officina', nome: 'Garanzie', scopo: 'Garanzie', collegato_a: [] }] });
+    return JSON.stringify(/slug «garanzie_officina»/.test(user) ? bozzaRotta : bozzaBuona('Lavori'));
+  };
+  let idG = null;
+  await test('senza processi non si genera; con una chiave AI mancante si dice chiaro', async () => {
+    const c = await (await api('POST', '', { name: 'Officina G', descrizione: 'Officina meccanica' })).json(); idG = c.id;
+    eq((await api('POST', '/' + idG + '/moduli/genera', {})).status, 400, 'senza processi');
+    await api('PATCH', '/' + idG, { processi: [{ nome: 'Lavorazione', scopo: 'Riparare un\'auto', passaggi: [{ titolo: 'Accettazione', ruolo: 'Ricezione', tipo: 'step' }], ruoli_coinvolti: [{ nome: 'Ricezione', tipo: 'utente' }], copertura: 'da_costruire' }] });
+    G.deps.isConfigured = () => false; eq((await api('POST', '/' + idG + '/moduli/genera', {})).status, 503, 'senza chiave'); G.deps.isConfigured = () => true;
+  });
+  await test('«Genera» parte in background, produce le bozze: una buona (approvata da sola) e una con problemi (non approvata)', async () => {
+    eq((await api('POST', '/' + idG + '/moduli/genera', {})).status, 202);
+    let st = null; for (let i = 0; i < 80; i++) { await new Promise((r) => setTimeout(r, 100)); st = await (await api('GET', '/' + idG + '/moduli')).json(); if (st.generazione && st.generazione.fase === 'finita') break; }
+    ok(st.generazione && st.generazione.fase === 'finita', 'non finita: ' + JSON.stringify(st.generazione));
+    eq(st.piano.map((x) => x.slug).sort(), ['garanzie_officina', 'lavorazioni_officina']);
+    const lavori = st.generati.find((m) => m.slug === 'lavorazioni_officina'), garanzie = st.generati.find((m) => m.slug === 'garanzie_officina');
+    ok(lavori && lavori.problemi.length === 0 && lavori.approvato === true, 'lavori: ' + JSON.stringify(lavori && lavori.problemi));
+    ok(garanzie && garanzie.problemi.length > 0 && garanzie.approvato === false && garanzie.tentativi === 3, 'garanzie: ' + JSON.stringify(garanzie && [garanzie.problemi, garanzie.approvato]));
+    ok(lavori.schema.steps.every((b) => /^blk_/.test(b.id)), 'schema pulito');
+  });
+  await test('si può approvare o scartare una bozza, e il lavoro già approvato resta tale se si rigenera', async () => {
+    eq((await api('PUT', '/' + idG + '/moduli/garanzie_officina', { approvato: true })).status, 200);
+    let st = await (await api('GET', '/' + idG + '/moduli')).json(); ok(st.generati.find((m) => m.slug === 'garanzie_officina').approvato === true, 'approvata');
+    eq((await api('DELETE', '/' + idG + '/moduli/garanzie_officina')).status, 200);
+    st = await (await api('GET', '/' + idG + '/moduli')).json(); eq(st.generati.map((m) => m.slug), ['lavorazioni_officina']); eq(st.piano.map((m) => m.slug), ['lavorazioni_officina']);
+    eq((await api('PUT', '/' + idG + '/moduli/inesistente', { approvato: true })).status, 404);
+  });
+
   console.log(`\n${passed} passati, ${failed} falliti`);
   process.exit(failed ? 1 : 0);
 }

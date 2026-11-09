@@ -1,5 +1,5 @@
 'use strict';
-// I capitoli della guida illustrata: testi e figure. Aggiornata alla versione 0.4.86 (giro guidato, avvisi, servizi vicini, report con mappa e stima ragionata, carattere e logo, solvibilità, conferma dei costi).
+// I capitoli della guida illustrata: testi e figure. Aggiornata alla versione 0.4.87 (giro guidato, avvisi, servizi vicini, report con mappa e stima ragionata, carattere e logo, solvibilità, conferma dei costi).
 module.exports = [
  { t: 'Primi passi', intro: 'Come entrare, come orientarsi e dove trovare aiuto.', az: [
   { t: 'Accedere', passi: ['Apri l\'indirizzo del tuo spazio di lavoro.', 'Scrivi nome utente e password, oppure usa «Accedi con passkey» se l\'hai attivata.', 'Il nome, il logo e il carattere che vedi qui li decide l\'amministratore da Impostazioni → Aspetto.'], fig: [['90-login', 'La schermata di accesso, con il nome dell\'app scelto dall\'amministratore.']] },

@@ -30,7 +30,7 @@ const list = (v, n, len) => (Array.isArray(v) ? v : []).map((x) => t(x, len)).fi
 // L'ultima versione di ogni modulo (esclusi quelli di supporto): id, nome, descrizione, gruppo.
 function libraryModules() {
   return db.prepare(`
-    SELECT rm.id, rm.name, rm.description, rm.group_name FROM registry_modules rm
+    SELECT rm.id, rm.slug, rm.name, rm.description, rm.group_name FROM registry_modules rm
     JOIN (SELECT slug, source_tenant_slug, MAX(version) AS v FROM registry_modules GROUP BY slug, source_tenant_slug) l
       ON l.slug = rm.slug AND l.source_tenant_slug IS rm.source_tenant_slug AND l.v = rm.version
     WHERE rm.support_module = 0 ORDER BY rm.name`).all();

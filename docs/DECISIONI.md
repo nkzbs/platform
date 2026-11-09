@@ -852,3 +852,10 @@ Codice potato dopo lo spegnimento di Platform (2 ottobre 2026): vedi [`DECISIONI
 - **Decisione**: i dati di esempio non passano dalle rotte dei record (che farebbero scattare automazioni, notifiche e mail) ma si inseriscono direttamente con la marcatura `_demo`, la stessa dei dati dimostrativi di OpenAPI.it: una sola rimozione per entrambi, nessun rischio per i dati veri.
 - Sono sempre generici (valori ricavati dai tipi di campo, non da nomi di settore). Per mostrare un settore in modo più credibile restano i dati dimostrativi di un pacchetto.
 
+## 0.4.87 — L'AI propone e scrive, il codice controlla, la persona approva
+
+- **Decisione**: l'analisi può generare i moduli mancanti, ma con tre vincoli: (1) la risposta del modello non entra mai in un tenant com'è: si ripulisce a lista chiusa (blocchi, proprietà, azioni ammesse) e si controlla con lo stesso controllo del tenant; (2) un difetto torna al modello come elenco preciso, non come «riprova»; (3) nulla si installa senza l'approvazione di chi ha l'analisi aperta.
+- Le automazioni generate usano solo `crea_record`, `aggiorna_record` e `notifica_interna` sul cambio di stato: niente chiamate a servizi esterni, niente codice.
+- Il controllo di coerenza è condiviso (`shared/`) perché Super Admin e tenant devono dire la stessa cosa: una bozza «valida» per l'uno non può risultare rotta per l'altro.
+- Alla nascita il tenant esegue guida, controllo e collaudo da solo: così «operativo» è un numero letto, non una sensazione.
+

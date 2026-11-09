@@ -6,6 +6,8 @@ import Manuale from '../components/analyses/Manuale'
 import Guida from '../components/analyses/Guida'
 import InviteTenantModal from '../components/InviteTenantModal'
 import CorreggiAParole from '../components/analyses/CorreggiAParole'
+import ModuliDaCostruire from '../components/analyses/ModuliDaCostruire'
+import OperativoTenant from '../components/analyses/OperativoTenant'
 import Stepper from '../components/analyses/Stepper'
 import { STAMPA_CSS } from '../components/analyses/stampa'
 import GlassPageBackground from '../components/GlassPageBackground'
@@ -284,6 +286,8 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
   const setProfilo = (patch) => change({ profilo: { ...pr, ...patch } })
   // Il pannello «Crea il tenant»: lo stesso nel riepilogo e nei dettagli (una funzione che ritorna JSX, non un componente: i campi non perdono il fuoco).
   const creaPanel = () => (
+            <>
+            {!a.tenant_slug && <ModuliDaCostruire analysisId={a.id} req={req} btn={btn} ghost={ghost} card={card} bloccato={!!(cr && cr.fase && cr.fase !== 'finita' && cr.fase !== 'errore')} />}
             <section className={card}>
               <h2 className="text-sm font-semibold text-ink mb-1">Crea il tenant</h2>
               {cr && cr.fase && cr.fase !== 'finita' && cr.fase !== 'errore' ? (
@@ -320,7 +324,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
               ) : (
                 <>
                   {cr && cr.fase === 'errore' && <div className="mb-3 bg-red-900/20 border border-red-900/40 rounded-lg p-3 text-xs text-red-300">Creazione non riuscita: {cr.errore}</div>}
-                  <p className="text-xs text-gray-500 mb-3">Installa i {b.moduli_ids.length} moduli{b.moduli_collegati && b.moduli_collegati.length ? ' (compresi quelli collegati: ' + b.moduli_collegati.join(', ') + ')' : ' scelti'} e crea i {b.ruoli_utente} ruoli degli utenti; i passaggi diventano gli stati del flusso dei moduli. Non tocca un modulo che ha già i suoi. Fino a questo tocco non è stato scritto niente.</p>
+                  <p className="text-xs text-gray-500 mb-3">Installa i {b.moduli_ids.length} moduli{b.moduli_collegati && b.moduli_collegati.length ? ' (compresi quelli collegati: ' + b.moduli_collegati.join(', ') + ')' : ' scelti'} e crea i {b.ruoli_utente} ruoli degli utenti; i passaggi diventano gli stati del flusso dei moduli. Si aggiungono i moduli generati che hai approvato qui sopra. Alla fine il tenant ha già la guida d'uso, un controllo di coerenza e un collaudo dei flussi. Non tocca un modulo che ha già i suoi. Fino a questo tocco non è stato scritto niente.</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
                     <input className={input} placeholder="Nome del tenant" value={tf.name} onChange={(e) => setTf({ name: e.target.value, slug: slugify(e.target.value) })} />
                     <input className={input + ' font-mono'} placeholder="indirizzo (solo minuscole e trattini)" value={tf.slug} onChange={(e) => setTf({ ...tf, slug: slugify(e.target.value) })} />
@@ -328,8 +332,10 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
                   <button type="button" className={btn} onClick={creaTenant}>Crea il tenant</button>
                 </>
               )}
+              {a.tenant_slug && cr && cr.fase === 'finita' && <OperativoTenant analysisId={a.id} req={req} ghost={ghost} />}
               {invito && <InviteTenantModal token={token} tenant={invito} onClose={() => setInvito(null)} />}
             </section>
+            </>
   )
 
   const stampa = () => window.print()
@@ -383,7 +389,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
             ))}
           </div>
           {incompleti > 0 && <p className="text-xs text-amber-400 mb-2">{incompleti} {incompleti === 1 ? 'processo non è completo' : 'processi non sono completi'}: aprili dai dettagli e premi «Completa tutti i processi».</p>}
-          {b.da_costruire.length > 0 && <p className="text-xs text-gray-500 mb-2">Nessun modulo copre: {b.da_costruire.join(', ')}. Si costruiscono nel Super Builder dai dettagli.</p>}
+          {b.da_costruire.length > 0 && <p className="text-xs text-gray-500 mb-2">Nessun modulo copre: {b.da_costruire.join(', ')}. Li scrive l'AI nel riquadro «Moduli da costruire» più sotto: tu approvi le bozze.</p>}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2">
             {a.processi.map((p, i) => {
               const mod = p.registry_module_id ? nomeMod(p.registry_module_id) : null
@@ -524,7 +530,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
               </div>
               {b.moduli_collegati && b.moduli_collegati.length > 0 && <p className="text-xs text-gray-500 mb-3">Moduli collegati che servono ai tuoi moduli e vengono aggiunti: {b.moduli_collegati.join(', ')}.</p>}
               {b.manca && b.manca.length > 0 && <p className="text-xs text-gray-500 mb-3">Non coperto da nessun modulo: {b.manca.map((m) => m.processo + ' (' + m.voci.join(', ') + ')').join('; ')}.</p>}
-              {b.da_costruire.length > 0 && <p className="text-xs text-gray-500 mb-3">Da costruire: {b.da_costruire.join(', ')}. Si costruiscono nel Super Builder.</p>}
+              {b.da_costruire.length > 0 && <p className="text-xs text-gray-500 mb-3">Da costruire: {b.da_costruire.join(', ')}. Li scrive l'AI nel riquadro «Moduli da costruire»: tu approvi le bozze.</p>}
               <div className="flex gap-2 flex-wrap"><button type="button" className={btn} onClick={() => setShowManuale(true)}>Apri il manuale</button><button type="button" className={ghost} onClick={apriGuida}>Guida all'uso</button><button type="button" className={ghost} onClick={approfondisci} disabled={approfondendo}>{approfondendo ? 'Controllo…' : 'Cosa manca?'}</button></div>
               <div className="mt-4"><CorreggiAParole analysisId={a.id} req={req} btn={btn} ghost={ghost} input={input} onApplied={(d) => { setA(d); setProposte([]) }} /></div>
             </section>

@@ -15,6 +15,7 @@ const db = require('../db');
 const { requireAuth } = require('./auth');
 const { logAudit } = require('../audit-log');
 const analysis = require('../lib/analysis');
+const generatore = require('../lib/generatore-moduli');
 
 const router = express.Router();
 const row = (id) => db.prepare('SELECT * FROM process_analyses WHERE id = ?').get(id);
@@ -194,6 +195,68 @@ router.delete('/:id', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Moduli che la Libreria non ha: l'AI li propone e li costruisce, tu approvi ───────────────────────────────────────────────────────────────
+//   GET    /api/analyses/:id/moduli              { piano, generati, generazione }
+//   POST   /api/analyses/:id/moduli/genera       { piano? }  pianifica (se non glielo dai tu) e costruisce le bozze IN BACKGROUND; la pagina legge GET
+//   PUT    /api/analyses/:id/moduli/:slug        { approvato }  quali bozze si installano alla creazione del tenant
+//   DELETE /api/analyses/:id/moduli/:slug        scarta una bozza
+// Ogni bozza è pulita e controllata (shared/verifica-moduli.js) prima di essere mostrata; una con problemi resta non approvata finché non la correggi o la approvi tu.
+const moduliDi = (r) => { const m = json(r.moduli_generati, null) || {}; return { piano: m.piano || [], generati: m.generati || [], generazione: m.generazione || null }; };
+function setModuli(id, patch) { const r = row(id); const cur = r ? moduliDi(r) : {}; db.prepare('UPDATE process_analyses SET moduli_generati = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify({ ...cur, ...patch }), id); }
+const generazioneInCorso = (g) => !!g && g.fase !== 'finita' && g.fase !== 'errore' && Date.now() - g.inizio < 20 * 60 * 1000;
+
+// I moduli della Libreria che il tenant avrà (scelti dai processi, con le dipendenze): servono alle bozze per collegarsi (relazioni) e al controllo.
+function moduliDellaLibreria(processi) {
+  const ids = analysis.withDependencies([...new Set(processi.flatMap((p) => [p.registry_module_id, ...(p.moduli_extra || [])]).filter(Boolean))]);
+  const out = [];
+  for (const id of ids) { const m = db.prepare('SELECT slug, name, schema_json FROM registry_modules WHERE id = ?').get(id); if (!m) continue; let s = {}; try { s = JSON.parse(m.schema_json || '{}'); } catch (e) { s = {}; } out.push({ slug: m.slug, nome: m.name, steps: Array.isArray(s.steps) ? s.steps : [] }); }
+  return out;
+}
+
+async function generaModuliInBackground(id, pianoDato) {
+  const agg = (p) => { const g = (moduliDi(row(id)).generazione) || {}; setModuli(id, { generazione: { ...g, ...p } }); };
+  try {
+    const r = row(id); const processi = analysis.sanitizeProcessi(json(r.processi, []), new Set(analysis.libraryModules().map((m) => m.id)));
+    const esistenti = moduliDellaLibreria(processi);
+    const disponibili = analysis.libraryModules().map((m) => ({ slug: m.slug, nome: m.name }));
+    agg({ fase: 'piano' });
+    const piano = pianoDato || await generatore.pianifica({ nomeAttivita: r.name, descrizione: r.descrizione, processi, disponibili: [...disponibili, ...esistenti.map((e) => ({ slug: e.slug, nome: e.nome }))].filter((x, i, a) => a.findIndex((y) => y.slug === x.slug) === i) });
+    setModuli(id, { piano }); agg({ fase: 'bozze', totale: piano.length, fatti: 0 });
+    const prima = moduliDi(row(id)).generati; const generati = [];
+    let fatti = 0;
+    const res = await generatore.costruisci({ nomeAttivita: r.name, descrizione: r.descrizione, processi, disponibili, esistenti, piano, onModulo: (m) => { fatti++; agg({ fase: 'bozze', fatti, ultimo: m.name }); } });
+    for (const m of res.moduli) { const v = prima.find((x) => x.slug === m.slug); generati.push({ ...m, approvato: v ? v.approvato : m.problemi.length === 0 }); }
+    setModuli(id, { generati });
+    agg({ fase: 'finita', fine: Date.now(), errore: null });
+    logAudit('analisi', 'analysis.genera_moduli', String(id), { moduli: generati.length, con_problemi: generati.filter((m) => m.problemi.length).length });
+  } catch (e) {
+    console.error('[analyses] generazione moduli non riuscita:', e.message);
+    agg({ fase: 'errore', errore: e.message });
+  }
+}
+
+router.get('/:id/moduli', requireAuth, (req, res) => { const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' }); res.json({ ...moduliDi(r), in_corso: generazioneInCorso(moduliDi(r).generazione) }); });
+router.post('/:id/moduli/genera', requireAuth, (req, res) => {
+  const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
+  if (r.tenant_slug) return res.status(400).json({ error: 'Il tenant è già stato creato: i moduli si cambiano nel Builder del tenant.' });
+  if (generazioneInCorso(moduliDi(r).generazione)) return res.status(409).json({ error: 'La generazione è già in corso.' });
+  if (!json(r.processi, []).length) return res.status(400).json({ error: 'Servono dei processi: scrivili prima.' });
+  if (!generatore.deps.isConfigured()) return res.status(503).json({ error: 'Nessuna chiave AI di Super Admin: inseriscila in Impostazioni → Chiavi AI.', code: 'ai_not_configured' });
+  const piano = Array.isArray(req.body && req.body.piano) ? req.body.piano.slice(0, 12).map((v) => ({ slug: generatore.slugDa(v && (v.slug || v.nome)), nome: String((v && v.nome) || '').slice(0, 60), scopo: String((v && v.scopo) || '').slice(0, 200), collegato_a: (Array.isArray(v && v.collegato_a) ? v.collegato_a : []).map(generatore.slugDa).filter(Boolean).slice(0, 6), processi: (Array.isArray(v && v.processi) ? v.processi : []).map(Number).filter((n) => n > 0).slice(0, 10) })).filter((v) => v.slug && v.nome) : null;
+  setModuli(r.id, { generazione: { fase: 'piano', inizio: Date.now(), fatti: 0, totale: 0, errore: null } });
+  generaModuliInBackground(r.id, piano && piano.length ? piano : null);
+  res.status(202).json({ avviata: true });
+});
+router.put('/:id/moduli/:slug', requireAuth, (req, res) => {
+  const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
+  const g = moduliDi(r).generati; const m = g.find((x) => x.slug === req.params.slug); if (!m) return res.status(404).json({ error: 'Bozza non trovata' });
+  m.approvato = !!(req.body && req.body.approvato); setModuli(r.id, { generati: g }); res.json({ ok: true });
+});
+router.delete('/:id/moduli/:slug', requireAuth, (req, res) => {
+  const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
+  const cur = moduliDi(r); setModuli(r.id, { generati: cur.generati.filter((x) => x.slug !== req.params.slug), piano: cur.piano.filter((x) => x.slug !== req.params.slug) }); res.json({ ok: true });
+});
+
 // ── Crea il tenant dall'analisi, IN BACKGROUND ────────────────────────────────────────────────────────────────────
 // La creazione di un tenant richiede da qualche decina di secondi a più di un minuto (container, avvio del database, dominio, moduli). Non si resta appesi a una chiamata:
 // la rotta parte e risponde subito (202); l'avanzamento sta in `creazione` (fase, inizio, tempi per fase) e la pagina lo legge con GET /:id/creazione. L'accesso admin iniziale
@@ -223,6 +286,12 @@ async function creaTenantInBackground({ id, name, slug, domain, actor, processi,
     let installed = await installModulesByIds(tenant.slug, moduleIds);
     if (moduleIds.length && (!installed || installed.modules !== moduleIds.length)) installed = await installModulesByIds(tenant.slug, moduleIds); // il tenant a volte non è ancora in ascolto: un secondo giro
     if (moduleIds.length && (!installed || installed.modules !== moduleIds.length)) avvisi.push({ tipo: 'moduli', testo: 'Installati ' + (installed ? installed.modules : 0) + ' moduli su ' + moduleIds.length + ': i mancanti si aggiungono dalla Libreria.' });
+    // i moduli che la Libreria non aveva e l'AI ha costruito (solo quelli approvati): si installano come quelli della Libreria, poi ruoli e flussi
+    const approvati = moduliDi(row(id)).generati.filter((m) => m.approvato);
+    for (const m of approvati) {
+      try { await require('../lib/tenant-api-client').callTenantAPI(tenant.slug, 'POST', '/api/modules/internal/upsert', { slug: m.slug, name: m.name, icon: m.icon, color: m.color, schema_json: JSON.stringify(m.schema) }); }
+      catch (e) { console.error('[analyses] modulo generato «' + m.slug + '» non installato:', e.message); avvisi.push({ tipo: 'moduli', testo: 'Il modulo generato «' + m.name + '» non è stato installato: ' + e.message + '. Si può ricreare dal Builder del tenant.' }); }
+    }
     segna('ruoli');
     let config = null;
     try { config = await analysis.deps.applyConfig({ tenantSlug: tenant.slug, processi, installedRegistryModuleIds: moduleIds, actor, configurazione }); }
@@ -242,9 +311,18 @@ async function creaTenantInBackground({ id, name, slug, domain, actor, processi,
       try { await require('../lib/pacchetti').invia(tenant.slug, slug); }
       catch (e) { console.error('[analyses] pacchetto ' + slug + ' non applicato (non bloccante):', e.message); avvisi.push({ tipo: 'pacchetto', testo: 'Il pacchetto «' + slug + '» non è stato applicato del tutto: ' + e.message + '. Arriva al prossimo riavvio del tenant.' }); }
     }
+    // la guida d'uso scritta dai moduli (senza toccare quella di un pacchetto già attivo), il controllo di coerenza e il collaudo completo in copia isolata (parte in background: l'esito si legge dopo)
+    let operativo = null;
+    try {
+      const tapi = require('../lib/tenant-api-client').callTenantAPI;
+      await tapi(tenant.slug, 'POST', '/api/internal-setup/guida', { solo_se_vuota: true });
+      const v = await tapi(tenant.slug, 'GET', '/api/internal-setup/verifica');
+      operativo = { punteggio: v.punteggio, controlli: v.controlli, superati: v.superati, problemi: (v.problemi || []).slice(0, 25), da_completare_a_mano: (v.da_completare_a_mano || []).slice(0, 25) };
+      try { await tapi(tenant.slug, 'POST', '/api/internal-setup/collaudo', {}); operativo.collaudo = 'avviato'; } catch (e) { operativo.collaudo = 'non avviato: ' + e.message; }
+    } catch (e) { console.error('[analyses] controllo del tenant non riuscito (non bloccante):', e.message); avvisi.push({ tipo: 'verifica', testo: 'Guida e controllo del tenant non eseguiti: ' + e.message + '. Si fanno da Impostazioni → Guida e Impostazioni → Moduli.' }); }
     segni.push({ fase: 'fine', t: Date.now() });
     const t = tempi(); delete t.fine;
-    setCreazione(id, { fase: 'finita', fine: Date.now(), secondi: Math.round((Date.now() - t0) / 100) / 10, tempi: t, moduli_installati: installed ? installed.modules : 0, report_creati: setup ? setup.reports.length : 0, moduli_dichiarati: setup ? setup.module_roles.length : 0, ruoli_creati: config ? config.roles_created.length : 0, moduli_configurati: config ? config.modules_configured.length : 0, avvisi });
+    setCreazione(id, { operativo, fase: 'finita', fine: Date.now(), secondi: Math.round((Date.now() - t0) / 100) / 10, tempi: t, moduli_installati: installed ? installed.modules : 0, report_creati: setup ? setup.reports.length : 0, moduli_dichiarati: setup ? setup.module_roles.length : 0, ruoli_creati: config ? config.roles_created.length : 0, moduli_configurati: config ? config.modules_configured.length : 0, avvisi });
     logAudit(actor, 'analysis.create_tenant', tenant.slug, { analysis_id: id, modules: installed ? installed.modules : 0, roles: config ? config.roles_created.length : 0, secondi: Math.round((Date.now() - t0) / 1000) });
   } catch (e) {
     console.error('[analyses] creazione tenant fallita:', e.message);
@@ -274,6 +352,22 @@ router.get('/:id/creazione', requireAuth, (req, res) => {
   const out = { ...c, in_corso: inCorso(c), tenant_slug: r.tenant_slug };
   if (c.fase === 'finita' && credenziali.has(r.id)) { out.credenziali = credenziali.get(r.id); credenziali.delete(r.id); }
   res.json(out);
+});
+
+// Quanto è operativo il tenant nato da questa analisi: il controllo di coerenza e l'esito del collaudo completo (in copia isolata, parte alla creazione).
+//   GET  /api/analyses/:id/operativo            { verifica, collaudo }
+//   POST /api/analyses/:id/operativo/collaudo   rilancia il collaudo
+router.get('/:id/operativo', requireAuth, async (req, res) => {
+  const r = row(req.params.id); if (!r) return res.status(404).json({ error: 'Analisi non trovata' });
+  if (!r.tenant_slug) return res.status(400).json({ error: 'Nessun tenant ancora creato da questa analisi.' });
+  const tapi = require('../lib/tenant-api-client').callTenantAPI;
+  try { res.json({ verifica: await tapi(r.tenant_slug, 'GET', '/api/internal-setup/verifica'), collaudo: await tapi(r.tenant_slug, 'GET', '/api/internal-setup/collaudo') }); }
+  catch (e) { res.status(502).json({ error: 'Il tenant non risponde: ' + e.message }); }
+});
+router.post('/:id/operativo/collaudo', requireAuth, async (req, res) => {
+  const r = row(req.params.id); if (!r || !r.tenant_slug) return res.status(400).json({ error: 'Nessun tenant ancora creato da questa analisi.' });
+  try { res.json(await require('../lib/tenant-api-client').callTenantAPI(r.tenant_slug, 'POST', '/api/internal-setup/collaudo', {})); }
+  catch (e) { res.status(502).json({ error: 'Il tenant non risponde: ' + e.message }); }
 });
 
 // Riprova SOLO ruoli/stati del flusso e/o ruoli dei moduli+report+AI, sul tenant GIÀ

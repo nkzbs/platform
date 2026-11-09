@@ -90,6 +90,20 @@ router.get('/pacchetti', (req, res) => res.json(require('../seed-blocchi-vertica
 
 // Il marchio dell'azienda alla nascita del tenant (da Analisi): ragione sociale, indirizzo, P.IVA, logo, colore. Regola di questo file: si COMPLETA,
 // non si sovrascrive: un campo già compilato resta com'è. Logo non valido o colore non valido: quel campo si salta e si dice quale.
+// Dopo che l'analisi ha costruito i moduli: guida d'uso generata (senza toccare una guida già scritta), controllo di coerenza e collaudo in copia isolata.
+//   POST /api/internal-setup/guida     { solo_se_vuota? }  scrive la guida d'uso dai moduli (lib/guida-generata.js)
+//   GET  /api/internal-setup/verifica                      il rapporto «Controlla il tenant» (lib/verifica-tenant.js)
+//   POST /api/internal-setup/collaudo                      avvia il collaudo completo in background (lib/collaudo-tenant.js); GET /collaudo ne legge l'esito
+router.post('/guida', (req, res) => {
+  if (req.body && req.body.solo_se_vuota && db.prepare('SELECT 1 FROM guida_tenant WHERE id = 1').get()) return res.json({ ok: true, saltata: true });
+  const g = require('../lib/guida-generata').genera();
+  db.prepare("INSERT INTO guida_tenant (id, contenuto) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET contenuto = excluded.contenuto, modificata_il = CURRENT_TIMESTAMP").run(JSON.stringify(g));
+  res.json({ ok: true, capitoli: Object.keys(g.capitoli).length, flussi: g.flussi.length, passi_giro: g.giro.length });
+});
+router.get('/verifica', (req, res) => res.json(require('../lib/verifica-tenant').verifica()));
+router.post('/collaudo', (req, res) => res.json(require('../lib/collaudo-tenant').avvia()));
+router.get('/collaudo', (req, res) => res.json(require('../lib/collaudo-tenant').stato() || { stato: 'mai_eseguito' }));
+
 router.post('/azienda', (req, res) => {
   const b = req.body || {}, out = { impostati: [], saltati: [] };
   const attuale = db.prepare('SELECT ragione_sociale, indirizzo, piva, logo_url, accent_color FROM tenant_settings WHERE id = 1').get() || {};

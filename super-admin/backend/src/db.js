@@ -234,6 +234,8 @@ if (!db.prepare('PRAGMA table_info(registry_proposals)').all().some((c) => c.nam
 if (!db.prepare('PRAGMA table_info(process_analyses)').all().some((c) => c.name === 'creazione')) db.exec('ALTER TABLE process_analyses ADD COLUMN creazione TEXT');
 if (!db.prepare('PRAGMA table_info(process_analyses)').all().some((c) => c.name === 'auto')) db.exec('ALTER TABLE process_analyses ADD COLUMN auto TEXT'); // avanzamento di «Fai tutto»
 if (!db.prepare('PRAGMA table_info(process_analyses)').all().some((c) => c.name === 'scelte')) db.exec("ALTER TABLE process_analyses ADD COLUMN scelte TEXT NOT NULL DEFAULT '{}'"); // proposte (report, AI) che l\'utente ha tolto // avanzamento della creazione del tenant dall\'analisi
+// Moduli generati dall'AI per i processi che la Libreria non copre (lib/generatore-moduli.js): { piano, generati, generazione }. Si installano nel tenant solo se approvati.
+if (!db.prepare('PRAGMA table_info(process_analyses)').all().some((c) => c.name === 'moduli_generati')) db.exec("ALTER TABLE process_analyses ADD COLUMN moduli_generati TEXT NOT NULL DEFAULT '{}'");
 
 // Seed del registro moduli — solo se completamente vuoto (prima installazione).
 // Mai sovrascrive: se l'operatore ha già pubblicato moduli propri, non tocca nulla.
