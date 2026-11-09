@@ -836,3 +836,9 @@ Codice potato dopo lo spegnimento di Platform (2 ottobre 2026): vedi [`DECISIONI
 - Il punteggio è la quota di controlli superati. Le cose che può fare solo una persona non lo abbassano: stanno in «Da completare a mano».
 - **Non coperto da questo controllo (passo successivo)**: la prova dinamica, cioè scenari che attraversano davvero il flusso (crea record, passaggi, importi calcolati) in un tenant di prova. Lo esercita già `docs/zucca-da-zero/prova-comportamento.mjs`; va derivato dai processi dell'analisi.
 
+## 0.4.84 — Il collaudo gira in una copia, mai sul tenant vivo
+
+- **Decisione**: la prova dinamica (record, stati, automazioni, documenti) non si esegue sul tenant vero: provocherebbe mail, notifiche e avvisi reali. Si esegue su una copia del database con tutte le credenziali tolte e i lavori in background spenti, in un processo separato che si cancella a fine prova.
+- Il collaudo è generico: i valori di prova si ricavano dai tipi di campo e dalle validazioni dichiarate, i flussi dagli stati e passaggi, i requisiti dai blocchi `state_requirements`. Nessun nome di settore.
+- Un risultato basso può essere un falso allarme (per esempio una condizione di automazione che i dati di prova non soddisfano): il messaggio lo dice, e va letto da una persona.
+

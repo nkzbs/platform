@@ -128,6 +128,10 @@ router.get('/verifica', requireAuth, requireAdmin, (req, res) => {
   try { res.json(require('../lib/verifica-tenant').verifica()); } catch (e) { res.status(500).json({ error: 'Controllo non riuscito: ' + e.message }); }
 });
 
+// Collaudo automatico in una copia isolata del tenant (lib/collaudo-tenant.js): parte in background, si legge l'esito con GET.
+router.post('/collaudo', requireAuth, requireAdmin, (req, res) => res.json(require('../lib/collaudo-tenant').avvia()));
+router.get('/collaudo', requireAuth, requireAdmin, (req, res) => res.json(require('../lib/collaudo-tenant').stato() || { stato: 'mai_eseguito' }));
+
 router.post('/formula/check', requireAuth, requireAdmin, (req, res) => {
   const { expr, steps, context } = req.body;
   if (Array.isArray(steps) && steps.length > 0) {

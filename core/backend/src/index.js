@@ -167,7 +167,7 @@ app.use('/__root_public', rootPublicRouter);
 
 app.get('/health', (req, res) => res.json({
   status: 'ok',
-  version: '0.4.83',
+  version: '0.4.84',
   tenant: process.env.TENANT_SLUG || 'unknown',
   name: process.env.TENANT_NAME || 'Platform Core'
 }));
@@ -249,6 +249,7 @@ require('./pwa-icon').apply(); // icona del dock/PWA sul colore del tenant, se s
 
 app.listen(PORT, () => {
   console.log('Platform Core [' + (process.env.TENANT_SLUG || 'default') + '] running on port ' + PORT);
+  if (process.env.COLLAUDO === '1') { console.log('Copia di collaudo: lavori programmati spenti'); return; } // lib/collaudo-tenant.js: nessun lavoro in background sulla copia
   startScheduler();
   startReports(); // il controllo ogni minuto parte sempre; se la funzione è spenta non fa niente
   require('./lib/messaggi-clienti').avviaAuguri(); // auguri di compleanno (spenti finché non si attivano nelle impostazioni)

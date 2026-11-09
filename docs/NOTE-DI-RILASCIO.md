@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.84 — 9 novembre 2026
+
+**Collaudo completo: i flussi si provano per davvero, in una copia isolata.** In Impostazioni → Moduli, accanto a «Controlla», il pulsante **Collaudo completo** (circa un minuto) fa ciò che il controllo statico non può:
+- **Copia isolata**: copia il database in una cartella temporanea, vi toglie ogni credenziale (collegamenti, webhook, chat), avvia una seconda istanza dello stesso codice con i lavori programmati spenti (`COLLAUDO=1`) e un utente amministratore usa-e-getta. Nulla parte verso l'esterno e i dati veri non si toccano; a fine prova la copia si spegne e si cancella.
+- **Cosa prova**: per ogni modulo crea un record di prova (valori plausibili per tipo di campo, relazioni risolte creando prima i record collegati), lo legge, lo modifica, genera l'anteprima di ogni documento (segnaposto sostituiti), calcola gli abbinamenti e **percorre tutti gli stati raggiungibili** del flusso: prima verifica che un requisito bloccante blocchi davvero, poi lo soddisfa (campi, relazioni, allegati) e fa il passaggio. Controlla che le automazioni che creano record li abbiano creati, e mostra **cosa hanno prodotto**.
+- I campi che compila il sistema (scritti da automazioni o dalle azioni esterne) non si riempiono nei dati di prova, altrimenti le condizioni «una volta sola» non scatterebbero mai.
+- Rotte `POST/GET /api/builder/collaudo` (solo amministratori, parte in background e si legge l'esito); codice in `lib/collaudo-tenant.js`, prove in `collaudo-tenant.test.js`.
+- Risultato sulla copia di zucca in locale: **100/100** (71 prove, due provvigioni create alla firma del preliminare).
+
 ## 0.4.83 — 9 novembre 2026
 
 **«Controlla il tenant»: quanto è operativo uno spazio di lavoro.** In Impostazioni → Moduli un pulsante legge gli schemi di tutti i moduli installati e dice quanti riferimenti stanno in piedi, con un punteggio su 100. Sola lettura: non crea né cambia nulla.
