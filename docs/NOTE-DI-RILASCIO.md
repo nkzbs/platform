@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.97 — 9 novembre 2026
+
+**«Verifica del soggetto» (Risk) non resta più «da attivare» con Risk attivo.** Per capire se il servizio era abilitato l'adattatore chiedeva il token anche con uno scope che non usa mai (la verifica del codice fiscale, un altro prodotto): se l'account non lo ha, il token falliva e il pulsante rispondeva 501 «da attivare» anche con Risk attivo e «Controlla i servizi» tutto ✓. Ora chiede solo gli scope del report sulla persona. Test: `verifica-persona-scopi.test.js`. Non verificato: un report vero (ogni richiesta si paga). Serve «Aggiorna» su zucca e Finance.
+
 ## 0.4.96 — 9 novembre 2026
 
 **Il Builder ha gli editor che mancavano e il generatore di moduli scrive anche i permessi.**

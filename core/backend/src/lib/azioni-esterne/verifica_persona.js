@@ -7,7 +7,8 @@
 // Se il servizio non è abilitato sulla chiave, la funzione resta «da attivare» (nessuna richiesta, nessun costo).
 const openapiIt = require('../openapi-it');
 const DOM = 'risk';
-const SCOPI = [['POST', '/IT-report-persona'], ['GET', '/IT-report-persona'], ['GET', '/IT-verifica_cf']];
+// Solo gli scope che l'adattatore usa davvero: chiederne uno in più (es. la verifica del codice fiscale, un altro prodotto) fa fallire il token e la funzione resta «da attivare» anche con Risk attivo.
+const SCOPI = [['POST', '/IT-report-persona'], ['GET', '/IT-report-persona']];
 const CF = /^[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]$/;
 
 const stato = (r) => String((r && r.data && r.data.state) || '').toLowerCase();
