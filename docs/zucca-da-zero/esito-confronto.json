@@ -1,0 +1,361 @@
+[
+ {
+  "nome": "Guida: capitoli",
+  "zucca": 7,
+  "da_zero": 0,
+  "uguale": false
+ },
+ {
+  "nome": "Guida: flussi",
+  "zucca": 3,
+  "da_zero": 0,
+  "uguale": false
+ },
+ {
+  "nome": "Guida: voci di glossario",
+  "zucca": 8,
+  "da_zero": 0,
+  "uguale": false
+ },
+ {
+  "nome": "Giro guidato: passi",
+  "zucca": 8,
+  "da_zero": 0,
+  "uguale": false
+ },
+ {
+  "nome": "Modulo clienti: blocchi per tipo",
+  "zucca": {
+   "field": 24,
+   "workflow_state": 3,
+   "workflow_transition": 4,
+   "allegati": 1,
+   "state_requirements": 2,
+   "external_action": 4,
+   "automation": 2,
+   "document_action": 4
+  },
+  "da_zero": {
+   "field": 24,
+   "workflow_state": 3,
+   "workflow_transition": 4,
+   "allegati": 1,
+   "state_requirements": 2,
+   "external_action": 4,
+   "automation": 2,
+   "document_action": 4
+  },
+  "uguale": true
+ },
+ {
+  "nome": "Modulo immobili: blocchi per tipo",
+  "zucca": {
+   "field": 37,
+   "relation": 1,
+   "workflow_state": 4,
+   "workflow_transition": 6,
+   "allegati": 1,
+   "external_action": 2,
+   "state_requirements": 2,
+   "map_view": 1,
+   "automation": 2,
+   "match_view": 1
+  },
+  "da_zero": {
+   "field": 37,
+   "relation": 1,
+   "workflow_state": 4,
+   "workflow_transition": 6,
+   "allegati": 1,
+   "external_action": 2,
+   "state_requirements": 2,
+   "map_view": 1,
+   "automation": 2,
+   "match_view": 1
+  },
+  "uguale": true
+ },
+ {
+  "nome": "Modulo trattative: blocchi per tipo",
+  "zucca": {
+   "field": 11,
+   "relation": 3,
+   "workflow_state": 4,
+   "workflow_transition": 6,
+   "automation": 4,
+   "allegati": 1,
+   "state_requirements": 4,
+   "external_action": 1
+  },
+  "da_zero": {
+   "field": 11,
+   "relation": 3,
+   "workflow_state": 4,
+   "workflow_transition": 6,
+   "automation": 4,
+   "allegati": 1,
+   "state_requirements": 4,
+   "external_action": 1
+  },
+  "uguale": true
+ },
+ {
+  "nome": "Modulo provvigioni: blocchi per tipo",
+  "zucca": {
+   "field": 20,
+   "relation": 2,
+   "workflow_state": 3,
+   "workflow_transition": 4,
+   "state_requirements": 2,
+   "external_action": 1,
+   "automation": 1,
+   "document_action": 1
+  },
+  "da_zero": {
+   "field": 20,
+   "relation": 2,
+   "workflow_state": 3,
+   "workflow_transition": 4,
+   "state_requirements": 2,
+   "external_action": 1,
+   "automation": 1,
+   "document_action": 1
+  },
+  "uguale": true
+ },
+ {
+  "nome": "Modulo attivita: blocchi per tipo",
+  "zucca": {
+   "field": 9,
+   "workflow_state": 3,
+   "workflow_transition": 4,
+   "relation": 3,
+   "calendar_view": 1,
+   "state_requirements": 1,
+   "automation": 1
+  },
+  "da_zero": {
+   "field": 9,
+   "workflow_state": 3,
+   "workflow_transition": 4,
+   "relation": 3,
+   "calendar_view": 1,
+   "state_requirements": 1,
+   "automation": 1
+  },
+  "uguale": true
+ },
+ {
+  "nome": "Modulo quote_societarie: blocchi per tipo",
+  "zucca": {
+   "relation": 4,
+   "field": 5,
+   "workflow_state": 3,
+   "workflow_transition": 3,
+   "allegati": 1,
+   "state_requirements": 2,
+   "document_action": 1
+  },
+  "da_zero": {
+   "relation": 4,
+   "field": 5,
+   "workflow_state": 3,
+   "workflow_transition": 3,
+   "allegati": 1,
+   "state_requirements": 2,
+   "document_action": 1
+  },
+  "uguale": true
+ },
+ {
+  "nome": "Modulo richieste_privacy: blocchi per tipo",
+  "zucca": {
+   "relation": 1,
+   "field": 3,
+   "workflow_state": 3,
+   "workflow_transition": 4,
+   "state_requirements": 1
+  },
+  "da_zero": {
+   "relation": 1,
+   "field": 3,
+   "workflow_state": 3,
+   "workflow_transition": 4,
+   "state_requirements": 1
+  },
+  "uguale": true
+ },
+ {
+  "nome": "Menu moduli (slug:visibilità:gruppo)",
+  "zucca": [
+   "attivita:visibile:null",
+   "clienti:visibile:null",
+   "dashboard:visibile:null",
+   "immobili:visibile:null",
+   "provvigioni:visibile:null",
+   "quote_societarie:visibile:null",
+   "richieste_privacy:visibile:null",
+   "trattative:visibile:null"
+  ],
+  "da_zero": [
+   "attivita:visibile:null",
+   "clienti:visibile:null",
+   "dashboard:visibile:null",
+   "immobili:visibile:null",
+   "provvigioni:visibile:null",
+   "quote_societarie:visibile:null",
+   "richieste_privacy:visibile:null",
+   "trattative:visibile:null"
+  ],
+  "uguale": true
+ },
+ {
+  "nome": "Dashboard: riquadri",
+  "zucca": [
+   "kpi:Immobili a portafoglio",
+   "periodo:Preliminari del mese",
+   "periodo:Provvigioni in scadenza nel mese",
+   "agenda:Da fare",
+   "percorso:Percorso degli immobili",
+   "segnali:Da sistemare"
+  ],
+  "da_zero": [
+   "kpi:Immobili a portafoglio",
+   "periodo:Preliminari del mese",
+   "periodo:Provvigioni in scadenza nel mese",
+   "agenda:Da fare",
+   "percorso:Percorso degli immobili",
+   "segnali:Da sistemare"
+  ],
+  "uguale": true
+ },
+ {
+  "nome": "Ruoli",
+  "zucca": [
+   "admin",
+   "user"
+  ],
+  "da_zero": [
+   "admin",
+   "user"
+  ],
+  "uguale": true
+ },
+ {
+  "nome": "Funzioni attive (features)",
+  "zucca": [
+   {
+    "key": "whatsapp",
+    "enabled": false,
+    "label": "Notifiche WhatsApp",
+    "description": "Destinatari e messaggi WhatsApp: avvisi e riepiloghi inviati a chi scegli. Serve il collegamento WhatsApp in Connessioni."
+   },
+   {
+    "key": "gmail",
+    "enabled": false,
+    "label": "Mail che diventano righe",
+    "description": "Regole su Gmail: le mail di certi mittenti diventano righe da smistare. Serve Google collegato in Connessioni."
+   },
+   {
+    "key": "sito_web",
+    "enabled": false,
+    "label": "Sito Web",
+    "description": "Pagine pubbliche del progetto, con il loro editor. Resta spento al pubblico finché non lo attivi dalla scheda Sito Web."
+   },
+   {
+    "key": "movimenti",
+    "enabled": false,
+    "label": "Movimenti bancari",
+    "description": "Carica gli estratti conto in PDF, vedi i movimenti reali e completa le spese che mancano."
+   },
+   {
+    "key": "analisi",
+    "enabled": false,
+    "label": "Come sta andando",
+    "description": "Scheda in dashboard con entrate, spese, risparmio, confronti e anomalie, spiegata dall'assistente."
+   },
+   {
+    "key": "riepilogo_mattino",
+    "enabled": false,
+    "label": "Report",
+    "description": "Report pianificati su WhatsApp e Telegram, configurabili: quanto pagare, righe da trattare, voci in ritardo, ore lavorate e straordinari."
+   },
+   {
+    "key": "suggerimenti",
+    "enabled": false,
+    "label": "Suggerimenti",
+    "description": "Ogni giorno osserva come usi i moduli (campi mai compilati, righe ferme, passaggi mai usati) e ti suggerisce come migliorarli; l'AI spiega e propone su richiesta. Spento di partenza."
+   }
+  ],
+  "da_zero": [
+   {
+    "key": "whatsapp",
+    "enabled": false,
+    "label": "Notifiche WhatsApp",
+    "description": "Destinatari e messaggi WhatsApp: avvisi e riepiloghi inviati a chi scegli. Serve il collegamento WhatsApp in Connessioni."
+   },
+   {
+    "key": "gmail",
+    "enabled": false,
+    "label": "Mail che diventano righe",
+    "description": "Regole su Gmail: le mail di certi mittenti diventano righe da smistare. Serve Google collegato in Connessioni."
+   },
+   {
+    "key": "sito_web",
+    "enabled": false,
+    "label": "Sito Web",
+    "description": "Pagine pubbliche del progetto, con il loro editor. Resta spento al pubblico finché non lo attivi dalla scheda Sito Web."
+   },
+   {
+    "key": "movimenti",
+    "enabled": false,
+    "label": "Movimenti bancari",
+    "description": "Carica gli estratti conto in PDF, vedi i movimenti reali e completa le spese che mancano."
+   },
+   {
+    "key": "analisi",
+    "enabled": false,
+    "label": "Come sta andando",
+    "description": "Scheda in dashboard con entrate, spese, risparmio, confronti e anomalie, spiegata dall'assistente."
+   },
+   {
+    "key": "riepilogo_mattino",
+    "enabled": false,
+    "label": "Report",
+    "description": "Report pianificati su WhatsApp e Telegram, configurabili: quanto pagare, righe da trattare, voci in ritardo, ore lavorate e straordinari."
+   },
+   {
+    "key": "suggerimenti",
+    "enabled": false,
+    "label": "Suggerimenti",
+    "description": "Ogni giorno osserva come usi i moduli (campi mai compilati, righe ferme, passaggi mai usati) e ti suggerisce come migliorarli; l'AI spiega e propone su richiesta. Spento di partenza."
+   }
+  ],
+  "uguale": true
+ },
+ {
+  "nome": "Impostazioni: nome app e colore",
+  "zucca": {},
+  "da_zero": {},
+  "uguale": true
+ },
+ {
+  "nome": "Connessioni visibili",
+  "zucca": [
+   "email_smtp:false",
+   "email_resend:false",
+   "openapi_it:true"
+  ],
+  "da_zero": [
+   "email_smtp:false",
+   "email_resend:false"
+  ],
+  "uguale": false
+ },
+ {
+  "nome": "Liste di scelta",
+  "zucca": 0,
+  "da_zero": 0,
+  "uguale": true
+ }
+]

@@ -1,0 +1,55 @@
+[
+ {
+  "nome": "crea cliente venditore",
+  "ok": true,
+  "d": "200"
+ },
+ {
+  "nome": "crea cliente acquirente",
+  "ok": true
+ },
+ {
+  "nome": "codice fiscale non valido viene rifiutato",
+  "ok": true,
+  "d": "400 {\"error\":\"Codice Fiscale / P.IVA: «XXXXXXXXXXXXXXXX» non è un codice fiscale né una partit"
+ },
+ {
+  "nome": "crea immobile con proprietario",
+  "ok": true,
+  "d": "200 {\"id\":13,\"module_slug\":\"immobili\",\"user_id\":1,\"data\":{\"titolo\":\"Bilocale Via Verdi\",\"tipologia\":\"App"
+ },
+ {
+  "nome": "crea trattativa",
+  "ok": true,
+  "d": "200"
+ },
+ {
+  "nome": "passaggio a «Preliminare firmato» bloccato senza il contratto",
+  "ok": true,
+  "d": "400 {\"error\":\"Per passare a «Preliminare firmato» manca: Contratto preliminare.\",\"mancano\":[\"Contratto preliminare\"]}"
+ },
+ {
+  "nome": "allegato «Contratto preliminare» caricato",
+  "ok": true,
+  "d": "200 {\"id\":1,\"upload_id\":1,\"tipo\":\"Contratto preliminare\"}"
+ },
+ {
+  "nome": "alla firma del preliminare nascono 2 provvigioni (una per parte)",
+  "ok": true,
+  "d": "transizione 200, provvigioni trovate: 2"
+ },
+ {
+  "nome": "l'importo della provvigione si calcola da solo",
+  "ok": true,
+  "d": "[[\"Venditore\",3,4560,5563.2],[\"Acquirente\",3,4560,5563.2]]"
+ },
+ {
+  "nome": "crea attività collegata a immobile e cliente",
+  "ok": true
+ },
+ {
+  "nome": "requisiti per stato presenti",
+  "ok": true,
+  "d": ""
+ }
+]

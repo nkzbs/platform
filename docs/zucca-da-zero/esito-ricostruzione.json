@@ -1,0 +1,217 @@
+[
+ {
+  "k": "ruolo admin",
+  "ok": false,
+  "d": "{\"error\":\"Nome riservato\"}"
+ },
+ {
+  "k": "ruolo user",
+  "ok": false,
+  "d": "{\"error\":\"Nome riservato\"}"
+ },
+ {
+  "k": "crea clienti",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "bozza clienti",
+  "ok": true,
+  "d": "44 blocchi"
+ },
+ {
+  "k": "pubblica clienti",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "impostazioni clienti",
+  "ok": true,
+  "d": "group_order,list_view,sort_order,quick_toggle,menu_nascosto"
+ },
+ {
+  "k": "permessi clienti",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "crea immobili",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "bozza immobili",
+  "ok": true,
+  "d": "57 blocchi"
+ },
+ {
+  "k": "pubblica immobili",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "impostazioni immobili",
+  "ok": true,
+  "d": "group_order,list_view,sort_order,quick_toggle,menu_nascosto"
+ },
+ {
+  "k": "permessi immobili",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "crea trattative",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "bozza trattative",
+  "ok": true,
+  "d": "34 blocchi"
+ },
+ {
+  "k": "pubblica trattative",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "impostazioni trattative",
+  "ok": true,
+  "d": "group_order,list_view,sort_order,quick_toggle,menu_nascosto"
+ },
+ {
+  "k": "permessi trattative",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "crea provvigioni",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "bozza provvigioni",
+  "ok": true,
+  "d": "34 blocchi"
+ },
+ {
+  "k": "pubblica provvigioni",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "impostazioni provvigioni",
+  "ok": true,
+  "d": "group_order,list_view,sort_order,quick_toggle,menu_nascosto"
+ },
+ {
+  "k": "permessi provvigioni",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "crea attivita",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "bozza attivita",
+  "ok": true,
+  "d": "22 blocchi"
+ },
+ {
+  "k": "pubblica attivita",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "impostazioni attivita",
+  "ok": true,
+  "d": "group_order,list_view,sort_order,quick_toggle,menu_nascosto"
+ },
+ {
+  "k": "permessi attivita",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "crea quote_societarie",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "bozza quote_societarie",
+  "ok": true,
+  "d": "19 blocchi"
+ },
+ {
+  "k": "pubblica quote_societarie",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "impostazioni quote_societarie",
+  "ok": true,
+  "d": "group_order,list_view,sort_order,quick_toggle,menu_nascosto"
+ },
+ {
+  "k": "permessi quote_societarie",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "crea richieste_privacy",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "bozza richieste_privacy",
+  "ok": true,
+  "d": "12 blocchi"
+ },
+ {
+  "k": "pubblica richieste_privacy",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "impostazioni richieste_privacy",
+  "ok": true,
+  "d": "group_order,list_view,sort_order,quick_toggle,menu_nascosto"
+ },
+ {
+  "k": "permessi richieste_privacy",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "widget Immobili a portafoglio",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "widget Preliminari del mese",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "widget Provvigioni in scadenza nel mese",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "widget Da fare",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "widget Percorso degli immobili",
+  "ok": true,
+  "d": ""
+ },
+ {
+  "k": "widget Da sistemare",
+  "ok": true,
+  "d": ""
+ }
+]
