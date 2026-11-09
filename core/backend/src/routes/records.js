@@ -910,7 +910,8 @@ function runTransition(user, slug, id, to) {
   const transition = (workflow.transitions || []).find((t) => t.from === from && t.to === to);
   if (!transition) return err(422, `Transizione non ammessa: ${from} → ${to}`);
 
-  if (Array.isArray(transition.roles) && transition.roles.length > 0 && !transition.roles.includes(user.role)) return err(403, 'Il tuo ruolo non può eseguire questa transizione');
+  // L'amministratore passa sempre (come nei permessi dei moduli, permissions.js): un passaggio riservato a un ruolo non deve bloccare chi gestisce il tenant.
+  if (Array.isArray(transition.roles) && transition.roles.length > 0 && user.role !== 'admin' && !transition.roles.includes(user.role)) return err(403, 'Il tuo ruolo non può eseguire questa transizione');
 
   // Requisiti dello stato di arrivo (blocco `state_requirements`): se il blocco è «bloccante» e manca qualcosa, il passaggio non avviene e si dice cosa manca.
   // Se non è bloccante sono solo un promemoria nella scheda (shared/requisiti-stato.js, lo stesso calcolo).

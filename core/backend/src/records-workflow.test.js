@@ -87,6 +87,7 @@ async function main() {
       transitions: [
         { from: 'bozza', to: 'confermato' },
         { from: 'confermato', to: 'archiviato', roles: ['admin'] },
+        { from: 'archiviato', to: 'bozza', roles: ['operatore_x'] },
       ],
     },
   };
@@ -179,6 +180,12 @@ async function main() {
   await test('Il ruolo admin (incluso in transition.roles) può eseguire la stessa transizione — controllo positivo', async () => {
     const res = await fetch(BASE + '/api/records/' + SLUG + '/' + recId2 + '/transition', { method: 'POST', headers: auth, body: JSON.stringify({ to: 'archiviato' }) });
     assertEq(res.status, 200);
+  });
+
+  await test('Un passaggio riservato a un altro ruolo: l\'amministratore passa comunque, un ruolo estraneo no', async () => {
+    const url = BASE + '/api/records/' + SLUG + '/' + recId2 + '/transition';
+    assertEq((await fetch(url, { method: 'POST', headers: authViewer, body: JSON.stringify({ to: 'bozza' }) })).status, 403);
+    assertEq((await fetch(url, { method: 'POST', headers: auth, body: JSON.stringify({ to: 'bozza' }) })).status, 200);
   });
 
   await test('Modulo senza workflow -> 400 su qualunque transizione', async () => {
