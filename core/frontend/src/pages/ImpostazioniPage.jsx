@@ -129,12 +129,19 @@ function ConnessioniTab({ token, user, features = {} }) {
   }
 
   const googleConnected = !!(googleStatus && googleStatus.connected)
-  const rows = [
-    ...connections.filter((c) => c.gruppo === 'posta').map((c) => ({ id: c.id, name: c.name || c.id, connected: !!c.connected, intg: c, gruppo: 'posta' })),
-    { id: 'google', name: 'Google (Gmail / Calendar / Drive)', connected: googleConnected },
-    ...connections.filter((c) => c.id !== 'google' && c.id !== 'telegram' && c.gruppo !== 'posta').map((c) => ({ id: c.id, name: c.name || c.id, connected: !!c.connected, intg: c })),
-    { id: 'telegram', name: 'Telegram (bot)', connected: !!(tgStatus && tgStatus.configured) },
+  // Quattro blocchi, sempre in questo ordine; Google e Telegram non stanno nel catalogo (hanno una loro scheda) e si collocano qui.
+  const GRUPPI = [
+    { id: 'posta', titolo: 'Posta in uscita', desc: 'Da qui partono documenti, solleciti, messaggi di massa, auguri e le richieste del Sito Web. Scegli <b>una</b> delle due: l\'SMTP è il server di posta del tuo dominio; se le colleghi tutte e due vince l\'SMTP.' },
+    { id: 'dati', titolo: 'Dati e servizi', desc: 'Valutazioni, visure e catasto (OpenAPI.it), documenti e calendario (Google).' },
+    { id: 'messaggistica', titolo: 'Messaggistica', desc: 'Avvisi e messaggi sui canali di chat (Telegram, WhatsApp, Slack).' },
+    { id: 'altro', titolo: 'Altro', desc: 'Pagamenti, fatturazione e marketing.' },
   ]
+  const tutte = [
+    ...connections.filter((c) => c.id !== 'google' && c.id !== 'telegram').map((c) => ({ id: c.id, name: c.name || c.id, connected: !!c.connected, intg: c, gruppo: c.gruppo || 'altro' })),
+    { id: 'google', name: 'Google (Gmail / Calendar / Drive)', connected: googleConnected, gruppo: 'dati' },
+    { id: 'telegram', name: 'Telegram (bot)', connected: !!(tgStatus && tgStatus.configured), gruppo: 'messaggistica' },
+  ]
+  const rows = GRUPPI.flatMap((g) => tutte.filter((r) => r.gruppo === g.id))
   const postaAttiva = rows.filter((r) => r.gruppo === 'posta' && r.connected).map((r) => r.id)
 
   return (
@@ -143,15 +150,12 @@ function ConnessioniTab({ token, user, features = {} }) {
       <div className="space-y-2">
         {rows.map((row, i) => (
           <React.Fragment key={row.id}>
-          {row.gruppo === 'posta' && i === 0 && (
-            <div className="pt-1">
-              <h2 className="text-sm font-semibold text-ink">Posta in uscita</h2>
-              <p className="text-xs text-gray-500 mt-0.5 mb-1">Da qui partono documenti, solleciti, messaggi di massa, auguri e le richieste del Sito Web. Scegli <b>una</b> delle due: l'SMTP è il server di posta del tuo dominio; se le colleghi tutte e due vince l'SMTP.</p>
+          {(i === 0 || rows[i - 1].gruppo !== row.gruppo) && (() => { const g = GRUPPI.find((x) => x.id === row.gruppo); return (
+            <div className={i === 0 ? 'pt-1' : 'pt-5'}>
+              <h2 className="text-sm font-semibold text-ink">{g.titolo}</h2>
+              <p className="text-xs text-gray-500 mt-0.5 mb-1" dangerouslySetInnerHTML={{ __html: g.desc }} />
             </div>
-          )}
-          {row.gruppo !== 'posta' && i > 0 && rows[i - 1].gruppo === 'posta' && (
-            <div className="pt-4"><h2 className="text-sm font-semibold text-ink">Altri servizi</h2></div>
-          )}
+          ) })()}
           <div className="glass-panel p-3">
             <button onClick={() => toggle(row.id)} className="flex items-center gap-1.5 w-full text-left">
               <Icon name="plug" size={13} className={row.connected ? 'text-green-400' : 'text-amber-400'} />
@@ -522,8 +526,10 @@ const SETTINGS_GROUPS = [
     { key: 'funzioni', icon: 'grid', label: 'Funzioni' },
     { key: 'aspetto', icon: 'palette', label: 'Aspetto' },
   ] },
-  { label: 'Integrazioni', items: [
+  { label: 'Collegamenti', items: [
     { key: 'connessioni', icon: 'link', label: 'Connessioni' },
+  ] },
+  { label: 'Comunicazioni', items: [
     { key: 'messaggi', icon: 'mail', label: 'Messaggi ai clienti' },
     { key: 'notifiche', icon: 'bell', label: 'Report' },
   ] },

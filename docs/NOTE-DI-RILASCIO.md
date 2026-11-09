@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.82 — 9 novembre 2026
+
+**Impostazioni più ordinate.**
+- Nel menu, il gruppo «Integrazioni» (che mescolava servizi esterni, messaggi ai clienti e report) è diviso in **Collegamenti** (Connessioni) e **Comunicazioni** (Messaggi ai clienti, Report).
+- Dentro **Connessioni** le schede stanno in quattro blocchi con titolo e una riga di spiegazione: **Posta in uscita**, **Dati e servizi** (OpenAPI.it, Google), **Messaggistica** (Telegram, WhatsApp, Slack), **Altro** (Stripe, Mailchimp, Fatture in Cloud). Un blocco senza schede visibili non compare.
+- Ogni voce del catalogo ha un `gruppo`; l'ordine dei blocchi è fisso.
+
 ## 0.4.81 — 9 novembre 2026
 
 **Posta in uscita: SMTP classico, e finalmente si trova.** Prima le mail dei documenti, dei solleciti e dei messaggi ai clienti partivano solo da Resend, e la sua scheda in Connessioni non compariva se non era già collegata: per questo non si trovava dove inserire la posta.

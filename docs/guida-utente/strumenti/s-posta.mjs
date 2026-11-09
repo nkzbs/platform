@@ -5,6 +5,7 @@ const menu=(n)=>b.clic(n,{sel:'aside button, aside a, nav button, nav a'})
 try{
   await b.accedi()
   await passo('120-impostazioni-posta',async()=>{ await menu('Impostazioni'); await b.pausa(900); await b.clic('Connessioni',{sel:'nav button, button'}); await b.pausa(1200) })
+  await passo('123-connessioni-gruppi',async()=>{ await b.scorri(0) })
   await passo('121-posta-smtp',async()=>{ await b.clic('Posta in uscita — SMTP',{sel:'button'}); await b.pausa(800) })
   await passo('122-messaggi-clienti',async()=>{ await b.clic('Messaggi ai clienti',{sel:'nav button, button'}); await b.pausa(1200) })
 }finally{ await b.chiudi?.() }

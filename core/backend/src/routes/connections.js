@@ -18,32 +18,32 @@ const router = express.Router();
 // aggiungere un'integrazione nuova, non due. 'google' non ha cred_fields: passa da
 // un vero OAuth2 (routes/google-oauth.js), non da un form di credenziali generico.
 const CATALOG = [
-  { id: 'fatture_in_cloud', name: 'Fatture in Cloud', desc: 'Fatturazione elettronica e SDI', color: '#F59E0B', icon: 'file',
+  { id: 'fatture_in_cloud', gruppo: 'altro', name: 'Fatture in Cloud', desc: 'Fatturazione elettronica e SDI', color: '#F59E0B', icon: 'file',
     actions: ['Crea fattura', 'Invia a SDI', 'Registra pagamento', 'Crea nota credito'],
     cred_fields: [
       { key: 'access_token', label: 'Access Token', placeholder: 'Bearer token OAuth2' },
       { key: 'company_id', label: 'Company ID', placeholder: 'ID azienda FiC' },
     ] },
-  { id: 'whatsapp', name: 'WhatsApp Business', desc: 'Messaggistica diretta ai clienti', color: '#25D366', icon: 'cpu',
+  { id: 'whatsapp', gruppo: 'messaggistica', name: 'WhatsApp Business', desc: 'Messaggistica diretta ai clienti', color: '#25D366', icon: 'cpu',
     actions: ['Invia messaggio', 'Invia template', 'Invia documento'],
     cred_fields: [
       { key: 'token', label: 'Bearer Token', placeholder: 'EAABx...' },
       { key: 'phone_id', label: 'Phone Number ID', placeholder: '1234567890' },
       { key: 'to', label: 'Destinatario (numero)', placeholder: '+39...' },
     ] },
-  { id: 'whatsapp_callmebot', name: 'WhatsApp (CallMeBot)', desc: 'Notifiche dirette via CallMeBot — multi-destinatario per tag', color: '#25D366', icon: 'message-circle',
+  { id: 'whatsapp_callmebot', gruppo: 'messaggistica', name: 'WhatsApp (CallMeBot)', desc: 'Notifiche dirette via CallMeBot — multi-destinatario per tag', color: '#25D366', icon: 'message-circle',
     actions: ['Invia notifica'],
     cred_fields: [{ key: 'api_key', label: 'CallMeBot API Key', placeholder: 'ottenuta scrivendo al bot da telefono' }] },
-  { id: 'slack', name: 'Slack', desc: 'Notifiche e alert sul canale', color: '#4A154B', icon: 'zap',
+  { id: 'slack', gruppo: 'messaggistica', name: 'Slack', desc: 'Notifiche e alert sul canale', color: '#4A154B', icon: 'zap',
     actions: ['Invia notifica', 'Invia alert', 'Post su canale'],
     cred_fields: [{ key: 'webhook_url', label: 'Webhook URL', placeholder: 'https://hooks.slack.com/services/...' }] },
   { id: 'google', name: 'Google Workspace', desc: 'Drive, Calendar, Gmail', color: '#4285F4', icon: 'link',
     actions: ['Allega documento', 'Crea evento', 'Invia email'],
     cred_fields: [] },
-  { id: 'stripe', name: 'Stripe', desc: 'Pagamenti online', color: '#635BFF', icon: 'credit-card',
+  { id: 'stripe', gruppo: 'altro', name: 'Stripe', desc: 'Pagamenti online', color: '#635BFF', icon: 'credit-card',
     actions: ['Crea payment link', 'Verifica pagamento'],
     cred_fields: [{ key: 'secret_key', label: 'Secret Key', placeholder: 'sk_live_...' }] },
-  { id: 'mailchimp', name: 'Mailchimp', desc: 'Email marketing', color: '#FFE01B', icon: 'users',
+  { id: 'mailchimp', gruppo: 'altro', name: 'Mailchimp', desc: 'Email marketing', color: '#FFE01B', icon: 'users',
     actions: ['Aggiungi a lista', 'Invia campagna'],
     cred_fields: [
       { key: 'api_key', label: 'API Key', placeholder: 'abc123...-us6' },
@@ -79,7 +79,7 @@ const CATALOG = [
   // nessuna autenticazione OAuth, solo una chiave. Ambiente sandbox e produzione hanno
   // basi URL diverse (vedi lib/openapi-it.js): il campo "ambiente" sceglie quale usare,
   // così si può provare senza rischiare una chiamata vera a pagamento per sbaglio.
-  { id: 'openapi_it', name: 'OpenAPI.it — Immobili', desc: 'Ricerca immobili per CF, quotazioni di mercato, visure catastali', color: '#0EA5E9', icon: 'home',
+  { id: 'openapi_it', gruppo: 'dati', name: 'OpenAPI.it — Immobili', desc: 'Ricerca immobili per CF, quotazioni di mercato, visure catastali', color: '#0EA5E9', icon: 'home',
     actions: ['Ricerca immobili per codice fiscale', 'Quotazioni di mercato', 'Visura catastale'],
     cred_fields: [
       { key: 'email', label: 'Email dell\'account openapi.com', placeholder: 'tua@email.it' },
