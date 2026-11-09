@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.90 — 9 novembre 2026
+
+**«Controlla i servizi» di OpenAPI.it non si blocca più.** Segnalato dall'utente su zucca, dopo aver abilitato i servizi nella console di OpenAPI.it.
+- Il controllo faceva i servizi **uno dopo l'altro**, ciascuno con due chiamate da 15 secondi di attesa massima: se OpenAPI.it era lento la somma superava i 100 secondi che Cloudflare concede e la pagina mostrava un errore. Ora i servizi si controllano **tutti insieme** (al massimo circa 30 secondi in totale); l'esito per servizio è identico.
+- **Connessioni**: un servizio usato solo da un'azione esterna di un modulo (per esempio la valutazione di un immobile, che usa OpenAPI.it) ora compare nell'elenco anche se non è ancora collegato, come già i servizi richiesti dalle automazioni. Prima poteva non comparire e non si poteva collegare.
+- Prove: due nuove in `openapi-servizi.test.js` (parallelo, con 500 ms a chiamata; comparsa in Connessioni).
+- Se il controllo dà ancora errore, il messaggio sotto il pulsante dice il motivo (chiave non collegata, servizio non abilitato, nessuna risposta).
+
 ## 0.4.89 — 9 novembre 2026
 
 **«Aggiorna» non dà più KO per un avvio lento, e un fallimento lascia traccia.** Segnalato dall'utente: la prima pressione dava KO, la seconda partiva. Causa più probabile (vista su Finance, dalla 0.4.37 alla 0.4.81): dopo un salto di versione il primo avvio del tenant fa le migrazioni del database e supera il minuto, mentre Super Admin aspettava al massimo 60 secondi.

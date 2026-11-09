@@ -223,23 +223,24 @@ const SERVIZI = [
 async function verificaServizi() {
   const c = credenziali();
   if (!c) throw Object.assign(new Error('OpenAPI.it non collegato: imposta email e API key in Impostazioni → Connessioni.'), { status: 503, code: 'not_connected' });
-  const out = [];
-  for (const sv of SERVIZI) {
+  // Tutti i servizi insieme: uno dopo l'altro, con due chiamate da 15 secondi l'una, si superavano i 100 secondi che Cloudflare concede e il controllo sembrava non funzionare.
+  const uno = async (sv) => {
     const host = (c.sandbox ? 'test.' : '') + sv.dominio;
     const base = { id: sv.id, nome: sv.nome };
     let token;
     try { token = await ottieniToken(c, ['GET:' + host + (sv.scope || sv.rotta)]); }
-    catch (e) { out.push({ ...base, stato: 'non_abilitato', dettaglio: String((e && e.message) || 'Token non ottenuto').slice(0, 200) }); continue; }
-    if (!sv.lettura) { out.push({ ...base, stato: 'token_ok', dettaglio: 'Il token si ottiene; nessuna lettura gratuita da provare (è il servizio usato dalla valutazione).' }); continue; }
+    catch (e) { return { ...base, stato: 'non_abilitato', dettaglio: String((e && e.message) || 'Token non ottenuto').slice(0, 200) }; }
+    if (!sv.lettura) return { ...base, stato: 'token_ok', dettaglio: 'Il token si ottiene; nessuna lettura gratuita da provare (è il servizio usato dalla valutazione).' };
     try {
       const res = await fetch('https://' + host + sv.rotta, { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(15000) });
       const dati = await res.json().catch(() => null);
       const msg = String((dati && (dati.message || dati.error)) || '').slice(0, 160);
-      if (res.ok) out.push({ ...base, stato: 'attivo', dettaglio: 'La lettura di prova è riuscita.' });
-      else if (res.status === 401 || res.status === 403) out.push({ ...base, stato: 'non_abilitato', dettaglio: msg || 'Non autorizzato (' + res.status + ').' });
-      else out.push({ ...base, stato: 'incerto', dettaglio: 'Il servizio ha risposto ' + res.status + (msg ? ': ' + msg : '') + '. Il token c\'è: si capisce provando un controllo vero.' });
-    } catch (e) { out.push({ ...base, stato: 'incerto', dettaglio: 'Nessuna risposta dal servizio (' + String((e && e.message) || e).slice(0, 80) + ').' }); }
-  }
+      if (res.ok) return { ...base, stato: 'attivo', dettaglio: 'La lettura di prova è riuscita.' };
+      if (res.status === 401 || res.status === 403) return { ...base, stato: 'non_abilitato', dettaglio: msg || 'Non autorizzato (' + res.status + ').' };
+      return { ...base, stato: 'incerto', dettaglio: 'Il servizio ha risposto ' + res.status + (msg ? ': ' + msg : '') + '. Il token c\'è: si capisce provando un controllo vero.' };
+    } catch (e) { return { ...base, stato: 'incerto', dettaglio: 'Nessuna risposta dal servizio (' + String((e && e.message) || e).slice(0, 80) + ').' }; }
+  };
+  const out = await Promise.all(SERVIZI.map(uno));
   return { ambiente: c.sandbox ? 'prova' : 'produzione', servizi: out };
 }
 

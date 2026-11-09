@@ -96,6 +96,9 @@ function requiredByInstalledModules() {
   const ids = new Set();
   for (const m of db.prepare('SELECT schema_json FROM modules WHERE installed = 1').all()) {
     try { getRequiredConnectors(m.schema_json).forEach((id) => ids.add(id)); } catch (e) { /* schema non leggibile: nessun requisito */ }
+    // anche le azioni esterne (pulsanti su un record che chiamano un servizio, blocco `external_action` con `connection`) richiedono il loro collegamento: senza questo, un servizio usato solo
+    // da un'azione esterna (per esempio la valutazione di un immobile) non compariva mai in Connessioni e non si poteva collegare
+    try { (JSON.parse(m.schema_json || '{}').steps || []).forEach((b) => { if (b && b.block_type === 'external_action' && b.connection) ids.add(b.connection); }); } catch (e) { /* schema non leggibile */ }
   }
   return ids;
 }

@@ -73,6 +73,18 @@ async function main() {
   });
 
   global.fetch = veroFetch;
+  await test('i servizi si controllano tutti insieme (non uno dopo l\'altro): con 500 ms a chiamata il controllo resta sotto i tre secondi (uno dopo l\'altro ne servirebbero più di quattro)', async () => {
+    const f = global.fetch; global.fetch = async (url, opts) => { if (/openapi\.(com|it)/.test(String(url))) await new Promise((r) => setTimeout(r, 500)); return f(url, opts); };
+    try { const t0 = Date.now(); const r = await (await post()).json(); const ms = Date.now() - t0; ok(r.ok && r.servizi.length === oa.SERVIZI.length, JSON.stringify(r).slice(0, 200)); ok(ms < 3000, 'ha impiegato ' + ms + ' ms: i servizi vanno controllati in parallelo'); } finally { global.fetch = f; }
+  });
+  await test('un servizio usato solo da un\'azione esterna compare in Connessioni anche se non è ancora collegato', async () => {
+    db.prepare('DELETE FROM connections WHERE integration_id = ?').run('openapi_it');
+    const nome = async () => (await (await fetch(BASE + '/api/connections', { headers: H })).json()).map((c) => c.id);
+    ok(!(await nome()).includes('openapi_it'), 'non dovrebbe comparire senza moduli che lo usano');
+    db.prepare("INSERT INTO modules (name, slug, installed, schema_json) VALUES ('Prova', 'prova_ea', 1, ?)").run(JSON.stringify({ version: 3, steps: [{ id: 'a', block_type: 'external_action', key: 'x', label: 'X', adapter: 'valutazione_immobiliare', connection: 'openapi_it' }] }));
+    ok((await nome()).includes('openapi_it'), 'doveva comparire: ' + (await nome()).join());
+  });
+
   console.log(`\n${passed} passati, ${failed} falliti`);
   try { fs.unlinkSync(process.env.DB_PATH); } catch (e) {}
   process.exit(failed ? 1 : 0);
