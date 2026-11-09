@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.100 — 9 novembre 2026
+
+**«Verifica del soggetto» (Risk) mostra lo stato della richiesta presso OpenAPI.it.** Prima, finché il PDF non era scaricabile, il report risultava solo «non ancora pronto»: una richiesta fallita o ferma era indistinguibile da una in attesa. Ora l'adattatore legge lo stato (`GET /IT-report-persona/{id}`) e lo scrive nell'esito («stato presso OpenAPI.it: …»); se lo stato è di errore (fallita, rifiutata, non trovata…) lo dice con il motivo, il record passa a «fallita» e il pulsante non ricontrolla a vuoto: premendolo si fa una richiesta nuova, con conferma del costo. Test: `risk-collegati.test.js`. **Non verificato:** i nomi esatti degli stati di OpenAPI.it (il codice riconosce quelli di errore più comuni e mostra sempre lo stato grezzo, così il primo caso vero chiarisce); un report vero non è ancora stato scaricato. Serve «Aggiorna» su zucca.
+
 ## 0.4.99 — 9 novembre 2026
 
 **L'amministratore può far avanzare un record anche quando il passaggio è riservato a un altro ruolo.** In zucca i passaggi di stato del cliente («Documenti inviati» ecc.) sono riservati al ruolo `operatore_front_office`: l'amministratore vedeva il pulsante ma la risposta era «Il tuo ruolo non può eseguire questa transizione». Ora l'amministratore passa sempre, come già avviene per i permessi dei moduli; gli altri ruoli restano limitati a quelli elencati. Vale per tutti i tenant. Test: `records-workflow.test.js`. Serve «Aggiorna» su zucca e Finance.

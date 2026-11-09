@@ -16,7 +16,7 @@ const eq = (a, e, m) => { if (JSON.stringify(a) !== JSON.stringify(e)) throw new
 const ok = (c, m) => { if (!c) throw new Error(m || 'atteso true'); };
 
 async function main() {
-  let attivo = false, reportPronto = false; const chiamate = [];
+  let attivo = false, reportPronto = false, statoServizio = 'processing'; const chiamate = [];
   const PDF = Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(400, 'x')]);
   require.cache[require.resolve('./lib/openapi-it')] = { id: 'fake', filename: 'fake', loaded: true, exports: {
     credenziali: () => ({ email: 'a@b.it', apiKey: 'x', sandbox: false }),
@@ -29,6 +29,7 @@ async function main() {
       if (percorso === '/visura_catastale/vis1') return reportPronto ? { data: { id: 'vis1', stato: 'evasa', risultato: { Immobile: { DatiClassamento: { Categoria: 'A/2', RenditaEuro: '413,17' } } } } } : { data: { id: 'vis1', stato: 'in_erogazione' } };
       if (/IT-creditscore-start\//.test(percorso)) return { data: { organization_name: 'ACME SRL', risk_score: 'VERDE' } };
       if (/IT-creditscore-advanced\//.test(percorso)) return { data: { organization_name: 'ACME SRL', risk_score: 'GIALLO', rating: 'B2', operational_credit_limit: '25000' } };
+      if (metodo === 'GET' && /IT-report-persona\/rep123$/.test(percorso)) return { data: { id: 'rep123', state: statoServizio, ...(/fail/.test(statoServizio) ? { message: 'soggetto non trovato' } : {}) } };
       throw new Error('chiamata inattesa ' + metodo + ' ' + percorso);
     },
   } };
@@ -108,6 +109,18 @@ async function main() {
     eq((await azione(id, 'controllo_catastale')).status, 200, 'ricontrollo senza conferma');
     const t = leggi(id).verifica_esito; ok(/categoria coincide/.test(t) && /rendita coincide/.test(t), t); eq(leggi(id).controllo_catastale.stato, 'completata');
     eq((await spese()).produzione.richieste, prima + 1, 'nessuna seconda spesa');
+  });
+
+  await test('persona: lo stato presso OpenAPI.it si vede; una richiesta fallita non resta «in preparazione» per sempre e non si ricontrolla a vuoto', async () => {
+    reportPronto = false; statoServizio = 'processing';
+    const id2 = rec(persona); const prima = (await spese()).produzione.richieste;
+    eq((await azione(id2, 'verifica_soggetto', { conferma: true })).status, 200);
+    eq(leggi(id2).verifica_persona.stato, 'in_corso'); ok(/stato presso OpenAPI\.it: processing/.test(leggi(id2).verifica_esito), leggi(id2).verifica_esito);
+    statoServizio = 'failed';
+    eq((await azione(id2, 'verifica_soggetto')).status, 200, 'il ricontrollo non costa');
+    eq(leggi(id2).verifica_persona.stato, 'fallita'); ok(/fallita/.test(leggi(id2).verifica_esito) && /soggetto non trovato/.test(leggi(id2).verifica_esito), leggi(id2).verifica_esito);
+    const r = await azione(id2, 'verifica_soggetto'); eq(r.status, 409); eq((await r.json()).code, 'conferma_costo'); // una richiesta fallita non è più «in corso»: ne serve una nuova, con conferma del costo
+    eq((await spese()).produzione.richieste, prima + 1, 'una sola spesa finora');
   });
 
   console.log('\n' + passed + ' passati, ' + failed + ' falliti su ' + (passed + failed) + ' test.');
