@@ -123,6 +123,11 @@ router.post('/:slug/key-usage', requireAuth, requireAdmin, (req, res) => {
 // Il context {currentModule, currentRecordId} serve solo per i campi calcolati (tipo
 // 'computed' su un modulo), che usano le funzioni *_children — gli aggregati di Report
 // non lo passano e continuano a funzionare come prima.
+// «Quanto è operativo il tenant»: controllo di coerenza di tutti i moduli installati, sola lettura (lib/verifica-tenant.js).
+router.get('/verifica', requireAuth, requireAdmin, (req, res) => {
+  try { res.json(require('../lib/verifica-tenant').verifica()); } catch (e) { res.status(500).json({ error: 'Controllo non riuscito: ' + e.message }); }
+});
+
 router.post('/formula/check', requireAuth, requireAdmin, (req, res) => {
   const { expr, steps, context } = req.body;
   if (Array.isArray(steps) && steps.length > 0) {

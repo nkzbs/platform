@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.83 — 9 novembre 2026
+
+**«Controlla il tenant»: quanto è operativo uno spazio di lavoro.** In Impostazioni → Moduli un pulsante legge gli schemi di tutti i moduli installati e dice quanti riferimenti stanno in piedi, con un punteggio su 100. Sola lettura: non crea né cambia nulla.
+- Controlla **flussi** (stato iniziale unico, passaggi verso stati esistenti, ogni stato raggiungibile), **requisiti per stato** (campi e tipi di allegato che esistono davvero), **relazioni** (modulo e campo mostrato), **automazioni** (stato, campi e moduli citati), **documenti** (segnaposto e destinatario), **viste** (calendario, mappa, abbinamento), **ruoli e permessi** e **calcoli**.
+- Ogni problema dice in italiano quale modulo e quale blocco, e cosa non esiste. Ciò che può mettere solo una persona (servizi esterni da collegare) sta in un elenco «Da completare a mano» e non toglie punti.
+- Rotta `GET /api/builder/verifica` (solo amministratori); codice in `lib/verifica-tenant.js`, prove in `verifica-tenant.test.js`. Serve da misura per l'analisi dei processi (vedi `docs/zucca-da-zero/RELAZIONE.md`).
+- Primo risultato sulla copia di zucca in locale: 99/100, con due difetti veri trovati (la mappa di Immobili cita un campo `numero_civico` che non esiste; il requisito «Scheda di acquisizione firmata» chiede un allegato che nessun documento produce in quella copia).
+- **Corretto**: nell'elenco di Impostazioni → Moduli compariva uno «0» dopo il nome di ogni modulo (il campo `menu_nascosto` a 0 veniva stampato).
+
 ## 0.4.82 — 9 novembre 2026
 
 **Impostazioni più ordinate.**

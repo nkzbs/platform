@@ -830,3 +830,9 @@ Codice potato dopo lo spegnimento di Platform (2 ottobre 2026): vedi [`DECISIONI
 - Il modulo di contatto del Sito Web non ha più un suo invio a Resend: usa lo stesso canale.
 - La password SMTP non compare mai negli errori restituiti né nel registro; le credenziali sono sigillate come quelle degli altri servizi.
 
+## 0.4.83 — Misurare quanto è operativo un tenant
+
+- **Decisione**: prima di far generare moduli all'analisi dei processi serve una misura oggettiva di «operativo». Primo passo: un controllo di coerenza statico e a sola lettura (nessun record creato, nessun effetto collaterale su mail, notifiche o servizi esterni), uguale per qualunque tenant e senza nomi di settore.
+- Il punteggio è la quota di controlli superati. Le cose che può fare solo una persona non lo abbassano: stanno in «Da completare a mano».
+- **Non coperto da questo controllo (passo successivo)**: la prova dinamica, cioè scenari che attraversano davvero il flusso (crea record, passaggi, importi calcolati) in un tenant di prova. Lo esercita già `docs/zucca-da-zero/prova-comportamento.mjs`; va derivato dai processi dell'analisi.
+

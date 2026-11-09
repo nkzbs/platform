@@ -22,6 +22,7 @@ import MovimentiPage from './MovimentiPage'
 import ListePage from './ListePage'
 import AspettoTab from './AspettoTab'
 import MessaggiClientiTab from './MessaggiClientiTab'
+import VerificaTenantPanel from '../components/VerificaTenantPanel'
 import GlassPageBackground from '../components/GlassPageBackground'
 
 // "Il mio account" unito qui (2026-08-29, richiesto esplicitamente dall'utente) —
@@ -440,6 +441,7 @@ function ModuliTab({ token }) {
 
   return (
     <div>
+      <VerificaTenantPanel token={token} />
       <p className="text-sm text-gray-500 mb-4">Ordine e visibilità nella sidebar — un modulo nascosto resta installato con i suoi dati, solo non compare nel menu.</p>
       <div className="space-y-1.5">
         {modules.map((m, i) => (
@@ -458,7 +460,7 @@ function ModuliTab({ token }) {
             <div className="flex-1 min-w-0">
               <div className="text-sm text-ink font-medium truncate flex items-center gap-1.5">
                 {m.name}
-                {(!m.active || m.menu_nascosto) && <span title="Spento o nascosto: non compare nel menu" className="text-[9px] px-1.5 py-0.5 rounded-full bg-gray-800 text-gray-400 flex-shrink-0">nascosto</span>}
+                {(!m.active || !!m.menu_nascosto) && <span title="Spento o nascosto: non compare nel menu" className="text-[9px] px-1.5 py-0.5 rounded-full bg-gray-800 text-gray-400 flex-shrink-0">nascosto</span>}
                 {overlay[m.slug] === 'customized' && (
                   <span title="Modificato rispetto al modello di partenza" className="text-[9px] px-1.5 py-0.5 rounded-full bg-cp-purple/30 text-cp-purple flex-shrink-0">personalizzato</span>
                 )}
