@@ -225,8 +225,6 @@ const SERVIZI = [
   { id: 'risk_report', nome: 'Risk — report sulla persona', dominio: 'risk.openapi.com', rotta: '/IT-report-persona/', scope: '/IT-report-persona', lettura: true },
   { id: 'esignature', nome: 'eSignature (firma elettronica a distanza)', dominio: 'esignature.openapi.com', rotta: '/signatures', lettura: true },
   { id: 'sdi_fatture', nome: 'Fatturazione elettronica (SDI)', dominio: 'invoice.openapi.com', rotta: '/IT-invoices', lettura: null },
-  { id: 'pec_massiva', nome: 'PEC Massiva (invio di PEC)', dominio: 'ws.pecmassiva.com', rotta: '/send', metodo: 'POST', lettura: null },
-  { id: 'visure_camerali', nome: 'Visure camerali (società, soci)', dominio: 'visurecamerali.openapi.it', rotta: '/impresa?provincia=MI&limit=1', scope: '/impresa', lettura: true },
 ];
 
 async function verificaServizi() {

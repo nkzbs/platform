@@ -52,11 +52,11 @@ async function main() {
   });
   await test('con la chiave collegata (ambiente di prova) ogni servizio ha il suo esito, con host di prova e solo letture', async () => {
     db.prepare("INSERT INTO connections (integration_id, connected, credentials) VALUES ('openapi_it', 1, ?)").run(sigillo.seal({ email: 'a@b.it', api_key: CHIAVE, ambiente: 'sandbox' }));
-    rifiutaToken = ['visurecamerali'];
+    rifiutaToken = ['invoice.openapi'];
     const r = await post(); eq(r.status, 200); const j = await r.json(); eq(j.ambiente, 'prova');
     const per = Object.fromEntries(j.servizi.map((s) => [s.id, s.stato]));
-    eq(per, { real_estate: 'token_ok', catasto: 'attivo', risk_patrimoniale: 'non_abilitato', risk_report: 'incerto', esignature: 'incerto', sdi_fatture: 'token_ok', pec_massiva: 'token_ok', visure_camerali: 'non_abilitato' });
-    ok(/Scope non consentito/.test(j.servizi.find((s) => s.id === 'visure_camerali').dettaglio), 'il motivo di OpenAPI.it arriva all\'utente');
+    eq(per, { real_estate: 'token_ok', catasto: 'attivo', risk_patrimoniale: 'non_abilitato', risk_report: 'incerto', esignature: 'incerto', sdi_fatture: 'non_abilitato' });
+    ok(/Scope non consentito/.test(j.servizi.find((s) => s.id === 'sdi_fatture').dettaglio), 'il motivo di OpenAPI.it arriva all\'utente');
     ok(chiamate.every((c) => c.startsWith('POST ') ? /\/tokens$/.test(c) : c.startsWith('GET ')), 'solo token e letture: ' + chiamate.join(' | '));
     ok(chiamate.some((c) => /GET https:\/\/test\.catasto\.openapi\.it\/territorio/.test(c)) && chiamate.some((c) => /test\.risk\.openapi\.com\/IT-patrimoniale-persona\//.test(c)) && chiamate.some((c) => /test\.oauth\.openapi\.com\/tokens/.test(c)), 'host di prova');
   });
@@ -68,7 +68,7 @@ async function main() {
   });
   await test('l\'elenco dei servizi è un dato: ogni voce ha nome, dominio e rotta; i domini sono quelli del catalogo', () => {
     for (const s of oa.SERVIZI) ok(s.id && s.nome && s.dominio && s.rotta, s.id);
-    eq(oa.SERVIZI.find((s) => s.id === 'visure_camerali').dominio, 'visurecamerali.openapi.it', 'le visure camerali stanno su un dominio .it');
+    ok(!oa.SERVIZI.some((s) => s.id === 'pec_massiva' || s.id === 'visure_camerali'), 'PEC Massiva e Visure camerali non sono nell\'elenco finché nessuna funzione le richiede');
     eq(oa.SERVIZI.find((s) => s.id === 'risk_report').dominio, 'risk.openapi.com');
   });
 

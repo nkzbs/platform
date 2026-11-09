@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.94 — 9 novembre 2026
+
+**«Controlla i servizi» non elenca più PEC Massiva e Visure camerali.** Nessuna funzione in uso li richiede e sul conto di zucca non sono attivi: restavano due ✗ che sembravano un problema. L'invio via PEC resta nel codice e funziona se un giorno si attiva PEC Massiva (si controlla al momento dell'invio); per rimetterli nell'elenco basta riaggiungere le due voci in `SERVIZI` (`lib/openapi-it.js`).
+
 ## 0.4.93 — 9 novembre 2026
 
 **«Controlla i servizi»: Risk ed eSignature risultano attivi.** La prova elenca le richieste fatte; con zero richieste OpenAPI.it risponde 404 «no requests linked to this username», e prima veniva segnato «da verificare». Ora è «attivo, nessuna richiesta ancora». Non verificato: una richiesta vera a Risk o eSignature.
