@@ -54,6 +54,9 @@ async function main() {
       if (cmd.includes('docker load')) { if (o.stdin && o.stdin.resume) await new Promise((res) => { o.stdin.on('end', res); o.stdin.resume(); }); return { code: 0, stdout: 'Loaded image: platform-core:latest\n', stderr: '' }; }
       if (cmd.startsWith("cat > '/srv") && o.stdin && o.stdin.resume) { await new Promise((res) => { o.stdin.on('end', res); o.stdin.resume(); }); return { code: 0, stdout: '', stderr: '' }; }
       if (cmd.startsWith('docker exec -i') && cmd.includes('password_hash')) return { code: 0, stdout: 'ok\n', stderr: '' };
+      if (cmd.startsWith('docker exec -i') && cmd.includes('JSON.parse')) return { code: 0, stdout: JSON.stringify({ ok: [{ n: 1 }] }) + '\n', stderr: '' };
+      if (cmd.startsWith('docker inspect -f')) return { code: 0, stdout: 'running|2026-11-10T10:00:00Z\n', stderr: '' };
+      if (cmd.startsWith('docker stats')) return { code: 0, stdout: '0.5%|120MiB / 961MiB|12.5%|1.2kB / 3.4kB\n', stderr: '' };
       if (cmd.includes('curl -s -m 5')) return { code: 0, stdout: avviaOk ? '200' : '000', stderr: '' };
       if (cmd.startsWith('wc -c')) return { code: 0, stdout: String(dbRemoto.length) + '\n', stderr: '' };
       if (cmd.startsWith("cat '/srv") && o.onStdout) { o.onStdout(dbRemoto); return { code: 0, stdout: '', stderr: '' }; }
@@ -189,6 +192,13 @@ async function main() {
     inserisci('pw1'); const t = Object.assign(db.prepare("SELECT * FROM tenants WHERE slug='pw1'").get(), { remote_ip: '203.0.113.9' });
     comandi.length = 0; await remoto.reimpostaPasswordAdmin(t, '$2a$10$hashdiprova');
     const c = comandi.find((x) => /docker exec -i/.test(x)); ok(c && !c.includes('hashdiprova'), 'hash non nel comando');
+  });
+
+  await test('sessioni e statistiche su Linode: la query gira nel container, i valori su stdin e mai nel comando; stato e consumi si leggono dal server', async () => {
+    inserisci('sess1'); const t = Object.assign(db.prepare("SELECT * FROM tenants WHERE slug='sess1'").get(), { remote_ip: '203.0.113.9' });
+    comandi.length = 0; const r = await remoto.interroga(t, { sql: 'SELECT 1', params: ["x'; DROP TABLE users; --"] });
+    ok(Array.isArray(r), 'righe'); const c = comandi.find((x) => /docker exec -i/.test(x)); ok(c && !c.includes('DROP TABLE'), 'il valore non è nel comando');
+    const st = await remoto.statoContainer(t); eq(st.running, true); eq(st.mem_usage_mb, 120); eq(st.cpu_percent, 0.5);
   });
 
   console.log(`\n${passed} passati, ${failed} falliti`); process.exit(failed ? 1 : 0);

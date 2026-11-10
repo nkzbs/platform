@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.117 — Tenant su Linode: sessioni e statistiche
+
+Sessioni (elenco, «attivo ora» nella lista, revoca) e statistiche (stato, CPU, memoria, rete, dimensione del database) ora funzionano anche per i tenant su Linode: la query gira dentro il container sul suo server (valori su stdin, mai nel comando). «Attivo ora» è in cache 20 secondi. Lo spazio totale in Analytics conta, per Linode, la dimensione dell'ultimo backup riuscito. Non ancora: la Libreria che legge i moduli dai database dei tenant salta quelli su Linode.
+
 ## 0.4.116 — Tenant su Linode: ripristino da backup, reset password, dove vive
 
 Da Super Admin ora un tenant su Linode si ripristina da un suo backup: prima la copia di sicurezza dello stato attuale (se non riesce non si tocca niente), poi il backup viaggia sul server e si controlla (dimensione, integrità, utenti) mentre il tenant gira; solo dopo si ferma, il database attuale resta accanto con la data, si mette quello del backup e si riaccende. Se non riparte si rimette il database di prima. «Reset credenziali» funziona anche su Linode (la password non compare in nessun comando). Nella lista ogni tenant dice se è sul NAS o su Linode con il suo IP.

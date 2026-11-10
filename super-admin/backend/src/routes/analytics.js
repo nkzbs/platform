@@ -72,6 +72,10 @@ function computePlatformOverview() {
 
 
   const totalStorageMb = tenants.reduce((sum, t) => {
+    if (t.host === 'linode') { // il file sta sul suo server: si usa la dimensione dell'ultimo backup riuscito (stesso database, nessuna connessione per ogni apertura della pagina)
+      const b = db.prepare("SELECT size_mb FROM tenant_backups WHERE tenant_slug = ? AND status = 'ok' ORDER BY id DESC LIMIT 1").get(t.slug);
+      return sum + (b && b.size_mb ? b.size_mb : 0);
+    }
     try { return sum + (require('fs').statSync(t.db_path).size / 1024 / 1024); } catch (e) { return sum; }
   }, 0);
 

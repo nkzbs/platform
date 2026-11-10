@@ -779,11 +779,20 @@ router.get('/:slug/stats', requireAuth, requireTenantScope, async (req, res) => 
 
   // Dimensione reale del file .db — leggibile anche a container fermo
   let db_size_mb = null;
+  if (tenant.host === 'linode') {
+    try { db_size_mb = await require('../lib/server-remoto').dimensioneDatabaseMb(tenant); } catch (e) { db_size_mb = null; }
+  } else {
   try {
     const st = fs.statSync(tenant.db_path);
     db_size_mb = Math.round((st.size / 1024 / 1024) * 100) / 100;
   } catch (e) {
     db_size_mb = null; // file non ancora creato, es. tenant appena provisionato
+  }
+  }
+
+  if (tenant.host === 'linode') {
+    try { return res.json({ db_size_mb, ...(await require('../lib/server-remoto').statoContainer(tenant)) }); }
+    catch (err) { return res.status(502).json({ error: 'Il server del tenant non risponde: ' + err.message, db_size_mb }); }
   }
 
   try {
@@ -1086,8 +1095,12 @@ router.get('/:slug/backups/:backupId/download', requireQueryToken, (req, res) =>
 // `sessions` del .db del tenant (stesso accesso diretto readonly già usato da
 // waitForTenantDb) — nessuna API interna nuova sul lato tenant, coerente con come
 // Super Admin legge già dati tenant-side per backup/clonazione moduli.
-router.get('/:slug/sessions', requireAuth, requireTenantScope, (req, res) => {
+router.get('/:slug/sessions', requireAuth, requireTenantScope, async (req, res) => {
   const tenant = req.tenant;
+  if (tenant.host === 'linode') { // il database sta sul suo server: la query gira là
+    try { return res.json(await require('../lib/server-remoto').interroga(tenant, { sql: 'SELECT id, username, login_at, last_seen_at, revoked_at FROM sessions ORDER BY login_at DESC LIMIT 100' })); }
+    catch (e) { return res.status(502).json({ error: 'Il server del tenant non risponde: ' + e.message }); }
+  }
   if (!fs.existsSync(tenant.db_path)) return res.json([]);
   let tdb;
   try {
@@ -1109,11 +1122,21 @@ router.get('/:slug/sessions', requireAuth, requireTenantScope, (req, res) => {
 // minuti (default 5) risulta attivo. Una query per tenant, ma tutte in un solo
 // giro di rete dal frontend invece di N chiamate — importante quando i tenant
 // diventano tanti.
-router.get('/active-sessions', requireAuth, (req, res) => {
+const attiviRemoti = new Map(); // slug+minuti → { quando, valore }: la lista si ricarica spesso e ogni risposta costa una connessione SSH
+router.get('/active-sessions', requireAuth, async (req, res) => {
   const minutes = Math.max(1, parseInt(req.query.minutes, 10) || 5);
-  const tenants = db.prepare("SELECT slug, db_path FROM tenants WHERE status != 'deleted'").all();
+  const tenants = db.prepare("SELECT slug, db_path, host, remote_ip, remote_fingerprint FROM tenants WHERE status != 'deleted'").all();
   const result = {};
-  tenants.forEach((t) => {
+  await Promise.all(tenants.filter((t) => t.host === 'linode' && t.remote_ip).map(async (t) => {
+    const k = t.slug + ':' + minutes, c = attiviRemoti.get(k);
+    if (c && Date.now() - c.quando < 20000) { result[t.slug] = c.valore; return; }
+    try {
+      const righe = await require('../lib/server-remoto').interroga(t, { sql: "SELECT username, last_active_at FROM sessions WHERE revoked_at IS NULL AND last_active_at >= datetime('now', ?) ORDER BY last_active_at DESC LIMIT 1", params: ['-' + minutes + ' minutes'] });
+      result[t.slug] = righe[0] || null;
+    } catch (e) { result[t.slug] = null; }
+    attiviRemoti.set(k, { quando: Date.now(), valore: result[t.slug] });
+  }));
+  tenants.filter((t) => t.host !== 'linode').forEach((t) => {
     result[t.slug] = null;
     if (!fs.existsSync(t.db_path)) return;
     let tdb;
@@ -1138,8 +1161,15 @@ router.get('/active-sessions', requireAuth, (req, res) => {
 // naturale. Richiede un tenant già aggiornato con la colonna revoked_at (core
 // da questa versione in poi) — se la colonna non esiste ancora, fallisce con un
 // errore chiaro invece di un errore SQL criptico.
-router.post('/:slug/sessions/:sid/revoke', requireAuth, requireTenantScope, (req, res) => {
+router.post('/:slug/sessions/:sid/revoke', requireAuth, requireTenantScope, async (req, res) => {
   const tenant = req.tenant;
+  if (tenant.host === 'linode') {
+    try {
+      const r = await require('../lib/server-remoto').interroga(tenant, { sql: 'UPDATE sessions SET revoked_at = CURRENT_TIMESTAMP WHERE id = ? AND revoked_at IS NULL', params: [req.params.sid], scrivi: true });
+      logAudit(req.user.username, 'tenant.session_revoke', req.params.slug, { sid: req.params.sid, changed: r.changes, remoto: true });
+      return res.json({ ok: true, changed: r.changes });
+    } catch (err) { return res.status(500).json({ error: 'Impossibile revocare sul server del tenant: ' + err.message }); }
+  }
   let tdb;
   try {
     tdb = new Database(tenant.db_path, { fileMustExist: true });

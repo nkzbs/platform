@@ -241,4 +241,47 @@ async function reimpostaPasswordAdmin(tenant, hash) {
   finally { c.close(); }
 }
 
-module.exports = { ripristinaDatabase, reimpostaPasswordAdmin, scaricaDatabase, crea, distruggi, comando, aggiorna, chiave, ambiente, caddyfile, nomeServer, deps };
+// Una query sul database del tenant, eseguita DENTRO il suo container sul server (stesso motore e stesso file del tenant). Il testo SQL lo scrive solo il nostro codice;
+// i valori viaggiano come parametri su stdin, mai dentro il comando. { scrivi: true } per UPDATE/INSERT; ritorna le righe (o { changes }).
+async function interroga(tenant, { sql, params = [], scrivi = false }) {
+  const c = await entra(tenant);
+  const nome = nomeContenitore(tenant.slug);
+  const script = "let b='';process.stdin.on('data',x=>b+=x).on('end',()=>{try{const q=JSON.parse(b);const D=require('better-sqlite3');const d=new D('/data/" + tenant.slug + ".db',{readonly:!q.scrivi,timeout:5000});"
+    + "const st=d.prepare(q.sql);const out=q.scrivi?{changes:st.run(...q.params).changes}:st.all(...q.params);d.close();console.log(JSON.stringify({ok:out}))}catch(e){console.log(JSON.stringify({err:String(e.message)}))}})";
+  try {
+    const r = await c.run('docker exec -i ' + sq(nome) + ' node -e ' + sq(script), { stdin: JSON.stringify({ sql, params, scrivi }) });
+    const riga = String(r.stdout || '').trim().split('\n').pop();
+    let j; try { j = JSON.parse(riga); } catch (e) { throw new Error('Risposta non valida dal server: ' + (r.stderr || riga).slice(0, 160)); }
+    if (j.err) throw new Error(j.err);
+    return j.ok;
+  } finally { c.close(); }
+}
+
+// Dimensione del database sul server, in MB.
+async function dimensioneDatabaseMb(tenant) {
+  const c = await entra(tenant);
+  try {
+    const r = await sh(c, 'wc -c < ' + sq(DIR(tenant.slug) + '/data/' + tenant.slug + '.db'));
+    return Math.round((Number(r.stdout.trim()) / 1024 / 1024) * 100) / 100;
+  } finally { c.close(); }
+}
+
+// Stato e consumi del container del tenant sul server (docker inspect + docker stats), nella stessa forma che usa la scheda statistiche.
+const inMb = (t) => { const m = String(t || '').trim().match(/^([\d.]+)\s*([kKMGT]?i?B)$/); if (!m) return null; const f = { B: 1, kB: 1e3, KiB: 1024, MB: 1e6, MiB: 1048576, GB: 1e9, GiB: 1073741824, TB: 1e12, TiB: 1099511627776 }[m[2]] || 1; return Number(m[1]) * f / 1048576; };
+async function statoContainer(tenant) {
+  const c = await entra(tenant);
+  const nome = sq(nomeContenitore(tenant.slug));
+  try {
+    const i = await c.run("docker inspect -f '{{.State.Status}}|{{.State.StartedAt}}' " + nome);
+    if (i.code !== 0) return { status: 'missing', running: false };
+    const [status, started_at] = i.stdout.trim().split('|');
+    if (status !== 'running') return { status, running: false, started_at };
+    const st = await c.run("docker stats --no-stream --format '{{.CPUPerc}}|{{.MemUsage}}|{{.MemPerc}}|{{.NetIO}}' " + nome);
+    const [cpu, mem, memp, net] = st.stdout.trim().split('|');
+    const [u, l] = String(mem || '').split('/'); const [rx, tx] = String(net || '').split('/');
+    const r2 = (x) => (x == null ? null : Math.round(x * 100) / 100);
+    return { status, running: true, started_at, cpu_percent: parseFloat(cpu) || 0, mem_usage_mb: Math.round(inMb(u) || 0), mem_limit_mb: l ? Math.round(inMb(l) || 0) : null, mem_percent: parseFloat(memp) || 0, net_rx_mb: r2(inMb(rx)), net_tx_mb: r2(inMb(tx)) };
+  } finally { c.close(); }
+}
+
+module.exports = { statoContainer, interroga, dimensioneDatabaseMb, ripristinaDatabase, reimpostaPasswordAdmin, scaricaDatabase, crea, distruggi, comando, aggiorna, chiave, ambiente, caddyfile, nomeServer, deps };
