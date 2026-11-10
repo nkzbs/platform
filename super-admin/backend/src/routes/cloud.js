@@ -52,7 +52,7 @@ router.delete('/cloudflare/token', requireAuth, (req, res) => {
   res.json(cf.stato());
 });
 router.put('/cloudflare/impostazioni', requireAuth, (req, res) => {
-  try { cf.salvaImpostazioni({ zona: req.body && req.body.zona, dominio: req.body && req.body.dominio }); }
+  try { cf.salvaImpostazioni({ zona: req.body && req.body.zona, dominio: req.body && req.body.dominio, ip: req.body && req.body.ip }); }
   catch (e) { return res.status(e.status || 400).json({ error: e.message }); }
   logAudit(req.user.username, 'cloud.cloudflare.impostazioni', null, cf.impostazioni());
   res.json(cf.stato());

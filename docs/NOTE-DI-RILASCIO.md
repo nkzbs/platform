@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.106 — 10 novembre 2026
+
+**Cloudflare: niente più doppione, vive tutto in Impostazioni.** Token (cifrato), ID della zona, dominio dei tenant e **indirizzo pubblico del NAS** (nuovo campo) stanno nel database di Super Admin e si cambiano da Impostazioni → Server. Le vecchie variabili d'ambiente (`CLOUDFLARE_*`) non si leggono più a ogni richiesta: all'avvio ogni voce ancora vuota si copia da lì UNA volta (il token cifrato) e poi l'ambiente si può svuotare senza effetti. Sostituisce la regola della 0.4.105 «salvato, altrimenti ambiente». Test: `cloud` (copia unica, nessuna sovrascrittura), `security-status`, `tenant-provisioning`.
+
 ## 0.4.105 — 10 novembre 2026
 
 **Un solo collegamento a Cloudflare.** Super Admin aveva già un token nell'ambiente del backend (`CLOUDFLARE_API_TOKEN`, `_ZONE_ID`, `_ZONE_NAME`) per creare e togliere l'indirizzo di ogni tenant; la 0.4.104 ne aveva aggiunto un secondo, da Impostazioni. Ora è uno solo: il token salvato in Impostazioni vince, in sua assenza vale quello dell'ambiente, e `cloudflare.js` (indirizzi dei tenant) e «Controlla Cloudflare» usano la stessa fonte. Il controllo dice da dove viene il token (`salvato` o `ambiente`). Nessun cambio per i tenant esistenti. Test: `cloud`, `security-status`, `tenant-provisioning`.

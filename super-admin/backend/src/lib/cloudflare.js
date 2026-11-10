@@ -10,23 +10,30 @@ db.exec('CREATE TABLE IF NOT EXISTS cloud_settings (key TEXT PRIMARY KEY, value 
 const get = (k) => { const r = db.prepare('SELECT value FROM cloud_settings WHERE key = ?').get(k); return r ? r.value : null; };
 const set = (k, v) => db.prepare('INSERT INTO cloud_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(k, v);
 
-// Un solo collegamento a Cloudflare per tutta Super Admin: il token salvato da Impostazioni vince; in sua assenza vale quello già nell'ambiente del backend
-// (CLOUDFLARE_API_TOKEN / _ZONE_ID / _ZONE_NAME, usati da cloudflare.js per l'indirizzo di ogni nuovo tenant), così non esistono due token da tenere allineati.
+// Un solo collegamento a Cloudflare per tutta Super Admin, e vive qui: token (cifrato), zona, dominio e indirizzo del NAS stanno nel database, in Impostazioni.
+// Le vecchie variabili d'ambiente del backend (CLOUDFLARE_API_TOKEN, _ZONE_ID, _ZONE_NAME, _ORIGIN_IP) non si leggono più a ogni richiesta: all'avvio, per ogni voce
+// che nelle Impostazioni è ancora vuota, se ne copia il valore UNA volta (il token viene cifrato). Dopo, l'ambiente si può svuotare senza effetti.
 function tokenSalvato() {
   const v = get('cloudflare_token');
   if (!v) return null;
   const t = decrypt(v);
   return t && !t.startsWith('[errore') ? t : null;
 }
-function token() { return tokenSalvato() || process.env.CLOUDFLARE_API_TOKEN || null; }
-function impostazioni() { return { zona: get('cloudflare_zona') || process.env.CLOUDFLARE_ZONE_ID || '', dominio: get('cloudflare_dominio') || process.env.CLOUDFLARE_ZONE_NAME || 'platform-core.it' }; }
-function stato() {
-  const salvato = tokenSalvato(), t = salvato || process.env.CLOUDFLARE_API_TOKEN || null;
-  return { configurato: !!t, hint: t ? '…' + t.slice(-4) : null, origine: salvato ? 'salvato' : (t ? 'ambiente' : null), ...impostazioni() };
+function semina() {
+  const E = process.env;
+  if (!get('cloudflare_token') && E.CLOUDFLARE_API_TOKEN) set('cloudflare_token', encrypt(E.CLOUDFLARE_API_TOKEN));
+  if (!get('cloudflare_zona') && E.CLOUDFLARE_ZONE_ID) set('cloudflare_zona', E.CLOUDFLARE_ZONE_ID);
+  if (!get('cloudflare_dominio') && E.CLOUDFLARE_ZONE_NAME) set('cloudflare_dominio', E.CLOUDFLARE_ZONE_NAME);
+  if (!get('cloudflare_ip') && E.CLOUDFLARE_ORIGIN_IP) set('cloudflare_ip', E.CLOUDFLARE_ORIGIN_IP);
 }
+semina();
+const token = tokenSalvato;
+function impostazioni() { return { zona: get('cloudflare_zona') || '', dominio: get('cloudflare_dominio') || 'platform-core.it', ip: get('cloudflare_ip') || '' }; }
+function stato() { const t = tokenSalvato(); return { configurato: !!t, hint: t ? '…' + t.slice(-4) : null, ...impostazioni() }; }
 function salvaToken(t) { set('cloudflare_token', encrypt(t)); }
 function togliToken() { db.prepare("DELETE FROM cloud_settings WHERE key = 'cloudflare_token'").run(); }
-function salvaImpostazioni({ zona, dominio }) {
+function salvaImpostazioni({ zona, dominio, ip }) {
+  if (ip !== undefined) { if (ip !== '' && !/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) throw Object.assign(new Error('L\'indirizzo del NAS è un IPv4, ad esempio 93.45.12.7.'), { status: 400 }); set('cloudflare_ip', ip); }
   if (zona !== undefined) { if (zona !== '' && !/^[a-f0-9]{32}$/i.test(zona)) throw Object.assign(new Error('L\'ID della zona è di 32 caratteri esadecimali (lo trovi nella panoramica del dominio su Cloudflare).'), { status: 400 }); set('cloudflare_zona', zona); }
   if (dominio !== undefined) { if (!/^([a-z0-9-]+\.)+[a-z]{2,}$/i.test(dominio)) throw Object.assign(new Error('Dominio non valido.'), { status: 400 }); set('cloudflare_dominio', dominio.toLowerCase()); }
 }

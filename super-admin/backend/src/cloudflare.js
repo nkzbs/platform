@@ -1,3 +1,4 @@
+// (Token, zona e indirizzo del NAS: da Impostazioni → Server, mai dall'ambiente — vedi lib/cloudflare.js.)
 // Automazione sottodominio Cloudflare — un record DNS per tenant, stesso IP
 // pubblico già usato da coffee/finance (il NAS ha un solo indirizzo pubblico,
 // tutto il routing per-dominio avviene dopo, dentro platform-nginx via Host
@@ -16,7 +17,7 @@ const lib = require('./lib/cloudflare'); // token e zona: quelli salvati in Impo
 const zonaId = () => lib.impostazioni().zona;
 
 function isConfigured() {
-  return !!(lib.token() && zonaId() && process.env.CLOUDFLARE_ORIGIN_IP);
+  return !!(lib.token() && zonaId() && lib.impostazioni().ip);
 }
 
 function zoneName() {
@@ -52,17 +53,17 @@ async function upsertSubdomain(slug) {
   const existing = await cf('/zones/' + zoneId + '/dns_records?type=A&name=' + encodeURIComponent(name));
   if (existing.length > 0) {
     const rec = existing[0];
-    if (rec.content === process.env.CLOUDFLARE_ORIGIN_IP) return { updated: false, unchanged: true, name };
+    if (rec.content === lib.impostazioni().ip) return { updated: false, unchanged: true, name };
     const updated = await cf('/zones/' + zoneId + '/dns_records/' + rec.id, {
       method: 'PATCH',
-      body: JSON.stringify({ content: process.env.CLOUDFLARE_ORIGIN_IP }),
+      body: JSON.stringify({ content: lib.impostazioni().ip }),
     });
     return { updated: true, name, proxied: updated.proxied };
   }
 
   const created = await cf('/zones/' + zoneId + '/dns_records', {
     method: 'POST',
-    body: JSON.stringify({ type: 'A', name, content: process.env.CLOUDFLARE_ORIGIN_IP, proxied: true, ttl: 1 }),
+    body: JSON.stringify({ type: 'A', name, content: lib.impostazioni().ip, proxied: true, ttl: 1 }),
   });
   return { created: true, name, proxied: created.proxied };
 }

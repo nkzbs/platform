@@ -95,9 +95,9 @@ async function main() {
   console.log('\n--- Cloudflare configurato: sslMode() legge davvero la zona ---');
 
   await test('zona in modalità "flexible" -> il pannello la mostra com\'è, non assume "sicuro"', async () => {
-    process.env.CLOUDFLARE_API_TOKEN = 'token-finto';
-    process.env.CLOUDFLARE_ZONE_ID = 'zona-finta';
-    process.env.CLOUDFLARE_ORIGIN_IP = '203.0.113.7';
+    const cfLib = require('./lib/cloudflare'); // il collegamento vive nelle Impostazioni (database), non nell'ambiente
+    cfLib.salvaToken('token-finto-0123456789');
+    cfLib.salvaImpostazioni({ zona: 'a1b2c3d4e5f60718293a4b5c6d7e8f90', ip: '203.0.113.7' });
     const realFetch = global.fetch;
     global.fetch = async (url) => {
       if (String(url).includes('/settings/ssl')) return { json: async () => ({ success: true, result: { value: 'flexible' } }) };
@@ -109,7 +109,7 @@ async function main() {
       assertEq(j.cloudflare.ssl_mode, 'flexible');
     } finally {
       global.fetch = realFetch;
-      delete process.env.CLOUDFLARE_API_TOKEN; delete process.env.CLOUDFLARE_ZONE_ID; delete process.env.CLOUDFLARE_ORIGIN_IP;
+      require('./lib/cloudflare').togliToken();
     }
   });
 

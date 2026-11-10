@@ -517,7 +517,8 @@ function SettingsPage({ token, myId }) {
                 <div className="flex gap-2 flex-wrap items-end">
                   <label className="text-xs text-gray-400">ID della zona<input defaultValue={cf.zona} id="cf-zona" className={inputCls + ' block mt-1 w-72'} placeholder="32 caratteri, dalla panoramica del dominio" /></label>
                   <label className="text-xs text-gray-400">Dominio dei tenant<input defaultValue={cf.dominio} id="cf-dominio" className={inputCls + ' block mt-1 w-48'} /></label>
-                  <button type="button" onClick={() => cfCall('PUT', '/impostazioni', { zona: document.getElementById('cf-zona').value.trim(), dominio: document.getElementById('cf-dominio').value.trim() })} disabled={cloudBusy} className={ghostBtn}>Salva scelta</button>
+                  <label className="text-xs text-gray-400">Indirizzo pubblico del NAS<input defaultValue={cf.ip} id="cf-ip" className={inputCls + ' block mt-1 w-40'} placeholder="es. 93.45.12.7" /></label>
+                  <button type="button" onClick={() => cfCall('PUT', '/impostazioni', { zona: document.getElementById('cf-zona').value.trim(), dominio: document.getElementById('cf-dominio').value.trim(), ip: document.getElementById('cf-ip').value.trim() })} disabled={cloudBusy} className={ghostBtn}>Salva scelta</button>
                   <button type="button" onClick={cfControlla} disabled={cloudBusy || !cf.configurato} className={primaryBtn}>Controlla Cloudflare</button>
                 </div>
                 {cfMsg && <div className={'text-xs ' + (cfMsg.ok ? 'text-green-400' : 'text-amber-400')}>{cfMsg.text}</div>}

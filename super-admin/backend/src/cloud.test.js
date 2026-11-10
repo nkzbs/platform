@@ -109,6 +109,18 @@ async function main() {
     await api('DELETE', '/cloudflare/token');
     const d = await (await api('POST', '/cloudflare/controlla')).json(); eq(d.ok, false); ok(/token/i.test(d.motivo));
   });
+  await test('Cloudflare: le vecchie variabili d\'ambiente si copiano UNA volta nelle Impostazioni e poi non contano più', async () => {
+    db.prepare("DELETE FROM cloud_settings WHERE key LIKE 'cloudflare_%'").run();
+    process.env.CLOUDFLARE_API_TOKEN = 'token-vecchio-ambiente-123456'; process.env.CLOUDFLARE_ZONE_ID = ZONA; process.env.CLOUDFLARE_ORIGIN_IP = '203.0.113.9'; process.env.CLOUDFLARE_ZONE_NAME = 'esempio.it';
+    const ricarica = () => { for (const m of Object.keys(require.cache)) if (m.endsWith('/lib/cloudflare.js')) delete require.cache[m]; return require('./lib/cloudflare'); };
+    const nuovo = ricarica();
+    const st = nuovo.stato(); eq(st.configurato, true); eq(st.zona, ZONA); eq(st.ip, '203.0.113.9'); eq(st.dominio, 'esempio.it');
+    ok(!db.prepare("SELECT value FROM cloud_settings WHERE key = 'cloudflare_token'").get().value.includes('token-vecchio'), 'cifrato');
+    nuovo.salvaImpostazioni({ ip: '198.51.100.1' }); process.env.CLOUDFLARE_ORIGIN_IP = '203.0.113.99';
+    eq(ricarica().stato().ip, '198.51.100.1', 'quello scelto in Impostazioni non si sovrascrive');
+    eq((await api('PUT', '/cloudflare/impostazioni', { ip: 'non-un-ip' })).status, 400);
+    for (const k of ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ZONE_ID', 'CLOUDFLARE_ORIGIN_IP', 'CLOUDFLARE_ZONE_NAME']) delete process.env[k];
+  });
   console.log(`\n${passed} passati, ${failed} falliti`); process.exit(failed ? 1 : 0);
 }
 main().catch((e) => { console.error(e); process.exit(1); });
