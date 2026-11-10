@@ -49,7 +49,7 @@ function startTenantStatusReconciler() {
 
   async function tick() {
     const tenants = db.prepare(
-      "SELECT slug, status FROM tenants WHERE status IN ('active', 'stopped')"
+      "SELECT slug, status FROM tenants WHERE status IN ('active', 'stopped') AND COALESCE(host, 'nas') != 'linode'"
     ).all();
     for (const tenant of tenants) {
       await reconcileOne(tenant); // sequenziale di proposito: N chiamate HTTP al provisioner, non serve parallelismo per un tick ogni 15 minuti

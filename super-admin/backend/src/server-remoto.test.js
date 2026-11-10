@@ -52,7 +52,7 @@ async function main() {
       comandi.push(cmd);
       if (fallisciSu && cmd.includes(fallisciSu)) return { code: 1, stdout: '', stderr: 'errore simulato' };
       if (cmd.includes('docker load')) { if (o.stdin && o.stdin.resume) await new Promise((res) => { o.stdin.on('end', res); o.stdin.resume(); }); return { code: 0, stdout: 'Loaded image: platform-core:latest\n', stderr: '' }; }
-      if (cmd.startsWith("cat > '/srv") && o.stdin && o.stdin.resume) { await new Promise((res) => { o.stdin.on('end', res); o.stdin.resume(); }); return { code: 0, stdout: '', stderr: '' }; }
+      if (/cat > '?\/srv/.test(cmd) && o.stdin && o.stdin.resume) { await new Promise((res) => { o.stdin.on('end', res); o.stdin.resume(); }); return { code: 0, stdout: '', stderr: '' }; }
       if (cmd.startsWith('docker exec -i') && cmd.includes('password_hash')) return { code: 0, stdout: 'ok\n', stderr: '' };
       if (cmd.startsWith('docker exec -i') && cmd.includes('JSON.parse')) return { code: 0, stdout: JSON.stringify({ ok: [{ n: 1 }] }) + '\n', stderr: '' };
       if (cmd.startsWith('docker inspect -f')) return { code: 0, stdout: 'running|2026-11-10T10:00:00Z\n', stderr: '' };
@@ -209,6 +209,47 @@ async function main() {
     const r = await realFetch(BASE + '/api/registry/tenants/lib1/modules', { headers: H }); eq(r.status, 200); ok(Array.isArray(await r.json()), 'elenco');
     ok(comandi.some((c) => /docker exec -i/.test(c) && /FROM modules/.test(c) === false), 'la query è girata sul server (valori fuori dal comando)');
     eq((await realFetch(BASE + '/api/registry/tenants/non-esiste/modules', { headers: H })).status, 404);
+  });
+
+  await test('spostamento NAS → Linode: copia di sicurezza, server pronto PRIMA, poi stop sul NAS, dati, indirizzo; il NAS resta fermo; host passa a linode', async () => {
+    const S = require('./lib/sposta-linode'); const ev = [];
+    db.prepare("INSERT INTO tenants (name, slug, port, db_path, status, domain, jwt_secret, encryption_key) VALUES ('Mv','mv1',48500,'/data/mv1/mv1.db','active','mv1.platform-test.it',?,?)").run('j'.repeat(64), 'e'.repeat(64));
+    S.deps.backup = async () => { ev.push('backup'); return { ok: true }; };
+    S.deps.provisioner = async (m, p) => { ev.push(p.split('/').pop()); return {}; };
+    S.deps.copiaDatabaseFermo = () => { ev.push('copia-db'); const f = path.join(os.tmpdir(), 'mv-' + crypto.randomBytes(3).toString('hex') + '.db'); fs.writeFileSync(f, dbRemoto); return f; };
+    S.deps.allegati = () => null;
+    comandi.length = 0; avviaOk = true;
+    S.avvia('mv1', { actor: 'test' });
+    const t0 = Date.now(); while (!S.stato('mv1').fine && Date.now() - t0 < 8000) await new Promise((r) => setTimeout(r, 50));
+    const st = S.stato('mv1'); eq(st.errore, null, st.errore);
+    ok(ev.indexOf('backup') < ev.indexOf('stop') && ev.indexOf('stop') < ev.indexOf('copia-db'), 'ordine: backup, stop, copia: ' + ev.join(','));
+    ok(!ev.includes('start'), 'il NAS non si riaccende');
+    const r = db.prepare("SELECT host, status, linode_id, remote_ip FROM tenants WHERE slug='mv1'").get(); eq([r.host, r.status], ['linode', 'active']); ok(r.linode_id > 0 && r.remote_ip, 'server collegato');
+    const i = (re) => comandi.findIndex((c) => re.test(c)); ok(i(/cat > .*mv1\.db/) >= 0 && i(/cat > .*mv1\.db/) < i(/docker run -d --name 'platform-mv1'/), 'i dati arrivano prima che il tenant parta sul server');
+  });
+
+  await test('spostamento: se dopo lo stop qualcosa va storto, il NAS si riaccende, l\'indirizzo torna, il server nuovo sparisce, host resta nas', async () => {
+    const S = require('./lib/sposta-linode'); const ev = [];
+    db.prepare("INSERT INTO tenants (name, slug, port, db_path, status, domain, jwt_secret, encryption_key) VALUES ('Mv2','mv2',48501,'/data/mv2/mv2.db','active','mv2.platform-test.it',?,?)").run('j'.repeat(64), 'e'.repeat(64));
+    S.deps.backup = async () => ({ ok: true }); S.deps.provisioner = async (m, p) => { ev.push(p.split('/').pop()); return {}; };
+    S.deps.copiaDatabaseFermo = () => { const f = path.join(os.tmpdir(), 'mv-' + crypto.randomBytes(3).toString('hex') + '.db'); fs.writeFileSync(f, dbRemoto); return f; };
+    const prima = remoto.deps.proveHttps; remoto.deps.proveHttps = async () => false; const nServer = serviziLinode.length;
+    try {
+      S.avvia('mv2', { actor: 'test' });
+      const t0 = Date.now(); while (!S.stato('mv2').fine && Date.now() - t0 < 8000) await new Promise((r) => setTimeout(r, 50));
+    } finally { remoto.deps.proveHttps = prima; }
+    const st = S.stato('mv2'); ok(st.errore, 'deve fallire'); eq(ev, ['stop', 'start'], 'stop poi riaccende');
+    const r = db.prepare("SELECT host, status, linode_id, remote_ip FROM tenants WHERE slug='mv2'").get(); eq([r.host, r.status, r.linode_id], ['nas', 'active', null]);
+    eq(serviziLinode.length, nServer, 'il server nuovo è stato cancellato');
+  });
+
+  await test('spostamento: se la copia di sicurezza non riesce non si parte; un tenant già su Linode o fermo viene rifiutato', async () => {
+    const S = require('./lib/sposta-linode');
+    db.prepare("INSERT INTO tenants (name, slug, port, db_path, status, domain) VALUES ('Mv3','mv3',48502,'/data/mv3/mv3.db','active','mv3.platform-test.it')").run();
+    S.deps.backup = async () => ({ ok: false, error: 'disco pieno' }); const ev = []; S.deps.provisioner = async (m, p) => { ev.push(p); return {}; };
+    S.avvia('mv3', { actor: 'test' }); const t0 = Date.now(); while (!S.stato('mv3').fine && Date.now() - t0 < 5000) await new Promise((r) => setTimeout(r, 50));
+    ok(/copia di sicurezza/.test(S.stato('mv3').errore), S.stato('mv3').errore); eq(ev, [], 'nessuna azione sul NAS');
+    let m = ''; try { S.avvia('mv1'); } catch (e) { m = e.message; } ok(/già su Linode/.test(m), m);
   });
 
   console.log(`\n${passed} passati, ${failed} falliti`); process.exit(failed ? 1 : 0);

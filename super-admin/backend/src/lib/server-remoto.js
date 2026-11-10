@@ -111,10 +111,12 @@ async function crea(tenant, opz) {
   const k = chiave();
   say('Creo il server su Linode (' + nomeServer(tenant.slug) + ')…');
   const s = await deps.linode.creaServer({ nome: nomeServer(tenant.slug), chiavi: [k.pubblica], tags: ['platform', 'tenant'] });
-  db.prepare("UPDATE tenants SET host = 'linode', linode_id = ?, remote_ip = ? WHERE slug = ?").run(s.id, s.ip, tenant.slug); // subito: se fallisce, si sa cosa cancellare
+  // subito: se fallisce, si sa cosa cancellare. In uno spostamento (opz.spostamento) il tenant resta «nas» finché non è tutto fatto: chi lo chiama cambia host alla fine.
+  if (opz.spostamento) db.prepare('UPDATE tenants SET linode_id = ?, remote_ip = ? WHERE slug = ?').run(s.id, s.ip, tenant.slug);
+  else db.prepare("UPDATE tenants SET host = 'linode', linode_id = ?, remote_ip = ? WHERE slug = ?").run(s.id, s.ip, tenant.slug);
   let c = null;
   try {
-    if (opz.dns) { say('Preparo l\'indirizzo ' + opz.dominio + '…'); await opz.dns(s.ip); }
+    if (opz.dns && !opz.differisciDns) { say('Preparo l\'indirizzo ' + opz.dominio + '…'); await opz.dns(s.ip); }
     say('Aspetto che il server si accenda…');
     let imp = null;
     for (let i = 0; i < deps.tentativiSsh && !c; i++) {
@@ -128,8 +130,10 @@ async function crea(tenant, opz) {
     const ref = await caricaImmagine(c, say);
     say('Scrivo i segreti e avvio il tenant…');
     await sh(c, 'umask 077 && mkdir -p ' + DIR(tenant.slug) + '/data');
+    if (opz.prima) await opz.prima(c, { dir: DIR(tenant.slug), sh: (cmd, o) => sh(c, cmd, o) }); // spostamento: qui arrivano i dati, PRIMA che il tenant parta sul server
     await sh(c, 'umask 077 && cat > ' + DIR(tenant.slug) + '/env', { stdin: ambiente(tenant, opz) });
     await avviaContenitore(c, tenant.slug, ref);
+    if (opz.dns && opz.differisciDns) { say('Porto l\'indirizzo ' + opz.dominio + ' sul nuovo server…'); await opz.dns(s.ip); }
     await sh(c, 'cat > /etc/caddy/Caddyfile', { stdin: caddyfile(opz.dominio) });
     await sh(c, 'systemctl reload caddy || systemctl restart caddy');
     say('Aspetto che il tenant risponda (il certificato HTTPS può volere un minuto)…');
@@ -139,6 +143,7 @@ async function crea(tenant, opz) {
     if (!su) throw new Error('Il tenant è partito sul server ma non risponde su https://' + opz.dominio + ' (guarda l\'indirizzo su Cloudflare e i log del server).');
     return { linode_id: s.id, ip: s.ip, fingerprint: imp };
   } catch (e) {
+    if (opz.alFallimento) { try { await opz.alFallimento(); say('Ho rimesso le cose come prima.'); } catch (x) { e.message += ' (ATTENZIONE: non sono riuscito a rimettere tutto com\'era prima: ' + x.message + ')'; } }
     if (c) { try { e.message += ' — DIAGNOSI DAL SERVER: ' + await diagnosi(c, tenant.slug, opz.dominio); } catch (x) { /* la diagnosi è un aiuto, non deve coprire l'errore vero */ } }
     try { await deps.linode.eliminaServer(s.id); db.prepare("UPDATE tenants SET linode_id = NULL, remote_ip = NULL WHERE slug = ?").run(tenant.slug); say('Qualcosa non è andato: ho cancellato il server appena creato, così non costa.'); }
     catch (x) { e.message += ' (ATTENZIONE: il server ' + s.id + ' su Linode non si è cancellato da solo: toglilo a mano da Linode)'; }

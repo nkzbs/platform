@@ -296,6 +296,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
   // non esiste ancora: lo ricrea sullo stesso volume dati, con le chiavi salvate (un
   // tenant registrato da "Registra esistente" nasce fermo e parte da qui).
   const [actionSlug, setActionSlug] = useState(null)
+  const [sposta, setSposta] = useState(null) // spostamento NAS → Linode in corso: { slug, name, fase, passi, fine, errore, esito }
   const tenantAction = async (t, action) => {
     setActionSlug(t.slug)
     setError('')
@@ -343,6 +344,23 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
     } finally { load() }
   }
   const redeploy = (t) => runUpdate(t, false)
+  // Sposta su Linode: il tenant si ferma sul NAS per qualche minuto, poi riparte sul suo server con lo stesso indirizzo. Si segue lo stato vero finché non finisce.
+  const spostaSuLinode = async (t) => {
+    if (!window.confirm('Spostare «' + t.name + '» su un server Linode?\n\n• Costa 5 $ al mese più 2 $ di backup.\n• Il tenant resta FERMO per circa 3-5 minuti.\n• L\'indirizzo non cambia.\n• Sul NAS resta fermo con tutti i suoi dati: lo cancelli tu, quando sei tranquillo.\n• Se qualcosa non va, si rimette tutto com\'era sul NAS.')) return
+    const res = await fetch(API + '/tenants/' + t.slug + '/sposta-su-linode', { method: 'POST', headers })
+    const data = await res.json()
+    if (!res.ok) return alert(data.error || 'Spostamento non avviato')
+    setSposta({ slug: t.slug, name: t.name, fase: data.fase, passi: [], fine: false, errore: null, esito: null })
+    for (let i = 0; i < 400; i++) {
+      await new Promise((r) => setTimeout(r, 3000))
+      try {
+        const r = await fetch(API + '/tenants/' + t.slug + '/spostamento', { headers }); const st = await r.json()
+        setSposta({ slug: t.slug, name: t.name, ...st })
+        if (st.fine) break
+      } catch (e) { /* rete instabile: si riprova al giro dopo */ }
+    }
+    load()
+  }
 
   const resetCredentials = async (t) => {
     if (!confirm('Generare nuove credenziali per "' + t.name + '"? La password attuale smetterà subito di funzionare.')) return
@@ -631,6 +649,13 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                       className="text-sm px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition disabled:opacity-40 flex items-center gap-1.5">
                       <Icon name="refresh" size={12} />
                       Aggiorna
+                    </button>
+                  )}
+                  {t.status === 'active' && t.host !== 'linode' && (
+                    <button onClick={() => spostaSuLinode(t)} disabled={!!sposta && !sposta.fine} title="Porta il tenant su un suo server Linode, stesso indirizzo"
+                      className="text-sm px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition disabled:opacity-40 flex items-center gap-1.5">
+                      <Icon name="server" size={12} />
+                      Sposta su Linode
                     </button>
                   )}
                   <button
@@ -1014,6 +1039,23 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
         </Portal>
       )}
 
+      {sposta && (
+        <Portal>
+          <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+            <div className="bg-surface-card border border-gray-800 rounded-2xl p-6 max-w-md w-full">
+              <div className="text-ink font-medium mb-1">Spostamento di «{sposta.name}» su Linode</div>
+              <div className={'text-sm mb-3 ' + (sposta.errore ? 'text-cp-danger' : sposta.fine ? 'text-cp-success' : 'text-gray-500')}>
+                {sposta.errore ? 'Non è andato a buon fine: ' + sposta.errore : sposta.fase}
+              </div>
+              <ul className="text-xs text-gray-500 space-y-1 max-h-48 overflow-auto mb-3">
+                {(sposta.passi || []).map((m, i) => <li key={i}>• {m}</li>)}
+              </ul>
+              {!sposta.fine && <div className="text-[11px] text-gray-600 flex items-center gap-1.5 mb-3"><Icon name="info" size={11} />non chiudere questa pagina</div>}
+              {sposta.fine && <button onClick={() => setSposta(null)} className="text-sm px-4 py-2 rounded-lg bg-cp-primary hover:bg-cp-primary-hover text-white transition">Chiudi</button>}
+            </div>
+          </div>
+        </Portal>
+      )}
       {loading && showNew && <TenantCreatingOverlay fase={fase} />}
 
       {credentialsReveal && (

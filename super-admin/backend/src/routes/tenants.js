@@ -1184,6 +1184,18 @@ router.post('/:slug/sessions/:sid/revoke', requireAuth, requireTenantScope, asyn
 });
 
 
+// Sposta un tenant dal NAS al suo server Linode, stesso indirizzo (lib/sposta-linode.js). Parte in background; la pagina segue lo stato con GET.
+router.post('/:slug/sposta-su-linode', requireAuth, requireTenantScope, (req, res) => {
+  try {
+    const st = require('../lib/sposta-linode').avvia(req.params.slug, { actor: req.user.username });
+    res.status(202).json({ in_corso: true, fase: st.fase });
+  } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+});
+router.get('/:slug/spostamento', requireAuth, requireTenantScope, (req, res) => {
+  const st = require('../lib/sposta-linode').stato(req.params.slug);
+  res.json(st ? { fine: st.fine, fase: st.fase, errore: st.errore, esito: st.esito, passi: st.passi.map((p) => p.m) } : { fine: true, fase: null, errore: null, esito: null, passi: [] });
+});
+
 // Ripristino di un tenant su Linode: copia di sicurezza dello stato attuale (scaricata qui, come ogni backup), poi il database del backup va sul server (vedi server-remoto.ripristinaDatabase).
 async function ripristinoRemoto(req, res) {
   const { slug, backupId } = req.params;
