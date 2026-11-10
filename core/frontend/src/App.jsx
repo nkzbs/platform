@@ -166,6 +166,7 @@ export default function App() {
     clearAuth()
     setToken(null)
     setUser(null)
+    setCurrentPage('dashboard') // la pagina aperta era dell'utente di prima: un admin su «Builder» o «Impostazioni» lasciava la pagina bianca a chi entrava dopo senza quei permessi
   }
 
   // Login automatico da Super Admin ("Apri →" su un tenant, vedi TenantsPage.jsx):
@@ -207,7 +208,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const onLogin = (t, u) => { setToken(t); setUser(u) }
+  const onLogin = (t, u) => { setCurrentPage('dashboard'); setToken(t); setUser(u) }
   // Aggiorna lo user in stato E in localStorage dopo un cambiamento fatto da
   // AccountPage (foto profilo) senza dover rifare login/refresh — stesso oggetto
   // che Sidebar legge per il cerchio del dock e il pannello "Altro".

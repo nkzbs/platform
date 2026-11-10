@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.123 — Cambio utente: niente più pagina bianca
+
+Uscendo (o entrando) la pagina aperta restava quella dell'utente di prima: un admin su «Builder» o «Impostazioni» lasciava la pagina bianca a chi entrava dopo senza quei permessi. Ora a ogni uscita e a ogni accesso si riparte dalla Dashboard. Va portato sui tenant con «Aggiorna» (l'immagine del programma si ricostruisce da un tenant sul NAS).
+
 ## 0.4.122 — Cancellare un tenant spostato toglie anche il container fermo sul NAS
 
 Dopo «Sposta su Linode» il tenant resta sul NAS come container fermo. Cancellando il tenant, ora si toglie anche quel container (prima restava orfano; la cartella dati veniva già tolta).
