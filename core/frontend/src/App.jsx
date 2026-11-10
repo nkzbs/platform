@@ -232,13 +232,16 @@ export default function App() {
   const logoMostrato = temaScuro && tenantLogoChiaroUrl ? tenantLogoChiaroUrl : tenantLogoUrl
   const identita = { logoUrl: logoMostrato, letter: hidePlatformName && tenantName ? tenantName.trim()[0] : undefined }
 
+  // I passi del giro: quelli del verticale (solo per le pagine che chi guarda ha davvero), altrimenti il giro generico di Platform.
+  // ATTENZIONE: questo gancio (useEffect) DEVE stare prima del «return» del login qui sotto. Stava dopo: uscendo (token nullo) React vedeva meno ganci del giro prima, andava in errore
+  // («Rendered fewer hooks than expected») e svuotava l'intera pagina — la «pagina bianca» che si vedeva cambiando utente, finché non si ricaricava.
+  const passiGiro = costruisciGiro(giro.passi, [...PAGINE_FISSE, ...installedModules.map((m) => m.slug)])
+  useEffect(() => { if (giro.mostra && passiGiro.length && installedModules.length) setShowTour(true) }, [giro.mostra, passiGiro.length, installedModules.length]) // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!token) return <IdentitaAppContext.Provider value={identita}><Login onLogin={onLogin} tenantName={tenantName} logoUrl={logoMostrato} hidePlatformName={hidePlatformName} /></IdentitaAppContext.Provider>
 
   const currentModule = installedModules.find((m) => m.slug === currentPage)
-  // I passi del giro: quelli del verticale (solo per le pagine che chi guarda ha davvero), altrimenti il giro generico di Platform.
-  const passiGiro = costruisciGiro(giro.passi, [...PAGINE_FISSE, ...installedModules.map((m) => m.slug)])
   const stepsGiro = passiGiro.length ? passiGiro : ONBOARDING_STEPS
-  useEffect(() => { if (giro.mostra && passiGiro.length && installedModules.length) setShowTour(true) }, [giro.mostra, passiGiro.length, installedModules.length]) // eslint-disable-line react-hooks/exhaustive-deps
   const allModulesForBuilder = installedModules
 
   return (
