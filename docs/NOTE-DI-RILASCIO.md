@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.103 — 10 novembre 2026
+
+**Super Admin si collega a Linode (primo passo: solo token e controllo).** Nuova sezione Impostazioni → **Server (Linode)**: il token personale si incolla lì, viene controllato con Linode e conservato cifrato (si vedono solo le ultime 4 cifre); regione (predefinita Milano, `it-mil`) e tipo di macchina (Nanode 1 GB, `g6-nanode-1`) sono dati modificabili. «Controlla Linode» fa **solo letture**: conferma il token, mostra saldo, prezzo e RAM della macchina scelta, e i server già presenti. Non crea e non costa nulla. Il saldo è facoltativo (serve il permesso «Account» in sola lettura). Rotte `/api/cloud/*`, codice `lib/linode.js`, prova `cloud.test.js` (Linode simulato). **Non verificato:** nessuna chiamata a Linode vera. Seguirà il driver che crea e cancella i Nanodi, con riepilogo del costo. Serve ridistribuire Super Admin.
+
 ## 0.4.102 — 10 novembre 2026
 
 **«Controlla i servizi» elenca anche gli SMS (SMS v2 di OpenAPI.it).** Prova la lettura gratuita dei mittenti (`GET /senders`): serve a sapere se il servizio è attivo sul conto prima di costruire l'invio. Nessun SMS parte ancora. Non verificato: l'esito reale sul conto di zucca.

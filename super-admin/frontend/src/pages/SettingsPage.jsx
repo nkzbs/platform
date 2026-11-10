@@ -37,6 +37,7 @@ const SETTINGS_GROUPS = [
     { key: 'sicurezza', icon: 'shield', label: 'Sicurezza' },
   ] },
   { label: 'AI', items: [{ key: 'ai', icon: 'key', label: 'Chiavi AI' }] },
+  { label: 'Server', items: [{ key: 'server', icon: 'database', label: 'Server (Linode)' }] },
 ]
 
 function SettingsNav({ groups, active, onChange }) {
@@ -89,6 +90,13 @@ function SettingsPage({ token, myId }) {
   const [keyInput, setKeyInput] = useState('')
   const [keyMsg, setKeyMsg] = useState(null)
   const [keyBusy, setKeyBusy] = useState(false)
+
+  // Server (Linode): token sigillato, regione e tipo di macchina; il controllo fa solo letture su Linode.
+  const [cloud, setCloud] = useState(null) // { configurato, hint, regione, tipo }
+  const [cloudToken, setCloudToken] = useState('')
+  const [cloudMsg, setCloudMsg] = useState(null)
+  const [cloudBusy, setCloudBusy] = useState(false)
+  const [cloudCheck, setCloudCheck] = useState(null)
 
   // Sicurezza della piattaforma (2026-10-15, richiesto dall'utente: "lato
   // sicurezza la struttura regge? un pannello dove controllo lo stato della
@@ -152,6 +160,22 @@ function SettingsPage({ token, myId }) {
     setKeys(data); setKeyInput(''); setKeyMsg({ ok: true, text: 'Fatto.' })
   }
 
+  const loadCloud = () => fetch(API + '/cloud', { headers }).then((r) => r.json()).then((d) => d && typeof d.configurato === 'boolean' && setCloud(d))
+  const cloudCall = async (method, path, body) => {
+    setCloudBusy(true); setCloudMsg(null)
+    const res = await fetch(API + '/cloud' + path, { method, headers, body: body ? JSON.stringify(body) : undefined })
+    const data = await res.json().catch(() => ({}))
+    setCloudBusy(false)
+    if (!res.ok) { setCloudMsg({ ok: false, text: data.error || 'Non riuscito.' }); return }
+    setCloud(data); setCloudToken(''); setCloudMsg({ ok: true, text: 'Fatto.' })
+  }
+  const cloudControlla = async () => {
+    setCloudBusy(true); setCloudMsg(null); setCloudCheck(null)
+    const res = await fetch(API + '/cloud/controlla', { method: 'POST', headers })
+    setCloudCheck(await res.json().catch(() => ({ ok: false, motivo: 'Risposta non valida.' })))
+    setCloudBusy(false)
+  }
+
   const changePassword = async () => {
     setMsg(null)
     if (newPassword !== confirmPassword) { setMsg({ ok: false, text: 'Le due password non coincidono' }); return }
@@ -200,6 +224,7 @@ function SettingsPage({ token, myId }) {
   }
 
   const [tab, setTab] = useState('accesso')
+  useEffect(() => { if (tab === 'server' && !cloud) loadCloud() }, [tab]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const inputCls = 'w-full bg-surface-page text-ink px-3.5 py-2.5 rounded-lg outline-none border border-gray-800 focus:border-cp-primary transition text-sm placeholder-gray-600'
   const primaryBtn = 'bg-cp-primary hover:bg-cp-primary-hover disabled:opacity-50 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition'
@@ -420,6 +445,45 @@ function SettingsPage({ token, myId }) {
             </div>
             {keyMsg && <div className={'text-xs ' + (keyMsg.ok ? 'text-green-400' : 'text-amber-400')}>{keyMsg.text}</div>}
             <div className="text-xs text-gray-600">Le chiavi sono controllate con Mistral e conservate cifrate. Non vengono mostrate di nuovo.</div>
+          </div>
+        )}
+      </section>
+      )}
+
+      {/* SERVER (LINODE) */}
+      {tab === 'server' && (
+      <section className="glass-panel p-5">
+        <SectionHead icon="database" title="Server (Linode)" sub="Ogni tenant potrà vivere su un suo piccolo server Linode; Super Admin resta dov'è. Qui metti il token e controlli che funzioni: il controllo legge soltanto, non crea nulla e non costa." />
+        {cloud && (
+          <div className="space-y-4">
+            <div className="text-xs">
+              {cloud.configurato ? <div className="text-green-400">Token salvato ({cloud.hint})</div> : <div className="text-amber-400">Nessun token: crealo su Linode (Linodes in lettura e scrittura, Account in sola lettura) e incollalo qui.</div>}
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <input type="password" autoComplete="off" spellCheck="false" value={cloudToken} onChange={(e) => setCloudToken(e.target.value)} placeholder="Incolla il token personale di Linode" className={inputCls + ' flex-1 min-w-[220px]'} />
+              <button type="button" onClick={() => cloudCall('PUT', '/token', { token: cloudToken })} disabled={cloudBusy || !cloudToken.trim()} className={primaryBtn}>Salva</button>
+              {cloud.configurato && <button type="button" onClick={() => cloudCall('DELETE', '/token')} disabled={cloudBusy} className={ghostBtn}>Togli</button>}
+            </div>
+            <div className="border-t border-gray-800 pt-4 flex gap-2 flex-wrap items-end">
+              <label className="text-xs text-gray-400">Regione<input defaultValue={cloud.regione} id="cloud-regione" className={inputCls + ' block mt-1 w-40'} /></label>
+              <label className="text-xs text-gray-400">Tipo di macchina<input defaultValue={cloud.tipo} id="cloud-tipo" className={inputCls + ' block mt-1 w-48'} /></label>
+              <button type="button" onClick={() => cloudCall('PUT', '/impostazioni', { regione: document.getElementById('cloud-regione').value.trim(), tipo: document.getElementById('cloud-tipo').value.trim() })} disabled={cloudBusy} className={ghostBtn}>Salva scelta</button>
+              <button type="button" onClick={cloudControlla} disabled={cloudBusy || !cloud.configurato} className={primaryBtn}>Controlla Linode</button>
+            </div>
+            <div className="text-xs text-gray-500">Predefiniti: <code>it-mil</code> (Milano) e <code>g6-nanode-1</code> (1 GB).</div>
+            {cloudMsg && <div className={'text-xs ' + (cloudMsg.ok ? 'text-green-400' : 'text-amber-400')}>{cloudMsg.text}</div>}
+            {cloudCheck && (
+              <div className="text-sm space-y-2 border border-gray-800 rounded-lg p-3">
+                {!cloudCheck.ok && <div className="text-amber-400">{cloudCheck.motivo || (cloudCheck.token && cloudCheck.token.motivo)}</div>}
+                {cloudCheck.ok && <div className="text-green-400">Il token funziona.</div>}
+                {cloudCheck.saldo && <div className="text-gray-300">Saldo: {cloudCheck.saldo.da_pagare} $ · consumo del mese non ancora fatturato: {cloudCheck.saldo.uninvoiced} $</div>}
+                {cloudCheck.regione && <div className="text-gray-300">Regione: {cloudCheck.regione.nome ? cloudCheck.regione.nome + ' (' + cloudCheck.regione.id + ')' : <span className="text-amber-400">{cloudCheck.regione.avviso}</span>}</div>}
+                {cloudCheck.tipo && <div className="text-gray-300">Macchina: {cloudCheck.tipo.nome ? cloudCheck.tipo.nome + ' — ' + Math.round(cloudCheck.tipo.ram_mb / 1024) + ' GB di RAM, ' + cloudCheck.tipo.prezzo_mese + ' $/mese + ' + cloudCheck.tipo.backup_mese + ' $ di backup' : <span className="text-amber-400">{cloudCheck.tipo.avviso}</span>}</div>}
+                {cloudCheck.ok && <div className="text-gray-300">Server esistenti: {cloudCheck.server.length ? cloudCheck.server.map((x) => x.nome + ' (' + x.stato + ', ' + x.ip + ')').join(' · ') : 'nessuno'}</div>}
+                {(cloudCheck.avvisi || []).map((a, i) => <div key={i} className="text-xs text-gray-500">{a}</div>)}
+              </div>
+            )}
+            <div className="text-xs text-gray-600">Il token è controllato con Linode e conservato cifrato. Non viene mostrato di nuovo.</div>
           </div>
         )}
       </section>

@@ -24,6 +24,7 @@ const monitoringRoutes = require('./routes/monitoring');
 const analyticsRoutes = require('./routes/analytics');
 const guidaRoutes = require('./routes/guida');
 const aiUsageRoutes = require('./routes/ai-usage');
+const cloudRoutes = require('./routes/cloud');
 const tenantAiRoutes = require('./routes/tenant-ai');
 const securityStatusRoutes = require('./routes/security-status');
 const { startBackupScheduler } = require('./backup-scheduler');
@@ -66,10 +67,11 @@ app.use('/api/monitoring', monitoringRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/guida', guidaRoutes);
 app.use('/api/ai-usage', aiUsageRoutes);
+app.use('/api/cloud', cloudRoutes);
 app.use('/api/tenant-ai', tenantAiRoutes);
 app.use('/api/security-status', securityStatusRoutes);
 
-app.get('/health', (req, res) => res.json({ status: 'ok', version: '0.4.102' }));
+app.get('/health', (req, res) => res.json({ status: 'ok', version: '0.4.103' }));
 
 // G19 (PLATFORM-0.6-GAP-ANALYSIS.md) — pubblica di proposito, nessuna autenticazione: serve al
 // workflow GitHub Actions di uptime-check (.github/workflows/uptime-check.yml) per sapere quali
