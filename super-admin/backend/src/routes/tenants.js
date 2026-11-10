@@ -1153,6 +1153,31 @@ router.post('/:slug/sessions/:sid/revoke', requireAuth, requireTenantScope, (req
   }
 });
 
+
+// Ripristino di un tenant su Linode: copia di sicurezza dello stato attuale (scaricata qui, come ogni backup), poi il database del backup va sul server (vedi server-remoto.ripristinaDatabase).
+async function ripristinoRemoto(req, res) {
+  const { slug, backupId } = req.params;
+  const tenant = req.tenant;
+  const backup = db.prepare('SELECT * FROM tenant_backups WHERE id = ? AND tenant_slug = ?').get(backupId, slug);
+  if (!backup || backup.status !== 'ok') return res.status(404).json({ error: 'Backup non trovato o non valido' });
+  if (!fs.existsSync(backup.file_path)) return res.status(404).json({ error: 'Il file di questo backup non è più presente su disco' });
+  const remoto = require('../lib/server-remoto');
+  try {
+    const safetyDir = BACKUP_ROOT + '/' + slug;
+    fs.mkdirSync(safetyDir, { recursive: true });
+    const safetyPath = path.join(safetyDir, slug + '_pre-restore_' + Date.now() + '.db');
+    await remoto.scaricaDatabase(tenant, safetyPath); // se la copia di sicurezza non riesce, NON si tocca niente
+    db.prepare("INSERT INTO tenant_backups (tenant_slug, file_path, size_mb, status, trigger) VALUES (?, ?, ?, ?, 'pre-restore')").run(slug, safetyPath, Math.round((fs.statSync(safetyPath).size / 1024 / 1024) * 100) / 100, 'ok');
+    const r = await remoto.ripristinaDatabase(tenant, backup.file_path);
+    db.prepare('UPDATE tenants SET status = ? WHERE slug = ?').run('active', slug);
+    logAudit(req.user.username, 'tenant.restore', slug, { backup_id: backup.id, restored_from: backup.file_path, safety_copy: safetyPath, remoto: true });
+    res.json({ ok: true, restarted: true, copia_di_sicurezza: path.basename(safetyPath) });
+  } catch (err) {
+    logAudit(req.user.username, 'tenant.restore.failed', slug, { backup_id: backup.id, error: String(err.message).slice(0, 300) });
+    res.status(500).json({ error: err.message });
+  }
+}
+
 // Ripristina il .db del tenant da un backup precedente. Ferma il container (se
 // attivo) prima di sovrascrivere il file — copiare sopra un database mentre il
 // container ci scrive sarebbe la stessa classe di rischio già evitata nel backup
@@ -1161,7 +1186,7 @@ router.post('/:slug/sessions/:sid/revoke', requireAuth, requireTenantScope, (req
 // una copia dello stato attuale ("pre-restore") — così un ripristino sbagliato
 // non è un vicolo cieco, è a sua volta annullabile.
 router.post('/:slug/restore/:backupId', requireAuth, requireTenantScope, async (req, res) => {
-  if (req.tenant.host === 'linode') return res.status(501).json({ error: 'Per un tenant su Linode questa azione non è ancora disponibile (il suo database sta sul suo server).' });
+  if (req.tenant.host === 'linode') return ripristinoRemoto(req, res);
   const { slug, backupId } = req.params;
   const tenant = req.tenant;
   const backup = db.prepare('SELECT * FROM tenant_backups WHERE id = ? AND tenant_slug = ?').get(backupId, slug);
@@ -1245,8 +1270,14 @@ router.post('/:slug/invite', requireAuth, requireTenantScope, async (req, res) =
 // licenza sospesa/scaduta), perché non passa dalla sua API ma dal file diretto,
 // stesso meccanismo già usato per i backup. Vecchia password immediatamente
 // invalidata (sovrascritta, non solo affiancata).
-router.post('/:slug/reset-credentials', requireAuth, requireTenantScope, (req, res) => {
-  if (req.tenant.host === 'linode') return res.status(501).json({ error: 'Per un tenant su Linode questa azione non è ancora disponibile (il suo database sta sul suo server).' });
+router.post('/:slug/reset-credentials', requireAuth, requireTenantScope, async (req, res) => {
+  if (req.tenant.host === 'linode') {
+    const password = generatePassword();
+    try { await require('../lib/server-remoto').reimpostaPasswordAdmin(req.tenant, require('bcryptjs').hashSync(password, 10)); }
+    catch (err) { return res.status(500).json({ error: 'Impossibile scrivere le nuove credenziali sul server: ' + err.message }); }
+    logAudit(req.user.username, 'tenant.credentials.reset', req.params.slug, { remoto: true });
+    return res.json({ username: 'admin', password });
+  }
   const { slug } = req.params;
   const tenant = db.prepare('SELECT * FROM tenants WHERE slug = ?').get(slug);
   if (!tenant) return res.status(404).json({ error: 'Tenant non trovato' });

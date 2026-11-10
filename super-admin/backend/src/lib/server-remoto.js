@@ -187,4 +187,58 @@ async function scaricaDatabase(tenant, destino) {
   finally { try { await c.run('rm -f ' + sq(suHost)); } catch (e) { /* pulizia best effort */ } c.close(); }
 }
 
-module.exports = { scaricaDatabase, crea, distruggi, comando, aggiorna, chiave, ambiente, caddyfile, nomeServer, deps };
+// Rimette sul server un database preso da un backup. Ordine pensato per non lasciare mai il tenant senza dati:
+// 1) il file viaggia in un posto di passaggio e si controlla (dimensione + integrità + ha gli utenti), mentre il tenant continua a girare;
+// 2) solo allora si ferma il tenant, il database attuale NON si butta (resta accanto con la data) e si mette quello del backup;
+// 3) si riaccende e si aspetta che risponda; se non risponde si rimette il database di prima e si riaccende. Chi chiama ha già fatto la copia di sicurezza.
+async function ripristinaDatabase(tenant, file, { say = () => {} } = {}) {
+  const fs = require('fs');
+  const dim = fs.statSync(file).size;
+  if (!(dim > 0)) throw new Error('Il file di backup è vuoto.');
+  const c = await entra(tenant);
+  const nome = nomeContenitore(tenant.slug), dati = DIR(tenant.slug) + '/data', dbNome = tenant.slug + '.db';
+  const passaggio = dati + '/_ripristino.db', attuale = dati + '/' + dbNome, vecchio = dati + '/' + dbNome + '.prima-ripristino-' + Date.now();
+  const rimettiAcceso = async () => { try { await c.run('docker start ' + sq(nome)); } catch (e) { /* già acceso */ } };
+  try {
+    say('Porto il backup sul server…');
+    const up = await c.run('cat > ' + sq(passaggio), { stdin: fs.createReadStream(file) });
+    if (up.code !== 0) throw new Error('Il caricamento del backup sul server è fallito.');
+    const arrivati = Number((await sh(c, 'wc -c < ' + sq(passaggio))).stdout.trim());
+    if (arrivati !== dim) throw new Error('Il backup sul server non ha la dimensione giusta (' + arrivati + ' su ' + dim + ').');
+    say('Controllo che il backup sia un database sano…');
+    const prova = "const D=require('better-sqlite3');const d=new D('/data/_ripristino.db',{readonly:true});const i=d.prepare('PRAGMA integrity_check').get();const u=d.prepare('SELECT COUNT(*) n FROM users').get();d.close();if(i.integrity_check!=='ok'||!(u.n>0)){console.error('integrità '+i.integrity_check+', utenti '+u.n);process.exit(3)}";
+    await sh(c, 'docker exec ' + sq(nome) + ' node -e ' + sq(prova));
+    say('Fermo il tenant e metto il database del backup…');
+    await sh(c, 'docker stop ' + sq(nome));
+    await sh(c, 'mv ' + sq(attuale) + ' ' + sq(vecchio) + '; rm -f ' + sq(attuale + '-wal') + ' ' + sq(attuale + '-shm') + '; mv ' + sq(passaggio) + ' ' + sq(attuale));
+    await sh(c, 'docker start ' + sq(nome));
+    say('Aspetto che il tenant riparta…');
+    let su = false;
+    for (let i = 0; i < 20 && !su; i++) {
+      const r = await c.run('curl -s -m 5 -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/api/tenant-info');
+      su = r.stdout.trim() === '200';
+      if (!su) await deps.attesa(3000);
+    }
+    if (!su) {
+      say('Il tenant non riparte con questo backup: rimetto il database di prima…');
+      await sh(c, 'docker stop ' + sq(nome) + ' || true; rm -f ' + sq(attuale) + ' ' + sq(attuale + '-wal') + ' ' + sq(attuale + '-shm') + '; mv ' + sq(vecchio) + ' ' + sq(attuale));
+      await sh(c, 'docker start ' + sq(nome));
+      throw new Error('Il tenant non è ripartito con questo backup: ho rimesso il database di prima.');
+    }
+    return { byte: dim, copia_precedente: vecchio };
+  } catch (e) { await rimettiAcceso(); try { await c.run('rm -f ' + sq(passaggio)); } catch (x) { /* pulizia */ } throw e; }
+  finally { c.close(); }
+}
+
+// Nuova password per l'utente admin del tenant sul suo server. L'hash si calcola qui e viaggia su stdin: la password non compare in nessun comando.
+async function reimpostaPasswordAdmin(tenant, hash) {
+  const c = await entra(tenant);
+  const nome = nomeContenitore(tenant.slug);
+  const script = "let h='';process.stdin.on('data',x=>h+=x).on('end',()=>{const D=require('better-sqlite3');const d=new D('/data/" + tenant.slug + ".db',{timeout:5000});h=h.trim();"
+    + "const e=d.prepare(\"SELECT id FROM users WHERE username='admin'\").get();"
+    + "if(e)d.prepare(\"UPDATE users SET password_hash=? WHERE username='admin'\").run(h);else d.prepare(\"INSERT INTO users (username,password_hash,display_name,role) VALUES ('admin',?,'Admin','admin')\").run(h);d.close();console.log('ok')})";
+  try { const r = await c.run('docker exec -i ' + sq(nome) + ' node -e ' + sq(script), { stdin: hash }); if (r.code !== 0 || !/ok/.test(r.stdout)) throw new Error((r.stderr || 'comando fallito').trim().split('\n').slice(-2).join(' ')); }
+  finally { c.close(); }
+}
+
+module.exports = { ripristinaDatabase, reimpostaPasswordAdmin, scaricaDatabase, crea, distruggi, comando, aggiorna, chiave, ambiente, caddyfile, nomeServer, deps };

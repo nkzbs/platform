@@ -45,13 +45,16 @@ async function main() {
   cf.salvaToken('token-cf-di-prova-1234567890'); cf.salvaImpostazioni({ zona: 'a1b2c3d4e5f60718293a4b5c6d7e8f90', dominio: 'platform-test.it', ip: '198.51.100.7' });
 
   // SSH finto: registra i comandi, risponde come un server sano
-  const comandi = []; let sshPronto = true, fallisciSu = null, dbRemoto = Buffer.from('SQLITE-FINTO-' + 'x'.repeat(200));
+  const comandi = []; let avviaOk = true, sshPronto = true, fallisciSu = null, dbRemoto = Buffer.from('SQLITE-FINTO-' + 'x'.repeat(200));
   remoto.deps.connect = async (opts) => {
     if (!sshPronto) throw new Error('connessione rifiutata');
     return { fingerprint: 'SHA256:impronta-finta', close() {}, run: async (cmd, o = {}) => {
       comandi.push(cmd);
       if (fallisciSu && cmd.includes(fallisciSu)) return { code: 1, stdout: '', stderr: 'errore simulato' };
       if (cmd.includes('docker load')) { if (o.stdin && o.stdin.resume) await new Promise((res) => { o.stdin.on('end', res); o.stdin.resume(); }); return { code: 0, stdout: 'Loaded image: platform-core:latest\n', stderr: '' }; }
+      if (cmd.startsWith("cat > '/srv") && o.stdin && o.stdin.resume) { await new Promise((res) => { o.stdin.on('end', res); o.stdin.resume(); }); return { code: 0, stdout: '', stderr: '' }; }
+      if (cmd.startsWith('docker exec -i') && cmd.includes('password_hash')) return { code: 0, stdout: 'ok\n', stderr: '' };
+      if (cmd.includes('curl -s -m 5')) return { code: 0, stdout: avviaOk ? '200' : '000', stderr: '' };
       if (cmd.startsWith('wc -c')) return { code: 0, stdout: String(dbRemoto.length) + '\n', stderr: '' };
       if (cmd.startsWith("cat '/srv") && o.onStdout) { o.onStdout(dbRemoto); return { code: 0, stdout: '', stderr: '' }; }
       return { code: 0, stdout: '', stderr: '' };
@@ -149,6 +152,43 @@ async function main() {
     const r = await realFetch(BASE + '/api/tenants', { method: 'POST', headers: H, body: JSON.stringify({ name: 'Nuovo Linode', slug: 'nuovo', host: 'linode' }) });
     const j = await r.json(); eq(r.status, 200, JSON.stringify(j)); eq(j.host, 'linode'); eq(j.domain, 'nuovo.platform-test.it'); ok(j.linode_id > 0 && j.remote_ip, 'server collegato'); eq(j.status, 'active');
     ok(!('encryption_key' in j) && !('jwt_secret' in j), 'i segreti non escono');
+  });
+
+  await test('ripristino: il backup viaggia e si controlla PRIMA di fermare il tenant; il database attuale resta accanto, mai buttato', async () => {
+    inserisci('rip1'); const t = db.prepare("SELECT * FROM tenants WHERE slug='rip1'").get();
+    const f = path.join(os.tmpdir(), 'bk-' + crypto.randomBytes(3).toString('hex') + '.db'); fs.writeFileSync(f, dbRemoto);
+    comandi.length = 0; avviaOk = true;
+    await remoto.ripristinaDatabase(Object.assign(t, { remote_ip: '203.0.113.9' }), f);
+    const i = (re) => comandi.findIndex((c) => re.test(c));
+    ok(i(/^cat > .*_ripristino\.db/) >= 0 && i(/integrity_check/) > i(/^cat > .*_ripristino/), 'carica e poi controlla');
+    ok(i(/docker stop/) > i(/integrity_check/), 'ferma solo dopo il controllo');
+    ok(/mv '[^']*rip1\.db' '[^']*prima-ripristino/.test(comandi.join('\n')), 'il database attuale resta accanto');
+    ok(i(/docker start/) > i(/docker stop/), 'riaccende');
+  });
+
+  await test('ripristino: se il tenant non riparte col backup, si rimette il database di prima e si riaccende', async () => {
+    inserisci('rip2'); const t = db.prepare("SELECT * FROM tenants WHERE slug='rip2'").get();
+    const f = path.join(os.tmpdir(), 'bk-' + crypto.randomBytes(3).toString('hex') + '.db'); fs.writeFileSync(f, dbRemoto);
+    comandi.length = 0; avviaOk = false; let msg = '';
+    try { await remoto.ripristinaDatabase(Object.assign(t, { remote_ip: '203.0.113.9' }), f); } catch (e) { msg = e.message; }
+    avviaOk = true;
+    ok(/ho rimesso il database di prima/.test(msg), 'errore chiaro: ' + msg);
+    ok(/mv '[^']*prima-ripristino[^']*' '[^']*rip2\.db'/.test(comandi.join('\n')), 'rimesso il vecchio');
+    ok(comandi.filter((c) => /docker start/.test(c)).length >= 2, 'riacceso dopo il ritorno');
+  });
+
+  await test('ripristino: backup di dimensione sbagliata sul server → niente viene fermato', async () => {
+    inserisci('rip3'); const t = db.prepare("SELECT * FROM tenants WHERE slug='rip3'").get();
+    const f = path.join(os.tmpdir(), 'bk-' + crypto.randomBytes(3).toString('hex') + '.db'); fs.writeFileSync(f, Buffer.from('piccolo'));
+    comandi.length = 0; let msg = '';
+    try { await remoto.ripristinaDatabase(Object.assign(t, { remote_ip: '203.0.113.9' }), f); } catch (e) { msg = e.message; }
+    ok(/dimensione giusta/.test(msg), msg); ok(!comandi.some((c) => /docker stop/.test(c)), 'il tenant non è stato fermato');
+  });
+
+  await test('reset password su Linode: l\'hash viaggia su stdin, la password non compare nei comandi', async () => {
+    inserisci('pw1'); const t = Object.assign(db.prepare("SELECT * FROM tenants WHERE slug='pw1'").get(), { remote_ip: '203.0.113.9' });
+    comandi.length = 0; await remoto.reimpostaPasswordAdmin(t, '$2a$10$hashdiprova');
+    const c = comandi.find((x) => /docker exec -i/.test(x)); ok(c && !c.includes('hashdiprova'), 'hash non nel comando');
   });
 
   console.log(`\n${passed} passati, ${failed} falliti`); process.exit(failed ? 1 : 0);

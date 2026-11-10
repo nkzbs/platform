@@ -552,6 +552,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                   <div>
                     <div className="font-medium text-ink flex items-center gap-2 flex-wrap">
                       {t.name}
+                      <span className="text-[11px] px-2 py-0.5 rounded-full border border-gray-700 text-gray-400" title={t.host === 'linode' ? ('Server Linode ' + (t.remote_ip || '')) : 'Sul NAS (staging)'}>{t.host === 'linode' ? 'Linode' + (t.remote_ip ? ' · ' + t.remote_ip : '') : 'NAS'}</span>
                       {/* Prima l'unico segnale di stato era il pallino colorato (StatusDot,
                           senza testo/tooltip) più la parola grezza in inglese ("active"/
                           "stopped") sepolta nella riga meta in monospace — facile da perdere,

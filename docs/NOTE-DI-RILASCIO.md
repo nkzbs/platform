@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.116 — Tenant su Linode: ripristino da backup, reset password, dove vive
+
+Da Super Admin ora un tenant su Linode si ripristina da un suo backup: prima la copia di sicurezza dello stato attuale (se non riesce non si tocca niente), poi il backup viaggia sul server e si controlla (dimensione, integrità, utenti) mentre il tenant gira; solo dopo si ferma, il database attuale resta accanto con la data, si mette quello del backup e si riaccende. Se non riparte si rimette il database di prima. «Reset credenziali» funziona anche su Linode (la password non compare in nessun comando). Nella lista ogni tenant dice se è sul NAS o su Linode con il suo IP.
+
 ## 0.4.115 — Server Linode dei tenant: nome `tenant-<slug>` (davvero)
 
 La 0.4.114 diceva di aver cambiato l'etichetta dei server in `tenant-<slug>`, ma la modifica non era entrata nel codice. Ora sì. I server già creati con `plt-<slug>` restano com'erano: il collegamento al server passa dall'id Linode, non dal nome.
