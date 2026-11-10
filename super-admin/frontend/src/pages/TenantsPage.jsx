@@ -996,7 +996,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
               <div>
                 <label className="text-xs text-gray-400 mb-1 block">Dove creare il tenant</label>
                 <select className="w-full bg-surface-page text-ink px-4 py-3 rounded-lg outline-none border border-gray-800 focus:border-cp-primary transition" value={form.host || 'nas'} onChange={(e) => setForm({ ...form, host: e.target.value })}>
-                  <option value="nas">NAS — prova (gratis)</option>
+                  <option value="nas">NAS — staging (gratis)</option>
                   <option value="linode">Linode — produzione (un suo server: 5 $ + 2 $ di backup al mese)</option>
                 </select>
                 {form.host === 'linode' && <p className="text-xs text-amber-500 mt-1.5">Crea un server vero su Linode e parte il costo mensile. Serve il token Linode e Cloudflare in Impostazioni → Server. La creazione dura alcuni minuti.</p>}

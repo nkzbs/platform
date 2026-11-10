@@ -201,7 +201,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
 
   const creaTenant = async () => {
     if (!tf.name.trim() || !tf.slug.trim()) { setMsg({ ok: false, text: 'Servono nome e indirizzo del tenant.' }); return }
-    if (!window.confirm('Creare il tenant «' + tf.name + '» con ' + a.blueprint.moduli_ids.length + ' moduli e i ruoli dell\'analisi' + (tf.host === 'linode' ? ' su un server Linode (5 $ al mese più 2 $ di backup, da subito)' : ' sul NAS (prova)') + '?')) return
+    if (!window.confirm('Creare il tenant «' + tf.name + '» con ' + a.blueprint.moduli_ids.length + ' moduli e i ruoli dell\'analisi' + (tf.host === 'linode' ? ' su un server Linode (5 $ al mese più 2 $ di backup, da subito)' : ' sul NAS (staging)') + '?')) return
     setMsg(null); setCredenziali(null)
     const r = await req('POST', '/' + a.id + '/create-tenant', { name: tf.name, slug: tf.slug, host: tf.host })
     if (r.ok) { setCr({ fase: 'container', inizio: Date.now(), tempi: {} }); seguiCreazione(a.id) } else setMsg({ ok: false, text: r.data.error || 'Non riuscito.' })
@@ -331,7 +331,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
                   </div>
                   <label className="text-xs text-gray-400 block mb-1">Dove crearlo</label>
                   <select className={input + ' mb-3'} value={tf.host} onChange={(e) => setTf({ ...tf, host: e.target.value })}>
-                    <option value="nas">NAS — prova (gratis)</option>
+                    <option value="nas">NAS — staging (gratis)</option>
                     <option value="linode">Linode — produzione (5 $ + 2 $ di backup al mese)</option>
                   </select>
                   <button type="button" className={btn} onClick={creaTenant}>Crea il tenant</button>
