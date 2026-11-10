@@ -40,8 +40,7 @@
       ],
       "consigli": [
         "Un cliente società ha come codice fiscale la partita IVA: il campo accetta entrambi.",
-        "Gli **Auguri** si mandano dal menu Documenti; i compleanni li trovi nel report Ricorrenze.",
-        "**Invia via PEC** (menu «Altre funzioni», quando il servizio PEC Massiva è abilitato e la casella è scritta in Connessioni → OpenAPI.it): manda per posta certificata il testo di «Privacy + Incarico» all'indirizzo PEC del cliente. Costa 0,05 € a invio e si conferma prima."
+        "Gli **Auguri** si mandano dal menu Documenti; i compleanni li trovi nel report Ricorrenze."
       ]
     },
     "immobili": {

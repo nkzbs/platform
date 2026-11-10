@@ -9,7 +9,6 @@ const ADATTATORI = {
   controllo_catastale: () => require('./controllo_catastale'),
   messaggio_cliente: () => require('./messaggio_cliente'),
   firma_elettronica: () => require('./firma_elettronica'),
-  invio_pec: () => require('./invio_pec'),
   fattura_elettronica: () => require('./fattura_elettronica'),
   da_attivare: () => require('./da_attivare'), // segnaposto per funzioni previste ma non ancora collegate al servizio esterno
 };

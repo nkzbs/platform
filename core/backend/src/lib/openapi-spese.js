@@ -31,7 +31,6 @@ const SERVIZI = {
   catasto_elenco_note: { nome: 'Catasto — elenco delle note', prezzo: 10.90 },
   catasto_visura_immobile: { nome: 'Catasto — visura di un immobile (prezzo non indicato nelle pagine pubbliche: scrivilo tu da Prezzi)', prezzo: null },
   catasto_ispezione_nazionale: { nome: 'Catasto — immobili di una persona dal codice fiscale (ispezione nazionale)', prezzo: 23.70 },
-  pec_massiva_invio: { nome: 'PEC Massiva — invio di un messaggio (POST /send, listino 0,05)', prezzo: 0.05 },
   sdi_fattura: { nome: 'Fatturazione elettronica (SDI): invio di una fattura — prezzo non indicato nelle pagine pubbliche: scrivilo tu da Prezzi', prezzo: null },
   esignature_ses: { nome: 'Firma elettronica semplice (eSignature, SES): prezzo non indicato nelle pagine pubbliche: scrivilo tu da Prezzi', prezzo: null },
   sms_italia: { nome: 'SMS Italia (SMS v2): costo per segmento da 160 caratteri; listino «da 0,036»', prezzo: 0.036 },

@@ -1733,27 +1733,6 @@
       ]
     },
     {
-      "key": "invio_pec",
-      "_nota": "Segnaposto «da attivare»: la PEC richiede il servizio PEC di OpenAPI.it.",
-      "richiede": {
-        "clienti": [
-          "nome"
-        ]
-      },
-      "aggiungi": [
-        {
-          "block_type": "external_action",
-          "key": "invio_pec",
-          "label": "Invia via PEC",
-          "icon": "mail",
-          "descrizione": "Spedisce un documento al cliente con posta elettronica certificata",
-          "adapter": "da_attivare",
-          "servizio_richiesto": "il servizio PEC di OpenAPI.it",
-          "come_attivare": "Attivalo nella console di OpenAPI.it e controllalo da Impostazioni → Connessioni → OpenAPI.it («Controlla i servizi»); poi la funzione verrà collegata."
-        }
-      ]
-    },
-    {
       "key": "conservazione_scaduta",
       "_nota": "Avviso settimanale (06:00 UTC) per ogni cliente con la data di conservazione dei dati già passata. Non cancella nulla: la decisione (cancellare, o rinnovare il consenso) resta a una persona.",
       "richiede": {
@@ -1995,60 +1974,6 @@
               "data_nascita": "data_nascita"
             },
             "automatico": "compleanno"
-          }
-        }
-      ]
-    },
-    {
-      "key": "collega_pec",
-      "_nota": "Collega «Invia via PEC» al servizio PEC Massiva di OpenAPI.it (adattatore `invio_pec`): manda per PEC il testo del documento «Privacy + Incarico» all'indirizzo PEC del cliente. Serve la casella PEC Massiva (utente e password in Impostazioni → Connessioni → OpenAPI.it) oltre al servizio abilitato; finché mancano, il pulsante resta tra «Altre funzioni» e dice cosa serve. Costa 0,05 € a invio e si conferma prima.",
-      "richiede": {
-        "clienti": [
-          "nome",
-          "pec"
-        ]
-      },
-      "aggiungi": [
-        {
-          "block_type": "field",
-          "key": "pec_invio_data",
-          "label": "Ultima PEC inviata — data",
-          "type": "date"
-        },
-        {
-          "block_type": "field",
-          "key": "pec_invio_esito",
-          "label": "Ultima PEC inviata — esito",
-          "type": "text"
-        }
-      ],
-      "riscrivi": [
-        {
-          "block_type": "external_action",
-          "key": "invio_pec",
-          "proprieta": {
-            "adapter": {
-              "da": "da_attivare",
-              "a": "invio_pec"
-            }
-          }
-        }
-      ],
-      "imposta": [
-        {
-          "block_type": "external_action",
-          "key": "invio_pec",
-          "proprieta": {
-            "campi": {
-              "pec": "pec"
-            },
-            "documento": "privacy_incarico",
-            "esito": {
-              "esito": "pec_invio_esito",
-              "data": "pec_invio_data"
-            },
-            "risultato_in": "invio_pec",
-            "connection": "openapi_it"
           }
         }
       ]

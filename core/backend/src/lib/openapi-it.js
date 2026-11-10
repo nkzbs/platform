@@ -20,8 +20,7 @@ function credenziali() {
   const c = require('../secrets-at-rest').unseal(row.credentials);
   if (!c || !c.email || !c.api_key) return null;
   const sandbox = String(c.ambiente || 'sandbox').trim().toLowerCase() !== 'produzione';
-  // la casella PEC Massiva (facoltativa) serve solo all'invio di PEC: utente e password stanno sigillati con il resto, mai restituiti da nessuna rotta
-  return { email: c.email, apiKey: c.api_key, sandbox, pec: c.pec_utente && c.pec_password ? { utente: String(c.pec_utente).trim(), password: String(c.pec_password) } : null,
+  return { email: c.email, apiKey: c.api_key, sandbox,
     // dati dell'azienda che servono alla fattura elettronica e che il tenant non ha altrove (facoltativi: senza, la fattura dice cosa manca)
     fiscale: { codice_fiscale: String(c.sdi_codice_fiscale || '').trim(), regime: String(c.sdi_regime_fiscale || '').trim().toUpperCase(), cap: String(c.sdi_cap || '').trim(), comune: String(c.sdi_comune || '').trim(), provincia: String(c.sdi_provincia || '').trim(), iban: String(c.sdi_iban || '').trim() } };
 }
@@ -35,7 +34,6 @@ const domini = (sandbox) => ({
   sms: (sandbox ? 'test.' : '') + 'sms.openapi.com',
   visurecamerali: (sandbox ? 'test.' : '') + 'visurecamerali.openapi.it', // le visure camerali stanno su un dominio .it
   invoice: (sandbox ? 'test.' : '') + 'invoice.openapi.com', // fatturazione elettronica (SDI)
-  pecmassiva: (sandbox ? 'test.' : '') + 'ws.pecmassiva.com', // PEC Massiva: invio di PEC (il dominio non è di openapi.com)
 });
 
 // Token in cache per processo, per ambiente — mai nel DB: si rigenera da solo a ogni
