@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.121 — Allegati nello spostamento e nell'esportazione
+
+La prova generale dello spostamento ha trovato un difetto: gli allegati, letti dal NAS con tar, arrivavano al server con 0 byte (il flusso si agganciava alla connessione SSH troppo tardi). Ora si incanalano subito in un flusso proprio. Valeva anche per l'esportazione verso un server esterno. In quella prova il rimedio ha funzionato: dopo l'errore il tenant si è riacceso sul NAS, l'indirizzo è tornato e il server nuovo è stato cancellato.
+
 ## 0.4.120 — Sposta su Linode
 
 Nella riga di ogni tenant sul NAS c'è «Sposta su Linode»: copia di sicurezza, nasce il server e si prepara tutto senza toccare il tenant; solo allora il tenant si ferma sul NAS (3-5 minuti di stop), database e allegati vanno sul server, il tenant parte là, l'indirizzo passa al nuovo server (senza proxy il tempo del certificato, poi con). Se qualcosa non va dopo lo stop: server nuovo cancellato, indirizzo e tenant tornano sul NAS, che non è mai stato modificato. A fine lavoro il tenant sul NAS resta fermo con tutti i suoi dati: lo cancella una persona. Lo spostamento in corso ha lo stato «moving», fuori dai controlli automatici; i tenant su Linode non vengono più controllati dal riconciliatore dei container del NAS (segnalava a torto «container mancante» ogni 15 minuti).

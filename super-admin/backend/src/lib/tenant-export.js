@@ -11,7 +11,7 @@ const dns = require('dns').promises;
 const crypto = require('crypto');
 const zlib = require('zlib');
 const { spawn } = require('child_process');
-const { Readable } = require('stream');
+const { Readable, PassThrough } = require('stream');
 const Database = require('better-sqlite3');
 const db = require('../db');
 const { logAudit } = require('../audit-log');
@@ -51,7 +51,12 @@ const deps = {
     const uploadsDir = path.join(DATA_ROOT, slug, 'uploads');
     if (!fs.existsSync(path.join(uploadsDir, slug))) return null;
     const p = spawn('tar', ['czf', '-', '-C', uploadsDir, slug]);
-    return p.stdout;
+    // Va incanalato SUBITO in un flusso nostro: chi lo legge (la connessione SSH) si aggancia più tardi, e un'uscita di tar già finita lasciava arrivare 0 byte (provato dal vivo).
+    const out = new PassThrough();
+    p.stdout.pipe(out);
+    p.on('error', (e) => out.destroy(e));
+    p.on('close', (code) => { if (code !== 0) out.destroy(new Error('Lettura degli allegati fallita (tar ' + code + ').')); });
+    return out;
   },
 };
 
