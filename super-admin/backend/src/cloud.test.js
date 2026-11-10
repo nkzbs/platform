@@ -15,9 +15,21 @@ const eq = (a, e, m) => { if (JSON.stringify(a) !== JSON.stringify(e)) throw new
 const ok = (c, m) => { if (!c) throw new Error(m || 'atteso true'); };
 
 const BUONO = 'token-linode-buono-1234567890', SENZA_ACCOUNT = 'token-linode-senza-account-123456', SBAGLIATO = 'token-linode-sbagliato-1234567';
+const CF_BUONO = 'cf-token-buono-1234567890abcd', CF_SENZA_DNS = 'cf-token-senza-dns-1234567890', CF_SBAGLIATO = 'cf-token-sbagliato-12345678901', ZONA = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
 const realFetch = global.fetch; const chiamate = [];
 global.fetch = async (url, opts = {}) => {
-  const u = String(url); if (!u.startsWith('https://api.linode.com/v4')) return realFetch(url, opts);
+  const u = String(url);
+  if (u.startsWith('https://api.cloudflare.com/client/v4')) {
+    const tok = ((opts.headers || {}).Authorization || '').replace('Bearer ', ''); const p = u.replace('https://api.cloudflare.com/client/v4', '');
+    chiamate.push({ metodo: opts.method || 'GET', p, tok });
+    const r = (status, body) => ({ ok: status < 400, status, json: async () => body });
+    if (p === '/user/tokens/verify') return tok === CF_SBAGLIATO ? r(401, { success: false, errors: [{ message: 'Invalid API Token' }] }) : r(200, { success: true, result: { status: 'active' } });
+    if (p === '/zones/' + ZONA) return r(200, { success: true, result: { name: 'platform-core.it', status: 'active' } });
+    if (p.startsWith('/zones/' + ZONA + '/dns_records')) return tok === CF_SENZA_DNS ? r(403, { success: false, errors: [{ message: 'forbidden' }] }) : r(200, { success: true, result: [{ name: 'finance.platform-core.it', type: 'A', content: '1.2.3.4', proxied: true }], result_info: { total_count: 1 } });
+    if (p === '/zones/' + ZONA + '/settings/ssl') return tok === CF_BUONO ? r(200, { success: true, result: { value: 'strict' } }) : r(403, { success: false, errors: [{ message: 'forbidden' }] });
+    return r(404, { success: false, errors: [{ message: 'non trovato' }] });
+  }
+  if (!u.startsWith('https://api.linode.com/v4')) return realFetch(url, opts);
   const tok = ((opts.headers || {}).Authorization || '').replace('Bearer ', ''); const p = u.replace('https://api.linode.com/v4', '');
   chiamate.push({ metodo: opts.method || 'GET', p, tok });
   const r = (status, body) => ({ ok: status < 400, status, json: async () => body });
@@ -74,6 +86,28 @@ async function main() {
   await test('togliere il token: il controllo dice di incollarlo', async () => {
     eq((await (await api('DELETE', '/token')).json()).configurato, false);
     const c = await (await api('POST', '/controlla')).json(); eq(c.ok, false); ok(/token/i.test(c.motivo));
+  });
+  await test('Cloudflare: token sbagliato rifiutato, buono salvato cifrato; la zona manca finché non la scrivi', async () => {
+    const cfApi = (m, p, b) => api(m, '/cloudflare' + p, b);
+    eq((await cfApi('PUT', '/token', { token: CF_SBAGLIATO })).status, 400);
+    const j = await (await cfApi('PUT', '/token', { token: CF_BUONO })).json(); eq(j.configurato, true); eq(j.hint, '…abcd'); ok(!JSON.stringify(j).includes(CF_BUONO));
+    ok(!db.prepare("SELECT value FROM cloud_settings WHERE key = 'cloudflare_token'").get().value.includes(CF_BUONO), 'cifrato');
+    const c0 = await (await cfApi('POST', '/controlla')).json(); eq(c0.token.ok, true); ok(c0.avvisi.some((a) => /ID della zona/.test(a)), JSON.stringify(c0));
+    eq((await cfApi('PUT', '/impostazioni', { zona: 'non-valida' })).status, 400);
+    eq((await cfApi('PUT', '/impostazioni', { zona: ZONA })).status, 200);
+  });
+  await test('Cloudflare: controllo completo a sole letture (zona, record, SSL strict)', async () => {
+    chiamate.length = 0;
+    const c = await (await api('POST', '/cloudflare/controlla')).json();
+    eq(c.ok, true); eq(c.zona.nome, 'platform-core.it'); eq(c.record.totale, 1); eq(c.record.nomi[0].proxy, true); eq(c.ssl, 'strict'); eq(c.avvisi, []);
+    ok(chiamate.length >= 4 && chiamate.every((x) => x.metodo === 'GET'), JSON.stringify(chiamate));
+  });
+  await test('Cloudflare: senza permesso DNS o SSL il controllo riesce e lo dice; token tolto: messaggio', async () => {
+    await api('PUT', '/cloudflare/token', { token: CF_SENZA_DNS });
+    const c = await (await api('POST', '/cloudflare/controlla')).json();
+    eq(c.ok, true); eq(c.record, null); ok(c.avvisi.some((a) => /DNS/.test(a)) && c.avvisi.some((a) => /SSL/.test(a)), JSON.stringify(c.avvisi));
+    await api('DELETE', '/cloudflare/token');
+    const d = await (await api('POST', '/cloudflare/controlla')).json(); eq(d.ok, false); ok(/token/i.test(d.motivo));
   });
   console.log(`\n${passed} passati, ${failed} falliti`); process.exit(failed ? 1 : 0);
 }

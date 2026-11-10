@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.104 — 10 novembre 2026
+
+**Super Admin si collega anche a Cloudflare (solo token e controllo).** In Impostazioni → Server (Linode), sotto Linode: token API di Cloudflare (cifrato, mai restituito), ID della zona e dominio dei tenant (`platform-core.it`). «Controlla Cloudflare» fa **solo letture**: verifica il token, la zona, elenca i record DNS e legge la modalità SSL (deve essere Full strict; se manca il permesso lo dice e non blocca). Il token giusto ha un solo permesso, *Zona → DNS → Modifica*, limitato alla zona. I record non si creano ancora: arriveranno col driver dei server. Rotte `/api/cloud/cloudflare/*`, `lib/cloudflare.js`, prove in `cloud.test.js` (Cloudflare simulato). **Non verificato:** nessuna chiamata a Cloudflare vera. Serve ridistribuire Super Admin.
+
 ## 0.4.103 — 10 novembre 2026
 
 **Super Admin si collega a Linode (primo passo: solo token e controllo).** Nuova sezione Impostazioni → **Server (Linode)**: il token personale si incolla lì, viene controllato con Linode e conservato cifrato (si vedono solo le ultime 4 cifre); regione (predefinita Milano, `it-mil`) e tipo di macchina (Nanode 1 GB, `g6-nanode-1`) sono dati modificabili. «Controlla Linode» fa **solo letture**: conferma il token, mostra saldo, prezzo e RAM della macchina scelta, e i server già presenti. Non crea e non costa nulla. Il saldo è facoltativo (serve il permesso «Account» in sola lettura). Rotte `/api/cloud/*`, codice `lib/linode.js`, prova `cloud.test.js` (Linode simulato). **Non verificato:** nessuna chiamata a Linode vera. Seguirà il driver che crea e cancella i Nanodi, con riepilogo del costo. Serve ridistribuire Super Admin.

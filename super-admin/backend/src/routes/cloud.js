@@ -34,4 +34,29 @@ router.put('/impostazioni', requireAuth, (req, res) => {
 // Solo letture su Linode: non crea e non costa.
 router.post('/controlla', requireAuth, async (req, res) => res.json(await linode.controlla()));
 
+// ── Cloudflare (record DNS dei tenant sui loro server) ─ stesse regole: token sigillato, controllo a sole letture ──
+const cf = require('../lib/cloudflare');
+router.get('/cloudflare', requireAuth, (req, res) => res.json(cf.stato()));
+router.put('/cloudflare/token', requireAuth, async (req, res) => {
+  const t = String((req.body && req.body.token) || '').trim();
+  if (t.length < 20 || /\s/.test(t)) return res.status(400).json({ error: 'Il token non sembra valido (troppo corto o con spazi).' });
+  const v = await cf.validaToken(t);
+  if (!v.ok) return res.status(400).json({ error: v.reason });
+  cf.salvaToken(t);
+  logAudit(req.user.username, 'cloud.cloudflare.token.set', null, null);
+  res.json(cf.stato());
+});
+router.delete('/cloudflare/token', requireAuth, (req, res) => {
+  cf.togliToken();
+  logAudit(req.user.username, 'cloud.cloudflare.token.clear', null, null);
+  res.json(cf.stato());
+});
+router.put('/cloudflare/impostazioni', requireAuth, (req, res) => {
+  try { cf.salvaImpostazioni({ zona: req.body && req.body.zona, dominio: req.body && req.body.dominio }); }
+  catch (e) { return res.status(e.status || 400).json({ error: e.message }); }
+  logAudit(req.user.username, 'cloud.cloudflare.impostazioni', null, cf.impostazioni());
+  res.json(cf.stato());
+});
+router.post('/cloudflare/controlla', requireAuth, async (req, res) => res.json(await cf.controlla()));
+
 module.exports = router;

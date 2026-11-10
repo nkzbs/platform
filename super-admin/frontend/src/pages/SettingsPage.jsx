@@ -97,6 +97,11 @@ function SettingsPage({ token, myId }) {
   const [cloudMsg, setCloudMsg] = useState(null)
   const [cloudBusy, setCloudBusy] = useState(false)
   const [cloudCheck, setCloudCheck] = useState(null)
+  // Cloudflare (DNS dei tenant sui loro server): stesso schema, controllo a sole letture
+  const [cf, setCf] = useState(null) // { configurato, hint, zona, dominio }
+  const [cfToken, setCfToken] = useState('')
+  const [cfMsg, setCfMsg] = useState(null)
+  const [cfCheck, setCfCheck] = useState(null)
 
   // Sicurezza della piattaforma (2026-10-15, richiesto dall'utente: "lato
   // sicurezza la struttura regge? un pannello dove controllo lo stato della
@@ -169,6 +174,21 @@ function SettingsPage({ token, myId }) {
     if (!res.ok) { setCloudMsg({ ok: false, text: data.error || 'Non riuscito.' }); return }
     setCloud(data); setCloudToken(''); setCloudMsg({ ok: true, text: 'Fatto.' })
   }
+  const loadCf = () => fetch(API + '/cloud/cloudflare', { headers }).then((r) => r.json()).then((d) => d && typeof d.configurato === 'boolean' && setCf(d))
+  const cfCall = async (method, path, body) => {
+    setCloudBusy(true); setCfMsg(null)
+    const res = await fetch(API + '/cloud/cloudflare' + path, { method, headers, body: body ? JSON.stringify(body) : undefined })
+    const data = await res.json().catch(() => ({}))
+    setCloudBusy(false)
+    if (!res.ok) { setCfMsg({ ok: false, text: data.error || 'Non riuscito.' }); return }
+    setCf(data); setCfToken(''); setCfMsg({ ok: true, text: 'Fatto.' })
+  }
+  const cfControlla = async () => {
+    setCloudBusy(true); setCfMsg(null); setCfCheck(null)
+    const res = await fetch(API + '/cloud/cloudflare/controlla', { method: 'POST', headers })
+    setCfCheck(await res.json().catch(() => ({ ok: false, motivo: 'Risposta non valida.' })))
+    setCloudBusy(false)
+  }
   const cloudControlla = async () => {
     setCloudBusy(true); setCloudMsg(null); setCloudCheck(null)
     const res = await fetch(API + '/cloud/controlla', { method: 'POST', headers })
@@ -224,7 +244,7 @@ function SettingsPage({ token, myId }) {
   }
 
   const [tab, setTab] = useState('accesso')
-  useEffect(() => { if (tab === 'server' && !cloud) loadCloud() }, [tab]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (tab === 'server' && !cloud) { loadCloud(); loadCf() } }, [tab]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const inputCls = 'w-full bg-surface-page text-ink px-3.5 py-2.5 rounded-lg outline-none border border-gray-800 focus:border-cp-primary transition text-sm placeholder-gray-600'
   const primaryBtn = 'bg-cp-primary hover:bg-cp-primary-hover disabled:opacity-50 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition'
@@ -484,6 +504,35 @@ function SettingsPage({ token, myId }) {
               </div>
             )}
             <div className="text-xs text-gray-600">Il token è controllato con Linode e conservato cifrato. Non viene mostrato di nuovo.</div>
+            <div className="border-t border-gray-800 pt-5 space-y-3">
+              <div className="text-sm text-gray-200 font-medium">Cloudflare (indirizzi dei tenant)</div>
+              <div className="text-xs text-gray-500">Serve a creare da solo l'indirizzo di ogni tenant che vive su un suo server. Il token giusto ha un solo permesso: <em>Zona → DNS → Modifica</em>, limitato alla zona del dominio.</div>
+              {cf && (<>
+                <div className="text-xs">{cf.configurato ? <span className="text-green-400">Token salvato ({cf.hint})</span> : <span className="text-amber-400">Nessun token Cloudflare.</span>}</div>
+                <div className="flex gap-2 flex-wrap">
+                  <input type="password" autoComplete="off" spellCheck="false" value={cfToken} onChange={(e) => setCfToken(e.target.value)} placeholder="Incolla il token API di Cloudflare" className={inputCls + ' flex-1 min-w-[220px]'} />
+                  <button type="button" onClick={() => cfCall('PUT', '/token', { token: cfToken })} disabled={cloudBusy || !cfToken.trim()} className={primaryBtn}>Salva</button>
+                  {cf.configurato && <button type="button" onClick={() => cfCall('DELETE', '/token')} disabled={cloudBusy} className={ghostBtn}>Togli</button>}
+                </div>
+                <div className="flex gap-2 flex-wrap items-end">
+                  <label className="text-xs text-gray-400">ID della zona<input defaultValue={cf.zona} id="cf-zona" className={inputCls + ' block mt-1 w-72'} placeholder="32 caratteri, dalla panoramica del dominio" /></label>
+                  <label className="text-xs text-gray-400">Dominio dei tenant<input defaultValue={cf.dominio} id="cf-dominio" className={inputCls + ' block mt-1 w-48'} /></label>
+                  <button type="button" onClick={() => cfCall('PUT', '/impostazioni', { zona: document.getElementById('cf-zona').value.trim(), dominio: document.getElementById('cf-dominio').value.trim() })} disabled={cloudBusy} className={ghostBtn}>Salva scelta</button>
+                  <button type="button" onClick={cfControlla} disabled={cloudBusy || !cf.configurato} className={primaryBtn}>Controlla Cloudflare</button>
+                </div>
+                {cfMsg && <div className={'text-xs ' + (cfMsg.ok ? 'text-green-400' : 'text-amber-400')}>{cfMsg.text}</div>}
+                {cfCheck && (
+                  <div className="text-sm space-y-2 border border-gray-800 rounded-lg p-3">
+                    {!cfCheck.ok && <div className="text-amber-400">{cfCheck.motivo || (cfCheck.token && !cfCheck.token.ok && cfCheck.token.motivo) || (cfCheck.zona && !cfCheck.zona.ok && cfCheck.zona.motivo) || 'Completa i dati qui sopra.'}</div>}
+                    {cfCheck.token && cfCheck.token.ok && <div className="text-green-400">Il token funziona.</div>}
+                    {cfCheck.zona && cfCheck.zona.ok && <div className="text-gray-300">Zona: {cfCheck.zona.nome} ({cfCheck.zona.stato})</div>}
+                    {cfCheck.record && <div className="text-gray-300">Record DNS: {cfCheck.record.totale} · {cfCheck.record.nomi.slice(0, 12).map((r) => r.nome.replace('.' + cf.dominio, '') + (r.proxy ? ' ☁' : '')).join(', ')}</div>}
+                    {cfCheck.ssl && <div className="text-gray-300">Modalità SSL: {cfCheck.ssl}</div>}
+                    {(cfCheck.avvisi || []).map((a, i) => <div key={i} className="text-xs text-amber-400">{a}</div>)}
+                  </div>
+                )}
+              </>)}
+            </div>
           </div>
         )}
       </section>
