@@ -45,7 +45,7 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,40}$/;
 const DOM_RE = /^([a-z0-9-]+\.)+[a-z]{2,}$/;
 const DIR = (slug) => '/srv/platform/' + slug;
 const nomeContenitore = (slug) => 'platform-' + slug;
-const nomeServer = (slug) => 'plt-' + slug;
+const nomeServer = (slug) => 'tenant-' + slug; // non 'plt-…': "plt-test" era la macchina di prova fatta a mano
 
 async function entra(tenant, { impronta = tenant.remote_fingerprint } = {}) {
   const k = chiave();
