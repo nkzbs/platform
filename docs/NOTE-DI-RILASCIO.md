@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.118 — Libreria: vede anche i moduli dei tenant su Linode
+
+Elenco moduli di un tenant, esportazione, «salva nella Libreria» e «dove è usato» ora leggono il database del tenant ovunque viva: sul NAS dal file, su Linode con una query dentro il container sul suo server.
+
 ## 0.4.117 — Tenant su Linode: sessioni e statistiche
 
 Sessioni (elenco, «attivo ora» nella lista, revoca) e statistiche (stato, CPU, memoria, rete, dimensione del database) ora funzionano anche per i tenant su Linode: la query gira dentro il container sul suo server (valori su stdin, mai nel comando). «Attivo ora» è in cache 20 secondi. Lo spazio totale in Analytics conta, per Linode, la dimensione dell'ultimo backup riuscito. Non ancora: la Libreria che legge i moduli dai database dei tenant salta quelli su Linode.

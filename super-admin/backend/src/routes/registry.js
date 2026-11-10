@@ -38,6 +38,19 @@ function openTenantDbReadOnly(slug) {
   }
 }
 
+// Le righe di una query sul database di UN tenant, ovunque viva: sul NAS si apre il file in sola lettura, su Linode la query gira nel container sul suo server.
+// Ritorna l'elenco di righe, o null se il tenant non c'è / il database non è raggiungibile (stesso significato che aveva openTenantDbReadOnly → null).
+async function righeTenant(slug, sql, params = []) {
+  const tenant = db.prepare('SELECT * FROM tenants WHERE slug = ?').get(slug);
+  if (!tenant) return null;
+  if (tenant.host === 'linode') {
+    try { return await require('../lib/server-remoto').interroga(tenant, { sql, params }); } catch (e) { return null; }
+  }
+  const tdb = openTenantDbReadOnly(slug);
+  if (!tdb) return null;
+  try { return tdb.prepare(sql).all(...params); } finally { tdb.close(); }
+}
+
 // Solo l'ultima versione di ogni modulo (slug + tenant d'origine).
 const LATEST_VERSIONS_SQL = `
   SELECT rm.* FROM registry_modules rm
@@ -71,17 +84,15 @@ router.get('/modules', requireAuth, (req, res) => {
 
 // Dove è usato un modulo: i tenant che lo hanno installato (con la versione) e i moduli della Libreria che si collegano a lui. Dal database del tenant si legge SOLO
 // la tabella dei moduli (da dove vengono e a che versione sono), mai le righe; chi aggiorna è sempre il tenant, da qui non si cambia niente.
-router.get('/modules/:id/usage', requireAuth, (req, res) => {
+router.get('/modules/:id/usage', requireAuth, async (req, res) => {
   const m = db.prepare('SELECT * FROM registry_modules WHERE id = ?').get(req.params.id);
   if (!m) return res.status(404).json({ error: 'Modulo non trovato' });
   const ultima = db.prepare('SELECT MAX(version) v FROM registry_modules WHERE slug = ? AND source_tenant_slug IS ?').get(m.slug, m.source_tenant_slug).v;
   const tenants = [];
   for (const t of db.prepare("SELECT slug, name FROM tenants WHERE status != 'deleted' AND COALESCE(is_sandbox, 0) = 0 ORDER BY name").all()) {
-    const tdb = openTenantDbReadOnly(t.slug); if (!tdb) continue;
-    try {
-      const r = tdb.prepare('SELECT registry_version AS v FROM modules WHERE registry_slug = ? AND registry_source_tenant_slug IS ? AND installed = 1').get(m.slug, m.source_tenant_slug);
-      if (r) tenants.push({ slug: t.slug, name: t.name, version: r.v, aggiornabile: r.v != null && r.v < ultima });
-    } catch (e) { /* tenant con un database più vecchio, senza queste colonne: non conta */ } finally { tdb.close(); }
+    const righe = await righeTenant(t.slug, 'SELECT registry_version AS v FROM modules WHERE registry_slug = ? AND registry_source_tenant_slug IS ? AND installed = 1', [m.slug, m.source_tenant_slug]);
+    const r = righe && righe[0]; // null: tenant irraggiungibile o con un database più vecchio, senza queste colonne: non conta
+    if (r) tenants.push({ slug: t.slug, name: t.name, version: r.v, aggiornabile: r.v != null && r.v < ultima });
   }
   const usatoDa = [];
   for (const o of db.prepare(LATEST_VERSIONS_SQL).all()) {
@@ -170,27 +181,18 @@ router.post('/proposals/:id/reject', requireAuth, (req, res) => {
 });
 
 // Moduli di UN tenant, per il selettore "salva nella Libreria".
-router.get('/tenants/:slug/modules', requireAuth, (req, res) => {
-  const tdb = openTenantDbReadOnly(req.params.slug);
-  if (!tdb) return res.status(404).json({ error: 'Tenant non trovato o database non ancora creato' });
-  try {
-    res.json(tdb.prepare('SELECT id, name, slug, icon, color FROM modules ORDER BY name').all());
-  } finally {
-    tdb.close();
-  }
+router.get('/tenants/:slug/modules', requireAuth, async (req, res) => {
+  const righe = await righeTenant(req.params.slug, 'SELECT id, name, slug, icon, color FROM modules ORDER BY name');
+  if (!righe) return res.status(404).json({ error: 'Tenant non trovato o database non raggiungibile' });
+  res.json(righe);
 });
 
 // Esporta UN modulo direttamente da un tenant come file JSON. Auth via ?token=
 // perché è un download da <a href>.
-router.get('/tenants/:slug/modules/:moduleSlug/export', requireQueryToken, (req, res) => {
-  const tdb = openTenantDbReadOnly(req.params.slug);
-  if (!tdb) return res.status(404).json({ error: 'Tenant non trovato o database non ancora creato' });
-  let mod;
-  try {
-    mod = tdb.prepare('SELECT name, slug, icon, color, schema_json FROM modules WHERE slug = ?').get(req.params.moduleSlug);
-  } finally {
-    tdb.close();
-  }
+router.get('/tenants/:slug/modules/:moduleSlug/export', requireQueryToken, async (req, res) => {
+  const righe = await righeTenant(req.params.slug, 'SELECT name, slug, icon, color, schema_json FROM modules WHERE slug = ?', [req.params.moduleSlug]);
+  if (!righe) return res.status(404).json({ error: 'Tenant non trovato o database non raggiungibile' });
+  const mod = righe[0];
   if (!mod) return res.status(404).json({ error: 'Modulo non trovato' });
   res.setHeader('Content-Disposition', 'attachment; filename="modulo-' + mod.slug + '.json"');
   res.setHeader('Content-Type', 'application/json');
@@ -199,18 +201,13 @@ router.get('/tenants/:slug/modules/:moduleSlug/export', requireQueryToken, (req,
 
 // Salva nella Libreria il modulo di un tenant. Se esiste già (stesso tenant e stesso
 // modulo) nasce la versione successiva.
-router.post('/publish', requireAuth, (req, res) => {
+router.post('/publish', requireAuth, async (req, res) => {
   const { tenant_slug, module_slug, description, release_notes } = req.body || {};
   if (!tenant_slug || !module_slug) return res.status(400).json({ error: 'tenant_slug e module_slug obbligatori' });
 
-  const tdb = openTenantDbReadOnly(tenant_slug);
-  if (!tdb) return res.status(404).json({ error: 'Tenant non trovato o database non ancora creato' });
-  let mod;
-  try {
-    mod = tdb.prepare('SELECT * FROM modules WHERE slug = ?').get(module_slug);
-  } finally {
-    tdb.close();
-  }
+  const righe = await righeTenant(tenant_slug, 'SELECT * FROM modules WHERE slug = ?', [module_slug]);
+  if (!righe) return res.status(404).json({ error: 'Tenant non trovato o database non raggiungibile' });
+  const mod = righe[0];
   if (!mod) return res.status(404).json({ error: 'Modulo non trovato in quel tenant' });
 
   const prev = db.prepare('SELECT MAX(version) AS v FROM registry_modules WHERE source_tenant_slug = ? AND slug = ?').get(tenant_slug, module_slug);

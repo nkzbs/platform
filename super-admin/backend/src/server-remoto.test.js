@@ -201,6 +201,16 @@ async function main() {
     const st = await remoto.statoContainer(t); eq(st.running, true); eq(st.mem_usage_mb, 120); eq(st.cpu_percent, 0.5);
   });
 
+  await test('Libreria: i moduli di un tenant su Linode si leggono dal suo server (elenco), un tenant che non c\'è dà 404', async () => {
+    inserisci('lib1'); db.prepare("UPDATE tenants SET host='linode', remote_ip='203.0.113.9' WHERE slug='lib1'").run();
+    const login = await realFetch(BASE + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'rm_user', password: 'rm_pw_123456' }) });
+    const H = { Authorization: 'Bearer ' + (await login.json()).token };
+    comandi.length = 0;
+    const r = await realFetch(BASE + '/api/registry/tenants/lib1/modules', { headers: H }); eq(r.status, 200); ok(Array.isArray(await r.json()), 'elenco');
+    ok(comandi.some((c) => /docker exec -i/.test(c) && /FROM modules/.test(c) === false), 'la query è girata sul server (valori fuori dal comando)');
+    eq((await realFetch(BASE + '/api/registry/tenants/non-esiste/modules', { headers: H })).status, 404);
+  });
+
   console.log(`\n${passed} passati, ${failed} falliti`); process.exit(failed ? 1 : 0);
 }
 main().catch((e) => { console.error(e); process.exit(1); });
