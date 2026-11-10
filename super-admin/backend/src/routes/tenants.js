@@ -331,7 +331,7 @@ async function createTenant({ name, slug, domain, actor, isSandbox, skipDefaults
       db.prepare('UPDATE tenants SET domain = ?, host = ? WHERE slug = ?').run(dominioRemoto, 'linode', slug);
       const rigaT = db.prepare('SELECT * FROM tenants WHERE slug = ?').get(slug);
       const base = (process.env.SUPER_ADMIN_PUBLIC_URL || ('https://admin.' + cloudflare.zoneName()));
-      await require('../lib/server-remoto').crea(rigaT, { dominio: dominioRemoto, superAdminUrl: base, internalSecret: internalSecret(), passwordIniziale: initialPassword, say: () => {}, dns: (ip) => cloudflare.upsertSubdomain(slug, ip) });
+      await require('../lib/server-remoto').crea(rigaT, { dominio: dominioRemoto, superAdminUrl: base, internalSecret: internalSecret(), passwordIniziale: initialPassword, say: () => {}, dns: (ip) => cloudflare.upsertSubdomain(slug, ip, { proxied: false }), proxy: (v, ip) => cloudflare.upsertSubdomain(slug, ip, { proxied: v }).then(() => null) });
     }
     if (!remoto) await provisionerRequest('POST', '/tenants', {
       slug,

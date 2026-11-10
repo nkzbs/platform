@@ -89,13 +89,14 @@ const avviaContenitore = (c, slug, ref) => sh(c, 'docker rm -f ' + sq(nomeConten
 
 // Cosa vede il server stesso quando il tenant non risponde da fuori: serve a capire se manca il container, Caddy o il certificato. Solo letture, testo corto.
 async function diagnosi(c, slug, dominio) {
-  const cmd = ['echo "[container]"; docker ps -a --format "{{.Names}} {{.Status}}" | head -3',
+  const cmd = ['echo "[log tenant]"; docker logs --tail 15 ' + nomeContenitore(slug) + ' 2>&1 | cut -c1-220',
+    'echo "[container]"; docker ps -a --format "{{.Names}} {{.Status}}" | head -3',
     'echo "[locale]"; curl -s -m 8 -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/api/tenant-info',
-    'echo; echo "[caddy]"; systemctl is-active caddy; journalctl -u caddy --no-pager -n 12 2>&1 | cut -c1-220',
+    'echo; echo "[caddy]"; systemctl is-active caddy; journalctl -u caddy --no-pager -n 6 2>&1 | cut -c60-300',
     'echo "[https locale]"; curl -sk -m 8 -o /dev/null -w "%{http_code}" --resolve ' + dominio + ':443:127.0.0.1 https://' + dominio + '/api/tenant-info',
-    'echo; echo "[log tenant]"; docker logs --tail 6 ' + nomeContenitore(slug) + ' 2>&1 | cut -c1-200; true'].join('; ');
+    'true'].join('; ');
   const r = await sh(c, cmd);
-  return String(r && r.stdout !== undefined ? r.stdout : r).slice(0, 1800);
+  return String(r && r.stdout !== undefined ? r.stdout : r).slice(0, 3000);
 }
 
 // Crea il server e ci mette il tenant. `tenant` è la riga di Super Admin (con segreti); `opz`: { dominio, superAdminUrl, internalSecret, passwordIniziale, say, dns(ip) }.
@@ -131,6 +132,7 @@ async function crea(tenant, opz) {
     say('Aspetto che il tenant risponda (il certificato HTTPS può volere un minuto)…');
     let su = false;
     for (let i = 0; i < deps.tentativiAvvio && !su; i++) { su = await deps.proveHttps('https://' + opz.dominio + '/api/tenant-info'); if (!su) await deps.attesa(deps.passoAvvio); }
+    if (su && opz.proxy) { say('Certificato ottenuto: accendo la protezione di Cloudflare…'); await opz.proxy(true, s.ip); }
     if (!su) throw new Error('Il tenant è partito sul server ma non risponde su https://' + opz.dominio + ' (guarda l\'indirizzo su Cloudflare e i log del server).');
     return { linode_id: s.id, ip: s.ip, fingerprint: imp };
   } catch (e) {

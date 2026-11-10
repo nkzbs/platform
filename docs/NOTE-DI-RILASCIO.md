@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.109 — Tenant su Linode: il certificato si prende prima, poi si accende Cloudflare
+
+Dal collaudo: Let's Encrypt riceveva 403 passando dal proxy Cloudflare, quindi Caddy non otteneva il certificato. Ora l'indirizzo del tenant nasce senza proxy (solo DNS), il server ottiene il certificato dritto da Let's Encrypt e solo dopo Super Admin accende il proxy. La diagnosi dal server mostra prima il log del tenant.
+
 ## 0.4.108 — Tenant su Linode: se non risponde, l'errore dice perché
 
 Il primo collaudo reale è fallito: server creato, ma il tenant non rispondeva da fuori e il server veniva cancellato senza lasciare tracce. Ora, prima di cancellare, Super Admin legge dal server stesso (solo letture) lo stato del container, di Caddy, del certificato e del log, e lo aggiunge al messaggio d'errore.

@@ -48,7 +48,7 @@ async function cf(path, options = {}) {
 // Se esiste già, lascia il suo stato "proxied" attuale invece di sovrascriverlo
 // (un record impostato a mano diversamente da un operatore resta come deciso) —
 // solo per un record NUOVO si applica il default (proxato, vedi commento sopra).
-async function upsertSubdomain(slug, ip) {
+async function upsertSubdomain(slug, ip, opz = {}) {
   if (!(ip ? lib.token() && zonaId() : isConfigured())) return { skipped: true, reason: 'cloudflare_not_configured' };
   const name = slug + '.' + zoneName();
   const zoneId = zonaId();
@@ -56,17 +56,18 @@ async function upsertSubdomain(slug, ip) {
   const existing = await cf('/zones/' + zoneId + '/dns_records?type=A&name=' + encodeURIComponent(name));
   if (existing.length > 0) {
     const rec = existing[0];
-    if (rec.content === (ip || lib.impostazioni().ip)) return { updated: false, unchanged: true, name };
+    const stessoProxy = typeof opz.proxied !== 'boolean' || rec.proxied === opz.proxied;
+    if (rec.content === (ip || lib.impostazioni().ip) && stessoProxy) return { updated: false, unchanged: true, name };
     const updated = await cf('/zones/' + zoneId + '/dns_records/' + rec.id, {
       method: 'PATCH',
-      body: JSON.stringify({ content: (ip || lib.impostazioni().ip) }),
+      body: JSON.stringify({ content: (ip || lib.impostazioni().ip), ...(typeof opz.proxied === 'boolean' ? { proxied: opz.proxied } : {}) }),
     });
     return { updated: true, name, proxied: updated.proxied };
   }
 
   const created = await cf('/zones/' + zoneId + '/dns_records', {
     method: 'POST',
-    body: JSON.stringify({ type: 'A', name, content: (ip || lib.impostazioni().ip), proxied: true, ttl: 1 }),
+    body: JSON.stringify({ type: 'A', name, content: (ip || lib.impostazioni().ip), proxied: typeof opz.proxied === 'boolean' ? opz.proxied : true, ttl: 1 }),
   });
   return { created: true, name, proxied: created.proxied };
 }

@@ -93,7 +93,7 @@ const cloudflare = require('./cloudflare');
     const src = fs.readFileSync(path.join(__dirname, 'routes', 'tenants.js'), 'utf8');
     const args = [...src.matchAll(/upsertSubdomain\(([^)]*)\)/g)].map((m) => m[1].trim());
     assertTrue(args.length >= 2, 'attese almeno 2 chiamate, trovate ' + args.length);
-    for (const a of args) assertTrue(['slug', 'label', 'slug, ip'].includes(a), 'argomento sospetto: "' + a + '"');
+    for (const a of args) assertTrue(['slug', 'label', 'slug, ip', 'slug, ip, { proxied: false }', 'slug, ip, { proxied: v }'].includes(a), 'argomento sospetto: "' + a + '"');
   });
 
   console.log(`\n${'='.repeat(60)}`);
