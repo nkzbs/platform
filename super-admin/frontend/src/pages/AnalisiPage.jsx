@@ -63,7 +63,7 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
   const [invito, setInvito] = useState(null) // { slug, name } per invitare il cliente nel tenant creato
   const [guida, setGuida] = useState(null) // la guida all'uso, caricata quando si apre
   const apriGuida = async () => { const r = await req('GET', '/' + a.id + '/guida'); if (r.ok) setGuida(r.data); else setMsg({ ok: false, text: (r.data && r.data.error) || 'Non riesco a preparare la guida.' }) }
-  const [tf, setTf] = useState({ name: '', slug: '' })
+  const [tf, setTf] = useState({ name: '', slug: '', host: 'nas' })
   const [cr, setCr] = useState(null) // avanzamento della creazione del tenant: { fase, inizio, tempi, ... }
   const [credenziali, setCredenziali] = useState(null) // l'accesso admin: si vede una volta
   // Recupero credenziali (2026-11-01, bug reale: l'accesso admin iniziale vive solo in
@@ -201,9 +201,9 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
 
   const creaTenant = async () => {
     if (!tf.name.trim() || !tf.slug.trim()) { setMsg({ ok: false, text: 'Servono nome e indirizzo del tenant.' }); return }
-    if (!window.confirm('Creare il tenant «' + tf.name + '» con ' + a.blueprint.moduli_ids.length + ' moduli e i ruoli dell\'analisi?')) return
+    if (!window.confirm('Creare il tenant «' + tf.name + '» con ' + a.blueprint.moduli_ids.length + ' moduli e i ruoli dell\'analisi' + (tf.host === 'linode' ? ' su un server Linode (5 $ al mese più 2 $ di backup, da subito)' : ' sul NAS (prova)') + '?')) return
     setMsg(null); setCredenziali(null)
-    const r = await req('POST', '/' + a.id + '/create-tenant', { name: tf.name, slug: tf.slug })
+    const r = await req('POST', '/' + a.id + '/create-tenant', { name: tf.name, slug: tf.slug, host: tf.host })
     if (r.ok) { setCr({ fase: 'container', inizio: Date.now(), tempi: {} }); seguiCreazione(a.id) } else setMsg({ ok: false, text: r.data.error || 'Non riuscito.' })
   }
 
@@ -326,9 +326,14 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
                   {cr && cr.fase === 'errore' && <div className="mb-3 bg-red-900/20 border border-red-900/40 rounded-lg p-3 text-xs text-red-300">Creazione non riuscita: {cr.errore}</div>}
                   <p className="text-xs text-gray-500 mb-3">Installa i {b.moduli_ids.length} moduli{b.moduli_collegati && b.moduli_collegati.length ? ' (compresi quelli collegati: ' + b.moduli_collegati.join(', ') + ')' : ' scelti'} e crea i {b.ruoli_utente} ruoli degli utenti; i passaggi diventano gli stati del flusso dei moduli. Si aggiungono i moduli generati che hai approvato qui sopra. Alla fine il tenant ha già la guida d'uso, un controllo di coerenza e un collaudo dei flussi. Non tocca un modulo che ha già i suoi. Fino a questo tocco non è stato scritto niente.</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
-                    <input className={input} placeholder="Nome del tenant" value={tf.name} onChange={(e) => setTf({ name: e.target.value, slug: slugify(e.target.value) })} />
+                    <input className={input} placeholder="Nome del tenant" value={tf.name} onChange={(e) => setTf({ ...tf, name: e.target.value, slug: slugify(e.target.value) })} />
                     <input className={input + ' font-mono'} placeholder="indirizzo (solo minuscole e trattini)" value={tf.slug} onChange={(e) => setTf({ ...tf, slug: slugify(e.target.value) })} />
                   </div>
+                  <label className="text-xs text-gray-400 block mb-1">Dove crearlo</label>
+                  <select className={input + ' mb-3'} value={tf.host} onChange={(e) => setTf({ ...tf, host: e.target.value })}>
+                    <option value="nas">NAS — prova (gratis)</option>
+                    <option value="linode">Linode — produzione (5 $ + 2 $ di backup al mese)</option>
+                  </select>
                   <button type="button" className={btn} onClick={creaTenant}>Crea il tenant</button>
                 </>
               )}

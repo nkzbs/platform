@@ -299,7 +299,7 @@ router.post('/tenants/:slug/install-module', requireAuth, async (req, res) => {
   if (!tenant) return res.status(404).json({ error: 'Tenant non trovato' });
   try {
     const token = await mintTenantAdminToken(tenant.slug);
-    const r = await fetch('http://platform-' + tenant.slug + ':80/api/modules/import', {
+    const r = await fetch(require('../lib/tenant-host').base(tenant.slug) + '/api/modules/import', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
       body: JSON.stringify({ name, icon, color, schema_json, description }),

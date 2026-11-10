@@ -227,7 +227,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
     return h + 'h ' + m + 'min'
   }
 
-  const EMPTY_TENANT_FORM = { name: '', slug: '', domain: '' }
+  const EMPTY_TENANT_FORM = { name: '', slug: '', domain: '', host: 'nas' }
 
   const openNew = () => {
     setForm({ ...EMPTY_TENANT_FORM })
@@ -239,6 +239,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
     if (!form.name || !form.slug) return setError('Nome e slug obbligatori')
     setLoading(true)
     setError('')
+    if (form.host === 'linode' && !window.confirm('Creare un server su Linode per «' + form.name + '»? Costa 5 $ al mese più 2 $ di backup, da subito.')) return
     const res = await fetch(API + '/tenants', { method: 'POST', headers, body: JSON.stringify(form) })
     const data = await res.json()
     setLoading(false)
@@ -966,6 +967,14 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                 <input className="w-full bg-surface-page text-ink px-4 py-3 rounded-lg outline-none border border-gray-800 focus:border-cp-primary transition font-mono placeholder-gray-600"
                   placeholder="es. coffee.platform-core.it" value={form.domain}
                   onChange={(e) => setForm({ ...form, domain: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 mb-1 block">Dove creare il tenant</label>
+                <select className="w-full bg-surface-page text-ink px-4 py-3 rounded-lg outline-none border border-gray-800 focus:border-cp-primary transition" value={form.host || 'nas'} onChange={(e) => setForm({ ...form, host: e.target.value })}>
+                  <option value="nas">NAS — prova (gratis)</option>
+                  <option value="linode">Linode — produzione (un suo server: 5 $ + 2 $ di backup al mese)</option>
+                </select>
+                {form.host === 'linode' && <p className="text-xs text-amber-500 mt-1.5">Crea un server vero su Linode e parte il costo mensile. Serve il token Linode e Cloudflare in Impostazioni → Server. La creazione dura alcuni minuti.</p>}
               </div>
             </div>
             <div className="flex gap-3">

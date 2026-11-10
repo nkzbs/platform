@@ -271,7 +271,7 @@ function setCreazione(id, patch) {
   db.prepare('UPDATE process_analyses SET creazione = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify({ ...cur, ...patch }), id);
 }
 
-async function creaTenantInBackground({ id, name, slug, domain, actor, processi, escludi, marchio, configurazione, pacchetti }) {
+async function creaTenantInBackground({ id, name, slug, domain, host, actor, processi, escludi, marchio, configurazione, pacchetti }) {
   const t0 = Date.now(), segni = []; // [{ fase, t }]
   const segna = (fase) => { segni.push({ fase, t: Date.now() }); setCreazione(id, { fase }); };
   const tempi = () => { const out = {}; segni.forEach((s, i) => { const fine = (segni[i + 1] ? segni[i + 1].t : Date.now()); out[s.fase] = Math.round((fine - s.t) / 100) / 10; }); return out; };
@@ -280,7 +280,7 @@ async function creaTenantInBackground({ id, name, slug, domain, actor, processi,
   const avvisi = [];
   try {
     segna('container');
-    const { tenant, initialPassword } = await enqueueHostedCreation(() => createTenant({ name, slug, domain, actor, skipDefaults: true, onStep: (f) => { if (FASI.includes(f) && (!segni.length || segni[segni.length - 1].fase !== f)) segna(f); } }));
+    const { tenant, initialPassword } = await enqueueHostedCreation(() => createTenant({ name, slug, domain, host: host || 'nas', actor, skipDefaults: true, onStep: (f) => { if (FASI.includes(f) && (!segni.length || segni[segni.length - 1].fase !== f)) segna(f); } }));
     db.prepare('UPDATE process_analyses SET tenant_slug = ? WHERE id = ?').run(tenant.slug, id); // da qui il tenant esiste
     credenziali.set(id, { username: 'admin', password: initialPassword });
     segna('moduli');
@@ -343,7 +343,7 @@ router.post('/:id/create-tenant', requireAuth, (req, res) => {
   const valid = new Set(analysis.libraryModules().map((m) => m.id));
   const processi = analysis.sanitizeProcessi(json(r.processi, []), valid);
   setCreazione(r.id, { fase: 'container', inizio: Date.now(), nome: name, slug, tempi: {}, errore: null, avvisi: [] });
-  creaTenantInBackground({ id: r.id, name, slug, domain, actor: req.user.username, processi, escludi: (json(r.scelte, {}).escludi) || [], marchio: analysis.sanitizeProfilo(json(r.profilo, {})).marchio, configurazione: analysis.sanitizeProfilo(json(r.profilo, {})).configurazione, pacchetti: analysis.sanitizeProfilo(json(r.profilo, {})).configurazione.pacchetti }); // senza await: la pagina segue l'avanzamento
+  creaTenantInBackground({ id: r.id, name, slug, domain, host: (req.body && req.body.host) === 'linode' ? 'linode' : 'nas', actor: req.user.username, processi, escludi: (json(r.scelte, {}).escludi) || [], marchio: analysis.sanitizeProfilo(json(r.profilo, {})).marchio, configurazione: analysis.sanitizeProfilo(json(r.profilo, {})).configurazione, pacchetti: analysis.sanitizeProfilo(json(r.profilo, {})).configurazione.pacchetti }); // senza await: la pagina segue l'avanzamento
   res.status(202).json({ avviata: true });
 });
 

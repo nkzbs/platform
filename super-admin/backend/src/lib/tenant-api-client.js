@@ -21,7 +21,7 @@ const MAX_ATTEMPTS = 18;
 
 async function callTenantAPI(slug, method, path, body, attempt = 1) {
   try {
-    const r = await fetch('http://platform-' + slug + ':80' + path, {
+    const r = await fetch(require('./tenant-host').base(slug) + path, {
       method,
       headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET },
       body: body !== undefined ? JSON.stringify(body) : undefined,

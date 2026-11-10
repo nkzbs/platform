@@ -20,6 +20,9 @@ function isConfigured() {
   return !!(lib.token() && zonaId() && lib.impostazioni().ip);
 }
 
+// Basta token e zona (senza l'indirizzo del NAS) per dare a un tenant su Linode il suo indirizzo.
+function configuredForRemote() { return !!(lib.token() && zonaId()); }
+
 function zoneName() {
   return lib.impostazioni().dominio;
 }
@@ -45,25 +48,25 @@ async function cf(path, options = {}) {
 // Se esiste già, lascia il suo stato "proxied" attuale invece di sovrascriverlo
 // (un record impostato a mano diversamente da un operatore resta come deciso) —
 // solo per un record NUOVO si applica il default (proxato, vedi commento sopra).
-async function upsertSubdomain(slug) {
-  if (!isConfigured()) return { skipped: true, reason: 'cloudflare_not_configured' };
+async function upsertSubdomain(slug, ip) {
+  if (!(ip ? lib.token() && zonaId() : isConfigured())) return { skipped: true, reason: 'cloudflare_not_configured' };
   const name = slug + '.' + zoneName();
   const zoneId = zonaId();
 
   const existing = await cf('/zones/' + zoneId + '/dns_records?type=A&name=' + encodeURIComponent(name));
   if (existing.length > 0) {
     const rec = existing[0];
-    if (rec.content === lib.impostazioni().ip) return { updated: false, unchanged: true, name };
+    if (rec.content === (ip || lib.impostazioni().ip)) return { updated: false, unchanged: true, name };
     const updated = await cf('/zones/' + zoneId + '/dns_records/' + rec.id, {
       method: 'PATCH',
-      body: JSON.stringify({ content: lib.impostazioni().ip }),
+      body: JSON.stringify({ content: (ip || lib.impostazioni().ip) }),
     });
     return { updated: true, name, proxied: updated.proxied };
   }
 
   const created = await cf('/zones/' + zoneId + '/dns_records', {
     method: 'POST',
-    body: JSON.stringify({ type: 'A', name, content: lib.impostazioni().ip, proxied: true, ttl: 1 }),
+    body: JSON.stringify({ type: 'A', name, content: (ip || lib.impostazioni().ip), proxied: true, ttl: 1 }),
   });
   return { created: true, name, proxied: created.proxied };
 }
@@ -93,4 +96,4 @@ async function sslMode() {
   return result.value;
 }
 
-module.exports = { isConfigured, zoneName, upsertSubdomain, deleteSubdomain, sslMode };
+module.exports = { configuredForRemote, isConfigured, zoneName, upsertSubdomain, deleteSubdomain, sslMode };

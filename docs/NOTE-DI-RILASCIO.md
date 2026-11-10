@@ -2,6 +2,16 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.107 — 10 novembre 2026
+
+**Un tenant può nascere (e vivere) su un suo server Linode.** Nel modulo «Nuovo tenant» e nella creazione dall'analisi c'è la scelta **Dove crearlo**: **NAS (prova, gratis)** di partenza, oppure **Linode (produzione)**, che crea un Nanode (5 $ + 2 $ di backup al mese) con la conferma del costo.
+- **Cosa fa su Linode** (`lib/server-remoto.js`): crea il server con l'API (chiave SSH di Super Admin, mai password), ci installa Docker e Caddy, ci porta l'immagine del programma dal NAS, avvia il container con i segreti del tenant, mette Caddy davanti (HTTPS vero, Cloudflare in Full strict), crea il record DNS verso l'IP del server. **Se un passo fallisce cancella il server appena creato** (non resta a costare). **Freno alla spesa:** non crea più di 5 server (si alza da `cloud_settings.max_server`).
+- **Gestione a distanza:** avvia, ferma e Aggiorna (immagine nuova + stesso container e stessi dati) funzionano anche per un tenant su Linode; i backup scaricano una copia consistente del database dal server (`VACUUM INTO` nel container, poi SSH, dimensione controllata) e passano dallo stesso motore di prima (retention, copia off-site).
+- **Cancellare un tenant su Linode** fa prima la copia di sicurezza; **se la copia non riesce il server NON si cancella** (sul NAS invece un database rotto non blocca).
+- **Un solo punto per raggiungere i tenant:** `lib/tenant-host.js` (NAS: dentro Docker; Linode: il suo dominio). Sostituisce 7 indirizzi scritti a mano. Nuove colonne `host`, `remote_ip`, `linode_id`, `remote_fingerprint` (i tenant esistenti restano `nas`).
+- **NON ancora disponibile per un tenant su Linode** (risponde 501 o mostra vuoto, mai un errore silenzioso): ripristino da backup, reset credenziali, e le viste di Super Admin che leggono il database del tenant dal disco (sessioni, statistiche di spazio, lettura moduli per il registro). Si portano con la copia periodica del database; per ora non ci sono.
+- **Non verificato:** mai creato un server vero (tutto provato con Linode, SSH e Cloudflare simulati); non so se il pacchetto `caddy` e l'immagine `linode/ubuntu24.04` funzionano come previsto a Milano; il certificato HTTPS dietro Cloudflare va visto dal vivo. Il primo collaudo si fa su un tenant di prova, da cancellare. Prove: `server-remoto.test.js` (10), regressione su provisioning, redeploy, restore, export, backup, cloudflare.
+
 ## 0.4.106 — 10 novembre 2026
 
 **Cloudflare: niente più doppione, vive tutto in Impostazioni.** Token (cifrato), ID della zona, dominio dei tenant e **indirizzo pubblico del NAS** (nuovo campo) stanno nel database di Super Admin e si cambiano da Impostazioni → Server. Le vecchie variabili d'ambiente (`CLOUDFLARE_*`) non si leggono più a ogni richiesta: all'avvio ogni voce ancora vuota si copia da lì UNA volta (il token cifrato) e poi l'ambiente si può svuotare senza effetti. Sostituisce la regola della 0.4.105 «salvato, altrimenti ambiente». Test: `cloud` (copia unica, nessuna sovrascrittura), `security-status`, `tenant-provisioning`.

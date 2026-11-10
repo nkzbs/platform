@@ -11,6 +11,9 @@
 const fs = require('fs');
 const path = require('path');
 
+// il collegamento a Cloudflare vive nel database (lib/cloudflare.js): le variabili qui sotto vengono copiate una volta all'avvio, poi non contano più
+process.env.DB_PATH = require('path').join(require('os').tmpdir(), 'cloudflare-test-' + require('crypto').randomBytes(6).toString('hex') + '.db');
+process.env.JWT_SECRET = 'cf_secret_test'; process.env.ENCRYPTION_KEY = 'cf_enc_test_key';
 process.env.CLOUDFLARE_API_TOKEN = 'token-finto';
 process.env.CLOUDFLARE_ZONE_ID = 'zona-finta';
 process.env.CLOUDFLARE_ORIGIN_IP = '203.0.113.7';
@@ -90,7 +93,7 @@ const cloudflare = require('./cloudflare');
     const src = fs.readFileSync(path.join(__dirname, 'routes', 'tenants.js'), 'utf8');
     const args = [...src.matchAll(/upsertSubdomain\(([^)]*)\)/g)].map((m) => m[1].trim());
     assertTrue(args.length >= 2, 'attese almeno 2 chiamate, trovate ' + args.length);
-    for (const a of args) assertTrue(['slug', 'label'].includes(a), 'argomento sospetto: "' + a + '"');
+    for (const a of args) assertTrue(['slug', 'label', 'slug, ip'].includes(a), 'argomento sospetto: "' + a + '"');
   });
 
   console.log(`\n${'='.repeat(60)}`);

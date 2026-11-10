@@ -18,7 +18,7 @@ const INTERNAL_SECRET = internalSecret();
 async function fetchTenantMonitoringFeed(tenant, limit, before) {
   try {
     const qs = 'limit=' + limit + (before ? '&before=' + encodeURIComponent(before) : '');
-    const res = await fetch('http://platform-' + tenant.slug + ':80/api/audit-log/internal/monitoring-feed?' + qs, {
+    const res = await fetch(require('../lib/tenant-host').base(tenant.slug) + '/api/audit-log/internal/monitoring-feed?' + qs, {
       headers: { 'x-internal-secret': INTERNAL_SECRET },
       signal: AbortSignal.timeout(5000),
     });

@@ -15,7 +15,7 @@ const INTERNAL_SECRET = internalSecret();
 // di due copie della stessa query.
 async function moduleStatsForTenant(slug) {
   try {
-    const res = await fetch('http://platform-' + slug + ':80/api/modules/internal/stats', {
+    const res = await fetch(require('./tenant-host').base(slug) + '/api/modules/internal/stats', {
       headers: { 'x-internal-secret': INTERNAL_SECRET },
       signal: AbortSignal.timeout(5000),
     });

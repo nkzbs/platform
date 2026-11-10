@@ -211,6 +211,11 @@ if (!db.prepare("SELECT 1 FROM pragma_table_info('ai_usage_log') WHERE name = 't
 for (const col of ['backup_mail_weekly INTEGER DEFAULT 0', 'backup_mail_last_sent TEXT', 'backup_mail_passphrase TEXT']) {
   if (!db.prepare("SELECT 1 FROM pragma_table_info('tenants') WHERE name = ?").get(col.split(' ')[0])) db.exec('ALTER TABLE tenants ADD COLUMN ' + col);
 }
+// Dove vive il tenant: 'nas' (come sempre, container sul NAS) oppure 'linode' (un suo server). Per i tenant su Linode: indirizzo, numero del server Linode e impronta SSH
+// (fissata al primo collegamento, poi deve combaciare). Tutti i tenant esistenti restano 'nas'.
+for (const col of ["host TEXT DEFAULT 'nas'", 'remote_ip TEXT', 'linode_id INTEGER', 'remote_fingerprint TEXT']) {
+  if (!db.prepare("SELECT 1 FROM pragma_table_info('tenants') WHERE name = ?").get(col.split(' ')[0])) db.exec('ALTER TABLE tenants ADD COLUMN ' + col);
+}
 db.prepare('INSERT OR IGNORE INTO update_manager (id) VALUES (1)').run();
 // I verticali proposti ai tenant: gruppi di moduli della Libreria con nome, icona e descrizione (dati, nessun settore nel codice). Si gestiscono da Libreria;
 // al primo avvio si riempiono dal file seeds/verticali.json (lib/verticali.js).

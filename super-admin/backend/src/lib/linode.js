@@ -2,6 +2,7 @@
 // Collegamento di Super Admin a Linode (Akamai Cloud): ogni tenant potrà vivere su un suo Nanode.
 // Questo file fa DUE cose sole: custodisce il token (cifrato, mai restituito: si vede solo «configurato» e le ultime 4 cifre) e lo controlla con SOLE LETTURE.
 // Non crea, non modifica e non cancella nulla su Linode: la creazione dei server verrà dopo, con il suo riepilogo del costo.
+const crypto = require('crypto');
 const db = require('../db');
 const { encrypt, decrypt } = require('../crypto-secrets');
 
@@ -31,8 +32,8 @@ function salvaImpostazioni({ regione, tipo }) {
   if (tipo !== undefined) { if (!/^[a-z0-9-]{2,40}$/.test(tipo)) throw Object.assign(new Error('Tipo di macchina non valido.'), { status: 400 }); set('tipo', tipo); }
 }
 
-async function chiama(percorso, tok) {
-  const res = await fetch(API + percorso, { headers: tok ? { Authorization: 'Bearer ' + tok } : {}, signal: AbortSignal.timeout(15000) });
+async function chiama(percorso, tok, opzioni = {}) {
+  const res = await fetch(API + percorso, { method: opzioni.metodo || 'GET', headers: { ...(tok ? { Authorization: 'Bearer ' + tok } : {}), ...(opzioni.corpo ? { 'Content-Type': 'application/json' } : {}) }, body: opzioni.corpo ? JSON.stringify(opzioni.corpo) : undefined, signal: AbortSignal.timeout(30000) });
   const dati = await res.json().catch(() => null);
   return { status: res.status, ok: res.ok, dati };
 }
@@ -71,4 +72,35 @@ async function validaToken(t) {
   return c.token && c.token.ok ? { ok: true } : { ok: false, reason: (c.token && c.token.motivo) || c.motivo || 'Token non valido.' };
 }
 
-module.exports = { stato, salvaToken, togliToken, salvaImpostazioni, controlla, validaToken, impostazioni, PREDEFINITI };
+// ── Scritture: solo il driver dei server le usa, ognuna dietro una conferma del costo ──────────────────────────────────────────────────────────────
+const MAX_SERVER_PREDEFINITO = 5; // freno alla spesa: oltre questo numero di server Super Admin non ne crea (si cambia da cloud_settings.max_server)
+function maxServer() { const v = Number(get('max_server')); return Number.isInteger(v) && v > 0 ? v : MAX_SERVER_PREDEFINITO; }
+function pass() { const c = crypto.randomBytes(24).toString('base64').replace(/[+/=]/g, 'x'); return c + 'aA1!'; } // la password di root non serve a nessuno: si entra solo con la chiave, e questa non si conserva
+
+// Crea un server. `chiavi` = chiavi pubbliche autorizzate. Ritorna { id, ip, stato }. Rifiuta se ci sono già troppi server.
+async function creaServer({ nome, chiavi, tags = ['platform'], backup = true }) {
+  const tok = token(); if (!tok) throw Object.assign(new Error('Nessun token Linode: salvalo in Impostazioni → Server.'), { status: 503 });
+  if (!/^[a-z0-9][a-z0-9-]{1,40}$/.test(nome)) throw Object.assign(new Error('Nome del server non valido.'), { status: 400 });
+  const gia = await chiama('/linode/instances?page_size=100', tok);
+  if (!gia.ok) throw Object.assign(new Error('Linode non risponde: ' + motivo(gia)), { status: 502 });
+  const n = ((gia.dati && gia.dati.data) || []).length;
+  if (n >= maxServer()) throw Object.assign(new Error('Ci sono già ' + n + ' server su Linode (il massimo che Super Admin crea da solo è ' + maxServer() + '): se ne servono di più si alza il limite.'), { status: 409 });
+  const { regione, tipo } = impostazioni();
+  const r = await chiama('/linode/instances', tok, { metodo: 'POST', corpo: { label: nome, region: regione, type: tipo, image: 'linode/ubuntu24.04', root_pass: pass(), authorized_keys: chiavi, backups_enabled: !!backup, booted: true, tags } });
+  if (!r.ok) throw Object.assign(new Error('Linode non ha creato il server: ' + motivo(r)), { status: 502 });
+  return { id: r.dati.id, ip: (r.dati.ipv4 || [])[0] || null, stato: r.dati.status };
+}
+async function leggiServer(id) {
+  const r = await chiama('/linode/instances/' + Number(id), token());
+  if (r.status === 404) return null;
+  if (!r.ok) throw Object.assign(new Error('Linode non risponde: ' + motivo(r)), { status: 502 });
+  return { id: r.dati.id, stato: r.dati.status, ip: (r.dati.ipv4 || [])[0] || null };
+}
+async function eliminaServer(id) {
+  const r = await chiama('/linode/instances/' + Number(id), token(), { metodo: 'DELETE' });
+  if (r.status === 404) return { eliminato: false, motivo: 'non esiste già più' };
+  if (!r.ok) throw Object.assign(new Error('Linode non ha cancellato il server: ' + motivo(r)), { status: 502 });
+  return { eliminato: true };
+}
+
+module.exports = { creaServer, leggiServer, eliminaServer, maxServer, token, stato, salvaToken, togliToken, salvaImpostazioni, controlla, validaToken, impostazioni, PREDEFINITI };

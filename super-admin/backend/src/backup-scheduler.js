@@ -17,15 +17,19 @@ async function runBackupForTenant(slug, { trigger = 'manual', actor = 'system' }
   const tenant = db.prepare('SELECT * FROM tenants WHERE slug = ?').get(slug);
   if (!tenant) return { ok: false, error: 'Tenant non trovato' };
 
-  const dir = '/data/backups/' + slug;
+  const dir = (process.env.BACKUP_ROOT || '/data/backups') + '/' + slug;
   fs.mkdirSync(dir, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const destPath = path.join(dir, slug + '_' + trigger + '_' + stamp + '.db');
 
   try {
-    const src = new Database(tenant.db_path, { readonly: true, timeout: 5000 });
-    src.exec("VACUUM INTO '" + destPath.replace(/'/g, "''") + "'");
-    src.close();
+    if (tenant.host === 'linode') {
+      await require('./lib/server-remoto').scaricaDatabase(tenant, destPath); // il database sta sul suo server: si scarica una copia consistente
+    } else {
+      const src = new Database(tenant.db_path, { readonly: true, timeout: 5000 });
+      src.exec("VACUUM INTO '" + destPath.replace(/'/g, "''") + "'");
+      src.close();
+    }
     const st = fs.statSync(destPath);
     const sizeMb = Math.round((st.size / 1024 / 1024) * 100) / 100;
 

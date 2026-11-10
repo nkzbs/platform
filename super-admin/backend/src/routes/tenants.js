@@ -247,7 +247,8 @@ router.get('/cloudflare/status', requireAuth, (req, res) => {
 // tenant senza duplicare la logica Docker/clonazione, ed è sempre l'unico punto che
 // decide come nasce un tenant.
 // `skipDefaults`: non installare i moduli di default (chi crea da un'analisi sceglie lui i moduli). `onStep(fase)`: avviso a ogni fase (per mostrare l'avanzamento e misurare i tempi).
-async function createTenant({ name, slug, domain, actor, isSandbox, skipDefaults, onStep }) {
+async function createTenant({ name, slug, domain, actor, isSandbox, skipDefaults, onStep, host = 'nas' }) {
+  if (!['nas', 'linode'].includes(host)) throw Object.assign(new Error('Dove creare il tenant: «nas» o «linode».'), { status: 400 });
   const step = (f) => { try { if (onStep) onStep(f); } catch (e) { /* mai bloccare la creazione per un avviso */ } };
   // Stesso formato richiesto dal docker-provisioner per il nome container
   // (SLUG_RE, super-admin/docker-provisioner/src/docker.js) — validato QUI,
@@ -322,7 +323,17 @@ async function createTenant({ name, slug, domain, actor, isSandbox, skipDefaults
     // dato opaco, non lo interpreta: image/network/volume/restart-policy restano
     // fissati lato provisioner, non passabili da qui (vedi G2).
     step('container');
-    await provisionerRequest('POST', '/tenants', {
+    const remoto = host === 'linode';
+    // Su Linode serve il dominio PRIMA di tutto: è l'unico modo di raggiungere il tenant. Lo decide chi crea, o è <slug>.<dominio dei tenant>.
+    if (remoto) {
+      if (!cleanDomain && !cloudflare.configuredForRemote()) throw Object.assign(new Error('Per creare un tenant su Linode serve Cloudflare configurato (Impostazioni → Server) o un dominio esplicito.'), { status: 400 });
+      const dominioRemoto = cleanDomain || (slug + '.' + cloudflare.zoneName());
+      db.prepare('UPDATE tenants SET domain = ?, host = ? WHERE slug = ?').run(dominioRemoto, 'linode', slug);
+      const rigaT = db.prepare('SELECT * FROM tenants WHERE slug = ?').get(slug);
+      const base = (process.env.SUPER_ADMIN_PUBLIC_URL || ('https://admin.' + cloudflare.zoneName()));
+      await require('../lib/server-remoto').crea(rigaT, { dominio: dominioRemoto, superAdminUrl: base, internalSecret: internalSecret(), passwordIniziale: initialPassword, say: () => {}, dns: (ip) => cloudflare.upsertSubdomain(slug, ip) });
+    }
+    if (!remoto) await provisionerRequest('POST', '/tenants', {
       slug,
       port,
       env: [
@@ -360,11 +371,12 @@ async function createTenant({ name, slug, domain, actor, isSandbox, skipDefaults
       finalDomain = autoDomain;
       db.prepare('UPDATE tenants SET domain = ? WHERE slug = ?').run(finalDomain, slug);
     }
-    const cloudflarePromise = cloudflare.isConfigured() && finalDomain === autoDomain
+    const cloudflarePromise = host === 'linode' ? Promise.resolve({ created: true, name: finalDomain, remote: true }) // già creato da server-remoto con l'indirizzo del server
+      : cloudflare.isConfigured() && finalDomain === autoDomain
       ? cloudflare.upsertSubdomain(slug).catch((e) => ({ error: e.message }))
       : Promise.resolve(null);
     step('database');
-    await waitForTenantDb(hostDbPath);
+    if (host !== 'linode') await waitForTenantDb(hostDbPath);
     step('moduli_default');
     const cloneResult = skipDefaults ? null : await installDefaultModules(slug);
 
@@ -399,11 +411,11 @@ async function createTenant({ name, slug, domain, actor, isSandbox, skipDefaults
 }
 
 router.post('/', requireAuth, async (req, res) => {
-  const { name, slug, domain } = req.body;
+  const { name, slug, domain, host } = req.body;
   if (!name || !slug) return res.status(400).json({ error: 'Nome e slug obbligatori' });
 
   try {
-    const { tenant, initialPassword, cloneResult, cloudflareResult } = await enqueueHostedCreation(() => createTenant({ name, slug, domain, actor: req.user.username }));
+    const { tenant, initialPassword, cloneResult, cloudflareResult } = await enqueueHostedCreation(() => createTenant({ name, slug, domain, host: host || 'nas', actor: req.user.username }));
     // La password viene restituita UNA volta sola, qui — non è salvata da nessuna
     // parte in Super Admin (nel tenant sì, come hash bcrypt, mai in chiaro). Se
     // l'operatore la perde, l'unica strada è "Reset credenziali", non un recupero.
@@ -416,7 +428,8 @@ router.post('/', requireAuth, async (req, res) => {
 router.post('/:slug/stop', requireAuth, requireTenantScope, async (req, res) => {
   const { slug } = req.params;
   try {
-    await provisionerRequest('POST', '/tenants/' + slug + '/stop');
+    if (req.tenant.host === 'linode') await require('../lib/server-remoto').comando(req.tenant, 'stop');
+    else await provisionerRequest('POST', '/tenants/' + slug + '/stop');
     db.prepare('UPDATE tenants SET status = ? WHERE slug = ?').run('stopped', slug);
     logAudit(req.user.username, 'tenant.stop', slug, null);
     syncNginxDomains().catch(() => {});
@@ -446,7 +459,8 @@ router.post('/:slug/start', requireAuth, requireTenantScope, async (req, res) =>
   const { slug } = req.params;
   try {
     try {
-      await provisionerRequest('POST', '/tenants/' + slug + '/start');
+      if (req.tenant.host === 'linode') await require('../lib/server-remoto').comando(req.tenant, 'start');
+      else await provisionerRequest('POST', '/tenants/' + slug + '/start');
     } catch (startErr) {
       // Container assente (tenant registrato ma mai avviato qui, o rimosso a mano):
       // lo si ricrea sullo stesso volume dati con i segreti già salvati.
@@ -480,6 +494,16 @@ router.post('/:slug/start', requireAuth, requireTenantScope, async (req, res) =>
 // possono riusarla senza duplicare la logica di ricreazione container.
 async function redeployTenant(tenant, { force, actor, log }) {
   const say = (m) => { try { if (log) log(m) } catch (e) { /* un log non deve mai fermare l'aggiornamento */ } }
+  if (tenant.host === 'linode') { // un tenant su Linode si aggiorna dal suo server: immagine nuova e stesso container (la guardia sessioni legge il database locale, che qui non c'è)
+    say('Il tenant è su Linode: aggiorno il suo server…');
+    await require('../lib/server-remoto').aggiorna(tenant, { say });
+    db.prepare('UPDATE tenants SET status = ? WHERE slug = ?').run('active', tenant.slug);
+    logAudit(actor || 'system', 'tenant.redeploy', tenant.slug, { forced: !!force, host: 'linode' });
+    let up = false;
+    for (let i = 0; i < 60 && !up; i++) { await new Promise((r) => setTimeout(r, 2000)); try { const r = await fetch(require('../lib/tenant-host').base(tenant.slug) + '/api/tenant-info', { signal: AbortSignal.timeout(4000) }); up = r.ok } catch (e) { /* in avvio */ } }
+    say(up ? 'Il tenant risponde.' : 'Il tenant non risponde ancora: controlla nei Dettagli.');
+    return { ok: true, healthy: up };
+  }
   say('Controllo se qualcuno sta usando "' + tenant.name + '"…')
   if (!force && fs.existsSync(tenant.db_path)) {
     let tdb;
@@ -541,7 +565,7 @@ async function redeployTenant(tenant, { force, actor, log }) {
     let up = false
     for (let i = 0; i < 120 && !up; i++) {
       await new Promise((r) => setTimeout(r, 1500))
-      try { const r = await fetch('http://platform-' + tenant.slug + ':80/api/tenant-info', { signal: AbortSignal.timeout(3000) }); up = r.ok } catch (e) { /* ancora in avvio */ }
+      try { const r = await fetch(require('../lib/tenant-host').base(tenant.slug) + '/api/tenant-info', { signal: AbortSignal.timeout(3000) }); up = r.ok } catch (e) { /* ancora in avvio */ }
       if (!up && i === 39) say('Il tenant sta ancora partendo (migrazioni del database dopo un salto di versione): aspetto ancora un po\'…')
     }
     if (!up) { say('Il tenant non risponde dopo 3 minuti: controlla nei Dettagli.'); logAudit(actor || 'system', 'tenant.redeploy_non_risponde', tenant.slug, { attesa_secondi: 180 }); return { ok: true, healthy: false } }
@@ -670,11 +694,15 @@ async function deleteTenantBySlug(slug, actor) {
   // da eliminare. L'esito del backup viene comunque loggato e restituito nella risposta,
   // così chi elimina sa se la rete di sicurezza ha funzionato o no.
   let safetyBackup = { ok: false, skipped: true };
-  if (tenant && fs.existsSync(tenant.db_path)) {
+  const remoto = !!(tenant && tenant.host === 'linode');
+  if (tenant && (remoto || fs.existsSync(tenant.db_path))) {
     safetyBackup = await runBackupForTenant(slug, { trigger: 'pre-delete', actor });
   }
+  // Un server su Linode si cancella DAVVERO con i suoi dati: senza la copia di sicurezza non si procede (sul NAS un database già rotto non deve bloccare la cancellazione, qui sì).
+  if (remoto && !safetyBackup.ok && tenant.linode_id) throw Object.assign(new Error('Non cancello il server su Linode: la copia di sicurezza del database non è riuscita (' + (safetyBackup.error || 'errore sconosciuto') + '). Il server resta com\'è.'), { status: 409 });
 
-  await fetch(PROVISIONER_URL + '/tenants/' + slug, { method: 'DELETE', headers: provisionerHeaders }).catch(() => {});
+  if (remoto) { try { await require('../lib/server-remoto').distruggi(tenant); } catch (e) { throw Object.assign(new Error('Il server su Linode non si è cancellato: ' + e.message + ' (il tenant resta registrato).'), { status: 502 }); } }
+  else await fetch(PROVISIONER_URL + '/tenants/' + slug, { method: 'DELETE', headers: provisionerHeaders }).catch(() => {});
   // Il container viene rimosso, ma il file .db vive sul volume condiviso
   // (platform_platform-data) e sopravvive alla rimozione del container — finora
   // restava lì per sempre. Se poi si ricreava un tenant con lo stesso slug, il nuovo
@@ -709,7 +737,7 @@ router.delete('/:slug', requireAuth, requireTenantScope, async (req, res) => {
     const result = await deleteTenantBySlug(req.params.slug, req.user.username);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -921,7 +949,7 @@ router.patch('/:slug/backup-settings', requireAuth, requireTenantScope, (req, re
 // /internal-token (primo admin, nessuna credenziale). Vedi open-session sotto.
 async function mintTenantAdminToken(slug, credentials) {
   const path = credentials ? '/api/auth/internal-login' : '/api/auth/internal-token';
-  const r = await fetch('http://platform-' + slug + ':80' + path, {
+  const r = await fetch(require('../lib/tenant-host').base(slug) + path, {
     method: 'POST',
     headers: {
       'x-internal-secret': internalSecret(),
@@ -949,7 +977,7 @@ async function mintTenantAdminToken(slug, credentials) {
 router.all('/:slug/preview/*', requireAuth, requireTenantScope, async (req, res) => {
   const suffix = req.params[0] || '';
   const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
-  const target = 'http://platform-' + req.tenant.slug + ':80/' + suffix + qs;
+  const target = require('../lib/tenant-host').base(req.tenant.slug) + '/' + suffix + qs;
   const forwardHeaders = Object.assign({}, req.headers);
   delete forwardHeaders.host;
   delete forwardHeaders['content-length'];
@@ -1110,6 +1138,7 @@ router.post('/:slug/sessions/:sid/revoke', requireAuth, requireTenantScope, (req
 // una copia dello stato attuale ("pre-restore") — così un ripristino sbagliato
 // non è un vicolo cieco, è a sua volta annullabile.
 router.post('/:slug/restore/:backupId', requireAuth, requireTenantScope, async (req, res) => {
+  if (req.tenant.host === 'linode') return res.status(501).json({ error: 'Per un tenant su Linode questa azione non è ancora disponibile (il suo database sta sul suo server).' });
   const { slug, backupId } = req.params;
   const tenant = req.tenant;
   const backup = db.prepare('SELECT * FROM tenant_backups WHERE id = ? AND tenant_slug = ?').get(backupId, slug);
@@ -1194,6 +1223,7 @@ router.post('/:slug/invite', requireAuth, requireTenantScope, async (req, res) =
 // stesso meccanismo già usato per i backup. Vecchia password immediatamente
 // invalidata (sovrascritta, non solo affiancata).
 router.post('/:slug/reset-credentials', requireAuth, requireTenantScope, (req, res) => {
+  if (req.tenant.host === 'linode') return res.status(501).json({ error: 'Per un tenant su Linode questa azione non è ancora disponibile (il suo database sta sul suo server).' });
   const { slug } = req.params;
   const tenant = db.prepare('SELECT * FROM tenants WHERE slug = ?').get(slug);
   if (!tenant) return res.status(404).json({ error: 'Tenant non trovato' });
