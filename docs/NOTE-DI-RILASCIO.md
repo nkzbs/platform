@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.102 — 10 novembre 2026
+
+**«Controlla i servizi» elenca anche gli SMS (SMS v2 di OpenAPI.it).** Prova la lettura gratuita dei mittenti (`GET /senders`): serve a sapere se il servizio è attivo sul conto prima di costruire l'invio. Nessun SMS parte ancora. Non verificato: l'esito reale sul conto di zucca.
+
 ## 0.4.101 — 10 novembre 2026
 
 **Tolta la PEC da zucca.** Non serve e il servizio non è attivo sul conto: via il pulsante «Invia via PEC» dal pacchetto (versione 22), l'adattatore `invio_pec`, i campi della casella PEC Massiva in Connessioni e il costo di listino. Le fatture elettroniche e la firma restano. Il pulsante già installato su zucca resta finché non lo si toglie dal Builder (Clienti → blocco «Invia via PEC»): il pacchetto non sa cancellare blocchi. Serve ridistribuire Super Admin e «Aggiorna».

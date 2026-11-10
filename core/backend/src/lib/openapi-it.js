@@ -223,6 +223,7 @@ const SERVIZI = [
   { id: 'risk_report', nome: 'Risk — report sulla persona', dominio: 'risk.openapi.com', rotta: '/IT-report-persona/', scope: '/IT-report-persona', lettura: true },
   { id: 'esignature', nome: 'eSignature (firma elettronica a distanza)', dominio: 'esignature.openapi.com', rotta: '/signatures', lettura: true },
   { id: 'sdi_fatture', nome: 'Fatturazione elettronica (SDI)', dominio: 'invoice.openapi.com', rotta: '/IT-invoices', lettura: null },
+  { id: 'sms', nome: 'SMS (invio ai clienti)', dominio: 'sms.openapi.com', rotta: '/senders', lettura: true },
 ];
 
 async function verificaServizi() {
