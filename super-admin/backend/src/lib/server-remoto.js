@@ -254,8 +254,10 @@ async function interroga(tenant, { sql, params = [], scrivi = false }) {
   const script = "let b='';process.stdin.on('data',x=>b+=x).on('end',()=>{try{const q=JSON.parse(b);const D=require('better-sqlite3');const d=new D('/data/" + tenant.slug + ".db',{readonly:!q.scrivi,timeout:5000});"
     + "const st=d.prepare(q.sql);const out=q.scrivi?{changes:st.run(...q.params).changes}:st.all(...q.params);d.close();console.log(JSON.stringify({ok:out}))}catch(e){console.log(JSON.stringify({err:String(e.message)}))}})";
   try {
-    const r = await c.run('docker exec -i ' + sq(nome) + ' node -e ' + sq(script), { stdin: JSON.stringify({ sql, params, scrivi }) });
-    const riga = String(r.stdout || '').trim().split('\n').pop();
+    // Il client SSH tiene solo gli ultimi 20 KB dell'output: una risposta grande (lo schema di un modulo) si leggeva a metà. Qui si raccoglie tutto.
+    const pezzi = [];
+    const r = await c.run('docker exec -i ' + sq(nome) + ' node -e ' + sq(script), { stdin: JSON.stringify({ sql, params, scrivi }), onStdout: (d) => pezzi.push(Buffer.from(d)) });
+    const riga = Buffer.concat(pezzi).toString('utf8').trim().split('\n').pop();
     let j; try { j = JSON.parse(riga); } catch (e) { throw new Error('Risposta non valida dal server: ' + (r.stderr || riga).slice(0, 160)); }
     if (j.err) throw new Error(j.err);
     return j.ok;

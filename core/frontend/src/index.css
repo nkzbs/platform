@@ -288,3 +288,27 @@ body {
 :root[data-theme="light"] .glass-mesh-logo {
   opacity: 0.22;
 }
+
+/* Selettori data/ora: su iPhone il campo si allargava oltre lo schermo e (vuoto) diventava una scatola alta. Stessa misura di un campo di testo, sempre dentro il contenitore. */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 2.25rem;
+  line-height: 1.25rem;
+  text-align: left;
+}
+input[type="date"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value,
+input[type="datetime-local"]::-webkit-date-and-time-value {
+  text-align: left;
+  min-height: 1.25rem;
+  margin: 0;
+}

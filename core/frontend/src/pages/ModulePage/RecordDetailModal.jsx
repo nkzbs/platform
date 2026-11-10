@@ -588,6 +588,14 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
     if (r) { setRecord(r); if (onSaved) onSaved(r) }
   }
 
+  // Azioni del record in UNA voce di menu (o un solo pulsante se ce n'è una): prima erano una fila di pulsanti con testo che andava a capo su quattro righe.
+  const BTN_ICONA = 'w-9 h-9 rounded-lg border border-gray-700 flex items-center justify-center flex-shrink-0 disabled:opacity-50 transition'
+  const voci = [
+    ...azioniEsterne.filter((az) => !inAttesa(az)).map((az) => ({ key: az.key, label: az.label, titolo: az.descrizione || '', icon: az.icon || 'sparkles', onClick: () => eseguiAzione(az), spenta: az.adapter === 'da_attivare' || !!(az.connection && connessioni && connessioni[az.connection] === false) })),
+    ...azioniEsterne.filter((az) => az.pdf && !az.vista && !inAttesa(az) && az.risultato_in && record && record.data[az.risultato_in] && record.data[az.risultato_in].id).map((az) => ({ key: az.key + '-pdf', label: az.label.split(' ')[0] === 'Verifica' ? 'Report PDF' : 'PDF', titolo: 'Scarica il PDF del report (nessun costo)', icon: 'file', onClick: () => scaricaAzionePdf(az) })),
+    ...azioniEsterne.filter((az) => inAttesa(az)).map((az) => ({ key: az.key, label: az.label, titolo: az.descrizione || 'Legata a un servizio esterno ancora da attivare', icon: az.icon || 'sparkles', onClick: () => eseguiAzione(az), attesa: true })),
+  ]
+
   return (
     <FormDrawer
       title={mod.name + ' — dettaglio'}
@@ -595,26 +603,25 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
       wide
       headerExtra={(
         <>
-          {!editing && record && azioniEsterne.filter((az) => !inAttesa(az)).map((az) => (
-            <button key={az.key} onClick={() => eseguiAzione(az)} disabled={inEsecuzione !== null} title={az.descrizione || undefined} className={'text-xs border border-gray-700 hover:border-accent text-accent rounded-lg px-3 py-2 min-h-[36px] whitespace-nowrap flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50 transition' + (az.adapter === 'da_attivare' || (az.connection && connessioni && connessioni[az.connection] === false) ? ' opacity-60' : '')}>
-              <Icon name={az.icon || 'sparkles'} size={12} />{inEsecuzione === az.key ? 'Un attimo…' : az.label}
+          {!editing && record && voci.length === 1 && (
+            <button onClick={voci[0].onClick} disabled={inEsecuzione !== null} title={voci[0].titolo} aria-label={voci[0].label} className={BTN_ICONA + ' text-accent hover:border-accent' + (voci[0].spenta ? ' opacity-60' : '')}>
+              <Icon name={voci[0].icon} size={16} />
             </button>
-          ))}
-          {!editing && record && azioniEsterne.filter((az) => az.pdf && !az.vista && !inAttesa(az) && az.risultato_in && record.data[az.risultato_in] && record.data[az.risultato_in].id).map((az) => (
-            <button key={az.key + '-pdf'} onClick={() => scaricaAzionePdf(az)} title="Scarica il PDF del report (nessun costo)" className="text-xs border border-gray-700 hover:border-accent text-accent rounded-lg px-3 py-2 min-h-[36px] whitespace-nowrap flex items-center gap-1.5 flex-shrink-0 transition">
-              <Icon name="file" size={12} />{az.label.split(' ')[0] === 'Verifica' ? 'Report PDF' : 'PDF'}
-            </button>
-          ))}
-          {!editing && record && azioniEsterne.some((az) => inAttesa(az)) && (
+          )}
+          {!editing && record && voci.length > 1 && (
             <div className="relative flex-shrink-0">
-              <button onClick={() => setMenuFunz((x) => !x)} aria-haspopup="menu" aria-expanded={menuFunz} className="text-xs border border-gray-700 hover:border-accent text-accent rounded-lg px-3 py-2 min-h-[36px] whitespace-nowrap flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50 transition"><Icon name="sparkles" size={12} />Altre funzioni<Icon name="chevron-down" size={11} /></button>
+              <button onClick={() => setMenuFunz((x) => !x)} aria-haspopup="menu" aria-expanded={menuFunz} title="Azioni" aria-label="Azioni" className={BTN_ICONA + ' text-accent hover:border-accent'}>
+                <Icon name="sparkles" size={16} />
+              </button>
               {menuFunz && (
-                <div role="menu" className="fixed left-3 right-3 top-auto mt-1 z-30 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:w-80 bg-surface-card border border-gray-700 rounded-lg shadow-lg py-1">
-                  <div className="px-3 py-1.5 text-[11px] text-gray-500">Previste, ma legate a un servizio esterno ancora da attivare.</div>
-                  {azioniEsterne.filter((az) => inAttesa(az)).map((az) => (
-                    <button key={az.key} role="menuitem" onClick={() => { setMenuFunz(false); eseguiAzione(az) }} className="w-full text-left px-3 py-2 hover:bg-white/5 transition flex items-start gap-2">
-                      <Icon name={az.icon || 'sparkles'} size={13} className="mt-0.5 text-gray-500 flex-shrink-0" />
-                      <span className="flex-1 min-w-0"><span className="block text-xs text-ink">{az.label} <span className="ml-1 text-[10px] uppercase tracking-wide bg-amber-400/15 border border-amber-500/50 text-ink rounded px-1.5 py-0.5">da attivare</span></span><span className="block text-[11px] text-gray-500">{az.descrizione}</span></span>
+                <div role="menu" className="fixed left-3 right-3 top-auto mt-1 z-30 sm:absolute sm:left-0 sm:right-auto sm:top-full sm:w-80 bg-surface-card border border-gray-700 rounded-lg shadow-lg py-1">
+                  {voci.map((v) => (
+                    <button key={v.key} role="menuitem" disabled={inEsecuzione !== null && !v.attesa} onClick={() => { setMenuFunz(false); v.onClick() }} className={'w-full text-left px-3 py-2 hover:bg-white/5 transition flex items-start gap-2' + (v.spenta ? ' opacity-60' : '')}>
+                      <Icon name={v.icon} size={14} className="mt-0.5 text-accent flex-shrink-0" />
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-xs text-ink">{inEsecuzione === v.key ? 'Un attimo…' : v.label}{v.attesa && <span className="ml-1 text-[10px] uppercase tracking-wide bg-amber-400/15 border border-amber-500/50 text-ink rounded px-1.5 py-0.5">da attivare</span>}</span>
+                        {v.titolo && <span className="block text-[11px] text-gray-500">{v.titolo}</span>}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -622,29 +629,29 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
             </div>
           )}
           {!editing && record && !bozzaDoc && documenti.length === 1 && documenti.map((az) => (
-            <button key={az.key} onClick={() => apriDocumento(az)} disabled={docInPreparazione !== null} title={az.delivery === 'firma' ? 'Si scarica il PDF da firmare e poi si ricarica la scansione firmata' : 'Prepara l\'email: il testo si rivede e si modifica prima di spedirla'} className="text-xs border border-gray-700 hover:border-accent text-accent rounded-lg px-3 py-2 min-h-[36px] whitespace-nowrap flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50 transition">
-              <Icon name={az.icon || 'mail'} size={12} />{docInPreparazione === az.key ? 'Preparo…' : az.label}{az.delivery !== 'firma' && docInPreparazione !== az.key && <span className="text-gray-500"> · email</span>}
+            <button key={az.key} onClick={() => apriDocumento(az)} disabled={docInPreparazione !== null} title={az.label + (az.delivery === 'firma' ? ' — si scarica il PDF da firmare e poi si ricarica la scansione firmata' : ' — prepara l\'email: il testo si rivede e si modifica prima di spedirla')} aria-label={az.label} className={BTN_ICONA + ' text-accent hover:border-accent'}>
+              <Icon name={az.icon || 'mail'} size={16} />
             </button>
           ))}
           {!editing && record && !bozzaDoc && documenti.length > 1 && (
-            <div className="relative">
-              <button onClick={() => setMenuDoc((x) => !x)} disabled={docInPreparazione !== null} aria-haspopup="menu" aria-expanded={menuDoc} className="text-xs border border-gray-700 hover:border-accent text-accent rounded-lg px-3 py-2 min-h-[36px] whitespace-nowrap flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50 transition">
-                <Icon name="file" size={12} />{docInPreparazione !== null ? 'Preparo…' : 'Documenti'}<Icon name="chevron-down" size={11} />
+            <div className="relative flex-shrink-0">
+              <button onClick={() => setMenuDoc((x) => !x)} disabled={docInPreparazione !== null} aria-haspopup="menu" aria-expanded={menuDoc} title="Documenti" aria-label="Documenti" className={BTN_ICONA + ' text-accent hover:border-accent'}>
+                <Icon name="file" size={16} />
               </button>
               {menuDoc && (
-                <div role="menu" className="fixed left-3 right-3 top-auto mt-1 z-30 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:min-w-[260px] bg-surface-card border border-gray-700 rounded-lg shadow-lg py-1">
+                <div role="menu" className="fixed left-3 right-3 top-auto mt-1 z-30 sm:absolute sm:left-0 sm:right-auto sm:top-full sm:min-w-[260px] bg-surface-card border border-gray-700 rounded-lg shadow-lg py-1">
                   {documenti.map((az) => (
                     <button key={az.key} role="menuitem" onClick={() => { setMenuDoc(false); apriDocumento(az) }} className="w-full text-left px-3 py-2 hover:bg-white/5 transition flex items-start gap-2">
-                      <Icon name={az.icon || 'mail'} size={13} className="mt-0.5 text-accent flex-shrink-0" />
-                      <span><span className="block text-xs text-ink">{az.label}</span><span className="block text-[11px] text-gray-500">{az.delivery === 'firma' ? 'PDF da firmare, poi si ricarica la scansione' : 'Email da rivedere prima di spedirla'}</span></span>
+                      <Icon name={az.icon || 'mail'} size={14} className="mt-0.5 text-accent flex-shrink-0" />
+                      <span><span className="block text-xs text-ink">{docInPreparazione === az.key ? 'Preparo…' : az.label}</span><span className="block text-[11px] text-gray-500">{az.delivery === 'firma' ? 'PDF da firmare, poi si ricarica la scansione' : 'Email da rivedere prima di spedirla'}</span></span>
                     </button>
                   ))}
                 </div>
               )}
             </div>
           )}
-          {!editing && record && <button onClick={startEditing} className="text-xs border border-gray-700 hover:border-accent text-accent rounded-lg px-3 py-2 min-h-[36px] whitespace-nowrap flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50 transition"><Icon name="edit" size={12} />Modifica</button>}
-          {!editing && record && canDelete && <button onClick={remove} className="text-xs border border-gray-700 hover:border-red-400 text-red-400/80 hover:text-red-400 rounded-lg px-3 py-2 min-h-[36px] whitespace-nowrap flex items-center gap-1.5 flex-shrink-0 transition"><Icon name="trash" size={12} />Elimina</button>}
+          {!editing && record && <button onClick={startEditing} title="Modifica" aria-label="Modifica" className={BTN_ICONA + ' text-accent hover:border-accent'}><Icon name="edit" size={16} /></button>}
+          {!editing && record && canDelete && <button onClick={remove} title="Elimina" aria-label="Elimina" className={BTN_ICONA + ' text-red-400/80 hover:text-red-400 hover:border-red-400'}><Icon name="trash" size={16} /></button>}
         </>
       )}
     >

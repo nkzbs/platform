@@ -45,7 +45,7 @@ async function main() {
   cf.salvaToken('token-cf-di-prova-1234567890'); cf.salvaImpostazioni({ zona: 'a1b2c3d4e5f60718293a4b5c6d7e8f90', dominio: 'platform-test.it', ip: '198.51.100.7' });
 
   // SSH finto: registra i comandi, risponde come un server sano
-  const comandi = []; let avviaOk = true, sshPronto = true, fallisciSu = null, dbRemoto = Buffer.from('SQLITE-FINTO-' + 'x'.repeat(200));
+  const comandi = []; let grandeRisposta = false, avviaOk = true, sshPronto = true, fallisciSu = null, dbRemoto = Buffer.from('SQLITE-FINTO-' + 'x'.repeat(200));
   remoto.deps.connect = async (opts) => {
     if (!sshPronto) throw new Error('connessione rifiutata');
     return { fingerprint: 'SHA256:impronta-finta', close() {}, run: async (cmd, o = {}) => {
@@ -54,7 +54,7 @@ async function main() {
       if (cmd.includes('docker load')) { if (o.stdin && o.stdin.resume) await new Promise((res) => { o.stdin.on('end', res); o.stdin.resume(); }); return { code: 0, stdout: 'Loaded image: platform-core:latest\n', stderr: '' }; }
       if (/cat > '?\/srv/.test(cmd) && o.stdin && o.stdin.resume) { await new Promise((res) => { o.stdin.on('end', res); o.stdin.resume(); }); return { code: 0, stdout: '', stderr: '' }; }
       if (cmd.startsWith('docker exec -i') && cmd.includes('password_hash')) return { code: 0, stdout: 'ok\n', stderr: '' };
-      if (cmd.startsWith('docker exec -i') && cmd.includes('JSON.parse')) return { code: 0, stdout: JSON.stringify({ ok: [{ n: 1 }] }) + '\n', stderr: '' };
+      if (cmd.startsWith('docker exec -i') && cmd.includes('JSON.parse')) { const g = JSON.stringify({ ok: [{ n: 1, grande: 'x'.repeat(grandeRisposta ? 60000 : 0) }] }) + '\n'; if (o.onStdout) o.onStdout(Buffer.from(g)); return { code: 0, stdout: g.slice(-20000), stderr: '' }; }
       if (cmd.startsWith('docker inspect -f')) return { code: 0, stdout: 'running|2026-11-10T10:00:00Z\n', stderr: '' };
       if (cmd.startsWith('docker stats')) return { code: 0, stdout: '0.5%|120MiB / 961MiB|12.5%|1.2kB / 3.4kB\n', stderr: '' };
       if (cmd.includes('curl -s -m 5')) return { code: 0, stdout: avviaOk ? '200' : '000', stderr: '' };
@@ -250,6 +250,11 @@ async function main() {
     S.avvia('mv3', { actor: 'test' }); const t0 = Date.now(); while (!S.stato('mv3').fine && Date.now() - t0 < 5000) await new Promise((r) => setTimeout(r, 50));
     ok(/copia di sicurezza/.test(S.stato('mv3').errore), S.stato('mv3').errore); eq(ev, [], 'nessuna azione sul NAS');
     let m = ''; try { S.avvia('mv1'); } catch (e) { m = e.message; } ok(/già su Linode/.test(m), m);
+  });
+
+  await test('query su Linode con risposta grande (oltre i 20 KB che il client SSH tiene): si legge intera', async () => {
+    inserisci('big1'); const t = Object.assign(db.prepare("SELECT * FROM tenants WHERE slug='big1'").get(), { remote_ip: '203.0.113.9' });
+    grandeRisposta = true; try { const r = await remoto.interroga(t, { sql: 'SELECT 1' }); eq(r[0].grande.length, 60000); } finally { grandeRisposta = false; }
   });
 
   console.log(`\n${passed} passati, ${failed} falliti`); process.exit(failed ? 1 : 0);
