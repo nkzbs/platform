@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.122 — Cancellare un tenant spostato toglie anche il container fermo sul NAS
+
+Dopo «Sposta su Linode» il tenant resta sul NAS come container fermo. Cancellando il tenant, ora si toglie anche quel container (prima restava orfano; la cartella dati veniva già tolta).
+
 ## 0.4.121 — Allegati nello spostamento e nell'esportazione
 
 La prova generale dello spostamento ha trovato un difetto: gli allegati, letti dal NAS con tar, arrivavano al server con 0 byte (il flusso si agganciava alla connessione SSH troppo tardi). Ora si incanalano subito in un flusso proprio. Valeva anche per l'esportazione verso un server esterno. In quella prova il rimedio ha funzionato: dopo l'errore il tenant si è riacceso sul NAS, l'indirizzo è tornato e il server nuovo è stato cancellato.

@@ -725,7 +725,8 @@ async function deleteTenantBySlug(slug, actor) {
   if (remoto && !safetyBackup.ok && tenant.linode_id) throw Object.assign(new Error('Non cancello il server su Linode: la copia di sicurezza del database non è riuscita (' + (safetyBackup.error || 'errore sconosciuto') + '). Il server resta com\'è.'), { status: 409 });
 
   if (remoto) { try { await require('../lib/server-remoto').distruggi(tenant); } catch (e) { throw Object.assign(new Error('Il server su Linode non si è cancellato: ' + e.message + ' (il tenant resta registrato).'), { status: 502 }); } }
-  else await fetch(PROVISIONER_URL + '/tenants/' + slug, { method: 'DELETE', headers: provisionerHeaders }).catch(() => {});
+  // Anche per un tenant su Linode: se è stato spostato dal NAS, lì resta un container fermo (e la sua cartella dati, tolta qui sotto): senza questo restava orfano.
+  await fetch(PROVISIONER_URL + '/tenants/' + slug, { method: 'DELETE', headers: provisionerHeaders }).catch(() => {});
   // Il container viene rimosso, ma il file .db vive sul volume condiviso
   // (platform_platform-data) e sopravvive alla rimozione del container — finora
   // restava lì per sempre. Se poi si ricreava un tenant con lo stesso slug, il nuovo
