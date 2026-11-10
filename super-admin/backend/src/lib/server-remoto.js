@@ -62,7 +62,7 @@ function ambiente(tenant, { superAdminUrl, internalSecret, passwordIniziale }) {
   return [
     'PORT=3000', 'DB_PATH=/data/' + tenant.slug + '.db', 'JWT_SECRET=' + tenant.jwt_secret, 'ENCRYPTION_KEY=' + tenant.encryption_key,
     'TENANT_SLUG=' + tenant.slug, 'TENANT_NAME=' + String(tenant.name).replace(/[\r\n]+/g, ' '),
-    'INTERNAL_API_SECRET=' + internalSecret, 'SUPER_ADMIN_URL=' + superAdminUrl,
+    'REDIS_URL=redis://redis:6379', 'INTERNAL_API_SECRET=' + internalSecret, 'SUPER_ADMIN_URL=' + superAdminUrl,
     ...(passwordIniziale ? ['INITIAL_ADMIN_PASSWORD=' + passwordIniziale] : []),
   ].join('\n') + '\n';
 }
@@ -85,7 +85,9 @@ async function caricaImmagine(c, say) {
   if (!ref || !/^[A-Za-z0-9_.:/@-]+$/.test(ref)) throw new Error('Immagine caricata ma non riconosco il nome nell\'output.');
   return ref;
 }
-const avviaContenitore = (c, slug, ref) => sh(c, 'docker rm -f ' + sq(nomeContenitore(slug)) + ' >/dev/null 2>&1 || true; docker run -d --name ' + sq(nomeContenitore(slug)) + ' --restart unless-stopped -p 127.0.0.1:8080:80 --env-file ' + DIR(slug) + '/env -v ' + DIR(slug) + '/data:/data ' + sq(ref));
+// Il core in produzione pretende Redis (contatori condivisi): ne basta uno piccolo sul server, su una rete interna, mai esposto fuori.
+const PREPARA_REDIS = 'docker network inspect platform-net >/dev/null 2>&1 || docker network create platform-net >/dev/null; docker inspect -f "{{.State.Running}}" redis 2>/dev/null | grep -q true || { docker rm -f redis >/dev/null 2>&1; docker run -d --name redis --restart unless-stopped --network platform-net redis:7-alpine >/dev/null; }; ';
+const avviaContenitore = (c, slug, ref) => sh(c, PREPARA_REDIS + 'docker rm -f ' + sq(nomeContenitore(slug)) + ' >/dev/null 2>&1 || true; docker run -d --name ' + sq(nomeContenitore(slug)) + ' --restart unless-stopped --network platform-net -p 127.0.0.1:8080:80 --env-file ' + DIR(slug) + '/env -v ' + DIR(slug) + '/data:/data ' + sq(ref));
 
 // Cosa vede il server stesso quando il tenant non risponde da fuori: serve a capire se manca il container, Caddy o il certificato. Solo letture, testo corto.
 async function diagnosi(c, slug, dominio) {

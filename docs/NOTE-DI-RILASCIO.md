@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.110 — Tenant su Linode: Redis sul server
+
+Il secondo collaudo ha mostrato che il certificato ora si ottiene, ma il tenant non partiva: in produzione il core pretende Redis. Ogni server Linode ora ha un suo Redis piccolo su una rete interna (mai esposto fuori) e il tenant lo usa.
+
 ## 0.4.109 — Tenant su Linode: il certificato si prende prima, poi si accende Cloudflare
 
 Dal collaudo: Let's Encrypt riceveva 403 passando dal proxy Cloudflare, quindi Caddy non otteneva il certificato. Ora l'indirizzo del tenant nasce senza proxy (solo DNS), il server ottiene il certificato dritto da Let's Encrypt e solo dopo Super Admin accende il proxy. La diagnosi dal server mostra prima il log del tenant.
