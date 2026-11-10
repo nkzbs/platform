@@ -49,6 +49,7 @@ async function main() {
       return { code: 0, stdout: '', stderr: '' };
     } };
   };
+  const ORIG = { allegati: X.deps.allegati, copia: X.deps.copiaDatabase };
   X.deps.imageStream = async () => Readable.from([Buffer.from('IMMAGINE-FINTA')]);
   X.deps.allegati = (slug) => (slug === 'officina' ? Readable.from([Buffer.from('ALLEGATI-FINTI')]) : null);
   const server = { host: 'srv.example.com', port: 22, username: 'nima', password: 'LA-MIA-PASSWORD-SEGRETA' };
@@ -146,6 +147,17 @@ async function main() {
     const s = await attendi(async () => null, 1).catch(() => null) || await (async () => { const t = Date.now(); while (Date.now() - t < 8000) { const x = await (await chiama('officina', '/stato/' + id, firma(officina), null, 'GET')).json(); if (x.fine) return x; await new Promise((q) => setTimeout(q, 30)); } })();
     eq(s.errore, null); ok(!JSON.stringify(s).includes('PASSWORD'), 'nessuna credenziale nello stato');
     eq((await chiama('officina', '/stato/' + id, firma(altro), null, 'GET')).status, 401);
+  });
+
+  await test('tenant su Linode: database e allegati si prendono dal suo server, non dal file sul NAS', async () => {
+    const R = require('./lib/server-remoto'); const sc = R.scaricaDatabase, fl = R.flussoAllegati; const chiamate = [];
+    R.scaricaDatabase = async (t, dest) => { chiamate.push(['db', t.slug]); fs.writeFileSync(dest, 'DB-REMOTO'); return { byte: 9 }; };
+    R.flussoAllegati = async (t) => { chiamate.push(['allegati', t.slug]); return Readable.from([Buffer.from('ALL-REMOTI')]); };
+    try {
+      const t = { slug: 'lontano', host: 'linode', db_path: '/non/esiste.db' };
+      const f = await ORIG.copia(t); eq(fs.readFileSync(f, 'utf8'), 'DB-REMOTO'); fs.unlinkSync(f);
+      const tar = await ORIG.allegati('lontano', t); ok(tar, 'flusso'); eq(chiamate, [['db', 'lontano'], ['allegati', 'lontano']]);
+    } finally { R.scaricaDatabase = sc; R.flussoAllegati = fl; }
   });
 
   console.log(`\n${passed} passati, ${failed} falliti`);

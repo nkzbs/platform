@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.119 — Esportazione di un tenant su Linode
+
+L'esportazione verso un server esterno ora funziona anche per un tenant che vive su Linode: il database si copia in modo consistente dal suo server (come i backup) e gli allegati arrivano in streaming dal suo server, invece di leggere file sul NAS.
+
 ## 0.4.118 — Libreria: vede anche i moduli dei tenant su Linode
 
 Elenco moduli di un tenant, esportazione, «salva nella Libreria» e «dove è usato» ora leggono il database del tenant ovunque viva: sul NAS dal file, su Linode con una query dentro il container sul suo server.

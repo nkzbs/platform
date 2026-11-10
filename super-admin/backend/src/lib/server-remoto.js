@@ -284,4 +284,19 @@ async function statoContainer(tenant) {
   } finally { c.close(); }
 }
 
-module.exports = { statoContainer, interroga, dimensioneDatabaseMb, ripristinaDatabase, reimpostaPasswordAdmin, scaricaDatabase, crea, distruggi, comando, aggiorna, chiave, ambiente, caddyfile, nomeServer, deps };
+// Gli allegati del tenant come tar.gz in streaming dal suo server, o null se non ne ha (stessa forma di quelli del NAS, per l'esportazione).
+async function flussoAllegati(tenant) {
+  const { PassThrough } = require('stream');
+  const c = await entra(tenant);
+  const dir = DIR(tenant.slug) + '/data/uploads';
+  try {
+    const e = await c.run('test -d ' + sq(dir + '/' + tenant.slug) + ' && echo si');
+    if (!e.stdout.includes('si')) { c.close(); return null; }
+  } catch (err) { c.close(); throw err; }
+  const pass = new PassThrough();
+  c.run('tar czf - -C ' + sq(dir) + ' ' + sq(tenant.slug), { onStdout: (d) => pass.write(d) })
+    .then((r) => { c.close(); if (r.code !== 0) pass.destroy(new Error('Lettura degli allegati dal server fallita.')); else pass.end(); }, (err) => { c.close(); pass.destroy(err); });
+  return pass;
+}
+
+module.exports = { flussoAllegati, statoContainer, interroga, dimensioneDatabaseMb, ripristinaDatabase, reimpostaPasswordAdmin, scaricaDatabase, crea, distruggi, comando, aggiorna, chiave, ambiente, caddyfile, nomeServer, deps };

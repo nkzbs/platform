@@ -36,8 +36,9 @@ const deps = {
     return Readable.fromWeb(r.body);
   },
   // Una copia consistente del database in un file temporaneo (VACUUM INTO), come i backup.
-  copiaDatabase: (tenant) => {
+  copiaDatabase: async (tenant) => {
     const tmp = path.join(os.tmpdir(), 'export-' + tenant.slug + '-' + crypto.randomBytes(6).toString('hex') + '.db');
+    if (tenant.host === 'linode') { await require('./server-remoto').scaricaDatabase(tenant, tmp); return tmp; } // il database sta sul suo server: copia consistente via SSH
     const src = new Database(tenant.db_path, { readonly: true, timeout: 5000 });
     try { src.exec("VACUUM INTO '" + tmp.replace(/'/g, "''") + "'"); } finally { src.close(); }
     return tmp;
@@ -45,7 +46,8 @@ const deps = {
   // Gli allegati del tenant come tar.gz in streaming, o null se non ce ne sono.
   // Lo stesso albero che il container vede come '/data/uploads/<slug>' sta,
   // da qui (Super Admin, mount intero), a '<DATA_ROOT>/<slug>/uploads/<slug>'.
-  allegati: (slug) => {
+  allegati: (slug, tenant) => {
+    if (tenant && tenant.host === 'linode') return require('./server-remoto').flussoAllegati(tenant);
     const uploadsDir = path.join(DATA_ROOT, slug, 'uploads');
     if (!fs.existsSync(path.join(uploadsDir, slug))) return null;
     const p = spawn('tar', ['czf', '-', '-C', uploadsDir, slug]);
@@ -165,14 +167,14 @@ async function lavora(tenant, server, fingerprint, o, st) {
 
     fase('dati', 'database');
     await sh('umask 077 && mkdir -p ' + D + '/data/uploads');
-    tmpDb = deps.copiaDatabase(tenant);
+    tmpDb = await deps.copiaDatabase(tenant);
     const dim = fs.statSync(tmpDb).size;
     await sh('umask 077 && cat > ' + D + '/data/' + tenant.slug + '.db', { stdin: fs.createReadStream(tmpDb) });
     const verificaDim = (await sh('wc -c < ' + D + '/data/' + tenant.slug + '.db')).stdout.trim();
     if (Number(verificaDim) !== dim) throw new Error('Il database copiato non ha la dimensione giusta (' + verificaDim + ' invece di ' + dim + ' byte).');
 
     fase('allegati');
-    const tar = deps.allegati(tenant.slug);
+    const tar = await deps.allegati(tenant.slug, tenant);
     if (tar) await sh('tar xzf - -C ' + D + '/data/uploads', { stdin: tar }); else st.passi[st.passi.length - 1].dettaglio = 'nessun allegato';
 
     fase('segreti', 'scritti in un file riservato (solo tuo)');
