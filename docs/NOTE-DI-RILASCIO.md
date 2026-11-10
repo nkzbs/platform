@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.108 — Tenant su Linode: se non risponde, l'errore dice perché
+
+Il primo collaudo reale è fallito: server creato, ma il tenant non rispondeva da fuori e il server veniva cancellato senza lasciare tracce. Ora, prima di cancellare, Super Admin legge dal server stesso (solo letture) lo stato del container, di Caddy, del certificato e del log, e lo aggiunge al messaggio d'errore.
+
 ## 0.4.107 — 10 novembre 2026
 
 **Un tenant può nascere (e vivere) su un suo server Linode.** Nel modulo «Nuovo tenant» e nella creazione dall'analisi c'è la scelta **Dove crearlo**: **NAS (prova, gratis)** di partenza, oppure **Linode (produzione)**, che crea un Nanode (5 $ + 2 $ di backup al mese) con la conferma del costo.

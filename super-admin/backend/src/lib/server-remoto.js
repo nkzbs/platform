@@ -87,6 +87,17 @@ async function caricaImmagine(c, say) {
 }
 const avviaContenitore = (c, slug, ref) => sh(c, 'docker rm -f ' + sq(nomeContenitore(slug)) + ' >/dev/null 2>&1 || true; docker run -d --name ' + sq(nomeContenitore(slug)) + ' --restart unless-stopped -p 127.0.0.1:8080:80 --env-file ' + DIR(slug) + '/env -v ' + DIR(slug) + '/data:/data ' + sq(ref));
 
+// Cosa vede il server stesso quando il tenant non risponde da fuori: serve a capire se manca il container, Caddy o il certificato. Solo letture, testo corto.
+async function diagnosi(c, slug, dominio) {
+  const cmd = ['echo "[container]"; docker ps -a --format "{{.Names}} {{.Status}}" | head -3',
+    'echo "[locale]"; curl -s -m 8 -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/api/tenant-info',
+    'echo; echo "[caddy]"; systemctl is-active caddy; journalctl -u caddy --no-pager -n 12 2>&1 | cut -c1-220',
+    'echo "[https locale]"; curl -sk -m 8 -o /dev/null -w "%{http_code}" --resolve ' + dominio + ':443:127.0.0.1 https://' + dominio + '/api/tenant-info',
+    'echo; echo "[log tenant]"; docker logs --tail 6 ' + nomeContenitore(slug) + ' 2>&1 | cut -c1-200; true'].join('; ');
+  const r = await sh(c, cmd);
+  return String(r && r.stdout !== undefined ? r.stdout : r).slice(0, 1800);
+}
+
 // Crea il server e ci mette il tenant. `tenant` è la riga di Super Admin (con segreti); `opz`: { dominio, superAdminUrl, internalSecret, passwordIniziale, say, dns(ip) }.
 // Ritorna { linode_id, ip, fingerprint }. Se qualcosa fallisce, cancella il server appena creato e rilancia l'errore.
 async function crea(tenant, opz) {
@@ -123,6 +134,7 @@ async function crea(tenant, opz) {
     if (!su) throw new Error('Il tenant è partito sul server ma non risponde su https://' + opz.dominio + ' (guarda l\'indirizzo su Cloudflare e i log del server).');
     return { linode_id: s.id, ip: s.ip, fingerprint: imp };
   } catch (e) {
+    if (c) { try { e.message += ' — DIAGNOSI DAL SERVER: ' + await diagnosi(c, tenant.slug, opz.dominio); } catch (x) { /* la diagnosi è un aiuto, non deve coprire l'errore vero */ } }
     try { await deps.linode.eliminaServer(s.id); db.prepare("UPDATE tenants SET linode_id = NULL, remote_ip = NULL WHERE slug = ?").run(tenant.slug); say('Qualcosa non è andato: ho cancellato il server appena creato, così non costa.'); }
     catch (x) { e.message += ' (ATTENZIONE: il server ' + s.id + ' su Linode non si è cancellato da solo: toglilo a mano da Linode)'; }
     throw e;
