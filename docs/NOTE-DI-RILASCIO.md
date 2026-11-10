@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.105 — 10 novembre 2026
+
+**Un solo collegamento a Cloudflare.** Super Admin aveva già un token nell'ambiente del backend (`CLOUDFLARE_API_TOKEN`, `_ZONE_ID`, `_ZONE_NAME`) per creare e togliere l'indirizzo di ogni tenant; la 0.4.104 ne aveva aggiunto un secondo, da Impostazioni. Ora è uno solo: il token salvato in Impostazioni vince, in sua assenza vale quello dell'ambiente, e `cloudflare.js` (indirizzi dei tenant) e «Controlla Cloudflare» usano la stessa fonte. Il controllo dice da dove viene il token (`salvato` o `ambiente`). Nessun cambio per i tenant esistenti. Test: `cloud`, `security-status`, `tenant-provisioning`.
+
 ## 0.4.104 — 10 novembre 2026
 
 **Super Admin si collega anche a Cloudflare (solo token e controllo).** In Impostazioni → Server (Linode), sotto Linode: token API di Cloudflare (cifrato, mai restituito), ID della zona e dominio dei tenant (`platform-core.it`). «Controlla Cloudflare» fa **solo letture**: verifica il token, la zona, elenca i record DNS e legge la modalità SSL (deve essere Full strict; se manca il permesso lo dice e non blocca). Il token giusto ha un solo permesso, *Zona → DNS → Modifica*, limitato alla zona. I record non si creano ancora: arriveranno col driver dei server. Rotte `/api/cloud/cloudflare/*`, `lib/cloudflare.js`, prove in `cloud.test.js` (Cloudflare simulato). **Non verificato:** nessuna chiamata a Cloudflare vera. Serve ridistribuire Super Admin.

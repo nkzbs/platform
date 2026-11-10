@@ -12,20 +12,22 @@
 // isConfigured().
 
 const API_BASE = 'https://api.cloudflare.com/client/v4';
+const lib = require('./lib/cloudflare'); // token e zona: quelli salvati in Impostazioni, altrimenti le variabili d'ambiente (un solo collegamento)
+const zonaId = () => lib.impostazioni().zona;
 
 function isConfigured() {
-  return !!(process.env.CLOUDFLARE_API_TOKEN && process.env.CLOUDFLARE_ZONE_ID && process.env.CLOUDFLARE_ORIGIN_IP);
+  return !!(lib.token() && zonaId() && process.env.CLOUDFLARE_ORIGIN_IP);
 }
 
 function zoneName() {
-  return process.env.CLOUDFLARE_ZONE_NAME || 'platform-core.it';
+  return lib.impostazioni().dominio;
 }
 
 async function cf(path, options = {}) {
   const res = await fetch(API_BASE + path, {
     ...options,
     headers: {
-      'Authorization': 'Bearer ' + process.env.CLOUDFLARE_API_TOKEN,
+      'Authorization': 'Bearer ' + lib.token(),
       'Content-Type': 'application/json',
       ...(options.headers || {}),
     },
@@ -45,7 +47,7 @@ async function cf(path, options = {}) {
 async function upsertSubdomain(slug) {
   if (!isConfigured()) return { skipped: true, reason: 'cloudflare_not_configured' };
   const name = slug + '.' + zoneName();
-  const zoneId = process.env.CLOUDFLARE_ZONE_ID;
+  const zoneId = zonaId();
 
   const existing = await cf('/zones/' + zoneId + '/dns_records?type=A&name=' + encodeURIComponent(name));
   if (existing.length > 0) {
@@ -70,7 +72,7 @@ async function upsertSubdomain(slug) {
 async function deleteSubdomain(slug) {
   if (!isConfigured()) return { skipped: true, reason: 'cloudflare_not_configured' };
   const name = slug + '.' + zoneName();
-  const zoneId = process.env.CLOUDFLARE_ZONE_ID;
+  const zoneId = zonaId();
   const existing = await cf('/zones/' + zoneId + '/dns_records?type=A&name=' + encodeURIComponent(name));
   if (existing.length === 0) return { deleted: false, reason: 'not_found' };
   await cf('/zones/' + zoneId + '/dns_records/' + existing[0].id, { method: 'DELETE' });
@@ -85,7 +87,7 @@ async function deleteSubdomain(slug) {
 // vorremmo fosse.
 async function sslMode() {
   if (!isConfigured()) return null;
-  const zoneId = process.env.CLOUDFLARE_ZONE_ID;
+  const zoneId = zonaId();
   const result = await cf('/zones/' + zoneId + '/settings/ssl');
   return result.value;
 }
