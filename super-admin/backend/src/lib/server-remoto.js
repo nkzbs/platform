@@ -75,7 +75,8 @@ const SCRIPT_SETUP = [
 ].join(' && ');
 
 // Caddy davanti al container: il dominio del tenant, HTTPS automatico, il resto sulla porta locale. Il container non è mai esposto direttamente.
-const caddyfile = (dominio) => dominio + ' {\n  encode gzip\n  reverse_proxy 127.0.0.1:8080\n}\n';
+// Cloudflare qui porta il traffico dei tenant sulla porta 4000 (regola di destinazione della zona): il server risponde sia su 443 sia su 4000, stesso certificato.
+const caddyfile = (dominio) => dominio + ', ' + dominio + ':4000 {\n  encode gzip\n  reverse_proxy 127.0.0.1:8080\n}\n';
 
 async function caricaImmagine(c, say) {
   say('Porto l\'immagine del programma sul server (è la parte più lunga)…');

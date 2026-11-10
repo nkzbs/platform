@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.111 — Tenant su Linode: funziona dietro Cloudflare (porta 4000)
+
+Il terzo collaudo ha trovato la causa del 521: la zona Cloudflare porta il traffico dei tenant sulla porta 4000 (non 443). Il server ora risponde su entrambe, con lo stesso certificato. Primo tenant su Linode vivo dietro Cloudflare.
+
 ## 0.4.110 — Tenant su Linode: Redis sul server
 
 Il secondo collaudo ha mostrato che il certificato ora si ottiene, ma il tenant non partiva: in produzione il core pretende Redis. Ogni server Linode ora ha un suo Redis piccolo su una rete interna (mai esposto fuori) e il tenant lo usa.
