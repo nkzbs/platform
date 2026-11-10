@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.131 — Utenti: azioni nel menu «⋯»
+
+Nella riga di ogni utente «Disabilita/Abilita» e «Reimposta password» (due link di testo) stanno ora nel menu «⋯», con icona e spiegazione. In vista restano lo stato e le due scelte che dicono un numero: Widget e Moduli visibili. Il menu si apre sotto la riga, dentro lo schermo da telefono.
+
 ## 0.4.130 — Liste dei moduli: un solo pulsante in evidenza e un menu «⋯»
 
 In cima a ogni lista di record c'erano fino a dieci pulsanti con testo (Importa da PDF, Busta paga, CSV, Sincronizza Drive, Carica file, Messaggio, Importa, Report, Calendario, Cerca da fonte esterna, Nuovo). Ora: «Nuovo» in evidenza, Report e Calendario come icone con stato, e tutto il resto nel menu «⋯», una riga per voce con icona, nome e spiegazione (componente VoceMenu, usato anche altrove). Il menu resta montato da chiuso, così le finestre di importazione non spariscono. Da telefono sta dentro lo schermo.
