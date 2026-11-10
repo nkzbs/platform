@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.114 — Server Linode dei tenant: nome `tenant-<slug>`
+
+Un tenant chiamato «test» si scontrava con la macchina `plt-test` (etichetta già usata su Linode). I server dei tenant ora si chiamano `tenant-<slug>`.
+
 ## 0.4.113 — «staging» al posto di «prova»
 
 Nella scelta di dove creare un tenant, il NAS ora si chiama «staging».
