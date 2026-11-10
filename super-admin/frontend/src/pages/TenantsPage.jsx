@@ -571,7 +571,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
             const expanded = expandedSlug === t.slug
             return (
             <div key={t.id} className={'glass-panel hover:bg-white/5 transition ' + (menuTenant === t.slug ? 'overflow-visible relative z-20' : 'overflow-hidden')}>
-              <div className="p-5 flex items-center justify-between flex-wrap gap-4">
+              <div className="p-5 flex items-center justify-between flex-wrap gap-4 relative">
                 <div className="flex items-center gap-4 min-w-0">
                   <StatusDot status={t.status} />
                   <div>
@@ -648,14 +648,14 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                     Dettagli
                     <Icon name={expanded ? 'chevron-down' : 'chevron-right'} size={12} />
                   </button>
-                  <div className="relative" data-menu-tenant>
+                  <div data-menu-tenant>
                     <button onClick={() => setMenuTenant((x) => (x === t.slug ? null : t.slug))} aria-haspopup="menu" aria-expanded={menuTenant === t.slug} aria-label="Altre azioni" title="Altre azioni"
                       className="w-9 h-9 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition flex items-center justify-center">
                       <Icon name="more" size={18} />
                     </button>
                     {menuTenant === t.slug && (
                       <>
-                        <div role="menu" className="absolute right-0 top-full mt-1 z-30 w-72 bg-surface-card border border-gray-700 rounded-xl shadow-lg py-1">
+                        <div role="menu" className="absolute left-4 right-4 top-full -mt-2 z-30 sm:left-auto sm:w-80 bg-surface-card border border-gray-700 rounded-xl shadow-lg py-1">
                           {t.status === 'active' && (
                             <button role="menuitem" onClick={() => { setMenuTenant(null); redeploy(t) }} disabled={actionSlug === t.slug} className="w-full text-left px-3 py-2.5 hover:bg-white/5 transition flex items-start gap-3 disabled:opacity-40">
                               <Icon name="refresh" size={18} className="text-cp-primary mt-0.5 flex-shrink-0" />

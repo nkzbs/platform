@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.129 — Menu del tenant dentro lo schermo
+
+Da telefono il menu «⋯» della riga tenant usciva a sinistra dello schermo (ancorato al tasto, che non sta a destra). Ora si apre sotto la riga, largo come la card su telefono e di 20 rem su schermo largo.
+
 ## 0.4.128 — Super Admin, lista dei tenant: Apri, Dettagli e un menu «⋯»
 
 Nella riga di ogni tenant restano in vista solo Apri e Dettagli. Aggiorna, Sposta su Linode, Ferma/Avvia ed Elimina stanno nel menu «⋯», ognuna con la sua riga di spiegazione (cosa fa, quanto costa, cosa succede); Elimina è separata e in rosso. Il menu si chiude toccando fuori.
