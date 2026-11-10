@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.126 — Uscendo non si svuota più la pagina
+
+Causa vera della «pagina bianca» cambiando utente (vista in una registrazione dello schermo): in App.jsx un useEffect del giro guidato stava dopo il return del login. Uscendo, React vedeva meno ganci di prima, andava in errore («Rendered fewer hooks than expected») e svuotava l'intera pagina fino al ricaricamento. Il gancio ora sta prima del return; un test controlla che non ci siano ganci dopo. La correzione 0.4.123 (pagina corrente azzerata) resta, ma non bastava.
+
 ## 0.4.125 — Dettaglio record: barra in basso con etichette
 
 Le azioni del dettaglio (Clienti, Immobili e ogni altro modulo) stanno ora in una barra fissa in basso: icona sopra, nome sotto, massimo 4 voci. Modifica c'è sempre; se le altre non stanno, l'ultima voce è «Altro» con il resto (anche le azioni «da attivare»). «Documenti» apre l'elenco dei documenti. In alto accanto alla X c'è «⋯» con Elimina, lontano dai tasti di uso comune. Nuova icona «more» nella mappa.
