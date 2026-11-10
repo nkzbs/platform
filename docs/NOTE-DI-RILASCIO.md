@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.128 — Super Admin, lista dei tenant: Apri, Dettagli e un menu «⋯»
+
+Nella riga di ogni tenant restano in vista solo Apri e Dettagli. Aggiorna, Sposta su Linode, Ferma/Avvia ed Elimina stanno nel menu «⋯», ognuna con la sua riga di spiegazione (cosa fa, quanto costa, cosa succede); Elimina è separata e in rosso. Il menu si chiude toccando fuori.
+
 ## 0.4.127 — Dettaglio a tre schede: Dati, Azioni, Documenti
 
 Il dettaglio di ogni record ha, se il modulo lo prevede, tre schede. «Dati» è la scheda di sempre. «Azioni» elenca le azioni esterne con icona, nome, la loro spiegazione e un'etichetta: «a pagamento · circa X €» (costo di listino, nessuna richiesta al servizio), «da attivare» o «non collegato», quindi si sa il costo PRIMA di premere. «Documenti» elenca i documenti da preparare. In alto: matita per Modifica e «⋯» con Elimina, lontano dai tasti di uso comune. Un modulo senza azioni né documenti non mostra le schede. Nessun campo nuovo da compilare: legge quello che lo schema già dichiara (nome, icona, descrizione). Pacchetto mediazione immobiliare 23: «Verifica del soggetto» e «Credit score società» hanno icone diverse (prima due lenti uguali). `/api/records/:slug/azioni-stato` dice anche `a_pagamento` e `costo`.

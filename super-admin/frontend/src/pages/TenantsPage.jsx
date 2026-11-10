@@ -296,6 +296,13 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
   // non esiste ancora: lo ricrea sullo stesso volume dati, con le chiavi salvate (un
   // tenant registrato da "Registra esistente" nasce fermo e parte da qui).
   const [actionSlug, setActionSlug] = useState(null)
+  const [menuTenant, setMenuTenant] = useState(null) // riga con il menu «⋯» aperto
+  useEffect(() => { // un tocco fuori dal menu lo chiude
+    if (!menuTenant) return undefined
+    const chiudi = (e) => { if (!(e.target.closest && e.target.closest('[data-menu-tenant]'))) setMenuTenant(null) }
+    document.addEventListener('mousedown', chiudi); document.addEventListener('touchstart', chiudi)
+    return () => { document.removeEventListener('mousedown', chiudi); document.removeEventListener('touchstart', chiudi) }
+  }, [menuTenant])
   const [sposta, setSposta] = useState(null) // spostamento NAS → Linode in corso: { slug, name, fase, passi, fine, errore, esito }
   const tenantAction = async (t, action) => {
     setActionSlug(t.slug)
@@ -563,7 +570,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
             const stats = statsBySlug[t.slug]
             const expanded = expandedSlug === t.slug
             return (
-            <div key={t.id} className="glass-panel hover:bg-white/5 transition overflow-hidden">
+            <div key={t.id} className={'glass-panel hover:bg-white/5 transition ' + (menuTenant === t.slug ? 'overflow-visible relative z-20' : 'overflow-hidden')}>
               <div className="p-5 flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-4 min-w-0">
                   <StatusDot status={t.status} />
@@ -624,13 +631,10 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
                   {t.status === 'active' && (
-                    <button
-                      onClick={() => openTenant(t)}
-                      className="text-sm text-cp-primary hover:opacity-80 disabled:opacity-50 transition"
-                    >
-                      Apri &#8594;
+                    <button onClick={() => openTenant(t)} title="Apri il tenant" className="text-sm px-3 py-1.5 rounded-lg bg-cp-primary/15 hover:bg-cp-primary/25 text-cp-primary transition flex items-center gap-1.5">
+                      Apri<Icon name="chevron-right" size={13} />
                     </button>
                   )}
                   <button
@@ -644,40 +648,39 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                     Dettagli
                     <Icon name={expanded ? 'chevron-down' : 'chevron-right'} size={12} />
                   </button>
-                  {t.status === 'active' && (
-                    <button onClick={() => redeploy(t)} disabled={actionSlug === t.slug} title="Ricrea il container con l'ultima versione; i dati non si toccano"
-                      className="text-sm px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition disabled:opacity-40 flex items-center gap-1.5">
-                      <Icon name="refresh" size={12} />
-                      Aggiorna
+                  <div className="relative" data-menu-tenant>
+                    <button onClick={() => setMenuTenant((x) => (x === t.slug ? null : t.slug))} aria-haspopup="menu" aria-expanded={menuTenant === t.slug} aria-label="Altre azioni" title="Altre azioni"
+                      className="w-9 h-9 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition flex items-center justify-center">
+                      <Icon name="more" size={18} />
                     </button>
-                  )}
-                  {t.status === 'active' && t.host !== 'linode' && (
-                    <button onClick={() => spostaSuLinode(t)} disabled={!!sposta && !sposta.fine} title="Porta il tenant su un suo server Linode, stesso indirizzo"
-                      className="text-sm px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition disabled:opacity-40 flex items-center gap-1.5">
-                      <Icon name="server" size={12} />
-                      Sposta su Linode
-                    </button>
-                  )}
-                  <button
-                    onClick={() => toggle(t)}
-                    disabled={t.status === 'creating' || t.status === 'error' || actionSlug === t.slug}
-                    className={
-                      'text-sm px-3 py-1.5 rounded-lg transition disabled:opacity-40 flex items-center gap-1.5 ' +
-                      (t.status === 'active'
-                        ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                        : 'bg-green-900/30 hover:bg-green-900/50 text-green-400 border border-green-900/50')
-                    }
-                  >
-                    <Icon name={t.status === 'active' ? 'square' : 'play'} size={12} />
-                    {actionSlug === t.slug ? '...' : t.status === 'active' ? 'Stop' : 'Start'}
-                  </button>
-                  <button
-                    onClick={() => deleteTenant(t)}
-                    className="text-sm px-3 py-1.5 rounded-lg bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/30 transition flex items-center gap-1.5"
-                  >
-                    <Icon name="trash" size={12} />
-                    Elimina
-                  </button>
+                    {menuTenant === t.slug && (
+                      <>
+                        <div role="menu" className="absolute right-0 top-full mt-1 z-30 w-72 bg-surface-card border border-gray-700 rounded-xl shadow-lg py-1">
+                          {t.status === 'active' && (
+                            <button role="menuitem" onClick={() => { setMenuTenant(null); redeploy(t) }} disabled={actionSlug === t.slug} className="w-full text-left px-3 py-2.5 hover:bg-white/5 transition flex items-start gap-3 disabled:opacity-40">
+                              <Icon name="refresh" size={18} className="text-cp-primary mt-0.5 flex-shrink-0" />
+                              <span><span className="block text-sm text-ink">Aggiorna</span><span className="block text-xs text-gray-500">Ricrea il container con l'ultima versione; i dati non si toccano</span></span>
+                            </button>
+                          )}
+                          {t.status === 'active' && t.host !== 'linode' && (
+                            <button role="menuitem" onClick={() => { setMenuTenant(null); spostaSuLinode(t) }} disabled={!!sposta && !sposta.fine} className="w-full text-left px-3 py-2.5 hover:bg-white/5 transition flex items-start gap-3 disabled:opacity-40">
+                              <Icon name="server" size={18} className="text-cp-primary mt-0.5 flex-shrink-0" />
+                              <span><span className="block text-sm text-ink">Sposta su Linode</span><span className="block text-xs text-gray-500">Un suo server, stesso indirizzo. Si ferma 3-5 minuti · 5 $ + 2 $ al mese</span></span>
+                            </button>
+                          )}
+                          <button role="menuitem" onClick={() => { setMenuTenant(null); toggle(t) }} disabled={t.status === 'creating' || t.status === 'error' || actionSlug === t.slug} className="w-full text-left px-3 py-2.5 hover:bg-white/5 transition flex items-start gap-3 disabled:opacity-40">
+                            <Icon name={t.status === 'active' ? 'square' : 'play'} size={18} className={(t.status === 'active' ? 'text-gray-400' : 'text-green-400') + ' mt-0.5 flex-shrink-0'} />
+                            <span><span className="block text-sm text-ink">{actionSlug === t.slug ? '…' : t.status === 'active' ? 'Ferma' : 'Avvia'}</span><span className="block text-xs text-gray-500">{t.status === 'active' ? 'Spegne il tenant; i dati restano' : 'Riaccende il tenant'}</span></span>
+                          </button>
+                          <div className="my-1 border-t border-gray-800" />
+                          <button role="menuitem" onClick={() => { setMenuTenant(null); deleteTenant(t) }} className="w-full text-left px-3 py-2.5 hover:bg-red-900/20 transition flex items-start gap-3">
+                            <Icon name="trash" size={18} className="text-red-400 mt-0.5 flex-shrink-0" />
+                            <span><span className="block text-sm text-red-400">Elimina</span><span className="block text-xs text-gray-500">Prima una copia di sicurezza; poi non si torna indietro</span></span>
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
