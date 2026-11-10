@@ -34,15 +34,24 @@ function estimatedPercent(elapsedMs) {
   return Math.min(96, Math.round(100 * (1 - Math.exp(-elapsedMs / 9000))))
 }
 
-function TenantCreatingOverlay({ label }) {
+// Con `fase` (creazione lunga su Linode) l'etichetta e la barra seguono la fase VERA scritta dal server, non il tempo.
+const FASI = {
+  creating_container: { label: 'Creo il server su Linode e ci metto il programma (alcuni minuti)…', min: 10 },
+  seeding_database: { label: 'Preparo il database del tenant…', min: 70 },
+  configuring_domain: { label: 'Configuro l\'indirizzo…', min: 85 },
+  active: { label: 'Fatto.', min: 96 },
+}
+
+function TenantCreatingOverlay({ label, fase }) {
   const [elapsed, setElapsed] = useState(0)
   useEffect(() => {
     const start = Date.now()
     const id = setInterval(() => setElapsed(Date.now() - start), 500)
     return () => clearInterval(id)
   }, [])
-  const stage = [...STAGES].reverse().find((s) => elapsed >= s.after) || STAGES[0]
-  const pct = estimatedPercent(elapsed)
+  const f = fase && FASI[fase]
+  const stage = f ? { label: f.label } : ([...STAGES].reverse().find((s) => elapsed >= s.after) || STAGES[0])
+  const pct = f ? Math.min(96, Math.max(f.min, Math.round(100 * (1 - Math.exp(-elapsed / 240000))))) : estimatedPercent(elapsed)
 
   return (
     <Portal>

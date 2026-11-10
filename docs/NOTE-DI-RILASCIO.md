@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.112 — Creazione su Linode: la schermata segue la fase vera
+
+La creazione di un tenant su Linode dura minuti: la richiesta si interrompeva e la barra restava ferma al 96%. Ora Super Admin risponde subito «preso in carico», la schermata guarda lo stato vero del tenant (fase, esito, errore) e al termine mostra le credenziali iniziali, leggibili una sola volta (30 minuti in memoria). Corretto anche il bottone che restava bloccato se si annullava la conferma del costo.
+
 ## 0.4.111 — Tenant su Linode: funziona dietro Cloudflare (porta 4000)
 
 Il terzo collaudo ha trovato la causa del 521: la zona Cloudflare porta il traffico dei tenant sulla porta 4000 (non 443). Il server ora risponde su entrambe, con lo stesso certificato. Primo tenant su Linode vivo dietro Cloudflare.

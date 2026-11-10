@@ -55,6 +55,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
   const [dnsRetrying, setDnsRetrying] = useState(false)
   const [form, setForm] = useState({ name: '', slug: '', domain: '' })
   const [loading, setLoading] = useState(false)
+  const [fase, setFase] = useState(null) // fase vera di una creazione lunga (Linode)
   const [error, setError] = useState('')
   const [expandedSlug, setExpandedSlug] = useState(null)
   // PLATFORM-UI-REDESIGN-CATALOG.md #18-27 — il pannello espanso era un'unica
@@ -237,13 +238,14 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
 
   const create = async () => {
     if (!form.name || !form.slug) return setError('Nome e slug obbligatori')
+    if (form.host === 'linode' && !window.confirm('Creare un server su Linode per «' + form.name + '»? Costa 5 $ al mese più 2 $ di backup, da subito.')) return
     setLoading(true)
     setError('')
-    if (form.host === 'linode' && !window.confirm('Creare un server su Linode per «' + form.name + '»? Costa 5 $ al mese più 2 $ di backup, da subito.')) return
     const res = await fetch(API + '/tenants', { method: 'POST', headers, body: JSON.stringify(form) })
     const data = await res.json()
+    if (!res.ok) { setLoading(false); return setError(data.error) }
+    if (res.status === 202) return seguiCreazione(data.slug, form.name)
     setLoading(false)
-    if (!res.ok) return setError(data.error)
     setShowNew(false)
     setForm(EMPTY_TENANT_FORM)
     if (data.initial_credentials) {
@@ -253,6 +255,29 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
       setDnsWarning({ slug: data.slug, name: data.name, domain: data.domain, error: data.cloudflare.error })
     }
     load()
+  }
+
+  // Creazione lunga (server su Linode): si guarda la riga vera del tenant finché non è attiva o in errore.
+  const seguiCreazione = async (slug, name) => {
+    setFase('creating_container')
+    for (let i = 0; i < 360; i++) { // fino a ~24 minuti
+      await new Promise((r) => setTimeout(r, 4000))
+      let t = null
+      try { const r = await fetch(API + '/tenants', { headers }); const l = await r.json(); t = (Array.isArray(l) ? l : l.tenants || []).find((x) => x.slug === slug) } catch (e) { continue }
+      if (!t) continue
+      if (t.provisioning_step) setFase(t.provisioning_step)
+      if (t.status === 'active') {
+        setLoading(false); setFase(null); setShowNew(false); setForm(EMPTY_TENANT_FORM); load()
+        try {
+          const r = await fetch(API + '/tenants/' + slug + '/credenziali-iniziali', { headers })
+          if (r.ok) { const c = await r.json(); setCredentialsReveal({ slug, name, username: c.username, password: c.password }) }
+        } catch (e) { /* le credenziali si possono rigenerare con Reset credenziali */ }
+        return
+      }
+      if (t.status === 'error') { setLoading(false); setFase(null); load(); return setError('Creazione fallita: ' + (t.provisioning_error || 'errore sconosciuto')) }
+    }
+    setLoading(false); setFase(null); load()
+    setError('La creazione sta durando troppo: guarda lo stato nella lista dei tenant.')
   }
 
   const retryDns = async () => {
@@ -988,7 +1013,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
         </Portal>
       )}
 
-      {loading && showNew && <TenantCreatingOverlay />}
+      {loading && showNew && <TenantCreatingOverlay fase={fase} />}
 
       {credentialsReveal && (
         <Portal>

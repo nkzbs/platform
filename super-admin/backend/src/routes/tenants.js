@@ -410,9 +410,32 @@ async function createTenant({ name, slug, domain, actor, isSandbox, skipDefaults
   }
 }
 
+// Un tenant su Linode ci mette parecchi minuti: più di quanto una singola richiesta HTTP regga (Cloudflare, telefono, rete). Si risponde subito "ho preso in carico"
+// e la persona segue la creazione dalla lista (provisioning_step/status veri). La password iniziale, che esiste solo qui, resta in memoria 30 minuti e si legge UNA volta.
+const credenzialiInAttesa = new Map();
+const trattieni = (slug, cred) => { credenzialiInAttesa.set(slug, { ...cred, scade: Date.now() + 30 * 60 * 1000 }); };
+router.get('/:slug/credenziali-iniziali', requireAuth, (req, res) => {
+  const c = credenzialiInAttesa.get(req.params.slug);
+  credenzialiInAttesa.delete(req.params.slug);
+  if (!c || c.scade < Date.now()) return res.status(404).json({ error: 'Nessuna credenziale in attesa (già lette, scadute o creazione non finita).' });
+  res.json({ username: c.username, password: c.password });
+});
+
 router.post('/', requireAuth, async (req, res) => {
   const { name, slug, domain, host } = req.body;
   if (!name || !slug) return res.status(400).json({ error: 'Nome e slug obbligatori' });
+
+  if (host === 'linode') {
+    const lavoro = enqueueHostedCreation(() => createTenant({ name, slug, domain, host, actor: req.user.username }));
+    lavoro.then((r) => trattieni(slug, { username: 'admin', password: r.initialPassword })).catch(() => {}); // l'errore vero è già scritto sulla riga del tenant
+    const subito = await Promise.race([lavoro, new Promise((ok) => setTimeout(() => ok(null), 4000))]).catch((err) => err);
+    if (subito instanceof Error) return res.status(subito.status || 500).json({ error: subito.message });
+    if (subito) { // finita in fretta: risposta completa come per il NAS
+      credenzialiInAttesa.delete(slug);
+      return res.json({ ...withoutSecrets(subito.tenant), initial_credentials: { username: 'admin', password: subito.initialPassword }, cloned_from_template: subito.cloneResult, cloudflare: subito.cloudflareResult });
+    }
+    return res.status(202).json({ in_corso: true, slug });
+  }
 
   try {
     const { tenant, initialPassword, cloneResult, cloudflareResult } = await enqueueHostedCreation(() => createTenant({ name, slug, domain, host: host || 'nas', actor: req.user.username }));
