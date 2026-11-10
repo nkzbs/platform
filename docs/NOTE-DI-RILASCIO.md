@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.133 — Super Admin: Analisi, Utenti e Libreria con lo stesso schema
+
+Analisi: dopo la creazione del tenant, «Invita il cliente», «Genera una nuova password» e «Riprova la configurazione» sono un elenco di azioni con icona e spiegazione (prima tre link di testo sparsi). Utenti di Super Admin: Abilita/Disabilita, Resetta password, Disattiva 2FA ed Elimina stanno nel menu «⋯» (Elimina separata, in rosso). Libreria: «Moduli generici» e «Moduli di default» nel menu «⋯», resta in evidenza «Salva un modulo». Tutto con il componente condiviso VoceMenu.
+
 ## 0.4.132 — Builder: barra del modulo più ordinata; VoceMenu condiviso
 
 Nella barra del modulo del Builder (anche in Super Admin) Anteprima è un'icona con stato, Valida resta con il numero di problemi, e Cronologia ed Esporta stanno nel menu «⋯» con la loro spiegazione. Bozza e Pubblica restano come prima. VoceMenu è ora un componente condiviso (shared/frontend/VoceMenu.jsx) con un ponte in core e in Super Admin.

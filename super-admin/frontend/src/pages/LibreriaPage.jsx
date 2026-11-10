@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { API } from '../lib/api'
 import Icon from '../components/Icon'
+import VoceMenu from '../components/VoceMenu'
 import Select from '../components/Select'
 import VerticaliAdmin from '../components/VerticaliAdmin'
 import { parseSchemaFrontend, getAutomationSteps, getRequiredConnectors } from '../lib/schema-v3-frontend'
@@ -65,6 +66,13 @@ function LibreriaPage({ token }) {
   const [edit, setEdit] = useState(null) // { description, release_notes }
   const [installSlug, setInstallSlug] = useState('')
   const [busy, setBusy] = useState(false)
+  const [menuLib, setMenuLib] = useState(false) // menu «⋯» in cima
+  useEffect(() => { // un tocco fuori dal menu lo chiude
+    if (!menuLib) return undefined
+    const chiudi = (e) => { if (!(e.target.closest && e.target.closest('[data-menu-libreria]'))) setMenuLib(false) }
+    document.addEventListener('mousedown', chiudi); document.addEventListener('touchstart', chiudi)
+    return () => { document.removeEventListener('mousedown', chiudi); document.removeEventListener('touchstart', chiudi) }
+  }, [menuLib])
 
   const [publishOpen, setPublishOpen] = useState(false)
   const [pub, setPub] = useState({ tenant: '', module: '', description: '', release_notes: '' })
@@ -209,8 +217,17 @@ function LibreriaPage({ token }) {
           <p className="text-gray-500 text-sm mt-0.5">I tuoi moduli, con le loro versioni, pronti da installare in qualunque tenant.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {generici && (generici.mancanti.length + (generici.da_completare || []).length) > 0 && <button onClick={importaGenerici} disabled={busy} className={ghostBtn + ' text-xs !py-2'}>{generici.mancanti.length ? 'Aggiungi i moduli generici (' + generici.mancanti.length + ')' : 'Completa i moduli generici (' + generici.da_completare.length + ')'}</button>}
-          <button onClick={openDefaults} className={ghostBtn + ' text-xs !py-2'}>Moduli di default</button>
+          <div className="relative" data-menu-libreria>
+            <button onClick={() => setMenuLib((x) => !x)} aria-haspopup="menu" aria-expanded={menuLib} aria-label="Altre azioni" title="Altre azioni" className="w-9 h-9 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition flex items-center justify-center"><Icon name="more" size={18} /></button>
+            {menuLib && (
+              <div role="menu" className="absolute right-0 top-full mt-1 z-30 w-[min(20rem,calc(100vw-2rem))] bg-surface-card border border-gray-700 rounded-xl shadow-lg py-1">
+                {generici && (generici.mancanti.length + (generici.da_completare || []).length) > 0 && (
+                  <VoceMenu icon="download" disabled={busy} label={generici.mancanti.length ? 'Aggiungi i moduli generici (' + generici.mancanti.length + ')' : 'Completa i moduli generici (' + generici.da_completare.length + ')'} desc="I moduli di partenza che mancano nella Libreria" onClick={() => { setMenuLib(false); importaGenerici() }} />
+                )}
+                <VoceMenu icon="settings" label="Moduli di default" desc="Quelli che ogni nuovo tenant riceve da subito" onClick={() => { setMenuLib(false); openDefaults() }} />
+              </div>
+            )}
+          </div>
           <button onClick={openPublish} className={primaryBtn + ' text-xs !py-2 flex items-center gap-1.5'}><Icon name="plus" size={13} />Salva un modulo</button>
         </div>
       </div>

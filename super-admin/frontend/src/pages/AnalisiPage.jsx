@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { API } from '../lib/api'
 import Icon from '../components/Icon'
+import VoceMenu from '../components/VoceMenu'
 import ProcessoEditor, { applySuggestion, needsEnrichment } from '../components/analyses/ProcessoEditor'
 import Manuale from '../components/analyses/Manuale'
 import Guida from '../components/analyses/Guida'
@@ -305,19 +306,14 @@ export default function AnalisiPage({ token, onNavigate, onBuild }) {
                       <div className="text-xs text-green-400/80">Moduli installati: {cr.moduli_installati} · ruoli creati: {cr.ruoli_creati} · moduli configurati: {cr.moduli_configurati}{cr.moduli_dichiarati != null ? ' · ruoli dichiarati: ' + cr.moduli_dichiarati + ' · report creati (spenti): ' + cr.report_creati : ''}</div>
                       {cr.tempi && <div className="text-xs text-green-400/60 mt-1">Dove è andato il tempo: {FASI_UI.filter((f) => cr.tempi[f.key] != null).map((f) => f.label + ' ' + cr.tempi[f.key] + ' s').join(' · ')}</div>}
                       {(cr.avvisi || []).map((v, i) => <div key={i} className="text-xs text-amber-300 mt-1">{typeof v === 'string' ? v : v.testo}</div>)}
-                      {(cr.avvisi || []).some((v) => typeof v === 'object' && (v.tipo === 'config' || v.tipo === 'setup')) && (
-                        <button type="button" onClick={retryConfig} disabled={retryBusy} className="text-xs text-cp-primary hover:opacity-80 disabled:opacity-50 transition mt-1.5 block">
-                          {retryBusy ? 'Riprovo…' : 'Riprova'}
-                        </button>
-                      )}
-                      {credenziali ? (
+                      {credenziali && (
                         <div className="text-xs mt-2">Accesso admin (si vede una volta sola): <span className="font-mono">{credenziali.username}</span> / <span className="font-mono">{credenziali.password}</span></div>
-                      ) : (
-                        <button type="button" onClick={rigeneraCredenziali} disabled={resetCredBusy} className="text-xs text-cp-primary hover:opacity-80 disabled:opacity-50 transition mt-2">
-                          {resetCredBusy ? 'Genero…' : 'Non hai più le credenziali? Genera una nuova password'}
-                        </button>
                       )}
-                      {a.tenant_slug && <button type="button" className={ghost + ' mt-2'} onClick={() => setInvito({ slug: a.tenant_slug, name: a.name })}>Invita il cliente (consigliato: sceglie lui la password)</button>}
+                      <div className="mt-3 -mx-1 border border-green-900/30 rounded-lg divide-y divide-green-900/20 bg-surface-page/40">
+                        {a.tenant_slug && <VoceMenu icon="mail" label="Invita il cliente" desc="Consigliato: sceglie lui la password" onClick={() => setInvito({ slug: a.tenant_slug, name: a.name })} />}
+                        {!credenziali && <VoceMenu icon="key" label={resetCredBusy ? 'Genero…' : 'Genera una nuova password'} desc="Se non hai più le credenziali dell'admin" onClick={rigeneraCredenziali} disabled={resetCredBusy} />}
+                        {(cr.avvisi || []).some((v) => typeof v === 'object' && (v.tipo === 'config' || v.tipo === 'setup')) && <VoceMenu icon="refresh" label={retryBusy ? 'Riprovo…' : 'Riprova la configurazione'} desc="Alcuni passi non sono andati a buon fine" onClick={retryConfig} disabled={retryBusy} />}
+                      </div>
                     </div>
                   )}
                 </div>

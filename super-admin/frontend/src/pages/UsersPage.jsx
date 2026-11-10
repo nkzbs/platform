@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { API } from '../lib/api'
 import Icon from '../components/Icon'
+import VoceMenu from '../components/VoceMenu'
 import Select from '../components/Select'
 import StatusBadge from '../components/StatusBadge'
 import Portal from '../components/Portal'
@@ -11,6 +12,13 @@ import Portal from '../components/Portal'
 function UsersPage({ token, embedded, myId }) {
   const [users, setUsers] = useState([])
   const [showNew, setShowNew] = useState(false)
+  const [menuUtente, setMenuUtente] = useState(null) // utente con il menu «⋯» aperto
+  useEffect(() => { // un tocco fuori dal menu lo chiude
+    if (menuUtente === null) return undefined
+    const chiudi = (e) => { if (!(e.target.closest && e.target.closest('[data-menu-utente]'))) setMenuUtente(null) }
+    document.addEventListener('mousedown', chiudi); document.addEventListener('touchstart', chiudi)
+    return () => { document.removeEventListener('mousedown', chiudi); document.removeEventListener('touchstart', chiudi) }
+  }, [menuUtente])
   const [form, setForm] = useState({ username: '', password: '', role: 'admin' })
   const [error, setError] = useState('')
 
@@ -110,7 +118,7 @@ function UsersPage({ token, embedded, myId }) {
         {users.map((u) => {
           const isSelf = myId != null && Number(myId) === u.id
           return (
-            <div key={u.id} className="glass-panel px-5 py-4">
+            <div key={u.id} className={'glass-panel px-5 py-4 relative ' + (menuUtente === u.id ? 'overflow-visible z-20' : '')}>
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -133,19 +141,23 @@ function UsersPage({ token, embedded, myId }) {
                   <span className={'text-xs px-2 py-1 rounded ' + (u.active ? 'bg-green-900/30 text-green-400' : 'bg-gray-800 text-gray-500')}>
                     {u.active ? 'Attivo' : 'Disabilitato'}
                   </span>
-                  <button onClick={() => toggle(u)} className="text-sm text-gray-500 hover:text-ink transition">
-                    {u.active ? 'Disabilita' : 'Abilita'}
-                  </button>
+                  <div data-menu-utente>
+                    <button onClick={() => setMenuUtente((x) => (x === u.id ? null : u.id))} aria-haspopup="menu" aria-expanded={menuUtente === u.id} aria-label="Altre azioni" title="Altre azioni" className="w-9 h-9 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition flex items-center justify-center">
+                      <Icon name="more" size={18} />
+                    </button>
+                    {menuUtente === u.id && (
+                      <div role="menu" className="absolute left-4 right-4 top-full -mt-1 z-30 sm:left-auto sm:w-80 bg-surface-card border border-gray-700 rounded-xl shadow-lg py-1">
+                        <VoceMenu icon={u.active ? 'square' : 'play'} label={u.active ? 'Disabilita' : 'Abilita'} desc={u.active ? 'Non può più entrare; i suoi dati restano' : 'Può di nuovo entrare'} onClick={() => { setMenuUtente(null); toggle(u) }} />
+                        {!isSelf && <VoceMenu icon="lock" label="Resetta password" desc="La password attuale smette subito di funzionare" onClick={() => { setMenuUtente(null); openAction(u, 'password') }} />}
+                        {!isSelf && u.totp_enabled && <VoceMenu icon="shield" label="Disattiva 2FA" desc="Per chi ha perso il telefono: dovrà configurarlo di nuovo" onClick={() => { setMenuUtente(null); openAction(u, '2fa') }} />}
+                        {!isSelf && <div className="my-1 border-t border-gray-800" />}
+                        {!isSelf && <VoceMenu danger icon="trash" label="Elimina" desc="L'utente non esiste più; non si torna indietro" onClick={() => { setMenuUtente(null); openAction(u, 'delete') }} />}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {!isSelf && (
-                <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-800/70 flex-wrap">
-                  <button onClick={() => openAction(u, 'password')} className="text-xs text-gray-400 hover:text-ink transition">Resetta password</button>
-                  {u.totp_enabled && <button onClick={() => openAction(u, '2fa')} className="text-xs text-gray-400 hover:text-ink transition">Disattiva 2FA</button>}
-                  <button onClick={() => openAction(u, 'delete')} className="text-xs text-red-400/80 hover:text-red-400 transition">Elimina</button>
-                </div>
-              )}
               {isSelf && (
                 <div className="text-[11px] text-gray-600 mt-3 pt-3 border-t border-gray-800/70">La tua password e il tuo 2FA si gestiscono qui sotto, non da questa lista.</div>
               )}
