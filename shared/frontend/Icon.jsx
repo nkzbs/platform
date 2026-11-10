@@ -34,7 +34,7 @@ export function createIcon(lucide) {
     // non coperte da nessuna delle precedenti anche come sostituto ragionevole.
     dashboard: lucide.LayoutDashboard, building: lucide.Building2,
     wand: lucide.WandSparkles, clipboard: lucide.ClipboardList,
-    lock: lucide.Lock,
+    lock: lucide.Lock, more: lucide.MoreHorizontal || lucide.Ellipsis,
     // Icone verticali/settore (2026-08-31) — usate come template_icon dei 15
     // casi d'uso gestionali marcati is_template=1: senza queste voci ricadevano
     // tutte in silenzio sull'icona box generica (bug reale trovato controllando

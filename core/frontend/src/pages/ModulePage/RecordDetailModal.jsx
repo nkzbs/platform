@@ -511,6 +511,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   const [mostraVuoti, setMostraVuoti] = useState(false)
   const [gruppiAperti, setGruppiAperti] = useState({})
   const [menuFunz, setMenuFunz] = useState(false)
+  const [menuTitolo, setMenuTitolo] = useState(false)
   const [menuDoc, setMenuDoc] = useState(false)
   const valoreVuoto = (f) => { const v = record && record.data ? record.data[f.key] : undefined; return v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0) }
   const campiRiempiti = fields.filter((f) => !valoreVuoto(f))
@@ -595,65 +596,63 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
     ...azioniEsterne.filter((az) => az.pdf && !az.vista && !inAttesa(az) && az.risultato_in && record && record.data[az.risultato_in] && record.data[az.risultato_in].id).map((az) => ({ key: az.key + '-pdf', label: az.label.split(' ')[0] === 'Verifica' ? 'Report PDF' : 'PDF', titolo: 'Scarica il PDF del report (nessun costo)', icon: 'file', onClick: () => scaricaAzionePdf(az) })),
     ...azioniEsterne.filter((az) => inAttesa(az)).map((az) => ({ key: az.key, label: az.label, titolo: az.descrizione || 'Legata a un servizio esterno ancora da attivare', icon: az.icon || 'sparkles', onClick: () => eseguiAzione(az), attesa: true })),
   ]
+  // Barra in basso: massimo 4 voci (icona sopra, nome sotto). Modifica c'è sempre; se le altre non stanno, l'ultima voce è «Altro» con il resto.
+  const docVoce = documenti.length ? { key: '__doc', label: documenti.length === 1 ? documenti[0].label : 'Documenti', icon: documenti.length === 1 ? (documenti[0].icon || 'mail') : 'file', titolo: documenti.length === 1 ? undefined : 'Documenti da preparare', onClick: () => { setMenuFunz(false); if (documenti.length === 1) apriDocumento(documenti[0]); else setMenuDoc((x) => !x) }, menu: documenti.length > 1 } : null
+  const tutte = [...voci.filter((v) => !v.attesa), ...(docVoce ? [docVoce] : []), ...voci.filter((v) => v.attesa)]
+  const sta = tutte.length + 1 <= 4
+  const resto = sta ? [] : tutte.slice(2)
+  const barra = [
+    ...(sta ? tutte : tutte.slice(0, 2)),
+    ...(sta ? [] : [{ key: '__altro', label: 'Altro', icon: 'more', onClick: () => { setMenuDoc(false); setMenuFunz((x) => !x) }, menu: true }]),
+    { key: '__modifica', label: 'Modifica', icon: 'edit', onClick: startEditing, titolo: 'Modifica', menu: true },
+  ]
 
   return (
     <FormDrawer
       title={mod.name + ' — dettaglio'}
       onClose={editing ? () => setEditing(false) : onClose}
       wide
-      headerExtra={(
-        <>
-          {!editing && record && voci.length === 1 && (
-            <button onClick={voci[0].onClick} disabled={inEsecuzione !== null} title={voci[0].titolo} aria-label={voci[0].label} className={BTN_ICONA + ' text-accent hover:border-accent' + (voci[0].spenta ? ' opacity-60' : '')}>
-              <Icon name={voci[0].icon} size={16} />
-            </button>
-          )}
-          {!editing && record && voci.length > 1 && (
-            <div className="relative flex-shrink-0">
-              <button onClick={() => setMenuFunz((x) => !x)} aria-haspopup="menu" aria-expanded={menuFunz} title="Azioni" aria-label="Azioni" className={BTN_ICONA + ' text-accent hover:border-accent'}>
-                <Icon name="sparkles" size={16} />
-              </button>
-              {menuFunz && (
-                <div role="menu" className="fixed left-3 right-3 top-auto mt-1 z-30 sm:absolute sm:left-0 sm:right-auto sm:top-full sm:w-80 bg-surface-card border border-gray-700 rounded-lg shadow-lg py-1">
-                  {voci.map((v) => (
-                    <button key={v.key} role="menuitem" disabled={inEsecuzione !== null && !v.attesa} onClick={() => { setMenuFunz(false); v.onClick() }} className={'w-full text-left px-3 py-2 hover:bg-white/5 transition flex items-start gap-2' + (v.spenta ? ' opacity-60' : '')}>
-                      <Icon name={v.icon} size={14} className="mt-0.5 text-accent flex-shrink-0" />
-                      <span className="flex-1 min-w-0">
-                        <span className="block text-xs text-ink">{inEsecuzione === v.key ? 'Un attimo…' : v.label}{v.attesa && <span className="ml-1 text-[10px] uppercase tracking-wide bg-amber-400/15 border border-amber-500/50 text-ink rounded px-1.5 py-0.5">da attivare</span>}</span>
-                        {v.titolo && <span className="block text-[11px] text-gray-500">{v.titolo}</span>}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
+      titleExtra={!editing && record && canDelete ? (
+        <div className="relative">
+          <button onClick={() => setMenuTitolo((x) => !x)} aria-haspopup="menu" aria-expanded={menuTitolo} aria-label="Altro" title="Altro" className="text-gray-500 hover:text-ink transition p-1"><Icon name="more" size={20} /></button>
+          {menuTitolo && (
+            <div role="menu" className="absolute right-0 top-full mt-1 z-30 w-44 bg-surface-card border border-gray-700 rounded-lg shadow-lg py-1">
+              <button role="menuitem" onClick={() => { setMenuTitolo(false); remove() }} className="w-full text-left px-3 py-2 hover:bg-white/5 transition flex items-center gap-2 text-xs text-red-400"><Icon name="trash" size={14} />Elimina</button>
             </div>
           )}
-          {!editing && record && !bozzaDoc && documenti.length === 1 && documenti.map((az) => (
-            <button key={az.key} onClick={() => apriDocumento(az)} disabled={docInPreparazione !== null} title={az.label + (az.delivery === 'firma' ? ' — si scarica il PDF da firmare e poi si ricarica la scansione firmata' : ' — prepara l\'email: il testo si rivede e si modifica prima di spedirla')} aria-label={az.label} className={BTN_ICONA + ' text-accent hover:border-accent'}>
-              <Icon name={az.icon || 'mail'} size={16} />
-            </button>
-          ))}
-          {!editing && record && !bozzaDoc && documenti.length > 1 && (
-            <div className="relative flex-shrink-0">
-              <button onClick={() => setMenuDoc((x) => !x)} disabled={docInPreparazione !== null} aria-haspopup="menu" aria-expanded={menuDoc} title="Documenti" aria-label="Documenti" className={BTN_ICONA + ' text-accent hover:border-accent'}>
-                <Icon name="file" size={16} />
-              </button>
-              {menuDoc && (
-                <div role="menu" className="fixed left-3 right-3 top-auto mt-1 z-30 sm:absolute sm:left-0 sm:right-auto sm:top-full sm:min-w-[260px] bg-surface-card border border-gray-700 rounded-lg shadow-lg py-1">
-                  {documenti.map((az) => (
-                    <button key={az.key} role="menuitem" onClick={() => { setMenuDoc(false); apriDocumento(az) }} className="w-full text-left px-3 py-2 hover:bg-white/5 transition flex items-start gap-2">
-                      <Icon name={az.icon || 'mail'} size={14} className="mt-0.5 text-accent flex-shrink-0" />
-                      <span><span className="block text-xs text-ink">{docInPreparazione === az.key ? 'Preparo…' : az.label}</span><span className="block text-[11px] text-gray-500">{az.delivery === 'firma' ? 'PDF da firmare, poi si ricarica la scansione' : 'Email da rivedere prima di spedirla'}</span></span>
-                    </button>
-                  ))}
-                </div>
-              )}
+        </div>
+      ) : null}
+      footer={!editing && record && !bozzaDoc ? (
+        <div className="relative -my-1">
+          {(menuFunz || menuDoc) && (
+            <div role="menu" className="absolute left-0 right-0 bottom-full mb-2 z-30 max-h-[60vh] overflow-y-auto bg-surface-card border border-gray-700 rounded-lg shadow-lg py-1">
+              {menuDoc && documenti.map((az) => (
+                <button key={az.key} role="menuitem" onClick={() => { setMenuDoc(false); apriDocumento(az) }} className="w-full text-left px-3 py-2 hover:bg-white/5 transition flex items-start gap-2">
+                  <Icon name={az.icon || 'mail'} size={14} className="mt-0.5 text-accent flex-shrink-0" />
+                  <span><span className="block text-xs text-ink">{docInPreparazione === az.key ? 'Preparo…' : az.label}</span><span className="block text-[11px] text-gray-500">{az.delivery === 'firma' ? 'PDF da firmare, poi si ricarica la scansione' : 'Email da rivedere prima di spedirla'}</span></span>
+                </button>
+              ))}
+              {menuFunz && resto.map((v) => (
+                <button key={v.key} role="menuitem" onClick={() => { setMenuFunz(false); v.onClick() }} className={'w-full text-left px-3 py-2 hover:bg-white/5 transition flex items-start gap-2' + (v.spenta ? ' opacity-60' : '')}>
+                  <Icon name={v.icon} size={14} className="mt-0.5 text-accent flex-shrink-0" />
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-xs text-ink">{inEsecuzione === v.key ? 'Un attimo…' : v.label}{v.attesa && <span className="ml-1 text-[10px] uppercase tracking-wide bg-amber-400/15 border border-amber-500/50 text-ink rounded px-1.5 py-0.5">da attivare</span>}</span>
+                    {v.titolo && <span className="block text-[11px] text-gray-500">{v.titolo}</span>}
+                  </span>
+                </button>
+              ))}
             </div>
           )}
-          {!editing && record && <button onClick={startEditing} title="Modifica" aria-label="Modifica" className={BTN_ICONA + ' text-accent hover:border-accent'}><Icon name="edit" size={16} /></button>}
-          {!editing && record && canDelete && <button onClick={remove} title="Elimina" aria-label="Elimina" className={BTN_ICONA + ' text-red-400/80 hover:text-red-400 hover:border-red-400'}><Icon name="trash" size={16} /></button>}
-        </>
-      )}
+          <div className="flex items-stretch justify-around gap-1">
+            {barra.map((v) => (
+              <button key={v.key} onClick={v.onClick} disabled={inEsecuzione !== null && !v.menu} title={v.titolo || v.label} aria-label={v.label} className={'flex-1 min-w-0 max-w-[110px] flex flex-col items-center gap-1 py-1.5 rounded-lg hover:bg-white/5 transition disabled:opacity-50' + (v.spenta ? ' opacity-60' : '')}>
+                <Icon name={v.icon} size={20} className="text-accent" />
+                <span className="text-[11px] leading-tight text-gray-400 text-center line-clamp-2">{inEsecuzione === v.key ? 'Un attimo…' : v.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
     >
         {!vaultUnlocked ? (
           <VaultPinGate token={token} userId={userId} onUnlocked={() => setVaultUnlocked(true)} />

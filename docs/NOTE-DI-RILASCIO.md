@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.125 — Dettaglio record: barra in basso con etichette
+
+Le azioni del dettaglio (Clienti, Immobili e ogni altro modulo) stanno ora in una barra fissa in basso: icona sopra, nome sotto, massimo 4 voci. Modifica c'è sempre; se le altre non stanno, l'ultima voce è «Altro» con il resto (anche le azioni «da attivare»). «Documenti» apre l'elenco dei documenti. In alto accanto alla X c'è «⋯» con Elimina, lontano dai tasti di uso comune. Nuova icona «more» nella mappa.
+
 ## 0.4.124 — Dettaglio più pulito, selettore data da mobile, query grandi su Linode
 
 Nel dettaglio di un record le azioni non sono più una fila di pulsanti con testo che andava su quattro righe: sono icone (Azioni, Documenti, Modifica, Elimina) con il nome al tocco/sopra; le azioni esterne stanno in un solo menu «Azioni» con nome e spiegazione, oppure un solo pulsante se ce n'è una. I selettori data/ora da iPhone restano dentro lo schermo e hanno la stessa altezza degli altri campi. Per i tenant su Linode, una query con risposta grande (lo schema di un modulo, oltre 20 KB) si leggeva a metà: ora si legge intera (toccava la Libreria: esporta, salva, dove è usato).

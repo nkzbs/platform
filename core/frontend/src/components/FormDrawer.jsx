@@ -15,7 +15,7 @@ import Icon from './Icon'
 // quella card invece di coprire tutta la pagina. Il portale lo sposta fuori
 // dall'albero React (e dal DOM) della card, verso la radice — fixed torna a
 // comportarsi come ci si aspetta, qualunque sia l'antenato da cui si apre.
-function FormDrawer({ title, onClose, children, footer, wide, headerExtra }) {
+function FormDrawer({ title, onClose, children, footer, wide, headerExtra, titleExtra }) {
   return createPortal(
     <div className="fixed inset-0 bg-black/70 z-50 flex justify-end" onClick={onClose}>
       <div
@@ -25,6 +25,7 @@ function FormDrawer({ title, onClose, children, footer, wide, headerExtra }) {
         {/* Intestazione: il titolo ha la sua riga (non si spezza in tre righe), le azioni (headerExtra) vanno SEMPRE sotto, a capo se non stanno in una riga (tutte visibili, niente scorrimento nascosto): accanto al titolo lo facevano troncare («Provvigio…»). */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-800 flex-shrink-0">
           <h2 className="flex-1 min-w-0 text-lg font-bold text-ink truncate">{title}</h2>
+ {titleExtra}
           <button onClick={onClose} aria-label="Chiudi" className="text-gray-500 hover:text-ink transition p-1"><Icon name="x" size={18} /></button>
           {headerExtra && <div className="order-last w-full flex flex-wrap items-center gap-2">{headerExtra}</div>}
         </div>
