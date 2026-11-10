@@ -62,6 +62,10 @@ cd super-admin/backend && npm test     # 34 suite
 
 I frontend si verificano compilando: `cd core/frontend && npx vite build` (idem `super-admin/frontend`).
 
+## Dove gira
+
+Super Admin e lo staging (ai-sandbox) stanno sul NAS; i tenant in produzione (Finance, zucca) ognuno su un **suo server Linode**, gestiti da Super Admin. Vedi `ARCHITETTURA.md` («Tenant su un server Linode») e `docs/OPERAZIONI.md`.
+
 ## Mettere online sul NAS
 
 ```bash

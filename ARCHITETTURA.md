@@ -1,6 +1,6 @@
 # Architettura
 
-Come è fatto Platform 0.1. Per il perché vedi [`PLATFORM-VISIONE.md`](PLATFORM-VISIONE.md); per metterlo
+Come è fatto Platform 0.5. Per il perché vedi [`PLATFORM-VISIONE.md`](PLATFORM-VISIONE.md); per metterlo
 online e mantenerlo vedi [`docs/OPERAZIONI.md`](docs/OPERAZIONI.md).
 
 ## In breve
@@ -9,7 +9,8 @@ Due tipi di processo:
 
 - **Super Admin** (uno solo): crea e gestisce i tenant, ospita il Builder e la Libreria, fa i backup.
 - **Tenant** (uno per progetto): la stessa immagine `platform-core` con un proprio database e i propri
-  moduli. Finance è un tenant.
+  moduli. Finance e zucca sono tenant. Un tenant vive **sul NAS** (staging, prova) oppure **sul suo server
+  Linode** (produzione): vedi «Tenant su un server Linode» più sotto. Super Admin resta sempre sul NAS.
 
 Un **provisioner** (piccolo servizio con accesso a Docker) è l'unico che crea e ferma i container dei tenant.
 
@@ -455,6 +456,45 @@ La vista **Da inizio anno** (`buildYearSnapshot`) va da gennaio all'ultimo mese 
 - **La copia**: database (`VACUUM INTO`, verificato per dimensione), allegati (tar in streaming), file `env` con i segreti (permessi 0600; `INTERNAL_API_SECRET` nuovo, `SUPER_ADMIN_URL` su una porta chiusa, `DETACHED=1`), immagine (`/images/export` del provisioner, gzip in streaming, `docker load`), `docker run` con riavvio automatico e prova di `/health`. Se si rompe dopo l'avvio, il container a metà viene tolto.
 - **Difese**: destinazioni vietate loopback e link-local (servizi dei cloud) e, salvo `EXPORT_ALLOW_PRIVATE=1`, gli indirizzi privati (da Super Admin non si deve poter sondare la rete interna); credenziali SSH solo in memoria (mai in log, stato o audit, svuotate a fine lavoro); un solo lavoro per tenant alla volta; cartella e porta validate (niente caratteri da shell).
 - **Distaccato = indipendente**: senza Super Admin non ci sono AI, Libreria e aggiornamenti.
+
+## Tenant su un server Linode
+
+Dalla 0.4.103 (collaudato dal vivo nella 0.4.111) ogni tenant può vivere su un **suo server** Linode (Nanode 1 GB, Milano, 5 $ al mese più 2 $ di backup). Super Admin resta sul NAS e gestisce entrambi i tipi dalla stessa lista. La colonna `tenants.host` dice dove sta (`nas` o `linode`); per Linode ci sono anche `remote_ip`, `linode_id` e `remote_fingerprint` (l'impronta SSH, fissata alla prima connessione).
+
+**File** (tutti in `super-admin/backend/src/`):
+
+| File | Cosa fa |
+|---|---|
+| `lib/linode.js` | Token Linode (cifrato in `cloud_settings`), regione e tipo, controllo a sole letture, creazione e cancellazione del server. Tetto di 5 server (`cloud_settings.max_server`) |
+| `lib/cloudflare.js`, `cloudflare.js` | Un solo collegamento a Cloudflare (token, zona, dominio, IP del NAS) in `cloud_settings`; record DNS dei tenant |
+| `lib/server-remoto.js` | Il driver: crea il server, lo prepara, porta il tenant, lo aggiorna, lo ripristina, lo interroga |
+| `lib/sposta-linode.js` | Sposta un tenant dal NAS a Linode con rete di ritorno |
+| `lib/tenant-host.js` | Come si raggiunge un tenant (NAS o dominio pubblico) |
+| `routes/cloud.js` | `/api/cloud`: collegamenti Linode e Cloudflare (Impostazioni → Server) |
+
+**Il server di un tenant**: Ubuntu con `docker.io` e `caddy`; una rete `platform-net` con un Redis interno (il core in produzione lo pretende) mai esposto; il container `platform-<slug>` con `--env-file /srv/platform/<slug>/env` e dati in `/srv/platform/<slug>/data`; Caddy con certificato Let's Encrypt che risponde sulla 443 **e sulla 4000**, perché la zona Cloudflare porta il traffico dei tenant sulla porta 4000. L'etichetta del server è `tenant-<slug>` (i primi si chiamavano `plt-<slug>`: il collegamento passa dall'id Linode, non dal nome). L'accesso è solo con una chiave ed25519 di Super Admin (cifrata a riposo).
+
+**Come nasce** (`crea`): il server si crea, ci si collega (impronta fissata), si prepara, arriva l'immagine del core dal NAS (`docker save` via il provisioner), si scrivono i segreti, parte il container, poi l'indirizzo: il record DNS nasce **senza proxy** così Caddy ottiene il certificato (con il proxy Let's Encrypt riceveva 403), e **solo dopo** si accende il proxy Cloudflare. Se un passo fallisce, il messaggio d'errore include una diagnosi presa dal server (container, Caddy, log) e il server appena creato si cancella da solo. La richiesta HTTP non regge i minuti necessari: per Linode la creazione è in background e la schermata segue lo stato vero del tenant; la password iniziale resta 30 minuti in memoria e si legge una volta (`/:slug/credenziali-iniziali`).
+
+**Cosa si fa da Super Admin su un tenant Linode** (tutto passa da SSH ed esegue dentro il container, mai con SQL fuori dal nostro codice e con i valori su stdin): backup (`VACUUM INTO` nel container, poi download), ripristino (controllo di integrità prima, il database attuale resta accanto, ritorno automatico se non riparte), reset credenziali, sessioni e «attivo ora», statistiche (stato e consumi), Libreria (`righeTenant` in `routes/registry.js`), esportazione verso un server esterno, aggiornamento (l'immagine del NAS), avvio e stop. Le risposte grandi (schemi di moduli) si leggono intere: il client SSH tiene solo gli ultimi 20 KB, quindi `interroga` raccoglie tutto da `onStdout`.
+
+**Cancellazione sicura**: prima la copia di sicurezza; se non riesce, il server Linode **resta**. Dopo uno spostamento si toglie anche il container fermo sul NAS.
+
+**Spostare un tenant** (`lib/sposta-linode.js`): copia di sicurezza; il server nasce e si prepara senza toccare il tenant; solo allora il tenant si ferma sul NAS (3-5 minuti), database (copia consistente) e allegati vanno sul server, il tenant parte là, l'indirizzo passa al nuovo server. Se qualcosa fallisce dopo lo stop: il server nuovo si cancella, l'indirizzo torna al NAS, il tenant si riaccende sul NAS (mai modificato). A fine lavoro il tenant sul NAS resta **fermo con tutti i suoi dati**: lo cancella una persona. Lo stato transitorio `moving` è fuori dai controlli automatici; il riconciliatore dei container non guarda i tenant Linode.
+
+**Segreti e collegamenti**: lo spostamento porta `JWT_SECRET` e `ENCRYPTION_KEY` dello stesso tenant, quindi utenti, password, sessioni, 2FA, passkey (stesso dominio) e i collegamenti cifrati (Google, WhatsApp, Telegram, OpenAPI.it) restano validi. La chiave Mistral sta in Super Admin, non nel tenant.
+
+**Non c'è ancora**: vista di Super Admin su file locali del tenant (la dimensione in Analytics usa l'ultimo backup riuscito), «Controlla Linode» che segnali un server orfano, un pulsante per togliere solo la copia ferma sul NAS.
+
+## Interfaccia: azioni in menu, schede, un solo pulsante in evidenza
+
+Dalla 0.4.124 la regola per ogni schermata (scelta dall'utente, pensata per il telefono):
+
+- **Un solo pulsante in evidenza** per schermata («Nuovo», «Apri»); le altre azioni in un menu «⋯» fatto di righe `VoceMenu` (`shared/frontend/VoceMenu.jsx`, ponti in `core/frontend/src/components` e `super-admin/frontend/src/components`): icona, nome intero, una riga di spiegazione; Elimina separata e in rosso.
+- **Dettaglio di un record a schede**: Dati | Azioni | Documenti (`RecordDetailModal.jsx`). La scheda Azioni dice per ogni azione «a pagamento · circa X €» (listino, nessuna richiesta: `GET /api/records/:slug/azioni-stato` risponde anche `a_pagamento` e `costo`), «da attivare» o «non collegato». Matita per Modifica e «⋯» con Elimina in alto. Nessun campo nuovo: legge nome, icona e descrizione già dichiarati dallo schema.
+- **Liste dei moduli**: «Nuovo» in evidenza, Report e Calendario come icone con stato, il resto nel menu. Il pannello del menu resta montato ma `hidden`, perché Importa da PDF, Busta paga ecc. hanno finestre proprie.
+- **Mobile**: un menu non si ancora al tasto (usciva dallo schermo) ma alla riga o alla card; la card ha `overflow` visibile mentre è aperto; si chiude toccando fuori. I selettori data/ora hanno una regola globale in `core/frontend/src/index.css`.
+- **Pagina bianca cambiando utente**: un `useEffect` stava dopo il `return` del login in `App.jsx`; uscendo React vedeva meno ganci, andava in errore e svuotava la pagina. Ora sta prima; un test (`app-hooks-order.test.js`) impedisce di rimetterlo dopo.
 
 ## Inviti
 

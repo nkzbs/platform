@@ -7,7 +7,7 @@ Come si mette online, si aggiorna e si mantiene Platform sul NAS. Per come è fa
 
 | Cosa | Valore |
 |---|---|
-| Server | NAS Synology, x86 (amd64), Docker in `/usr/local/bin/docker` |
+| Server | NAS Synology, x86 (amd64), Docker in `/usr/local/bin/docker`. Sul NAS: Super Admin e ai-sandbox. Finance e zucca stanno su server Linode propri (vedi «Tenant su Linode») |
 | Accesso | `ssh -p 1988 claude@192.168.1.2` (chiave, niente password) |
 | Router | inoltra la fascia 4000-4100 al NAS; Cloudflare punta alla porta **4000** |
 | Segreti | `/volume1/docker/deploy-secrets/*.env` (permessi 600), mai nel repository |
@@ -269,6 +269,26 @@ Nel Builder, modulo Documenti → «Come si vede l'elenco» → **Archivio**. Le
 - I backup fatti **prima** dell'aggiornamento (i 7 giornalieri, le copie sul Mac) contengono ancora i segreti **in chiaro**: scadono da soli in una settimana (quelli automatici); le copie manuali vanno cancellate quando non servono più.
 - Se dopo un ripristino i collegamenti risultano scollegati ma la chiave è giusta, guarda nel log di avvio se compare «NON riusciti».
 - **Librerie**: ogni tanto `npm audit --omit=dev` in `core/backend`, `super-admin/backend`, `super-admin/docker-provisioner`. Non usare `npm audit fix` negli ultimi due senza controllare che `dockerode` resti ≥ 4.0.5. Il **provisioner** non si aggiorna con `redeploy-nas.sh`: ha un'immagine sua (`docker-provisioner:0.1`).
+
+## Tenant su Linode
+
+**Dove sta cosa (dalla 0.4.120)**: sul NAS restano **Super Admin** e ai-sandbox (lo staging); **Finance** e **zucca** vivono ognuno sul **proprio server Linode** (`tenant-finance`, `tenant-zucca`). Super Admin li gestisce dalla stessa lista; ogni riga dice «NAS» o «Linode · IP».
+
+**Una volta sola** (Super Admin → Impostazioni → Server): il token Linode (permessi di lettura e scrittura su Linodes), regione `it-mil` e tipo `g6-nanode-1`, e il collegamento a Cloudflare (ID della zona, dominio, IP pubblico del NAS; token con il solo permesso Zona → DNS → Modifica, limitato alla zona). I token si salvano cifrati e non si rimostrano. «Controlla Linode» e «Controlla Cloudflare» fanno solo letture.
+
+**Creare un tenant su Linode**: Nuovo tenant → «Dove creare il tenant» = Linode (o dalla pagina Analisi). Costa 5 $ + 2 $ di backup al mese, da subito; tetto di 5 server. Dura circa 10 minuti: la finestra mostra le fasi vere. Le credenziali iniziali compaiono a fine creazione e si leggono **una volta** (30 minuti in memoria: se Super Admin si riavvia prima, «Reset credenziali»).
+
+**Spostare un tenant dal NAS a Linode**: riga del tenant → «⋯» → **Sposta su Linode**. Il tenant resta fermo 3-5 minuti, l'indirizzo non cambia, utenti e sessioni restano. Se qualcosa va storto si rimette tutto sul NAS da solo. Dopo, la copia sul NAS resta **ferma con tutti i dati**: **non cancellare il tenant da Super Admin** finché non sei tranquillo, perché cancellandolo si toglie anche quella. Prima di spostare controlla se il tenant usa servizi che accettano solo certi indirizzi IP (l'IP di uscita cambia, ad esempio una chiave OpenAPI.it con restrizione).
+
+**Aggiornare un tenant su Linode**: «⋯» → Aggiorna, come sul NAS (chiede il 2FA). Riceve l'immagine del core che c'è **sul NAS in quel momento**; l'immagine si ricostruisce con un «Aggiorna» di un tenant sul NAS (oggi ai-sandbox). Per portare un tenant Linode all'ultima versione: prima aggiorna un tenant del NAS, poi quello Linode. Gli aggiornamenti dei pacchetti di verticale arrivano da soli; se l'azione esiste già nel tenant, il pacchetto non ne cambia i campi (ad esempio un'icona): vanno corretti nel Builder o con una modifica mirata.
+
+**Backup e ripristino**: i backup automatici e manuali funzionano come per il NAS (il database viene scaricato dal server e conservato su Super Admin). Ripristino: prima una copia di sicurezza dello stato attuale, poi il backup viaggia sul server e si controlla; il database di prima resta accanto con la data; se il tenant non riparte si rimette quello di prima.
+
+**Cancellare un tenant su Linode**: prima la copia di sicurezza; se non riesce, il server **non** si cancella. Poi si cancella il server (si smette di pagare), il record DNS e, se c'era, il container fermo sul NAS. Controlla sempre in «Controlla Linode» che il server sia sparito.
+
+**Se qualcosa non va**: la creazione fallita mostra un messaggio con la **diagnosi dal server** (container, Caddy, log) ed elimina il server. `521` da Cloudflare su un tenant Linode: ricordati che Cloudflare parla alla **porta 4000** (Caddy la serve); verifica con una richiesta diretta all'IP. Un server che non risponde a SSH: l'impronta è fissata alla prima connessione e non si riscrive da sola.
+
+**Chiavi**: la chiave SSH di Super Admin è creata alla prima creazione, cifrata nel database; la pubblica va sui server nuovi in automatico.
 
 ## Distaccare un tenant su un server dell'utente
 

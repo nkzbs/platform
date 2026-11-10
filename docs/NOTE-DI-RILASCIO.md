@@ -2,6 +2,20 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.0 — Un server per tenant, spostare un tenant, un'interfaccia unica da telefono
+
+La 0.5 chiude la fase «dal NAS al server per tenant» e la riorganizzazione dell'interfaccia. Dalla 0.4.88 (generatore di moduli e collaudo) a qui:
+
+**Server per tenant (0.4.103–0.4.122).** Super Admin resta sul NAS; ogni tenant in produzione vive su un suo server Linode. Si sceglie dove nasce un tenant (NAS = staging, Linode = produzione) e si può **spostare** dal NAS a Linode con un pulsante, con rete di ritorno sul NAS. Da Super Admin, su un tenant Linode, funzionano: creazione (in background, con le fasi vere), aggiornamento, backup, ripristino, reset credenziali, sessioni e statistiche, Libreria, esportazione, cancellazione sicura (prima la copia). Un solo collegamento a Cloudflare. Collaudato dal vivo: creazione, aggiornamento, backup, ripristino, cancellazione, spostamento (con gli allegati) e il ritorno automatico dopo un fallimento. **Finance e zucca sono spostati e in uso su Linode.**
+
+**Interfaccia (0.4.124–0.4.133).** Dettaglio dei record a schede (Dati, Azioni, Documenti) con il costo di ogni azione visibile prima di premere; un solo pulsante in evidenza per schermata e il resto in un menu con icona, nome e spiegazione (`VoceMenu`), in liste, utenti, Builder, Libreria e Analisi, sia nei tenant sia in Super Admin. Selettori data da iPhone dentro lo schermo. Corretta la «pagina bianca» cambiando utente (un gancio React dopo il return del login).
+
+**Altro.** Rimossa la PEC (pacchetto 22) e le icone distinte di Verifica e Credit score (pacchetto 23). Corretti: allegati a 0 byte via SSH, risposte grandi lette a metà via SSH, reconciliatore che segnalava «container mancante» sui tenant Linode, cancellazione che lasciava il container fermo sul NAS.
+
+**Da sapere.** L'immagine del core dei tenant Linode viene dal NAS: per portarli all'ultima versione si aggiorna prima un tenant del NAS. Dopo uno spostamento la copia sul NAS resta ferma: non cancellare il tenant da Super Admin finché non sei tranquillo (si toglie anche quella). Un'azione già presente in un tenant non viene riscritta da un nuovo pacchetto (le icone di zucca sono state corrette a mano, con copia di sicurezza).
+
+**Da verificare / non ancora.** Una esportazione completa di un tenant Linode verso un server esterno (provate le due parti che dipendevano dal NAS); la barra delle fasi della creazione dal pulsante vero (la creazione di `collaudo` dal pulsante è riuscita, la barra non è stata osservata); l'avvio dell'app da telefono (circa 4 secondi di schermo nero, non misurato); un pulsante per togliere solo la copia ferma sul NAS; un avviso di «server orfano» in «Controlla Linode».
+
 ## 0.4.133 — Super Admin: Analisi, Utenti e Libreria con lo stesso schema
 
 Analisi: dopo la creazione del tenant, «Invita il cliente», «Genera una nuova password» e «Riprova la configurazione» sono un elenco di azioni con icona e spiegazione (prima tre link di testo sparsi). Utenti di Super Admin: Abilita/Disabilita, Resetta password, Disattiva 2FA ed Elimina stanno nel menu «⋯» (Elimina separata, in rosso). Libreria: «Moduli generici» e «Moduli di default» nel menu «⋯», resta in evidenza «Salva un modulo». Tutto con il componente condiviso VoceMenu.

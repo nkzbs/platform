@@ -875,3 +875,23 @@ Codice potato dopo lo spegnimento di Platform (2 ottobre 2026): vedi [`DECISIONI
 ## 0.4.96 — Permessi generati: «sola lettura» per chi il modello non cita
 
 La matrice dei permessi chiude fuori ogni ruolo senza una riga (tranne `admin`). Se il modello ne dimenticasse uno, quel ruolo non vedrebbe più il modulo. Per questo il generatore (`lib/generatore-moduli.js`) accetta solo ruoli che nascono dall'analisi, dà **sola lettura** a quelli non citati (e a `user`), e usa «solo i miei» (`owner_field`) solo con una relazione che esiste davvero nel modulo. Le azioni delle automazioni restano un elenco chiuso (crea, aggiorna con set/increment/decrement, notifica interna): le altre hanno una configurazione che il modello non può indovinare.
+
+## 0.4.103–0.4.122 — Un server per tenant: Super Admin sul NAS, i tenant su Linode
+
+L'utente ha deciso (2026-11-10) che Super Admin resta sul NAS e ogni tenant in produzione ha un **suo Nanode** Linode (5 $ + 2 $ di backup al mese; budget 100 $ per cinque mesi). Il NAS resta lo **staging**: alla creazione di un tenant si sceglie dove nasce, e un tenant si può spostare dopo. Perché: isolamento (un tenant che si pianta non toglie RAM agli altri; il NAS ne aveva 105 MB liberi), un costo prevedibile, e Super Admin non è più un punto unico per i dati dei clienti. Le alternative scartate: un unico server grande (condivide i guasti) e solo NAS (poca RAM, spento di notte).
+
+**Scelte di sicurezza fatte insieme**: tetto di 5 server; il server nuovo si cancella da solo se la creazione fallisce; un tenant non si cancella se la copia di sicurezza non riesce; l'impronta SSH si fissa alla prima connessione; i token Linode e Cloudflare sono cifrati e il controllo è a sole letture; un solo collegamento a Cloudflare (prima c'erano due configurazioni doppie, e l'utente non le voleva).
+
+**DNS senza proxy per il certificato.** Il primo collaudo ha mostrato che Let's Encrypt riceve 403 dietro il proxy Cloudflare. Il record nasce senza proxy, Caddy ottiene il certificato, e solo dopo si accende il proxy. **Cloudflare parla alla porta 4000** (una regola della zona che non conoscevamo): Caddy risponde sulla 443 e sulla 4000 con lo stesso certificato.
+
+**Spostare = copia con rete di ritorno, non trasloco.** Lo spostamento non modifica mai il tenant sul NAS: lo ferma, copia, controlla e cambia l'indirizzo; se qualcosa fallisce torna indietro; a fine lavoro il NAS resta con la copia ferma finché una persona la cancella. Costo: 3-5 minuti di stop (si è scartata la versione senza stop, più complicata: richiederebbe il certificato prima con una verifica via DNS). Il tenant si sposta con le **stesse chiavi** (`JWT_SECRET`, `ENCRYPTION_KEY`), quindi utenti, password, sessioni, 2FA, passkey e collegamenti cifrati restano validi.
+
+**Interrogare dentro il container, non con file.** Prima Super Admin leggeva i file dei tenant dal volume del NAS (backup, sessioni, statistiche, Libreria, registro). Per i tenant su Linode ogni lettura gira **nel container sul suo server** via SSH, con i valori su stdin e mai dentro il comando; le scritture passano dallo stesso percorso. Una sola funzione (`interroga`), non un database replicato: nessun dato duplicato da tenere allineato.
+
+**L'immagine del core viene dal NAS.** Un tenant Linode riceve l'immagine che c'è sul NAS in quel momento: per aggiornarlo all'ultima versione si aggiorna prima un tenant del NAS. È un compromesso (un solo punto dove si costruisce l'immagine) da riguardare se i tenant sul NAS finiscono.
+
+## 0.4.124–0.4.133 — Lo stesso schema in tutto Platform
+
+L'utente ha scelto la proposta F («schede Dati/Azioni/Documenti») e ha detto «portalo ovunque». Regole: un solo pulsante in evidenza per schermata, le altre azioni in un menu con icona, nome e spiegazione (`VoceMenu`), azioni con il costo visibile **prima** di premere, icone diverse per cose diverse, mobile per primo. Resta modulare: la scheda legge nome, icona e descrizione già nello schema, senza campi nuovi e senza nomi di progetto nel core. Non toccati di proposito: i moduli di inserimento (Connessioni, Impostazioni di Super Admin) e i piccoli pulsanti di modifica dentro il Builder, pensati per computer.
+
+**Perché la «pagina bianca» cambiando utente non si risolveva con la sola pagina di partenza**: la causa era un gancio React dopo il `return` del login (vedi ARCHITETTURA). Un test lo impedisce.
