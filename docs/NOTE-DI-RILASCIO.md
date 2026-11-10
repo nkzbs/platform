@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.130 — Liste dei moduli: un solo pulsante in evidenza e un menu «⋯»
+
+In cima a ogni lista di record c'erano fino a dieci pulsanti con testo (Importa da PDF, Busta paga, CSV, Sincronizza Drive, Carica file, Messaggio, Importa, Report, Calendario, Cerca da fonte esterna, Nuovo). Ora: «Nuovo» in evidenza, Report e Calendario come icone con stato, e tutto il resto nel menu «⋯», una riga per voce con icona, nome e spiegazione (componente VoceMenu, usato anche altrove). Il menu resta montato da chiuso, così le finestre di importazione non spariscono. Da telefono sta dentro lo schermo.
+
 ## 0.4.129 — Menu del tenant dentro lo schermo
 
 Da telefono il menu «⋯» della riga tenant usciva a sinistra dello schermo (ancorato al tasto, che non sta a destra). Ora si apre sotto la riga, largo come la card su telefono e di 20 rem su schermo largo.

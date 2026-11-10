@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import useApi from '../lib/useApi'
 import Icon from './Icon'
+import VoceMenu from './VoceMenu'
 import Portal from './Portal'
 
 // «Importa da PDF» (potenziamento "Importare" del modulo): carichi una bolletta o una fattura, l'AI legge il PDF e propone i campi; controlli e confermi.
@@ -9,7 +10,7 @@ const MAX = 3 * 1024 * 1024
 const eur = (n) => Number(n || 0).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })
 const toBase64 = (file) => new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(String(r.result).split(',')[1] || ''); r.onerror = reject; r.readAsDataURL(file) })
 
-export default function ImportPdf({ token, mod, onCreated }) {
+export default function ImportPdf({ token, mod, onCreated, voce }) {
   const api = useApi(token)
   const [enabled, setEnabled] = useState(false)
   const [open, setOpen] = useState(false)
@@ -53,7 +54,9 @@ export default function ImportPdf({ token, mod, onCreated }) {
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="bg-gray-800 hover:bg-gray-700 text-accent px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5"><Icon name="wand" size={14} />Importa da PDF</button>
+      {voce
+        ? <VoceMenu icon="wand" label="Importa da PDF" desc="Legge un documento e propone i dati da inserire" onClick={() => setOpen(true)} />
+        : <button type="button" onClick={() => setOpen(true)} className="bg-gray-800 hover:bg-gray-700 text-accent px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5"><Icon name="wand" size={14} />Importa da PDF</button>}
       {open && (
         <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">

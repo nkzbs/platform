@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import useApi from '../lib/useApi'
 import Icon from './Icon'
+import VoceMenu from './VoceMenu'
 
 // "Sincronizza Drive": non aspettare il giro automatico di 15 minuti del
 // poller (richiesto dall'utente il 25/10/2026: "un tasto aggiorna nei
 // documenti per forzare il sync"). Generico come BustaPagaReportView: si
 // mostra solo se QUESTO modulo è davvero quello che drive-poller.js gestisce.
-export default function DriveSyncButton({ token, mod, onSynced }) {
+export default function DriveSyncButton({ token, mod, onSynced, voce }) {
   const api = useApi(token)
   const [attivo, setAttivo] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -36,6 +37,7 @@ export default function DriveSyncButton({ token, mod, onSynced }) {
     if (importati && onSynced) onSynced()
   }
 
+  if (voce) return <VoceMenu icon="refresh" iconClassName={busy ? 'animate-spin' : ''} label={busy ? 'Sincronizzo…' : 'Sincronizza Drive'} desc="Controlla subito se ci sono file nuovi su Drive" onClick={sync} disabled={busy} />
   return (
     <button onClick={sync} disabled={busy} className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-400 hover:text-gray-200 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2" title="Controlla subito se ci sono file nuovi su Drive">
       <Icon name="refresh" size={14} className={busy ? 'animate-spin' : ''} />{busy ? 'Sincronizzo…' : 'Sincronizza Drive'}

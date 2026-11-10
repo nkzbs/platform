@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import useApi from '../lib/useApi'
 import Icon from './Icon'
+import VoceMenu from './VoceMenu'
 import Portal from './Portal'
 
 // «Carica busta paga» (potenziamento "payslip" del modulo): carichi il PDF o una foto della
@@ -12,7 +13,7 @@ const toBase64 = (file) => new Promise((resolve, reject) => { const r = new File
 const toMin = (hhmm) => { if (!hhmm) return null; const [h, m] = String(hhmm).slice(0, 5).split(':').map(Number); return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : null }
 const durata = (min) => { if (min == null) return '—'; const h = Math.floor(min / 60), m = Math.round(min % 60); return (h ? h + 'h ' : '') + (m || !h ? m + 'm' : '') }
 
-export default function ImportPayslip({ token, mod, user, onCreated }) {
+export default function ImportPayslip({ token, mod, user, onCreated, voce }) {
   const api = useApi(token)
   const [enabled, setEnabled] = useState(false)
   const [open, setOpen] = useState(false)
@@ -74,7 +75,9 @@ export default function ImportPayslip({ token, mod, user, onCreated }) {
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="bg-gray-800 hover:bg-gray-700 text-accent px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5"><Icon name="wand" size={14} />Carica busta paga</button>
+      {voce
+        ? <VoceMenu icon="wand" label="Carica busta paga" desc="Legge la busta paga e la confronta con le ore registrate" onClick={() => setOpen(true)} />
+        : <button type="button" onClick={() => setOpen(true)} className="bg-gray-800 hover:bg-gray-700 text-accent px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5"><Icon name="wand" size={14} />Carica busta paga</button>}
       {open && (
         <Portal>
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">

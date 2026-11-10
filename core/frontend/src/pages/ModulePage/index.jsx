@@ -4,6 +4,7 @@ const toast = (message, type = 'success') => window.dispatchEvent(new CustomEven
 import useApi from '../../lib/useApi'
 import { parseSchemaFrontend, getRequiredConnectors } from '../../lib/schema-v3-frontend'
 import Icon from '../../components/Icon'
+import VoceMenu from '../../components/VoceMenu'
 import FormDrawer from '../../components/FormDrawer'
 import Select from '../../components/Select'
 import FieldEditorInput from './FieldEditorInput'
@@ -321,6 +322,13 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
   }
 
   const [viewMode, setViewMode] = useState('table')
+  const [menuLista, setMenuLista] = useState(false)
+  useEffect(() => { // un tocco fuori dal menu lo chiude
+    if (!menuLista) return undefined
+    const chiudi = (e) => { if (!(e.target.closest && e.target.closest('[data-menu-lista]'))) setMenuLista(false) }
+    document.addEventListener('mousedown', chiudi); document.addEventListener('touchstart', chiudi)
+    return () => { document.removeEventListener('mousedown', chiudi); document.removeEventListener('touchstart', chiudi) }
+  }, [menuLista])
   const [calMonth, setCalMonth] = useState(() => { const n = new Date(); return { y: n.getFullYear(), m: n.getMonth() } })
   const [creating, setCreating] = useState(false)
 
@@ -614,50 +622,8 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
           </div>
         </div>
         {editableFields.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap">
-            {canCreate && <ImportPdf token={token} mod={mod} onCreated={loadRecords} />}
-            {canCreate && <ImportPayslip token={token} mod={mod} user={user} onCreated={loadRecords} />}
-            <button onClick={exportCsv} className="bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2" title="Esporta CSV">
-              <Icon name="download" size={14} />CSV
-            </button>
-            <DriveSyncButton token={token} mod={mod} onSynced={loadRecords} />
-            {canCreate && mod.batch_upload_field && (
-              <>
-                {batchCategoryField && (
-                  <select className="bg-surface-card text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-800" value={batchCategory} onChange={(e) => setBatchCategory(e.target.value)}>
-                    {(batchCategoryField.options || []).map((o) => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                )}
-                <input ref={batchFileRef} type="file" multiple className="hidden" onChange={(e) => uploadBatch(e.target.files)} />
-                <button onClick={() => batchFileRef.current && batchFileRef.current.click()} disabled={batchUploading}
-                  className="bg-accent hover:opacity-90 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2" title="Carica uno o più file — ognuno diventa un nuovo record">
-                  <Icon name="upload" size={14} />{batchUploading ? 'Caricamento...' : 'Carica file'}
-                </button>
-              </>
-            )}
-            {user && user.role === 'admin' && schema && (schema.external_actions || []).some((x) => x.adapter === 'messaggio_cliente') && (
-              <button onClick={() => setMessaggioMassivo(true)} title="Scrivi un messaggio (mail e/o SMS) ai clienti che vedi in questa lista: partirà solo a chi ha il consenso alle comunicazioni commerciali" className="bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
-                <Icon name="mail" size={14} />Messaggio
-              </button>
-            )}
-            {canCreate && (
-              <button onClick={() => { setShowImport(true); resetImport() }} className="bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2" title="Importa CSV">
-                <Icon name="upload" size={14} />Importa
-              </button>
-            )}
-            <button onClick={() => setShowReport(!showReport)} className={'px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ' + (showReport ? 'bg-gray-700 text-ink' : 'bg-gray-800 hover:bg-gray-700 text-gray-300')}>
-              <Icon name="bar-chart" size={14} />Report
-            </button>
-            {fields.some((f) => f.type === 'date' || f.type === 'datetime') && (
-              <button onClick={() => setViewMode((v) => v === 'calendar' ? 'table' : 'calendar')} className={'px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ' + (viewMode === 'calendar' ? 'bg-gray-700 text-ink' : 'bg-gray-800 hover:bg-gray-700 text-gray-300')}>
-                <Icon name="calendar" size={14} />Calendario
-              </button>
-            )}
-            {canCreate && (schema.api_sources || []).filter((s) => s.enabled !== false).length > 0 && (
-              <button onClick={() => setShowSourceSearch(true)} className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
-                <Icon name="search" size={14} />Cerca da fonte esterna
-              </button>
-            )}
+          <div className="flex items-center gap-2" data-menu-lista>
+            {/* Il solo pulsante in evidenza è «Nuovo». Report e Calendario sono viste (icone con stato). Tutto il resto sta nel menu «⋯», una riga per voce con la sua spiegazione. */}
             {canCreate && branchCreates.length > 0 ? (
               branchCreates.map((bc, i) => (
                 <button key={i} onClick={() => setBranchCreateOpen(bc)} className="bg-accent hover:opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
@@ -683,6 +649,47 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
                 <Icon name="plus" size={14} />Nuovo
               </button>
             )}
+            <button onClick={() => setShowReport(!showReport)} aria-label="Report" title="Report" aria-pressed={showReport} className={'w-9 h-9 rounded-lg transition flex items-center justify-center ' + (showReport ? 'bg-gray-700 text-ink' : 'bg-gray-800 hover:bg-gray-700 text-gray-300')}>
+              <Icon name="bar-chart" size={16} />
+            </button>
+            {fields.some((f) => f.type === 'date' || f.type === 'datetime') && (
+              <button onClick={() => setViewMode((v) => v === 'calendar' ? 'table' : 'calendar')} aria-label="Calendario" title="Calendario" aria-pressed={viewMode === 'calendar'} className={'w-9 h-9 rounded-lg transition flex items-center justify-center ' + (viewMode === 'calendar' ? 'bg-gray-700 text-ink' : 'bg-gray-800 hover:bg-gray-700 text-gray-300')}>
+                <Icon name="calendar" size={16} />
+              </button>
+            )}
+            <div className="relative">
+              <button onClick={() => setMenuLista((x) => !x)} aria-haspopup="menu" aria-expanded={menuLista} aria-label="Altre azioni" title="Altre azioni" className="w-9 h-9 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition flex items-center justify-center">
+                <Icon name="more" size={18} />
+              </button>
+              {/* Il pannello resta montato anche da chiuso (hidden): le finestre di Importa da PDF, Busta paga ecc. vivono dentro questi componenti e non devono sparire quando il menu si chiude. */}
+              <div role="menu" hidden={!menuLista} onClick={() => setMenuLista(false)} className="absolute right-0 top-full mt-1 z-30 w-[min(20rem,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto bg-surface-card border border-gray-700 rounded-xl shadow-lg py-1">
+                {canCreate && <ImportPdf token={token} mod={mod} onCreated={loadRecords} voce />}
+                {canCreate && <ImportPayslip token={token} mod={mod} user={user} onCreated={loadRecords} voce />}
+                {canCreate && mod.batch_upload_field && (
+                  <>
+                    {batchCategoryField && (
+                      <div className="px-3 pt-2 pb-1" onClick={(e) => e.stopPropagation()}>
+                        <label className="text-[11px] text-gray-500 block mb-1">Categoria dei file da caricare</label>
+                        <select className="w-full bg-surface-page text-ink px-3 py-2 rounded-lg text-sm outline-none border border-gray-800" value={batchCategory} onChange={(e) => setBatchCategory(e.target.value)}>
+                          {(batchCategoryField.options || []).map((o) => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </div>
+                    )}
+                    <input ref={batchFileRef} type="file" multiple className="hidden" onChange={(e) => uploadBatch(e.target.files)} />
+                    <VoceMenu icon="upload" label={batchUploading ? 'Caricamento…' : 'Carica file'} desc="Uno o più file: ognuno diventa un nuovo record" disabled={batchUploading} onClick={() => batchFileRef.current && batchFileRef.current.click()} />
+                  </>
+                )}
+                {canCreate && <VoceMenu icon="upload" label="Importa da CSV" desc="Aggiunge molti record da un file CSV" onClick={() => { setShowImport(true); resetImport() }} />}
+                <VoceMenu icon="download" label="Esporta in CSV" desc="Scarica i record di questa lista" onClick={exportCsv} />
+                <DriveSyncButton token={token} mod={mod} onSynced={loadRecords} voce />
+                {user && user.role === 'admin' && schema && (schema.external_actions || []).some((x) => x.adapter === 'messaggio_cliente') && (
+                  <VoceMenu icon="mail" label="Messaggio ai clienti" desc="Scrivi un messaggio (mail e/o SMS) ai clienti che vedi in questa lista: partirà solo a chi ha il consenso alle comunicazioni commerciali" onClick={() => setMessaggioMassivo(true)} />
+                )}
+                {canCreate && (schema.api_sources || []).filter((s) => s.enabled !== false).length > 0 && (
+                  <VoceMenu icon="search" label="Cerca da fonte esterna" desc="Trova un record da un servizio collegato" onClick={() => setShowSourceSearch(true)} />
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
