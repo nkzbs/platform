@@ -1,5 +1,5 @@
 {
   "nome": "Mediazione immobiliare",
   "descrizione": "I dati dei moduli di un'agenzia immobiliare: documenti da firmare, abbinamento domanda e offerta, schede complete, sezioni e dati chiave, azione di valutazione di mercato, requisiti per stato, Quote societarie e promemoria; sezioni, dati chiave e requisiti per Clienti, Trattative, Provvigioni, Quote societarie, Richieste privacy e Contatti. Si cambia aumentando `versione`: i tenant che lo usano lo ricevono al prossimo aggiornamento; dati dimostrativi da OpenAPI.it.",
-  "versione": 22
+  "versione": 23
 }

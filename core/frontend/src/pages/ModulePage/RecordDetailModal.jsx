@@ -512,6 +512,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   const [gruppiAperti, setGruppiAperti] = useState({})
   const [menuFunz, setMenuFunz] = useState(false)
   const [menuTitolo, setMenuTitolo] = useState(false)
+  const [scheda, setScheda] = useState('dati') // Dati | Azioni | Documenti
   const [menuDoc, setMenuDoc] = useState(false)
   const valoreVuoto = (f) => { const v = record && record.data ? record.data[f.key] : undefined; return v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0) }
   const campiRiempiti = fields.filter((f) => !valoreVuoto(f))
@@ -589,22 +590,11 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
     if (r) { setRecord(r); if (onSaved) onSaved(r) }
   }
 
-  // Azioni del record in UNA voce di menu (o un solo pulsante se ce n'è una): prima erano una fila di pulsanti con testo che andava a capo su quattro righe.
-  const BTN_ICONA = 'w-9 h-9 rounded-lg border border-gray-700 flex items-center justify-center flex-shrink-0 disabled:opacity-50 transition'
+  // Le azioni del record, nell'ordine in cui il modulo le dichiara: attive, report PDF, poi quelle ancora da attivare. Le mostra la scheda «Azioni».
   const voci = [
-    ...azioniEsterne.filter((az) => !inAttesa(az)).map((az) => ({ key: az.key, label: az.label, titolo: az.descrizione || '', icon: az.icon || 'sparkles', onClick: () => eseguiAzione(az), spenta: az.adapter === 'da_attivare' || !!(az.connection && connessioni && connessioni[az.connection] === false) })),
+    ...azioniEsterne.filter((az) => !inAttesa(az)).map((az) => ({ key: az.key, label: az.label, titolo: az.descrizione || '', icon: az.icon || 'sparkles', onClick: () => eseguiAzione(az), pag: statoAzioni && statoAzioni[az.key], spenta: az.adapter === 'da_attivare' || !!(az.connection && connessioni && connessioni[az.connection] === false) })),
     ...azioniEsterne.filter((az) => az.pdf && !az.vista && !inAttesa(az) && az.risultato_in && record && record.data[az.risultato_in] && record.data[az.risultato_in].id).map((az) => ({ key: az.key + '-pdf', label: az.label.split(' ')[0] === 'Verifica' ? 'Report PDF' : 'PDF', titolo: 'Scarica il PDF del report (nessun costo)', icon: 'file', onClick: () => scaricaAzionePdf(az) })),
     ...azioniEsterne.filter((az) => inAttesa(az)).map((az) => ({ key: az.key, label: az.label, titolo: az.descrizione || 'Legata a un servizio esterno ancora da attivare', icon: az.icon || 'sparkles', onClick: () => eseguiAzione(az), attesa: true })),
-  ]
-  // Barra in basso: massimo 4 voci (icona sopra, nome sotto). Modifica c'è sempre; se le altre non stanno, l'ultima voce è «Altro» con il resto.
-  const docVoce = documenti.length ? { key: '__doc', label: documenti.length === 1 ? documenti[0].label : 'Documenti', icon: documenti.length === 1 ? (documenti[0].icon || 'mail') : 'file', titolo: documenti.length === 1 ? undefined : 'Documenti da preparare', onClick: () => { setMenuFunz(false); if (documenti.length === 1) apriDocumento(documenti[0]); else setMenuDoc((x) => !x) }, menu: documenti.length > 1 } : null
-  const tutte = [...voci.filter((v) => !v.attesa), ...(docVoce ? [docVoce] : []), ...voci.filter((v) => v.attesa)]
-  const sta = tutte.length + 1 <= 4
-  const resto = sta ? [] : tutte.slice(2)
-  const barra = [
-    ...(sta ? tutte : tutte.slice(0, 2)),
-    ...(sta ? [] : [{ key: '__altro', label: 'Altro', icon: 'more', onClick: () => { setMenuDoc(false); setMenuFunz((x) => !x) }, menu: true }]),
-    { key: '__modifica', label: 'Modifica', icon: 'edit', onClick: startEditing, titolo: 'Modifica', menu: true },
   ]
 
   return (
@@ -612,45 +602,26 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
       title={mod.name + ' — dettaglio'}
       onClose={editing ? () => setEditing(false) : onClose}
       wide
-      titleExtra={!editing && record && canDelete ? (
-        <div className="relative">
-          <button onClick={() => setMenuTitolo((x) => !x)} aria-haspopup="menu" aria-expanded={menuTitolo} aria-label="Altro" title="Altro" className="text-gray-500 hover:text-ink transition p-1"><Icon name="more" size={20} /></button>
-          {menuTitolo && (
-            <div role="menu" className="absolute right-0 top-full mt-1 z-30 w-44 bg-surface-card border border-gray-700 rounded-lg shadow-lg py-1">
-              <button role="menuitem" onClick={() => { setMenuTitolo(false); remove() }} className="w-full text-left px-3 py-2 hover:bg-white/5 transition flex items-center gap-2 text-xs text-red-400"><Icon name="trash" size={14} />Elimina</button>
+      titleExtra={!editing && record ? (
+        <div className="flex items-center gap-1">
+          <button onClick={startEditing} aria-label="Modifica" title="Modifica" className="text-gray-400 hover:text-accent transition p-1"><Icon name="edit" size={18} /></button>
+          {canDelete && (
+            <div className="relative">
+              <button onClick={() => setMenuTitolo((x) => !x)} aria-haspopup="menu" aria-expanded={menuTitolo} aria-label="Altro" title="Altro" className="text-gray-500 hover:text-ink transition p-1"><Icon name="more" size={20} /></button>
+              {menuTitolo && (
+                <div role="menu" className="absolute right-0 top-full mt-1 z-30 w-44 bg-surface-card border border-gray-700 rounded-lg shadow-lg py-1">
+                  <button role="menuitem" onClick={() => { setMenuTitolo(false); remove() }} className="w-full text-left px-3 py-2 hover:bg-white/5 transition flex items-center gap-2 text-xs text-red-400"><Icon name="trash" size={14} />Elimina</button>
+                </div>
+              )}
             </div>
           )}
         </div>
       ) : null}
-      footer={!editing && record && !bozzaDoc ? (
-        <div className="relative -my-1">
-          {(menuFunz || menuDoc) && (
-            <div role="menu" className="absolute left-0 right-0 bottom-full mb-2 z-30 max-h-[60vh] overflow-y-auto bg-surface-card border border-gray-700 rounded-lg shadow-lg py-1">
-              {menuDoc && documenti.map((az) => (
-                <button key={az.key} role="menuitem" onClick={() => { setMenuDoc(false); apriDocumento(az) }} className="w-full text-left px-3 py-2 hover:bg-white/5 transition flex items-start gap-2">
-                  <Icon name={az.icon || 'mail'} size={14} className="mt-0.5 text-accent flex-shrink-0" />
-                  <span><span className="block text-xs text-ink">{docInPreparazione === az.key ? 'Preparo…' : az.label}</span><span className="block text-[11px] text-gray-500">{az.delivery === 'firma' ? 'PDF da firmare, poi si ricarica la scansione' : 'Email da rivedere prima di spedirla'}</span></span>
-                </button>
-              ))}
-              {menuFunz && resto.map((v) => (
-                <button key={v.key} role="menuitem" onClick={() => { setMenuFunz(false); v.onClick() }} className={'w-full text-left px-3 py-2 hover:bg-white/5 transition flex items-start gap-2' + (v.spenta ? ' opacity-60' : '')}>
-                  <Icon name={v.icon} size={14} className="mt-0.5 text-accent flex-shrink-0" />
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-xs text-ink">{inEsecuzione === v.key ? 'Un attimo…' : v.label}{v.attesa && <span className="ml-1 text-[10px] uppercase tracking-wide bg-amber-400/15 border border-amber-500/50 text-ink rounded px-1.5 py-0.5">da attivare</span>}</span>
-                    {v.titolo && <span className="block text-[11px] text-gray-500">{v.titolo}</span>}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="flex items-stretch justify-around gap-1">
-            {barra.map((v) => (
-              <button key={v.key} onClick={v.onClick} disabled={inEsecuzione !== null && !v.menu} title={v.titolo || v.label} aria-label={v.label} className={'flex-1 min-w-0 max-w-[110px] flex flex-col items-center gap-1 py-1.5 rounded-lg hover:bg-white/5 transition disabled:opacity-50' + (v.spenta ? ' opacity-60' : '')}>
-                <Icon name={v.icon} size={20} className="text-accent" />
-                <span className="text-[11px] leading-tight text-gray-400 text-center line-clamp-2">{inEsecuzione === v.key ? 'Un attimo…' : v.label}</span>
-              </button>
-            ))}
-          </div>
+      headerExtra={!editing && record && !bozzaDoc && (voci.length > 0 || documenti.length > 0) ? (
+        <div role="tablist" className="w-full flex bg-surface-page rounded-lg p-1 gap-1">
+          {[['dati', 'Dati', true], ['azioni', 'Azioni', voci.length > 0], ['documenti', 'Documenti', documenti.length > 0]].filter((t) => t[2]).map(([k, nome]) => (
+            <button key={k} role="tab" aria-selected={scheda === k} onClick={() => setScheda(k)} className={'flex-1 text-xs py-2 rounded-md transition ' + (scheda === k ? 'bg-surface-card text-ink font-semibold shadow-sm' : 'text-gray-400 hover:text-ink')}>{nome}{k === 'azioni' && voci.length > 0 ? <span className="ml-1 text-gray-500">{voci.length}</span> : null}</button>
+          ))}
         </div>
       ) : null}
     >
@@ -775,6 +746,39 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                 )}
               </div>
             )}
+            {scheda === 'azioni' && voci.length > 0 && (
+              <div className="-mt-1 mb-4">
+                {voci.map((v) => (
+                  <button key={v.key} onClick={v.onClick} disabled={inEsecuzione !== null && !v.attesa} className={'w-full text-left flex items-start gap-3 py-3 border-t border-gray-800 first:border-t-0 hover:bg-white/5 transition disabled:opacity-50' + (v.spenta ? ' opacity-70' : '')}>
+                    <Icon name={v.icon} size={20} className="text-accent mt-0.5 flex-shrink-0" />
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm font-medium text-ink">{inEsecuzione === v.key ? 'Un attimo…' : v.label}</span>
+                      {v.titolo && <span className="block text-xs text-gray-500 mt-0.5">{v.titolo}</span>}
+                    </span>
+                    <span className="flex flex-col items-end gap-1 flex-shrink-0">
+                      {v.attesa && <span className="text-[10px] uppercase tracking-wide bg-amber-400/15 border border-amber-500/50 text-ink rounded px-1.5 py-0.5">da attivare</span>}
+                      {!v.attesa && v.spenta && <span className="text-[10px] bg-gray-800 text-gray-400 rounded px-1.5 py-0.5">non collegato</span>}
+                      {!v.attesa && v.pag && v.pag.a_pagamento && <span className="text-[10px] bg-amber-400/15 text-amber-500 rounded px-2 py-0.5 whitespace-nowrap">a pagamento{v.pag.costo != null ? ' · circa ' + euro(v.pag.costo) : ''}</span>}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {scheda === 'documenti' && documenti.length > 0 && (
+              <div className="-mt-1 mb-4">
+                {documenti.map((az) => (
+                  <button key={az.key} onClick={() => apriDocumento(az)} disabled={docInPreparazione !== null} className="w-full text-left flex items-start gap-3 py-3 border-t border-gray-800 first:border-t-0 hover:bg-white/5 transition disabled:opacity-50">
+                    <Icon name={az.icon || 'mail'} size={20} className="text-accent mt-0.5 flex-shrink-0" />
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm font-medium text-ink">{docInPreparazione === az.key ? 'Preparo…' : az.label}</span>
+                      <span className="block text-xs text-gray-500 mt-0.5">{az.delivery === 'firma' ? 'PDF da firmare, poi si ricarica la scansione firmata' : 'Email da rivedere e modificare prima di spedirla'}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {(scheda === 'dati' || (scheda === 'azioni' && !voci.length) || (scheda === 'documenti' && !documenti.length)) && (
+            <>
             {workflow && workflow.states.length > 1 && (
               <div className="flex flex-wrap items-center gap-1.5 mb-4 text-xs" aria-label="Percorso dello stato">
                 {workflow.states.map((st, i) => {
@@ -1313,6 +1317,8 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                 </div>
               )
             })}
+            </>
+            )}
           </>
         )}
     </FormDrawer>

@@ -678,9 +678,16 @@ router.get('/:slug/azioni-stato', requireAuth, requireModuleAccess, async (req, 
   const out = {};
   for (const config of schema.external_actions || []) {
     const adattatore = require('../lib/azioni-esterne').adattatore(config.adapter);
-    if (!adattatore || typeof adattatore.disponibile !== 'function') continue;
-    try { const d = await adattatore.disponibile({ config, dati: {} }); out[config.key] = { ok: !!d.ok, motivo: d.ok ? null : d.motivo || null }; }
-    catch (e) { out[config.key] = { ok: false, motivo: e.message }; }
+    if (!adattatore) continue;
+    if (typeof adattatore.disponibile === 'function') {
+      try { const d = await adattatore.disponibile({ config, dati: {} }); out[config.key] = { ok: !!d.ok, motivo: d.ok ? null : d.motivo || null }; }
+      catch (e) { out[config.key] = { ok: false, motivo: e.message }; }
+    } else out[config.key] = { ok: true, motivo: null };
+    // A pagamento? Lo dice l'adattatore (`servizio`/`servizioPer`) e il costo è quello di listino: nessuna richiesta al servizio. Serve alla scheda «Azioni» per dirlo PRIMA di premere.
+    try {
+      const nome = typeof adattatore.servizioPer === 'function' ? adattatore.servizioPer({ config, dati: {} }) : adattatore.servizio;
+      if (nome) { out[config.key].a_pagamento = true; const st = require('../lib/openapi-spese').stima(nome); out[config.key].costo = st && st.costo != null ? st.costo : null; }
+    } catch (e) { /* senza stima: «a pagamento» resta, senza importo */ }
   }
   res.json(out);
 });

@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.127 — Dettaglio a tre schede: Dati, Azioni, Documenti
+
+Il dettaglio di ogni record ha, se il modulo lo prevede, tre schede. «Dati» è la scheda di sempre. «Azioni» elenca le azioni esterne con icona, nome, la loro spiegazione e un'etichetta: «a pagamento · circa X €» (costo di listino, nessuna richiesta al servizio), «da attivare» o «non collegato», quindi si sa il costo PRIMA di premere. «Documenti» elenca i documenti da preparare. In alto: matita per Modifica e «⋯» con Elimina, lontano dai tasti di uso comune. Un modulo senza azioni né documenti non mostra le schede. Nessun campo nuovo da compilare: legge quello che lo schema già dichiara (nome, icona, descrizione). Pacchetto mediazione immobiliare 23: «Verifica del soggetto» e «Credit score società» hanno icone diverse (prima due lenti uguali). `/api/records/:slug/azioni-stato` dice anche `a_pagamento` e `costo`.
+
 ## 0.4.126 — Uscendo non si svuota più la pagina
 
 Causa vera della «pagina bianca» cambiando utente (vista in una registrazione dello schermo): in App.jsx un useEffect del giro guidato stava dopo il return del login. Uscendo, React vedeva meno ganci di prima, andava in errore («Rendered fewer hooks than expected») e svuotava l'intera pagina fino al ricaricamento. Il gancio ora sta prima del return; un test controlla che non ci siano ganci dopo. La correzione 0.4.123 (pagina corrente azzerata) resta, ma non bastava.
