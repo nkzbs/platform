@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Icon from '@app/components/Icon'
+import VoceMenu from '@app/components/VoceMenu'
 import Select from '@app/components/Select'
 import useApi from '@app/lib/useApi'
 import { genStepId, schemaToV3 } from '@app/lib/schema-v3-frontend'
@@ -238,6 +239,13 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
   const [published, setPublished] = useState(false)
   const [history, setHistory] = useState([])
   const [showPreview, setShowPreview] = useState(false)
+  const [menuBuilder, setMenuBuilder] = useState(false) // menu «⋯» della barra del modulo
+  useEffect(() => { // un tocco fuori dal menu lo chiude
+    if (!menuBuilder) return undefined
+    const chiudi = (e) => { if (!(e.target.closest && e.target.closest('[data-menu-builder]'))) setMenuBuilder(false) }
+    document.addEventListener('mousedown', chiudi); document.addEventListener('touchstart', chiudi)
+    return () => { document.removeEventListener('mousedown', chiudi); document.removeEventListener('touchstart', chiudi) }
+  }, [menuBuilder])
   const [previewRole, setPreviewRole] = useState('')
   // Ricerca dentro il modulo (2026-10-30) — un modulo con tante card (Spese Casa ne ha
   // già una dozzina) si scorre tutto per trovarne una; filtra per label/chiave/tipo,
@@ -1040,22 +1048,29 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => setPropTab('cronologia')} className="text-xs text-gray-500 hover:text-ink transition flex items-center gap-1"><Icon name="refresh" size={12} />Cronologia</button>
-                <button onClick={() => setShowPreview(!showPreview)} className="text-xs text-gray-500 hover:text-ink transition flex items-center gap-1"><Icon name="eye" size={12} />Anteprima</button>
-                <button onClick={exportModule} title="Scarica questo modulo come file, per caricarlo su un altro tenant" className="text-xs text-gray-500 hover:text-ink transition flex items-center gap-1"><Icon name="download" size={12} />Esporta</button>
+                <button onClick={() => setShowPreview(!showPreview)} aria-label="Anteprima" title="Anteprima" aria-pressed={showPreview} className={'w-9 h-9 rounded-lg transition flex items-center justify-center ' + (showPreview ? 'bg-gray-700 text-ink' : 'bg-gray-800 hover:bg-gray-700 text-gray-300')}><Icon name="eye" size={16} /></button>
                 {(() => {
                   const { errors, warnings } = computeValidations(schema, fieldCache, allRoles)
                   const n = errors.length + warnings.length
                   return (
-                    <button onClick={() => { setBottomTab('validazioni'); setBottomCollapsed(false) }}
-                      className="text-xs text-gray-500 hover:text-ink transition flex items-center gap-1.5">
-                      <Icon name="shield" size={12} />Valida
+                    <button onClick={() => { setBottomTab('validazioni'); setBottomCollapsed(false) }} title="Controlla il modulo" aria-label="Valida"
+                      className="h-9 px-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition flex items-center gap-1.5 text-sm">
+                      <Icon name="shield" size={15} />Valida
                       {n > 0 && <span className={'text-[10px] px-1.5 py-0.5 rounded-full ' + (errors.length > 0 ? 'bg-red-900/40 text-red-400' : 'bg-amber-900/40 text-amber-400')}>{n}</span>}
                     </button>
                   )
                 })()}
-                <button onClick={saveDraft} className="bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded-lg text-sm transition flex items-center gap-1.5"><Icon name="save" size={14} />Bozza</button>
-                <button onClick={publish} className="bg-accent hover:opacity-90 text-white px-3 py-1.5 rounded-lg text-sm transition flex items-center gap-1.5"><Icon name="check" size={14} />Pubblica</button>
+                <div className="relative" data-menu-builder>
+                  <button onClick={() => setMenuBuilder((x) => !x)} aria-haspopup="menu" aria-expanded={menuBuilder} aria-label="Altre azioni" title="Altre azioni" className="w-9 h-9 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition flex items-center justify-center"><Icon name="more" size={18} /></button>
+                  {menuBuilder && (
+                    <div role="menu" className="absolute right-0 top-full mt-1 z-30 w-[min(20rem,calc(100vw-2rem))] bg-surface-card border border-gray-700 rounded-xl shadow-lg py-1">
+                      <VoceMenu icon="refresh" label="Cronologia" desc="Le versioni passate di questo modulo" onClick={() => { setMenuBuilder(false); setPropTab('cronologia') }} />
+                      <VoceMenu icon="download" label="Esporta" desc="Scarica questo modulo come file, per caricarlo su un altro tenant" onClick={() => { setMenuBuilder(false); exportModule() }} />
+                    </div>
+                  )}
+                </div>
+                <button onClick={saveDraft} className="bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded-lg text-sm transition flex items-center gap-1.5 h-9"><Icon name="save" size={14} />Bozza</button>
+                <button onClick={publish} className="bg-accent hover:opacity-90 text-white px-3 py-1.5 rounded-lg text-sm transition flex items-center gap-1.5 h-9"><Icon name="check" size={14} />Pubblica</button>
                 {moduleActions && moduleActions(modules.find((m) => m.slug === selected))}
                 {(saved || published) && <span className={saved ? 'text-green-400 text-xs' : 'text-accent text-xs'}>{saved ? 'Bozza salvata' : 'Pubblicato!'}</span>}
               </div>

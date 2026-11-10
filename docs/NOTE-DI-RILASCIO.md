@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.4.132 — Builder: barra del modulo più ordinata; VoceMenu condiviso
+
+Nella barra del modulo del Builder (anche in Super Admin) Anteprima è un'icona con stato, Valida resta con il numero di problemi, e Cronologia ed Esporta stanno nel menu «⋯» con la loro spiegazione. Bozza e Pubblica restano come prima. VoceMenu è ora un componente condiviso (shared/frontend/VoceMenu.jsx) con un ponte in core e in Super Admin.
+
 ## 0.4.131 — Utenti: azioni nel menu «⋯»
 
 Nella riga di ogni utente «Disabilita/Abilita» e «Reimposta password» (due link di testo) stanno ora nel menu «⋯», con icona e spiegazione. In vista restano lo stato e le due scelte che dicono un numero: Widget e Moduli visibili. Il menu si apre sotto la riga, dentro lo schermo da telefono.
