@@ -66,7 +66,7 @@ async function main() {
   let esiti;
   await test('si applica: nuovi campi del tipo giusto e caselle trasformate in elenchi a scelta multipla', async () => {
     esiti = await applicaSeed(estensioni, { tipo: 'estensione' });
-    assertEq(esiti.filter((e) => (e.slug === 'immobili' || e.slug === 'clienti') && e.key !== 'allegati' && e.key !== 'profilo_mediazione' && e.key !== 'verifica_soggetto' && e.key !== 'mappa_osm' && e.key !== 'conservazione_scaduta' && !['avviso_documenti_mancanti', 'avviso_richieste_compatibili', 'controllo_catastale', 'stato_alla_firma_scheda', 'auguri_cliente', 'servizi_vicini', 'verifica_soggetto_testi', 'credit_score_societa', 'dati_fatturazione', 'firma_in_un_pacchetto'].includes(e.key)).map((e) => e.slug + ':' + e.esito), ['immobili:applicato', 'clienti:applicato']);
+    assertEq(esiti.filter((e) => (e.slug === 'immobili' || e.slug === 'clienti') && e.key !== 'allegati' && e.key !== 'profilo_mediazione' && e.key !== 'verifica_soggetto' && e.key !== 'mappa_osm' && e.key !== 'conservazione_scaduta' && !['avviso_documenti_mancanti', 'avviso_richieste_compatibili', 'controllo_catastale', 'stato_alla_firma_scheda', 'auguri_cliente', 'servizi_vicini', 'verifica_soggetto_testi', 'credit_score_societa', 'dati_fatturazione', 'firma_in_un_pacchetto', 'firma_scheda_destinatario'].includes(e.key)).map((e) => e.slug + ':' + e.esito), ['immobili:applicato', 'clienti:applicato']);
     assertEq(campo('immobili', 'data_sopralluogo').type, 'date');
     assertEq(campo('immobili', 'prezzo_consigliato').type, 'currency');
     assertEq(campo('immobili', 'valore_ipe').type, 'number');

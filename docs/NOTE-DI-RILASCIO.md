@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.7 — «Invia per la firma» anche sull'immobile
+
+La Scheda di acquisizione dell'immobile non diceva a chi andava, quindi «Invia per la firma» sull'immobile (che non ha un campo email) non avrebbe trovato un indirizzo. Ora il documento ha come destinatario `proprietario.email` (lo stesso di «Scheda immobile»); sui tenant che hanno già il documento lo imposta l'estensione `firma_scheda_destinatario` (solo se manca). Alla firma l'immobile passa da «Da valutare» a «In mandato», come già prima. Vale per il proprietario: i comproprietari non ricevono ancora il proprio link.
+
 ## 0.5.6 — «Invia per la firma»: un pacchetto, un link
 
 Dal record, scheda **Documenti**, il pulsante **Invia per la firma** manda al cliente UNA mail (con la grafica dell'agenzia) con l'elenco dei documenti da firmare e un solo pulsante. Il link porta a una pagina pubblica (`/firma/<codice>`, senza account, pensata per il telefono) in tre passi: rivedi (si scaricano i PDF), firma e carica (la foto o il PDF firmato di ogni documento, più i consensi da spuntare), fatto.

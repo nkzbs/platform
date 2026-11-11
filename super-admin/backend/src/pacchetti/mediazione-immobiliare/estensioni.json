@@ -1474,6 +1474,24 @@
           "type": "number"
         }
       ]
+    },
+    {
+      "key": "firma_scheda_destinatario",
+      "_nota": "«Invia per la firma» sull'immobile manda la Scheda di acquisizione al proprietario: l'indirizzo è quello della sua scheda cliente (stesso destinatario di «Scheda immobile»). Solo se il documento non dice già a chi va.",
+      "richiede": {
+        "immobili": [
+          "proprietario"
+        ]
+      },
+      "imposta": [
+        {
+          "block_type": "document_action",
+          "key": "scheda_immobile_completa",
+          "proprieta": {
+            "recipient": "proprietario.email"
+          }
+        }
+      ]
     }
   ],
   "clienti": [
