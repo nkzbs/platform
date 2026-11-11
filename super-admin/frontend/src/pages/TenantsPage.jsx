@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { API } from '../lib/api'
 import SchedaBackup from '../components/SchedaBackup'
+import VoceMenu from '../components/VoceMenu'
 import InviteTenantModal from '../components/InviteTenantModal'
 import Icon from '../components/Icon'
 import Select from '../components/Select'
@@ -297,6 +298,8 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
   // non esiste ancora: lo ricrea sullo stesso volume dati, con le chiavi salvate (un
   // tenant registrato da "Registra esistente" nasce fermo e parte da qui).
   const [actionSlug, setActionSlug] = useState(null)
+  const [bkSez, setBkSez] = useState({}) // sezione aperta nella scheda Backup di ogni tenant: copie | fuori | disco | mail
+  const [bkMenu, setBkMenu] = useState(null)
   const [menuTenant, setMenuTenant] = useState(null) // riga con il menu «⋯» aperto
   useEffect(() => { // un tocco fuori dal menu lo chiude
     if (!menuTenant) return undefined
@@ -781,15 +784,30 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
 
                   {(detailTabBySlug[t.slug] || 'panoramica') === 'backup' && (
                   <div>
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-3 relative">
                       <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Backup</div>
-                      <button onClick={() => runBackup(t.slug)} disabled={backingUpSlug === t.slug}
-                        className="text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-3 py-1.5 rounded-lg transition">
-                        {backingUpSlug === t.slug ? 'Backup in corso...' : 'Backup ora'}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => runBackup(t.slug)} disabled={backingUpSlug === t.slug}
+                          className="text-xs bg-cp-primary hover:bg-cp-primary-hover disabled:opacity-50 text-white px-3 py-2 rounded-lg transition font-medium">
+                          {backingUpSlug === t.slug ? 'Backup in corso...' : 'Backup ora'}
+                        </button>
+                        <button onClick={() => setBkMenu((x) => (x === t.slug ? null : t.slug))} aria-haspopup="menu" aria-expanded={bkMenu === t.slug} aria-label="Altro sui backup" title="Altro sui backup"
+                          className="w-9 h-9 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition flex items-center justify-center"><Icon name="more" size={18} /></button>
+                      </div>
+                      {bkMenu === t.slug && (
+                        <>
+                          <div className="fixed inset-0 z-20" onClick={() => setBkMenu(null)} />
+                          <div role="menu" className="absolute right-0 top-full mt-1 z-30 w-full sm:w-80 bg-surface-card border border-gray-700 rounded-xl shadow-lg py-1">
+                            <VoceMenu icon="database" label="Copie salvate" desc="L'elenco: scarica o ripristina" onClick={() => { setBkMenu(null); setBkSez((p) => ({ ...p, [t.slug]: 'copie' })) }} />
+                            <VoceMenu icon="upload" label="Copia fuori dal NAS" desc="Dove va la copia esterna e se funziona" onClick={() => { setBkMenu(null); setBkSez((p) => ({ ...p, [t.slug]: 'fuori' })) }} />
+                            {t.host === 'linode' && <VoceMenu icon="server" label="Disco del server" desc="Le copie di Linode e il ripristino completo" onClick={() => { setBkMenu(null); setBkSez((p) => ({ ...p, [t.slug]: 'disco' })) }} />}
+                            <VoceMenu icon="mail" label="Copia via mail" desc="Ogni lunedì, cifrata" onClick={() => { setBkMenu(null); setBkSez((p) => ({ ...p, [t.slug]: 'mail' })) }} />
+                          </div>
+                        </>
+                      )}
                     </div>
-                    <SchedaBackup api={API} headers={headers} slug={t.slug} ricarica={() => { loadBackups(t.slug); load() }} />
-                    {(() => {
+                    <SchedaBackup api={API} headers={headers} slug={t.slug} sezione={bkSez[t.slug] || null} chiudi={() => setBkSez((p) => ({ ...p, [t.slug]: null }))} ricarica={() => { loadBackups(t.slug); load() }} />
+                    {bkSez[t.slug] === 'mail' && (() => {
                       const bs = offsiteSettingsBySlug[t.slug] || {}
                       const on = !!bs.backup_mail_weekly
                       return (
@@ -829,6 +847,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                           </div>
                         : <div className="text-xs text-red-400 mb-2">{backupMsg[t.slug].error}</div>
                     )}
+                    {bkSez[t.slug] === 'copie' && (<>
                     {/* PLATFORM-UI-RESKIN-PLAN.md — passato da lista a tabella con pillole di
                         stato reali (era testo colorato in linea), come la reference "Backup &
                         Ripristino": stessi identici dati e azioni, solo il contenitore cambia. */}
@@ -898,6 +917,8 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                       </div>
                     )}
 
+                    </>)}
+
                     {/* G18 (PLATFORM-0.6-GAP-ANALYSIS.md) — un solo campo URL decide la
                         destinazione off-site, mai un interruttore separato: vuoto =
                         disattivato. Cambiare destinazione domani (oggi un percorso locale
@@ -905,6 +926,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                         URL diverso qui, nessun redeploy. Credenziali: campo JSON libero,
                         opzionale, lasciato vuoto non tocca quelle già salvate — nessuno
                         schema oggi le richiede (file:// no), pronto per quando servirà. */}
+                    {bkSez[t.slug] === 'fuori' && (
                     <div className="mt-3 pt-3 border-t border-gray-800/60">
                       <div className="text-xs text-gray-500 mb-1.5">Backup off-site</div>
                       <input type="text" placeholder="es. file:///offsite-backups/nome-tenant"
@@ -931,6 +953,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                           : <div className="text-xs text-red-400 mt-1.5">{offsiteMsg[t.slug].error}</div>
                       )}
                     </div>
+                    )}
                   </div>
                   )}
 

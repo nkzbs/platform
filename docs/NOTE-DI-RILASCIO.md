@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.3 — Scheda Backup più semplice
+
+La scheda Backup mostra **una frase di stato** («Tutto in ordine» oppure la prima cosa che non va), l'ultimo backup e con cosa è protetto il tenant. Un solo pulsante in evidenza, «Backup ora»; tutto il resto sta nel menu «⋯» (Copie salvate, Copia fuori dal NAS, Disco del server, Copia via mail), che apre **una sezione alla volta**. Prima i tre livelli, la tabella, la mail e l'off-site stavano tutti aperti insieme. Nessun cambiamento nel backend.
+
 ## 0.5.2 — Backup in tre livelli, tutto da Super Admin
 
 Tenant → Dettagli → Backup ha in cima una **scheda unica** con i tre livelli e la data dell'ultima copia riuscita di ciascuno.
