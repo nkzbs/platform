@@ -2,6 +2,11 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.23 — Guida illustrata aggiornata e caselle della pagina di firma
+
+- **Guida illustrata in PDF** (`docs/guida-utente/Guida-illustrata.pdf`): il capitolo Clienti ha ora «Far firmare i documenti al cliente» con le schermate vere (scheda Documenti, la mail che arriva al cliente, la pagina di firma da telefono con le due scelte), e «Spedire un messaggio (auguri)»; il capitolo Immobili parla di firma con i comproprietari. Le altre schermate restano quelle della 0.4.87 (da rifare in blocco, con i menu e le schede nuovi). Come si rifà: `docs/guida-utente/strumenti/LEGGIMI.md` (aggiunto `s-firma.mjs`).
+- **Pagina di firma, correzione trovata scattando la schermata:** le caselle dei consensi e la scelta «Per mail / Per SMS» comparivano come quadrati e cerchi **pieni e scuri anche se non spuntati**, quindi non si capiva cosa il cliente stesse accettando (il tema scuro dell'app arrivava sui controlli nativi). Ora la pagina è sempre chiara e i controlli sono quelli normali, con il colore dell'agenzia.
+
 ## 0.5.22 — La guida d'uso di zucca racconta il flusso nuovo
 
 La guida in app (pacchetto Mediazione immobiliare 26) descriveva ancora i documenti spediti uno per uno per mail e da allegare a mano: ora parla di «Invia per la firma» (clienti, immobili con i comproprietari, quote societarie), firma con codice o a mano e solleciti. Le parti ricavate dagli schemi (elenco dei documenti, azioni, stati) si aggiornano da sole. Aggiornati anche `docs/zucca/guida-all-uso.txt` e `docs/zucca/relazione-processi.txt`. **Non aggiornata**: `docs/guida-utente/Guida-illustrata.pdf` (PDF illustrato fatto a mano, da rifare con le schermate nuove).

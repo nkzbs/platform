@@ -20,7 +20,7 @@ export default function FirmaPage({ token }) {
 
   const colore = (info && info.agenzia && /^#[0-9a-f]{6}$/i.test(info.agenzia.colore || '') && info.agenzia.colore) || '#1f4e79'
   const su = testoSu(colore)
-  const css = `.fp{--c:${colore};--s:${su};--cs:${chiaro(colore, 0.12)};min-height:100vh;background:#f4f2ee;color:#1c1917;font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;padding-bottom:40px}
+  const css = `.fp{color-scheme:light;--c:${colore};--s:${su};--cs:${chiaro(colore, 0.12)};min-height:100vh;background:#f4f2ee;color:#1c1917;font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;padding-bottom:40px}
   .fp *{box-sizing:border-box}.fp-top{background:var(--c);color:var(--s);padding:16px max(16px,env(safe-area-inset-left));display:flex;gap:12px;align-items:center}
   .fp-logo{width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,.18);display:grid;place-items:center;font:600 19px Georgia,serif;flex:none;overflow:hidden}.fp-logo img{max-width:100%;max-height:100%}
   .fp-nome{font:600 18px Georgia,serif}.fp-box{max-width:520px;margin:0 auto;padding:20px 16px}.fp h1{font:600 24px/1.2 Georgia,serif;margin:6px 0 10px}.fp p{margin:0 0 12px}
@@ -28,7 +28,7 @@ export default function FirmaPage({ token }) {
   .fp-card{background:#fff;border:1px solid #e3dfd7;border-radius:12px;padding:14px 16px;margin-bottom:12px}.fp-card b{display:block;font:600 16px Georgia,serif}
   .fp-btn{display:block;width:100%;border:0;border-radius:10px;background:var(--c);color:var(--s);font:600 16px system-ui,sans-serif;padding:15px;text-align:center;text-decoration:none;cursor:pointer;margin-top:14px}.fp-btn[disabled]{opacity:.5}
   .fp-ghost{display:inline-block;margin-top:8px;background:none;border:0;padding:0;color:var(--c);font-weight:600;font-size:14px;text-decoration:none;cursor:pointer}.fp-err{color:#b3261e;font-size:14px;margin-top:10px}
-  .fp label.k{display:flex;gap:10px;align-items:flex-start;font-size:14px;margin:10px 0 0}.fp input[type=checkbox]{width:20px;height:20px;accent-color:var(--c);flex:none;margin-top:2px}
+  .fp label.k{display:flex;gap:10px;align-items:flex-start;font-size:14px;margin:10px 0 0}.fp input[type=checkbox],.fp input[type=radio]{appearance:auto;-webkit-appearance:auto;background:#fff;border:0;padding:0;width:20px;height:20px;accent-color:var(--c);flex:none;margin-top:2px}
   .fp-file{display:block;margin-top:10px;padding:12px;border:1.5px dashed var(--c);border-radius:10px;background:var(--cs);font-size:14px}.fp-file input{display:block;margin-top:6px;max-width:100%}
   .fp-tick{width:56px;height:56px;border-radius:50%;background:var(--cs);color:var(--c);display:grid;place-items:center;font-size:28px;margin:24px auto 10px}.fp-mut{color:#6b665f;font-size:14px}`
 
