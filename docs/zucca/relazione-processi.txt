@@ -14,7 +14,7 @@ Allegati: nel dettaglio del cliente c'è il riquadro «Allegati» con i tipi che
 [X] Coperto il flusso base: scheda, tipologia, stati, tre documenti
 [ ] Da completare l'avviso sugli allegati mancanti
 Cosa manca: il sistema non segnala ancora quando un allegato richiesto per quel tipo di cliente (per esempio l'atto di provenienza del venditore) non è stato caricato: l'elenco dei tipi c'è, l'obbligo no.
-Cosa manca (2): Privacy e incarico e Antiriciclaggio partono solo per email; non hanno ancora il giro scarica, firma e ricarica. Il cambio di stato a «cliente verificato» è manuale.
+Aggiornamento 11 novembre 2026: i documenti del cliente si fanno firmare con «Invia per la firma» (un link, firma con codice o a mano, allegati e consensi automatici, solleciti). Il cambio di stato a «cliente verificato» resta manuale, perché la verifica dell'identità è dell'agente.
 
 CLIENTE — SOCIETÀ E CESSIONE DI QUOTE
 Come funziona: un cliente può essere una Società (con partita IVA) e un immobile può avere come proprietario quel cliente.

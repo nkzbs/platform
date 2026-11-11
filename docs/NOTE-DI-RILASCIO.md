@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.22 — La guida d'uso di zucca racconta il flusso nuovo
+
+La guida in app (pacchetto Mediazione immobiliare 26) descriveva ancora i documenti spediti uno per uno per mail e da allegare a mano: ora parla di «Invia per la firma» (clienti, immobili con i comproprietari, quote societarie), firma con codice o a mano e solleciti. Le parti ricavate dagli schemi (elenco dei documenti, azioni, stati) si aggiornano da sole. Aggiornati anche `docs/zucca/guida-all-uso.txt` e `docs/zucca/relazione-processi.txt`. **Non aggiornata**: `docs/guida-utente/Guida-illustrata.pdf` (PDF illustrato fatto a mano, da rifare con le schermate nuove).
+
 ## 0.5.21 — «Aggiorna» su Linode manda anche i pacchetti
 
 Trovato dall'uso: dopo «Aggiorna» su zucca (tenant su Linode) i documenti erano ancora quelli di prima («Anagrafica + privacy», «Privacy + Incarico» e «Antiriciclaggio» come mail). Causa: l'aggiornamento di un tenant su Linode usciva prima del passo che manda i pacchetti di verticale aggiornati (sul NAS c'era, su Linode no); zucca era rimasta al pacchetto 23. Ora il passo c'è anche su Linode, dopo che il tenant risponde, con la stessa regola («best-effort»: se non riesce lo dice e riprova al prossimo aggiornamento). Per riallineare subito un tenant c'è già `POST /api/tenants/<slug>/pacchetti/sincronizza`. Non c'è un test automatico: il ramo Linode di `redeployTenant` non si lascia simulare facilmente; da verificare dal vivo.

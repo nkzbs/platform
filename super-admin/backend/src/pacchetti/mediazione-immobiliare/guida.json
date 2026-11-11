@@ -35,7 +35,7 @@
       "come_si_usa": [
         "Crea il cliente con nome, codice fiscale (o P.IVA) e almeno un recapito: il codice fiscale viene controllato mentre salvi.",
         "Indica se è venditore o acquirente e, se cerca casa, cosa cerca (budget, zona, tipologia): l'app propone da sola gli **immobili adatti**.",
-        "Dalla scheda spedisci i documenti da firmare (privacy e incarico, antiriciclaggio) con il menu **Documenti**: il testo si rivede prima dell'invio.",
+        "Per far firmare i documenti apri **Documenti** e premi **Invia per la firma**: parte una mail con il marchio dell'agenzia e un solo link. Il cliente rivede i documenti, firma con un codice (per mail o SMS) oppure stampa, firma e ricarica la foto; allegati, consensi e stato si aggiornano da soli. Dopo 3 e 7 giorni parte un sollecito gentile. Se preferisci fare tutto a mano, nello stesso riquadro scarichi il PDF, lo fai firmare e lo carichi tu.",
         "Per passare a «Cliente verificato» servono il documento d'identità e la privacy firmata."
       ],
       "consigli": [
@@ -49,7 +49,7 @@
         "Inserisci proprietario, indirizzo, tipologia e prezzo richiesto.",
         "Sotto i dati chiave c'è la **mappa** con l'indirizzo (OpenStreetMap): **+** e **−** avvicinano e allontanano, **Apri la mappa** la apre a tutto schermo, **Percorso** dà le indicazioni per arrivarci. Se l'indirizzo non si trova, la mappa non compare: controlla indirizzo e comune.",
         "Con **Valutazione di mercato** (serve OpenAPI.it) ottieni la stima, i comparabili e un PDF da mostrare al proprietario. L'app chiede la conferma del costo prima di ogni richiesta.",
-        "Fai firmare la scheda di acquisizione e allegala: prima di metterlo «In vendita» l'app ti ricorda che serve.",
+        "Fai firmare la scheda di acquisizione con **Invia per la firma** (Documenti): arriva al proprietario e ai comproprietari, ognuno col suo link. Quando hanno firmato tutti, i firmati sono già tra gli allegati e l'immobile passa a «In mandato»; prima di metterlo «In vendita» l'app ti ricorda cosa manca.",
         "Dal dettaglio vedi le **richieste compatibili**: i clienti che cercano qualcosa come questo immobile."
       ],
       "consigli": [
@@ -86,7 +86,7 @@
       "scopo": "Le quote di società che detengono immobili, e la loro cessione.",
       "come_si_usa": [
         "Registra società, socio, percentuale e valore.",
-        "Quando c'è un acquirente, passa a «In cessione» e prepara la proposta (Documenti): va firmata e fatta rivedere dal notaio.",
+        "Quando c'è un acquirente, passa a «In cessione» e prepara la proposta (Documenti): con **Invia per la firma** la ricevono cedente e cessionario, ognuno col suo link; va fatta rivedere dal notaio.",
         "Per «Ceduta» servono la data e la proposta firmata allegata."
       ]
     },
@@ -116,7 +116,7 @@
     {
       "titolo": "Dal mandato al rogito",
       "passi": [
-        "**Clienti**: crea il proprietario e fagli firmare privacy e incarico.",
+        "**Clienti**: crea il proprietario e premi «Invia per la firma» per l'informativa privacy e l'incarico.",
         "**Immobili**: inserisci l'immobile e fai la valutazione di mercato.",
         "**Immobili → In vendita**: l'app ti ricorda cosa manca (prezzo, valutazione, scheda di acquisizione firmata).",
         "**Attività**: pianifica le visite e porta i clienti interessati a vedere l'immobile.",
@@ -128,7 +128,7 @@
       "titolo": "Un nuovo cliente",
       "passi": [
         "Crealo in **Clienti** con codice fiscale e un recapito.",
-        "Invia **Privacy + Incarico** e, se serve, il modulo antiriciclaggio.",
+        "Con un solo **Invia per la firma** parte l'informativa privacy e incarico e, se serve, il modulo antiriciclaggio.",
         "Quando hai documento d'identità e privacy firmata, passa a «Cliente verificato».",
         "La verifica automatica del soggetto è prevista, ma «da attivare»."
       ]
@@ -186,12 +186,12 @@
     {
       "pagina": "clienti",
       "titolo": "I clienti",
-      "testo": "Chi vende, chi compra, chi cerca casa. Crea il cliente con codice fiscale e un recapito; se cerca casa scrivi budget, zona e tipologia: dalla sua scheda vedi subito gli immobili adatti. Da qui spedisci anche i documenti da firmare (privacy e incarico, antiriciclaggio)."
+      "testo": "Chi vende, chi compra, chi cerca casa. Crea il cliente con codice fiscale e un recapito; se cerca casa scrivi budget, zona e tipologia: dalla sua scheda vedi subito gli immobili adatti. Da qui fai firmare i documenti (privacy e incarico, antiriciclaggio) con un solo link."
     },
     {
       "pagina": "immobili",
       "titolo": "Gli immobili",
-      "testo": "Ogni immobile in mandato ha la sua scheda completa, la mappa, le foto e la valutazione di mercato con il report in PDF. Quando la scheda di acquisizione torna firmata l'immobile passa da solo a «In mandato». Per metterlo in vendita la scheda ti dice cosa manca; quando entra in mandato ti avvisa se c'è già una richiesta compatibile."
+      "testo": "Ogni immobile in mandato ha la sua scheda completa, la mappa, le foto e la valutazione di mercato con il report in PDF. Quando la scheda di acquisizione è firmata da tutti i proprietari l'immobile passa da solo a «In mandato». Per metterlo in vendita la scheda ti dice cosa manca; quando entra in mandato ti avvisa se c'è già una richiesta compatibile."
     },
     {
       "pagina": "trattative",

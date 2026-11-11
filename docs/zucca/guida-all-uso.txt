@@ -12,15 +12,15 @@ Il cliente nasce nello stato «verifica identità cliente».
 Allega le copie dei documenti che il cliente fornisce dal riquadro «Allegati» del dettaglio, scegliendo il tipo: documento di identità, codice fiscale, attualità della residenza, atto di provenienza (se vende), atto di matrimonio (se compra, facoltativo).
 
 2. DOCUMENTI DEL CLIENTE
-Privacy e incarico: dal dettaglio del cliente apri il documento, rileggi il testo a schermo, correggilo se serve e invialo per email. Non parte nulla senza la tua conferma.
-Antiriciclaggio: stessa procedura; il cliente lo restituisce firmato.
-Anagrafica e privacy (da firmare): scarica il PDF, fallo firmare, poi ricaricalo dallo stesso pannello. Spunta i consensi dati dal cliente (comunicazioni commerciali, comunicazione a partner e portali): vengono registrati sul record con data, versione e data di conservazione.
-Quando ricevi i documenti firmati (privacy e incarico, antiriciclaggio), caricali dal riquadro «Allegati» con il tipo «firmato» corrispondente, poi passa il cliente a «documenti inviati» e a «cliente verificato» con i pulsanti di stato.
+Dal dettaglio del cliente, scheda «Documenti», premi «Invia per la firma»: al cliente arriva una mail con il marchio dell'agenzia, l'elenco dei documenti (informativa privacy e incarico, antiriciclaggio) e un solo pulsante. Il link porta a una pagina da telefono: il cliente rivede i documenti e sceglie come firmare, con un codice ricevuto per mail o per SMS oppure stampando, firmando e ricaricando la foto. Puoi aggiungere un SMS con il link e, con un tocco, scrivergli su WhatsApp con il messaggio già pronto.
+Quando il cliente firma, i documenti firmati sono già tra gli allegati, i consensi (comunicazioni commerciali, comunicazione a partner e portali), la data della firma, la versione e la data di conservazione sono scritti sul record e ricevi un avviso. Se non firma, dopo 3 e 7 giorni parte un sollecito; dopo 14 giorni il link scade. Dalla scheda puoi sollecitare o annullare.
+A mano: nello stesso riquadro, sotto «Oppure a mano», scegli il documento, scarica il PDF, fallo firmare e ricaricalo dal pannello: spunta i consensi dati dal cliente.
+Poi passa il cliente a «documenti inviati» (lo fa da solo all'invio) e a «cliente verificato» con i pulsanti di stato dopo aver controllato il documento d'identità: la verifica resta tua.
 
 3. NUOVO IMMOBILE
 Apri Immobili e premi «Nuovo»: scegli il proprietario (fino a tre comproprietari, con le quote) e compila la scheda, che segue le 11 sezioni del modulo dell'agenzia. Le voci con caselle si spuntano da un elenco.
 Lo stato di partenza è «da valutare». Un cliente può avere più immobili. Nel riquadro «Allegati» dell'immobile carichi atto di provenienza, visura e planimetria catastale, APE, regolamento e verbali del condominio, certificazione impianti e foto.
-Apri il documento «Scheda di acquisizione (da firmare)»: vedi l'anteprima, scarica il PDF con il marchio, fallo firmare e ricarica l'originale firmato: resta archiviato nell'immobile.
+Dalla scheda Documenti premi «Invia per la firma»: la Scheda di acquisizione arriva al proprietario e ai comproprietari, ognuno col suo link. Quando hanno firmato tutti i firmati restano archiviati nell'immobile e lo stato passa a «In mandato». A mano: scarichi il PDF, lo fai firmare e lo carichi tu.
 
 4. VALUTAZIONE DELL'IMMOBILE
 Dal dettaglio premi «Valuta con OpenAPI.it». Servono almeno indirizzo e comune; con la superficie compare anche il valore stimato.
