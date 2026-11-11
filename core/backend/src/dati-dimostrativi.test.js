@@ -73,7 +73,7 @@ async function main() {
     const j = await leggi(); eq([j.disponibili, j.totale], [true, 0]);
     const r = await carica(); eq(r.status, 409); const p = await r.json(); eq(p.code, 'conferma_costo'); eq(p.ambiente, 'prova');
     eq(p.piano.voci.map((v) => [v.servizio, v.richieste]), [['visure_ricerca_imprese', 1], ['valutazione_immobiliare', 2], ['real_estate_comparabili', 2]]);
-    eq(p.piano.voci[0].costo_unitario, 0, 'la ricerca di imprese non costa'); ok(p.piano.ignoti >= 1, 'prezzi non noti segnalati');
+    eq(p.piano.voci[0].costo_unitario, 0, 'la ricerca di imprese non costa'); eq(p.piano.ignoti, 0, 'ora i prezzi della valutazione e dei comparabili sono noti'); eq(p.piano.voci[1].costo_unitario, 3);
     eq(chiamate, [], 'nessuna chiamata a OpenAPI.it'); eq(DD.totaleDemo(), 0);
   });
   await test('con la conferma carica: imprese e annunci veri, record inventati collegati; tutti segnati; campi che il modulo non ha saltati con un avviso; spese registrate', async () => {

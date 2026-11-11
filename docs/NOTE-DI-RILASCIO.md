@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.15 — Prezzi del Real Estate: la valutazione ha un costo noto
+
+Letti dalla console: valutazione avanzata €/mq **3,00** (0,39 con abbonamento), semplice (start) 2,00 (0,26), valore di mercato (rm value) 4,00 (0,35), quotazioni OMI 0,02 (0,003; 1.440 gratis al giorno), annunci comparabili 0,12 (0,032; 30 gratis al mese), storico del valore al mq 0,12 (0,032). Nel registro spese la **valutazione di mercato** e gli **annunci comparabili** non sono più «da scrivere»: valgono 3,00 e 0,12, quindi la conferma del costo prima del pulsante «Valutazione» e il piano dei costi dei dati dimostrativi mostrano un importo vero. Test aggiornati. Con un abbonamento si scrive il prezzo in Prezzi.
+
 ## 0.5.14 — Prezzi della fatturazione elettronica di OpenAPI
 
 Letti dalla console: fattura italiana emessa o ricevuta **0,049** (le emesse 0,0135 con un abbonamento), configurazione di un'azienda 1,00, punto vendita 9,00, importazione 0,049, scontrini 0,019, corrispettivi 0,013; Francia 0,27 e 0,09; Germania 0,09; altri paesi 0,09 e 0,001. Nel registro spese `sdi_fattura` passa da «da scrivere» a 0,049 e c'è `sdi_configurazione`. **Platform non usa l'SDI di OpenAPI**: le fatture delle provvigioni si emettono con Fatture in Cloud (decisione dell'8 novembre); i prezzi servono solo per confronto.

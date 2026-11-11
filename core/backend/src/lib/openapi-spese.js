@@ -19,8 +19,12 @@ db.exec('CREATE TABLE IF NOT EXISTS openapi_impostazioni (chiave TEXT PRIMARY KE
 
 // Prezzi di listino in € a richiesta (IVA esclusa), dal catalogo di OpenAPI.it. `null` = non indicato nelle pagine viste: va scritto dall'utente.
 const SERVIZI = {
-  valutazione_immobiliare: { nome: 'Valutazione di mercato (Real Estate)', prezzo: null },
-  real_estate_comparabili: { nome: 'Real Estate — annunci comparabili vicino a un punto', prezzo: null },
+  valutazione_immobiliare: { nome: 'Valutazione di mercato (Real Estate, avanzata €/mq; 0,39 con un abbonamento al massimo)', prezzo: 3.00 },
+  real_estate_start: { nome: 'Real Estate — valutazione €/mq semplice (start; 0,26 con un abbonamento)', prezzo: 2.00 },
+  real_estate_rm_value: { nome: 'Real Estate — valore di mercato di un immobile (rm value / rmv; 0,35 con un abbonamento)', prezzo: 4.00 },
+  real_estate_omi: { nome: 'Real Estate — quotazioni OMI (0,02 dopo 1.440 gratis al giorno; 0,003 con un abbonamento)', prezzo: 0.02 },
+  real_estate_storico_mq: { nome: 'Real Estate — storico del valore medio al mq (0,032 con un abbonamento)', prezzo: 0.12 },
+  real_estate_comparabili: { nome: 'Real Estate — annunci comparabili vicino a un punto (30 gratis al mese; 0,032 con un abbonamento)', prezzo: 0.12 },
   visure_ricerca_imprese: { nome: 'Visure camerali — ricerca di imprese (senza costi di ricerca)', prezzo: 0 },
   catasto_indirizzo: { nome: 'Catasto — cerca un indirizzo', prezzo: 0.10 },
   catasto_foglio: { nome: 'Catasto — foglio catastale (0,08 con un abbonamento)', prezzo: 0.30 },

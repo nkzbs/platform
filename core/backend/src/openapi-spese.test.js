@@ -39,9 +39,9 @@ async function main() {
   const spese = async () => (await fetch(BASE + '/api/connections/openapi_it/spese', { headers: H })).json();
   const imposta = (corpo, headers = H) => fetch(BASE + '/api/connections/openapi_it/impostazioni', { method: 'PUT', headers, body: JSON.stringify(corpo) });
 
-  await test('senza conferma il server non esegue: 409 con costo (qui ignoto), ambiente, spesa del mese e tetto; nessuna chiamata, nessuna riga', async () => {
+  await test('senza conferma il server non esegue: 409 con costo (qui 3,00 di listino), ambiente, spesa del mese e tetto; nessuna chiamata, nessuna riga', async () => {
     const id = rec(); const r = await azione(id); eq(r.status, 409); const j = await r.json();
-    eq([j.code, j.costo, j.noto, j.ambiente, j.speso_mese, j.tetto], ['conferma_costo', null, false, 'produzione', 0, null]); ok(/Valutazione/.test(j.nome));
+    eq([j.code, j.costo, j.noto, j.ambiente, j.speso_mese, j.tetto], ['conferma_costo', 3, true, 'produzione', 0, null]); ok(/Valutazione/.test(j.nome));
     eq(chiamate, 0); eq((await spese()).produzione.richieste, 0); eq(JSON.parse(db.prepare('SELECT data FROM records WHERE id = ?').get(id).data).valore, undefined);
   });
   await test('già eseguita: se il report è già salvato sul record la conferma lo dice (così non si paga due volte per distrazione); su un record nuovo no', async () => {
@@ -77,7 +77,7 @@ async function main() {
   await test('impostazioni: tetto e prezzi validati, servizio sconosciuto rifiutato, null toglie tetto e riporta al listino, solo l\'amministratore', async () => {
     for (const male of [{ tetto_mensile: -1 }, { tetto_mensile: 'tanto' }, { prezzi: { inventato: 1 } }, { prezzi: { catasto_indirizzo: -2 } }, { prezzi: [] }]) eq((await imposta(male)).status, 400, JSON.stringify(male));
     eq((await imposta({ tetto_mensile: null, prezzi: { valutazione_immobiliare: null } })).status, 200);
-    const s = await spese(); eq([s.tetto, s.prezzi.find((p) => p.servizio === 'valutazione_immobiliare').prezzo], [null, null]);
+    const s = await spese(); eq([s.tetto, s.prezzi.find((p) => p.servizio === 'valutazione_immobiliare').prezzo], [null, 3]);
     eq((await imposta({ tetto_mensile: 3 }, { 'Content-Type': 'application/json' })).status, 401); eq((await fetch(BASE + '/api/connections/openapi_it/spese')).status, 401);
   });
   await test('il contatore è del mese corrente: le richieste di un altro mese non contano', () => {

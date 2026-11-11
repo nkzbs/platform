@@ -15,7 +15,10 @@ Stima dell'8 novembre 2026. I prezzi sono **di listino, IVA esclusa**, letti dal
 |---|---|---|---|
 | **Valutazione di mercato** (pulsante sull'immobile) | Valutazione avanzata €/mq (Advanced Quotation) | **3,00** singola; a scaglioni annui 2,50 (300 chiamate), 1,00 (1.000), 0,79 (5.000), 0,67 (10.000), 0,39 (50.000) | Dalla pagina prodotto (8/11): una pagina di ricerca indicava «da 0,05», che non coincide: vale il prezzo di listino, da confermare nella console. Il servizio «Start» (solo 3 valori al mq) costa da 2,00 a 0,26 |
 | ↳ annunci comparabili | Real Estate Comparables | 0,12 singola; 0,09 → 0,032 a scaglioni annui (1.000 → 100.000 chiamate); **30 gratis al mese** | Scaglioni annuali da pagare in anticipo |
-| ↳ quotazioni OMI | OMI Real Estate Quotations | 0,02 dopo **1.440 gratis al giorno** | Di fatto gratuita per un'agenzia |
+| ↳ quotazioni OMI | OMI Real Estate Quotations | 0,02 dopo **1.440 gratis al giorno** (0,003 con abbonamento) | Di fatto gratuita per un'agenzia. Confermato dalla console l'11/11/2026 |
+| ↳ valutazione €/mq semplice (start) | Real Estate | 2,00 (0,26 con abbonamento) | Non usata dal pulsante di valutazione, che usa l'avanzata |
+| ↳ valore di mercato dell'immobile (rm value) | Real Estate | 4,00 (0,35 con abbonamento) | Non usato da Platform |
+| ↳ storico del valore medio al mq | Real Estate | 0,12 (0,032 con abbonamento) | Non usato da Platform |
 | ↳ fotovoltaico, zona sismica, mappa, luoghi vicini | PVGIS, ISPRA, OpenStreetMap | 0 | Non passano da OpenAPI |
 | **Ricerca imprese** (clienti società) | Visure camerali, ricerca | 0 | Senza costi di ricerca |
 | **Visura camerale** (società, quote societarie) | Visure Camerali | n.d. (indicativo 2,90 per impresa individuale ordinaria/storica, da confermare) | Il listino vero si legge dall'endpoint `GET /documents` della tua console |
