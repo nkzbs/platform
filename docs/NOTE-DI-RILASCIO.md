@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.19 — Prezzo degli SMS dalla console
+
+Letto dalla console: SMS in Italia **0,049** a segmento da 160 caratteri (0,036 con un abbonamento); Spagna 0,039 (0,027); il codice monouso (OTP) costa come l'SMS normale; **registrare un mittente (alias) costa 0,30** una tantum; letture 0,001. Prima il registro contava 0,036 (il prezzo con abbonamento): ora 0,049, quindi la stima dei messaggi di massa e dell'SMS di «Invia per la firma» sale di conseguenza. Con un abbonamento si scrive il prezzo in Prezzi. Con questo il registro spese ha tutti i prezzi visibili nella console di OpenAPI.
+
 ## 0.5.18 — Risk: anche monitoraggi e controlli KYC singoli
 
 Aggiunti al registro spese i prezzi che mancavano dalla pagina di Risk: PEP, sanzioni e notizie negative una per una (0,31 l'una, 0,0496 con abbonamento), monitoraggio continuo KYC (1,56; 0,25) e del credit score top (1,265; 0,828). Nessuno è usato da Platform: servono quando una funzione li chiederà.

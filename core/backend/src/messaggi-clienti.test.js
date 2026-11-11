@@ -60,7 +60,7 @@ async function main() {
   await test('anteprima: nessun invio; conta chi riceve, chi è saltato e perché; senza conferma non parte niente', async () => {
     reset();
     const r = await (await massivo({ ids: [a, b, c, d], canali: ['mail', 'sms'], oggetto: 'Ciao', testo: 'Ciao {nome}', anteprima: true })).json();
-    eq([r.pronti, r.mail, r.sms, r.saltati, r.costo_sms], [2, 2, 1, 2, 0.036]); ok(r.saltati_motivi.some((m) => /consenso/.test(m)) && r.saltati_motivi.some((m) => /contatto/.test(m)));
+    eq([r.pronti, r.mail, r.sms, r.saltati, r.costo_sms], [2, 2, 1, 2, 0.049]); ok(r.saltati_motivi.some((m) => /consenso/.test(m)) && r.saltati_motivi.some((m) => /contatto/.test(m)));
     eq(r.esempio.testo, 'Ciao Mario'); eq([mail.length, sms.length], [0, 0]);
     const s = await massivo({ ids: [a], canali: ['mail'], oggetto: 'x', testo: 'y' }); eq((await s.json()).conferma_richiesta, true); eq(mail.length, 0, 'senza conferma non parte');
   });
