@@ -39,6 +39,16 @@ async function chiama(percorso, tok, opzioni = {}) {
 }
 const motivo = (r) => String((r.dati && r.dati.errors && r.dati.errors[0] && r.dati.errors[0].reason) || ('risposta ' + r.status)).slice(0, 160);
 
+// Orfano = creato da Platform (etichetta «tenant-…» o tag «platform»), non collegato a nessun tenant, vecchio di almeno 15 minuti
+// (un server appena creato non ha ancora il suo tenant: si collega a fine creazione). I server fatti a mano non si toccano mai.
+const ETA_MINIMA_ORFANO_MS = 15 * 60 * 1000;
+function eOrfano(s, usati) {
+  const nostro = /^tenant-/.test(s.label || '') || (s.tags || []).includes('platform');
+  if (!nostro || usati.has(Number(s.id))) return false;
+  const nato = Date.parse(s.created);
+  return Number.isFinite(nato) ? Date.now() - nato >= ETA_MINIMA_ORFANO_MS : false;
+}
+
 // Controllo: solo GET. Il token si prova con l'elenco dei server (serve il permesso «Linodes»); il saldo è facoltativo (serve «Account», lettura).
 // Regione e tipo si leggono dal catalogo pubblico, senza token. Ritorna sempre un quadro, mai un'eccezione per un esito negativo.
 async function controlla(tok = token()) {
@@ -51,7 +61,8 @@ async function controlla(tok = token()) {
     if (l.status === 403) { out.token = { ok: false, motivo: 'Il token non ha il permesso «Linodes»: ricrealo con Linodes in lettura e scrittura.' }; return out; }
     if (!l.ok) { out.token = { ok: false, motivo: 'Linode ha risposto: ' + motivo(l) }; return out; }
     out.token = { ok: true };
-    out.server = ((l.dati && l.dati.data) || []).map((s) => ({ id: s.id, nome: s.label, stato: s.status, regione: s.region, tipo: s.type, ip: (s.ipv4 || [])[0] || null, backup: !!(s.backups && s.backups.enabled) }));
+    const usati = new Set(db.prepare('SELECT linode_id FROM tenants WHERE linode_id IS NOT NULL').all().map((r) => Number(r.linode_id)));
+    out.server = ((l.dati && l.dati.data) || []).map((s) => ({ id: s.id, nome: s.label, stato: s.status, regione: s.region, tipo: s.type, ip: (s.ipv4 || [])[0] || null, backup: !!(s.backups && s.backups.enabled), orfano: eOrfano(s, usati) }));
     out.ok = true;
     const a = await chiama('/account', tok).catch(() => null);
     if (a && a.ok && a.dati) out.saldo = { da_pagare: a.dati.balance, uninvoiced: a.dati.balance_uninvoiced };
@@ -103,4 +114,14 @@ async function eliminaServer(id) {
   return { eliminato: true };
 }
 
-module.exports = { creaServer, leggiServer, eliminaServer, maxServer, token, stato, salvaToken, togliToken, salvaImpostazioni, controlla, validaToken, impostazioni, PREDEFINITI };
+// Cancella un server SOLO se in questo momento risulta orfano (riletto da Linode, non fidandosi della pagina).
+async function eliminaOrfano(id) {
+  const c = await controlla();
+  if (!c.ok) throw Object.assign(new Error(c.motivo || (c.token && c.token.motivo) || 'Linode non risponde.'), { status: 502 });
+  const s = c.server.find((x) => x.id === Number(id));
+  if (!s) throw Object.assign(new Error('Questo server non esiste più su Linode.'), { status: 404 });
+  if (!s.orfano) throw Object.assign(new Error('Questo server non risulta orfano (è collegato a un tenant, è appena nato o non è stato creato da Platform): non lo tocco.'), { status: 409 });
+  return eliminaServer(s.id);
+}
+
+module.exports = { eliminaOrfano, creaServer, leggiServer, eliminaServer, maxServer, token, stato, salvaToken, togliToken, salvaImpostazioni, controlla, validaToken, impostazioni, PREDEFINITI };

@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.1 — Server orfani su Linode
+
+«Controlla Linode» (Impostazioni → Server) segna come **ORFANO** un server creato da Platform (etichetta `tenant-…` o tag `platform`) che nessun tenant usa e che ha almeno 15 minuti (uno appena creato non ha ancora il suo tenant). Sotto l'elenco compare un avviso per ogni orfano, con il costo mensile e «Elimina questo server» (con conferma). Il backend rilegge Linode prima di cancellare e rifiuta (409) tutto ciò che non è orfano in quel momento; i server fatti a mano non si toccano mai. Test in `cloud.test.js`. **Non ancora provato** contro Linode vero (solo simulato).
+
 ## 0.5.0 — Un server per tenant, spostare un tenant, un'interfaccia unica da telefono
 
 La 0.5 chiude la fase «dal NAS al server per tenant» e la riorganizzazione dell'interfaccia. Dalla 0.4.88 (generatore di moduli e collaudo) a qui:

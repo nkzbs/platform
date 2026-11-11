@@ -276,6 +276,8 @@ Nel Builder, modulo Documenti → «Come si vede l'elenco» → **Archivio**. Le
 
 **Una volta sola** (Super Admin → Impostazioni → Server): il token Linode (permessi di lettura e scrittura su Linodes), regione `it-mil` e tipo `g6-nanode-1`, e il collegamento a Cloudflare (ID della zona, dominio, IP pubblico del NAS; token con il solo permesso Zona → DNS → Modifica, limitato alla zona). I token si salvano cifrati e non si rimostrano. «Controlla Linode» e «Controlla Cloudflare» fanno solo letture.
 
+**Server orfani** (dalla 0.5.1): «Controlla Linode» segna ORFANO un server di Platform senza tenant (vecchio di almeno 15 minuti) e offre «Elimina questo server». Non tocca mai server fatti a mano.
+
 **Creare un tenant su Linode**: Nuovo tenant → «Dove creare il tenant» = Linode (o dalla pagina Analisi). Costa 5 $ + 2 $ di backup al mese, da subito; tetto di 5 server. Dura circa 10 minuti: la finestra mostra le fasi vere. Le credenziali iniziali compaiono a fine creazione e si leggono **una volta** (30 minuti in memoria: se Super Admin si riavvia prima, «Reset credenziali»).
 
 **Spostare un tenant dal NAS a Linode**: riga del tenant → «⋯» → **Sposta su Linode**. Il tenant resta fermo 3-5 minuti, l'indirizzo non cambia, utenti e sessioni restano. Se qualcosa va storto si rimette tutto sul NAS da solo. Dopo, la copia sul NAS resta **ferma con tutti i dati**: **non cancellare il tenant da Super Admin** finché non sei tranquillo, perché cancellandolo si toglie anche quella. Prima di spostare controlla se il tenant usa servizi che accettano solo certi indirizzi IP (l'IP di uscita cambia, ad esempio una chiave OpenAPI.it con restrizione).

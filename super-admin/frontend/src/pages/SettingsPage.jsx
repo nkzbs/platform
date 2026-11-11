@@ -499,7 +499,21 @@ function SettingsPage({ token, myId }) {
                 {cloudCheck.saldo && <div className="text-gray-300">Saldo: {cloudCheck.saldo.da_pagare} $ · consumo del mese non ancora fatturato: {cloudCheck.saldo.uninvoiced} $</div>}
                 {cloudCheck.regione && <div className="text-gray-300">Regione: {cloudCheck.regione.nome ? cloudCheck.regione.nome + ' (' + cloudCheck.regione.id + ')' : <span className="text-amber-400">{cloudCheck.regione.avviso}</span>}</div>}
                 {cloudCheck.tipo && <div className="text-gray-300">Macchina: {cloudCheck.tipo.nome ? cloudCheck.tipo.nome + ' — ' + Math.round(cloudCheck.tipo.ram_mb / 1024) + ' GB di RAM, ' + cloudCheck.tipo.prezzo_mese + ' $/mese + ' + cloudCheck.tipo.backup_mese + ' $ di backup' : <span className="text-amber-400">{cloudCheck.tipo.avviso}</span>}</div>}
-                {cloudCheck.ok && <div className="text-gray-300">Server esistenti: {cloudCheck.server.length ? cloudCheck.server.map((x) => x.nome + ' (' + x.stato + ', ' + x.ip + ')').join(' · ') : 'nessuno'}</div>}
+                {cloudCheck.ok && <div className="text-gray-300">Server esistenti: {cloudCheck.server.length ? cloudCheck.server.map((x) => x.nome + ' (' + x.stato + ', ' + x.ip + ')' + (x.orfano ? ' — ORFANO' : '')).join(' · ') : 'nessuno'}</div>}
+                {cloudCheck.ok && cloudCheck.server.filter((x) => x.orfano).map((x) => (
+                  <div key={x.id} className="border border-amber-500/40 rounded-lg p-3 text-amber-300 space-y-2">
+                    <div>Il server <b>{x.nome}</b> ({x.ip}) non appartiene a nessun tenant{cloudCheck.tipo && cloudCheck.tipo.prezzo_mese ? ' e costa circa ' + cloudCheck.tipo.prezzo_mese + ' $/mese' : ''}.</div>
+                    <button type="button" disabled={cloudBusy} className={ghostBtn} onClick={async () => {
+                      if (!window.confirm('Eliminare il server ' + x.nome + ' su Linode? Con il server si perde tutto ciò che contiene e non si torna indietro.')) return
+                      setCloudBusy(true); setCloudMsg(null)
+                      const res = await fetch(API + '/cloud/server/' + x.id, { method: 'DELETE', headers })
+                      const d = await res.json().catch(() => ({}))
+                      setCloudBusy(false)
+                      if (!res.ok) { setCloudMsg({ ok: false, text: d.error || 'Non riuscito.' }); return }
+                      setCloudMsg({ ok: true, text: 'Server ' + x.nome + ' eliminato.' }); cloudControlla()
+                    }}>Elimina questo server</button>
+                  </div>
+                ))}
                 {(cloudCheck.avvisi || []).map((a, i) => <div key={i} className="text-xs text-gray-500">{a}</div>)}
               </div>
             )}

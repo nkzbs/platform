@@ -16,6 +16,7 @@ const ok = (c, m) => { if (!c) throw new Error(m || 'atteso true'); };
 
 const BUONO = 'token-linode-buono-1234567890', SENZA_ACCOUNT = 'token-linode-senza-account-123456', SBAGLIATO = 'token-linode-sbagliato-1234567';
 const CF_BUONO = 'cf-token-buono-1234567890abcd', CF_SENZA_DNS = 'cf-token-senza-dns-1234567890', CF_SBAGLIATO = 'cf-token-sbagliato-12345678901', ZONA = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
+const eliminati = []; const SERVER_EXTRA = [];
 const realFetch = global.fetch; const chiamate = [];
 global.fetch = async (url, opts = {}) => {
   const u = String(url);
@@ -36,7 +37,8 @@ global.fetch = async (url, opts = {}) => {
   if (p.startsWith('/regions/')) return r(p === '/regions/it-mil' ? 200 : 404, { label: 'Milan, IT', country: 'it' });
   if (p.startsWith('/linode/types/')) return r(200, { label: 'Nanode 1GB', memory: 1024, disk: 25600, price: { monthly: 5 }, addons: { backups: { price: { monthly: 2 } } } });
   if (tok === SBAGLIATO) return r(401, { errors: [{ reason: 'Invalid Token' }] });
-  if (p.startsWith('/linode/instances')) return r(200, { data: [{ id: 7, label: 'plt-test', status: 'running', region: 'it-mil', type: 'g6-nanode-1', ipv4: ['172.232.204.88'], backups: { enabled: false } }] });
+  if (p.startsWith('/linode/instances/') && opts.method === 'DELETE') { eliminati.push(Number(p.split('/').pop())); return r(200, {}); }
+  if (p.startsWith('/linode/instances')) return r(200, { data: [{ id: 7, label: 'plt-test', status: 'running', region: 'it-mil', type: 'g6-nanode-1', ipv4: ['172.232.204.88'], backups: { enabled: false }, tags: [], created: '2026-01-01T00:00:00' }, ...SERVER_EXTRA] });
   if (p === '/account') return tok === SENZA_ACCOUNT ? r(403, { errors: [{ reason: 'Unauthorized' }] }) : r(200, { balance: 0, balance_uninvoiced: 1.5 });
   return r(404, {});
 };
@@ -71,6 +73,22 @@ async function main() {
     eq(c.regione.nome, 'Milan, IT'); eq(c.tipo.prezzo_mese, 5); eq(c.tipo.backup_mese, 2);
     ok(chiamate.length >= 3 && chiamate.every((x) => x.metodo === 'GET'), 'solo letture: ' + JSON.stringify(chiamate));
     ok(!JSON.stringify(c).includes(BUONO), 'il token non esce');
+  });
+  await test('server orfani: solo quelli di Platform, senza tenant e non appena nati; si cancellano solo se orfani', async () => {
+    const vecchio = '2026-01-02T00:00:00', ora = new Date().toISOString();
+    db.prepare("INSERT INTO tenants (slug, name, port, db_path, status, linode_id) VALUES ('legato', 'Legato', 47499, '/x/l.db', 'active', 21)").run();
+    SERVER_EXTRA.push(
+      { id: 20, label: 'tenant-fantasma', status: 'running', tags: ['platform', 'tenant'], created: vecchio, ipv4: ['1.1.1.1'] },
+      { id: 21, label: 'tenant-legato', status: 'running', tags: ['platform'], created: vecchio, ipv4: ['1.1.1.2'] },
+      { id: 22, label: 'tenant-nuovo', status: 'provisioning', tags: ['platform'], created: ora, ipv4: ['1.1.1.3'] },
+      { id: 23, label: 'mio-server', status: 'running', tags: [], created: vecchio, ipv4: ['1.1.1.4'] });
+    const c = await (await api('POST', '/controlla')).json();
+    eq(c.server.filter((x) => x.orfano).map((x) => x.id), [20]);
+    for (const id of [21, 22, 23, 7]) eq((await api('DELETE', '/server/' + id)).status, 409, 'server ' + id);
+    eq((await api('DELETE', '/server/999')).status, 404);
+    eq(eliminati, []);
+    eq((await api('DELETE', '/server/20')).status, 200); eq(eliminati, [20]);
+    SERVER_EXTRA.length = 0;
   });
   await test('senza il permesso «Account» il controllo riesce lo stesso e lo dice', async () => {
     await api('PUT', '/token', { token: SENZA_ACCOUNT });

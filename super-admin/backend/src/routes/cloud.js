@@ -34,6 +34,15 @@ router.put('/impostazioni', requireAuth, (req, res) => {
 // Solo letture su Linode: non crea e non costa.
 router.post('/controlla', requireAuth, async (req, res) => res.json(await linode.controlla()));
 
+// Elimina un server orfano (la conferma sta nella pagina; qui si riverifica che sia davvero orfano).
+router.delete('/server/:id', requireAuth, async (req, res) => {
+  try {
+    const r = await linode.eliminaOrfano(req.params.id);
+    logAudit(req.user.username, 'cloud.linode.orfano.elimina', null, { linode_id: Number(req.params.id) });
+    res.json(r);
+  } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+});
+
 // ── Cloudflare (record DNS dei tenant sui loro server) ─ stesse regole: token sigillato, controllo a sole letture ──
 const cf = require('../lib/cloudflare');
 router.get('/cloudflare', requireAuth, (req, res) => res.json(cf.stato()));
