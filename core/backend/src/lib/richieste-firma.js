@@ -124,9 +124,21 @@ async function invia({ slug, id, documenti, destinatario, utente, linkBase }) {
   return { id: c.id, scade: c.scade, destinatario };
 }
 
+// Il link di una richiesta (il token si conserva cifrato): serve per l'SMS, per WhatsApp e per rimandare lo stesso link nei solleciti.
+const linkDi = (r) => { const t = unsealText(r.token_cifrato); return t ? r.link_base + '/firma/' + t : null; };
+const testoSms = (r) => { const n = primoNome(r.destinatario_nome); const a = agenzia(); return (a ? a + ': ' : '') + (n ? n + ', i' : 'I') + ' documenti sono pronti da firmare (3 minuti). ' + linkDi(r); };
+// WhatsApp senza costi né API: un collegamento wa.me che apre la chat con il cliente e il messaggio già scritto; lo invia l'agente dal suo telefono.
+function whatsappUrl(r) {
+  const tel = normalizzaTel(r.destinatario_telefono); const link = linkDi(r); if (!tel || !link) return null;
+  const agente = mittente(r.creata_da); const n = primoNome(r.destinatario_nome);
+  const testo = 'Buongiorno' + (n ? ' ' + n : '') + ', sono ' + (agente ? agente.nome : 'dell\'agenzia') + (agenzia() ? ' di ' + agenzia() : '') + '. Ti ho mandato per mail i documenti da firmare. Se preferisci, li firmi da qui: ' + link;
+  return 'https://wa.me/' + tel.replace(/^\+/, '') + '?text=' + encodeURIComponent(testo);
+}
+function whatsappDi(id) { const r = db.prepare("SELECT * FROM richieste_firma WHERE id = ? AND stato IN ('inviata', 'in_firma')").get(id); if (!r) throw err('Richiesta non trovata o già conclusa.', 404); const u = whatsappUrl(r); if (!u) throw err('Manca un cellulare valido nella scheda del firmatario.', 409); return { url: u }; }
+
 // Più firmatari (per esempio proprietario e comproprietari): una richiesta e un link per ognuno, tutti nello stesso `gruppo`. Lo stato del record cambia solo quando hanno firmato tutti.
 // `firmatari` = [{ email, nome, telefono }]. Se una mail non parte, quella richiesta si annulla e lo si dice; se non parte nessuna, errore.
-async function inviaGruppo({ slug, id, documenti, firmatari, utente, linkBase }) {
+async function inviaGruppo({ slug, id, documenti, firmatari, utente, linkBase, canali = [] }) {
   const visti = new Set(), lista = [];
   for (const f of firmatari || []) { const e = String(f.email || '').trim().toLowerCase(); if (e && !visti.has(e)) { visti.add(e); lista.push({ ...f, email: String(f.email).trim() }); } }
   if (!lista.length) throw err('Manca un indirizzo email valido a cui mandare i documenti.');
@@ -136,7 +148,14 @@ async function inviaGruppo({ slug, id, documenti, firmatari, utente, linkBase })
     const c = crea({ slug, id, documenti, destinatario: f.email, utente, linkBase, gruppo, nome: f.nome, telefono: f.telefono });
     const r = db.prepare('SELECT * FROM richieste_firma WHERE id = ?').get(c.id);
     const mail = await mandaEmail(r, c.token);
-    if (mail.ok) inviati.push({ id: c.id, destinatario: f.email, nome: f.nome || '' });
+    if (mail.ok) {
+      let sms = null;
+      if (canali.includes('sms')) {
+        if (!normalizzaTel(f.telefono)) sms = 'manca un cellulare valido';
+        else { const x = await require('./messaggi-clienti').inviaSmsA({ numero: normalizzaTel(f.telefono), testo: testoSms(r), tipo: 'firma', modulo: slug, recordId: id, utente: utente || 'firma' }); sms = x.ok ? 'inviato' : x.motivo; }
+      }
+      inviati.push({ id: c.id, destinatario: f.email, nome: f.nome || '', sms, whatsapp: whatsappUrl(r) });
+    }
     else { db.prepare("UPDATE richieste_firma SET stato = 'annullata' WHERE id = ?").run(c.id); falliti.push({ destinatario: f.email, motivo: mail.motivo }); }
   }
   if (!inviati.length) throw err('La mail non è partita: ' + falliti.map((x) => x.destinatario + ' (' + x.motivo + ')').join('; '), 502);
@@ -308,4 +327,4 @@ function avviaSolleciti() {
   console.log('Solleciti delle richieste di firma: controllo ogni ora (dopo 3 e 7 giorni, scadenza a 14)');
 }
 
-module.exports = { inviaGruppo, avviaCodice, controllaDaPagina, controllaFirmeInCorso, controllaCodice, crea, invia, pubblica, pdf, completa, elenco, annulla, sollecita, eseguiSolleciti, avviaSolleciti, motivoNonValida, GIORNI_VALIDITA };
+module.exports = { whatsappDi, inviaGruppo, avviaCodice, controllaDaPagina, controllaFirmeInCorso, controllaCodice, crea, invia, pubblica, pdf, completa, elenco, annulla, sollecita, eseguiSolleciti, avviaSolleciti, motivoNonValida, GIORNI_VALIDITA };

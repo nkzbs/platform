@@ -221,6 +221,33 @@ async function main() {
     eq(db.prepare("SELECT COUNT(*) c FROM record_attachments WHERE module_slug = 'immobili_t' AND record_id = ? AND tipo = 'scheda_firmata'").get(imm).c, 2, 'una copia a testa');
     ok(db.prepare("SELECT 1 FROM notifications WHERE message LIKE '%Chiara Beta ha firmato%' AND message NOT LIKE '%Manca%'").get(), 'l\'ultimo avviso non ha «manca»');
   });
+  // ── SMS e WhatsApp ──
+  const mc = require('./lib/messaggi-clienti'); const sms = []; let smsAttivo = true;
+  mc.canaliDisponibili = async () => ({ mail: { ok: true }, sms: smsAttivo ? { ok: true, motivo: null } : { ok: false, motivo: 'manca il mittente' } });
+  mc.inviaSmsA = async (m) => { sms.push(m); return { ok: true }; };
+  await test('capacità: SMS se il servizio c\'è (con il motivo se manca), WhatsApp sempre', async () => {
+    let c = await (await fetch(BASE + '/api/firma/capacita', { headers: H })).json(); eq(c.sms.ok, true); eq(c.whatsapp.ok, true);
+    smsAttivo = false; c = await (await fetch(BASE + '/api/firma/capacita', { headers: H })).json(); eq(c.sms.ok, false); ok(/mittente/.test(c.sms.motivo)); smsAttivo = true;
+    eq((await fetch(BASE + '/api/firma/capacita')).status, 401);
+  });
+  await test('senza chiederlo non parte nessun SMS; con «sms» parte uno a chi ha un cellulare, con il link e il nome dell\'agenzia, e dice chi non ce l\'ha', async () => {
+    const a = rec({ nome: 'Ida Sole', email: 'ida@esempio.it', telefono: '333 444 5555', _stato: 'nuovo' }), b = rec({ nome: 'Ugo Luna', email: 'ugo@esempio.it', _stato: 'nuovo' });
+    const n = sms.length; await post(`/firma/clienti_t/${a}/richieste`, { link_base: LINK }); eq(sms.length, n, 'nessun SMS non richiesto');
+    const r1 = await (await post(`/firma/clienti_t/${b}/richieste`, { link_base: LINK, canali: ['sms'] })).json(); eq(r1.inviati[0].sms, 'manca un cellulare valido'); eq(sms.length, n, 'niente numero, niente SMS (la mail è partita lo stesso)');
+    const c = rec({ nome: 'Ida Sole', email: 'ida2@esempio.it', telefono: '333 444 5555', _stato: 'nuovo' });
+    const r2 = await (await post(`/firma/clienti_t/${c}/richieste`, { link_base: LINK, canali: ['sms'] })).json(); eq(r2.inviati[0].sms, 'inviato');
+    const m = sms[sms.length - 1]; eq(m.numero, '+393334445555'); ok(/Agenzia Prova: Ida, i documenti sono pronti da firmare/.test(m.testo) && /https:\/\/clienti\.esempio\.it\/firma\/[A-Za-z0-9_-]{40,}/.test(m.testo), m.testo);
+    ok(m.testo.length <= 180, 'resta breve: ' + m.testo.length);
+  });
+  await test('WhatsApp: collegamento wa.me con la chat del cliente e il messaggio già scritto, anche dopo (token cifrato); senza cellulare errore chiaro', async () => {
+    const c = rec({ nome: 'Lia Mare', email: 'lia@esempio.it', telefono: '3205556666', _stato: 'nuovo' });
+    const r = await (await post(`/firma/clienti_t/${c}/richieste`, { link_base: LINK })).json(); const w = r.inviati[0].whatsapp;
+    ok(w.startsWith('https://wa.me/393205556666?text='), w); const testo = decodeURIComponent(w.split('?text=')[1]);
+    ok(/Buongiorno Lia, sono Admin di Agenzia Prova\. Ti ho mandato per mail i documenti da firmare/.test(testo) && /https:\/\/clienti\.esempio\.it\/firma\//.test(testo), testo);
+    const dopo = await (await fetch(BASE + '/api/firma/richieste/' + r.inviati[0].id + '/whatsapp', { headers: H })).json(); eq(dopo.url, w);
+    const d = rec({ nome: 'Senza Tel', email: 'st@esempio.it', _stato: 'nuovo' }); const r2 = await (await post(`/firma/clienti_t/${d}/richieste`, { link_base: LINK })).json();
+    eq(r2.inviati[0].whatsapp, null); eq((await fetch(BASE + '/api/firma/richieste/' + r2.inviati[0].id + '/whatsapp', { headers: H })).status, 409);
+  });
   await test('annullare una richiesta: il link smette di funzionare; l\'elenco mostra gli stati', async () => {
     const id3 = rec({ nome: 'Carlo Neri', email: 'carlo@esempio.it', _stato: 'nuovo' });
     await post(`/firma/clienti_t/${id3}/richieste`, { link_base: LINK }); const tok3 = tokenDa(partite[partite.length - 1]);

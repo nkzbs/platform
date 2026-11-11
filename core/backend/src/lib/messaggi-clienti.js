@@ -73,6 +73,24 @@ function registra({ tipo, modulo, record_id, canale, esito, motivo, utente }) {
 }
 
 // Quali canali possono partire ORA? mail: SMTP o Resend (Posta in uscita); sms: servizio abilitato + mittente scritto.
+// Un SMS a un numero qualunque (per esempio il link di firma): stesso mittente, stessa spesa registrata, stesso registro dei messaggi. Niente consenso commerciale: è un messaggio di servizio.
+async function inviaSmsA({ numero, testo, tipo = 'servizio', modulo = null, recordId = null, utente = 'sistema' }) {
+  const mitt = impostazioni().sms_mittente;
+  const n = numeroE164(numero);
+  if (!mitt) return { ok: false, motivo: 'manca il mittente degli SMS' };
+  if (!n) return { ok: false, motivo: 'numero di cellulare non valido' };
+  try {
+    const spese = require('./openapi-spese');
+    const r = await require('./openapi-it').chiama({ dominio: 'sms', metodo: 'POST', percorso: '/IT-messages', corpo: { sender: mitt, recipient: n, message: String(testo || '').slice(0, 640) }, scopi: [['POST', '/IT-messages']] });
+    const m = (r && r.data) || {};
+    spese.registra({ servizio: 'sms_italia', descrizione: 'SMS · ' + String(m.recipient || n).slice(0, 20), costo: Number(m.totalPrice) || (spese.prezzo('sms_italia') || 0) * (m.messageCount || 1), utente, riferimento: 'sms#' + (m.id || '') });
+    try { db.prepare('INSERT INTO messaggi_inviati (tipo, modulo, record_id, canale, esito, motivo, utente) VALUES (?, ?, ?, ?, ?, ?, ?)').run(tipo, modulo, recordId, 'sms', 'ok', null, utente); } catch (e) { /* il registro non blocca */ }
+    return { ok: true };
+  } catch (e) {
+    try { db.prepare('INSERT INTO messaggi_inviati (tipo, modulo, record_id, canale, esito, motivo, utente) VALUES (?, ?, ?, ?, ?, ?, ?)').run(tipo, modulo, recordId, 'sms', 'errore', String((e && e.message) || e).slice(0, 200), utente); } catch (x) { /* idem */ }
+    return { ok: false, motivo: String((e && e.message) || e).slice(0, 160) };
+  }
+}
 async function canaliDisponibili() {
   const mail = require('./email');
   const st = mail.stato();
@@ -181,4 +199,4 @@ function avviaAuguri() {
 }
 
 const registroRecente = (limite = 50) => db.prepare('SELECT * FROM messaggi_inviati ORDER BY id DESC LIMIT ?').all(limite);
-module.exports = { impostazioni, salvaImpostazioni, riempi, numeroE164, haConsenso, canaliDisponibili, prepara, spedisci, eseguiAuguri, avviaAuguri, compleannoOggi, registroRecente, inviatiOggi, _leggi: leggi };
+module.exports = { inviaSmsA, impostazioni, salvaImpostazioni, riempi, numeroE164, haConsenso, canaliDisponibili, prepara, spedisci, eseguiAuguri, avviaAuguri, compleannoOggi, registroRecente, inviatiOggi, _leggi: leggi };

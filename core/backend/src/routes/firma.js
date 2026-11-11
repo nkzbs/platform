@@ -53,7 +53,7 @@ admin.post('/:slug/:id/richieste', requireAuth, requireAdmin, requireModuleAcces
       if (!percorsi.length) { const e = indirizzoDelRecord(ctx.schema, ctx.record); if (e) firmatari.push({ email: e, nome: risolviDestinatario('nome', ctx.get), telefono: risolviDestinatario('telefono', ctx.get) }); }
       documenti.push({ key: a.key, label: a.label || a.key, corpo: renderModello(a.body, ctx.get), consensi: (a.consents || []).map((c) => ({ field: c.field, label: c.label })) });
     }
-    const out = await firma.inviaGruppo({ slug, id: Number(id), documenti, firmatari, utente: req.user.username, linkBase: String((req.body && req.body.link_base) || '').replace(/\/+$/, '') });
+    const out = await firma.inviaGruppo({ slug, id: Number(id), documenti, firmatari, utente: req.user.username, linkBase: String((req.body && req.body.link_base) || '').replace(/\/+$/, ''), canali: Array.isArray(req.body && req.body.canali) ? req.body.canali : [] });
     logAudit(req.user.username, 'firma.richiesta', slug + '#' + id, { documenti: documenti.map((d) => d.key), email: out.inviati.map((x) => x.destinatario) });
     // Come per l'invio per email: lo stato «documenti inviati» (`on_send_state`) scatta alla partenza, se il flusso lo ammette da dove il record si trova.
     const stato = scelte.map((a) => a.on_send_state).find(Boolean);
@@ -61,6 +61,11 @@ admin.post('/:slug/:id/richieste', requireAuth, requireAdmin, requireModuleAcces
     res.json({ ok: true, ...out, id: out.inviati[0].id, destinatario: out.inviati.map((x) => x.destinatario).join(', '), stato_aggiornato: statoAggiornato });
   } catch (e) { fail(res, e); }
 });
+// Cosa si può usare oltre alla mail: l'SMS c'è se il mittente è impostato e il servizio è attivo (con il prezzo di un SMS, se noto); WhatsApp c'è sempre (collegamento wa.me, senza costi).
+admin.get('/capacita', requireAuth, requireAdmin, async (req, res) => {
+  try { const c = await require('../lib/messaggi-clienti').canaliDisponibili(); res.json({ sms: { ok: !!c.sms.ok, motivo: c.sms.motivo || null, prezzo: require('../lib/openapi-spese').prezzo('sms_italia') }, whatsapp: { ok: true } }); } catch (e) { fail(res, e); }
+});
+admin.get('/richieste/:rid/whatsapp', requireAuth, requireAdmin, (req, res) => { try { res.json(firma.whatsappDi(Number(req.params.rid))); } catch (e) { fail(res, e); } });
 admin.post('/richieste/:rid/sollecita', requireAuth, requireAdmin, async (req, res) => { try { res.json(await firma.sollecita(Number(req.params.rid))); } catch (e) { fail(res, e); } });
 admin.delete('/richieste/:rid', requireAuth, requireAdmin, (req, res) => {
   if (!firma.annulla(Number(req.params.rid))) return res.status(404).json({ error: 'Richiesta non trovata o già conclusa.' });

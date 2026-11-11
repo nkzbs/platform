@@ -2,6 +2,12 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.11 — «Invia per la firma» anche per SMS e WhatsApp
+
+- **SMS**: nella scheda Documenti, sopra il pulsante, la casella «Manda anche un SMS con il link» (compare solo se il mittente degli SMS è impostato e il servizio SMS di OpenAPI.it è attivo; mostra il prezzo se lo hai scritto in Prezzi). Parte un SMS a ogni firmatario che ha un cellulare valido nella scheda, breve e con il nome dell'agenzia («Agenzia: Mario, i documenti sono pronti da firmare (3 minuti). link»); chi non ha il cellulare lo si dice e la mail parte lo stesso. È un messaggio di servizio: non serve il consenso alle comunicazioni commerciali. La spesa va nel registro spese e il messaggio nel registro dei messaggi.
+- **WhatsApp**, senza costi né API: un collegamento `wa.me` che apre la chat con il cliente e il messaggio già scritto («Buongiorno Mario, sono Giulia di Agenzia. Ti ho mandato per mail i documenti da firmare. Se preferisci, li firmi da qui: link»); lo invii tu dal tuo telefono. Compare come pulsante dopo l'invio e come «WhatsApp» su ogni riga in attesa (il link si ricostruisce dal token cifrato).
+- Il saluto e il numero sono quelli del firmatario, non della scheda. Test: 23 in `richieste-firma.test.js`.
+
 ## 0.5.10 — Più firmatari: comproprietari, cedente e cessionario
 
 «Invia per la firma» ora può mandare gli stessi documenti a **più persone**, ognuna con la sua mail, il suo link e il suo nome nel saluto (prima il saluto usava il nome della scheda: sull'immobile avrebbe detto «Buongiorno Villa»). Il documento dichiara chi firma con `recipients` (elenco di campi email del record o di un record collegato); nome e telefono si cercano accanto all'email (`proprietario.email` → `proprietario.nome`, `proprietario.telefono`; `email` → `nome`, `telefono`). Senza elenco valgono `recipient` e, in mancanza, il campo email del record. Gli indirizzi uguali si mandano una volta sola; se una mail non parte, quella richiesta si annulla e lo si dice, le altre restano.
