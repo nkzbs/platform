@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.14 — Prezzi della fatturazione elettronica di OpenAPI
+
+Letti dalla console: fattura italiana emessa o ricevuta **0,049** (le emesse 0,0135 con un abbonamento), configurazione di un'azienda 1,00, punto vendita 9,00, importazione 0,049, scontrini 0,019, corrispettivi 0,013; Francia 0,27 e 0,09; Germania 0,09; altri paesi 0,09 e 0,001. Nel registro spese `sdi_fattura` passa da «da scrivere» a 0,049 e c'è `sdi_configurazione`. **Platform non usa l'SDI di OpenAPI**: le fatture delle provvigioni si emettono con Fatture in Cloud (decisione dell'8 novembre); i prezzi servono solo per confronto.
+
 ## 0.5.13 — Prezzi di eSignature e delle visure catastali dalla console di OpenAPI
 
 Letti dalla console (11 novembre 2026): la **firma elettronica semplice costa 0,49 a richiesta** (0,09 con un abbonamento), non a firmatario, e non 0,14 come stimato prima: il pacchetto di «Invia per la firma» è UNA richiesta. Marca temporale facoltativa 0,15 (Platform non la chiede). Firma avanzata 1,20 (0,69), con prova di vita 1,38 (0,79), qualificata con OTP 0,025 (0,0065), automatica e sigillo 0,05 (0,013); certificati Namirial 29 e 137; letture e verifiche 0,001. Catasto: **visura immobile e visura soggetto 1,90** (visura immobile 0,39 con abbonamento), **monitoraggio 0,60** (prospetto catastale, ricerca persona, ricerca nazionale). Il registro spese conta ora 0,49 per ogni firma con codice partita; `docs/COSTI-OPENAPI.md` e l'esempio di spesa mensile sono aggiornati (da circa 170 a 230 € al mese + IVA con 26 richieste di firma).

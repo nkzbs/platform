@@ -37,7 +37,7 @@ Stima dell'8 novembre 2026. I prezzi sono **di listino, IVA esclusa**, letti dal
 | ↳ **letture gratuite** del Catasto (territorio, richiesta, visura, ipotecarie, estratto di mappa, elaborato, monitoraggio) | Catasto | **0,001** a richiesta | Non sono a zero: il controllo dell'esito di una ricerca costa un millesimo di euro (Platform le conta 0) |
 | ↳ visura catastale (immobile / soggetto) | Catasto | 1,90 l'una (visura immobile 0,39 con abbonamento) | Letti dalla console di OpenAPI l'11 novembre 2026 |
 | ↳ monitoraggio (prospetto catastale, ricerca persona, ricerca nazionale) | Catasto | 0,60 l'uno | Idem |
-| **Fattura elettronica** (provvigioni) | **Fatture in Cloud** (non OpenAPI) | secondo il tuo piano di Fatture in Cloud | Decisione dell'8/11: le fatture si emettono con Fatture in Cloud; il servizio SDI di OpenAPI non serve e non va attivato |
+| **Fattura elettronica** (provvigioni) | **Fatture in Cloud** (non OpenAPI) | secondo il tuo piano di Fatture in Cloud | Decisione dell'8/11: le fatture si emettono con Fatture in Cloud; il servizio SDI di OpenAPI non serve e non va attivato. Per confronto, listino SDI di OpenAPI (console, 11/11/2026): fattura IT emessa o ricevuta **0,049** (emesse 0,0135 con abbonamento), configurazione azienda 1,00, punto vendita 9,00, importazione fatture 0,049, scontrini 0,019 (0,009), corrispettivi 0,013 (0,0034); Francia 0,27 (0,051) e 0,09; Germania 0,09; altri paesi 0,09 e 0,001 |
 | **Firma elettronica semplice** (preliminare, privacy e incarico: codice per mail o SMS) | eSignature · EU-SES | **0,49 a richiesta** (0,09 con un abbonamento) | Letto dalla console l'11 novembre 2026. È a **richiesta**, non a firmatario: il pacchetto di documenti di «Invia per la firma» è UNA richiesta. In più la marca temporale facoltativa (0,15), che Platform non chiede |
 | ↳ firma avanzata (AES) / con prova di vita | eSignature | 1,20 (0,69 con abbonamento) / 1,38 (0,79) | Non usate da Platform |
 | ↳ firma qualificata con OTP / automatica / sigillo | eSignature · EU-QES | 0,025 (0,0065 con abbonamento) / 0,05 (0,013) | Non usate da Platform |
@@ -75,7 +75,7 @@ Ipotesi: un'agenzia con **20 valutazioni, 15 clienti persona, 5 clienti società
 | Clienti società: credit score Start | 5 | 0,06 | **0,3** |
 | Catasto: indirizzo + foglio + particella | 20 | 0,70 | **14,0** |
 | Catasto: estratto di mappa su 5 pratiche | 5 | 6,90 | **34,5** |
-| Fatture elettroniche (invio + archiviazione + firma) | 10 | 0,08–0,125 | **0,8–1,3** |
+| Fatture elettroniche (solo se si usasse l'SDI di OpenAPI: invio, 0,049; con Fatture in Cloud è nel loro piano) | 10 | 0,049 | **0,5** |
 | Richieste di firma elettronica | 26 | 0,49 (0,09 con abbonamento) | **12,7** (2,3 con abbonamento) |
 | **Totale base** | | | **circa 170–175** |
 | In più, se per 3 clienti al mese serve il Top Person Report (18,00) | 3 | 18,00 | **+54** |
