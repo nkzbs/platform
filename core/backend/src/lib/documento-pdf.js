@@ -137,7 +137,7 @@ function badge(doc, x, y, lato, nome, colore, tipo) {
 
 // `azienda`: { nome, indirizzo, piva, colore } (o solo il nome, come stringa); `logo`: Buffer PNG/JPEG o null.
 // → Promise<Buffer>
-function creaPdf({ titolo, corpo, azienda, logo = null, etichetta = 'Documento', riquadroFirma = true, piePagina = '' }) {
+function creaPdf({ titolo, corpo, azienda, logo = null, etichetta = 'Documento', riquadroFirma = true, piePagina = '', numero = '' }) {
   const az = typeof azienda === 'string' ? { nome: azienda } : (azienda || {});
   const colore = coloreValido(az.colore);
   const vivo = accento(colore), bordo = tinta(vivo, 0.3), chiaro = tinta(vivo, 0.14), chiaro2 = tinta(vivo, 0.24);
@@ -151,7 +151,7 @@ function creaPdf({ titolo, corpo, azienda, logo = null, etichetta = 'Documento',
     const FONDO = doc.page.height - 66;
     const PAD = 14, GAP = 14, TESTA = 40;
 
-    intestazione(doc, { azienda: az, logo, etichetta, data: new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }) });
+    intestazione(doc, { azienda: az, logo, etichetta, numero, data: new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }) });
     doc.on('pageAdded', () => { doc.rect(0, 0, doc.page.width, 6).fill(colore); doc.y = M; });
 
     // ── Titolo, filetto azzurro, sottotitolo ──

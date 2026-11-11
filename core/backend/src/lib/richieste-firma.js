@@ -79,7 +79,7 @@ async function pdf(token, key) {
   const r = riga(token); if (motivoNonValida(r)) throw err(motivoNonValida(r), 410);
   const d = JSON.parse(r.documenti).find((x) => x.key === key); if (!d) throw err('Documento non trovato.', 404);
   const identita = await require('./identita-pdf').caricaIdentita(db);
-  return { nome: d.key + '.pdf', buffer: await require('./documento-pdf').creaPdf({ titolo: d.label || 'Documento', corpo: d.corpo, ...identita, riquadroFirma: true, piePagina: d.label || '' }) };
+  return { nome: d.key + '.pdf', buffer: await require('./documento-pdf').creaPdf({ titolo: d.label || 'Documento', corpo: d.corpo, ...identita, riquadroFirma: true, piePagina: d.label || '', numero: new Date(r.creata_il.replace(' ', 'T') + 'Z').getUTCFullYear() + '-' + String(r.id).padStart(4, '0') }) };
 }
 
 function mittente(utente) {

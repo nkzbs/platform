@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.8 — Testata dei PDF più pulita
+
+La testata di tutti i PDF (documenti da firmare, report di valutazione) non è più una fascia piena con sfumatura, riflesso e pillola: ora è un filetto del colore dell'agenzia in cima, a sinistra il logo (o il nome in serif) con indirizzo e P.IVA, a destra il tipo di documento in maiuscoletto con data e numero, e un filo sottile sotto. Fondo bianco. L'altezza resta la stessa, quindi il contenuto non si sposta. I documenti mandati con «Invia per la firma» portano un numero (`anno-numero della richiesta`, per esempio 2026-0148).
+
 ## 0.5.7 — «Invia per la firma» anche sull'immobile
 
 La Scheda di acquisizione dell'immobile non diceva a chi andava, quindi «Invia per la firma» sull'immobile (che non ha un campo email) non avrebbe trovato un indirizzo. Ora il documento ha come destinatario `proprietario.email` (lo stesso di «Scheda immobile»); sui tenant che hanno già il documento lo imposta l'estensione `firma_scheda_destinatario` (solo se manca). Alla firma l'immobile passa da «Da valutare» a «In mandato», come già prima. Vale per il proprietario: i comproprietari non ricevono ancora il proprio link.

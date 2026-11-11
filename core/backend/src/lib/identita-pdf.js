@@ -70,39 +70,38 @@ function larghezzaPillola(doc, etichetta) {
   return Math.min(230, Math.max(118, Math.ceil(doc.widthOfString(testo) + testo.length * 0.8 + 28)));
 }
 
-// Fascia colorata in cima alla pagina corrente. A destra: etichetta del documento e data.
-function intestazione(doc, { azienda = {}, logo = null, etichetta = 'DOCUMENTO', data = '' }) {
+// Testata della pagina corrente: filetto del colore dell'azienda in cima, a sinistra logo (o nome in serif) con indirizzo e P.IVA, a destra il tipo di documento in maiuscoletto con data e,
+// se c'è, il numero; sotto un filo sottile. Fondo bianco: niente fascia piena, niente sfumature. L'altezza resta ALTEZZA_FASCIA, così il contenuto sotto non si sposta.
+function intestazione(doc, { azienda = {}, logo = null, etichetta = 'DOCUMENTO', data = '', numero = '' }) {
   const colore = coloreValido(azienda.colore);
   // Se in Aspetto è scelto un carattere dell'app, titoli e piè di pagina lo usano (lib/caratteri.js); altrimenti restano Times.
   if (!doc._carattere) doc._carattere = require('./caratteri').registraPdf(doc, azienda.carattere) || { nessuno: true };
   const W = doc.page.width - M * 2;
-  const lp = larghezzaPillola(doc, etichetta); // calcolata prima di scegliere il carattere dei titoli: misurare cambia il carattere corrente
-  const sf = doc.linearGradient(0, 0, doc.page.width, ALTEZZA_FASCIA); sf.stop(0, colore).stop(0.5, colore).stop(1, tinta(colore, 0.78)); // a sinistra il colore pieno: un logo con il suo fondo si fonde con la fascia
-  doc.rect(0, 0, doc.page.width, ALTEZZA_FASCIA).fill(sf);
-  // Riflesso diagonale appena percettibile, come sulla carta intestata.
-  doc.save().fillOpacity(0.09).polygon([doc.page.width * 0.56, 0], [doc.page.width * 0.78, 0], [doc.page.width * 0.52, ALTEZZA_FASCIA], [doc.page.width * 0.36, ALTEZZA_FASCIA]).fill('#ffffff').restore();
-  let xTesto = M, logoLargo = false;
+  const larghDx = 190; // colonna di destra
+  doc.rect(0, 0, doc.page.width, 5).fill(colore);
+  let xTesto = M, logoMostrato = false;
   if (logo) {
     try {
       const img = doc.openImage(logo);
-      if (img.width / img.height > 1.4) {
-        // Logo orizzontale (scritta + simbolo): sta direttamente sulla fascia, che ha il suo stesso colore di fondo.
-        logoLargo = true;
-        doc.image(logo, M - 6, 6, { fit: [210, 66] });
-      } else {
-        doc.roundedRect(M, 14, 50, 50, 6).fill('#ffffff'); doc.image(logo, M + 5, 19, { fit: [40, 40], align: 'center', valign: 'center' }); xTesto = M + 62;
-      }
+      const orizzontale = img.width / img.height > 1.4;
+      doc.image(logo, M, 20, orizzontale ? { fit: [170, 40] } : { fit: [44, 44] });
+      logoMostrato = true; xTesto = orizzontale ? M : M + 56;
+      if (orizzontale) { /* il logo largo contiene già il nome */ }
     } catch (e) { /* logo illeggibile: si scrive il nome */ }
   }
-  if (!logoLargo) {
-    doc.font(fontTitolo(doc)).fontSize(16).fillColor('#ffffff').text(azienda.nome || etichetta, xTesto, 22, { width: Math.max(120, Math.min(270, M + W - lp - 14 - xTesto)), lineBreak: false });
-    if (azienda.nome) doc.font('Helvetica').fontSize(9).fillColor('#f3f4f6').text([azienda.indirizzo, azienda.piva && 'P.IVA ' + azienda.piva].filter(Boolean).join(' · '), xTesto, 42, { width: 280, lineBreak: false });
+  const largSx = W - larghDx - 12 - (xTesto - M);
+  const mostraNome = !logoMostrato || xTesto > M; // un logo largo contiene già il nome
+  if (mostraNome) {
+    doc.font(fontTitolo(doc)).fontSize(17).fillColor(colore).text(azienda.nome || etichetta, xTesto, 21, { width: Math.max(120, largSx), lineBreak: false });
+    if (azienda.nome) doc.font('Helvetica').fontSize(8.5).fillColor(GRIGIO).text([azienda.indirizzo, azienda.piva && 'P.IVA ' + azienda.piva].filter(Boolean).join(' · '), xTesto, 43, { width: Math.max(120, largSx), lineBreak: false });
+  } else if (azienda.nome) {
+    doc.font('Helvetica').fontSize(8.5).fillColor(GRIGIO).text([azienda.indirizzo, azienda.piva && 'P.IVA ' + azienda.piva].filter(Boolean).join(' · '), xTesto, 63, { width: Math.max(120, largSx), lineBreak: false });
   }
-  // Etichetta del documento in una pillola, data sotto. La pillola si allarga quanto serve al testo (prima era fissa e «REPORT DI VALUTAZIONE» andava a capo fuori dal bordo).
-  const xp = M + W - lp;
-  doc.roundedRect(xp, 16, lp, 24, 12).lineWidth(0.9).strokeColor('#ffffff').stroke();
-  doc.font('Helvetica').fontSize(9).fillColor('#ffffff').text(String(etichetta).toUpperCase(), xp, 24, { width: lp, align: 'center', lineBreak: false, characterSpacing: 0.8 });
-  if (data) doc.font('Helvetica').fontSize(9).fillColor('#f3f4f6').text(data, xp - 40, 48, { width: lp + 40, align: 'right', lineBreak: false });
+  const xd = M + W - larghDx;
+  doc.font('Helvetica-Bold').fontSize(8).fillColor(colore).text(String(etichetta).toUpperCase(), xd, 23, { width: larghDx, align: 'right', lineBreak: false, characterSpacing: 1.1 });
+  const dettagli = [data, numero && 'N. ' + numero].filter(Boolean).join('  ·  ');
+  if (dettagli) doc.font('Helvetica').fontSize(9).fillColor(GRIGIO).text(dettagli, xd, 37, { width: larghDx, align: 'right', lineBreak: false });
+  doc.moveTo(M, ALTEZZA_FASCIA - 8).lineTo(M + W, ALTEZZA_FASCIA - 8).lineWidth(0.6).strokeColor(LINEA).stroke();
   return colore;
 }
 
