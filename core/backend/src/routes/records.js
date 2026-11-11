@@ -1098,15 +1098,14 @@ router.get('/:slug/:id/abbinamenti/:key', requireAuth, requireModuleAccess, (req
 // occhi di chi lo manda. Il DESTINATARIO lo ricava sempre il server dal modello e dal record:
 // non arriva dalla richiesta, così nessuno può far spedire un documento a un indirizzo scelto da fuori.
 // Sostituisce le rotte che stavano legate agli slug di un solo verticale (vedi docs/DECISIONI.md).
-function contestoDocumento(req) {
-  const { slug, id, key } = req.params;
+function contestoDocumentoDa(slug, id, key, user) {
   const schema = getModuleSchema(slug) || {};
   const azione = (schema.document_actions || []).find((a) => a.key === key);
   if (!azione) return { errore: [404, 'Documento non trovato in questo modulo'] };
   const record = db.prepare('SELECT * FROM records WHERE id = ? AND module_slug = ?').get(id, slug);
   if (!record) return { errore: [404, 'Record non trovato'] };
-  const rule = ruleFor(schema, req.user.role);
-  if (rule && (!rule.view || !ownedOrAllowed(rule, record, req.user))) return { errore: [403, 'Non hai i permessi per vedere questo record'] };
+  const rule = user ? ruleFor(schema, user.role) : null;
+  if (user && rule && (!rule.view || !ownedOrAllowed(rule, record, user))) return { errore: [403, 'Non hai i permessi per vedere questo record'] };
   const dati = attachComputedFields({ ...record, data: decryptFields(JSON.parse(record.data), schema.fields) }, schema, slug).data;
   const tenant = db.prepare('SELECT ragione_sociale, indirizzo, piva FROM tenant_settings WHERE id = 1').get();
   const leggiRecord = (modulo, rid) => {
@@ -1116,6 +1115,7 @@ function contestoDocumento(req) {
   const get = require('../lib/modello-documento').costruisciGet({ record: dati, schema, tenant, leggiRecord });
   return { schema, azione, record, get };
 }
+const contestoDocumento = (req) => contestoDocumentoDa(req.params.slug, req.params.id, req.params.key, req.user);
 
 router.post('/:slug/:id/documento/:key/anteprima', requireAuth, requireAdmin, requireModuleAccess, (req, res) => {
   const ctx = contestoDocumento(req);
@@ -1168,6 +1168,31 @@ router.post('/:slug/:id/documento/:key/pdf', requireAuth, requireAdmin, requireM
   }
 });
 
+// Registra un documento firmato sul record: allega il file con il tipo giusto, scrive i consensi dati, la data della firma, la versione e la scadenza di conservazione,
+// e passa allo stato previsto (`on_signed_state`). Lo usano la rotta «firmato» (caricato dall'agente) e la richiesta di firma (caricato dal cliente dal suo link).
+// `ctx` è quello di contestoDocumentoDa; `user` ({ username, role }) è chi risulta nella cronologia e per i permessi del cambio di stato.
+function registraFirmato({ user, slug, id, ctx, uploadId, consensi }) {
+  const schema = ctx.schema;
+  const { calcolaAggiornamento, TIPO_FIRMATO } = require('../lib/documento-firmato');
+  const oggi = new Date().toISOString().slice(0, 10);
+  const patch = calcolaAggiornamento(ctx.azione, consensi, oggi);
+  const tipo = TIPO_FIRMATO(ctx.azione);
+
+  db.prepare('INSERT INTO record_attachments (module_slug, record_id, upload_id, tipo) VALUES (?, ?, ?, ?)').run(slug, ctx.record.id, uploadId, tipo);
+  const beforeData = JSON.parse(ctx.record.data);
+  if (Object.keys(patch).length) {
+    db.prepare('UPDATE records SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND module_slug = ?').run(JSON.stringify({ ...beforeData, ...patch }), ctx.record.id, slug);
+    const dopo = db.prepare('SELECT * FROM records WHERE id = ?').get(ctx.record.id);
+    const attached = attachComputedFields({ ...dopo, data: decryptFields(JSON.parse(dopo.data), schema.fields) }, schema, slug);
+    logHistory(slug, ctx.record.id, user.username, 'update', beforeData, attached.data);
+    Object.keys(patch).forEach((k) => { if (JSON.stringify(beforeData[k]) !== JSON.stringify(patch[k])) fireTrigger(slug, 'modifica_campo', attached.data, attached.id, { campo: k }); });
+  }
+  logAudit(user.username, 'record.documento_firmato', slug + '#' + ctx.record.id, { documento: ctx.azione.key, consensi: patch });
+  let statoAggiornato = false;
+  if (ctx.azione.on_signed_state) statoAggiornato = runTransition(user, slug, id, ctx.azione.on_signed_state).status === 200;
+  return { tipo, patch, statoAggiornato };
+}
+
 // Documento firmato: il file caricato (scansione o foto del foglio firmato) si allega al record e,
 // se il documento lo prevede, si registrano i consensi dati, la data della firma, la versione del
 // testo e fino a quando si conservano i dati. Richiamare la rotta con un nuovo firmato (anche per
@@ -1186,23 +1211,8 @@ router.post('/:slug/:id/documento/:key/firmato', requireAuth, requireAdmin, requ
   if (up.uploaded_by !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ error: 'Puoi allegare solo file che hai caricato tu' });
   if (!(up.mime_type === 'application/pdf' || /^image\/(jpeg|png|webp)$/.test(up.mime_type))) return res.status(400).json({ error: 'Il documento firmato deve essere un PDF o una foto (JPEG, PNG, WebP)' });
 
-  const { calcolaAggiornamento, TIPO_FIRMATO } = require('../lib/documento-firmato');
-  const oggi = new Date().toISOString().slice(0, 10);
-  const patch = calcolaAggiornamento(ctx.azione, consensi, oggi);
-  const tipo = TIPO_FIRMATO(ctx.azione);
-
-  db.prepare('INSERT INTO record_attachments (module_slug, record_id, upload_id, tipo) VALUES (?, ?, ?, ?)').run(req.params.slug, ctx.record.id, up.id, tipo);
-  const beforeData = JSON.parse(ctx.record.data);
-  if (Object.keys(patch).length) {
-    db.prepare('UPDATE records SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND module_slug = ?').run(JSON.stringify({ ...beforeData, ...patch }), ctx.record.id, req.params.slug);
-    const dopo = db.prepare('SELECT * FROM records WHERE id = ?').get(ctx.record.id);
-    const attached = attachComputedFields({ ...dopo, data: decryptFields(JSON.parse(dopo.data), schema.fields) }, schema, req.params.slug);
-    logHistory(req.params.slug, ctx.record.id, req.user.username, 'update', beforeData, attached.data);
-    Object.keys(patch).forEach((k) => { if (JSON.stringify(beforeData[k]) !== JSON.stringify(patch[k])) fireTrigger(req.params.slug, 'modifica_campo', attached.data, attached.id, { campo: k }); });
-  }
-  logAudit(req.user.username, 'record.documento_firmato', req.params.slug + '#' + ctx.record.id, { documento: ctx.azione.key, consensi: patch });
-  let statoAggiornato = false;
-  if (ctx.azione.on_signed_state) statoAggiornato = runTransition(req.user, req.params.slug, req.params.id, ctx.azione.on_signed_state).status === 200;
+  const esito = registraFirmato({ user: req.user, slug: req.params.slug, id: req.params.id, ctx, uploadId: up.id, consensi });
+  const { tipo, patch, statoAggiornato } = esito;
   res.json({ ok: true, tipo, campi_aggiornati: Object.keys(patch), stato_aggiornato: statoAggiornato });
 });
 
@@ -1340,3 +1350,6 @@ router.delete('/:slug/:id/attachments/:attId', requireAuth, requireModuleAccess,
 
 module.exports = router;
 module.exports.runTransition = runTransition;
+module.exports.contestoDocumentoDa = contestoDocumentoDa;
+module.exports.getModuleSchema = getModuleSchema;
+module.exports.registraFirmato = registraFirmato;

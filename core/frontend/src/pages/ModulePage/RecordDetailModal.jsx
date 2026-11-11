@@ -11,6 +11,7 @@ import FieldEditorInput from './FieldEditorInput'
 import { parseSchemaFrontend } from '../../lib/schema-v3-frontend'
 import { requisitiDallo } from '../../lib/requisiti-stato'
 import AbbinamentiSezione from '../../components/AbbinamentiSezione'
+import RichiestaFirma from './RichiestaFirma'
 
 function VaultPinGate({ token, userId, onUnlocked }) {
   const [pin, setPin] = useState('')
@@ -499,7 +500,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   // che verifica con possibilità di modifica da parte dell'utente admin", richiesto dal vivo):
   // «anteprima» riempie la bozza e non spedisce nulla, «invia» manda esattamente il testo nel
   // riquadro (che l'admin può aver modificato). Il destinatario lo decide il server.
-  const documenti = (schema && schema.document_actions) || []
+  const documenti = ((schema && schema.document_actions) || []).filter((a) => !a.archiviato) // «archiviato»: un documento tolto dall'uso che resta nel modulo
   const [docInPreparazione, setDocInPreparazione] = useState(null) // chiave del documento in corso
   const [inviandoDoc, setInviandoDoc] = useState(false)
   const [bozzaDoc, setBozzaDoc] = useState(null) // { key, label, icon, oggetto, corpo, destinatario } oppure null = pannello chiuso
@@ -763,6 +764,9 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                   </button>
                 ))}
               </div>
+            )}
+            {scheda === 'documenti' && documenti.some((a) => a.delivery === 'firma') && (
+              <RichiestaFirma api={api} slug={mod.slug} recordId={recordId} documentiFirma={documenti.filter((a) => a.delivery === 'firma')} />
             )}
             {scheda === 'documenti' && documenti.length > 0 && (
               <div className="-mt-1 mb-4">

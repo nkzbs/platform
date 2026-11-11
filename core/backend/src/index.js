@@ -60,6 +60,7 @@ const suggestionsRoutes = require('./routes/suggestions');
 const setupWizardRoutes = require('./routes/setup-wizard');
 const exportServerRoutes = require('./routes/export-server');
 const inviteRoutes = require('./routes/invites');
+const firmaRoutes = require('./routes/firma');
 const { startSuggestions } = require('./suggestions');
 const { startModuleGap } = require('./module-gap');
 const { startReports } = require('./reports');
@@ -144,6 +145,8 @@ const routeMounts = [
   ['/invites', inviteRoutes.admin],
   ['/internal-invite', inviteRoutes.interno],
   ['/public-invite', inviteRoutes.pubblico],
+  ['/firma', firmaRoutes.admin],
+  ['/public-firma', firmaRoutes.pubblico],
   ['/site-pages', siteAdminRouter],
 ];
 app.use('/api', apiGlobalLimiter);
@@ -167,7 +170,7 @@ app.use('/__root_public', rootPublicRouter);
 
 app.get('/health', (req, res) => res.json({
   status: 'ok',
-  version: '0.5.5',
+  version: '0.5.6',
   tenant: process.env.TENANT_SLUG || 'unknown',
   name: process.env.TENANT_NAME || 'Platform Core'
 }));
@@ -254,6 +257,7 @@ app.listen(PORT, () => {
   startReports(); // il controllo ogni minuto parte sempre; se la funzione è spenta non fa niente
   require('./lib/messaggi-clienti').avviaAuguri(); // auguri di compleanno (spenti finché non si attivano nelle impostazioni)
   startMonitor(); // il giorno 2 alle 9: "come sta andando" su WhatsApp, per i widget che lo hanno acceso
+  require('./lib/richieste-firma').avviaSolleciti();
   startAvvisi(); // ogni minuto: righe nuove in "da smistare" (da qualunque via) -> un messaggio WhatsApp
   startGmailPoller();
   startDrivePoller();

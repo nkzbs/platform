@@ -2012,6 +2012,55 @@
           "type": "text"
         }
       ]
+    },
+    {
+      "key": "firma_in_un_pacchetto",
+      "_nota": "I documenti del cliente si fanno firmare in un colpo solo («Invia per la firma»): «Anagrafica + privacy» diventa «Informativa privacy e incarico» (con il paragrafo dell'incarico, che stava in «Privacy + Incarico»), «Antiriciclaggio» diventa un documento da firmare e «Privacy + Incarico» viene archiviato (non compare più; resta nel modulo). Ogni modifica è fatta solo se la proprietà manca o è ancora il testo di prima: ciò che l'agenzia ha cambiato dal Builder non si tocca.",
+      "richiede": {
+        "clienti": [
+          "nome"
+        ]
+      },
+      "imposta": [
+        {
+          "block_type": "document_action",
+          "key": "antiriciclaggio",
+          "proprieta": {
+            "delivery": "firma",
+            "signed_type": "antiriciclaggio_firmato"
+          }
+        },
+        {
+          "block_type": "document_action",
+          "key": "privacy_incarico",
+          "proprieta": {
+            "archiviato": true
+          }
+        },
+        {
+          "block_type": "document_action",
+          "key": "anagrafica_privacy",
+          "proprieta": {
+            "recipient": "email"
+          }
+        }
+      ],
+      "riscrivi": [
+        {
+          "block_type": "document_action",
+          "key": "anagrafica_privacy",
+          "proprieta": {
+            "label": {
+              "da": "Anagrafica + privacy (da firmare)",
+              "a": "Informativa privacy e incarico"
+            },
+            "body": {
+              "da": "SCHEDA ANAGRAFICA E INFORMATIVA PRIVACY (GDPR)\n\nTitolare del trattamento: {{#@azienda}}{{@azienda}}{{/@azienda}}{{^@azienda}}l'agenzia{{/@azienda}}{{#@piva}} — P.IVA {{@piva}}{{/@piva}}{{#@indirizzo}} — {{@indirizzo}}{{/@indirizzo}}\nData: {{@oggi}}\n\nDATI ANAGRAFICI\nNome / ragione sociale: {{nome|linea}}\nTipo soggetto: {{tipo_soggetto|linea}}\nCodice fiscale / P.IVA: {{codice_fiscale_piva|linea}}\nData di nascita: {{data_nascita|linea}}\nIndirizzo: {{indirizzo|linea}}\nEmail: {{email|linea}}\nTelefono: {{telefono|linea}}\n\nCOME USIAMO I SUOI DATI (art. 13 Reg. UE 2016/679)\nFinalità e base giuridica:\na) svolgere l'incarico di mediazione e gestire le trattative — esecuzione del contratto e di misure precontrattuali;\nb) adempiere agli obblighi di legge, in particolare di identificazione e adeguata verifica (D.Lgs. 231/2007), fiscali e contabili — obbligo di legge;\nc) inviarle comunicazioni commerciali su immobili e servizi dell'agenzia — solo se lo consente qui sotto;\nd) comunicare i suoi dati a partner e portali per la promozione dell'immobile — solo se lo consente qui sotto.\nDestinatari: notai, professionisti e consulenti coinvolti nella pratica, enti pubblici per gli adempimenti di legge, fornitori dei sistemi informatici dell'agenzia. I dati non sono diffusi.\nConservazione: per la durata dell'incarico e poi per 10 anni, come richiede la normativa antiriciclaggio; i dati trattati solo con il suo consenso fino alla revoca.\nI suoi diritti: può chiedere accesso, rettifica, cancellazione, limitazione, portabilità dei dati e opporsi al trattamento (artt. 15-22); revocare in ogni momento i consensi qui sotto, senza effetto sul trattamento già fatto; presentare reclamo al Garante per la protezione dei dati personali. Per esercitarli scriva a {{#@azienda}}{{@azienda}}{{/@azienda}}{{^@azienda}}all'agenzia{{/@azienda}}.\n\nI SUOI CONSENSI (barri a penna le caselle che accetta; sono facoltativi e non condizionano l'incarico)\n{{consenso_marketing|casella}} Acconsento a ricevere comunicazioni commerciali (email, telefono, messaggi).\n{{consenso_terzi|casella}} Acconsento alla comunicazione dei miei dati a partner e portali per la promozione dell'immobile.\n\nDichiaro di aver letto l'informativa e che i dati sopra indicati sono esatti.\n",
+              "a": "SCHEDA ANAGRAFICA E INFORMATIVA PRIVACY (GDPR)\n\nTitolare del trattamento: {{#@azienda}}{{@azienda}}{{/@azienda}}{{^@azienda}}l'agenzia{{/@azienda}}{{#@piva}} — P.IVA {{@piva}}{{/@piva}}{{#@indirizzo}} — {{@indirizzo}}{{/@indirizzo}}\nData: {{@oggi}}\n\nDATI ANAGRAFICI\nNome / ragione sociale: {{nome|linea}}\nTipo soggetto: {{tipo_soggetto|linea}}\nCodice fiscale / P.IVA: {{codice_fiscale_piva|linea}}\nData di nascita: {{data_nascita|linea}}\nIndirizzo: {{indirizzo|linea}}\nEmail: {{email|linea}}\nTelefono: {{telefono|linea}}\n\nCOME USIAMO I SUOI DATI (art. 13 Reg. UE 2016/679)\nFinalità e base giuridica:\na) svolgere l'incarico di mediazione e gestire le trattative — esecuzione del contratto e di misure precontrattuali;\nb) adempiere agli obblighi di legge, in particolare di identificazione e adeguata verifica (D.Lgs. 231/2007), fiscali e contabili — obbligo di legge;\nc) inviarle comunicazioni commerciali su immobili e servizi dell'agenzia — solo se lo consente qui sotto;\nd) comunicare i suoi dati a partner e portali per la promozione dell'immobile — solo se lo consente qui sotto.\nDestinatari: notai, professionisti e consulenti coinvolti nella pratica, enti pubblici per gli adempimenti di legge, fornitori dei sistemi informatici dell'agenzia. I dati non sono diffusi.\nConservazione: per la durata dell'incarico e poi per 10 anni, come richiede la normativa antiriciclaggio; i dati trattati solo con il suo consenso fino alla revoca.\nI suoi diritti: può chiedere accesso, rettifica, cancellazione, limitazione, portabilità dei dati e opporsi al trattamento (artt. 15-22); revocare in ogni momento i consensi qui sotto, senza effetto sul trattamento già fatto; presentare reclamo al Garante per la protezione dei dati personali. Per esercitarli scriva a {{#@azienda}}{{@azienda}}{{/@azienda}}{{^@azienda}}all'agenzia{{/@azienda}}.\n\nI SUOI CONSENSI (barri a penna le caselle che accetta; sono facoltativi e non condizionano l'incarico)\n{{consenso_marketing|casella}} Acconsento a ricevere comunicazioni commerciali (email, telefono, messaggi).\n{{consenso_terzi|casella}} Acconsento alla comunicazione dei miei dati a partner e portali per la promozione dell'immobile.\n\nCon la firma del presente modulo conferisce inoltre incarico a {{#@azienda}}{{@azienda}}{{/@azienda}}{{^@azienda}}all'agenzia{{/@azienda}} per le attività di mediazione immobiliare relative al presente rapporto.\n\nDichiaro di aver letto l'informativa e che i dati sopra indicati sono esatti.\n"
+            }
+          }
+        }
+      ]
     }
   ],
   "quote_societarie": [
