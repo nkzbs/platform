@@ -784,7 +784,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
 
                   {(detailTabBySlug[t.slug] || 'panoramica') === 'backup' && (
                   <div>
-                    <div className="flex items-center justify-between mb-3 relative">
+                    <div className="flex items-center justify-between mb-3">
                       <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Backup</div>
                       <div className="flex items-center gap-2">
                         <button onClick={() => runBackup(t.slug)} disabled={backingUpSlug === t.slug}
@@ -794,10 +794,10 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                         <button onClick={() => setBkMenu((x) => (x === t.slug ? null : t.slug))} aria-haspopup="menu" aria-expanded={bkMenu === t.slug} aria-label="Altro sui backup" title="Altro sui backup"
                           className="w-9 h-9 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition flex items-center justify-center"><Icon name="more" size={18} /></button>
                       </div>
-                      {bkMenu === t.slug && (
+                    </div>
+                    {bkMenu === t.slug && (
                         <>
-                          <div className="fixed inset-0 z-20" onClick={() => setBkMenu(null)} />
-                          <div role="menu" className="absolute right-0 top-full mt-1 z-30 w-full sm:w-80 bg-surface-card border border-gray-700 rounded-xl shadow-lg py-1">
+                                                    <div role="menu" className="mb-3 w-full bg-surface-card border border-gray-700 rounded-xl py-1">
                             <VoceMenu icon="database" label="Copie salvate" desc="L'elenco: scarica o ripristina" onClick={() => { setBkMenu(null); setBkSez((p) => ({ ...p, [t.slug]: 'copie' })) }} />
                             <VoceMenu icon="upload" label="Copia fuori dal NAS" desc="Dove va la copia esterna e se funziona" onClick={() => { setBkMenu(null); setBkSez((p) => ({ ...p, [t.slug]: 'fuori' })) }} />
                             {t.host === 'linode' && <VoceMenu icon="server" label="Disco del server" desc="Le copie di Linode e il ripristino completo" onClick={() => { setBkMenu(null); setBkSez((p) => ({ ...p, [t.slug]: 'disco' })) }} />}
@@ -805,7 +805,6 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                           </div>
                         </>
                       )}
-                    </div>
                     <SchedaBackup api={API} headers={headers} slug={t.slug} sezione={bkSez[t.slug] || null} chiudi={() => setBkSez((p) => ({ ...p, [t.slug]: null }))} ricarica={() => { loadBackups(t.slug); load() }} />
                     {bkSez[t.slug] === 'mail' && (() => {
                       const bs = offsiteSettingsBySlug[t.slug] || {}

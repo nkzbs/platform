@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.4 — Menu Backup non più tagliato
+
+Il menu «⋯» della scheda Backup si apriva sopra la scheda del tenant, che ne tagliava il fondo (da telefono si vedevano solo due voci). Ora il menu sta nel flusso della pagina, sotto la riga del titolo.
+
 ## 0.5.3 — Scheda Backup più semplice
 
 La scheda Backup mostra **una frase di stato** («Tutto in ordine» oppure la prima cosa che non va), l'ultimo backup e con cosa è protetto il tenant. Un solo pulsante in evidenza, «Backup ora»; tutto il resto sta nel menu «⋯» (Copie salvate, Copia fuori dal NAS, Disco del server, Copia via mail), che apre **una sezione alla volta**. Prima i tre livelli, la tabella, la mail e l'off-site stavano tutti aperti insieme. Nessun cambiamento nel backend.
