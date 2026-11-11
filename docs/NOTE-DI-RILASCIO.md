@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.16 — Prezzi delle visure camerali
+
+Letti dalla console: visura **ordinaria** impresa individuale 2,90 (2,75 con abbonamento), società di persone 3,40 (2,97), società di capitale 4,90 (3,96); **storica** 3,90 (3,63), 4,40 (3,85), 5,90 (4,95); soci attivi 2,30; bilancio ottico 4,50 (2,95); certificato di iscrizione, anche con vigenza, 13,70; letture 0,001. Nel registro spese la visura camerale conta 4,90 (società di capitali, cautelativo) invece di «da scrivere»; aggiunti soci attivi, bilancio ottico e certificato. La suite `openapi-servizi.test.js` («i servizi si controllano tutti insieme», un test sui tempi) può fallire quando il computer è sotto carico durante l'intero giro dei test e passa da sola: instabile, non un difetto.
+
 ## 0.5.15 — Prezzi del Real Estate: la valutazione ha un costo noto
 
 Letti dalla console: valutazione avanzata €/mq **3,00** (0,39 con abbonamento), semplice (start) 2,00 (0,26), valore di mercato (rm value) 4,00 (0,35), quotazioni OMI 0,02 (0,003; 1.440 gratis al giorno), annunci comparabili 0,12 (0,032; 30 gratis al mese), storico del valore al mq 0,12 (0,032). Nel registro spese la **valutazione di mercato** e gli **annunci comparabili** non sono più «da scrivere»: valgono 3,00 e 0,12, quindi la conferma del costo prima del pulsante «Valutazione» e il piano dei costi dei dati dimostrativi mostrano un importo vero. Test aggiornati. Con un abbonamento si scrive il prezzo in Prezzi.

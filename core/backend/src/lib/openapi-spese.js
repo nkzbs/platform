@@ -54,7 +54,10 @@ const SERVIZI = {
   risk_creditscore_start: { nome: 'Risk — credit score società: semaforo a 3 classi (start)', prezzo: 0.06 },
   risk_creditscore_advanced: { nome: 'Risk — credit score società: rating e fido (advanced)', prezzo: 0.15 },
   risk_creditscore_societa: { nome: 'Risk — semaforo di rischio di una società', prezzo: 0.19 },
-  visure_camerali: { nome: 'Visura camerale', prezzo: null },
+  visure_camerali: { nome: 'Visura camerale (cautelativo: società di capitali ordinaria 4,90; impresa individuale 2,90, società di persone 3,40, storiche da 3,90 a 5,90)', prezzo: 4.90 },
+  visure_soci_attivi: { nome: 'Visure camerali — soci attivi', prezzo: 2.30 },
+  visure_bilancio_ottico: { nome: 'Visure camerali — bilancio ottico (2,95 con un abbonamento)', prezzo: 4.50 },
+  visure_certificato_iscrizione: { nome: 'Visure camerali — certificato di iscrizione (anche con vigenza)', prezzo: 13.70 },
 };
 
 const leggi = (chiave, predefinito) => { const r = db.prepare('SELECT valore FROM openapi_impostazioni WHERE chiave = ?').get(chiave); if (!r) return predefinito; try { return JSON.parse(r.valore); } catch (e) { return predefinito; } };

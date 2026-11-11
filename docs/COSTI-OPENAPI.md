@@ -21,7 +21,7 @@ Stima dell'8 novembre 2026. I prezzi sono **di listino, IVA esclusa**, letti dal
 | ↳ storico del valore medio al mq | Real Estate | 0,12 (0,032 con abbonamento) | Non usato da Platform |
 | ↳ fotovoltaico, zona sismica, mappa, luoghi vicini | PVGIS, ISPRA, OpenStreetMap | 0 | Non passano da OpenAPI |
 | **Ricerca imprese** (clienti società) | Visure camerali, ricerca | 0 | Senza costi di ricerca |
-| **Visura camerale** (società, quote societarie) | Visure Camerali | n.d. (indicativo 2,90 per impresa individuale ordinaria/storica, da confermare) | Il listino vero si legge dall'endpoint `GET /documents` della tua console |
+| **Visura camerale** (società, quote societarie) | Visure Camerali | **ordinaria**: impresa individuale 2,90 (2,75 con abbonamento), società di persone 3,40 (2,97), società di capitale 4,90 (3,96). **Storica**: 3,90 (3,63), 4,40 (3,85), 5,90 (4,95). Soci attivi 2,30; bilancio ottico 4,50 (2,95); certificato di iscrizione, anche con vigenza, 13,70 | Letti dalla console l'11 novembre 2026. Nel registro spese Platform conta 4,90 (società di capitali, cautelativo). Letture 0,001 |
 | **Verifica codice fiscale** | Risk · Person | da 0,0081 | Pochi secondi |
 | **Verifica eventi negativi** (protesti, procedure) | Risk · Person | da 0,054; protesti 0,90; protesti e atti pregiudizievoli 3,70; con procedure concorsuali 3,90 | |
 | **Dati anagrafici incrociati** (Personal Data Check) | Risk · Person | 0,80 | In 2 ore lavorative |
@@ -56,7 +56,7 @@ Fonti: pagine prodotto di OpenAPI ([Person](https://openapi.com/products/crif-pe
 | # | Processo analizzato | Cosa chiede a OpenAPI | Costo per pratica (€ + IVA) |
 |---|---|---|---|
 | 1 | Cliente: acquisizione e verifica | Persona fisica: verifica CF + eventi negativi + Person Report. Società: credit score + (facoltativa) visura | Persona: 0,0081 + 0,054 + 3,10 ≈ **3,16** (base) fino a +18 se serve il Top Person Report. Società: **0,06** (Start), con visura circa +2,90 |
-| 2 | Cliente: società e cessione di quote | Visura camerale (soci, vigenza), credit score | **circa 3** (visura da confermare) + 0,06–0,42 |
+| 2 | Cliente: società e cessione di quote | Visura camerale (soci, vigenza), credit score | **da 2,90 a 4,90** (visura ordinaria secondo la forma della società) + 0,06–0,42 |
 | 3 | Immobile: scheda di acquisizione | Catasto: indirizzo, foglio, particella (+ estratto mappa) | **0,70** base; **7,60** con l'estratto di mappa |
 | 4 | Valutazione dell'immobile | Valutazione avanzata + comparabili + OMI | **3,00 + 0,12 = circa 3,12** a singola richiesta (OMI gratis; i comparabili sono gratis le prime 30 al mese: **3,00**); con un abbonamento annuale la valutazione scende fino a 0,39 |
 | 5 | Abbinamento domanda e offerta | Niente (calcolo interno) | 0 |
