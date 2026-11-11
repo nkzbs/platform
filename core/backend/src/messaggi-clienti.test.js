@@ -24,7 +24,7 @@ async function main() {
   require.cache[require.resolve('./lib/email')] = { id: 'fake-mail', filename: 'fake-mail', loaded: true, exports: {
     credenziali: () => ({ api_key: 'k', from_email: 'x@y.it' }),
     stato: () => ({ ok: true, via: 'resend', motivo: null }),
-    htmlDaTesto: (t) => '<p>' + t + '</p>',
+    htmlDaTesto: (t, o) => '<p>' + t + '</p>' + (o && o.piede ? '<p>' + o.piede + '</p>' : ''),
     invia: async ({ to, subject, html }) => { mail.push({ to, subject, html }); return { ok: true }; },
   } };
   require.cache[require.resolve('./lib/ai-valutazione')] = { id: 'fake-ai', filename: 'fake-ai', loaded: true, exports: { considerazioni: async () => null } };

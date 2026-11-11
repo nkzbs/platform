@@ -65,11 +65,11 @@ async function invia({ to, subject, html }) {
   }
 }
 
-// Testo semplice -> HTML minimale per il corpo di un'email (indentazione/a-capo preservati,
-// nessun markup): condiviso da tutti i documenti da modello (routes/records.js, blocco `document_action`).
-function htmlDaTesto(testo) {
-  const righe = String(testo || '').split('\n').map((r) => r.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
-  return '<div style="font-family:system-ui,-apple-system,sans-serif;color:#1c1917;white-space:pre-wrap;line-height:1.6;max-width:640px">' + righe.join('<br>') + '</div>';
+// Testo semplice -> mail con la grafica dell'agenzia (lib/email-grafica.js): fascia con logo e colore, titolo, paragrafi,
+// pulsante e piè di pagina con i dati dell'azienda. `opzioni` (facoltative): titolo, pulsante {testo, url}, nota, elenco, firmaDa, piede.
+// Condiviso da tutti i documenti, solleciti, auguri e richieste di firma del tenant.
+function htmlDaTesto(testo, opzioni) {
+  return require('./email-grafica').htmlComunicazione(testo, opzioni || {});
 }
 
 module.exports = { invia, htmlDaTesto, credenziali, smtp, stato };

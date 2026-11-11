@@ -110,7 +110,7 @@ async function prepara({ records, config, canali, testoSms }) {
 async function inviaMail({ dati, C, oggetto, testo }) {
   const email = require('./email');
   const corpo = riempi(testo, dati, C);
-  const html = email.htmlDaTesto(corpo + '\n\n' + (impostazioni().footer_mail || ''));
+  const html = email.htmlDaTesto(corpo, { piede: impostazioni().footer_mail || '' });
   return email.invia({ to: String(dati[C.email]).trim(), subject: riempi(oggetto, dati, C), html });
 }
 async function inviaSms({ dati, C, testo }) {

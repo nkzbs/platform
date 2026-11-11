@@ -2,6 +2,12 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.5 — Una grafica unica per le mail ai clienti
+
+Tutte le mail che un tenant manda ai suoi clienti (documenti da modello, solleciti di pagamento, auguri, messaggi di massa, prova della posta) escono ora con la stessa grafica: fascia con logo e colore dell'agenzia (da Impostazioni → Aspetto, gli stessi dei PDF), titolo in serif, testo in paragrafi, un solo pulsante, firma di chi scrive e piè di pagina con indirizzo e P.IVA. Prima erano testo semplice. Il logo si usa solo se è un indirizzo https (le immagini incorporate le bloccano Gmail e Outlook), altrimenti l'iniziale; il testo sopra il colore dell'agenzia passa da bianco a scuro se il colore è chiaro. Codice: `lib/email-grafica.js`; `email.htmlDaTesto(testo, opzioni)` resta la porta d'ingresso (opzioni: titolo, pulsante, nota, elenco, firmaDa, piede), quindi nessun chiamante cambia. Test: `email-grafica.test.js`.
+
+**Da sapere.** La suite `collaudo-tenant.test.js` («un passaggio che nessuno può eseguire viene segnalato») risulta rossa anche su `main` prima di questa modifica: non l'ho toccata, è da guardare a parte.
+
 ## 0.5.4 — Menu Backup non più tagliato
 
 Il menu «⋯» della scheda Backup si apriva sopra la scheda del tenant, che ne tagliava il fondo (da telefono si vedevano solo due voci). Ora il menu sta nel flusso della pagina, sotto la riga del titolo.
