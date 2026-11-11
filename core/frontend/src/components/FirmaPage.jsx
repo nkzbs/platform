@@ -13,7 +13,10 @@ export default function FirmaPage({ token }) {
   const [errore, setErrore] = useState('')
   const [busy, setBusy] = useState(false)
   const [fatto, setFatto] = useState(false)
-  useEffect(() => { fetch('/api/public-firma/' + encodeURIComponent(token)).then((r) => r.json()).then(setInfo).catch(() => setInfo({ valido: false, motivo: 'Non riesco a contattare il server: riprova tra poco.', agenzia: {} })) }, [token])
+  const [modo, setModo] = useState(null) // null = si sceglie | 'codice' | 'carta'
+  const [auth, setAuth] = useState('email')
+  const [inFirma, setInFirma] = useState(null) // { metodo } quando la firma con codice è partita
+  useEffect(() => { fetch('/api/public-firma/' + encodeURIComponent(token)).then((r) => r.json()).then((d) => { setInfo(d); if (d && d.in_firma) { setInFirma(d.in_firma); setPasso(2) } }).catch(() => setInfo({ valido: false, motivo: 'Non riesco a contattare il server: riprova tra poco.', agenzia: {} })) }, [token])
 
   const colore = (info && info.agenzia && /^#[0-9a-f]{6}$/i.test(info.agenzia.colore || '') && info.agenzia.colore) || '#1f4e79'
   const su = testoSu(colore)
@@ -29,6 +32,18 @@ export default function FirmaPage({ token }) {
   .fp-file{display:block;margin-top:10px;padding:12px;border:1.5px dashed var(--c);border-radius:10px;background:var(--cs);font-size:14px}.fp-file input{display:block;margin-top:6px;max-width:100%}
   .fp-tick{width:56px;height:56px;border-radius:50%;background:var(--cs);color:var(--c);display:grid;place-items:center;font-size:28px;margin:24px auto 10px}.fp-mut{color:#6b665f;font-size:14px}`
 
+  const controlla = async () => {
+    try { const r = await fetch('/api/public-firma/' + encodeURIComponent(token) + '/controlla', { method: 'POST' }); const d = await r.json().catch(() => ({})); if (d.stato === 'firmata') setFatto(true); else if (d.stato === 'da_rifare') { setInFirma(null); setModo(null); setPasso(2); setErrore('La firma non è andata a buon fine. Puoi riprovare o scegliere la stampa.') } } catch (e) { /* ci riprova */ }
+  }
+  useEffect(() => { if (!inFirma || fatto) return undefined; const t = setInterval(controlla, 10000); return () => clearInterval(t) }, [inFirma, fatto]) // eslint-disable-line react-hooks/exhaustive-deps
+  const avviaCodice = async () => {
+    setErrore(''); setBusy(true)
+    try {
+      const r = await fetch('/api/public-firma/' + encodeURIComponent(token) + '/codice', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ consensi, autenticazione: auth }) })
+      const d = await r.json().catch(() => ({}))
+      if (r.ok) setInFirma({ metodo: d.metodo }); else setErrore(d.error || 'Non riuscito: riprova.')
+    } catch (e) { setErrore('Non riesco a contattare il server: riprova tra poco.') } finally { setBusy(false) }
+  }
   const ok = info && info.valido
   const tutti = ok && info.documenti.every((d) => file[d.key])
   const invia = async () => {
@@ -80,13 +95,58 @@ export default function FirmaPage({ token }) {
                   <button type="button" className="fp-btn" onClick={() => setPasso(2)}>Continua</button>
                 </>
               )}
-              {passo === 2 && (
+              {passo === 2 && inFirma && (
+                <>
+                  <h1>Completa la firma</h1>
+                  <p>Ti abbiamo mandato un messaggio via <b>{inFirma.metodo}</b> con il collegamento e il codice. Aprilo, firma e torna qui: la pagina si aggiorna da sola.</p>
+                  <p className="fp-mut">Non lo vedi? Controlla la posta indesiderata. Quando hai firmato basta qualche istante.</p>
+                  <button type="button" className="fp-btn" onClick={controlla}>Ho firmato</button>
+                </>
+              )}
+              {passo === 2 && !inFirma && modo === null && (
+                <>
+                  <h1>Come vuoi firmare?</h1>
+                  {errore && <div className="fp-err" style={{ marginTop: 0, marginBottom: 12 }}>{errore}</div>}
+                  {info.codice && info.codice.disponibile && info.codice.tentativi_residui > 0 && (
+                    <button type="button" className="fp-card" style={{ width: '100%', textAlign: 'left', cursor: 'pointer', borderColor: colore }} onClick={() => { setErrore(''); setModo('codice') }}>
+                      <b>Firma con un codice</b><span className="fp-mut">Ricevi un codice e firmi dal telefono, senza stampare. Ci vuole un minuto.</span>
+                    </button>
+                  )}
+                  <button type="button" className="fp-card" style={{ width: '100%', textAlign: 'left', cursor: 'pointer' }} onClick={() => { setErrore(''); setModo('carta') }}>
+                    <b>Stampa, firma e ricarica</b><span className="fp-mut">Scarichi i PDF, li firmi a penna e carichi la foto o la scansione.</span>
+                  </button>
+                  <button type="button" className="fp-ghost" onClick={() => setPasso(1)}>Indietro</button>
+                </>
+              )}
+              {passo === 2 && !inFirma && modo === 'codice' && (
+                <>
+                  <h1>Firma con un codice</h1>
+                  <p className="fp-mut">Una sola firma vale per {info.documenti.length === 1 ? 'il documento' : 'tutti i documenti'}: {info.documenti.map((d) => d.label).join(', ')}.</p>
+                  {info.documenti.some((d) => d.consensi.length) && (
+                    <div className="fp-card">
+                      {info.documenti.map((d) => d.consensi.map((c) => (
+                        <label className="k" key={d.key + c.field}><input type="checkbox" checked={!!(consensi[d.key] && consensi[d.key][c.field])} onChange={(e) => spunta(d.key, c.field, e.target.checked)} />{c.label}</label>
+                      )))}
+                    </div>
+                  )}
+                  <div className="fp-card">
+                    <b>Dove ti mandiamo il codice?</b>
+                    <label className="k"><input type="radio" name="auth" checked={auth === 'email'} onChange={() => setAuth('email')} />Per mail</label>
+                    {info.codice.sms && <label className="k"><input type="radio" name="auth" checked={auth === 'sms'} onChange={() => setAuth('sms')} />Per SMS al cellulare che ci hai dato</label>}
+                  </div>
+                  {errore && <div className="fp-err">{errore}</div>}
+                  <button type="button" className="fp-btn" disabled={busy} onClick={avviaCodice}>{busy ? 'Un attimo…' : 'Invia il codice'}</button>
+                  <button type="button" className="fp-ghost" onClick={() => { setModo(null); setErrore('') }}>Indietro</button>
+                </>
+              )}
+              {passo === 2 && !inFirma && modo === 'carta' && (
                 <>
                   <h1>Firma e carica</h1>
                   <p className="fp-mut">Stampa e firma a penna e fotografa il foglio, oppure firma il PDF con un'app sul telefono. Poi scegli il file qui sotto.</p>
                   {info.documenti.map((d) => (
                     <div className="fp-card" key={d.key}>
                       <b>{d.label}</b>
+                      <a className="fp-ghost" href={'/api/public-firma/' + encodeURIComponent(token) + '/pdf/' + encodeURIComponent(d.key)} target="_blank" rel="noopener noreferrer">Scarica il PDF</a>
                       {d.consensi.map((c) => (
                         <label className="k" key={c.field}><input type="checkbox" checked={!!(consensi[d.key] && consensi[d.key][c.field])} onChange={(e) => spunta(d.key, c.field, e.target.checked)} />{c.label}</label>
                       ))}
@@ -97,7 +157,7 @@ export default function FirmaPage({ token }) {
                   ))}
                   {errore && <div className="fp-err">{errore}</div>}
                   <button type="button" className="fp-btn" disabled={!tutti || busy} onClick={invia}>{busy ? 'Invio…' : 'Invia i documenti firmati'}</button>
-                  <button type="button" className="fp-ghost" onClick={() => setPasso(1)}>Indietro</button>
+                  <button type="button" className="fp-ghost" onClick={() => { setModo(null); setErrore('') }}>Indietro</button>
                 </>
               )}
             </>

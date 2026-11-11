@@ -133,6 +133,70 @@ async function main() {
     eq(j.stato_aggiornato, true); eq(JSON.parse(db.prepare('SELECT data FROM records WHERE id = ?').get(id4).data)._stato, 'ricevuti');
     mod.steps = vecchi; db.prepare("UPDATE modules SET schema_json = ? WHERE slug = 'clienti_t'").run(JSON.stringify(mod));
   });
+  // ── firma con codice (eSignature simulata) ──
+  const oit = require('./lib/openapi-it'); const chiamate = []; let statoFirma = 'WAIT_SIGN'; let servizio = true;
+  oit.servizioAttivo = async () => (servizio ? { ok: true } : { ok: false, motivo: 'spento' });
+  oit.chiama = async (c) => {
+    chiamate.push({ metodo: c.metodo || 'GET', percorso: c.percorso, corpo: c.corpo });
+    if (c.metodo === 'POST' && c.percorso === '/EU-SES') return { data: { id: 'sig-' + chiamate.length, state: 'WAIT_SIGN' } };
+    if (/\/detail$/.test(c.percorso)) return { data: { state: statoFirma } };
+    if (/\/signedDocument$/.test(c.percorso)) return { buffer: Buffer.from('%PDF-1.4 firmato da eSignature '.padEnd(200, 'x')), tipo: 'application/pdf' };
+    throw new Error('chiamata inattesa ' + c.percorso);
+  };
+  const spesaPrima = () => { try { return db.prepare('SELECT COUNT(*) c FROM openapi_spese WHERE servizio = ?').get('esignature_ses').c; } catch (e) { return null; } };
+  const id5 = rec({ nome: 'Elena Blu', email: 'elena@esempio.it', telefono: '333 111 2222', _stato: 'nuovo' });
+  await post(`/firma/clienti_t/${id5}/richieste`, { link_base: LINK }); const tok5 = tokenDa(partite[partite.length - 1]);
+  const codice = (t, b) => fetch(BASE + '/api/public-firma/' + t + '/codice', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b || {}) });
+  const controlla = (t) => fetch(BASE + '/api/public-firma/' + t + '/controlla', { method: 'POST' });
+  await test('la pagina sa se la firma con codice c\'è, se il codice può andare per SMS e quanti tentativi restano', async () => {
+    let p = await (await fetch(BASE + '/api/public-firma/' + tok5)).json(); eq(p.codice, { disponibile: true, sms: true, tentativi_residui: 2 });
+    servizio = false; p = await (await fetch(BASE + '/api/public-firma/' + tok5)).json(); eq(p.codice.disponibile, false); servizio = true;
+    const senzaTel = await (await fetch(BASE + '/api/public-firma/' + token)).json(); ok(senzaTel.valido === false, 'quella già firmata non è più valida');
+  });
+  await test('firma con codice: UN solo PDF con tutti i documenti e la pagina Firma, UN firmatario, la richiesta passa «in firma»', async () => {
+    const n = chiamate.length; const r = await codice(tok5, { consensi: { privacy: { c_mkt: true } }, autenticazione: 'email' }); eq(r.status, 200, await r.clone().text()); eq((await r.json()).metodo, 'email');
+    const c = chiamate.slice(n).find((x) => x.metodo === 'POST'); ok(c, 'una sola richiesta a eSignature');
+    eq(c.corpo.inputDocuments.length, 1, 'un solo PDF'); const pdf = Buffer.from(c.corpo.inputDocuments[0].payload, 'base64'); eq(pdf.subarray(0, 5).toString(), '%PDF-');
+    eq((pdf.toString('latin1').match(/\/Type \/Page\b/g) || []).length, 3, 'due documenti + pagina Firma');
+    eq(c.corpo.signers.length, 1); eq(c.corpo.signers[0].email, 'elena@esempio.it'); eq(c.corpo.signers[0].name, 'Elena'); eq(c.corpo.signers[0].surname, 'Blu'); eq(c.corpo.signers[0].signatures[0].page, 3, 'la firma sta sull\'ultima pagina');
+    eq(db.prepare('SELECT stato FROM richieste_firma WHERE id = (SELECT id FROM richieste_firma WHERE record_id = ?)').get(id5).stato, 'in_firma');
+    eq((await invia(tok5, { file: { privacy: pdfFinto(), aml: pdfFinto() } })).status, 409, 'non si firma anche a mano mentre il codice è in corso');
+    eq((await codice(tok5, {})).status, 409, 'non si riavvia');
+    const p = await (await fetch(BASE + '/api/public-firma/' + tok5)).json(); eq(p.in_firma, { metodo: 'email' });
+  });
+  await test('mentre il codice è in corso non partono solleciti', async () => {
+    const ric = db.prepare('SELECT * FROM richieste_firma WHERE record_id = ?').get(id5); const t = Date.parse(ric.creata_il.replace(' ', 'T') + 'Z');
+    ok(!(await firma.eseguiSolleciti(t + 4 * GIORNO)).includes(ric.id), 'nessun sollecito a chi ha già il codice');
+  });
+  await test('ricontrollo: in attesa non cambia nulla; completata → un solo firmato scaricato, allegato a ogni documento, consensi, stato, avviso e conferma', async () => {
+    let r = await (await controlla(tok5)).json(); eq(r.stato, 'in_attesa');
+    statoFirma = 'DONE'; const n = partite.length; const prima = db.prepare("SELECT COUNT(*) c FROM record_attachments WHERE record_id = ? AND module_slug = 'clienti_t'").get(id5).c;
+    r = await (await controlla(tok5)).json(); eq(r.stato, 'firmata');
+    eq(db.prepare("SELECT tipo FROM record_attachments WHERE record_id = ? AND module_slug = 'clienti_t' ORDER BY id").all(id5).map((a) => a.tipo), ['privacy_firmata', 'aml_firmato']); eq(prima, 0);
+    const dati = JSON.parse(db.prepare('SELECT data FROM records WHERE id = ?').get(id5).data); eq(dati.c_mkt, true); eq(dati._stato, 'ricevuti');
+    ok(db.prepare("SELECT 1 FROM notifications WHERE message LIKE '%Elena Blu ha firmato%'").get(), 'avviso'); eq(partite.length, n + 1); ok(/Abbiamo ricevuto la tua firma/.test(partite[n].subject));
+    eq((await controlla(tok5)).status, 200, 'una richiesta già firmata risponde senza rifare nulla');
+  });
+  await test('firma fallita o annullata: la richiesta torna disponibile; dopo due tentativi il codice non si riavvia più', async () => {
+    const id6 = rec({ nome: 'Franco Verde', email: 'franco@esempio.it', _stato: 'nuovo' });
+    await post(`/firma/clienti_t/${id6}/richieste`, { link_base: LINK }); const tok6 = tokenDa(partite[partite.length - 1]);
+    statoFirma = 'WAIT_SIGN'; eq((await codice(tok6, {})).status, 200); statoFirma = 'ERROR'; eq((await (await controlla(tok6)).json()).stato, 'da_rifare');
+    eq(db.prepare('SELECT stato FROM richieste_firma WHERE record_id = ?').get(id6).stato, 'inviata');
+    eq((await codice(tok6, {})).status, 200); statoFirma = 'CANCELLED'; await controlla(tok6);
+    const terzo = await codice(tok6, {}); eq(terzo.status, 409, 'oltre i tentativi'); ok(/stampa/.test((await terzo.json()).error));
+    const p = await (await fetch(BASE + '/api/public-firma/' + tok6)).json(); eq(p.codice.tentativi_residui, 0);
+    eq((await invia(tok6, { file: { privacy: pdfFinto(), aml: pdfFinto() } })).status, 200, 'la strada della stampa resta aperta');
+  });
+  await test('SMS: serve un cellulare valido nella scheda (si normalizza in +39…); senza, errore chiaro; servizio spento: «usa la stampa»', async () => {
+    const id7 = rec({ nome: 'Gina Rosa', email: 'gina@esempio.it', telefono: '3331112222', _stato: 'nuovo' }); const id8 = rec({ nome: 'Hugo Neri', email: 'hugo@esempio.it', _stato: 'nuovo' });
+    await post(`/firma/clienti_t/${id7}/richieste`, { link_base: LINK }); const tok7 = tokenDa(partite[partite.length - 1]);
+    await post(`/firma/clienti_t/${id8}/richieste`, { link_base: LINK }); const tok8 = tokenDa(partite[partite.length - 1]);
+    statoFirma = 'WAIT_SIGN'; const n = chiamate.length;
+    eq((await codice(tok8, { autenticazione: 'sms' })).status, 409);
+    eq((await codice(tok7, { autenticazione: 'sms' })).status, 200);
+    const c = chiamate.slice(n).find((x) => x.metodo === 'POST'); eq(c.corpo.signers[0].mobile, '+393331112222'); eq(c.corpo.signers[0].authentication, ['sms']); ok(!('email' in c.corpo.signers[0]), 'solo il canale scelto');
+    servizio = false; const r = await codice(tok8, {}); eq(r.status, 503); ok(/stampa/.test((await r.json()).error)); servizio = true;
+  });
   await test('annullare una richiesta: il link smette di funzionare; l\'elenco mostra gli stati', async () => {
     const id3 = rec({ nome: 'Carlo Neri', email: 'carlo@esempio.it', _stato: 'nuovo' });
     await post(`/firma/clienti_t/${id3}/richieste`, { link_base: LINK }); const tok3 = tokenDa(partite[partite.length - 1]);

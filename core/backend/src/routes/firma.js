@@ -6,6 +6,8 @@
 //   DELETE /api/firma/richieste/:rid                 (admin)  annulla una richiesta in attesa
 //   GET    /api/public-firma/:token                  (pubblica) cosa c'è da firmare (solo nome dell'agenzia, documenti e consensi)
 //   GET    /api/public-firma/:token/pdf/:key         (pubblica) il PDF di un documento
+//   POST   /api/public-firma/:token/codice           (pubblica) { consensi, autenticazione: 'email'|'sms' } → firma con codice (eSignature), un PDF con tutti i documenti
+//   POST   /api/public-firma/:token/controlla        (pubblica) ricontrolla la firma con codice: se completa, chiude
 //   POST   /api/public-firma/:token                  (pubblica, multipart) file firmati `file_<chiave>` e `consensi` (JSON {chiave:{campo:true}})
 // Il destinatario lo ricava SEMPRE il server dal record (mai dalla richiesta).
 const express = require('express');
@@ -59,7 +61,7 @@ admin.delete('/richieste/:rid', requireAuth, requireAdmin, (req, res) => {
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024, files: 12 } });
 const pubblico = express.Router();
-pubblico.get('/:token', (req, res) => { const p = firma.pubblica(req.params.token); res.status(p.valido ? 200 : 410).json(p); });
+pubblico.get('/:token', async (req, res) => { try { const p = await firma.pubblica(req.params.token); res.status(p.valido ? 200 : 410).json(p); } catch (e) { fail(res, e); } });
 pubblico.get('/:token/pdf/:key', async (req, res) => {
   try {
     const f = await firma.pdf(req.params.token, req.params.key);
@@ -75,5 +77,11 @@ pubblico.post('/:token', upload.any(), async (req, res) => {
     res.json(await firma.completa(req.params.token, { file, consensi, ip: req.ip }));
   } catch (e) { fail(res, e); }
 });
+
+// Firma con codice: parte la richiesta a eSignature (un PDF, un codice); la pagina poi ricontrolla con «controlla» (e comunque lo fa il server ogni 5 minuti).
+pubblico.post('/:token/codice', async (req, res) => {
+  try { res.json(await firma.avviaCodice(req.params.token, { consensi: (req.body && req.body.consensi) || {}, autenticazione: req.body && req.body.autenticazione, ip: req.ip })); } catch (e) { fail(res, e); }
+});
+pubblico.post('/:token/controlla', async (req, res) => { try { res.json(await firma.controllaDaPagina(req.params.token)); } catch (e) { fail(res, e); } });
 
 module.exports = { admin, pubblico };

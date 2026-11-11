@@ -137,7 +137,9 @@ function badge(doc, x, y, lato, nome, colore, tipo) {
 
 // `azienda`: { nome, indirizzo, piva, colore } (o solo il nome, come stringa); `logo`: Buffer PNG/JPEG o null.
 // → Promise<Buffer>
-function creaPdf({ titolo, corpo, azienda, logo = null, etichetta = 'Documento', riquadroFirma = true, piePagina = '', numero = '' }) {
+// `documenti` (facoltativo): più documenti nello stesso PDF, ognuno su pagine nuove, per la firma con codice (un solo file, una sola firma). `paginaFirma`: aggiunge in fondo una pagina «Firma»
+// con l'elenco dei documenti e lo spazio per la firma; ritorna anche quante pagine ha il PDF dietro `creaPdfPacchetto`.
+function creaPdf({ titolo, corpo, azienda, logo = null, etichetta = 'Documento', riquadroFirma = true, piePagina = '', numero = '', documenti = null, paginaFirma = false }) {
   const az = typeof azienda === 'string' ? { nome: azienda } : (azienda || {});
   const colore = coloreValido(az.colore);
   const vivo = accento(colore), bordo = tinta(vivo, 0.3), chiaro = tinta(vivo, 0.14), chiaro2 = tinta(vivo, 0.24);
@@ -154,6 +156,8 @@ function creaPdf({ titolo, corpo, azienda, logo = null, etichetta = 'Documento',
     intestazione(doc, { azienda: az, logo, etichetta, numero, data: new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }) });
     doc.on('pageAdded', () => { doc.rect(0, 0, doc.page.width, 6).fill(colore); doc.y = M; });
 
+    const dataOggi = new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+    const scrivi = (titolo, corpo, riquadroFirma) => {
     // ── Titolo, filetto azzurro, sottotitolo ──
     const { sottotitolo, sezioni } = struttura(corpo);
     const dt = dividiTitolo(String(titolo || 'Documento'));
@@ -320,9 +324,31 @@ function creaPdf({ titolo, corpo, azienda, logo = null, etichetta = 'Documento',
       });
     }
 
+    };
+
+    const elenco = documenti && documenti.length ? documenti : [{ titolo, corpo, riquadroFirma }];
+    elenco.forEach((d, i) => {
+      if (i > 0) { doc.addPage(); intestazione(doc, { azienda: az, logo, etichetta, numero, data: dataOggi }); }
+      scrivi(d.titolo, d.corpo, d.riquadroFirma !== undefined ? d.riquadroFirma : riquadroFirma);
+    });
+    if (paginaFirma) {
+      doc.addPage(); intestazione(doc, { azienda: az, logo, etichetta, numero, data: dataOggi });
+      doc.font(FONT_TITOLO).fontSize(24).fillColor(TESTO).text('Firma', M, ALTEZZA_FASCIA + 22, { width: W });
+      doc.roundedRect(M, doc.y + 6, 46, 4, 2).fill(vivo); doc.y += 26;
+      doc.font('Helvetica').fontSize(11).fillColor('#1c1917').text('Con la firma qui sotto il sottoscritto conferma di aver letto e di accettare i documenti seguenti, che precedono questa pagina:', M, doc.y, { width: W, lineGap: 2 });
+      doc.y += 10;
+      elenco.forEach((d, i) => { doc.font('Helvetica-Bold').fontSize(11).text((i + 1) + '.  ' + (d.titolo || 'Documento'), M + 8, doc.y, { width: W - 8 }); doc.y += 4; });
+    }
+
     pieDiPagina(doc, { azienda: az, riserva: piePagina, colore });
     doc.end();
   });
 }
 
-module.exports = { creaPdf, eTitoletto };
+// Il PDF unico con tutti i documenti più la pagina «Firma»: { buffer, pagine } (la pagina della firma è l'ultima).
+async function creaPdfPacchetto({ documenti, azienda, logo = null, etichetta = 'Documenti da firmare', numero = '' }) {
+  const buffer = await creaPdf({ titolo: 'Documenti da firmare', corpo: '', azienda, logo, etichetta, piePagina: etichetta, numero, documenti: documenti.map((d) => ({ ...d, riquadroFirma: false })), paginaFirma: true });
+  return { buffer, pagine: (buffer.toString('latin1').match(/\/Type \/Page\b/g) || []).length };
+}
+
+module.exports = { creaPdf, creaPdfPacchetto, eTitoletto };

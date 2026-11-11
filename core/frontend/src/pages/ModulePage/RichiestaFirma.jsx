@@ -4,7 +4,7 @@ import Icon from '../../components/Icon'
 // «Invia per la firma»: UN pulsante per mandare al cliente i documenti da firmare (tutti insieme, con un solo link). Sotto, lo stato dell'ultima richiesta:
 // in attesa (da quanti giorni, quanti solleciti), firmata, scaduta. Sollecitare o annullare sono azioni piccole; il resto (allegati, consensi, stato) lo fa il server quando il cliente firma.
 const quando = (d) => (d ? new Date(d.includes('T') ? d : d.replace(' ', 'T') + 'Z').toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }) : '')
-const STATI = { inviata: ['In attesa di firma', 'text-amber-500'], firmata: ['Firmata', 'text-green-500'], scaduta: ['Scaduta', 'text-gray-400'], annullata: ['Annullata', 'text-gray-400'] }
+const STATI = { inviata: ['In attesa di firma', 'text-amber-500'], in_firma: ['Firma con codice in corso', 'text-amber-500'], firmata: ['Firmata', 'text-green-500'], scaduta: ['Scaduta', 'text-gray-400'], annullata: ['Annullata', 'text-gray-400'] }
 
 export default function RichiestaFirma({ api, slug, recordId, documentiFirma }) {
   const [richieste, setRichieste] = useState([])
@@ -32,7 +32,7 @@ export default function RichiestaFirma({ api, slug, recordId, documentiFirma }) 
     carica()
   }
   const ultima = richieste[0]
-  const inAttesa = ultima && ultima.stato === 'inviata'
+  const inAttesa = ultima && (ultima.stato === 'inviata' || ultima.stato === 'in_firma')
   return (
     <div className="rounded-xl border border-gray-800 p-4 mb-4">
       <div className="flex items-start gap-3">
@@ -49,10 +49,10 @@ export default function RichiestaFirma({ api, slug, recordId, documentiFirma }) 
       {ultima && (
         <div className="mt-3 pt-3 border-t border-gray-800 text-xs flex items-center justify-between gap-2 flex-wrap">
           <span><span className={'font-medium ' + (STATI[ultima.stato] || STATI.annullata)[1]}>{(STATI[ultima.stato] || STATI.annullata)[0]}</span>
-            <span className="text-gray-500"> · inviata il {quando(ultima.creata_il)} a {ultima.destinatario}{ultima.stato === 'firmata' ? ' · firmata il ' + quando(ultima.firmata_il) : inAttesa ? ' · ' + ultima.solleciti + ' solleciti' : ''}</span></span>
+            <span className="text-gray-500"> · inviata il {quando(ultima.creata_il)} a {ultima.destinatario}{ultima.stato === 'firmata' ? ' · firmata il ' + quando(ultima.firmata_il) : ultima.stato === 'inviata' ? ' · ' + ultima.solleciti + ' solleciti' : ''}</span></span>
           {inAttesa && (
             <span className="flex gap-3 flex-shrink-0">
-              <button type="button" disabled={busy} onClick={() => azione('sollecita', ultima)} className="text-accent hover:opacity-80 disabled:opacity-40">Sollecita</button>
+              {ultima.stato === 'inviata' && <button type="button" disabled={busy} onClick={() => azione('sollecita', ultima)} className="text-accent hover:opacity-80 disabled:opacity-40">Sollecita</button>}
               <button type="button" disabled={busy} onClick={() => azione('annulla', ultima)} className="text-gray-400 hover:text-gray-200 disabled:opacity-40">Annulla</button>
             </span>
           )}
