@@ -216,6 +216,10 @@ for (const col of ['backup_mail_weekly INTEGER DEFAULT 0', 'backup_mail_last_sen
 for (const col of ["host TEXT DEFAULT 'nas'", 'remote_ip TEXT', 'linode_id INTEGER', 'remote_fingerprint TEXT']) {
   if (!db.prepare("SELECT 1 FROM pragma_table_info('tenants') WHERE name = ?").get(col.split(' ')[0])) db.exec('ALTER TABLE tenants ADD COLUMN ' + col);
 }
+// Allegati nel backup (0.5.2): archivio accanto al database, con dimensione ed eventuale errore.
+for (const col of ['allegati_file TEXT', 'allegati_size_mb REAL', 'allegati_error TEXT']) {
+  if (!db.prepare("SELECT 1 FROM pragma_table_info('tenant_backups') WHERE name = ?").get(col.split(' ')[0])) db.exec('ALTER TABLE tenant_backups ADD COLUMN ' + col);
+}
 db.prepare('INSERT OR IGNORE INTO update_manager (id) VALUES (1)').run();
 // I verticali proposti ai tenant: gruppi di moduli della Libreria con nome, icona e descrizione (dati, nessun settore nel codice). Si gestiscono da Libreria;
 // al primo avvio si riempiono dal file seeds/verticali.json (lib/verticali.js).

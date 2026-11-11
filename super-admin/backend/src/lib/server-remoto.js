@@ -306,4 +306,11 @@ async function flussoAllegati(tenant) {
   return pass;
 }
 
-module.exports = { flussoAllegati, statoContainer, interroga, dimensioneDatabaseMb, ripristinaDatabase, reimpostaPasswordAdmin, scaricaDatabase, crea, distruggi, comando, aggiorna, chiave, ambiente, caddyfile, nomeServer, deps };
+// Rimette gli allegati di un archivio .tar.gz sul server del tenant (non cancella nulla: sovrascrive i file con lo stesso nome).
+async function ripristinaAllegati(tenant, file) {
+  const c = await entra(tenant);
+  try { await sh(c, 'umask 077 && mkdir -p ' + sq(DIR(tenant.slug) + '/data/uploads') + ' && tar xzf - -C ' + sq(DIR(tenant.slug) + '/data/uploads'), { stdin: require('fs').createReadStream(file) }); }
+  finally { c.close(); }
+}
+
+module.exports = { ripristinaAllegati, flussoAllegati, statoContainer, interroga, dimensioneDatabaseMb, ripristinaDatabase, reimpostaPasswordAdmin, scaricaDatabase, crea, distruggi, comando, aggiorna, chiave, ambiente, caddyfile, nomeServer, deps };

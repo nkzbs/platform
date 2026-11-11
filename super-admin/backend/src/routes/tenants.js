@@ -1085,6 +1085,13 @@ router.get('/:slug/backups', requireAuth, requireTenantScope, (req, res) => {
 // esattamente lo schema+dati reali, non serve reinventare un formato JSON parallelo).
 // Auth via query string (?token=), stesso pattern di /update-manager/export: un <a href>
 // di download normale non può mandare l'header Authorization.
+router.get('/:slug/backups/:backupId/allegati/download', requireQueryToken, (req, res) => {
+  const backup = db.prepare('SELECT * FROM tenant_backups WHERE id = ? AND tenant_slug = ?').get(req.params.backupId, req.params.slug);
+  if (!backup || backup.status !== 'ok' || !backup.allegati_file) return res.status(404).json({ error: 'Questo backup non ha un archivio degli allegati' });
+  if (!fs.existsSync(backup.allegati_file)) return res.status(404).json({ error: 'Archivio degli allegati non più presente su disco' });
+  res.download(backup.allegati_file, req.params.slug + '_' + backup.created_at.replace(/[:\s]/g, '-') + '_allegati.tar.gz');
+});
+
 router.get('/:slug/backups/:backupId/download', requireQueryToken, (req, res) => {
   const backup = db.prepare('SELECT * FROM tenant_backups WHERE id = ? AND tenant_slug = ?').get(req.params.backupId, req.params.slug);
   if (!backup || backup.status !== 'ok') return res.status(404).json({ error: 'Backup non trovato' });
@@ -1197,6 +1204,15 @@ router.get('/:slug/spostamento', requireAuth, requireTenantScope, (req, res) => 
   res.json(st ? { fine: st.fine, fase: st.fase, errore: st.errore, esito: st.esito, passi: st.passi.map((p) => p.m) } : { fine: true, fase: null, errore: null, esito: null, passi: [] });
 });
 
+// Con `con_allegati: true` nel corpo, rimette anche gli allegati del backup (non cancella nulla: i file dell'archivio sovrascrivono quelli con lo stesso nome). Ritorna true/false.
+async function ripristinaAllegatiSeRichiesto(req, tenant, backup) {
+  if (!(req.body && req.body.con_allegati)) return false;
+  if (!backup.allegati_file || !fs.existsSync(backup.allegati_file)) throw new Error('Questo backup non ha un archivio degli allegati (o il file non c\'è più): il database non è stato toccato più del necessario, riprova senza allegati.');
+  await require('../lib/backup-allegati').ripristina(tenant, backup.allegati_file);
+  logAudit(req.user.username, 'tenant.restore.allegati', tenant.slug, { backup_id: backup.id });
+  return true;
+}
+
 // Ripristino di un tenant su Linode: copia di sicurezza dello stato attuale (scaricata qui, come ogni backup), poi il database del backup va sul server (vedi server-remoto.ripristinaDatabase).
 async function ripristinoRemoto(req, res) {
   const { slug, backupId } = req.params;
@@ -1212,9 +1228,10 @@ async function ripristinoRemoto(req, res) {
     await remoto.scaricaDatabase(tenant, safetyPath); // se la copia di sicurezza non riesce, NON si tocca niente
     db.prepare("INSERT INTO tenant_backups (tenant_slug, file_path, size_mb, status, trigger) VALUES (?, ?, ?, ?, 'pre-restore')").run(slug, safetyPath, Math.round((fs.statSync(safetyPath).size / 1024 / 1024) * 100) / 100, 'ok');
     const r = await remoto.ripristinaDatabase(tenant, backup.file_path);
+    const allegatiRipristinati = await ripristinaAllegatiSeRichiesto(req, tenant, backup);
     db.prepare('UPDATE tenants SET status = ? WHERE slug = ?').run('active', slug);
     logAudit(req.user.username, 'tenant.restore', slug, { backup_id: backup.id, restored_from: backup.file_path, safety_copy: safetyPath, remoto: true });
-    res.json({ ok: true, restarted: true, copia_di_sicurezza: path.basename(safetyPath) });
+    res.json({ ok: true, restarted: true, copia_di_sicurezza: path.basename(safetyPath), allegati_ripristinati: allegatiRipristinati });
   } catch (err) {
     logAudit(req.user.username, 'tenant.restore.failed', slug, { backup_id: backup.id, error: String(err.message).slice(0, 300) });
     res.status(500).json({ error: err.message });
@@ -1258,6 +1275,7 @@ router.post('/:slug/restore/:backupId', requireAuth, requireTenantScope, async (
     }
 
     fs.copyFileSync(backup.file_path, tenant.db_path);
+    const allegatiRipristinati = await ripristinaAllegatiSeRichiesto(req, tenant, backup);
 
     if (wasRunning) {
       await provisionerRequest('POST', '/tenants/' + slug + '/start');
@@ -1265,7 +1283,7 @@ router.post('/:slug/restore/:backupId', requireAuth, requireTenantScope, async (
     }
 
     logAudit(req.user.username, 'tenant.restore', slug, { backup_id: backup.id, restored_from: backup.file_path, safety_copy: safetyPath });
-    res.json({ ok: true, restarted: wasRunning });
+    res.json({ ok: true, restarted: wasRunning, allegati_ripristinati: allegatiRipristinati });
   } catch (err) {
     // Se qualcosa fallisce a metà, prova comunque a far ripartire il container
     // con quello che c'è sul disco in questo momento, invece di lasciare il
@@ -1276,6 +1294,64 @@ router.post('/:slug/restore/:backupId', requireAuth, requireTenantScope, async (
     res.status(500).json({ error: err.message });
   }
 });
+
+
+// ── Scheda Backup (0.5.2): i tre livelli in un colpo solo ────────────────────────────────────────────────────────────────────────────────────────
+// Livello 1 = copie di Platform (database + allegati) conservate qui; livello 2 = copia fuori dal NAS; livello 3 = backup del disco di Linode (solo tenant su Linode, letto a parte).
+router.get('/:slug/backup-stato', requireAuth, requireTenantScope, (req, res) => {
+  const t = req.tenant;
+  const ult = (cond) => db.prepare("SELECT * FROM tenant_backups WHERE tenant_slug = ? AND status = 'ok' " + cond + ' ORDER BY created_at DESC LIMIT 1').get(t.slug);
+  const eta = (r) => r ? Math.floor((Date.now() - Date.parse(r.created_at.replace(' ', 'T') + 'Z')) / 3600000) : null;
+  const l1 = ult(''), conAllegati = ult('AND allegati_file IS NOT NULL'), l2 = ult("AND offsite_status = 'ok'"), verif = db.prepare("SELECT * FROM tenant_backups WHERE tenant_slug = ? AND verify_status IS NOT NULL ORDER BY verify_checked_at DESC LIMIT 1").get(t.slug);
+  const errAll = db.prepare("SELECT allegati_error, created_at FROM tenant_backups WHERE tenant_slug = ? AND status = 'ok' ORDER BY created_at DESC LIMIT 1").get(t.slug);
+  const n = db.prepare("SELECT COUNT(*) n FROM tenant_backups WHERE tenant_slug = ? AND status = 'ok'").get(t.slug).n;
+  res.json({
+    host: t.host || 'nas',
+    automatico: !!t.backup_auto_enabled,
+    soglia_ore: 36,
+    livello1: { copie: n, ultimo: l1 ? l1.created_at : null, eta_ore: eta(l1), scoperto: !l1 || eta(l1) >= 36, dimensione_mb: l1 ? l1.size_mb : null,
+      allegati: { ultimo: conAllegati ? conAllegati.created_at : null, dimensione_mb: conAllegati ? conAllegati.allegati_size_mb : null, errore: errAll && errAll.allegati_error ? errAll.allegati_error : null } },
+    livello2: { configurato: !!t.backup_offsite_url, ultimo: l2 ? l2.offsite_synced_at : null, verifica: verif ? { esito: verif.verify_status, quando: verif.verify_checked_at, errore: verif.verify_error } : null },
+    livello3: t.host === 'linode' ? { server: t.linode_id } : null,
+  });
+});
+
+router.get('/:slug/backup-disco', requireAuth, requireTenantScope, async (req, res) => {
+  if (req.tenant.host !== 'linode' || !req.tenant.linode_id) return res.status(400).json({ error: 'Il backup del disco esiste solo per i tenant che vivono su un server Linode.' });
+  try { res.json(await require('../lib/linode').elencoBackupDisco(req.tenant.linode_id)); }
+  catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+});
+
+// Ripristino del disco: copia di sicurezza di Platform prima (se non riesce NON si tocca nulla), poi spegne, ripristina, riaccende. Lavoro lungo: parte in background, si segue con GET.
+const ripristiniDisco = new Map();
+router.post('/:slug/backup-disco/:backupId/ripristina', requireAuth, requireTenantScope, async (req, res) => {
+  const t = req.tenant, slug = t.slug;
+  if (t.host !== 'linode' || !t.linode_id) return res.status(400).json({ error: 'Il backup del disco esiste solo per i tenant che vivono su un server Linode.' });
+  if (!req.body || req.body.conferma !== slug) return res.status(400).json({ error: 'Per confermare scrivi il nome del tenant («' + slug + '»): il ripristino riporta TUTTO il server a com\'era in quella data.' });
+  const corrente = ripristiniDisco.get(slug);
+  if (corrente && corrente.stato === 'in_corso') return res.status(409).json({ error: 'Un ripristino di questo server è già in corso.' });
+  const lavoro = { stato: 'in_corso', fasi: [], avviato: new Date().toISOString(), errore: null };
+  ripristiniDisco.set(slug, lavoro);
+  const say = (f) => lavoro.fasi.push(f);
+  logAudit(req.user.username, 'tenant.restore_disk.start', slug, { backup_disco: Number(req.params.backupId) });
+  res.status(202).json({ ok: true });
+  (async () => {
+    try {
+      say('Faccio prima una copia di sicurezza di Platform (database e allegati)…');
+      const b = await runBackupForTenant(slug, { trigger: 'pre-restore', actor: req.user.username });
+      if (!b.ok) throw new Error('La copia di sicurezza di Platform non è riuscita (' + b.error + '): non ho toccato il server.');
+      const r = await require('../lib/linode').ripristinaBackupDisco(t.linode_id, req.params.backupId, { say });
+      say('Aspetto che il tenant risponda…');
+      for (let i = 0; i < 40; i++) { try { const st = await require('../lib/server-remoto').statoContainer(t); if (st && st.running) break; } catch (e) { /* il server sta ancora partendo */ } await new Promise((r2) => setTimeout(r2, 5000)); }
+      lavoro.stato = 'finito'; lavoro.esito = r;
+      logAudit(req.user.username, 'tenant.restore_disk.done', slug, r);
+    } catch (e) {
+      lavoro.stato = 'errore'; lavoro.errore = e.message;
+      logAudit(req.user.username, 'tenant.restore_disk.failed', slug, { error: String(e.message).slice(0, 300) });
+    }
+  })();
+});
+router.get('/:slug/backup-disco/ripristino', requireAuth, requireTenantScope, (req, res) => res.json(ripristiniDisco.get(req.params.slug) || { stato: 'nessuno' }));
 
 // categoria (2026-08-30, Fase 5/6) — testo libero, stessa route minima già
 // vista per gli altri singoli campi di questo file (domain, ecc.).

@@ -233,4 +233,17 @@ async function sendInviteMail({ to, nome, tenantName, link, ore }) {
   } catch (e) { console.error('[notifier] invio invito fallito:', e.message); return { sent: false, reason: 'La mail non è partita: ' + e.message }; }
 }
 
-module.exports = { htmlBackupSettimanale, sendInviteMail, notifyBackupResult, notifyBackupVerifyFailure, notifyAIBudget, sendWeeklyBackupMail };
+// Backup mancante: nessun backup riuscito da troppo tempo (lo scheduler non è partito, il NAS era spento, un errore ripetuto).
+async function notifyBackupStale({ tenantName, tenantSlug, ore }) {
+  const to = process.env.NOTIFY_EMAIL_TO;
+  const t = getTransporter();
+  if (!t || !to) { console.log('[notifier] email non inviata (SMTP non configurato) — backup mancante per', tenantSlug); return { sent: false, reason: 'smtp_not_configured' }; }
+  const quando = ore == null ? 'non esiste ancora nessun backup riuscito' : 'l\'ultimo backup riuscito è di ' + ore + ' ore fa';
+  const subject = `Backup MANCANTE — ${tenantName}`;
+  const text = `Per il tenant "${tenantName}" (${tenantSlug}) ${quando}. Controlla Super Admin → tenant → Dettagli → Backup.`;
+  const html = wrapMailHtml({ accentColor: '#d97706', title: '⚠ Backup mancante', lines: [`Per il tenant <b>"${tenantName}"</b> (${tenantSlug}) ${quando}.`, 'Apri Super Admin → tenant → Dettagli → Backup e premi «Backup ora», poi guarda perché non è partito.'], footer: 'Platform Super Admin — notifica automatica' });
+  try { await t.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to, subject, text, html }); return { sent: true }; }
+  catch (e) { return { sent: false, reason: e.message }; }
+}
+
+module.exports = { notifyBackupStale, htmlBackupSettimanale, sendInviteMail, notifyBackupResult, notifyBackupVerifyFailure, notifyAIBudget, sendWeeklyBackupMail };

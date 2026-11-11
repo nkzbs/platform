@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { API } from '../lib/api'
+import SchedaBackup from '../components/SchedaBackup'
 import InviteTenantModal from '../components/InviteTenantModal'
 import Icon from '../components/Icon'
 import Select from '../components/Select'
@@ -496,7 +497,8 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
     if (!confirm('Ripristinare il backup del ' + new Date(backup.created_at).toLocaleString('it-IT') + '?\n\nIl container verrà fermato e riavviato. Lo stato attuale viene comunque salvato come backup "pre-restore" prima di sovrascrivere, quindi è annullabile.')) return
     setRestoringId(backup.id)
     setBackupMsg((p) => ({ ...p, [slug]: null }))
-    const res = await fetch(API + '/tenants/' + slug + '/restore/' + backup.id, { method: 'POST', headers })
+    const conAllegati = !!backup.allegati_file && confirm('Questo backup ha anche gli allegati (' + backup.allegati_size_mb + ' MB). Rimetto anche quelli?\n\nOK = sì, database e allegati. Annulla = solo il database. I file dell\'archivio sovrascrivono quelli con lo stesso nome, gli altri restano.')
+    const res = await fetch(API + '/tenants/' + slug + '/restore/' + backup.id, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ con_allegati: conAllegati }) })
     const data = await res.json()
     setRestoringId(null)
     setBackupMsg((p) => ({ ...p, [slug]: res.ok ? { ok: true, restored: true } : { ok: false, error: data.error } }))
@@ -786,6 +788,7 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                         {backingUpSlug === t.slug ? 'Backup in corso...' : 'Backup ora'}
                       </button>
                     </div>
+                    <SchedaBackup api={API} headers={headers} slug={t.slug} ricarica={() => { loadBackups(t.slug); load() }} />
                     {(() => {
                       const bs = offsiteSettingsBySlug[t.slug] || {}
                       const on = !!bs.backup_mail_weekly
@@ -874,6 +877,12 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                                         className="text-gray-400 hover:text-gray-200 transition normal-case">
                                         Scarica
                                       </a>
+                                      {b.allegati_file && (
+                                        <a href={API + '/tenants/' + t.slug + '/backups/' + b.id + '/allegati/download?token=' + encodeURIComponent(token)}
+                                          className="text-gray-400 hover:text-gray-200 transition normal-case ml-3" title={'Allegati: ' + b.allegati_size_mb + ' MB'}>
+                                          Allegati
+                                        </a>
+                                      )}
                                       <button onClick={() => runRestore(t.slug, b)} disabled={restoringId === b.id}
                                         className="text-cp-primary hover:opacity-80 disabled:opacity-40 transition normal-case ml-3">
                                         {restoringId === b.id ? 'Ripristino...' : 'Ripristina'}

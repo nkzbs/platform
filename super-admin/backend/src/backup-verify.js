@@ -92,6 +92,39 @@ async function verifyOffsiteBackups() {
   return results;
 }
 
+// Prova di ripristino mensile (0.5.2) sulle copie LOCALI di Platform: per ogni tenant attivo, l'ultimo backup riuscito si apre davvero (integrità + una query reale)
+// e l'archivio degli allegati si legge per intero. Non tocca mai il tenant: lavora su una copia temporanea. Un esito negativo manda una mail.
+async function provaRipristinoLocale() {
+  const backupAllegati = require('./lib/backup-allegati');
+  const esiti = [];
+  for (const tenant of db.prepare("SELECT * FROM tenants WHERE status = 'active'").all()) {
+    const b = db.prepare("SELECT * FROM tenant_backups WHERE tenant_slug = ? AND status = 'ok' ORDER BY created_at DESC LIMIT 1").get(tenant.slug);
+    if (!b) continue;
+    let r = fs.existsSync(b.file_path) ? verifyBackupFile(b.file_path) : { ok: false, error: 'File del backup non trovato su disco' };
+    if (r.ok && b.allegati_file) {
+      const a = fs.existsSync(b.allegati_file) ? await backupAllegati.verifica(b.allegati_file) : { ok: false, error: 'Archivio degli allegati non trovato su disco' };
+      if (!a.ok) r = { ok: false, error: 'allegati: ' + a.error };
+    }
+    db.prepare('UPDATE tenant_backups SET verify_status = ?, verify_checked_at = ?, verify_error = ? WHERE id = ?').run(r.ok ? 'ok' : 'error', new Date().toISOString(), r.ok ? null : r.error, b.id);
+    if (!r.ok) { logAudit('scheduler', 'tenant.backup.prova_ripristino_fallita', tenant.slug, { backup_id: b.id, error: r.error }); await notifyBackupVerifyFailure({ tenantName: tenant.name, tenantSlug: tenant.slug, error: r.error }); }
+    esiti.push({ slug: tenant.slug, backup_id: b.id, ok: r.ok });
+  }
+  return esiti;
+}
+function startProvaRipristinoMensile() {
+  db.exec('CREATE TABLE IF NOT EXISTS cloud_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
+  const tick = async () => {
+    const r = db.prepare("SELECT value FROM cloud_settings WHERE key = 'prova_ripristino_ultima'").get();
+    if (r && Date.now() - Number(r.value) < 30 * 24 * 3600000) return;
+    await provaRipristinoLocale();
+    db.prepare("INSERT INTO cloud_settings (key, value) VALUES ('prova_ripristino_ultima', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(String(Date.now()));
+  };
+  const guarded = withLock('backup-prova-ripristino', 30 * 60 * 1000, tick);
+  setTimeout(guarded, 5 * 60 * 1000);
+  setInterval(guarded, 24 * 3600000);
+  console.log('Prova di ripristino mensile avviata — controllo ogni giorno, la prova gira una volta ogni 30 giorni');
+}
+
 // Cadenza settimanale, non 15 minuti come il backup stesso: questo verifica
 // l'integrità STRUTTURALE di una copia già sincronizzata, non un segnale
 // operativo che serve sapere entro pochi minuti — un giro a settimana basta a
@@ -104,4 +137,4 @@ function startBackupVerifyScheduler() {
   console.log('Backup verify scheduler avviato — verifica settimanale che la copia off-site sia davvero ripristinabile');
 }
 
-module.exports = { verifyOffsiteBackups, startBackupVerifyScheduler };
+module.exports = { provaRipristinoLocale, startProvaRipristinoMensile, verifyOffsiteBackups, startBackupVerifyScheduler };

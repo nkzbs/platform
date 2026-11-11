@@ -3,9 +3,11 @@ const path = require('path');
 const Database = require('better-sqlite3');
 const db = require('./db');
 const { logAudit } = require('./audit-log');
-const { notifyBackupResult } = require('./notifier');
+const { notifyBackupResult, notifyBackupStale } = require('./notifier');
 const { copyBackupOffsite } = require('./offsite-backup');
 const { withLock } = require('./scheduler-lock');
+
+db.exec('CREATE TABLE IF NOT EXISTS cloud_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
 
 // Logica di backup condivisa — usata da:
 //   1. POST /:slug/backup (tasto manuale in UI)
@@ -37,6 +39,16 @@ async function runBackupForTenant(slug, { trigger = 'manual', actor = 'system' }
       .run(slug, destPath, sizeMb, 'ok', trigger);
     logAudit(actor, 'tenant.backup', slug, { file: destPath, size_mb: sizeMb, trigger });
 
+    // Allegati (0.5.2): un archivio accanto al database. Un errore qui non fa fallire il backup del database (già scritto), ma si registra e si vede nella scheda Backup.
+    let allegati = null;
+    try {
+      allegati = await require('./lib/backup-allegati').archivia(tenant, destPath.replace(/\.db$/, '.allegati.tar.gz'));
+      if (allegati) db.prepare('UPDATE tenant_backups SET allegati_file = ?, allegati_size_mb = ? WHERE id = ?').run(allegati.file, allegati.size_mb, backupRow.lastInsertRowid);
+    } catch (e) {
+      db.prepare('UPDATE tenant_backups SET allegati_error = ? WHERE id = ?').run(String(e.message).slice(0, 300), backupRow.lastInsertRowid);
+      logAudit(actor, 'tenant.backup.allegati_error', slug, { error: String(e.message).slice(0, 300) });
+    }
+
     // G18 — copia off-site, SOLO se questo tenant ha una destinazione configurata
     // (backup_offsite_url). Mai bloccante sul risultato del backup locale, già
     // scritto con successo qui sopra: un fallimento off-site aggiorna solo le
@@ -48,6 +60,7 @@ async function runBackupForTenant(slug, { trigger = 'manual', actor = 'system' }
       db.prepare('UPDATE tenant_backups SET offsite_status = ?, offsite_synced_at = ?, offsite_error = ? WHERE id = ?')
         .run(offsiteResult.ok ? 'ok' : 'error', offsiteResult.ok ? new Date().toISOString() : null, offsiteResult.ok ? null : offsiteResult.error, backupRow.lastInsertRowid);
       if (!offsiteResult.ok) logAudit(actor, 'tenant.backup.offsite_error', slug, { error: offsiteResult.error });
+      if (allegati) { const o2 = await copyBackupOffsite(tenant, allegati.file, path.basename(allegati.file)); if (!o2.skipped && !o2.ok) logAudit(actor, 'tenant.backup.offsite_error', slug, { error: 'allegati: ' + o2.error }); }
     }
 
     if (trigger === 'auto') applyRetention(slug, tenant.backup_auto_retention || 7);
@@ -76,11 +89,35 @@ function applyRetention(slug, keep) {
   const autoBackups = db.prepare(
     "SELECT * FROM tenant_backups WHERE tenant_slug = ? AND trigger = 'auto' AND status = 'ok' ORDER BY created_at DESC"
   ).all(slug);
-  const toDelete = autoBackups.slice(keep);
-  for (const b of toDelete) {
-    try { fs.unlinkSync(b.file_path); } catch (e) {} // file già assente: va bene così
+  const tenere = new Set(autoBackups.slice(0, keep).map((b) => b.id));
+  // Oltre agli ultimi N giornalieri: la più recente di ognuna delle ultime 4 settimane e di ognuno degli ultimi 6 mesi.
+  const piu = (chiave, max) => { const viste = new Set(); for (const b of autoBackups.slice(keep)) { const k = chiave(new Date(b.created_at.replace(' ', 'T') + (b.created_at.includes('Z') ? '' : 'Z'))); if (!viste.has(k) && viste.size < max) { viste.add(k); tenere.add(b.id); } } };
+  piu((d) => { const g = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())); g.setUTCDate(g.getUTCDate() - ((g.getUTCDay() + 6) % 7)); return g.toISOString().slice(0, 10); }, 4);
+  piu((d) => d.getUTCFullYear() + '-' + d.getUTCMonth(), 6);
+  for (const b of autoBackups) {
+    if (tenere.has(b.id)) continue;
+    for (const f of [b.file_path, b.allegati_file]) { if (f) try { fs.unlinkSync(f); } catch (e) {} } // file già assente: va bene così
     db.prepare('DELETE FROM tenant_backups WHERE id = ?').run(b.id);
   }
+}
+
+// Backup mancante: un tenant con backup automatico acceso e nessun backup riuscito da più di 36 ore. Una mail al giorno al massimo per tenant.
+const SOGLIA_MANCANTE_ORE = 36;
+async function controllaBackupMancanti(ora = Date.now()) {
+  const avvisati = [];
+  for (const t of db.prepare("SELECT * FROM tenants WHERE status = 'active' AND backup_auto_enabled = 1").all()) {
+    const ultimo = db.prepare("SELECT created_at FROM tenant_backups WHERE tenant_slug = ? AND status = 'ok' ORDER BY created_at DESC LIMIT 1").get(t.slug);
+    const ore = ultimo ? Math.floor((ora - Date.parse(ultimo.created_at.replace(' ', 'T') + 'Z')) / 3600000) : null;
+    if (ore !== null && ore < SOGLIA_MANCANTE_ORE) continue;
+    const chiave = 'backup_mancante_avviso_' + t.slug;
+    const r = db.prepare('SELECT value FROM cloud_settings WHERE key = ?').get(chiave);
+    if (r && ora - Number(r.value) < 24 * 3600000) continue;
+    db.prepare('INSERT INTO cloud_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(chiave, String(ora));
+    logAudit('scheduler', 'tenant.backup.mancante', t.slug, { ore });
+    await notifyBackupStale({ tenantName: t.name, tenantSlug: t.slug, ore });
+    avvisati.push(t.slug);
+  }
+  return avvisati;
 }
 
 // Scheduler: ogni 15 minuti controlla tutti i tenant attivi con backup_auto_enabled=1 e
@@ -108,6 +145,7 @@ function startBackupScheduler() {
         await runBackupForTenant(tenant.slug, { trigger: 'auto', actor: 'scheduler' });
       }
     }
+    await controllaBackupMancanti();
   }
 
   // G14 — lock distribuito (no-op senza Redis), TTL 10 min: un backup reale di
@@ -121,4 +159,4 @@ function startBackupScheduler() {
   console.log('Backup scheduler avviato — controllo ogni 15 minuti, frequenza per-tenant configurabile');
 }
 
-module.exports = { runBackupForTenant, applyRetention, startBackupScheduler };
+module.exports = { controllaBackupMancanti, runBackupForTenant, applyRetention, startBackupScheduler };

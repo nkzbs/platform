@@ -114,6 +114,52 @@ async function eliminaServer(id) {
   return { eliminato: true };
 }
 
+// ── Backup del disco (le copie che Linode fa da sé, 2 $/mese per server) ──────────────────────────────────────────────────────────────────────────
+// Elenco in sola lettura: automatici (fino a 3: giornaliero, settimanale, quindicinale) + l'eventuale istantanea manuale.
+async function elencoBackupDisco(linodeId) {
+  const tok = token(); if (!tok) throw Object.assign(new Error('Nessun token Linode: salvalo in Impostazioni → Server.'), { status: 503 });
+  const r = await chiama('/linode/instances/' + Number(linodeId) + '/backups', tok);
+  if (r.status === 404) throw Object.assign(new Error('Questo server non esiste più su Linode.'), { status: 404 });
+  if (!r.ok) throw Object.assign(new Error('Linode non risponde: ' + motivo(r)), { status: 502 });
+  const d = r.dati || {}, snap = d.snapshot || {};
+  const voce = (b, tipo) => b ? { id: b.id, tipo, stato: b.status, creato: b.created, finito: b.finished, etichetta: b.label || null, disponibile: b.available !== false && b.status === 'successful', dischi: (b.disks || []).map((x) => ({ nome: x.label, mb: x.size })) } : null;
+  return { automatici: (d.automatic || []).map((b) => voce(b, 'auto')), istantanea: voce(snap.current, 'istantanea'), in_corso: voce(snap.in_progress, 'istantanea') };
+}
+async function statoServer(linodeId) {
+  const r = await chiama('/linode/instances/' + Number(linodeId), token());
+  if (!r.ok) throw Object.assign(new Error('Linode non risponde: ' + motivo(r)), { status: 502 });
+  return r.dati && r.dati.status;
+}
+const attesaMs = (ms) => new Promise((r) => setTimeout(r, ms));
+async function aspettaStato(linodeId, voluto, { tentativi = 60, ogni = 5000, attesa = attesaMs } = {}) {
+  for (let i = 0; i < tentativi; i++) { if ((await statoServer(linodeId)) === voluto) return true; await attesa(ogni); }
+  return false;
+}
+// Ripristina un backup del disco SUL SERVER STESSO (sovrascrive i dischi): lo spegne, ripristina, lo riaccende. `say` racconta le fasi.
+// Il chiamante ha già fatto la copia di sicurezza di Platform e ha ricevuto la conferma esplicita.
+async function ripristinaBackupDisco(linodeId, backupId, { say = () => {}, attesa = attesaMs } = {}) {
+  const tok = token(); if (!tok) throw Object.assign(new Error('Nessun token Linode.'), { status: 503 });
+  const el = await elencoBackupDisco(linodeId);
+  const b = [...el.automatici, el.istantanea].filter(Boolean).find((x) => x.id === Number(backupId));
+  if (!b) throw Object.assign(new Error('Questo backup del disco non esiste più.'), { status: 404 });
+  if (!b.disponibile) throw Object.assign(new Error('Questo backup non è ancora utilizzabile (stato: ' + b.stato + ').'), { status: 409 });
+  say('Spengo il server…');
+  const sp = await chiama('/linode/instances/' + Number(linodeId) + '/shutdown', tok, { metodo: 'POST' });
+  if (!sp.ok) throw Object.assign(new Error('Linode non ha spento il server: ' + motivo(sp)), { status: 502 });
+  if (!(await aspettaStato(linodeId, 'offline', { attesa }))) throw Object.assign(new Error('Il server non si è spento in tempo: non ho ripristinato nulla.'), { status: 504 });
+  say('Ripristino il disco dal backup del ' + String(b.creato).slice(0, 10) + '…');
+  const rp = await chiama('/linode/instances/' + Number(linodeId) + '/backups/' + b.id + '/restore', tok, { metodo: 'POST', corpo: { linode_id: Number(linodeId), overwrite: true } });
+  if (!rp.ok) { await chiama('/linode/instances/' + Number(linodeId) + '/boot', tok, { metodo: 'POST' }).catch(() => {}); throw Object.assign(new Error('Linode non ha avviato il ripristino: ' + motivo(rp) + ' (ho riacceso il server).'), { status: 502 }); }
+  say('Linode sta copiando il disco (può richiedere da qualche minuto a un\'ora)…');
+  await attesa(15000); // il ripristino parte subito, ma lo stato «restoring» può comparire con un attimo di ritardo
+  for (let i = 0; i < 360; i++) { const st = await statoServer(linodeId); if (st !== 'restoring' && st !== 'busy') break; await attesa(10000); }
+  say('Riaccendo il server…');
+  const bt = await chiama('/linode/instances/' + Number(linodeId) + '/boot', tok, { metodo: 'POST' });
+  if (!bt.ok) throw Object.assign(new Error('Il disco è ripristinato ma Linode non ha riacceso il server: ' + motivo(bt)), { status: 502 });
+  if (!(await aspettaStato(linodeId, 'running', { attesa }))) throw Object.assign(new Error('Il disco è ripristinato ma il server non risulta acceso: controlla su Linode.'), { status: 504 });
+  return { ripristinato: b.id, del: b.creato };
+}
+
 // Cancella un server SOLO se in questo momento risulta orfano (riletto da Linode, non fidandosi della pagina).
 async function eliminaOrfano(id) {
   const c = await controlla();
@@ -124,4 +170,4 @@ async function eliminaOrfano(id) {
   return eliminaServer(s.id);
 }
 
-module.exports = { eliminaOrfano, creaServer, leggiServer, eliminaServer, maxServer, token, stato, salvaToken, togliToken, salvaImpostazioni, controlla, validaToken, impostazioni, PREDEFINITI };
+module.exports = { elencoBackupDisco, ripristinaBackupDisco, eliminaOrfano, creaServer, leggiServer, eliminaServer, maxServer, token, stato, salvaToken, togliToken, salvaImpostazioni, controlla, validaToken, impostazioni, PREDEFINITI };

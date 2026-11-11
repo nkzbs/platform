@@ -226,6 +226,9 @@ docker logs --tail 50 super-admin-backend
 ## Se Finance o Super Admin danno 521 da Cloudflare
 Cloudflare punta alla porta 4000, cioè al container `platform-nginx`. Se è fermo (`docker ps -a`), si riavvia con `docker start platform-nginx`. Capitato dopo un riavvio notturno del NAS (2026-10-06 → 10-10): il container aveva il riavvio automatico ma non è ripartito, causa non accertata.
 
+## Backup in tre livelli (dalla 0.5.2)
+Super Admin → tenant → Dettagli → Backup: scheda con i tre livelli. (1) Copie di Platform: database + allegati (`<slug>_<trigger>_<data>.allegati.tar.gz` accanto al `.db`), 7 giornaliere + 4 settimanali + 6 mensili. (2) Copia fuori dal NAS (indirizzo «Backup off-site») e prova di ripristino ogni 30 giorni. (3) Backup del disco di Linode, con ripristino da Super Admin (copia di sicurezza prima, poi spegni → restore → boot). Mail se un tenant con backup automatico non ha un backup riuscito da 36 ore. **Fuori da Super Admin resta una cosa sola**: la copia di `ENCRYPTION_KEY` e del database di Super Admin (senza la chiave i campi cifrati non si leggono più) la tieni tu, su un altro dispositivo.
+
 ## Backup settimanale via mail
 - Super Admin → Tenant → Dettagli → **Backup** → blocco **Backup settimanale via mail** (spento di default, per tenant). Ogni lunedì dalle 08:00 ora italiana (o al primo controllo utile della settimana, se il NAS era spento) arriva a `NOTIFY_EMAIL_TO` la copia del database, **compressa e cifrata**.
 - La passphrase si crea alla prima accensione e non cambia più (cambiarla renderebbe illeggibili le mail vecchie): si legge con **Mostra passphrase** (l'azione resta nel log attività). Va conservata in un gestore di password.

@@ -29,7 +29,7 @@ const tenantAiRoutes = require('./routes/tenant-ai');
 const securityStatusRoutes = require('./routes/security-status');
 const { startBackupScheduler } = require('./backup-scheduler');
 const { startWeeklyBackupMail } = require('./weekly-backup-mail');
-const { startBackupVerifyScheduler } = require('./backup-verify');
+const { startBackupVerifyScheduler, startProvaRipristinoMensile } = require('./backup-verify');
 const { startAnalyticsScheduler } = require('./analytics-scheduler');
 const { startTenantStatusReconciler } = require('./tenant-status-reconciler');
 const { startAuditRetentionScheduler } = require('./audit-retention-scheduler');
@@ -71,7 +71,7 @@ app.use('/api/cloud', cloudRoutes);
 app.use('/api/tenant-ai', tenantAiRoutes);
 app.use('/api/security-status', securityStatusRoutes);
 
-app.get('/health', (req, res) => res.json({ status: 'ok', version: '0.5.1' }));
+app.get('/health', (req, res) => res.json({ status: 'ok', version: '0.5.2' }));
 
 // G19 (PLATFORM-0.6-GAP-ANALYSIS.md) — pubblica di proposito, nessuna autenticazione: serve al
 // workflow GitHub Actions di uptime-check (.github/workflows/uptime-check.yml) per sapere quali
@@ -110,6 +110,7 @@ app.listen(PORT, () => {
   startBackupScheduler();
   startWeeklyBackupMail();
   startBackupVerifyScheduler();
+  startProvaRipristinoMensile();
   startAnalyticsScheduler();
   startTenantStatusReconciler();
   startAuditRetentionScheduler();

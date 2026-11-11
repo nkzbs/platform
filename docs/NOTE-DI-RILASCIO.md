@@ -2,6 +2,18 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.2 — Backup in tre livelli, tutto da Super Admin
+
+Tenant → Dettagli → Backup ha in cima una **scheda unica** con i tre livelli e la data dell'ultima copia riuscita di ciascuno.
+
+1. **Copie di Platform**: database **e allegati** (prima gli allegati non erano in nessun backup; per i tenant su Linode erano solo sul loro server). L'archivio `.allegati.tar.gz` sta accanto al database, viene copiato anche fuori dal NAS e si scarica da «Allegati». Oltre 2 GB non si archivia da solo (errore visibile). Un errore sugli allegati non fa fallire il backup del database. **Ripristina** chiede se rimettere anche gli allegati (sovrascrive i file con lo stesso nome, non cancella gli altri). Conservazione: ultimi N giornalieri (come prima) + la più recente di 4 settimane + la più recente di 6 mesi.
+2. **Copia fuori dal NAS**: invariata, più la **prova di ripristino mensile** (ogni tenant: l'ultimo backup si apre davvero e l'archivio allegati si legge per intero; esito negativo = mail).
+3. **Backup del disco su Linode** (solo tenant su Linode): elenco delle copie con data e stato e **«Ripristina il server a questa copia»**. Chiede di scrivere il nome del tenant; fa prima una copia di sicurezza di Platform (se non riesce non tocca nulla), spegne il server, ripristina con sovrascrittura, lo riaccende; il popup segue le fasi. Un ripristino per volta per tenant.
+
+**Avviso di backup mancante**: se un tenant con backup automatico acceso non ha un backup riuscito da più di 36 ore arriva una mail (al massimo una al giorno per tenant).
+
+**Non provato dal vivo**: il ripristino del disco Linode (provato solo contro Linode simulato: spegni → restore con overwrite → boot), il backup degli allegati su un tenant Linode vero e la prova di ripristino mensile. Provare il ripristino su un server di prova, mai su Finance o zucca.
+
 ## 0.5.1 — Server orfani su Linode
 
 «Controlla Linode» (Impostazioni → Server) segna come **ORFANO** un server creato da Platform (etichetta `tenant-…` o tag `platform`) che nessun tenant usa e che ha almeno 15 minuti (uno appena creato non ha ancora il suo tenant). Sotto l'elenco compare un avviso per ogni orfano, con il costo mensile e «Elimina questo server» (con conferma). Il backend rilegge Linode prima di cancellare e rifiuta (409) tutto ciò che non è orfano in quel momento; i server fatti a mano non si toccano mai. Test in `cloud.test.js`. **Non ancora provato** contro Linode vero (solo simulato).
