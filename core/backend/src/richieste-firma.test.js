@@ -197,6 +197,30 @@ async function main() {
     const c = chiamate.slice(n).find((x) => x.metodo === 'POST'); eq(c.corpo.signers[0].mobile, '+393331112222'); eq(c.corpo.signers[0].authentication, ['sms']); ok(!('email' in c.corpo.signers[0]), 'solo il canale scelto');
     servizio = false; const r = await codice(tok8, {}); eq(r.status, 503); ok(/stampa/.test((await r.json()).error)); servizio = true;
   });
+  // ── più firmatari: proprietario e comproprietari ──
+  const REL = (key) => ({ id: 'r_' + key, block_type: 'relation', key, label: key, type: 'many_to_one', target_module: 'clienti_t', display_field: 'nome' });
+  const scheda = { id: 'd5', block_type: 'document_action', key: 'scheda', label: 'Scheda di acquisizione', icon: 'file', delivery: 'firma', recipients: ['proprietario.email', 'comproprietario_2.email', 'comproprietario_3.email'], body: 'SCHEDA di {{titolo}}\nProprietario {{proprietario.nome}}', signed_type: 'scheda_firmata', on_signed_state: 'in_mandato' };
+  db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('Immobili', 'immobili_t', 'box', '#000', 1, 1, 71, ?)").run(JSON.stringify({ version: 3, steps: [F('titolo', 'Titolo'), REL('proprietario'), REL('comproprietario_2'), REL('comproprietario_3'),
+    { id: 'i1', block_type: 'workflow_state', key: 'da_valutare', label: 'Da valutare', initial: true }, { id: 'i2', block_type: 'workflow_state', key: 'in_mandato', label: 'In mandato' }, { id: 'i3', block_type: 'workflow_transition', from: 'da_valutare', to: 'in_mandato', label: 'Mandato' }, scheda] }));
+  const cp = rec({ nome: 'Piero Alfa', email: 'piero@esempio.it', _stato: 'nuovo' }), cc = rec({ nome: 'Chiara Beta', email: 'chiara@esempio.it', telefono: '3339998888', _stato: 'nuovo' });
+  const imm = db.prepare('INSERT INTO records (module_slug, data) VALUES (?, ?)').run('immobili_t', JSON.stringify({ titolo: 'Villa Rosa', proprietario: cp, comproprietario_2: cc, comproprietario_3: cp, _stato: 'da_valutare' })).lastInsertRowid; // il terzo è lo stesso del primo: una mail sola
+  let tokP, tokC, gruppo;
+  await test('immobile con comproprietari: una mail e un link per ognuno (senza doppioni), salutati col PROPRIO nome', async () => {
+    const n = partite.length; const r = await post(`/firma/immobili_t/${imm}/richieste`, { link_base: LINK }); const j = await r.json(); eq(r.status, 200, JSON.stringify(j));
+    eq(j.inviati.map((x) => x.destinatario).sort(), ['chiara@esempio.it', 'piero@esempio.it']); eq(partite.length, n + 2);
+    const mP = partite.slice(n).find((m) => m.to === 'piero@esempio.it'), mC = partite.slice(n).find((m) => m.to === 'chiara@esempio.it');
+    ok(/Buongiorno Piero/.test(mP.html) && /Buongiorno Chiara/.test(mC.html), 'ognuno col suo nome, non «Villa»'); tokP = tokenDa(mP); tokC = tokenDa(mC); ok(tokP !== tokC, 'link diversi');
+    const lista = await (await fetch(BASE + `/api/firma/immobili_t/${imm}/richieste`, { headers: H })).json(); eq(lista.length, 2); eq(lista[0].gruppo, lista[1].gruppo); gruppo = lista[0].gruppo; ok(lista.some((x) => x.nome === 'Chiara Beta'), 'il nome del firmatario');
+  });
+  await test('firma il primo: i firmati sono allegati, lo stato NON cambia e l\'avviso dice chi manca; firma l\'ultimo: lo stato cambia una volta sola', async () => {
+    eq((await invia(tokP, { file: { scheda: pdfFinto() } })).status, 200);
+    eq(JSON.parse(db.prepare('SELECT data FROM records WHERE id = ?').get(imm).data)._stato, 'da_valutare', 'ancora in attesa di Chiara');
+    ok(db.prepare("SELECT 1 FROM notifications WHERE message LIKE '%Piero Alfa ha firmato%Manca ancora: Chiara Beta%'").get(), 'avviso con chi manca');
+    eq((await invia(tokC, { file: { scheda: pdfFinto() } })).status, 200);
+    eq(JSON.parse(db.prepare('SELECT data FROM records WHERE id = ?').get(imm).data)._stato, 'in_mandato', 'ora hanno firmato tutti');
+    eq(db.prepare("SELECT COUNT(*) c FROM record_attachments WHERE module_slug = 'immobili_t' AND record_id = ? AND tipo = 'scheda_firmata'").get(imm).c, 2, 'una copia a testa');
+    ok(db.prepare("SELECT 1 FROM notifications WHERE message LIKE '%Chiara Beta ha firmato%' AND message NOT LIKE '%Manca%'").get(), 'l\'ultimo avviso non ha «manca»');
+  });
   await test('annullare una richiesta: il link smette di funzionare; l\'elenco mostra gli stati', async () => {
     const id3 = rec({ nome: 'Carlo Neri', email: 'carlo@esempio.it', _stato: 'nuovo' });
     await post(`/firma/clienti_t/${id3}/richieste`, { link_base: LINK }); const tok3 = tokenDa(partite[partite.length - 1]);

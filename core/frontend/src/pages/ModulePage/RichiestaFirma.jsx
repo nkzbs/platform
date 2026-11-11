@@ -21,7 +21,7 @@ export default function RichiestaFirma({ api, slug, recordId, documentiFirma }) 
     setBusy(true); setMsg(null)
     const r = await api.post('/firma/' + slug + '/' + recordId + '/richieste', { link_base: window.location.origin })
     setBusy(false)
-    setMsg(r.ok ? { ok: true, testo: 'Mail partita a ' + r.data.destinatario + '.' } : { ok: false, testo: (r.data && r.data.error) || 'Non riuscito.' })
+    setMsg(r.ok ? { ok: true, testo: 'Mail partita a ' + r.data.destinatario + '.' + ((r.data.falliti || []).length ? ' Non è partita a: ' + r.data.falliti.map((f) => f.destinatario).join(', ') + '.' : '') } : { ok: false, testo: (r.data && r.data.error) || 'Non riuscito.' })
     carica()
   }
   const azione = async (verbo, r) => {
@@ -32,7 +32,8 @@ export default function RichiestaFirma({ api, slug, recordId, documentiFirma }) 
     carica()
   }
   const ultima = richieste[0]
-  const inAttesa = ultima && (ultima.stato === 'inviata' || ultima.stato === 'in_firma')
+  const gruppo = ultima ? (ultima.gruppo ? richieste.filter((x) => x.gruppo === ultima.gruppo) : [ultima]) : []
+  const inAttesa = gruppo.some((x) => x.stato === 'inviata' || x.stato === 'in_firma')
   return (
     <div className="rounded-xl border border-gray-800 p-4 mb-4">
       <div className="flex items-start gap-3">
@@ -46,16 +47,24 @@ export default function RichiestaFirma({ api, slug, recordId, documentiFirma }) 
         {busy ? 'Un attimo…' : inAttesa ? 'Richiesta già inviata' : 'Invia per la firma'}
       </button>
       {msg && <div className={'text-xs mt-2 ' + (msg.ok ? 'text-green-500' : 'text-red-400')}>{msg.testo}</div>}
-      {ultima && (
-        <div className="mt-3 pt-3 border-t border-gray-800 text-xs flex items-center justify-between gap-2 flex-wrap">
-          <span><span className={'font-medium ' + (STATI[ultima.stato] || STATI.annullata)[1]}>{(STATI[ultima.stato] || STATI.annullata)[0]}</span>
-            <span className="text-gray-500"> · inviata il {quando(ultima.creata_il)} a {ultima.destinatario}{ultima.stato === 'firmata' ? ' · firmata il ' + quando(ultima.firmata_il) : ultima.stato === 'inviata' ? ' · ' + ultima.solleciti + ' solleciti' : ''}</span></span>
-          {inAttesa && (
-            <span className="flex gap-3 flex-shrink-0">
-              {ultima.stato === 'inviata' && <button type="button" disabled={busy} onClick={() => azione('sollecita', ultima)} className="text-accent hover:opacity-80 disabled:opacity-40">Sollecita</button>}
-              <button type="button" disabled={busy} onClick={() => azione('annulla', ultima)} className="text-gray-400 hover:text-gray-200 disabled:opacity-40">Annulla</button>
-            </span>
-          )}
+      {gruppo.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-gray-800 text-xs space-y-2">
+          {gruppo.map((x) => {
+            const [etichetta, colore] = STATI[x.stato] || STATI.annullata
+            const attesa = x.stato === 'inviata' || x.stato === 'in_firma'
+            return (
+              <div key={x.id} className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="min-w-0"><span className="text-ink">{x.nome || x.destinatario}</span> <span className={'font-medium ' + colore}>{etichetta}</span>
+                  <span className="text-gray-500"> · inviata il {quando(x.creata_il)}{x.nome ? ' a ' + x.destinatario : ''}{x.stato === 'firmata' ? ' · firmata il ' + quando(x.firmata_il) : x.stato === 'inviata' ? ' · ' + x.solleciti + ' solleciti' : ''}</span></span>
+                {attesa && (
+                  <span className="flex gap-3 flex-shrink-0">
+                    {x.stato === 'inviata' && <button type="button" disabled={busy} onClick={() => azione('sollecita', x)} className="text-accent hover:opacity-80 disabled:opacity-40">Sollecita</button>}
+                    <button type="button" disabled={busy} onClick={() => azione('annulla', x)} className="text-gray-400 hover:text-gray-200 disabled:opacity-40">Annulla</button>
+                  </span>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

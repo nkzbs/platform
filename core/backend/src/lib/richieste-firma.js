@@ -26,7 +26,7 @@ db.exec(`CREATE TABLE IF NOT EXISTS richieste_firma (
   consensi TEXT,
   token_cifrato TEXT
 )`);
-for (const col of ['token_cifrato TEXT', 'modalita TEXT', 'esign_id TEXT', 'esign_tentativi INTEGER DEFAULT 0', 'esign_autenticazione TEXT']) {
+for (const col of ['token_cifrato TEXT', 'modalita TEXT', 'esign_id TEXT', 'esign_tentativi INTEGER DEFAULT 0', 'esign_autenticazione TEXT', 'gruppo TEXT', 'destinatario_nome TEXT', 'destinatario_telefono TEXT']) {
   try { db.exec('ALTER TABLE richieste_firma ADD COLUMN ' + col); } catch (e) { /* già presente */ }
 }
 db.exec('CREATE INDEX IF NOT EXISTS idx_richieste_firma_record ON richieste_firma(module_slug, record_id)');
@@ -47,14 +47,14 @@ const agenzia = () => { try { return (db.prepare('SELECT ragione_sociale FROM te
 const dettaglioScadenza = (scade) => { const g = Math.max(0, Math.ceil((Date.parse(scade) - Date.now()) / GIORNO)); return g === 1 ? 'scade domani' : 'scade tra ' + g + ' giorni'; };
 
 // documenti = [{ key, label, corpo, consensi: [{ field, label }] }]: il corpo è il testo GIÀ riempito con i dati del record.
-function crea({ slug, id, documenti, destinatario, utente, linkBase }) {
+function crea({ slug, id, documenti, destinatario, utente, linkBase, gruppo, nome, telefono }) {
   if (!Array.isArray(documenti) || !documenti.length) throw err('Scegli almeno un documento da far firmare.');
   if (!EMAIL_RE.test(String(destinatario || ''))) throw err('Manca un indirizzo email valido a cui mandare i documenti.');
   if (!/^https:\/\/[^\s/]+$/.test(String(linkBase || ''))) throw err('Indirizzo del progetto non valido per il link di firma.');
   const token = crypto.randomBytes(32).toString('base64url');
   const scade = new Date(Date.now() + GIORNI_VALIDITA * GIORNO).toISOString();
-  const rid = db.prepare('INSERT INTO richieste_firma (token_hash, module_slug, record_id, destinatario, documenti, scade_il, creata_da, link_base, token_cifrato) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(hash(token), slug, id, destinatario, JSON.stringify(documenti), scade, utente || null, linkBase, sealText(token)).lastInsertRowid;
+  const rid = db.prepare('INSERT INTO richieste_firma (token_hash, module_slug, record_id, destinatario, documenti, scade_il, creata_da, link_base, token_cifrato, gruppo, destinatario_nome, destinatario_telefono) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(hash(token), slug, id, destinatario, JSON.stringify(documenti), scade, utente || null, linkBase, sealText(token), gruppo || null, String(nome || '').slice(0, 120) || null, String(telefono || '').slice(0, 40) || null).lastInsertRowid;
   return { id: Number(rid), token, scade };
 }
 
@@ -96,7 +96,7 @@ async function mandaEmail(r, token, { sollecito = 0 } = {}) {
   const email = require('./email');
   const docs = JSON.parse(r.documenti);
   const dati = (() => { try { return JSON.parse(db.prepare('SELECT data FROM records WHERE id = ? AND module_slug = ?').get(r.record_id, r.module_slug).data); } catch (e) { return {}; } })();
-  const ciao = primoNome(nomeDi(dati));
+  const ciao = primoNome(r.destinatario_nome || nomeDi(dati));
   const url = r.link_base + '/firma/' + token;
   const n = docs.length;
   const elenco = docs.map((d) => ({ nome: d.label, dettaglio: '' }));
@@ -124,6 +124,25 @@ async function invia({ slug, id, documenti, destinatario, utente, linkBase }) {
   return { id: c.id, scade: c.scade, destinatario };
 }
 
+// Più firmatari (per esempio proprietario e comproprietari): una richiesta e un link per ognuno, tutti nello stesso `gruppo`. Lo stato del record cambia solo quando hanno firmato tutti.
+// `firmatari` = [{ email, nome, telefono }]. Se una mail non parte, quella richiesta si annulla e lo si dice; se non parte nessuna, errore.
+async function inviaGruppo({ slug, id, documenti, firmatari, utente, linkBase }) {
+  const visti = new Set(), lista = [];
+  for (const f of firmatari || []) { const e = String(f.email || '').trim().toLowerCase(); if (e && !visti.has(e)) { visti.add(e); lista.push({ ...f, email: String(f.email).trim() }); } }
+  if (!lista.length) throw err('Manca un indirizzo email valido a cui mandare i documenti.');
+  const gruppo = crypto.randomBytes(8).toString('hex');
+  const inviati = [], falliti = [];
+  for (const f of lista) {
+    const c = crea({ slug, id, documenti, destinatario: f.email, utente, linkBase, gruppo, nome: f.nome, telefono: f.telefono });
+    const r = db.prepare('SELECT * FROM richieste_firma WHERE id = ?').get(c.id);
+    const mail = await mandaEmail(r, c.token);
+    if (mail.ok) inviati.push({ id: c.id, destinatario: f.email, nome: f.nome || '' });
+    else { db.prepare("UPDATE richieste_firma SET stato = 'annullata' WHERE id = ?").run(c.id); falliti.push({ destinatario: f.email, motivo: mail.motivo }); }
+  }
+  if (!inviati.length) throw err('La mail non è partita: ' + falliti.map((x) => x.destinatario + ' (' + x.motivo + ')').join('; '), 502);
+  return { gruppo, inviati, falliti };
+}
+
 // ── Chiusura comune: i firmati (caricati dal cliente o scaricati da eSignature) vanno sul record ─────────────────────────────────────────────────────────
 // Prende la richiesta in blocco (due chiusure insieme non allegano due volte) e scrive tutto o niente.
 async function chiudi(r, { file, consensi, ip }) {
@@ -133,6 +152,8 @@ async function chiudi(r, { file, consensi, ip }) {
   const records = require('../routes/records');
   const { saveUploadBuffer } = require('./upload-storage');
   const utente = { id: null, username: 'firma-link', role: 'admin' };
+  // Se nello stesso gruppo c'è chi deve ancora firmare, lo stato del record non cambia: scatta quando firma l'ultimo.
+  const altri = r.gruppo ? db.prepare("SELECT destinatario_nome, destinatario FROM richieste_firma WHERE gruppo = ? AND id != ? AND stato IN ('inviata', 'in_firma', 'in_registrazione')").all(r.gruppo, r.id) : [];
   try {
     for (const d of docs) {
       const ctx = records.contestoDocumentoDa(r.module_slug, r.record_id, d.key, null);
@@ -140,7 +161,7 @@ async function chiudi(r, { file, consensi, ip }) {
       const f = file[d.key];
       const stored = await saveUploadBuffer(f.buffer, f.nome || d.key + '.pdf', f.mime);
       const up = db.prepare('INSERT INTO uploads (original_name, stored_name, mime_type, size, uploaded_by) VALUES (?, ?, ?, ?, ?)').run(f.nome || d.key + '.pdf', stored, f.mime, f.buffer.length, null).lastInsertRowid;
-      records.registraFirmato({ user: utente, slug: r.module_slug, id: r.record_id, ctx, uploadId: Number(up), consensi: (consensi && consensi[d.key]) || {} });
+      records.registraFirmato({ user: utente, slug: r.module_slug, id: r.record_id, ctx, uploadId: Number(up), consensi: (consensi && consensi[d.key]) || {}, senzaStato: altri.length > 0 });
     }
   } catch (e) {
     db.prepare('UPDATE richieste_firma SET stato = ? WHERE id = ?').run(r.stato, r.id); // niente a metà: si può riprovare
@@ -148,12 +169,13 @@ async function chiudi(r, { file, consensi, ip }) {
   }
   db.prepare("UPDATE richieste_firma SET stato = 'firmata', firmata_il = ?, firmata_ip = ?, consensi = ? WHERE id = ?").run(new Date().toISOString(), String(ip || '').slice(0, 64), JSON.stringify(consensi || {}), r.id);
   const dati = (() => { try { return JSON.parse(db.prepare('SELECT data FROM records WHERE id = ? AND module_slug = ?').get(r.record_id, r.module_slug).data); } catch (e) { return {}; } })();
-  const chi = nomeDi(dati) || ('scheda #' + r.record_id);
-  try { db.prepare('INSERT INTO notifications (message, module_slug, record_id, roles, category) VALUES (?, ?, ?, ?, ?)').run(chi + ' ha firmato ' + (docs.length === 1 ? 'il documento' : docs.length + ' documenti') + ': i firmati sono tra gli allegati.', r.module_slug, r.record_id, '["admin"]', 'firma'); } catch (e) { /* l'avviso non blocca */ }
+  const chi = r.destinatario_nome || nomeDi(dati) || ('scheda #' + r.record_id);
+  const manca = altri.length ? ' Manca ancora: ' + altri.map((x) => x.destinatario_nome || x.destinatario).join(', ') + '.' : '';
+  try { db.prepare('INSERT INTO notifications (message, module_slug, record_id, roles, category) VALUES (?, ?, ?, ?, ?)').run(chi + ' ha firmato ' + (docs.length === 1 ? 'il documento' : docs.length + ' documenti') + ': i firmati sono tra gli allegati.' + manca, r.module_slug, r.record_id, '["admin"]', 'firma'); } catch (e) { /* l'avviso non blocca */ }
   require('../audit-log').logAudit('firma-link', 'firma.completata', r.module_slug + '#' + r.record_id, { richiesta: r.id, documenti: docs.map((d) => d.key), modalita: r.modalita || 'carta' });
   // conferma al cliente: mai bloccante
   try {
-    const ciao = primoNome(nomeDi(dati));
+    const ciao = primoNome(r.destinatario_nome || nomeDi(dati));
     const quando = new Date().toLocaleString('it-IT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
     await require('./email').invia({ to: r.destinatario, subject: 'Abbiamo ricevuto la tua firma' + (agenzia() ? ' — ' + agenzia() : ''), html: require('./email').htmlDaTesto('Abbiamo ricevuto i documenti firmati il ' + quando + '. Conserva questa mail: la tua firma è registrata.', { titolo: (ciao ? 'Grazie ' + ciao + ', ' : 'Grazie, ') + 'è tutto in ordine', elenco: docs.map((d) => ({ nome: d.label, dettaglio: 'firmato' })), firmaDa: mittente(r.creata_da) }) });
   } catch (e) { /* la firma è registrata comunque */ }
@@ -178,7 +200,8 @@ const MAX_TENTATIVI_CODICE = 2; // chi ha il link non può far partire richieste
 const firmaElettronica = () => require('./azioni-esterne/firma_elettronica');
 const codiceDisponibile = async () => { try { return (await firmaElettronica().disponibile()).ok === true; } catch (e) { return false; } };
 const datiRecord = (r) => { try { return JSON.parse(db.prepare('SELECT data FROM records WHERE id = ? AND module_slug = ?').get(r.record_id, r.module_slug).data); } catch (e) { return {}; } };
-const telefonoDi = (r) => { const d = datiRecord(r); const t = String(d.telefono || d.cellulare || d.mobile || '').replace(/[\s().-]/g, ''); if (!t) return ''; const m = t.startsWith('+') ? t : '+39' + t.replace(/^(00)?39/, '').replace(/^0+/, ''); return /^\+\d{8,15}$/.test(m) ? m : ''; };
+const normalizzaTel = (raw) => { const t = String(raw || '').replace(/[\s().-]/g, ''); if (!t) return ''; const m = t.startsWith('+') ? t : '+39' + t.replace(/^(00)?39/, '').replace(/^0+/, ''); return /^\+\d{8,15}$/.test(m) ? m : ''; };
+const telefonoDi = (r) => { const d = datiRecord(r); return normalizzaTel(r.destinatario_telefono) || normalizzaTel(d.telefono || d.cellulare || d.mobile); };
 
 async function avviaCodice(token, { consensi, autenticazione, ip }) {
   const r = riga(token), motivo = motivoNonValida(r); if (motivo) throw err(motivo, 410);
@@ -187,7 +210,7 @@ async function avviaCodice(token, { consensi, autenticazione, ip }) {
   const disp = await firmaElettronica().disponibile();
   if (!disp.ok) throw err('La firma con codice non è disponibile in questo momento: usa la stampa.', 503);
   const auth = autenticazione === 'sms' ? 'sms' : 'email';
-  const dati = datiRecord(r); const completo = nomeDi(dati); const parti = completo.split(/\s+/); const name = parti.shift() || ''; const surname = parti.join(' ');
+  const dati = datiRecord(r); const completo = r.destinatario_nome || nomeDi(dati); const parti = completo.split(/\s+/); const name = parti.shift() || ''; const surname = parti.join(' ');
   if (!name || !surname) throw err('Per la firma con codice servono nome e cognome nella scheda: usa la stampa, oppure chiedi all\'agenzia.', 409);
   const mobile = auth === 'sms' ? telefonoDi(r) : '';
   if (auth === 'sms' && !mobile) throw err('Per il codice via SMS manca un numero di cellulare valido nella scheda: scegli la mail.', 409);
@@ -245,8 +268,8 @@ async function controllaFirmeInCorso() {
 }
 
 function elenco(slug, id) {
-  return db.prepare('SELECT id, stato, destinatario, creata_il, scade_il, solleciti, firmata_il, documenti FROM richieste_firma WHERE module_slug = ? AND record_id = ? ORDER BY id DESC LIMIT 10').all(slug, id)
-    .map((r) => ({ id: r.id, stato: !['firmata', 'annullata', 'in_firma'].includes(r.stato) && Date.parse(r.scade_il) < Date.now() ? 'scaduta' : r.stato, destinatario: r.destinatario, creata_il: r.creata_il, scade_il: r.scade_il, solleciti: r.solleciti, firmata_il: r.firmata_il, documenti: JSON.parse(r.documenti).map((d) => d.label) }));
+  return db.prepare('SELECT id, gruppo, destinatario_nome, stato, destinatario, creata_il, scade_il, solleciti, firmata_il, documenti FROM richieste_firma WHERE module_slug = ? AND record_id = ? ORDER BY id DESC LIMIT 10').all(slug, id)
+    .map((r) => ({ id: r.id, gruppo: r.gruppo, nome: r.destinatario_nome, stato: !['firmata', 'annullata', 'in_firma'].includes(r.stato) && Date.parse(r.scade_il) < Date.now() ? 'scaduta' : r.stato, destinatario: r.destinatario, creata_il: r.creata_il, scade_il: r.scade_il, solleciti: r.solleciti, firmata_il: r.firmata_il, documenti: JSON.parse(r.documenti).map((d) => d.label) }));
 }
 function annulla(id) { return db.prepare("UPDATE richieste_firma SET stato = 'annullata' WHERE id = ? AND stato IN ('inviata', 'in_firma')").run(id).changes > 0; }
 
@@ -285,4 +308,4 @@ function avviaSolleciti() {
   console.log('Solleciti delle richieste di firma: controllo ogni ora (dopo 3 e 7 giorni, scadenza a 14)');
 }
 
-module.exports = { avviaCodice, controllaDaPagina, controllaFirmeInCorso, controllaCodice, crea, invia, pubblica, pdf, completa, elenco, annulla, sollecita, eseguiSolleciti, avviaSolleciti, motivoNonValida, GIORNI_VALIDITA };
+module.exports = { inviaGruppo, avviaCodice, controllaDaPagina, controllaFirmeInCorso, controllaCodice, crea, invia, pubblica, pdf, completa, elenco, annulla, sollecita, eseguiSolleciti, avviaSolleciti, motivoNonValida, GIORNI_VALIDITA };

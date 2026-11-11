@@ -163,6 +163,11 @@ class Collaudo {
   }
 
   async percorriFlusso(m) {
+    // L'amministratore passa sempre (permessi dei moduli): un passaggio riservato a ruoli che non esistono non si vedrebbe nemmeno percorrendo il flusso da admin, ma per tutti gli altri è bloccato.
+    const ruoli = new Set(db.prepare('SELECT name FROM roles').all().map((x) => x.name));
+    for (const p of m.passaggi) {
+      if (Array.isArray(p.roles) && p.roles.length && !p.roles.some((r) => ruoli.has(r) || r === 'admin')) this.ck('flusso', false, m.slug, 'passaggio «' + (p.label || p.from + ' → ' + p.to) + '»: ruoli', 'È riservato a ruoli che non esistono (' + p.roles.join(', ') + '): lo può eseguire solo l\'amministratore.');
+    }
     const iniziale = m.stati.find((s) => s.initial); if (!iniziale) return;
     // percorso più corto dall'iniziale a ogni stato raggiungibile
     const padre = new Map([[iniziale.key, null]]); const coda = [iniziale.key];

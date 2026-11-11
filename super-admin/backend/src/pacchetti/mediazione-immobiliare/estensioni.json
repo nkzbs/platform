@@ -1492,6 +1492,30 @@
           }
         }
       ]
+    },
+    {
+      "key": "firma_comproprietari",
+      "_nota": "«Invia per la firma» sull'immobile manda la Scheda di acquisizione al proprietario E ai comproprietari (fino a tre), ognuno col proprio link; lo stato passa a «In mandato» quando hanno firmato tutti. Solo se il documento non ha già un elenco di firmatari.",
+      "richiede": {
+        "immobili": [
+          "proprietario",
+          "comproprietario_2",
+          "comproprietario_3"
+        ]
+      },
+      "imposta": [
+        {
+          "block_type": "document_action",
+          "key": "scheda_immobile_completa",
+          "proprieta": {
+            "recipients": [
+              "proprietario.email",
+              "comproprietario_2.email",
+              "comproprietario_3.email"
+            ]
+          }
+        }
+      ]
     }
   ],
   "clienti": [
@@ -2142,6 +2166,29 @@
               "valore": "cessione_quote_firmata"
             }
           ]
+        }
+      ]
+    },
+    {
+      "key": "firma_cedente_cessionario",
+      "_nota": "«Invia per la firma» sulla Proposta di cessione quote la manda al cedente (socio) e al cessionario, ognuno col proprio link. Solo se il documento non ha già un elenco di firmatari.",
+      "richiede": {
+        "quote_societarie": [
+          "quota_percentuale",
+          "socio",
+          "cessionario"
+        ]
+      },
+      "imposta": [
+        {
+          "block_type": "document_action",
+          "key": "cessione_quote",
+          "proprieta": {
+            "recipients": [
+              "socio.email",
+              "cessionario.email"
+            ]
+          }
         }
       ]
     }

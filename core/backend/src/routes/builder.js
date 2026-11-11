@@ -444,6 +444,10 @@ router.post('/:slug/publish', requireAuth, requireAdmin, (req, res) => {
         if (!da.recipient || !da.recipient.trim()) errs.push('manca il destinatario (un campo email di questo record o di un record collegato)');
         else { const e = erroreDelPercorso(da.recipient.trim(), 'destinatario'); if (e) errs.push(e); }
       }
+      if (perFirma && Array.isArray(da.recipients)) {
+        // Più firmatari («Invia per la firma»): ogni percorso deve essere un campo email di questo record o di un record collegato.
+        da.recipients.forEach((p, i) => { const e = typeof p === 'string' && p.trim() ? erroreDelPercorso(p.trim(), 'firmatario ' + (i + 1)) : `firmatario ${i + 1}: percorso vuoto`; if (e) errs.push(e); });
+      }
       if (perFirma) {
         // Documento da scaricare, firmare e ricaricare: i campi che tiene aggiornati (consensi, data,
         // scadenza) devono esistere e avere il tipo giusto, altrimenti il «firmato» non scriverebbe nulla.

@@ -1171,7 +1171,7 @@ router.post('/:slug/:id/documento/:key/pdf', requireAuth, requireAdmin, requireM
 // Registra un documento firmato sul record: allega il file con il tipo giusto, scrive i consensi dati, la data della firma, la versione e la scadenza di conservazione,
 // e passa allo stato previsto (`on_signed_state`). Lo usano la rotta «firmato» (caricato dall'agente) e la richiesta di firma (caricato dal cliente dal suo link).
 // `ctx` è quello di contestoDocumentoDa; `user` ({ username, role }) è chi risulta nella cronologia e per i permessi del cambio di stato.
-function registraFirmato({ user, slug, id, ctx, uploadId, consensi }) {
+function registraFirmato({ user, slug, id, ctx, uploadId, consensi, senzaStato = false }) {
   const schema = ctx.schema;
   const { calcolaAggiornamento, TIPO_FIRMATO } = require('../lib/documento-firmato');
   const oggi = new Date().toISOString().slice(0, 10);
@@ -1189,7 +1189,7 @@ function registraFirmato({ user, slug, id, ctx, uploadId, consensi }) {
   }
   logAudit(user.username, 'record.documento_firmato', slug + '#' + ctx.record.id, { documento: ctx.azione.key, consensi: patch });
   let statoAggiornato = false;
-  if (ctx.azione.on_signed_state) statoAggiornato = runTransition(user, slug, id, ctx.azione.on_signed_state).status === 200;
+  if (ctx.azione.on_signed_state && !senzaStato) statoAggiornato = runTransition(user, slug, id, ctx.azione.on_signed_state).status === 200;
   return { tipo, patch, statoAggiornato };
 }
 

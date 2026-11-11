@@ -37,19 +37,28 @@ admin.post('/:slug/:id/richieste', requireAuth, requireAdmin, requireModuleAcces
     const tutte = ((records.getModuleSchema(slug) || {}).document_actions || []).filter((a) => a.delivery === 'firma' && !a.archiviato);
     const scelte = Array.isArray(req.body && req.body.documenti) && req.body.documenti.length ? tutte.filter((a) => req.body.documenti.includes(a.key)) : tutte;
     if (!scelte.length) return res.status(400).json({ error: 'Questo modulo non ha documenti da far firmare.' });
-    let destinatario = null; const documenti = [];
+    const firmatari = []; const documenti = [];
     for (const a of scelte) {
       const ctx = records.contestoDocumentoDa(slug, id, a.key, req.user);
       if (ctx.errore) return res.status(ctx.errore[0]).json({ error: ctx.errore[1] });
-      destinatario = destinatario || risolviDestinatario(a.recipient, ctx.get) || indirizzoDelRecord(ctx.schema, ctx.record);
+      // Chi firma: l'elenco `recipients` del documento (proprietario e comproprietari, cedente e cessionario…), altrimenti il `recipient`, altrimenti il campo email del record.
+      // Nome e telefono si cercano accanto all'email: «proprietario.email» → «proprietario.nome» e «proprietario.telefono»; «email» → «nome» e «telefono».
+      const percorsi = Array.isArray(a.recipients) && a.recipients.length ? a.recipients : (a.recipient ? [a.recipient] : []);
+      for (const pc of percorsi) {
+        const email = risolviDestinatario(pc, ctx.get); if (!email) continue;
+        const prefisso = pc.includes('.') ? pc.slice(0, pc.lastIndexOf('.') + 1) : '';
+        const nome = risolviDestinatario(prefisso + 'nome', ctx.get), tel = risolviDestinatario(prefisso + 'telefono', ctx.get);
+        firmatari.push({ email, nome, telefono: tel });
+      }
+      if (!percorsi.length) { const e = indirizzoDelRecord(ctx.schema, ctx.record); if (e) firmatari.push({ email: e, nome: risolviDestinatario('nome', ctx.get), telefono: risolviDestinatario('telefono', ctx.get) }); }
       documenti.push({ key: a.key, label: a.label || a.key, corpo: renderModello(a.body, ctx.get), consensi: (a.consents || []).map((c) => ({ field: c.field, label: c.label })) });
     }
-    const out = await firma.invia({ slug, id: Number(id), documenti, destinatario, utente: req.user.username, linkBase: String((req.body && req.body.link_base) || '').replace(/\/+$/, '') });
-    logAudit(req.user.username, 'firma.richiesta', slug + '#' + id, { documenti: documenti.map((d) => d.key), email: destinatario });
+    const out = await firma.inviaGruppo({ slug, id: Number(id), documenti, firmatari, utente: req.user.username, linkBase: String((req.body && req.body.link_base) || '').replace(/\/+$/, '') });
+    logAudit(req.user.username, 'firma.richiesta', slug + '#' + id, { documenti: documenti.map((d) => d.key), email: out.inviati.map((x) => x.destinatario) });
     // Come per l'invio per email: lo stato «documenti inviati» (`on_send_state`) scatta alla partenza, se il flusso lo ammette da dove il record si trova.
     const stato = scelte.map((a) => a.on_send_state).find(Boolean);
     const statoAggiornato = stato ? records.runTransition(req.user, slug, id, stato).status === 200 : false;
-    res.json({ ok: true, ...out, stato_aggiornato: statoAggiornato });
+    res.json({ ok: true, ...out, id: out.inviati[0].id, destinatario: out.inviati.map((x) => x.destinatario).join(', '), stato_aggiornato: statoAggiornato });
   } catch (e) { fail(res, e); }
 });
 admin.post('/richieste/:rid/sollecita', requireAuth, requireAdmin, async (req, res) => { try { res.json(await firma.sollecita(Number(req.params.rid))); } catch (e) { fail(res, e); } });

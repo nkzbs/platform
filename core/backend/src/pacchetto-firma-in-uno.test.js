@@ -65,6 +65,17 @@ async function main() {
     await applicaSeed(mappaAltro, { tipo: 'estensione' });
     const a = blocco('altro', 'anagrafica_privacy'); eq(a.label, 'Il mio titolo'); eq(a.body, 'Il mio testo'); eq(a.recipient, 'email', 'il destinatario, che mancava, si imposta');
   });
+  await test('immobili e quote societarie: i firmatari multipli si impostano solo dove mancano', async () => {
+    const REL = (key) => ({ id: 'r_' + key, block_type: 'relation', key, label: key, type: 'many_to_one', target_module: 'clienti', display_field: 'nome' });
+    mk('immobili', [F('titolo'), REL('proprietario'), REL('comproprietario_2'), REL('comproprietario_3'), vecchioDoc('scheda_immobile_completa', { label: 'Scheda', delivery: 'firma', body: 'b', signed_type: 'scheda_firmata' })]);
+    mk('quote_societarie', [F('quota_percentuale'), REL('socio'), REL('cessionario'), vecchioDoc('cessione_quote', { label: 'Cessione', delivery: 'firma', body: 'b', recipients: ['socio.email'] })]);
+    mk('senza_rel', [F('titolo'), vecchioDoc('scheda_immobile_completa', { label: 'S', delivery: 'firma', body: 'b' })]);
+    db.prepare("DELETE FROM seed_applicati WHERE chiave LIKE 'estensione:%'").run();
+    const mappa = { immobili: [estensioni.immobili.find((e) => e.key === 'firma_comproprietari')], quote_societarie: [estensioni.quote_societarie.find((e) => e.key === 'firma_cedente_cessionario')] };
+    await applicaSeed(mappa, { tipo: 'estensione' });
+    eq(blocco('immobili', 'scheda_immobile_completa').recipients, ['proprietario.email', 'comproprietario_2.email', 'comproprietario_3.email']);
+    eq(blocco('quote_societarie', 'cessione_quote').recipients, ['socio.email'], 'un elenco già scelto non si tocca');
+  });
   console.log(`\n${passed} passati, ${failed} falliti`); process.exit(failed ? 1 : 0);
 }
 main().catch((e) => { console.error(e); process.exit(1); });
