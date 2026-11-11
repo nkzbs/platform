@@ -6,7 +6,7 @@ import Icon from '../../components/Icon'
 const quando = (d) => (d ? new Date(d.includes('T') ? d : d.replace(' ', 'T') + 'Z').toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }) : '')
 const STATI = { inviata: ['In attesa di firma', 'text-amber-500'], in_firma: ['Firma con codice in corso', 'text-amber-500'], firmata: ['Firmata', 'text-green-500'], scaduta: ['Scaduta', 'text-gray-400'], annullata: ['Annullata', 'text-gray-400'] }
 
-export default function RichiestaFirma({ api, slug, recordId, documentiFirma }) {
+export default function RichiestaFirma({ api, slug, recordId, documentiFirma, onManuale }) {
   const [richieste, setRichieste] = useState([])
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState(null)
@@ -58,6 +58,18 @@ export default function RichiestaFirma({ api, slug, recordId, documentiFirma }) 
       {whats.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-2">
           {whats.map((x) => <a key={x.id} href={x.whatsapp} target="_blank" rel="noopener noreferrer" className="text-xs px-3 py-1.5 rounded-lg bg-green-500/15 text-green-500 hover:opacity-80">Scrivi su WhatsApp a {x.nome || x.destinatario}</a>)}
+        </div>
+      )}
+      {onManuale && (
+        <div className="mt-4 pt-3 border-t border-gray-800">
+          <div className="text-xs text-gray-400">Oppure a mano: scarichi il PDF, lo fai firmare e lo carichi tu (anche per chi è in studio con te).</div>
+          <div className="mt-2 flex flex-col gap-1">
+            {documentiFirma.map((d) => (
+              <button key={d.key} type="button" onClick={() => onManuale(d)} className="text-left text-xs px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 flex items-center justify-between gap-2">
+                <span className="min-w-0 truncate">{d.label}</span><span className="text-accent flex-shrink-0">Scarica PDF · Carica firmato</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
       {msg && <div className={'text-xs mt-2 ' + (msg.ok ? 'text-green-500' : 'text-red-400')}>{msg.testo}</div>}

@@ -766,7 +766,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
               </div>
             )}
             {scheda === 'documenti' && documenti.some((a) => a.delivery === 'firma') && (
-              <RichiestaFirma api={api} slug={mod.slug} recordId={recordId} documentiFirma={documenti.filter((a) => a.delivery === 'firma')} />
+              <RichiestaFirma api={api} slug={mod.slug} recordId={recordId} documentiFirma={documenti.filter((a) => a.delivery === 'firma')} onManuale={apriDocumento} />
             )}
             {scheda === 'documenti' && documenti.length > 0 && (
               <div className="-mt-1 mb-4">

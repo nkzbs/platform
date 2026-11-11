@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.20 — «Invia per la firma»: anche la strada a mano, dentro lo stesso riquadro
+
+Nel riquadro «Far firmare al cliente», sotto il pulsante, c'è ora la sezione «Oppure a mano: scarichi il PDF, lo fai firmare e lo carichi tu» con una riga per ogni documento da firmare («Scarica PDF · Carica firmato»). Apre il pannello del documento già esistente (anteprima del testo, scarica il PDF, carica la foto o il PDF firmato, consensi): allegato, consensi e stato si aggiornano come per il link. Prima quella strada c'era, ma nascosta più in basso nell'elenco dei documenti.
+
 ## 0.5.19 — Prezzo degli SMS dalla console
 
 Letto dalla console: SMS in Italia **0,049** a segmento da 160 caratteri (0,036 con un abbonamento); Spagna 0,039 (0,027); il codice monouso (OTP) costa come l'SMS normale; **registrare un mittente (alias) costa 0,30** una tantum; letture 0,001. Prima il registro contava 0,036 (il prezzo con abbonamento): ora 0,049, quindi la stima dei messaggi di massa e dell'SMS di «Invia per la firma» sale di conseguenza. Con un abbonamento si scrive il prezzo in Prezzi. Con questo il registro spese ha tutti i prezzi visibili nella console di OpenAPI.
