@@ -30,6 +30,7 @@ Stima dell'8 novembre 2026. I prezzi sono **di listino, IVA esclusa**, letti dal
 | **Personal Asset Report** (rapporti bancari, partecipazioni) | Risk · Person | 36,00 (top 48,00) | 10 giorni lavorativi |
 | ↳ **PEP, sanzioni, notizie negative** (KYC) | Risk · WW | 0,31 l'una; **tutte insieme (full) 0,39** (0,062 con abbonamento); monitoraggio full 1,56 (0,25) | Letti dalla console |
 | ↳ report su un'azienda / top; eredi con o senza accettazione | Risk | 9,60 / 48,00; 48,00 / 24,00 | Non usati da Platform |
+| ↳ monitoraggio continuo: KYC full / credit score top | Risk | 1,56 (0,25 con abbonamento) / 1,265 (0,828) | Non usato da Platform |
 | **Centrale dei Rischi Banca d'Italia** | Risk · Person | 17,50 | 15-30 giorni |
 | **Credit score società: Start** (semaforo 3 classi) | Risk · Company | **0,19** (0,06 con abbonamento) | Prima il registro contava 0,06 (il prezzo con abbonamento): ora il base |
 | **Credit score società: Advanced** (rating e fido) | Risk · Company | **0,51** (0,15 con abbonamento) | Idem |

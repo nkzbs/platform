@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.18 — Risk: anche monitoraggi e controlli KYC singoli
+
+Aggiunti al registro spese i prezzi che mancavano dalla pagina di Risk: PEP, sanzioni e notizie negative una per una (0,31 l'una, 0,0496 con abbonamento), monitoraggio continuo KYC (1,56; 0,25) e del credit score top (1,265; 0,828). Nessuno è usato da Platform: servono quando una funzione li chiederà.
+
 ## 0.5.17 — Prezzi di Risk: ora il registro conta il prezzo base
 
 Letti dalla console, colonna «Prezzo base» (la colonna «Miglior prezzo» vale solo con un abbonamento): verifica del codice fiscale **0,045**, eventi negativi **0,45**, credit score società Start **0,19**, Advanced **0,51**, Top **1,10**, report persona 3,60, report patrimoniale 36,00, **PEP, sanzioni e notizie negative insieme 0,39**. **Cambia la stima:** prima il registro contava per verifica CF, Start e Advanced i prezzi con abbonamento (0,0081, 0,06, 0,15), quindi sottostimava; la conferma del costo prima di «Credit score società» ora mostra 0,51 invece di 0,15. Se hai un abbonamento si scrive il prezzo in Prezzi (resta valido). Aggiunti report azienda, eredi e patrimoniale top. Il test sui tempi del controllo dei servizi OpenAPI (che falliva con il computer sotto carico) ha ora un margine più largo: 4,5 secondi, contro più di dieci in sequenza.
