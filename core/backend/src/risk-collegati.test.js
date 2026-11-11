@@ -89,9 +89,9 @@ async function main() {
     const r = await azione(id1, 'verifica_soggetto', {}, '/pdf'); eq(r.status, 200); const b = Buffer.from(await r.arrayBuffer()); eq(b.slice(0, 4).toString(), '%PDF');
     eq((await spese()).produzione.richieste, 1);
   });
-  await test('credit score: livello advanced → prezzo 0,15; con conferma scrive semaforo, rating e fido sul record; una persona è rifiutata', async () => {
+  await test('credit score: livello advanced → prezzo 0,51 (0,15 con abbonamento); con conferma scrive semaforo, rating e fido sul record; una persona è rifiutata', async () => {
     const id = rec({ nome: 'ACME SRL', codice_fiscale_piva: '01234567890', tipo_soggetto: 'Società' });
-    const c = await (await azione(id, 'credit_score_societa')).json(); eq([c.servizio, c.costo], ['risk_creditscore_advanced', 0.15]);
+    const c = await (await azione(id, 'credit_score_societa')).json(); eq([c.servizio, c.costo], ['risk_creditscore_advanced', 0.51]);
     const r = await azione(id, 'credit_score_societa', { conferma: true }); eq(r.status, 200);
     const t = leggi(id).credit_score_esito; ok(/GIALLO/.test(t) && /B2/.test(t) && /25000/.test(t), t);
     const p = await azione(rec(persona), 'credit_score_societa', { conferma: true }); eq(p.status, 400);

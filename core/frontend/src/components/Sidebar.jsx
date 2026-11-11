@@ -252,7 +252,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
                     : <><span className="font-bold">Platform</span>{tenantName && <span className="font-normal"> {tenantName}</span>}</>
                   }
                 </div>
-                <div className="text-xs text-gray-500">Platform 0.5.16</div>
+                <div className="text-xs text-gray-500">Platform 0.5.17</div>
               </div>
             )}
           </div>
@@ -333,7 +333,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
               {logoUrl ? <img src={logoUrl} alt="" className="w-[24px] h-[24px] rounded-md object-contain flex-shrink-0" /> : <PlatformLogo size={24} letter={hidePlatformName && tenantName ? tenantName.trim()[0] : undefined} />}
               <div className="min-w-0 flex-1">
                 <div className="text-sm text-ink font-bold truncate">{hidePlatformName && tenantName ? tenantName : 'Platform' + (tenantName ? ' ' + tenantName : '')}</div>
-                <div className="text-[11px] text-gray-500">Platform 0.5.16</div>
+                <div className="text-[11px] text-gray-500">Platform 0.5.17</div>
               </div>
               <button onClick={() => setEditPins((x) => !x)} className={'text-xs px-2.5 py-1 rounded-full transition flex-shrink-0 ' + (editPins ? 'bg-accent text-white' : 'text-accent hover:bg-white/8')}>{editPins ? 'Fine' : 'Modifica'}</button>
             </div>
@@ -378,7 +378,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
                 <Avatar user={user} size={28} />
                 <div className="min-w-0">
                   <div className="text-sm text-ink font-medium truncate">{user && user.display_name}</div>
-                  <div className="text-xs text-gray-500">{user && user.role}<span> · Platform 0.5.16</span></div>
+                  <div className="text-xs text-gray-500">{user && user.role}<span> · Platform 0.5.17</span></div>
                 </div>
               </button>
               <div className="flex items-center gap-3">

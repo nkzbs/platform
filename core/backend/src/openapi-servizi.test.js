@@ -73,9 +73,9 @@ async function main() {
   });
 
   global.fetch = veroFetch;
-  await test('i servizi si controllano tutti insieme (non uno dopo l\'altro): con 500 ms a chiamata il controllo resta sotto i tre secondi (uno dopo l\'altro ne servirebbero più di quattro)', async () => {
+  await test('i servizi si controllano tutti insieme (non uno dopo l\'altro): con 500 ms a chiamata il controllo resta sotto i quattro secondi e mezzo (uno dopo l\'altro ne servirebbero più di dieci)', async () => {
     const f = global.fetch; global.fetch = async (url, opts) => { if (/openapi\.(com|it)/.test(String(url))) await new Promise((r) => setTimeout(r, 500)); return f(url, opts); };
-    try { const t0 = Date.now(); const r = await (await post()).json(); const ms = Date.now() - t0; ok(r.ok && r.servizi.length === oa.SERVIZI.length, JSON.stringify(r).slice(0, 200)); ok(ms < 3000, 'ha impiegato ' + ms + ' ms: i servizi vanno controllati in parallelo'); } finally { global.fetch = f; }
+    try { const t0 = Date.now(); const r = await (await post()).json(); const ms = Date.now() - t0; ok(r.ok && r.servizi.length === oa.SERVIZI.length, JSON.stringify(r).slice(0, 200)); ok(ms < 4500, 'ha impiegato ' + ms + ' ms: i servizi vanno controllati in parallelo'); } finally { global.fetch = f; }
   });
   await test('un servizio usato solo da un\'azione esterna compare in Connessioni anche se non è ancora collegato', async () => {
     db.prepare('DELETE FROM connections WHERE integration_id = ?').run('openapi_it');

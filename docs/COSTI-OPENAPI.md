@@ -22,16 +22,18 @@ Stima dell'8 novembre 2026. I prezzi sono **di listino, IVA esclusa**, letti dal
 | ↳ fotovoltaico, zona sismica, mappa, luoghi vicini | PVGIS, ISPRA, OpenStreetMap | 0 | Non passano da OpenAPI |
 | **Ricerca imprese** (clienti società) | Visure camerali, ricerca | 0 | Senza costi di ricerca |
 | **Visura camerale** (società, quote societarie) | Visure Camerali | **ordinaria**: impresa individuale 2,90 (2,75 con abbonamento), società di persone 3,40 (2,97), società di capitale 4,90 (3,96). **Storica**: 3,90 (3,63), 4,40 (3,85), 5,90 (4,95). Soci attivi 2,30; bilancio ottico 4,50 (2,95); certificato di iscrizione, anche con vigenza, 13,70 | Letti dalla console l'11 novembre 2026. Nel registro spese Platform conta 4,90 (società di capitali, cautelativo). Letture 0,001 |
-| **Verifica codice fiscale** | Risk · Person | da 0,0081 | Pochi secondi |
-| **Verifica eventi negativi** (protesti, procedure) | Risk · Person | da 0,054; protesti 0,90; protesti e atti pregiudizievoli 3,70; con procedure concorsuali 3,90 | |
+| **Verifica codice fiscale** | Risk · Person | **0,045** (0,0081 con abbonamento; sincrona 0,050) | Pochi secondi. Letto dalla console l'11/11/2026: Platform conta il prezzo base |
+| **Verifica eventi negativi** (protesti, procedure) | Risk · Person | **0,45** (0,054 con abbonamento; sincrona 0,75/0,60); protesti 0,90; protesti e atti pregiudizievoli 3,70; con procedure concorsuali 3,90 | |
 | **Dati anagrafici incrociati** (Personal Data Check) | Risk · Person | 0,80 | In 2 ore lavorative |
-| **Person Report** (rischio, negatività, cariche, partecipazioni, immobili) | Risk · Person | da 3,10 | Da 10 minuti |
+| **Person Report** (rischio, negatività, cariche, partecipazioni, immobili) | Risk · Person | **3,60** (3,10 con abbonamento) | Da 10 minuti |
 | **Top Person Report** (recuperabilità del credito, residenza, lavoro) | Risk · Person | 18,00 | 10 giorni lavorativi |
-| **Personal Asset Report** (rapporti bancari, partecipazioni) | Risk · Person | 36,00 | 10 giorni lavorativi |
+| **Personal Asset Report** (rapporti bancari, partecipazioni) | Risk · Person | 36,00 (top 48,00) | 10 giorni lavorativi |
+| ↳ **PEP, sanzioni, notizie negative** (KYC) | Risk · WW | 0,31 l'una; **tutte insieme (full) 0,39** (0,062 con abbonamento); monitoraggio full 1,56 (0,25) | Letti dalla console |
+| ↳ report su un'azienda / top; eredi con o senza accettazione | Risk | 9,60 / 48,00; 48,00 / 24,00 | Non usati da Platform |
 | **Centrale dei Rischi Banca d'Italia** | Risk · Person | 17,50 | 15-30 giorni |
-| **Credit score società: Start** (semaforo 3 classi) | Risk · Company | 0,06 | |
-| **Credit score società: Advanced** (rating e fido) | Risk · Company | 0,15 | |
-| **Credit score società: Top** (oltre 200 dati) | Risk · Company | 0,42 (openapi.com) oppure 1,10 (openapi.it) | Le due pagine si contraddicono: da chiarire |
+| **Credit score società: Start** (semaforo 3 classi) | Risk · Company | **0,19** (0,06 con abbonamento) | Prima il registro contava 0,06 (il prezzo con abbonamento): ora il base |
+| **Credit score società: Advanced** (rating e fido) | Risk · Company | **0,51** (0,15 con abbonamento) | Idem |
+| **Credit score società: Top** (oltre 200 dati) | Risk · Company | **1,10** (0,42 con abbonamento) | Chiarito dalla console: le due pagine pubbliche indicavano prezzo con e senza abbonamento |
 | **Controllo dati catastali**: cerca indirizzo | Catasto | 0,10 | Dai prezzi già nel registro di Platform |
 | ↳ foglio, particella, richiesta | Catasto | 0,30 l'uno (0,08 con abbonamento) | «Richiesta» (POST /richiesta) confermata dalla console di OpenAPI l'11 novembre 2026 |
 | ↳ estratto di mappa, elaborato planimetrico, dettaglio nota | Catasto | 6,90 | |

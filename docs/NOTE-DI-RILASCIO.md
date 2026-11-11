@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.17 — Prezzi di Risk: ora il registro conta il prezzo base
+
+Letti dalla console, colonna «Prezzo base» (la colonna «Miglior prezzo» vale solo con un abbonamento): verifica del codice fiscale **0,045**, eventi negativi **0,45**, credit score società Start **0,19**, Advanced **0,51**, Top **1,10**, report persona 3,60, report patrimoniale 36,00, **PEP, sanzioni e notizie negative insieme 0,39**. **Cambia la stima:** prima il registro contava per verifica CF, Start e Advanced i prezzi con abbonamento (0,0081, 0,06, 0,15), quindi sottostimava; la conferma del costo prima di «Credit score società» ora mostra 0,51 invece di 0,15. Se hai un abbonamento si scrive il prezzo in Prezzi (resta valido). Aggiunti report azienda, eredi e patrimoniale top. Il test sui tempi del controllo dei servizi OpenAPI (che falliva con il computer sotto carico) ha ora un margine più largo: 4,5 secondi, contro più di dieci in sequenza.
+
 ## 0.5.16 — Prezzi delle visure camerali
 
 Letti dalla console: visura **ordinaria** impresa individuale 2,90 (2,75 con abbonamento), società di persone 3,40 (2,97), società di capitale 4,90 (3,96); **storica** 3,90 (3,63), 4,40 (3,85), 5,90 (4,95); soci attivi 2,30; bilancio ottico 4,50 (2,95); certificato di iscrizione, anche con vigenza, 13,70; letture 0,001. Nel registro spese la visura camerale conta 4,90 (società di capitali, cautelativo) invece di «da scrivere»; aggiunti soci attivi, bilancio ottico e certificato. La suite `openapi-servizi.test.js` («i servizi si controllano tutti insieme», un test sui tempi) può fallire quando il computer è sotto carico durante l'intero giro dei test e passa da sola: instabile, non un difetto.
