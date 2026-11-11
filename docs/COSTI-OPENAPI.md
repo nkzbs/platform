@@ -30,10 +30,12 @@ Stima dell'8 novembre 2026. I prezzi sono **di listino, IVA esclusa**, letti dal
 | **Credit score società: Advanced** (rating e fido) | Risk · Company | 0,15 | |
 | **Credit score società: Top** (oltre 200 dati) | Risk · Company | 0,42 (openapi.com) oppure 1,10 (openapi.it) | Le due pagine si contraddicono: da chiarire |
 | **Controllo dati catastali**: cerca indirizzo | Catasto | 0,10 | Dai prezzi già nel registro di Platform |
-| ↳ foglio, particella | Catasto | 0,30 l'uno (0,08 con abbonamento) | |
+| ↳ foglio, particella, richiesta | Catasto | 0,30 l'uno (0,08 con abbonamento) | «Richiesta» (POST /richiesta) confermata dalla console di OpenAPI l'11 novembre 2026 |
 | ↳ estratto di mappa, elaborato planimetrico, dettaglio nota | Catasto | 6,90 | |
 | ↳ elenco delle note | Catasto | 10,90 | |
 | ↳ immobili di una persona dal codice fiscale | Catasto (ispezione nazionale) | 23,70 | |
+| ↳ **letture gratuite** del Catasto (territorio, richiesta, visura, ipotecarie, estratto di mappa, elaborato, monitoraggio) | Catasto | **0,001** a richiesta | Non sono a zero: il controllo dell'esito di una ricerca costa un millesimo di euro (Platform le conta 0) |
+| ↳ visura catastale, monitoraggio | Catasto | **da leggere** | Nella console sono righe espandibili (prezzo per tipo): non visibili negli screenshot |
 | **Fattura elettronica** (provvigioni) | **Fatture in Cloud** (non OpenAPI) | secondo il tuo piano di Fatture in Cloud | Decisione dell'8/11: le fatture si emettono con Fatture in Cloud; il servizio SDI di OpenAPI non serve e non va attivato |
 | **Firma elettronica** (preliminare, privacy e incarico) | eSignature | da 0,14 | Non è chiaro se per firma o per richiesta; la firma avanzata con OTP via SMS: n.d. |
 | **SMS ai clienti** (auguri, invio di massa) | SMS v2 · SMS Italia | da 0,036 a segmento da 160 caratteri (listino «da»); sandbox gratuito | Serve un mittente (alias) registrato e approvato nella console. Il costo si registra in Platform per ogni SMS; ogni 160 caratteri è un segmento |

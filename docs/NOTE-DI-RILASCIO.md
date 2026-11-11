@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.12 — Prezzi del Catasto riletti dalla console di OpenAPI
+
+Confrontati con la pagina Prezzi del Catasto: indirizzo 0,10, foglio e particella 0,30, estratto di mappa, elaborato planimetrico e dettaglio nota 6,90, elenco note 10,90 e ispezione nazionale 23,70 **erano già giusti**. Aggiunto: la **richiesta** (POST /richiesta, 0,30) e il **monitoraggio** (da scrivere); nei nomi dei servizi compare «0,08 con un abbonamento» per foglio, particella e richiesta (Platform conta il prezzo base, cautelativo). Le letture gratuite del Catasto costano in realtà **0,001** a richiesta (Platform le conta 0). **Da leggere ancora**: i prezzi di «visura catastale» e «monitoraggio», righe espandibili nella console.
+
 ## 0.5.11 — «Invia per la firma» anche per SMS e WhatsApp
 
 - **SMS**: nella scheda Documenti, sopra il pulsante, la casella «Manda anche un SMS con il link» (compare solo se il mittente degli SMS è impostato e il servizio SMS di OpenAPI.it è attivo; mostra il prezzo se lo hai scritto in Prezzi). Parte un SMS a ogni firmatario che ha un cellulare valido nella scheda, breve e con il nome dell'agenzia («Agenzia: Mario, i documenti sono pronti da firmare (3 minuti). link»); chi non ha il cellulare lo si dice e la mail parte lo stesso. È un messaggio di servizio: non serve il consenso alle comunicazioni commerciali. La spesa va nel registro spese e il messaggio nel registro dei messaggi.
