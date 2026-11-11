@@ -101,7 +101,7 @@ async function main() {
     reportPronto = false;
     const m = await azione(rec({ provincia: 'BS' }), 'controllo_catastale', { conferma: true }); eq(m.status, 400); ok(/comune/.test((await m.json()).error));
     const id = rec({ provincia: 'BS', comune: 'Brescia', foglio: '273', particella: '23', sub: '60', categoria: 'A/2', rendita: 413.17 });
-    const c = await (await azione(id, 'controllo_catastale')).json(); eq([c.code, c.servizio, c.noto], ['conferma_costo', 'catasto_visura_immobile', false]);
+    const c = await (await azione(id, 'controllo_catastale')).json(); eq([c.code, c.servizio, c.noto, c.costo], ['conferma_costo', 'catasto_visura_immobile', true, 1.9]);
     const prima = (await spese()).produzione.richieste;
     eq((await azione(id, 'controllo_catastale', { conferma: true })).status, 200); eq(leggi(id).controllo_catastale.stato, 'in_corso');
     eq((await spese()).produzione.richieste, prima + 1);
