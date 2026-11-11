@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.13 — Prezzi di eSignature e delle visure catastali dalla console di OpenAPI
+
+Letti dalla console (11 novembre 2026): la **firma elettronica semplice costa 0,49 a richiesta** (0,09 con un abbonamento), non a firmatario, e non 0,14 come stimato prima: il pacchetto di «Invia per la firma» è UNA richiesta. Marca temporale facoltativa 0,15 (Platform non la chiede). Firma avanzata 1,20 (0,69), con prova di vita 1,38 (0,79), qualificata con OTP 0,025 (0,0065), automatica e sigillo 0,05 (0,013); certificati Namirial 29 e 137; letture e verifiche 0,001. Catasto: **visura immobile e visura soggetto 1,90** (visura immobile 0,39 con abbonamento), **monitoraggio 0,60** (prospetto catastale, ricerca persona, ricerca nazionale). Il registro spese conta ora 0,49 per ogni firma con codice partita; `docs/COSTI-OPENAPI.md` e l'esempio di spesa mensile sono aggiornati (da circa 170 a 230 € al mese + IVA con 26 richieste di firma).
+
 ## 0.5.12 — Prezzi del Catasto riletti dalla console di OpenAPI
 
 Confrontati con la pagina Prezzi del Catasto: indirizzo 0,10, foglio e particella 0,30, estratto di mappa, elaborato planimetrico e dettaglio nota 6,90, elenco note 10,90 e ispezione nazionale 23,70 **erano già giusti**. Aggiunto: la **richiesta** (POST /richiesta, 0,30) e il **monitoraggio** (da scrivere); nei nomi dei servizi compare «0,08 con un abbonamento» per foglio, particella e richiesta (Platform conta il prezzo base, cautelativo). Le letture gratuite del Catasto costano in realtà **0,001** a richiesta (Platform le conta 0). **Da leggere ancora**: i prezzi di «visura catastale» e «monitoraggio», righe espandibili nella console.

@@ -35,9 +35,14 @@ Stima dell'8 novembre 2026. I prezzi sono **di listino, IVA esclusa**, letti dal
 | ↳ elenco delle note | Catasto | 10,90 | |
 | ↳ immobili di una persona dal codice fiscale | Catasto (ispezione nazionale) | 23,70 | |
 | ↳ **letture gratuite** del Catasto (territorio, richiesta, visura, ipotecarie, estratto di mappa, elaborato, monitoraggio) | Catasto | **0,001** a richiesta | Non sono a zero: il controllo dell'esito di una ricerca costa un millesimo di euro (Platform le conta 0) |
-| ↳ visura catastale, monitoraggio | Catasto | **da leggere** | Nella console sono righe espandibili (prezzo per tipo): non visibili negli screenshot |
+| ↳ visura catastale (immobile / soggetto) | Catasto | 1,90 l'una (visura immobile 0,39 con abbonamento) | Letti dalla console di OpenAPI l'11 novembre 2026 |
+| ↳ monitoraggio (prospetto catastale, ricerca persona, ricerca nazionale) | Catasto | 0,60 l'uno | Idem |
 | **Fattura elettronica** (provvigioni) | **Fatture in Cloud** (non OpenAPI) | secondo il tuo piano di Fatture in Cloud | Decisione dell'8/11: le fatture si emettono con Fatture in Cloud; il servizio SDI di OpenAPI non serve e non va attivato |
-| **Firma elettronica** (preliminare, privacy e incarico) | eSignature | da 0,14 | Non è chiaro se per firma o per richiesta; la firma avanzata con OTP via SMS: n.d. |
+| **Firma elettronica semplice** (preliminare, privacy e incarico: codice per mail o SMS) | eSignature · EU-SES | **0,49 a richiesta** (0,09 con un abbonamento) | Letto dalla console l'11 novembre 2026. È a **richiesta**, non a firmatario: il pacchetto di documenti di «Invia per la firma» è UNA richiesta. In più la marca temporale facoltativa (0,15), che Platform non chiede |
+| ↳ firma avanzata (AES) / con prova di vita | eSignature | 1,20 (0,69 con abbonamento) / 1,38 (0,79) | Non usate da Platform |
+| ↳ firma qualificata con OTP / automatica / sigillo | eSignature · EU-QES | 0,025 (0,0065 con abbonamento) / 0,05 (0,013) | Non usate da Platform |
+| ↳ certificati Namirial | eSignature | 29,00 (OTP) / 137,00 (automatico) | Non usati da Platform |
+| ↳ letture e verifiche della firma | eSignature | 0,001 | Controllo dello stato, scaricamento, verifica |
 | **SMS ai clienti** (auguri, invio di massa) | SMS v2 · SMS Italia | da 0,036 a segmento da 160 caratteri (listino «da»); sandbox gratuito | Serve un mittente (alias) registrato e approvato nella console. Il costo si registra in Platform per ogni SMS; ogni 160 caratteri è un segmento |
 | **PEC** | PEC Massiva | 0,05 a messaggio + canone annuo (flat: 1.500 in offerta) | La PEC singola: n.d. |
 
@@ -52,7 +57,7 @@ Fonti: pagine prodotto di OpenAPI ([Person](https://openapi.com/products/crif-pe
 | 3 | Immobile: scheda di acquisizione | Catasto: indirizzo, foglio, particella (+ estratto mappa) | **0,70** base; **7,60** con l'estratto di mappa |
 | 4 | Valutazione dell'immobile | Valutazione avanzata + comparabili + OMI | **3,00 + 0,12 = circa 3,12** a singola richiesta (OMI gratis; i comparabili sono gratis le prime 30 al mese: **3,00**); con un abbonamento annuale la valutazione scende fino a 0,39 |
 | 5 | Abbinamento domanda e offerta | Niente (calcolo interno) | 0 |
-| 6 | Trattativa | Firma elettronica del preliminare (+ PEC se serve) | **0,14** per firma, più 0,05 a PEC |
+| 6 | Trattativa | Firma elettronica del preliminare (+ PEC se serve) | **0,49** a richiesta (0,09 con abbonamento), più 0,05 a PEC |
 | 7 | Provvigioni | Fattura elettronica con Fatture in Cloud (non OpenAPI) | secondo il piano di Fatture in Cloud |
 | 8 | Contatti e visite / Attività | Niente (avvisi in app); SMS solo se lo vorrai | 0 |
 | 9-15 | Promemoria, post-vendita, GDPR, documenti, note, report | Niente | 0 |
@@ -61,7 +66,7 @@ Non passano da OpenAPI, e quindi non costano: mappa, luoghi vicini, fotovoltaico
 
 ## Esempio di spesa mensile (illustrativo: sostituisci i numeri con i tuoi)
 
-Ipotesi: un'agenzia con **20 valutazioni, 15 clienti persona, 5 clienti società, 20 immobili con controllo catastale, 6 trattative, 10 fatture** al mese, e 26 firme (6 preliminari + 20 documenti di privacy e incarico).
+Ipotesi: un'agenzia con **20 valutazioni, 15 clienti persona, 5 clienti società, 20 immobili con controllo catastale, 6 trattative, 10 fatture** al mese, e 26 richieste di firma (6 preliminari + 20 pacchetti di privacy e incarico).
 
 | Voce | Quantità | Unitario | Mese |
 |---|---|---|---|
@@ -71,11 +76,11 @@ Ipotesi: un'agenzia con **20 valutazioni, 15 clienti persona, 5 clienti società
 | Catasto: indirizzo + foglio + particella | 20 | 0,70 | **14,0** |
 | Catasto: estratto di mappa su 5 pratiche | 5 | 6,90 | **34,5** |
 | Fatture elettroniche (invio + archiviazione + firma) | 10 | 0,08–0,125 | **0,8–1,3** |
-| Firme elettroniche | 26 | 0,14 | **3,6** |
-| **Totale base** | | | **circa 160–165** |
+| Richieste di firma elettronica | 26 | 0,49 (0,09 con abbonamento) | **12,7** (2,3 con abbonamento) |
+| **Totale base** | | | **circa 170–175** |
 | In più, se per 3 clienti al mese serve il Top Person Report (18,00) | 3 | 18,00 | **+54** |
 
-Quindi **da circa 160 a 220 € al mese + IVA**, a seconda di quanto si approfondiscono i clienti e il catasto. Le voci che pesano sono la valutazione avanzata (3 € l'una a richiesta singola), le verifiche sulle persone e gli estratti catastali; il credit score delle società, le fatture e le firme costano pochi euro. Gli scaglioni annuali (pagati in anticipo) abbassano i prezzi delle chiamate frequenti (valutazione avanzata, comparabili, SDI), ma non quelli dei report a pezzo: con 20 valutazioni al mese (240 l'anno) conviene confrontare il prezzo a richiesta singola (3,00) con il piano da 300 chiamate (2,50 l'una, da pagare in anticipo).
+Quindi **da circa 170 a 230 € al mese + IVA**, a seconda di quanto si approfondiscono i clienti e il catasto. Le voci che pesano sono la valutazione avanzata (3 € l'una a richiesta singola), le verifiche sulle persone e gli estratti catastali; il credit score delle società, le fatture e le firme costano pochi euro. Gli scaglioni annuali (pagati in anticipo) abbassano i prezzi delle chiamate frequenti (valutazione avanzata, comparabili, SDI), ma non quelli dei report a pezzo: con 20 valutazioni al mese (240 l'anno) conviene confrontare il prezzo a richiesta singola (3,00) con il piano da 300 chiamate (2,50 l'una, da pagare in anticipo).
 
 ## Regole d'uso di Platform che tengono la spesa sotto controllo
 
