@@ -525,6 +525,13 @@ async function redeployTenant(tenant, { force, actor, log }) {
     let up = false;
     for (let i = 0; i < 60 && !up; i++) { await new Promise((r) => setTimeout(r, 2000)); try { const r = await fetch(require('../lib/tenant-host').base(tenant.slug) + '/api/tenant-info', { signal: AbortSignal.timeout(4000) }); up = r.ok } catch (e) { /* in avvio */ } }
     say(up ? 'Il tenant risponde.' : 'Il tenant non risponde ancora: controlla nei Dettagli.');
+    // Anche i tenant su Linode ricevono i pacchetti di verticale aggiornati (prima questo passo mancava: zucca restava al pacchetto vecchio). Best-effort come sul NAS.
+    if (up) {
+      try {
+        const r = await require('../lib/pacchetti').sincronizza(tenant.slug);
+        if (r.inviati.length) say('Pacchetti aggiornati: ' + r.inviati.join(', ') + '.');
+      } catch (e) { say('Pacchetti non aggiornati (' + e.message + '): si riprova al prossimo aggiornamento.'); }
+    }
     return { ok: true, healthy: up };
   }
   say('Controllo se qualcuno sta usando "' + tenant.name + '"…')

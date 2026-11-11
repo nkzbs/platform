@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.21 — «Aggiorna» su Linode manda anche i pacchetti
+
+Trovato dall'uso: dopo «Aggiorna» su zucca (tenant su Linode) i documenti erano ancora quelli di prima («Anagrafica + privacy», «Privacy + Incarico» e «Antiriciclaggio» come mail). Causa: l'aggiornamento di un tenant su Linode usciva prima del passo che manda i pacchetti di verticale aggiornati (sul NAS c'era, su Linode no); zucca era rimasta al pacchetto 23. Ora il passo c'è anche su Linode, dopo che il tenant risponde, con la stessa regola («best-effort»: se non riesce lo dice e riprova al prossimo aggiornamento). Per riallineare subito un tenant c'è già `POST /api/tenants/<slug>/pacchetti/sincronizza`. Non c'è un test automatico: il ramo Linode di `redeployTenant` non si lascia simulare facilmente; da verificare dal vivo.
+
 ## 0.5.20 — «Invia per la firma»: anche la strada a mano, dentro lo stesso riquadro
 
 Nel riquadro «Far firmare al cliente», sotto il pulsante, c'è ora la sezione «Oppure a mano: scarichi il PDF, lo fai firmare e lo carichi tu» con una riga per ogni documento da firmare («Scarica PDF · Carica firmato»). Apre il pannello del documento già esistente (anteprima del testo, scarica il PDF, carica la foto o il PDF firmato, consensi): allegato, consensi e stato si aggiornano come per il link. Prima quella strada c'era, ma nascosta più in basso nell'elenco dei documenti.
