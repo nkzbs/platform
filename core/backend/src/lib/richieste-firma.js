@@ -75,8 +75,9 @@ async function pubblica(token) {
   const agz = { nome: a.nome, colore: a.colore, logo: a.logo || null };
   if (motivo) return { valido: false, motivo, firmata: !!(r && r.stato === 'firmata'), agenzia: agz };
   const docs = JSON.parse(r.documenti);
-  const codice = r.stato === 'in_firma' ? null : { disponibile: await codiceDisponibile(), sms: !!telefonoDi(r), tentativi_residui: Math.max(0, MAX_TENTATIVI_CODICE - (r.esign_tentativi || 0)) };
-  return { valido: true, agenzia: agz, scade: r.scade_il, codice, in_firma: r.stato === 'in_firma' ? { metodo: r.esign_autenticazione === 'sms' ? 'SMS' : 'email' } : null, documenti: docs.map((d) => ({ key: d.key, label: d.label, consensi: (d.consensi || []).map((c) => ({ field: c.field, label: c.label || c.field })) })) };
+  const linkCodice = r.stato === 'in_firma' ? await linkFirma(r) : null;
+  const codice = r.stato === 'in_firma' ? null : { disponibile: await codiceDisponibile(), sms: codiceSmsAcceso() && !!telefonoDi(r), tentativi_residui: Math.max(0, MAX_TENTATIVI_CODICE - (r.esign_tentativi || 0)) };
+  return { valido: true, agenzia: agz, scade: r.scade_il, codice, in_firma: r.stato === 'in_firma' ? { metodo: r.esign_autenticazione === 'sms' ? 'SMS' : 'email', url: linkCodice } : null, documenti: docs.map((d) => ({ key: d.key, label: d.label, consensi: (d.consensi || []).map((c) => ({ field: c.field, label: c.label || c.field })) })) };
 }
 
 async function pdf(token, key) {
@@ -204,7 +205,7 @@ async function chiudi(r, { file, consensi, ip }) {
 // Firma «a mano»: il cliente ha stampato, firmato e ricaricato un file per ogni documento. `file`: { key: { buffer, nome, mime } }, `consensi`: { key: { campo: bool } }.
 async function completa(token, { file, consensi, ip }) {
   const r = riga(token), motivo = motivoNonValida(r); if (motivo) throw err(motivo, 410);
-  if (r.stato === 'in_firma') throw err('Hai già avviato la firma con codice: completala dal messaggio che ti è arrivato.', 409);
+  if (r.stato === 'in_firma') throw err('Hai già avviato la firma con codice: completala dal collegamento della pagina di firma.', 409);
   for (const d of JSON.parse(r.documenti)) {
     const f = file && file[d.key];
     if (!f || !f.buffer || !f.buffer.length) throw err('Manca il file firmato di «' + d.label + '».');
@@ -215,6 +216,8 @@ async function completa(token, { file, consensi, ip }) {
 }
 
 // ── Firma con codice (eSignature di OpenAPI.it): UN PDF con tutti i documenti, UN codice, UN firmato ───────────────────────────────────────────────────────
+// Il codice via SMS c'è ma è SPENTO finché non lo si può usare (decisione dell'utente, 12/11/2026): per accenderlo FIRMA_CODICE_SMS=1.
+const codiceSmsAcceso = () => process.env.FIRMA_CODICE_SMS === '1';
 const MAX_TENTATIVI_CODICE = 2; // chi ha il link non può far partire richieste a pagamento all'infinito
 const firmaElettronica = () => require('./azioni-esterne/firma_elettronica');
 const codiceDisponibile = async () => { try { return (await firmaElettronica().disponibile()).ok === true; } catch (e) { return false; } };
@@ -222,12 +225,19 @@ const datiRecord = (r) => { try { return JSON.parse(db.prepare('SELECT data FROM
 const normalizzaTel = (raw) => { const t = String(raw || '').replace(/[\s().-]/g, ''); if (!t) return ''; const m = t.startsWith('+') ? t : '+39' + t.replace(/^(00)?39/, '').replace(/^0+/, ''); return /^\+\d{8,15}$/.test(m) ? m : ''; };
 const telefonoDi = (r) => { const d = datiRecord(r); return normalizzaTel(r.destinatario_telefono) || normalizzaTel(d.telefono || d.cellulare || d.mobile); };
 
+// Il link alla pagina di firma di eSignature: la POST /EU-SES NON manda nulla, restituisce un link per firmatario; il codice parte quando il firmatario lo apre.
+const linkEsign = (dati) => { const f = dati && Array.isArray(dati.signers) ? dati.signers[0] : null; return f && typeof f.url === 'string' && /^https:\/\//.test(f.url) ? f.url : null; };
+async function linkFirma(r) {
+  try { const det = await require('./openapi-it').chiama({ dominio: 'esignature', percorso: '/signatures/' + r.esign_id + '/detail', scopi: [['POST', '/EU-SES'], ['GET', '/signatures']] }); return linkEsign(det && det.data); } catch (e) { return null; }
+}
+
 async function avviaCodice(token, { consensi, autenticazione, ip }) {
   const r = riga(token), motivo = motivoNonValida(r); if (motivo) throw err(motivo, 410);
   if (r.stato !== 'inviata') throw err('La firma con codice è già stata avviata.', 409);
   if ((r.esign_tentativi || 0) >= MAX_TENTATIVI_CODICE) throw err('Hai già provato la firma con codice: usa la stampa, oppure chiedi all\'agenzia di mandarti un nuovo link.', 409);
   const disp = await firmaElettronica().disponibile();
   if (!disp.ok) throw err('La firma con codice non è disponibile in questo momento: usa la stampa.', 503);
+  if (autenticazione === 'sms' && !codiceSmsAcceso()) throw err('Il codice via SMS non è ancora disponibile: scegli la mail.', 409);
   const auth = autenticazione === 'sms' ? 'sms' : 'email';
   const dati = datiRecord(r); const completo = r.destinatario_nome || nomeDi(dati); const parti = completo.split(/\s+/); const name = parti.shift() || ''; const surname = parti.join(' ');
   if (!name || !surname) throw err('Per la firma con codice servono nome e cognome nella scheda: usa la stampa, oppure chiedi all\'agenzia.', 409);
@@ -250,7 +260,7 @@ async function avviaCodice(token, { consensi, autenticazione, ip }) {
   db.prepare("UPDATE richieste_firma SET stato = 'in_firma', modalita = 'codice', esign_id = ?, esign_autenticazione = ?, consensi = ? WHERE id = ?").run(String(sid), auth, JSON.stringify(consensi || {}), r.id);
   try { const spese = require('./openapi-spese'); spese.registra({ servizio: 'esignature_ses', descrizione: 'Firma con codice · richiesta ' + r.id, costo: spese.prezzo('esignature_ses') || 0, utente: 'firma-link', riferimento: String(sid) }); } catch (e) { /* il registro spese non blocca */ }
   require('../audit-log').logAudit('firma-link', 'firma.codice_avviato', r.module_slug + '#' + r.record_id, { richiesta: r.id, autenticazione: auth, esign_id: String(sid) });
-  return { ok: true, metodo: auth === 'sms' ? 'SMS' : 'email' };
+  return { ok: true, metodo: auth === 'sms' ? 'SMS' : 'email', url: linkEsign(res.data) };
 }
 
 // Ricontrolla una firma con codice: se è completa scarica il firmato e chiude; se è fallita o annullata la richiesta torna disponibile (un altro tentativo, se ce n'è).

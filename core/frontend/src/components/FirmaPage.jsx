@@ -41,7 +41,7 @@ export default function FirmaPage({ token }) {
     try {
       const r = await fetch('/api/public-firma/' + encodeURIComponent(token) + '/codice', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ consensi, autenticazione: auth }) })
       const d = await r.json().catch(() => ({}))
-      if (r.ok) setInFirma({ metodo: d.metodo }); else setErrore(d.error || 'Non riuscito: riprova.')
+      if (r.ok) setInFirma({ metodo: d.metodo, url: d.url }); else setErrore(d.error || 'Non riuscito: riprova.')
     } catch (e) { setErrore('Non riesco a contattare il server: riprova tra poco.') } finally { setBusy(false) }
   }
   const ok = info && info.valido
@@ -98,9 +98,19 @@ export default function FirmaPage({ token }) {
               {passo === 2 && inFirma && (
                 <>
                   <h1>Completa la firma</h1>
-                  <p>Ti abbiamo mandato un messaggio via <b>{inFirma.metodo}</b> con il collegamento e il codice. Aprilo, firma e torna qui: la pagina si aggiorna da sola.</p>
-                  <p className="fp-mut">Non lo vedi? Controlla la posta indesiderata. Quando hai firmato basta qualche istante.</p>
-                  <button type="button" className="fp-btn" onClick={controlla}>Ho firmato</button>
+                  {inFirma.url ? (
+                    <>
+                      <p>Premi il pulsante: si apre la pagina sicura dove leggi il documento e firmi. Lì ti arriva un codice via <b>{inFirma.metodo}</b> da inserire per confermare. Poi torna qui: la pagina si aggiorna da sola.</p>
+                      <a className="fp-btn" href={inFirma.url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>Apri la firma</a>
+                      <p className="fp-mut">Se il codice non arriva, controlla la posta indesiderata. Quando hai firmato basta qualche istante.</p>
+                      <button type="button" className="fp-btn" onClick={controlla} style={{ marginTop: 12 }}>Ho firmato</button>
+                    </>
+                  ) : (
+                    <>
+                      <p>La firma è stata avviata, ma non riesco a mostrarti ora il collegamento. Ricarica la pagina tra qualche istante.</p>
+                      <button type="button" className="fp-btn" onClick={() => window.location.reload()}>Ricarica</button>
+                    </>
+                  )}
                 </>
               )}
               {passo === 2 && !inFirma && modo === null && (

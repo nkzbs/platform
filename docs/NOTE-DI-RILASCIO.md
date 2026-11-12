@@ -2,6 +2,16 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.24 — Firma con codice: il link di eSignature, finalmente mostrato
+
+Trovato alla prima prova dal vivo (12 novembre): la richiesta a eSignature veniva accettata e pagata (3 × 0,49) ma al cliente **non arrivava nessun codice**. Causa: `POST /EU-SES` **non spedisce niente**, restituisce un **link per ogni firmatario** alla pagina di firma di eSignature; il codice parte solo quando il firmatario apre quel link. Noi scartavamo il link e la pagina diceva «ti abbiamo mandato un messaggio».
+
+- **Pagina di firma**: dopo l'avvio compare il pulsante **«Apri la firma»** (il link di eSignature, in una nuova scheda); lì il cliente legge, riceve il codice e firma. Poi «Ho firmato» o attesa automatica come prima. Se il link non c'è, la pagina lo dice e propone di ricaricare. Il link si rilegge dal dettaglio della richiesta (`/detail`, senza costo), quindi funziona anche per le richieste già partite.
+- **Pulsante «Firma elettronica» del preliminare**: stesso difetto, ora l'esito riporta i link di ogni firmatario da mandare a mano.
+- **Codice via SMS spento** (scelta dell'utente: «tienilo lì ma non possiamo ancora usarlo»): resta nel codice, sulla pagina compare solo «Per mail»; si accende con `FIRMA_CODICE_SMS=1`. Gli SMS con il link di «Invia per la firma» non cambiano.
+- **Da sapere**: le 3 richieste di prova di oggi sono pagate e restano «in firma»; annullarle dalla scheda. Le prove costano 0,49 l'una.
+- Test: 23 in `richieste-firma.test.js` (link, SMS spento di default).
+
 ## 0.5.23 — Guida illustrata aggiornata e caselle della pagina di firma
 
 - **Guida illustrata in PDF** (`docs/guida-utente/Guida-illustrata.pdf`): il capitolo Clienti ha ora «Far firmare i documenti al cliente» con le schermate vere (scheda Documenti, la mail che arriva al cliente, la pagina di firma da telefono con le due scelte), e «Spedire un messaggio (auguri)»; il capitolo Immobili parla di firma con i comproprietari. Le altre schermate restano quelle della 0.4.87 (da rifare in blocco, con i menu e le schede nuovi). Come si rifà: `docs/guida-utente/strumenti/LEGGIMI.md` (aggiunto `s-firma.mjs`).

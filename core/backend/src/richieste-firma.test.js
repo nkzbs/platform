@@ -134,12 +134,13 @@ async function main() {
     mod.steps = vecchi; db.prepare("UPDATE modules SET schema_json = ? WHERE slug = 'clienti_t'").run(JSON.stringify(mod));
   });
   // ── firma con codice (eSignature simulata) ──
+  process.env.FIRMA_CODICE_SMS = '1'; // il codice via SMS è spento di default: nei test si accende, e un caso lo prova spento
   const oit = require('./lib/openapi-it'); const chiamate = []; let statoFirma = 'WAIT_SIGN'; let servizio = true;
   oit.servizioAttivo = async () => (servizio ? { ok: true } : { ok: false, motivo: 'spento' });
   oit.chiama = async (c) => {
     chiamate.push({ metodo: c.metodo || 'GET', percorso: c.percorso, corpo: c.corpo });
-    if (c.metodo === 'POST' && c.percorso === '/EU-SES') return { data: { id: 'sig-' + chiamate.length, state: 'WAIT_SIGN' } };
-    if (/\/detail$/.test(c.percorso)) return { data: { state: statoFirma } };
+    if (c.metodo === 'POST' && c.percorso === '/EU-SES') return { data: { id: 'sig-' + chiamate.length, state: 'WAIT_SIGN', signers: [{ url: 'https://esign.example/s/' + chiamate.length }] } };
+    if (/\/detail$/.test(c.percorso)) return { data: { state: statoFirma, signers: [{ url: 'https://esign.example/s/det' }] } };
     if (/\/signedDocument$/.test(c.percorso)) return { buffer: Buffer.from('%PDF-1.4 firmato da eSignature '.padEnd(200, 'x')), tipo: 'application/pdf' };
     throw new Error('chiamata inattesa ' + c.percorso);
   };
@@ -162,7 +163,7 @@ async function main() {
     eq(db.prepare('SELECT stato FROM richieste_firma WHERE id = (SELECT id FROM richieste_firma WHERE record_id = ?)').get(id5).stato, 'in_firma');
     eq((await invia(tok5, { file: { privacy: pdfFinto(), aml: pdfFinto() } })).status, 409, 'non si firma anche a mano mentre il codice è in corso');
     eq((await codice(tok5, {})).status, 409, 'non si riavvia');
-    const p = await (await fetch(BASE + '/api/public-firma/' + tok5)).json(); eq(p.in_firma, { metodo: 'email' });
+    const p = await (await fetch(BASE + '/api/public-firma/' + tok5)).json(); eq(p.in_firma, { metodo: 'email', url: 'https://esign.example/s/det' });
   });
   await test('mentre il codice è in corso non partono solleciti', async () => {
     const ric = db.prepare('SELECT * FROM richieste_firma WHERE record_id = ?').get(id5); const t = Date.parse(ric.creata_il.replace(' ', 'T') + 'Z');
@@ -192,6 +193,8 @@ async function main() {
     await post(`/firma/clienti_t/${id7}/richieste`, { link_base: LINK }); const tok7 = tokenDa(partite[partite.length - 1]);
     await post(`/firma/clienti_t/${id8}/richieste`, { link_base: LINK }); const tok8 = tokenDa(partite[partite.length - 1]);
     statoFirma = 'WAIT_SIGN'; const n = chiamate.length;
+    process.env.FIRMA_CODICE_SMS = '0'; eq((await codice(tok7, { autenticazione: 'sms' })).status, 409, 'codice via SMS spento di default'); eq(chiamate.length, n);
+    process.env.FIRMA_CODICE_SMS = '1';
     eq((await codice(tok8, { autenticazione: 'sms' })).status, 409);
     eq((await codice(tok7, { autenticazione: 'sms' })).status, 200);
     const c = chiamate.slice(n).find((x) => x.metodo === 'POST'); eq(c.corpo.signers[0].mobile, '+393331112222'); eq(c.corpo.signers[0].authentication, ['sms']); ok(!('email' in c.corpo.signers[0]), 'solo il canale scelto');

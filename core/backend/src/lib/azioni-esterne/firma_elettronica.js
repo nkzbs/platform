@@ -82,7 +82,7 @@ async function esegui({ dati, config, utente, id, slug }) {
   const sid = r && r.data && r.data.id; if (!sid) throw err('OpenAPI.it non ha restituito l\'identificativo della richiesta di firma.', 502);
   if (config.risultato_in) patch[config.risultato_in] = { id: sid, stato: String((r.data && r.data.state) || 'WAIT_SIGN'), data: oggi };
   if (E.data) patch[E.data] = oggi;
-  if (E.esito) patch[E.esito] = 'Documento mandato in firma a ' + f.map((x) => x.name + ' ' + x.surname).join(' e ') + ' (' + (f[0].auth === 'sms' ? 'codice via SMS' : 'codice via email') + '). Premi di nuovo per ricontrollare.';
+  if (E.esito) patch[E.esito] = 'Documento mandato in firma a ' + f.map((x) => x.name + ' ' + x.surname).join(' e ') + ' (' + (f[0].auth === 'sms' ? 'codice via SMS' : 'codice via email') + '). eSignature non spedisce nulla da sola: manda tu a ogni firmatario il suo link, il codice parte quando lo apre. ' + ((r.data && r.data.signers) || []).map((x, i) => (f[i] ? f[i].name + ' ' + f[i].surname + ': ' : '') + (x.url || '')).filter(Boolean).join(' · ') + ' Premi di nuovo per ricontrollare.';
   return { patch, risposta: { id: sid, firmatari: f.length }, audit: { id: sid, firmatari: f.length } };
 }
 
