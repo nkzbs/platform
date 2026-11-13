@@ -5,6 +5,7 @@ import Icon from '../components/Icon'
 import RichText from '../components/RichText'
 import CollegaModuli from '../components/CollegaModuli'
 import VerticaliLibreria from '../components/VerticaliLibreria'
+import FunzioniStore from './FunzioniStore'
 import ProponiAllaLibreriaModal from '../components/ProponiAllaLibreria'
 import { parseSchemaFrontend, getAutomationSteps, getRequiredConnectors } from '../lib/schema-v3-frontend'
 import GlassPageBackground from '../components/GlassPageBackground'
@@ -33,6 +34,7 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
   const [uninstalled, setUninstalled] = useState(null) // { name } — conferma dopo una disinstallazione riuscita
   const [search, setSearch] = useState('')
   const [mostra, setMostra] = useState('tutti') // tutti | installati | disponibili
+  const [scheda, setScheda] = useState('moduli') // moduli | funzioni: i moduli (dati) e le funzioni (codice) si scelgono nello stesso posto
   const [proposta, setProposta] = useState(null) // { module, description } — «Proponi alla Libreria» (modale in components/ProponiAllaLibreria.jsx)
   const [proposte, setProposte] = useState([]) // lo stato delle proposte già inviate
   const caricaProposte = () => api.get('/modules/registry-proposals').then((d) => Array.isArray(d) && setProposte(d))
@@ -345,15 +347,25 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
 
   return (
     <GlassPageBackground>
-      <div className="rounded-2xl p-5 mb-5 text-white flex items-center justify-between gap-4 flex-wrap" style={{ background: 'linear-gradient(135deg,#584aec,#8b5cf6)' }}>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] opacity-90"><Icon name="store" size={14} />Libreria</div>
-          <div className="text-lg font-bold mt-1">I moduli per il tuo lavoro</div>
-          <div className="text-xs opacity-85 mt-1">{installedList.length} installati · {availableList.length} disponibili. Installare = avere una copia tua, modificabile nel Builder. <button onClick={() => setCollega(true)} className="underline font-medium">Collega i moduli</button></div>
+      <div className="rounded-2xl p-5 mb-5 text-white" style={{ background: 'linear-gradient(135deg,#584aec,#8b5cf6)' }}>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] opacity-90"><Icon name="store" size={14} />Libreria</div>
+            <div className="text-lg font-bold mt-1">{scheda === 'moduli' ? 'I moduli per il tuo lavoro' : 'Le funzioni da accendere'}</div>
+            <div className="text-xs opacity-85 mt-1">{scheda === 'moduli'
+              ? <>{installedList.length} installati · {availableList.length} disponibili. Installare = avere una copia tua, modificabile nel Builder. <button onClick={() => setCollega(true)} className="underline font-medium">Collega i moduli</button></>
+              : 'Firma, fattura elettronica, valutazione immobiliare e altro: accendi solo ciò che ti serve. Spegnere non cancella dati.'}</div>
+          </div>
+          {scheda === 'moduli' && onCreateNewModule && <button onClick={onCreateNewModule} className="bg-white/95 text-[#584aec] hover:bg-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2 flex-shrink-0"><Icon name="plus" size={14} />Crea modulo da zero</button>}
         </div>
-        {onCreateNewModule && <button onClick={onCreateNewModule} className="bg-white/95 text-[#584aec] hover:bg-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2 flex-shrink-0"><Icon name="plus" size={14} />Crea modulo da zero</button>}
+        <div className="flex gap-2 mt-4">
+          {[['moduli', 'Moduli', 'box'], ['funzioni', 'Funzioni', 'plug']].map(([k, l, ic]) => (
+            <button key={k} onClick={() => setScheda(k)} className={'text-xs px-3.5 py-1.5 rounded-full transition flex items-center gap-1.5 font-medium ' + (scheda === k ? 'bg-white text-[#584aec]' : 'bg-white/15 text-white hover:bg-white/25')}><Icon name={ic} size={12} />{l}</button>
+          ))}
+        </div>
       </div>
 
+      {scheda === 'funzioni' ? <FunzioniStore token={token} senzaBanner /> : (<>
       {registryUnavailable && (
         <div className="glass-panel p-4 mb-5 text-center">
           <div className="text-gray-500 text-sm">La Libreria non è raggiungibile al momento: vedi solo i moduli di questo tenant. Riprova più tardi.</div>
@@ -420,6 +432,8 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
           </div>
         </div>
       )}
+
+      </>)}
 
       {selezione.length > 0 && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 glass-panel px-4 py-3 flex items-center gap-3 max-w-[92vw]">

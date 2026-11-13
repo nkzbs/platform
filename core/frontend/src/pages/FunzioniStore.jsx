@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import useApi from '../lib/useApi'
 import Icon from '../components/Icon'
 
-// Lo «store» delle funzioni (Impostazioni → Store funzioni): le funzioni che non servono a tutti (firma, fattura elettronica, valutazione immobiliare…) si accendono qui,
+// Le funzioni (Libreria → scheda Funzioni): le funzioni che non servono a tutti (firma, fattura elettronica, valutazione immobiliare…) si accendono qui,
 // come in uno store di plugin. Cosa c'è e perché è accesa lo dice il server (rotta /funzioni): una funzione inclusa nel pacchetto del tenant o usata da un modulo
 // resta accesa; solo quelle accese a mano si spengono.
 const MOTIVI = { pacchetto: 'Inclusa nel pacchetto', usata: 'Usata da un modulo', prova: 'Attiva (prova)', scelta: 'Attiva' }
@@ -34,7 +34,7 @@ function Scheda({ f, occupata, onCambia }) {
   )
 }
 
-export default function FunzioniStore({ token }) {
+export default function FunzioniStore({ token, senzaBanner = false }) {
   const api = useApi(token)
   const [lista, setLista] = useState(null)
   const [errore, setErrore] = useState('')
@@ -59,11 +59,7 @@ export default function FunzioniStore({ token }) {
 
   return (
     <div className="max-w-5xl">
-      <div className="rounded-2xl p-5 mb-5 text-white" style={{ background: 'linear-gradient(135deg,#584aec,#8b5cf6)' }}>
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] opacity-90"><Icon name="store" size={14} />Store funzioni</div>
-        <div className="text-lg font-bold mt-1">Accendi solo ciò che ti serve</div>
-        <div className="text-xs opacity-85 mt-1">{nAttive} {nAttive === 1 ? 'funzione attiva' : 'funzioni attive'} su {lista.length}. Spegnerne una non cancella dati: smette solo di lavorare e sparisce dal Builder.</div>
-      </div>
+      {!senzaBanner && <p className="text-xs text-gray-500 mb-4">{nAttive} {nAttive === 1 ? 'funzione attiva' : 'funzioni attive'} su {lista.length}. Spegnerne una non cancella dati: smette solo di lavorare e sparisce dal Builder.</p>}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="relative flex-1">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"><Icon name="search" size={14} /></span>
