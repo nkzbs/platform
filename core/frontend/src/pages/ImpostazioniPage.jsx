@@ -490,24 +490,35 @@ function ModuliTab({ token }) {
 // fissa da `md:` in su) — non il drawer con overlay della Sidebar principale,
 // quello resta riservato alla navigazione primaria.
 function SettingsNav({ groups, active, onChange }) {
+  const [aperti, setAperti] = useState({})
   return (
     <nav className="w-full md:w-56 flex-shrink-0 md:sticky md:top-20 md:self-start">
-      <div className="space-y-5">
-        {groups.map((g) => (
-          <div key={g.label}>
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-600 px-2.5 mb-1.5">{g.label}</div>
-            <div className="space-y-0.5">
-              {g.items.map((it) => (
-                <button key={it.key} onClick={() => onChange(it.key)}
-                  className={'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-left transition ' +
-                    (active === it.key ? 'bg-accent/20 text-accent font-medium' : 'text-gray-400 hover:text-ink hover:bg-white/8')}>
-                  <Icon name={it.icon} size={15} />
-                  {it.label}
+      <div className="space-y-4">
+        {groups.map((g) => {
+          const contieneAttiva = g.items.some((it) => it.chiavi.includes(active))
+          const aperto = !g.chiuso || contieneAttiva || !!aperti[g.label]
+          return (
+            <div key={g.label}>
+              {g.chiuso ? (
+                <button type="button" onClick={() => setAperti((p) => ({ ...p, [g.label]: !aperto }))} className="w-full flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-gray-600 hover:text-ink px-2.5 mb-1.5">
+                  <span>{g.label}</span><Icon name={aperto ? 'chevron-down' : 'chevron-right'} size={12} />
                 </button>
-              ))}
+              ) : <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-600 px-2.5 mb-1.5">{g.label}</div>}
+              {aperto && (
+                <div className="space-y-0.5">
+                  {g.items.map((it) => (
+                    <button key={it.key} onClick={() => onChange(it.chiavi[0])}
+                      className={'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-left transition ' +
+                        (it.chiavi.includes(active) ? 'bg-accent/20 text-accent font-medium' : 'text-gray-400 hover:text-ink hover:bg-white/8')}>
+                      <Icon name={it.icon} size={15} />
+                      {it.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </nav>
   )
@@ -521,37 +532,24 @@ function SettingsNav({ groups, active, onChange }) {
 // Raggruppate (2026-10-18) in 6 categorie invece di una lista piatta — stesse
 // chiavi/icone/etichette di prima, cambia solo come sono organizzate.
 const SETTINGS_GROUPS = [
-  { label: 'Account', items: [
+  // Riorganizzate (13/11/2026): da 14 voci in 7 gruppi a 10 voci in 3. Le voci vicine stanno insieme come «schede» (`schede`: [chiave, etichetta]); le chiavi sono quelle di
+  // prima, quindi i collegamenti da altre pagine (initialTab) funzionano ancora. «Ogni giorno» è ciò che si tocca spesso; «Avanzate» sta chiuso finché non serve.
+  { label: 'Ogni giorno', items: [
     { key: 'account', icon: 'user', label: 'Il mio account' },
-  ] },
-  { label: 'Workspace', items: [
-    { key: 'utenti', icon: 'users', label: 'Utenti & Ruoli' },
-    { key: 'moduli', icon: 'box', label: 'Moduli' },
-    { key: 'liste', icon: 'list', label: 'Liste' },
-    { key: 'funzioni', icon: 'grid', label: 'Funzioni' },
-    { key: 'aspetto', icon: 'palette', label: 'Aspetto' },
-    { key: 'guida', icon: 'info', label: 'Guida' },
-  ] },
-  { label: 'Collegamenti', items: [
+    { key: 'utenti', icon: 'users', label: 'Utenti e ruoli' },
     { key: 'connessioni', icon: 'link', label: 'Connessioni' },
-  ] },
-  { label: 'Comunicazioni', items: [
-    { key: 'messaggi', icon: 'mail', label: 'Messaggi ai clienti' },
-    { key: 'notifiche', icon: 'bell', label: 'Report' },
-  ] },
-  { label: 'Sito Web', items: [
+    { key: 'messaggi', icon: 'mail', label: 'Messaggi e report', schede: [['messaggi', 'Messaggi ai clienti'], ['notifiche', 'Report']] },
     { key: 'sito_web', icon: 'globe', label: 'Sito Web' },
   ] },
-  { label: 'AI', items: [
-    { key: 'assistente', icon: 'wand', label: 'AI' },
-    { key: 'suggerimenti', icon: 'sparkles', label: 'Suggerimenti' },
+  { label: 'Avanzate', chiuso: true, items: [
+    { key: 'moduli', icon: 'box', label: 'Moduli e liste', schede: [['moduli', 'Moduli'], ['liste', 'Liste']] },
+    { key: 'aspetto', icon: 'palette', label: 'Aspetto e funzioni', schede: [['aspetto', 'Aspetto'], ['funzioni', 'Funzioni']] },
+    { key: 'assistente', icon: 'wand', label: 'AI', schede: [['assistente', 'Impostazioni AI'], ['suggerimenti', 'Suggerimenti']] },
+    { key: 'export_dati', icon: 'download', label: 'Dati e sicurezza', schede: [['export_dati', 'Dati e backup'], ['sicurezza', 'Sicurezza']] },
+    { key: 'guida', icon: 'info', label: 'Guida d\'uso' },
   ] },
-  { label: 'Dati & Sicurezza', items: [
-    { key: 'export_dati', icon: 'download', label: 'Dati' },
-    { key: 'sicurezza', icon: 'shield', label: 'Sicurezza' },
-    // (TMP) — 30/10/2026, richiesto dall'utente: entrambe pagine di lavoro
-    // temporanee (una revisione da chiudere, uno strumento di debug), non
-    // funzioni stabili del prodotto — la targhetta lo dice a chi le apre.
+  // (TMP) — 30/10/2026, richiesto dall'utente: pagine di lavoro temporanee (una revisione da chiudere, uno strumento di debug), non funzioni stabili del prodotto.
+  { label: 'Strumenti temporanei', chiuso: true, items: [
     { key: 'collegamenti', icon: 'link', label: 'Rivedi collegamenti (TMP)' },
     { key: 'movimenti', icon: 'credit-card', label: 'Movimenti (TMP)' },
   ] },
@@ -572,10 +570,27 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
     if (isAdmin) return key === 'sito_web' ? features.sito_web : key === 'notifiche' ? features.riepilogo_mattino : key === 'suggerimenti' ? features.suggerimenti : key === 'movimenti' ? features.movimenti : true
     return key === 'account' || (key === 'export_dati' && canExport)
   }
+  // Ogni voce porta con sé le chiavi permesse (`chiavi`): una voce con più schede sparisce solo se non ne resta nessuna; cliccandola si va alla prima.
   const visibleGroups = SETTINGS_GROUPS
-    .map((g) => ({ ...g, items: g.items.filter((it) => itemAllowed(it.key)) }))
+    .map((g) => ({ ...g, items: g.items.map((it) => { const chiavi = (it.schede ? it.schede.map((x) => x[0]) : [it.key]).filter(itemAllowed); const sola = it.schede && chiavi.length === 1 ? it.schede.find((x) => x[0] === chiavi[0]) : null; return { ...it, chiavi, label: sola ? sola[1] : it.label } }).filter((it) => it.chiavi.length > 0) }))
     .filter((g) => g.items.length > 0)
+  const voceAttuale = visibleGroups.flatMap((g) => g.items).find((it) => it.chiavi.includes(tab))
   const visibleCount = visibleGroups.reduce((n, g) => n + g.items.length, 0)
+  const api = useApi(token)
+  const [daSistemare, setDaSistemare] = useState([])
+  const [nascosto, setNascosto] = useState(() => { try { return localStorage.getItem('impostazioni_da_sistemare_nascosto') === '1' } catch (e) { return false } })
+  useEffect(() => {
+    if (!isAdmin) return
+    let vivo = true
+    Promise.all([api.get('/connections'), api.get('/ai/settings')]).then(([conn, ai]) => {
+      if (!vivo) return
+      const v = []
+      if (Array.isArray(conn) && conn.some((c) => c.gruppo === 'posta') && !conn.some((c) => c.gruppo === 'posta' && c.connected)) v.push({ testo: 'La posta in uscita non è collegata: documenti, solleciti e messaggi non possono partire.', vai: 'connessioni' })
+      if (ai && ai.enabled && !(ai.key && ai.key.configured)) v.push({ testo: 'L\'AI è accesa ma manca la chiave.', vai: 'assistente' })
+      setDaSistemare(v)
+    }).catch(() => {})
+    return () => { vivo = false }
+  }, [isAdmin]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <GlassPageBackground>
@@ -591,6 +606,22 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
         {(isAdmin || visibleCount > 1) && <SettingsNav groups={visibleGroups} active={tab} onChange={setTab} />}
 
         <div className="flex-1 min-w-0">
+          {isAdmin && daSistemare.length > 0 && !nascosto && (
+            <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <span className="font-semibold text-amber-500">Da sistemare</span>
+                <button type="button" onClick={() => { setNascosto(true); try { localStorage.setItem('impostazioni_da_sistemare_nascosto', '1') } catch (e) { /* senza memoria resta nascosto solo ora */ } }} className="text-xs text-gray-500 hover:text-ink">Nascondi</button>
+              </div>
+              {daSistemare.map((d) => <button key={d.vai} type="button" onClick={() => setTab(d.vai)} className="block w-full text-left py-1 text-ink hover:underline">{d.testo} <span className="text-accent">Apri →</span></button>)}
+            </div>
+          )}
+          {voceAttuale && voceAttuale.schede && voceAttuale.chiavi.length > 1 && (
+            <div className="flex gap-1 p-1 mb-4 rounded-xl bg-surface-card border border-gray-800 w-full md:w-auto md:inline-flex">
+              {voceAttuale.schede.filter((x) => voceAttuale.chiavi.includes(x[0])).map(([k, nome]) => (
+                <button key={k} type="button" onClick={() => setTab(k)} className={'flex-1 md:flex-none px-4 py-2 rounded-lg text-sm transition ' + (tab === k ? 'bg-accent text-white font-medium' : 'text-gray-400 hover:text-ink')}>{nome}</button>
+              ))}
+            </div>
+          )}
           {tab === 'utenti' && <UsersPage token={token} />}
           {tab === 'account' && <AccountPage token={token} user={user} onUserUpdate={onUserUpdate} />}
 

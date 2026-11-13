@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.30 — Impostazioni riordinate (tenant e Super Admin)
+
+**Tenant**: da 14 voci in 7 gruppi a 10 voci in 3. Le voci vicine sono una sola con **schede** dentro: «Messaggi e report» (Messaggi ai clienti | Report), «Moduli e liste», «Aspetto e funzioni», «AI» (Impostazioni AI | Suggerimenti), «Dati e sicurezza» (Dati e backup | Sicurezza). Gruppi: **Ogni giorno** (account, utenti e ruoli, connessioni, messaggi e report, Sito Web), **Avanzate** (chiuso finché non serve, si apre da solo se la voce attiva è lì dentro) e **Strumenti temporanei** (le due pagine «TMP», chiuse). Le chiavi interne sono quelle di prima, quindi i collegamenti da altre pagine (`initialTab`) funzionano. In cima, per l'admin, un riquadro **«Da sistemare»** con ciò che manca (posta in uscita non collegata; AI accesa senza chiave), ogni riga porta alla voce giusta; «Nascondi» lo toglie (si ricorda nel browser). **Super Admin**: da 4 gruppi con una voce sola a 2 (Accesso; Piattaforma). Nessuna funzione cambia, cambia solo come sono organizzate. Build e test del frontend verdi; non verificato nel browser.
+
 ## 0.5.29 — Form a sezioni più leggibile: colori, caselle, avanzamento
 
 Il form «Nuovo»/«Modifica» (`CampiPerSezioni.jsx`) ora è anche più chiaro da vedere: **barra di avanzamento** in cima («12 campi compilati su 80», «Mancano 2 campi necessari»), i campi obbligatori in un **riquadro viola evidenziato** («Da compilare»), ogni **sezione con il suo colore** (fascia a sinistra, titolo su fondo colorato, pillola «compilati/totali» che diventa verde con ✓ quando è completa) e ogni **campo in una casella** propria. Colori con trasparenza, quindi vanno bene in tema chiaro e scuro. Non verificato nel browser: l'aspetto va guardato su telefono dopo «Aggiorna».

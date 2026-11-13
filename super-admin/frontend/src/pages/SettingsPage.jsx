@@ -31,13 +31,16 @@ function passwordStrength(pw) {
 // sostituire come nel tenant), ma la stessa struttura a gruppi dà coerenza
 // visiva con il resto della piattaforma, non solo ordine in più.
 const SETTINGS_GROUPS = [
-  { label: 'Account', items: [{ key: 'accesso', icon: 'user', label: 'Il tuo accesso' }] },
-  { label: 'Piattaforma', items: [
+  // 13/11/2026: da 4 gruppi con una voce sola a 2 gruppi, come nelle Impostazioni dei tenant.
+  { label: 'Accesso', items: [
+    { key: 'accesso', icon: 'user', label: 'Il tuo accesso' },
     { key: 'utenti', icon: 'users', label: 'Utenti Super Admin' },
     { key: 'sicurezza', icon: 'shield', label: 'Sicurezza' },
   ] },
-  { label: 'AI', items: [{ key: 'ai', icon: 'key', label: 'Chiavi AI' }] },
-  { label: 'Server', items: [{ key: 'server', icon: 'database', label: 'Server (Linode)' }] },
+  { label: 'Piattaforma', items: [
+    { key: 'ai', icon: 'key', label: 'Chiavi AI' },
+    { key: 'server', icon: 'database', label: 'Server (Linode)' },
+  ] },
 ]
 
 function SettingsNav({ groups, active, onChange }) {
