@@ -622,7 +622,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
       ) : null}
       headerExtra={!editing && record && !bozzaDoc && (voci.length > 0 || documenti.length > 0) ? (
         <div role="tablist" className="w-full flex bg-surface-page rounded-lg p-1 gap-1">
-          {[['dati', 'Dati', true], ['azioni', 'Azioni', voci.length > 0], ['documenti', 'Documenti', documenti.length > 0]].filter((t) => t[2]).map(([k, nome]) => (
+          {[['dati', 'Dati', true], ['azioni', 'Azioni', voci.length > 0], ['documenti', 'Documenti', documenti.length > 0 || !!allegatiConfig]].filter((t) => t[2]).map(([k, nome]) => (
             <button key={k} role="tab" aria-selected={scheda === k} onClick={() => setScheda(k)} className={'flex-1 text-xs py-2 rounded-md transition ' + (scheda === k ? 'bg-surface-card text-ink font-semibold shadow-sm' : 'text-gray-400 hover:text-ink')}>{nome}{k === 'azioni' && voci.length > 0 ? <span className="ml-1 text-gray-500">{voci.length}</span> : null}</button>
           ))}
         </div>
@@ -770,9 +770,10 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
             {scheda === 'documenti' && documenti.some((a) => a.delivery === 'firma') && (
               <RichiestaFirma api={api} slug={mod.slug} recordId={recordId} documentiFirma={documenti.filter((a) => a.delivery === 'firma')} onManuale={apriDocumento} />
             )}
-            {scheda === 'documenti' && documenti.length > 0 && (
-              <div className="-mt-1 mb-4">
-                {documenti.map((az) => (
+            {scheda === 'documenti' && documenti.some((a) => a.delivery !== 'firma') && (
+              <div className="mb-4">
+                <div className="text-xs font-semibold text-gray-400 mb-1">Messaggi e documenti da mandare</div>
+                {documenti.filter((a) => a.delivery !== 'firma').map((az) => (
                   <button key={az.key} onClick={() => apriDocumento(az)} disabled={docInPreparazione !== null} className="w-full text-left flex items-start gap-3 py-3 border-t border-gray-800 first:border-t-0 hover:bg-white/5 transition disabled:opacity-50">
                     <Icon name={az.icon || 'mail'} size={20} className="text-accent mt-0.5 flex-shrink-0" />
                     <span className="flex-1 min-w-0">
@@ -783,7 +784,53 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                 ))}
               </div>
             )}
-            {(scheda === 'dati' || (scheda === 'azioni' && !voci.length) || (scheda === 'documenti' && !documenti.length)) && (
+            {scheda === 'documenti' && allegatiConfig && (
+              <div className="mb-4 p-3 rounded-lg bg-surface-page border border-gray-800">
+                <div className="flex items-center gap-2 text-xs font-semibold text-gray-400 mb-3">
+                  <Icon name="file" size={12} /> Documenti del cliente (identità, codice fiscale, atti…)
+                  <span className="text-gray-600 font-normal">({attachments.length})</span>
+                </div>
+                {attachments.length > 0 && (
+                  <div className="space-y-1.5 mb-3">
+                    {attachments.map((att) => (
+                      <div key={att.id} className="flex items-center gap-2 bg-surface-page rounded-lg px-3 py-2 border border-gray-800">
+                        <Icon name="file" size={12} className="text-gray-500" />
+                        <button onClick={() => openUploadedFile({ id: att.upload_id, name: att.original_name }, token)} className="flex-1 text-left text-xs text-accent hover:opacity-80 transition truncate">
+                          {att.original_name}
+                        </button>
+                        {att.tipo && <span className="text-[10px] text-gray-600 bg-gray-800 px-1.5 py-0.5 rounded">{att.tipo}</span>}
+                        <button onClick={() => deleteAttachment(att.id)} className="text-red-400/50 hover:text-red-400 transition flex-shrink-0"><Icon name="trash" size={11} /></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {(allegatiConfig.types || []).length > 0 && (
+                    <select className="bg-surface-page text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-700" value={attTipo} onChange={(e) => setAttTipo(e.target.value)}>
+                      <option value="">Tipo allegato...</option>
+                      {(allegatiConfig.types || []).map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  )}
+                  <label className={'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ' + (uploadingAtt ? 'opacity-50' : 'bg-gray-800 hover:bg-gray-700 text-gray-300')}>
+                    <Icon name="upload" size={12} />
+                    {uploadingAtt ? 'Caricamento...' : 'Carica allegati'}
+                    <input type="file" multiple className="hidden" disabled={uploadingAtt} onChange={(e) => uploadAttachments(e.target.files)} />
+                  </label>
+                </div>
+                {uploadProgress.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {uploadProgress.map((f, i) => (
+                      <div key={i} className="flex items-center gap-2 text-[11px] text-gray-500">
+                        <Icon name={f.status === 'ok' ? 'check' : f.status === 'error' ? 'x' : 'upload'} size={10}
+                          className={f.status === 'ok' ? 'text-green-400' : f.status === 'error' ? 'text-red-400' : 'text-gray-500'} />
+                        <span className="truncate">{f.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {(scheda === 'dati' || (scheda === 'azioni' && !voci.length) || false) && (
             <>
             {workflow && workflow.states.length > 1 && (
               <div className="flex flex-wrap items-center gap-1.5 mb-4 text-xs" aria-label="Percorso dello stato">
@@ -940,7 +987,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
               })}
             </div>
 
-            {(workflow || m2mRelations.length > 0 || allegatiConfig || children.length > 0) && (
+            {(workflow || m2mRelations.length > 0 || children.length > 0) && (
               <div className="grid grid-cols-2 gap-2 mb-3">
                 {workflow && (() => {
                   const statoCorrente = workflow.states.find((s) => s.key === record.data._stato)
@@ -951,10 +998,6 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                   <Tile icon="link" label="Relazioni collegate" active={openSection === 'relazioni'} onClick={() => toggleSection('relazioni')}
                     value={m2mRelations.map((r) => (m2mLinks[r.key] || []).length).reduce((a, b) => a + b, 0) + ' collegate'}
                     sub={m2mRelations.map((r) => r.label).join(', ')} />
-                )}
-                {allegatiConfig && (
-                  <Tile icon="file" label="Allegati" active={openSection === 'allegati'} onClick={() => toggleSection('allegati')}
-                    value={attachments.length + (attachments.length === 1 ? ' file' : ' file')} sub={attachments.length === 0 ? 'Nessun allegato' : 'Carica/consulta'} />
                 )}
                 <Tile icon="refresh" label="Cronologia" active={openSection === 'cronologia'} onClick={() => toggleSection('cronologia')}
                   value={history.length + (history.length === 1 ? ' modifica' : ' modifiche')} sub="Modifiche registrate" />
@@ -1067,52 +1110,6 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
               </div>
             )}
 
-            {openSection === 'allegati' && allegatiConfig && (
-              <div className="mb-4 p-3 rounded-lg bg-surface-page border border-gray-800">
-                <div className="flex items-center gap-2 text-xs font-semibold text-gray-400 mb-3">
-                  <Icon name="file" size={12} /> Allegati
-                  <span className="text-gray-600 font-normal">({attachments.length})</span>
-                </div>
-                {attachments.length > 0 && (
-                  <div className="space-y-1.5 mb-3">
-                    {attachments.map((att) => (
-                      <div key={att.id} className="flex items-center gap-2 bg-surface-page rounded-lg px-3 py-2 border border-gray-800">
-                        <Icon name="file" size={12} className="text-gray-500" />
-                        <button onClick={() => openUploadedFile({ id: att.upload_id, name: att.original_name }, token)} className="flex-1 text-left text-xs text-accent hover:opacity-80 transition truncate">
-                          {att.original_name}
-                        </button>
-                        {att.tipo && <span className="text-[10px] text-gray-600 bg-gray-800 px-1.5 py-0.5 rounded">{att.tipo}</span>}
-                        <button onClick={() => deleteAttachment(att.id)} className="text-red-400/50 hover:text-red-400 transition flex-shrink-0"><Icon name="trash" size={11} /></button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="flex items-center gap-2 flex-wrap">
-                  {(allegatiConfig.types || []).length > 0 && (
-                    <select className="bg-surface-page text-ink px-2 py-1.5 rounded-md text-xs outline-none border border-gray-700" value={attTipo} onChange={(e) => setAttTipo(e.target.value)}>
-                      <option value="">Tipo allegato...</option>
-                      {(allegatiConfig.types || []).map((t) => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  )}
-                  <label className={'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ' + (uploadingAtt ? 'opacity-50' : 'bg-gray-800 hover:bg-gray-700 text-gray-300')}>
-                    <Icon name="upload" size={12} />
-                    {uploadingAtt ? 'Caricamento...' : 'Carica allegati'}
-                    <input type="file" multiple className="hidden" disabled={uploadingAtt} onChange={(e) => uploadAttachments(e.target.files)} />
-                  </label>
-                </div>
-                {uploadProgress.length > 0 && (
-                  <div className="mt-2 space-y-1">
-                    {uploadProgress.map((f, i) => (
-                      <div key={i} className="flex items-center gap-2 text-[11px] text-gray-500">
-                        <Icon name={f.status === 'ok' ? 'check' : f.status === 'error' ? 'x' : 'upload'} size={10}
-                          className={f.status === 'ok' ? 'text-green-400' : f.status === 'error' ? 'text-red-400' : 'text-gray-500'} />
-                        <span className="truncate">{f.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
 
             {children.filter((c) => openSection === 'child:' + c.module_slug).map((c) => {
               const cSchema = childSchemas[c.module_slug]

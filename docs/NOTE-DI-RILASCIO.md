@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.27 — Scheda Documenti più chiara, con i documenti del cliente
+
+- **Niente più doppioni**: i documenti da firmare comparivano due volte (nel riquadro «Far firmare al cliente» e di nuovo nell'elenco sotto). Ora l'elenco sotto, intitolato «Messaggi e documenti da mandare», ha solo quelli che non si firmano (mail, auguri…); quelli da firmare stanno solo nel riquadro.
+- **Il testo del riquadro dice cosa fare**: «Premi “Invia per la firma”: il cliente riceve un link, firma con un codice oppure stampa e ricarica la foto».
+- **I documenti del cliente stanno in Documenti**: il riquadro Allegati (carta d'identità, codice fiscale, atti…, con il tipo) è passato dalla scheda Dati alla scheda Documenti, sempre aperto, con «Carica allegati». Dalla scheda Dati è sparita la tessera «Allegati». Non cambia dove sono salvati i file.
+- Non verificato nel browser, solo che la pagina si compila.
+
 ## 0.5.26 — Ogni cliente vede solo la verifica che gli serve (pacchetto 27)
 
 Un cliente persona fisica vedeva «Credit score società». Ora le azioni esterne hanno una condizione **`visibile_se`** `{ campo, op, valore }` (come `visible_if` dei campi; calcolata sul record aperto in `RecordDetailModal`). Il pacchetto Mediazione immobiliare 27 la imposta con l'estensione `risk_visibilita`: **«Credit score società» compare solo se «Tipo soggetto» è Società**, «Verifica del soggetto e solvibilità» in tutti gli altri casi (anche con il tipo vuoto). Si applica ai moduli già pubblicati con **Aggiorna** (sincronizza i pacchetti). Test: pacchetti, azioni-esterne, risk-collegati verdi; la condizione in interfaccia non ha un test automatico.

@@ -54,7 +54,7 @@ export default function RichiestaFirma({ api, slug, recordId, documentiFirma, on
         <Icon name="edit" size={20} className="text-accent mt-0.5 flex-shrink-0" />
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium text-ink">Far firmare al cliente</div>
-          <div className="text-xs text-gray-500 mt-0.5">{documentiFirma.map((d) => d.label).join(' · ')}. Un solo link: il cliente li scarica, li firma e ricarica la foto; allegati e stato si aggiornano da soli.</div>
+          <div className="text-xs text-gray-500 mt-0.5">{documentiFirma.map((d) => d.label).join(' · ')}. Premi «Invia per la firma»: il cliente riceve un link, firma con un codice oppure stampa e ricarica la foto; allegati e stato si aggiornano da soli.</div>
         </div>
       </div>
       {cap && cap.sms.ok && !inAttesa && (
