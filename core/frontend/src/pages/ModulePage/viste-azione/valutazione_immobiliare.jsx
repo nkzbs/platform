@@ -160,4 +160,13 @@ function ReportValutazione({ report, titolo, indirizzo, onPdf, dati = {}, campi 
   )
 }
 
+function sintesiValutazione(report, dati, az) {
+  const q = (report && report.dettaglio && report.dettaglio.quotazione) || {}
+  const num = (v) => { const x = parseFloat(String(v == null ? '' : v).replace(/[^0-9.]/g, '')); return isNaN(x) ? null : x }
+  const it = (x) => x.toLocaleString('it-IT', { maximumFractionDigits: 0, useGrouping: 'always' })
+  const E = (az && az.esito) || {}
+  const min = num(q.min), max = num(q.max), valore = parseFloat(dati[E.valore]), data = dati[E.data]
+  return [min != null && max != null ? it(min) + '–' + it(max) + ' €/mq' : null, valore ? 'stima ' + it(valore) + ' €' : null, data ? String(data).slice(0, 10).split('-').reverse().join('/') : null].filter(Boolean).join(' · ')
+}
+
 export const vistaValutazioneImmobiliare = { Vista: ReportValutazione, sintesi: sintesiValutazione }

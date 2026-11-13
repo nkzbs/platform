@@ -1,6 +1,7 @@
 import React from 'react'
 import Icon from '../../components/Icon'
 import Select from '../../components/Select'
+import { openUploadedFile } from '../../lib/api'
 
 // Le righe dei moduli collegati (es. i figli di un record) aperte sotto la scheda: elenco, aggiunta, modifica ed eliminazione di una riga. Lo stato e le azioni restano nella scheda
 // del record (RecordDetailModal), che le passa qui: questo file disegna soltanto.
