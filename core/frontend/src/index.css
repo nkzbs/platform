@@ -312,3 +312,14 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
   min-height: 1.25rem;
   margin: 0;
 }
+
+
+/* Sfondo di una sezione (GlassPageBackground con colore/icona del modulo): alone del colore in basso a destra, motivo a punti che sfuma verso l'alto e l'icona del modulo
+   molto grande e trasparente. Il colore arriva dalla variabile --sez; in chiaro tutto è più leggero. */
+.glass-mesh-bg.sezione { --sez-a: 28%; --sez-p: 40%; --sez-i: 0.12; background: radial-gradient(120% 90% at 100% 100%, color-mix(in srgb, var(--sez) var(--sez-a), transparent), transparent 62%); }
+:root[data-theme="light"] .glass-mesh-bg.sezione { --sez-a: 16%; --sez-p: 28%; --sez-i: 0.1; }
+.glass-mesh-bg.sezione::before, .glass-mesh-bg.sezione::after { display: none; }
+.sezione-punti { position: absolute; inset: 0; background-image: radial-gradient(color-mix(in srgb, var(--sez) var(--sez-p), transparent) 1px, transparent 1.5px); background-size: 16px 16px;
+  -webkit-mask-image: linear-gradient(200deg, transparent 5%, #000 85%); mask-image: linear-gradient(200deg, transparent 5%, #000 85%); }
+.sezione-icona { position: absolute; right: -40px; bottom: -50px; color: var(--sez); opacity: var(--sez-i); line-height: 0; }
+.sezione-icona svg { stroke-width: 1.4; }

@@ -286,7 +286,9 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
       <div key={(m._kind || 'own') + '-' + m.id} id={'module-card-' + m.slug}
         className="glass-panel hover:-translate-y-0.5 hover:shadow-lg transition p-4 flex flex-col cursor-pointer rounded-2xl relative overflow-hidden" style={{ boxShadow: installed ? '0 0 0 1px ' + tinta(col, 0.35) : undefined }} onClick={() => openDetail(m)}>
         <div className="absolute inset-x-0 top-0 h-1" style={{ background: 'linear-gradient(90deg,' + tinta(col, 0.9) + ',' + tinta(col, 0.15) + ')' }} />
-        <div className="flex items-start gap-3 mb-3 pt-1">
+        <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(' + tinta(col, 0.3) + ' 1px, transparent 1.4px)', backgroundSize: '12px 12px', opacity: 0.5 }} />
+        <div className="absolute pointer-events-none" style={{ right: -10, top: 44, color: col, opacity: 0.14, lineHeight: 0 }}><Icon name={m.icon || 'box'} size={100} /></div>
+        <div className="relative flex items-start gap-3 mb-3 pt-1">
           {!installed && m._kind === 'registry' && (
             <input type="checkbox" className="flex-shrink-0 w-4 h-4 mt-1 accent-[var(--accent)]" checked={selezione.includes(m.id)} onClick={(e) => e.stopPropagation()} onChange={() => spunta(m.id)} title="Scegli per installare più moduli insieme" />
           )}
@@ -301,8 +303,8 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
             </div>
           </div>
         </div>
-        <div className="text-xs text-gray-400 leading-relaxed line-clamp-3 flex-1 min-h-[3.4em]">{m.description || ''}</div>
-        <div className="flex items-center justify-between gap-1.5 flex-wrap mt-3 pt-3 border-t border-gray-800/70">
+        <div className="relative text-xs text-gray-400 leading-relaxed line-clamp-3 flex-1 min-h-[3.4em]">{m.description || ''}</div>
+        <div className="relative flex items-center justify-between gap-1.5 flex-wrap mt-3 pt-3 border-t border-gray-800/70">
           <span className="text-[11px] font-semibold flex items-center gap-1" style={{ color: installed ? '#10b981' : 'var(--text-faint, #9ca3af)' }}>
             {installed ? <><Icon name="check" size={12} />Installato</> : 'Disponibile'}
             {update && <span className="ml-1.5 text-[10px] bg-accent/20 text-accent px-2 py-0.5 rounded-full font-medium" title={'Nella Libreria c\'è la v' + update.version}>v{update.version} disponibile</span>}

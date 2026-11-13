@@ -608,7 +608,7 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
   }
 
   return (
-    <GlassPageBackground>
+    <GlassPageBackground colore={mod && mod.color} icona={mod && mod.icon}>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: mod.color + '22', color: mod.color }}>

@@ -296,7 +296,9 @@ function LibreriaPage({ token }) {
           {shown.map((m) => (
             <button key={m.id} onClick={() => openDetail(m)} className="text-left glass-panel hover:-translate-y-0.5 hover:shadow-lg p-4 transition flex flex-col rounded-2xl relative overflow-hidden">
               <div className="absolute inset-x-0 top-0 h-1" style={{ background: 'linear-gradient(90deg,' + tinta(m.color, 0.9) + ',' + tinta(m.color, 0.15) + ')' }} />
-              <div className="flex items-start gap-3 mb-3 pt-1">
+              <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(' + tinta(m.color, 0.3) + ' 1px, transparent 1.4px)', backgroundSize: '12px 12px', opacity: 0.5 }} />
+              <div className="absolute pointer-events-none" style={{ right: -10, top: 44, color: m.color || '#584aec', opacity: 0.14, lineHeight: 0 }}><Icon name={m.icon || 'box'} size={100} /></div>
+              <div className="relative flex items-start gap-3 mb-3 pt-1">
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg,' + tinta(m.color, 0.3) + ',' + tinta(m.color, 0.1) + ')', color: m.color || '#584aec' }}>
                   <Icon name={m.icon || 'box'} size={22} />
                 </div>
@@ -308,8 +310,8 @@ function LibreriaPage({ token }) {
                   </div>
                 </div>
               </div>
-              <div className="text-xs text-gray-400 leading-relaxed line-clamp-3 flex-1 min-h-[3.4em]">{m.description || ''}</div>
-              <div className="flex items-center justify-between text-[11px] text-gray-500 mt-3 pt-3 border-t border-gray-800/70">
+              <div className="relative text-xs text-gray-400 leading-relaxed line-clamp-3 flex-1 min-h-[3.4em]">{m.description || ''}</div>
+              <div className="relative flex items-center justify-between text-[11px] text-gray-500 mt-3 pt-3 border-t border-gray-800/70">
                 <span className="truncate">da {m.source_tenant_slug}</span>
                 <span className="flex-shrink-0 flex items-center gap-1 font-medium text-gray-400"><Icon name="download" size={11} />{m.install_count} install.</span>
               </div>

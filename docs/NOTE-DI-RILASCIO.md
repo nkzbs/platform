@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.36 — Sfondo minimal per sezione, tessere con motivo
+
+Ogni pagina di modulo ha il suo sfondo: alone del colore del modulo in basso a destra, motivo a punti che sfuma verso l'alto e l'icona del modulo grande e trasparente (`GlassPageBackground` con `colore`/`icona`, stile in `index.css`; più leggero nel tema chiaro). Un modulo nuovo lo ha da solo, usa il colore e l'icona già scelti. Nessuna immagine da caricare. Le altre pagine (Dashboard, Libreria, Impostazioni…) restano con il marchio Platform. Le tessere dei moduli in Libreria (tenant e Super Admin) hanno lo stesso motivo a punti e l'icona grande, così non restano vuote senza descrizione. Visto nel browser in locale (tema scuro, desktop); il tema chiaro e il telefono per lo sfondo di sezione non sono stati guardati.
+
 ## 0.5.35 — Libreria sola: moduli e funzioni nello stesso posto
 
 Lo «Store funzioni» non è più una voce di Impostazioni: è la scheda **Funzioni** della **Libreria**, accanto a **Moduli** (le due pillole stanno nel banner viola). Un posto solo dove si sceglie cosa avere: i moduli (i dati) e le funzioni (firma, fattura elettronica, messaggi, verifiche, valutazione immobiliare). Nessun cambio di comportamento: stessa rotta `/api/funzioni`. Visto nel browser in locale.
