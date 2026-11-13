@@ -1,4 +1,5 @@
 'use strict';
+process.env.PLATFORM_PLUGINS = 'immobiliare'; // il plugin immobiliare è attivo in questa prova
 // Il controllo dei servizi di OpenAPI.it (lib/openapi-it.js verificaServizi, rotta POST /api/connections/openapi_it/servizi): una lettura gratuita per servizio, mai un
 // controllo a pagamento, e la chiave non esce mai nella risposta. Server vero, DB temporaneo; OpenAPI.it è sostituito da un finto (nessuna chiamata di rete).
 // Eseguire con: node src/openapi-servizi.test.js (porta 34869 libera).

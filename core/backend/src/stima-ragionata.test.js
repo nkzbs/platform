@@ -1,11 +1,12 @@
 'use strict';
+process.env.PLATFORM_PLUGINS = 'immobiliare'; // il plugin immobiliare è attivo in questa prova
 const assert = require('assert');
 const path = require('path'), os = require('os'), fs = require('fs'), crypto = require('crypto');
 process.env.DB_PATH = path.join(os.tmpdir(), 'sr-test-' + crypto.randomBytes(6).toString('hex') + '.db');
 process.env.JWT_SECRET = 'sr_secret_' + crypto.randomBytes(8).toString('hex');
 process.env.UPLOAD_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'sr-uploads-'));
-const { stimaRagionata, condizioneOmi } = require('./lib/stima-ragionata');
-const { creaPdfReport } = require('./lib/report-valutazione-pdf');
+const { stimaRagionata, condizioneOmi } = require('./plugins/immobiliare/stima-ragionata');
+const { creaPdfReport } = require('./plugins/immobiliare/report-valutazione-pdf');
 
 const omi = { omi_zone: 'E7', values: [
   { property_type: 'Abitazioni civili', condition: 'NORMALE', sale: { min: 1550, max: 1900 } },

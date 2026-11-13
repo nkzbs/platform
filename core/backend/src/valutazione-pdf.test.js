@@ -1,4 +1,5 @@
 'use strict';
+process.env.PLATFORM_PLUGINS = 'immobiliare'; // il plugin immobiliare è attivo in questa prova
 // PDF del report di valutazione: testo ricavato dal report salvato e rotta che lo scarica senza richiamare OpenAPI.it.
 // Server reale, DB temporaneo. Eseguire con: node src/valutazione-pdf.test.js (porta 34837).
 
@@ -32,7 +33,7 @@ const REPORT = {
 };
 
 async function main() {
-  const { creaPdfReport } = require('./lib/report-valutazione-pdf');
+  const { creaPdfReport } = require('./plugins/immobiliare/report-valutazione-pdf');
   const { caricaLogo } = require('./lib/identita-pdf');
   const { spawnSync } = require('child_process');
   // Il testo si legge con pdftotext (poppler); se non c'è sul computer le prove sul contenuto si saltano.

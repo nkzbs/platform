@@ -1,4 +1,5 @@
 'use strict';
+process.env.PLATFORM_PLUGINS = 'immobiliare'; // il plugin immobiliare è attivo in questa prova
 // Le azioni esterne (blocco di schema `external_action`, lib/azioni-esterne/, rotta POST /:slug/:id/azione/:key): il blocco dice quale adattatore usare e come i campi del
 // modulo si collegano; il codice non conosce nomi di moduli. Server vero, DB temporaneo; il servizio esterno è sostituito da un finto (nessuna chiamata di rete).
 // Eseguire con: node src/azioni-esterne.test.js (porta 34863 libera).

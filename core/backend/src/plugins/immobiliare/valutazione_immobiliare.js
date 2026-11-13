@@ -13,7 +13,7 @@ async function esegui({ dati, config }) {
   if (!indirizzo.trim()) { const e = new Error('Serve almeno un indirizzo o un comune per valutare l\'immobile.'); e.status = 400; throw e; }
   const type = (config.tipologie || {})[dati[C.tipologia]] || config.tipologia_predefinita || 20; // un codice di riserva ragionevole: non blocca la valutazione
 
-  const openapiIt = require('../openapi-it');
+  const openapiIt = require('../../lib/openapi-it');
   const result = await openapiIt.valoreAlMqAvanzato({ address: indirizzo, forSale: true, type });
   const dettaglio = result.data || {};
   const q = dettaglio.quotazione || {};
@@ -23,7 +23,7 @@ async function esegui({ dati, config }) {
 
   // Comparabili e OMI partono dalle coordinate trovate dalla valutazione avanzata; fotovoltaico e zona sismica sono fonti pubbliche gratuite (JRC PVGIS, ISPRA).
   // Nessuna blocca la valutazione principale se non risponde o non copre il punto: la stima resta valida.
-  const rischiTerritorio = require('../rischi-territorio');
+  const rischiTerritorio = require('./rischi-territorio');
   let comparabili = null, omiZona = null, fotovoltaico = null, zonaSismicaUff = null;
   const coord = dettaglio.coordinate;
   if (coord && coord.lat && coord.lng) {
@@ -39,7 +39,7 @@ async function esegui({ dati, config }) {
   const ultimaDinamicita = dinamicitaAnni.length ? dinamicitaAnni[dinamicitaAnni.length - 1].dinamicita_mercato_residenziale : null;
   const tempiVendita = Array.isArray(dettaglio.tempistiche) && Array.isArray(dettaglio.tempistiche[0]) ? dettaglio.tempistiche[0] : [];
   const tempoVenditaMedio = tempiVendita.length ? Math.round(tempiVendita.reduce((s, t) => s + (t.media_giorni || 0), 0) / tempiVendita.length) : null;
-  const considerazioni = await require('../ai-valutazione').considerazioni({
+  const considerazioni = await require('../../lib/ai-valutazione').considerazioni({
     tipologia: dati[C.tipologia], comune: dettaglio.citta || dati[C.comune], zona: dettaglio.nome, // la città del report: i numeri sono di quel luogo, non del comune scritto sul record
     superficie_mq: superficie, quotazione_min: q.min, quotazione_media: eurMq, quotazione_max: q.max, valore_stimato: stimaValore,
     rischio_sismico: demo.rischio_sismico, zona_sismica_ufficiale: zonaSismicaUff && zonaSismicaUff.zona,
@@ -64,7 +64,7 @@ async function esegui({ dati, config }) {
 async function pdf({ id, dati, config, identita }) {
   const report = config.risultato_in && dati[config.risultato_in];
   if (!report) { const e = new Error('Questo immobile non è ancora stato valutato: avvia prima la valutazione.'); e.status = 400; throw e; }
-  return require('../report-valutazione-pdf').creaPdfReport({ record: { id, data: dati }, report, ...identita });
+  return require('./report-valutazione-pdf').creaPdfReport({ record: { id, data: dati }, report, ...identita });
 }
 
 // `servizio`: la voce del listino di OpenAPI.it (lib/openapi-spese.js) che questa azione consuma: la rotta chiede la conferma del costo e registra la spesa.

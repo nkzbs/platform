@@ -4,7 +4,7 @@
 // circa 100 metri) e solo le coordinate del punto vanno al servizio. Il tempo a piedi è una STIMA dalla distanza in linea d'aria (percorso reale ≈ 1,25 volte, 80 m al minuto),
 // non un percorso calcolato: la mappa dà il percorso vero con «Percorso». Best-effort: il servizio pubblico può metterci anche 30-40 secondi (provato l'8/11/2026): la scheda non aspetta,
 // l'elenco compare quando arriva; se il servizio non risponde non c'è l'elenco e la scheda resta valida.
-const db = require('../db');
+const db = require('../../db');
 const UA = 'Platform-servizi-immobili/1.0';
 // Il servizio pubblico di Overpass è spesso pieno («502, query workers busy»): si prova una copia dopo l'altra, prima le europee (solo le coordinate di un punto viaggiano). Ordine verificato l'8/11/2026:
 // la copia francese ~18 s, quella tedesca lz4 ~40 s; l'ultima è la copia di un servizio russo, usata solo se le altre non rispondono.

@@ -1,4 +1,5 @@
 'use strict';
+process.env.PLATFORM_PLUGINS = 'immobiliare'; // il plugin immobiliare è attivo in questa prova
 // Estensioni del pacchetto Mediazione immobiliare: minimo garantito, trattenute all'agente, provvigioni allineate al prezzo concordato,
 // solleciti per stato sulle trattative, avviso di conservazione dei dati scaduta. Server reale, DB temporaneo.
 // Eseguire con: node src/provvigioni-avvisi.test.js (porta 34837).

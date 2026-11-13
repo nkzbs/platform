@@ -1,4 +1,5 @@
 'use strict';
+process.env.PLATFORM_PLUGINS = 'immobiliare'; // il plugin immobiliare è attivo in questa prova
 // Le spese di OpenAPI.it: conferma del costo chiesta dal server, registro delle richieste, contatore del mese (produzione e prova separati), tetto mensile, prezzi personalizzati.
 // Server vero, DB temporaneo; OpenAPI.it è sostituito da un finto. Eseguire con: node src/openapi-spese.test.js (porta 34871 libera).
 const path = require('path');

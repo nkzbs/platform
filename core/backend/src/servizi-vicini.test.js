@@ -1,4 +1,5 @@
 'use strict';
+process.env.PLATFORM_PLUGINS = 'immobiliare'; // il plugin immobiliare è attivo in questa prova
 // Servizi vicini (lib/servizi-vicini.js): categorie, il più vicino per ognuna, tempo a piedi stimato, cache, errori non messi in cache, una richiesta alla volta. Nessuna rete: fetch finto.
 const path = require('path'); const os = require('os'); const fs = require('fs'); const crypto = require('crypto');
 process.env.DB_PATH = path.join(os.tmpdir(), 'srv-test-' + crypto.randomBytes(6).toString('hex') + '.db');
@@ -9,7 +10,7 @@ async function test(name, fn) { try { await fn(); console.log('  ✓ ' + name); 
 const eq = (a, e, m) => { if (JSON.stringify(a) !== JSON.stringify(e)) throw new Error(`${m || ''}: atteso ${JSON.stringify(e)}, ottenuto ${JSON.stringify(a)}`); };
 const ok = (c, m) => { if (!c) throw new Error(m || 'atteso true'); };
 const ok2 = ok;
-const srv = require('./lib/servizi-vicini'); srv._pausa = 5;
+const srv = require('./plugins/immobiliare/servizi-vicini'); srv._pausa = 5;
 
 async function main() {
   const LAT = 45.4642, LON = 9.19; // 0.001° di latitudine ≈ 111 m

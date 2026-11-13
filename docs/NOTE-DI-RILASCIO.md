@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.31 — Moduli: il codice del settore esce dal core
+
+**Plugin** (`core/backend/src/plugins/`): le funzioni che servono solo alla mediazione immobiliare — valutazione di mercato (comparabili, OMI, rischi del territorio, servizi vicini, report PDF) e visura catastale — non sono più nel core: stanno nel plugin `immobiliare`. Un tenant le ha solo se ha ricevuto il pacchetto «mediazione-immobiliare» (oppure se il plugin è nominato in `PLATFORM_PLUGINS`, per le prove); gli altri non le vedono né le eseguono. Il registro (`plugins/index.js`) è un elenco chiuso e dà al core gli adattatori delle azioni esterne e le librerie del plugin. Zucca non cambia (ha il pacchetto).
+
+**Scheda del record**: `RecordDetailModal` da 1.500 a ~1.040 righe: il PIN del vault (`VaultPinGate.jsx`), le righe dei moduli collegati (`RigheFiglie.jsx`) e il report di valutazione (`viste-azione/`, una vista per servizio) sono file a sé. Nessun cambio di funzione.
+
+Nuova prova `plugins.test.js` (senza pacchetto niente, col pacchetto sì). Non verificato nel browser.
+
 ## 0.5.30 — Impostazioni riordinate (tenant e Super Admin)
 
 **Tenant**: da 14 voci in 7 gruppi a 10 voci in 3. Le voci vicine sono una sola con **schede** dentro: «Messaggi e report» (Messaggi ai clienti | Report), «Moduli e liste», «Aspetto e funzioni», «AI» (Impostazioni AI | Suggerimenti), «Dati e sicurezza» (Dati e backup | Sicurezza). Gruppi: **Ogni giorno** (account, utenti e ruoli, connessioni, messaggi e report, Sito Web), **Avanzate** (chiuso finché non serve, si apre da solo se la voce attiva è lì dentro) e **Strumenti temporanei** (le due pagine «TMP», chiuse). Le chiavi interne sono quelle di prima, quindi i collegamenti da altre pagine (`initialTab`) funzionano. In cima, per l'admin, un riquadro **«Da sistemare»** con ciò che manca (posta in uscita non collegata; AI accesa senza chiave), ogni riga porta alla voce giusta; «Nascondi» lo toglie (si ricorda nel browser). **Super Admin**: da 4 gruppi con una voce sola a 2 (Accesso; Piattaforma). Nessuna funzione cambia, cambia solo come sono organizzate. Build e test del frontend verdi; non verificato nel browser.

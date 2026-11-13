@@ -2,7 +2,7 @@
 // La mappa di OpenStreetMap dentro un PDF (report di valutazione): le tessere si scaricano dal nostro server (con User-Agent che dice cos'è, poche richieste, in cache 14 giorni), si
 // disegnano ritagliate in un riquadro e sopra si segnano l'immobile e i luoghi utili vicini (numerati, con la legenda sotto). Solo coordinate di un punto: mai nome o dati del proprietario.
 // Best-effort: se le tessere non arrivano il riquadro dice che la mappa non è disponibile e la legenda dei luoghi resta. Fonte da citare: «© OpenStreetMap contributors».
-const db = require('../db');
+const db = require('../../db');
 const UA = 'Platform-mappa-immobili/1.0';
 const ZOOM = 14;                 // una tessera ≈ 1,7 km a queste latitudini: con TS = 240 pt una tessera è ~7 m per punto, il cerchio di 1 km sta nel riquadro
 const TS = 240;                  // lato di una tessera sul foglio, in punti

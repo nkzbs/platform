@@ -1,4 +1,5 @@
 'use strict';
+process.env.PLATFORM_PLUGINS = 'immobiliare'; // il plugin immobiliare è attivo in questa prova
 // I dati dimostrativi (lib/dati-dimostrativi.js, rotte /api/connections/openapi_it/dati-dimostrativi): letti dal pacchetto, costo da confermare, record segnati `_demo`,
 // rimozione di tutto e solo di quello. Server vero, DB temporaneo; OpenAPI.it è sostituito da un finto. Eseguire con: node src/dati-dimostrativi.test.js (porta 34873 libera).
 const path = require('path');

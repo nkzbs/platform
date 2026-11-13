@@ -8,7 +8,7 @@
 
 const PDFDocument = require('pdfkit');
 
-const { M, GRIGIO, CHIARO, LINEA, TESTO, coloreValido, caricaLogo, intestazione, pieDiPagina } = require('./identita-pdf');
+const { M, GRIGIO, CHIARO, LINEA, TESTO, coloreValido, caricaLogo, intestazione, pieDiPagina } = require('../../lib/identita-pdf');
 const mappaPdf = require('./mappa-pdf');
 const { stimaRagionata } = require('./stima-ragionata');
 

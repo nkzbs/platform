@@ -3,7 +3,7 @@
 //   campi: { provincia, comune, foglio, particella, subalterno, categoria, rendita }   esito: { esito, data }   risultato_in: chiave non dichiarata con { id, stato, data, confronto }.
 // La richiesta è ASINCRONA: si paga UNA volta, poi lo stesso pulsante ricontrolla senza costo. La forma della risposta si legge in modo tollerante (si cercano categoria e rendita in qualunque punto del
 // risultato): se non si trovano, l'esito lo dice invece di inventare un confronto.
-const openapiIt = require('../openapi-it');
+const openapiIt = require('../../lib/openapi-it');
 const DOM = 'catasto';
 const SCOPI = [['POST', '/visura_catastale'], ['GET', '/visura_catastale']];
 const err = (m, status = 400, code) => Object.assign(new Error(m), { status, code });

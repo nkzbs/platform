@@ -1,4 +1,5 @@
 'use strict';
+process.env.PLATFORM_PLUGINS = 'immobiliare'; // il plugin immobiliare è attivo in questa prova
 // «Verifica del soggetto» e «Credit score società» collegati a Risk di OpenAPI.it: la funzione resta «da attivare» finché il servizio non è abilitato e poi parte da sola,
 // con consenso, conferma del costo, ricontrollo gratuito del report asincrono e PDF. OpenAPI.it è sostituito da un finto (nessuna rete). Porta 34872.
 const path = require('path'), os = require('os'), fs = require('fs'), crypto = require('crypto');

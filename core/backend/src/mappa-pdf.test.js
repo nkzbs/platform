@@ -1,4 +1,5 @@
 'use strict';
+process.env.PLATFORM_PLUGINS = 'immobiliare'; // il plugin immobiliare è attivo in questa prova
 // La mappa di OpenStreetMap nel report di valutazione (lib/mappa-pdf.js, sezione nel PDF) e la pillola dell'intestazione che si adatta al testo. Nessuna rete: fetch finto.
 // Eseguire con: node src/mappa-pdf.test.js
 const path = require('path'); const os = require('os'); const fs = require('fs'); const crypto = require('crypto');
@@ -12,9 +13,9 @@ const ok = (c, m) => { if (!c) throw new Error(m || 'atteso true'); };
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
 
 async function main() {
-  const db = require('./db'); const mp = require('./lib/mappa-pdf'); const PDFDocument = require('pdfkit'); const ip = require('./lib/identita-pdf');
-  require('./lib/servizi-vicini'); // crea la tabella della cache dei luoghi
-  const { creaPdfReport } = require('./lib/report-valutazione-pdf'); const { spawnSync } = require('child_process');
+  const db = require('./db'); const mp = require('./plugins/immobiliare/mappa-pdf'); const PDFDocument = require('pdfkit'); const ip = require('./lib/identita-pdf');
+  require('./plugins/immobiliare/servizi-vicini'); // crea la tabella della cache dei luoghi
+  const { creaPdfReport } = require('./plugins/immobiliare/report-valutazione-pdf'); const { spawnSync } = require('child_process');
   const testoDi = (buf) => { const f = path.join(os.tmpdir(), 'mpdf-' + crypto.randomBytes(4).toString('hex') + '.pdf'); fs.writeFileSync(f, buf); const o = spawnSync('pdftotext', ['-layout', f, '-'], { encoding: 'utf8' }); try { fs.unlinkSync(f); } catch (e) {} return o.status === 0 ? o.stdout : null; };
   const urls = []; let modo = 'ok';
   mp._fetch = async (url, opts) => { urls.push(url); ok(/Platform/.test(opts.headers['User-Agent']), 'serve uno User-Agent che dice cos\'è'); if (modo === 'errore') return { ok: false, status: 503 }; return { ok: true, arrayBuffer: async () => PNG }; };

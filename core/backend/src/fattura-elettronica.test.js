@@ -1,4 +1,5 @@
 'use strict';
+process.env.PLATFORM_PLUGINS = 'immobiliare'; // il plugin immobiliare è attivo in questa prova
 // Fattura elettronica: l'XML (FatturaPA 1.2) è valido secondo lo schema ufficiale dell'Agenzia delle Entrate (se xmllint c'è), mancano-i-dati si dicono in italiano, e l'adattatore invia una volta sola,
 // numera per anno, ricontrolla lo stato e rimanda con lo stesso numero una fattura scartata. OpenAPI.it è finto (nessuna rete). Eseguire con: node src/fattura-elettronica.test.js
 const path = require('path'); const os = require('os'); const fs = require('fs'); const crypto = require('crypto'); const { spawnSync } = require('child_process');
