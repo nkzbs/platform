@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.25 — Firma: «Controlla» e segno ✓ per ogni firmatario
+
+Nel riquadro «Far firmare al cliente» ogni firmatario ha un segno davanti al nome (✓ verde firmato, ◷ in attesa, ✕ annullato/scaduto) e, finché aspetta, il pulsante **Controlla**: con la firma con codice chiede subito lo stato a eSignature (se ha firmato, scarica il firmato e chiude come sempre) e dice «Non ha ancora firmato» oppure «Ha firmato». **Annulla** ora chiede conferma. Prima il controllo era solo automatico (5 minuti). Rotta: `POST /api/firma/richieste/:rid/controlla`. Non si può annullare una richiesta già firmata (gli allegati sono già nel record).
+
 ## 0.5.24 — Firma con codice: il link di eSignature, finalmente mostrato
 
 Trovato alla prima prova dal vivo (12 novembre): la richiesta a eSignature veniva accettata e pagata (3 × 0,49) ma al cliente **non arrivava nessun codice**. Causa: `POST /EU-SES` **non spedisce niente**, restituisce un **link per ogni firmatario** alla pagina di firma di eSignature; il codice parte solo quando il firmatario apre quel link. Noi scartavamo il link e la pagina diceva «ti abbiamo mandato un messaggio».

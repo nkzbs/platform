@@ -37,6 +37,14 @@ export default function RichiestaFirma({ api, slug, recordId, documentiFirma, on
     setMsg(res.ok ? { ok: true, testo: verbo === 'sollecita' ? 'Sollecito mandato.' : 'Richiesta annullata.' } : { ok: false, testo: (res.data && res.data.error) || 'Non riuscito.' })
     carica()
   }
+  const controlla = async (r) => {
+    setBusy(true); setMsg(null)
+    const res = await api.post('/firma/richieste/' + r.id + '/controlla', {})
+    setBusy(false)
+    const e = res.ok && res.data && res.data.stato
+    setMsg(!res.ok ? { ok: false, testo: (res.data && res.data.error) || 'Non riuscito.' } : e === 'firmata' ? { ok: true, testo: 'Ha firmato: documenti allegati.' } : e === 'da_rifare' ? { ok: false, testo: 'La firma non è andata a buon fine: la richiesta è di nuovo disponibile.' } : { ok: true, testo: 'Non ha ancora firmato.' })
+    carica()
+  }
   const ultima = richieste[0]
   const gruppo = ultima ? (ultima.gruppo ? richieste.filter((x) => x.gruppo === ultima.gruppo) : [ultima]) : []
   const inAttesa = gruppo.some((x) => x.stato === 'inviata' || x.stato === 'in_firma')
@@ -80,13 +88,14 @@ export default function RichiestaFirma({ api, slug, recordId, documentiFirma, on
             const attesa = x.stato === 'inviata' || x.stato === 'in_firma'
             return (
               <div key={x.id} className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="min-w-0"><span className="text-ink">{x.nome || x.destinatario}</span> <span className={'font-medium ' + colore}>{etichetta}</span>
+                <span className="min-w-0"><span className={x.stato === 'firmata' ? 'text-green-500' : 'text-gray-500'}>{x.stato === 'firmata' ? '✓' : attesa ? '◷' : '✕'}</span> <span className="text-ink">{x.nome || x.destinatario}</span> <span className={'font-medium ' + colore}>{etichetta}</span>
                   <span className="text-gray-500"> · inviata il {quando(x.creata_il)}{x.nome ? ' a ' + x.destinatario : ''}{x.stato === 'firmata' ? ' · firmata il ' + quando(x.firmata_il) : x.stato === 'inviata' ? ' · ' + x.solleciti + ' solleciti' : ''}</span></span>
                 {attesa && (
                   <span className="flex gap-3 flex-shrink-0">
+                    <button type="button" disabled={busy} onClick={() => controlla(x)} className="text-accent hover:opacity-80 disabled:opacity-40">Controlla</button>
                     <button type="button" disabled={busy} onClick={async () => { const d = await api.get('/firma/richieste/' + x.id + '/whatsapp'); if (d && d.url) window.open(d.url, '_blank', 'noopener'); else setMsg({ ok: false, testo: 'Per WhatsApp serve un cellulare valido nella scheda del firmatario.' }) }} className="text-green-500 hover:opacity-80 disabled:opacity-40">WhatsApp</button>
                     {x.stato === 'inviata' && <button type="button" disabled={busy} onClick={() => azione('sollecita', x)} className="text-accent hover:opacity-80 disabled:opacity-40">Sollecita</button>}
-                    <button type="button" disabled={busy} onClick={() => azione('annulla', x)} className="text-gray-400 hover:text-gray-200 disabled:opacity-40">Annulla</button>
+                    <button type="button" disabled={busy} onClick={() => { if (window.confirm('Annullo la richiesta di firma per ' + (x.nome || x.destinatario) + '? Il link smette di funzionare.')) azione('annulla', x) }} className="text-gray-400 hover:text-gray-200 disabled:opacity-40">Annulla</button>
                   </span>
                 )}
               </div>

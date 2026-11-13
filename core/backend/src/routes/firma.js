@@ -3,6 +3,7 @@
 //   GET    /api/firma/:slug/:id/richieste            (admin)  le richieste di quel record con lo stato
 //   POST   /api/firma/:slug/:id/richieste            (admin)  { documenti?: [chiavi], link_base } → prepara i documenti (testo congelato) e manda l'email col link
 //   POST   /api/firma/richieste/:rid/sollecita       (admin)  rimanda l'email di sollecito
+//   POST   /api/firma/richieste/:rid/controlla (admin)  chiede subito lo stato a eSignature (firma con codice in corso)
 //   DELETE /api/firma/richieste/:rid                 (admin)  annulla una richiesta in attesa
 //   GET    /api/public-firma/:token                  (pubblica) cosa c'è da firmare (solo nome dell'agenzia, documenti e consensi)
 //   GET    /api/public-firma/:token/pdf/:key         (pubblica) il PDF di un documento
@@ -67,6 +68,7 @@ admin.get('/capacita', requireAuth, requireAdmin, async (req, res) => {
 });
 admin.get('/richieste/:rid/whatsapp', requireAuth, requireAdmin, (req, res) => { try { res.json(firma.whatsappDi(Number(req.params.rid))); } catch (e) { fail(res, e); } });
 admin.post('/richieste/:rid/sollecita', requireAuth, requireAdmin, async (req, res) => { try { res.json(await firma.sollecita(Number(req.params.rid))); } catch (e) { fail(res, e); } });
+admin.post('/richieste/:rid/controlla', requireAuth, requireAdmin, async (req, res) => { try { res.json(await firma.controllaRichiesta(Number(req.params.rid))); } catch (e) { fail(res, e); } });
 admin.delete('/richieste/:rid', requireAuth, requireAdmin, (req, res) => {
   if (!firma.annulla(Number(req.params.rid))) return res.status(404).json({ error: 'Richiesta non trovata o già conclusa.' });
   logAudit(req.user.username, 'firma.annulla', String(req.params.rid), null);

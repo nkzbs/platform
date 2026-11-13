@@ -288,6 +288,13 @@ async function controllaDaPagina(token) {
   if (r.stato !== 'in_firma') throw err('Nessuna firma con codice in corso.', 409);
   return controllaCodice(r);
 }
+// Controllo a richiesta dall'agente: se la firma con codice è in corso lo chiede subito a eSignature; la firma a mano non ha niente da controllare (arriva quando il cliente carica).
+async function controllaRichiesta(id) {
+  const r = db.prepare('SELECT * FROM richieste_firma WHERE id = ?').get(id);
+  if (!r) throw err('Richiesta non trovata.', 404);
+  if (r.stato === 'in_firma') return controllaCodice(r, { ip: 'controllo-agente' });
+  return { stato: r.stato === 'firmata' ? 'firmata' : r.stato === 'inviata' ? 'in_attesa' : r.stato };
+}
 async function controllaFirmeInCorso() {
   const fatte = [];
   for (const r of db.prepare("SELECT * FROM richieste_firma WHERE stato = 'in_firma'").all()) {
@@ -337,4 +344,4 @@ function avviaSolleciti() {
   console.log('Solleciti delle richieste di firma: controllo ogni ora (dopo 3 e 7 giorni, scadenza a 14)');
 }
 
-module.exports = { whatsappDi, inviaGruppo, avviaCodice, controllaDaPagina, controllaFirmeInCorso, controllaCodice, crea, invia, pubblica, pdf, completa, elenco, annulla, sollecita, eseguiSolleciti, avviaSolleciti, motivoNonValida, GIORNI_VALIDITA };
+module.exports = { controllaRichiesta, whatsappDi, inviaGruppo, avviaCodice, controllaDaPagina, controllaFirmeInCorso, controllaCodice, crea, invia, pubblica, pdf, completa, elenco, annulla, sollecita, eseguiSolleciti, avviaSolleciti, motivoNonValida, GIORNI_VALIDITA };
