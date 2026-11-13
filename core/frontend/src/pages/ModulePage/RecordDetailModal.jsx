@@ -445,7 +445,9 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   // Azioni esterne (blocco `external_action` del modulo, dichiarato dal pacchetto del verticale o dal Builder): un pulsante sul record che chiama un servizio
   // esterno tramite un adattatore e scrive l'esito sul record. Il blocco dice come si chiama, quale connessione serve, quali campi servono, dove sta l'esito e con
   // quale vista mostrarlo (VISTE_AZIONE): qui non ci sono nomi di moduli né di servizi.
-  const azioniEsterne = (schema && schema.external_actions) || []
+  // `visibile_se` { campo, op, valore }: l'azione compare solo per i record che lo soddisfano (come `visible_if` dei campi): così un cliente persona fisica non vede il credit score società.
+  const visibileSe = (az) => { const v = az.visibile_se; if (!v || !v.campo) return true; const x = String(((record && record.data) || {})[v.campo] ?? ''); return v.op === '!=' ? x !== String(v.valore) : x === String(v.valore) }
+  const azioniEsterne = ((schema && schema.external_actions) || []).filter(visibileSe)
   const [inEsecuzione, setInEsecuzione] = useState(null) // chiave dell'azione in corso
   const [vistaAperta, setVistaAperta] = useState({}) // l'esito di un'azione si mostra in una sezione chiusa; si apre da sola dopo averla eseguita
   // Perché un'azione non può partire (una frase, visibile in cima alla scheda e non solo in un avviso che sparisce): { testo, azione? }

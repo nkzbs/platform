@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.26 — Ogni cliente vede solo la verifica che gli serve (pacchetto 27)
+
+Un cliente persona fisica vedeva «Credit score società». Ora le azioni esterne hanno una condizione **`visibile_se`** `{ campo, op, valore }` (come `visible_if` dei campi; calcolata sul record aperto in `RecordDetailModal`). Il pacchetto Mediazione immobiliare 27 la imposta con l'estensione `risk_visibilita`: **«Credit score società» compare solo se «Tipo soggetto» è Società**, «Verifica del soggetto e solvibilità» in tutti gli altri casi (anche con il tipo vuoto). Si applica ai moduli già pubblicati con **Aggiorna** (sincronizza i pacchetti). Test: pacchetti, azioni-esterne, risk-collegati verdi; la condizione in interfaccia non ha un test automatico.
+
 ## 0.5.25 — Firma: «Controlla» e segno ✓ per ogni firmatario
 
 Nel riquadro «Far firmare al cliente» ogni firmatario ha un segno davanti al nome (✓ verde firmato, ◷ in attesa, ✕ annullato/scaduto) e, finché aspetta, il pulsante **Controlla**: con la firma con codice chiede subito lo stato a eSignature (se ha firmato, scarica il firmato e chiude come sempre) e dice «Non ha ancora firmato» oppure «Ha firmato». **Annulla** ora chiede conferma. Prima il controllo era solo automatico (5 minuti). Rotta: `POST /api/firma/richieste/:rid/controlla`. Non si può annullare una richiesta già firmata (gli allegati sono già nel record).
