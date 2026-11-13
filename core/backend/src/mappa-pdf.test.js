@@ -1,5 +1,5 @@
 'use strict';
-process.env.PLATFORM_PLUGINS = 'immobiliare'; // il plugin immobiliare è attivo in questa prova
+process.env.PLATFORM_PLUGINS = '*'; // il plugin immobiliare è attivo in questa prova
 // La mappa di OpenStreetMap nel report di valutazione (lib/mappa-pdf.js, sezione nel PDF) e la pillola dell'intestazione che si adatta al testo. Nessuna rete: fetch finto.
 // Eseguire con: node src/mappa-pdf.test.js
 const path = require('path'); const os = require('os'); const fs = require('fs'); const crypto = require('crypto');

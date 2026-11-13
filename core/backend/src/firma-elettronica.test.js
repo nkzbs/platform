@@ -1,5 +1,5 @@
 'use strict';
-process.env.PLATFORM_PLUGINS = 'immobiliare'; // il plugin immobiliare è attivo in questa prova
+process.env.PLATFORM_PLUGINS = '*'; // il plugin immobiliare è attivo in questa prova
 // Adattatore «firma_elettronica» (eSignature di OpenAPI.it): manda un PDF allegato ai firmatari, ricontrolla, e a firma completata salva il documento firmato tra gli allegati.
 // OpenAPI.it è finto (nessuna rete). Eseguire con: node src/firma-elettronica.test.js
 const path = require('path'); const os = require('os'); const fs = require('fs'); const crypto = require('crypto');

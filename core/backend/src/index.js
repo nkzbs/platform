@@ -61,6 +61,8 @@ const setupWizardRoutes = require('./routes/setup-wizard');
 const exportServerRoutes = require('./routes/export-server');
 const inviteRoutes = require('./routes/invites');
 const firmaRoutes = require('./routes/firma');
+const funzioniRoutes = require('./routes/funzioni');
+const plugins = require('./plugins');
 const { startSuggestions } = require('./suggestions');
 const { startModuleGap } = require('./module-gap');
 const { startReports } = require('./reports');
@@ -145,13 +147,14 @@ const routeMounts = [
   ['/invites', inviteRoutes.admin],
   ['/internal-invite', inviteRoutes.interno],
   ['/public-invite', inviteRoutes.pubblico],
-  ['/firma', firmaRoutes.admin],
-  ['/public-firma', firmaRoutes.pubblico],
+  ['/funzioni', funzioniRoutes],
+  ['/firma', plugins.soloSe('firma'), firmaRoutes.admin],
+  ['/public-firma', plugins.soloSe('firma'), firmaRoutes.pubblico],
   ['/site-pages', siteAdminRouter],
 ];
 app.use('/api', apiGlobalLimiter);
-for (const [path, routerModule] of routeMounts) {
-  app.use('/api' + path, routerModule);
+for (const [path, ...handlers] of routeMounts) {
+  app.use('/api' + path, ...handlers);
 }
 // Foto profilo (2026-10-31) — serviti come file statici pubblici, non da una route
 // autenticata: un <img src> non manda mai l'header Authorization, e il nome file è
@@ -170,7 +173,7 @@ app.use('/__root_public', rootPublicRouter);
 
 app.get('/health', (req, res) => res.json({
   status: 'ok',
-  version: '0.5.31',
+  version: '0.5.32',
   tenant: process.env.TENANT_SLUG || 'unknown',
   name: process.env.TENANT_NAME || 'Platform Core'
 }));

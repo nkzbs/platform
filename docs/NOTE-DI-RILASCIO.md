@@ -2,6 +2,12 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.32 — Store funzioni: si accende solo ciò che serve
+
+Impostazioni → **Store funzioni** (solo amministratore): schede con icona, categoria, descrizione e costo, ricerca e filtri (Tutte / Attive / Disponibili, per categoria), pulsante **Attiva / Disattiva**. Le funzioni: **Firma elettronica**, **Fattura elettronica**, **Messaggi ai clienti**, **Verifica clienti** e **Valutazione immobiliare**. Prima erano nel core per tutti; ora un tenant le ha solo se: ha il pacchetto che le include (zucca le ha tutte), oppure un modulo installato dalla Libreria le usa già (si accendono da sole, e non si spengono finché il modulo le usa), oppure le ha accese a mano. Spente: il Builder non le offre, le rotte della firma rispondono 404, l'azione non parte. Nessun dato viene cancellato spegnendo.
+
+Dietro: `plugins/index.js` (registro con `catalogo`, `attiva`, `spegni`, `soloSe`), `plugins/funzioni.js` (i manifesti), rotta `/api/funzioni`, tabella `funzioni_attive`. Il codice di firma/fattura/messaggi/verifiche è ancora fisicamente nel core (`lib/`): è spento, non ancora spostato in cartelle proprie. Non verificato nel browser.
+
 ## 0.5.31 — Moduli: il codice del settore esce dal core
 
 **Plugin** (`core/backend/src/plugins/`): le funzioni che servono solo alla mediazione immobiliare — valutazione di mercato (comparabili, OMI, rischi del territorio, servizi vicini, report PDF) e visura catastale — non sono più nel core: stanno nel plugin `immobiliare`. Un tenant le ha solo se ha ricevuto il pacchetto «mediazione-immobiliare» (oppure se il plugin è nominato in `PLATFORM_PLUGINS`, per le prove); gli altri non le vedono né le eseguono. Il registro (`plugins/index.js`) è un elenco chiuso e dà al core gli adattatori delle azioni esterne e le librerie del plugin. Zucca non cambia (ha il pacchetto).

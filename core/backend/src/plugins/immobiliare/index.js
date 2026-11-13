@@ -5,6 +5,9 @@
 module.exports = {
   id: 'immobiliare',
   nome: 'Mediazione immobiliare',
+  descrizione: 'Valuta un immobile con quotazioni di mercato, comparabili, OMI, rischi del territorio e servizi vicini (con il report in PDF) e chiede la visura catastale.',
+  icona: 'building', colore: '#ec4899', categoria: 'Immobili', costo: 'A pagamento (OpenAPI.it)',
+  marcatori: ['"adapter":"valutazione_immobiliare"', '"adapter":"controllo_catastale"'],
   pacchetti: ['mediazione-immobiliare'],
   // Adattatori delle azioni esterne (lib/azioni-esterne/): caricati solo quando serve.
   adattatori: {

@@ -1,5 +1,5 @@
 'use strict';
-process.env.PLATFORM_PLUGINS = 'immobiliare'; // il plugin immobiliare è attivo in questa prova
+process.env.PLATFORM_PLUGINS = '*'; // il plugin immobiliare è attivo in questa prova
 // Scheda di acquisizione completa: l'estensione «scheda_completa» (campi mancanti + caselle che erano testo
 // libero e diventano elenchi a scelta multipla, con i valori già scritti convertiti) e il documento
 // «da firmare» che riproduce l'intero modulo dell'agenzia. Server reale, DB temporaneo.

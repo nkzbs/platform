@@ -1,5 +1,5 @@
 'use strict';
-process.env.PLATFORM_PLUGINS = 'immobiliare'; // il plugin immobiliare è attivo in questa prova
+process.env.PLATFORM_PLUGINS = '*'; // il plugin immobiliare è attivo in questa prova
 const assert = require('assert');
 const path = require('path'), os = require('os'), fs = require('fs'), crypto = require('crypto');
 process.env.DB_PATH = path.join(os.tmpdir(), 'sr-test-' + crypto.randomBytes(6).toString('hex') + '.db');

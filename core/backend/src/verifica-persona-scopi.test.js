@@ -1,5 +1,5 @@
 'use strict';
-process.env.PLATFORM_PLUGINS = 'immobiliare'; // il plugin immobiliare è attivo in questa prova
+process.env.PLATFORM_PLUGINS = '*'; // il plugin immobiliare è attivo in questa prova
 // «Verifica del soggetto» (Risk): per capire se il servizio è attivo l'adattatore chiede il token solo con gli scope che usa davvero.
 // Un scope in più (che l'account può non avere) faceva restare la funzione «da attivare» anche con Risk attivo.
 const path = require('path'), os = require('os'), crypto = require('crypto');

@@ -1,5 +1,5 @@
 'use strict';
-process.env.PLATFORM_PLUGINS = 'immobiliare'; // il plugin immobiliare è attivo in questa prova
+process.env.PLATFORM_PLUGINS = '*'; // il plugin immobiliare è attivo in questa prova
 // Le azioni esterne (blocco di schema `external_action`, lib/azioni-esterne/, rotta POST /:slug/:id/azione/:key): il blocco dice quale adattatore usare e come i campi del
 // modulo si collegano; il codice non conosce nomi di moduli. Server vero, DB temporaneo; il servizio esterno è sostituito da un finto (nessuna chiamata di rete).
 // Eseguire con: node src/azioni-esterne.test.js (porta 34863 libera).
@@ -89,6 +89,14 @@ async function main() {
     ok(per.valutazione_immobiliare && per.fattura_elettronica && per.da_attivare, 'adattatori: ' + Object.keys(per).join());
     ok(per.fattura_elettronica.servizio === 'sdi_fattura' && per.da_attivare.servizio === null, 'costo dichiarato');
     ok(r.adattatori.every((a) => typeof a.pdf === 'boolean'), 'pdf booleano');
+  });
+  await test('lo store delle funzioni: elenco per chi è collegato, accendere/spegnere solo admin, una funzione «di prova» non si spegne', async () => {
+    eq((await fetch(BASE + '/api/funzioni')).status, 401);
+    const r = await (await fetch(BASE + '/api/funzioni', { headers: H })).json();
+    ok(r.funzioni.length >= 5 && r.funzioni.every((f) => f.id && f.nome && f.descrizione && f.categoria), 'voci complete');
+    ok(r.funzioni.find((f) => f.id === 'firma').attiva === true, 'firma accesa dalla prova');
+    eq((await fetch(BASE + '/api/funzioni/firma/spegni', { method: 'POST', headers: H })).status, 409);
+    eq((await fetch(BASE + '/api/funzioni/boh/attiva', { method: 'POST', headers: H })).status, 404);
   });
 
   console.log(`\n${passed} passati, ${failed} falliti`);

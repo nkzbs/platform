@@ -20,6 +20,7 @@ import SicurezzaTab from '../components/SicurezzaTab'
 import ReviewMatchesTab from '../components/ReviewMatchesTab'
 import MovimentiPage from './MovimentiPage'
 import ListePage from './ListePage'
+import FunzioniStore from './FunzioniStore'
 import AspettoTab from './AspettoTab'
 import MessaggiClientiTab from './MessaggiClientiTab'
 import GuidaTenantTab from './GuidaTenantTab'
@@ -540,6 +541,7 @@ const SETTINGS_GROUPS = [
     { key: 'connessioni', icon: 'link', label: 'Connessioni' },
     { key: 'messaggi', icon: 'mail', label: 'Messaggi e report', schede: [['messaggi', 'Messaggi ai clienti'], ['notifiche', 'Report']] },
     { key: 'sito_web', icon: 'globe', label: 'Sito Web' },
+    { key: 'store', icon: 'store', label: 'Store funzioni' },
   ] },
   { label: 'Avanzate', chiuso: true, items: [
     { key: 'moduli', icon: 'box', label: 'Moduli e liste', schede: [['moduli', 'Moduli'], ['liste', 'Liste']] },
@@ -627,6 +629,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
 
           {tab === 'moduli' && <ModuliTab token={token} />}
           {tab === 'liste' && <ListePage token={token} />}
+          {tab === 'store' && <FunzioniStore token={token} />}
 
           {tab === 'sito_web' && <SitoWebPage token={token} />}
 

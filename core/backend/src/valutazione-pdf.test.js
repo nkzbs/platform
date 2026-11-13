@@ -1,5 +1,5 @@
 'use strict';
-process.env.PLATFORM_PLUGINS = 'immobiliare'; // il plugin immobiliare è attivo in questa prova
+process.env.PLATFORM_PLUGINS = '*'; // il plugin immobiliare è attivo in questa prova
 // PDF del report di valutazione: testo ricavato dal report salvato e rotta che lo scarica senza richiamare OpenAPI.it.
 // Server reale, DB temporaneo. Eseguire con: node src/valutazione-pdf.test.js (porta 34837).
 

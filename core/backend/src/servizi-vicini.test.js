@@ -1,5 +1,5 @@
 'use strict';
-process.env.PLATFORM_PLUGINS = 'immobiliare'; // il plugin immobiliare è attivo in questa prova
+process.env.PLATFORM_PLUGINS = '*'; // il plugin immobiliare è attivo in questa prova
 // Servizi vicini (lib/servizi-vicini.js): categorie, il più vicino per ognuna, tempo a piedi stimato, cache, errori non messi in cache, una richiesta alla volta. Nessuna rete: fetch finto.
 const path = require('path'); const os = require('os'); const fs = require('fs'); const crypto = require('crypto');
 process.env.DB_PATH = path.join(os.tmpdir(), 'srv-test-' + crypto.randomBytes(6).toString('hex') + '.db');
