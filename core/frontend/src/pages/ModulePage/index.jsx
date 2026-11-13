@@ -8,6 +8,7 @@ import VoceMenu from '../../components/VoceMenu'
 import FormDrawer from '../../components/FormDrawer'
 import Select from '../../components/Select'
 import FieldEditorInput from './FieldEditorInput'
+import CampiPerSezioni from './CampiPerSezioni'
 import RecordDetailModal from './RecordDetailModal'
 import ReportPanel from './ReportPanel'
 import AiSuggestionsPanel from '../../components/AiSuggestionsPanel'
@@ -1204,7 +1205,7 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
                 return (
                   <>
                     {obbl.map(renderRelationField)}
-                    {campi.map(renderRegularField)}
+                    <CampiPerSezioni campi={campi} valori={form} renderCampo={renderRegularField} />
                     {facolt.length > 0 && (
                       <div className="border-t border-gray-800 pt-3">
                         <button type="button" onClick={() => setMostraCollegamenti((v) => !v)} className="w-full flex items-center justify-between text-sm text-gray-400 hover:text-ink py-1">

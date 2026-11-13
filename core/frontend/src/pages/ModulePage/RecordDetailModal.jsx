@@ -12,6 +12,7 @@ import { parseSchemaFrontend } from '../../lib/schema-v3-frontend'
 import { requisitiDallo } from '../../lib/requisiti-stato'
 import AbbinamentiSezione from '../../components/AbbinamentiSezione'
 import RichiestaFirma from './RichiestaFirma'
+import CampiPerSezioni from './CampiPerSezioni'
 
 function VaultPinGate({ token, userId, onUnlocked }) {
   const [pin, setPin] = useState('')
@@ -636,12 +637,12 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
           <>
             {saveError && <div className="bg-red-900/30 text-red-400 text-xs p-3 rounded-lg mb-3 border border-red-900/50">{saveError}</div>}
             <div className="space-y-3 mb-5">
-              {editableFields.map((f) => (
+              <CampiPerSezioni campi={editableFields} valori={editForm} renderCampo={(f) => (
                 <div key={f.key}>
                   <label className="text-xs text-gray-400 block mb-1">{f.label}{f.required && ' *'}</label>
                   <FieldEditorInput f={f} value={editForm[f.key]} onChange={(v) => setEditForm({ ...editForm, [f.key]: v })} uploading={uploading[f.key]} onUploadFile={(file) => uploadFileInModal(f.key, file)} />
                 </div>
-              ))}
+              )} />
               {relations.map((r) => {
                 const cache = relatedCache[r.key]
                 return (
