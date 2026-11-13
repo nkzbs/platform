@@ -18,8 +18,8 @@ function Scheda({ f, occupata, onCambia }) {
         <div className="min-w-0 flex-1">
           <div className="text-ink font-semibold text-sm leading-tight">{f.nome}</div>
           <div className="text-[11px] text-gray-500 mt-0.5">{f.categoria}</div>
+          {f.attiva && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 mt-1.5" style={{ background: tinta(f.colore, 0.16), color: f.colore }}><Icon name="check" size={10} />{MOTIVI[f.motivo] || 'Attiva'}</span>}
         </div>
-        {f.attiva && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0" style={{ background: tinta(f.colore, 0.16), color: f.colore }}><Icon name="check" size={10} />{MOTIVI[f.motivo] || 'Attiva'}</span>}
       </div>
       <p className="text-xs text-gray-400 leading-relaxed flex-1">{f.descrizione}</p>
       <div className="flex items-center justify-between gap-2 pt-1">

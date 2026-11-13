@@ -17,6 +17,9 @@ const inputCls = 'w-full bg-surface-page text-ink px-3.5 py-2.5 rounded-lg outli
 const primaryBtn = 'bg-cp-primary hover:bg-cp-primary-hover disabled:opacity-50 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition'
 const ghostBtn = 'px-4 py-2.5 rounded-lg text-sm bg-surface-page hover:bg-gray-800 text-gray-300 transition border border-gray-800'
 
+// Tinta trasparente di un colore esadecimale (per le tessere in stile store).
+const tinta = (hex, a) => { const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return 'rgba(88,74,236,' + a + ')'; const n = parseInt(m[1], 16); return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')' }
+
 function techSpec(m) {
   const schema = parseSchemaFrontend(m.schema_json)
   return {
@@ -211,10 +214,11 @@ function LibreriaPage({ token }) {
   return (
     <GlassPageBackground>
     <div className="max-w-5xl">
-      <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
-        <div>
-          <h1 className="text-lg font-bold text-ink tracking-[-0.35px]">Libreria</h1>
-          <p className="text-gray-500 text-sm mt-0.5">I tuoi moduli, con le loro versioni, pronti da installare in qualunque tenant.</p>
+      <div className="flex items-center justify-between gap-4 flex-wrap mb-6 rounded-2xl p-5 text-white" style={{ background: 'linear-gradient(135deg,#584aec,#8b5cf6)' }}>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] opacity-90"><Icon name="store" size={14} />Libreria</div>
+          <h1 className="text-lg font-bold mt-1 tracking-[-0.35px]">I moduli pronti da installare</h1>
+          <p className="text-xs opacity-85 mt-1">{modules.length} {modules.length === 1 ? 'modulo' : 'moduli'}, con le loro versioni, installabili in qualunque tenant.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative" data-menu-libreria>
@@ -290,20 +294,24 @@ function LibreriaPage({ token }) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {shown.map((m) => (
-            <button key={m.id} onClick={() => openDetail(m)} className="text-left glass-panel hover:bg-white/5 p-4 transition flex flex-col">
-              <div className="flex items-center gap-2.5 mb-2">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: (m.color || '#2563EB') + '22', color: m.color || '#2563EB' }}>
-                  <Icon name={m.icon || 'box'} size={16} />
+            <button key={m.id} onClick={() => openDetail(m)} className="text-left glass-panel hover:-translate-y-0.5 hover:shadow-lg p-4 transition flex flex-col rounded-2xl relative overflow-hidden">
+              <div className="absolute inset-x-0 top-0 h-1" style={{ background: 'linear-gradient(90deg,' + tinta(m.color, 0.9) + ',' + tinta(m.color, 0.15) + ')' }} />
+              <div className="flex items-start gap-3 mb-3 pt-1">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg,' + tinta(m.color, 0.3) + ',' + tinta(m.color, 0.1) + ')', color: m.color || '#584aec' }}>
+                  <Icon name={m.icon || 'box'} size={22} />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-sm font-medium text-ink truncate">{m.name}</div>
-                  <div className="text-[11px] text-gray-500 font-mono">v{m.version}{m.versions_count > 1 ? ' · ' + m.versions_count + ' versioni' : ''}</div>
+                  <div className="text-sm font-semibold text-ink truncate">{m.name}</div>
+                  <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                    {m.group_name && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/5 text-gray-400">{m.group_name}</span>}
+                    <span className="text-[10px] text-gray-500 font-mono">v{m.version}{m.versions_count > 1 ? ' · ' + m.versions_count + ' versioni' : ''}</span>
+                  </div>
                 </div>
               </div>
-              <div className="text-xs text-gray-500 line-clamp-2 flex-1 min-h-[2.2em]">{m.description || 'Nessuna descrizione.'}</div>
-              <div className="flex items-center justify-between text-[11px] text-gray-600 mt-3 pt-3 border-t border-gray-800/70">
-                <span className="truncate">{m.group_name ? m.group_name + ' · ' : ''}da {m.source_tenant_slug}</span>
-                <span className="flex-shrink-0">{m.install_count} install.</span>
+              <div className="text-xs text-gray-400 leading-relaxed line-clamp-3 flex-1 min-h-[3.4em]">{m.description || ''}</div>
+              <div className="flex items-center justify-between text-[11px] text-gray-500 mt-3 pt-3 border-t border-gray-800/70">
+                <span className="truncate">da {m.source_tenant_slug}</span>
+                <span className="flex-shrink-0 flex items-center gap-1 font-medium text-gray-400"><Icon name="download" size={11} />{m.install_count} install.</span>
               </div>
             </button>
           ))}

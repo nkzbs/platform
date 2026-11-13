@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.33 — Libreria e Store più belli
+
+**Libreria** (tenant e Super Admin) in stile store: banner viola con i numeri (installati / disponibili) e «Crea modulo da zero», tessere più grandi con icona sfumata del colore del modulo, filo colorato in alto, gruppo, versione, stato «Installato» e pulsanti nel piede della tessera; nel tenant anche i filtri a pillole **Tutti / Installati / Disponibili**. Stessa grafica per lo **Store funzioni** (il motivo per cui una funzione è accesa va sotto il titolo). Nessun cambio di funzione. Visto nel browser in locale (desktop e telefono) per il tenant; Super Admin solo compilato.
+
 ## 0.5.32 — Store funzioni: si accende solo ciò che serve
 
 Impostazioni → **Store funzioni** (solo amministratore): schede con icona, categoria, descrizione e costo, ricerca e filtri (Tutte / Attive / Disponibili, per categoria), pulsante **Attiva / Disattiva**. Le funzioni: **Firma elettronica**, **Fattura elettronica**, **Messaggi ai clienti**, **Verifica clienti** e **Valutazione immobiliare**. Prima erano nel core per tutti; ora un tenant le ha solo se: ha il pacchetto che le include (zucca le ha tutte), oppure un modulo installato dalla Libreria le usa già (si accendono da sole, e non si spengono finché il modulo le usa), oppure le ha accese a mano. Spente: il Builder non le offre, le rotte della firma rispondono 404, l'azione non parte. Nessun dato viene cancellato spegnendo.

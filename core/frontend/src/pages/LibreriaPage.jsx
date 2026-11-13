@@ -18,6 +18,9 @@ import Portal from '../components/Portal'
 // I collegamenti (Google, WhatsApp...) di un modulo si deducono da cosa fa davvero
 // (getRequiredConnectors) e si configurano dentro il suo dettaglio. La credenziale è condivisa
 // per tenant: un secondo modulo che usa lo stesso collegamento lo trova già connesso.
+// Tinta trasparente di un colore esadecimale (per le tessere in stile store).
+const tinta = (hex, a) => { const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return 'rgba(88,74,236,' + a + ')'; const n = parseInt(m[1], 16); return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')' }
+
 function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, onFeaturesChanged }) {
   const api = useApi(token)
   const [modules, setModules] = useState([])
@@ -29,6 +32,7 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
   const [detailModule, setDetailModule] = useState(null)
   const [uninstalled, setUninstalled] = useState(null) // { name } — conferma dopo una disinstallazione riuscita
   const [search, setSearch] = useState('')
+  const [mostra, setMostra] = useState('tutti') // tutti | installati | disponibili
   const [proposta, setProposta] = useState(null) // { module, description } — «Proponi alla Libreria» (modale in components/ProponiAllaLibreria.jsx)
   const [proposte, setProposte] = useState([]) // lo stato delle proposte già inviate
   const caricaProposte = () => api.get('/modules/registry-proposals').then((d) => Array.isArray(d) && setProposte(d))
@@ -275,28 +279,33 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
 
   const renderCard = (m, installed) => {
     const update = installed ? updateFor(m) : null
+    const col = m.color || '#584aec'
     return (
       <div key={(m._kind || 'own') + '-' + m.id} id={'module-card-' + m.slug}
-        className="glass-panel hover:bg-white/5 transition p-4 flex flex-col cursor-pointer" onClick={() => openDetail(m)}>
-        <div className="flex items-center gap-2.5 mb-2">
+        className="glass-panel hover:-translate-y-0.5 hover:shadow-lg transition p-4 flex flex-col cursor-pointer rounded-2xl relative overflow-hidden" style={{ boxShadow: installed ? '0 0 0 1px ' + tinta(col, 0.35) : undefined }} onClick={() => openDetail(m)}>
+        <div className="absolute inset-x-0 top-0 h-1" style={{ background: 'linear-gradient(90deg,' + tinta(col, 0.9) + ',' + tinta(col, 0.15) + ')' }} />
+        <div className="flex items-start gap-3 mb-3 pt-1">
           {!installed && m._kind === 'registry' && (
-            <input type="checkbox" className="flex-shrink-0 w-4 h-4 accent-[var(--accent)]" checked={selezione.includes(m.id)} onClick={(e) => e.stopPropagation()} onChange={() => spunta(m.id)} title="Scegli per installare più moduli insieme" />
+            <input type="checkbox" className="flex-shrink-0 w-4 h-4 mt-1 accent-[var(--accent)]" checked={selezione.includes(m.id)} onClick={(e) => e.stopPropagation()} onChange={() => spunta(m.id)} title="Scegli per installare più moduli insieme" />
           )}
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: (m.color || '#2563EB') + '22', color: m.color || '#2563EB' }}>
-            <Icon name={m.icon || 'box'} size={16} />
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg,' + tinta(col, 0.3) + ',' + tinta(col, 0.1) + ')', color: col }}>
+            <Icon name={m.icon || 'box'} size={22} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-ink font-medium text-sm truncate">{m.name}</div>
-            <div className="text-[11px] text-gray-500 font-mono">
-              {installed && m.registry_version ? 'v' + m.registry_version : m.version != null ? 'v' + m.version : m.slug}
+            <div className="text-ink font-semibold text-sm leading-tight truncate">{m.name}</div>
+            <div className="flex items-center gap-1.5 flex-wrap mt-1">
+              {m.group_name && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/5 text-gray-400">{m.group_name}</span>}
+              <span className="text-[10px] text-gray-500 font-mono">{installed && m.registry_version ? 'v' + m.registry_version : m.version != null ? 'v' + m.version : m.slug}</span>
             </div>
           </div>
-          {update && (
-            <span className="text-[10px] bg-accent/20 text-accent px-2 py-0.5 rounded-full flex-shrink-0 font-medium" title={'Nella Libreria c\'è la v' + update.version}>v{update.version} disponibile</span>
-          )}
         </div>
-        <div className="text-xs text-gray-500 line-clamp-2 flex-1 min-h-[2.2em]">{m.description || ''}</div>
-        <div className="flex items-center justify-end gap-1.5 flex-wrap mt-3 pt-3 border-t border-gray-800/70">
+        <div className="text-xs text-gray-400 leading-relaxed line-clamp-3 flex-1 min-h-[3.4em]">{m.description || ''}</div>
+        <div className="flex items-center justify-between gap-1.5 flex-wrap mt-3 pt-3 border-t border-gray-800/70">
+          <span className="text-[11px] font-semibold flex items-center gap-1" style={{ color: installed ? '#10b981' : 'var(--text-faint, #9ca3af)' }}>
+            {installed ? <><Icon name="check" size={12} />Installato</> : 'Disponibile'}
+            {update && <span className="ml-1.5 text-[10px] bg-accent/20 text-accent px-2 py-0.5 rounded-full font-medium" title={'Nella Libreria c\'è la v' + update.version}>v{update.version} disponibile</span>}
+          </span>
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
           {installed ? (
             <>
               {update && (
@@ -315,8 +324,9 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
             </>
           ) : (
             <button onClick={(e) => { e.stopPropagation(); m._kind === 'own' ? toggle(m) : startInstall(m) }}
-              className="text-xs px-3 py-1.5 rounded-lg transition bg-accent hover:opacity-90 text-white">Installa</button>
+              className="text-xs px-3.5 py-1.5 rounded-lg transition bg-accent hover:opacity-90 text-white font-medium flex items-center gap-1"><Icon name="plus" size={12} />Installa</button>
           )}
+          </div>
         </div>
       </div>
     )
@@ -335,23 +345,14 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
 
   return (
     <GlassPageBackground>
-      <h1 className="text-lg font-bold text-ink tracking-[-0.35px] mb-1">Libreria</h1>
-      <p className="text-gray-500 text-sm mb-6">I tuoi moduli e quelli salvati nella Libreria, in un unico posto. <button onClick={() => setCollega(true)} className="text-accent hover:underline">Collega i moduli</button></p>
-
-      {onCreateNewModule && (
-        <div data-tour="libreria-nuovo" className="flex items-center justify-between gap-4 flex-wrap glass-panel p-4 mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-accent/15 text-accent flex items-center justify-center flex-shrink-0"><Icon name="tool" size={18} /></div>
-            <div>
-              <div className="text-ink font-medium text-sm">Ti serve qualcosa che non c'è?</div>
-              <div className="text-gray-500 text-xs mt-0.5">Costruiscilo nel Builder: campi, relazioni, workflow, automazioni.</div>
-            </div>
-          </div>
-          <button onClick={onCreateNewModule} className="bg-accent hover:opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 flex-shrink-0">
-            <Icon name="plus" size={14} />Crea modulo da zero
-          </button>
+      <div className="rounded-2xl p-5 mb-5 text-white flex items-center justify-between gap-4 flex-wrap" style={{ background: 'linear-gradient(135deg,#584aec,#8b5cf6)' }}>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] opacity-90"><Icon name="store" size={14} />Libreria</div>
+          <div className="text-lg font-bold mt-1">I moduli per il tuo lavoro</div>
+          <div className="text-xs opacity-85 mt-1">{installedList.length} installati · {availableList.length} disponibili. Installare = avere una copia tua, modificabile nel Builder. <button onClick={() => setCollega(true)} className="underline font-medium">Collega i moduli</button></div>
         </div>
-      )}
+        {onCreateNewModule && <button onClick={onCreateNewModule} className="bg-white/95 text-[#584aec] hover:bg-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2 flex-shrink-0"><Icon name="plus" size={14} />Crea modulo da zero</button>}
+      </div>
 
       {registryUnavailable && (
         <div className="glass-panel p-4 mb-5 text-center">
@@ -392,14 +393,19 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
       <VerticaliLibreria token={token} installatiSlugs={new Set(modules.filter((m) => m.installed).flatMap((m) => [m.slug, m.registry_slug]).filter(Boolean))} richiestaGuida={richiestaGuida} onGuidaAperta={() => setRichiestaGuida(null)} onInstalled={(esito, v) => { setUltimoModello(v ? v.id : null); setBulk({ busy: false, esito, errore: '' }); load(); loadRegistry(); onRefresh() }} />
 
       <h2 className="text-sm font-semibold text-ink mb-3">Moduli</h2>
+      <div className="flex gap-2 mb-4 overflow-x-auto">
+        {[['tutti', 'Tutti'], ['installati', 'Installati'], ['disponibili', 'Disponibili']].map(([k, l]) => (
+          <button key={k} onClick={() => setMostra(k)} className={'text-xs px-3 py-1.5 rounded-full transition shrink-0 ' + (mostra === k ? 'bg-accent text-white font-medium' : 'bg-white/5 text-gray-400 hover:text-ink')}>{l}</button>
+        ))}
+      </div>
       <div className="relative mb-6 max-w-md">
         <Icon name="search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cerca moduli..."
           className="w-full bg-surface-card text-ink pl-9 pr-3 py-2.5 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition placeholder-gray-600" />
       </div>
 
-      {section('Installati', installedList, true, q ? 'Nessun modulo installato corrisponde alla ricerca.' : 'Nessun modulo installato ancora.')}
-      {section('Disponibili', availableList, false, q ? 'Nessun modulo disponibile corrisponde alla ricerca.' : 'Hai già installato tutto quello che c\'è nella Libreria.')}
+      {mostra !== 'disponibili' && section('Installati', installedList, true, q ? 'Nessun modulo installato corrisponde alla ricerca.' : 'Nessun modulo installato ancora.')}
+      {mostra !== 'installati' && section('Disponibili', availableList, false, q ? 'Nessun modulo disponibile corrisponde alla ricerca.' : 'Hai già installato tutto quello che c\'è nella Libreria.')}
 
       {proposte.length > 0 && (
         <div className="mt-8">
