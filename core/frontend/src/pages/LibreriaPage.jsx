@@ -439,89 +439,97 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
         const isInstalled = alreadyInstalledSlugs.has(detailModule.slug) && !!(installedMatch && installedMatch.installed)
         return (
         <Portal>
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setDetailModule(null)}>
-          <div className="bg-surface-card rounded-xl w-full max-w-2xl border border-gray-800 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="p-5 border-b border-gray-800 flex items-start justify-between gap-4">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: (detailModule.color || '#2563EB') + '22', color: detailModule.color || '#2563EB' }}>
-                  <Icon name={detailModule.icon || 'box'} size={22} />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-ink font-semibold text-base truncate">{detailModule.name}</div>
-                  <div className="text-xs text-gray-500 font-mono">
-                    {detailModule.slug}
-                    {detailModule.version != null && <> · v{detailModule.version}</>}
-                    {detailModule.source_tenant_slug && <> · da {detailModule.source_tenant_slug}</>}
+        <div className="fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center z-50 sm:p-4" onClick={() => setDetailModule(null)}>
+          <div className="bg-surface-card rounded-t-2xl sm:rounded-2xl w-full max-w-2xl border border-gray-800 max-h-[92vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            {/* Banner: l'anteprima del modulo, nel suo colore */}
+            {(() => {
+              const col = detailModule.color || '#584aec'
+              return (
+                <div className="relative p-5 pb-4 overflow-hidden" style={{ background: 'linear-gradient(135deg,' + tinta(col, 0.38) + ',' + tinta(col, 0.08) + ' 75%)' }}>
+                  <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full opacity-40 blur-2xl" style={{ background: tinta(col, 0.7) }} />
+                  <button onClick={() => setDetailModule(null)} aria-label="Chiudi" className="absolute right-3 top-3 w-8 h-8 rounded-full bg-black/20 hover:bg-black/30 text-white/90 flex items-center justify-center transition"><Icon name="x" size={16} /></button>
+                  <div className="relative flex items-start gap-4 pr-8">
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg" style={{ background: 'linear-gradient(135deg,' + tinta(col, 0.95) + ',' + tinta(col, 0.65) + ')', color: '#fff' }}>
+                      <Icon name={detailModule.icon || 'box'} size={30} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-ink font-bold text-lg leading-tight">{detailModule.name}</div>
+                      <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                        {isInstalled && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center gap-1"><Icon name="check" size={11} />Installato</span>}
+                        {detailModule.group_name && <span className="text-[11px] px-2 py-0.5 rounded-full bg-black/10 text-ink/80">{detailModule.group_name}</span>}
+                        {detailModule.version != null && <span className="text-[11px] px-2 py-0.5 rounded-full bg-black/10 text-ink/80 font-mono">v{detailModule.version}</span>}
+                        {detailModule.source_tenant_slug && <span className="text-[11px] px-2 py-0.5 rounded-full bg-black/10 text-ink/80">da {detailModule.source_tenant_slug}</span>}
+                      </div>
+                    </div>
                   </div>
+                  {detailModule.description && <p className="relative text-sm text-ink/85 mt-4 leading-relaxed"><RichText text={detailModule.description} /></p>}
                 </div>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {isInstalled ? (
-                  <>
-                    {installedMatch && !installedMatch.is_system && (
-                      <button onClick={() => { setProposta({ module: installedMatch, description: detailModule.description || '' }); setDetailModule(null) }} className="text-sm px-3.5 py-2 rounded-lg transition bg-gray-800 hover:bg-gray-700 text-gray-200 flex items-center gap-1.5"><Icon name="upload" size={13} />Proponi alla Libreria</button>
-                    )}
-                    {onOpenInBuilder && (
-                      <button onClick={() => onOpenInBuilder(detailModule.slug)} className="text-sm px-3.5 py-2 rounded-lg transition bg-gray-800 hover:bg-gray-700 text-gray-300 flex items-center gap-1.5">
-                        <Icon name="tool" size={13} />Personalizza
-                      </button>
-                    )}
-                    <button onClick={() => { toggle(detailModule); setDetailModule(null) }} className="text-sm px-3 py-2 rounded-lg transition text-gray-500 hover:text-red-400">Rimuovi</button>
-                  </>
-                ) : (
-                  <button onClick={() => (detailModule._kind === 'own' ? (toggle(detailModule), setDetailModule(null)) : startInstall(detailModule))}
-                    className="text-sm px-4 py-2 rounded-lg transition bg-accent hover:opacity-90 text-white">Installa</button>
-                )}
-                <button onClick={() => setDetailModule(null)} className="text-gray-500 hover:text-ink transition ml-1"><Icon name="x" size={18} /></button>
-              </div>
+              )
+            })()}
+            {/* Azioni: a capo su telefono, la principale per prima */}
+            <div className="px-5 py-3 border-b border-gray-800 flex items-center gap-2 flex-wrap">
+              {isInstalled ? (
+                <>
+                  {onOpenInBuilder && (
+                    <button onClick={() => onOpenInBuilder(detailModule.slug)} className="text-sm px-4 py-2 rounded-lg transition bg-accent hover:opacity-90 text-white font-medium flex items-center gap-1.5">
+                      <Icon name="tool" size={13} />Personalizza
+                    </button>
+                  )}
+                  {installedMatch && !installedMatch.is_system && (
+                    <button onClick={() => { setProposta({ module: installedMatch, description: detailModule.description || '' }); setDetailModule(null) }} className="text-sm px-3.5 py-2 rounded-lg transition bg-gray-800 hover:bg-gray-700 text-gray-300 flex items-center gap-1.5"><Icon name="upload" size={13} />Proponi alla Libreria</button>
+                  )}
+                  <button onClick={() => { toggle(detailModule); setDetailModule(null) }} className="text-sm px-3 py-2 rounded-lg transition text-gray-500 hover:text-red-400 sm:ml-auto">Rimuovi</button>
+                </>
+              ) : (
+                <button onClick={() => (detailModule._kind === 'own' ? (toggle(detailModule), setDetailModule(null)) : startInstall(detailModule))}
+                  className="text-sm px-5 py-2 rounded-lg transition bg-accent hover:opacity-90 text-white font-medium flex items-center gap-1.5"><Icon name="plus" size={14} />Installa</button>
+              )}
             </div>
             <div className="p-5">
-              <p className="text-sm text-gray-400"><RichText text={detailModule.description || 'Nessuna descrizione.'} /></p>
-              {detailModule.release_notes && <p className="text-xs text-gray-500 mt-2 whitespace-pre-wrap"><span className="text-gray-400">Note v{detailModule.version}:</span> {detailModule.release_notes}</p>}
+              {detailModule.release_notes && <p className="text-xs text-gray-500 mb-4 whitespace-pre-wrap rounded-lg bg-white/5 p-3"><span className="text-gray-400 font-medium">Novità v{detailModule.version}:</span> {detailModule.release_notes}</p>}
 
               {spec && (
-                <div className="mt-5">
-                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Scheda tecnica (già installato)</div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="bg-surface-page border border-gray-800 rounded-lg p-3">
-                      <div className="text-[11px] text-gray-500 mb-1.5">Campi ({spec.fields.length})</div>
-                      {spec.fields.length === 0 ? <div className="text-xs text-gray-600">Nessuno</div> : (
-                        <ul className="text-xs text-gray-300 space-y-1">
-                          {spec.fields.map((f) => <li key={f.key}>{f.label} <span className="text-gray-600 font-mono">({f.type}{f.required ? ', obbligatorio' : ''})</span></li>)}
-                        </ul>
-                      )}
-                    </div>
-                    <div className="bg-surface-page border border-gray-800 rounded-lg p-3">
-                      <div className="text-[11px] text-gray-500 mb-1.5">Relazioni ({spec.relations.length})</div>
-                      {spec.relations.length === 0 ? <div className="text-xs text-gray-600">Nessuna</div> : (
-                        <ul className="text-xs text-gray-300 space-y-1">
-                          {spec.relations.map((r) => <li key={r.key}>{r.label} <span className="text-gray-600 font-mono">→ {r.target_module}</span></li>)}
-                        </ul>
-                      )}
-                    </div>
-                    <div className="bg-surface-page border border-gray-800 rounded-lg p-3">
-                      <div className="text-[11px] text-gray-500 mb-1.5">Workflow</div>
-                      {!spec.workflow || !spec.workflow.states || spec.workflow.states.length === 0 ? <div className="text-xs text-gray-600">Nessuno</div> : (
-                        <div className="text-xs text-gray-300">{spec.workflow.states.map((s) => s.label).join(' → ')}</div>
-                      )}
-                    </div>
-                    <div className="bg-surface-page border border-gray-800 rounded-lg p-3">
-                      <div className="text-[11px] text-gray-500 mb-1.5">Automazioni ({spec.automations.length})</div>
-                      {spec.automations.length === 0 ? <div className="text-xs text-gray-600">Nessuna</div> : (
-                        <ul className="text-xs text-gray-300 space-y-1">
-                          {spec.automations.map((a) => <li key={a.id}>{a.label || '(senza nome)'}</li>)}
-                        </ul>
-                      )}
-                    </div>
-                    <div className="bg-surface-page border border-gray-800 rounded-lg p-3">
-                      <div className="text-[11px] text-gray-500 mb-1.5">Permessi</div>
-                      <div className="text-xs text-gray-300">{spec.permissionsRules.length > 0 ? spec.permissionsRules.length + ' regole configurate' : 'Nessuna restrizione esplicita'}</div>
-                    </div>
-                    <div className="bg-surface-page border border-gray-800 rounded-lg p-3">
-                      <div className="text-[11px] text-gray-500 mb-1.5">Connettori richiesti</div>
-                      <div className="text-xs text-gray-300">{spec.connectors.length > 0 ? spec.connectors.join(', ') : 'Nessuno'}</div>
-                    </div>
+                <div>
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Cosa contiene</div>
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
+                    {[['Campi', spec.fields.length], ['Relazioni', spec.relations.length], ['Stati', spec.workflow && spec.workflow.states ? spec.workflow.states.length : 0], ['Automazioni', spec.automations.length], ['Regole', spec.permissionsRules.length]].map(([etichetta, n]) => (
+                      <div key={etichetta} className="rounded-xl p-2.5 text-center" style={{ background: tinta(detailModule.color || '#584aec', n > 0 ? 0.12 : 0.04) }}>
+                        <div className="text-lg font-bold text-ink leading-none">{n}</div>
+                        <div className="text-[10px] text-gray-500 mt-1">{etichetta}</div>
+                      </div>
+                    ))}
                   </div>
+                  {spec.connectors.length > 0 && <div className="text-xs text-gray-400 mb-3 flex items-center gap-1.5 flex-wrap"><Icon name="plug" size={12} />Richiede: {spec.connectors.join(', ')}</div>}
+                  {spec.workflow && spec.workflow.states && spec.workflow.states.length > 0 && (
+                    <div className="flex items-center gap-1 flex-wrap mb-3">
+                      {spec.workflow.states.map((s, i) => (
+                        <React.Fragment key={s.key || s.label + i}>
+                          {i > 0 && <Icon name="chevron-right" size={11} className="text-gray-600" />}
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/5 text-gray-300">{s.label}</span>
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  )}
+                  <details className="rounded-xl bg-white/5 mb-2 group">
+                    <summary className="cursor-pointer select-none px-3.5 py-2.5 text-sm text-ink font-medium list-none flex items-center justify-between">Campi <span className="text-xs text-gray-500">{spec.fields.length}</span></summary>
+                    <ul className="px-3.5 pb-3 text-xs text-gray-300 space-y-1">
+                      {spec.fields.map((f) => <li key={f.key} className="flex items-baseline justify-between gap-3"><span className="min-w-0">{f.label}{f.required ? <span className="text-accent"> *</span> : null}</span><span className="text-gray-600 font-mono shrink-0">{f.type}</span></li>)}
+                    </ul>
+                  </details>
+                  {spec.relations.length > 0 && (
+                    <details className="rounded-xl bg-white/5 mb-2">
+                      <summary className="cursor-pointer select-none px-3.5 py-2.5 text-sm text-ink font-medium list-none flex items-center justify-between">Relazioni <span className="text-xs text-gray-500">{spec.relations.length}</span></summary>
+                      <ul className="px-3.5 pb-3 text-xs text-gray-300 space-y-1">
+                        {spec.relations.map((r) => <li key={r.key} className="flex items-baseline justify-between gap-3"><span>{r.label}</span><span className="text-gray-600 font-mono shrink-0">→ {r.target_module}</span></li>)}
+                      </ul>
+                    </details>
+                  )}
+                  {spec.automations.length > 0 && (
+                    <details className="rounded-xl bg-white/5 mb-2">
+                      <summary className="cursor-pointer select-none px-3.5 py-2.5 text-sm text-ink font-medium list-none flex items-center justify-between">Automazioni <span className="text-xs text-gray-500">{spec.automations.length}</span></summary>
+                      <ul className="px-3.5 pb-3 text-xs text-gray-300 space-y-1">{spec.automations.map((a) => <li key={a.id}>{a.label || '(senza nome)'}</li>)}</ul>
+                    </details>
+                  )}
                 </div>
               )}
 

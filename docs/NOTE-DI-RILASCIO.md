@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.34 — Dettaglio del modulo con banner e anteprima
+
+La scheda di un modulo in Libreria (tenant e Super Admin) ha un **banner** nel colore del modulo con icona grande, stato, gruppo, versione e descrizione; i pulsanti vanno a capo su telefono (prima si sovrapponevano al titolo) e su telefono la scheda sale dal basso. La «scheda tecnica» non è più una lista lunga: tessere con i numeri (campi, relazioni, stati, automazioni, regole), gli stati in fila e le liste dentro sezioni che si aprono. Visto nel browser in locale su telefono per il tenant; Super Admin solo compilato.
+
 ## 0.5.33 — Libreria e Store più belli
 
 **Libreria** (tenant e Super Admin) in stile store: banner viola con i numeri (installati / disponibili) e «Crea modulo da zero», tessere più grandi con icona sfumata del colore del modulo, filo colorato in alto, gruppo, versione, stato «Installato» e pulsanti nel piede della tessera; nel tenant anche i filtri a pillole **Tutti / Installati / Disponibili**. Stessa grafica per lo **Store funzioni** (il motivo per cui una funzione è accesa va sotto il titolo). Nessun cambio di funzione. Visto nel browser in locale (desktop e telefono) per il tenant; Super Admin solo compilato.

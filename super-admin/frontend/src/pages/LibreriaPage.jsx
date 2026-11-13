@@ -321,17 +321,22 @@ function LibreriaPage({ token }) {
       {/* DETTAGLIO */}
       {detail && (
         <Modal onClose={closeDetail} wide>
-          <div className="p-5 border-b border-gray-800 flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: (detail.color || '#2563EB') + '22', color: detail.color || '#2563EB' }}>
-                <Icon name={detail.icon || 'box'} size={22} />
+          <div className="relative p-5 border-b border-gray-800 overflow-hidden" style={{ background: 'linear-gradient(135deg,' + tinta(detail.color, 0.38) + ',' + tinta(detail.color, 0.08) + ' 75%)' }}>
+            <button onClick={closeDetail} aria-label="Chiudi" className="absolute right-3 top-3 w-8 h-8 rounded-full bg-black/20 hover:bg-black/30 text-white/90 flex items-center justify-center transition"><Icon name="x" size={16} /></button>
+            <div className="flex items-start gap-4 pr-8">
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg text-white" style={{ background: 'linear-gradient(135deg,' + tinta(detail.color, 0.95) + ',' + tinta(detail.color, 0.65) + ')' }}>
+                <Icon name={detail.icon || 'box'} size={30} />
               </div>
               <div className="min-w-0">
-                <h2 className="text-base font-semibold text-ink truncate">{detail.name}</h2>
-                <div className="text-xs text-gray-500 font-mono">{detail.slug} · v{detail.version} · da {detail.source_tenant_slug} · {formatDate(detail.created_at)}</div>
+                <h2 className="text-lg font-bold text-ink leading-tight">{detail.name}</h2>
+                <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                  {detail.group_name && <span className="text-[11px] px-2 py-0.5 rounded-full bg-black/10 text-ink/80">{detail.group_name}</span>}
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-black/10 text-ink/80 font-mono">v{detail.version}</span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-black/10 text-ink/80">da {detail.source_tenant_slug}</span>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-black/10 text-ink/80">{formatDate(detail.created_at)}</span>
+                </div>
               </div>
             </div>
-            <button onClick={closeDetail} className="text-gray-500 hover:text-ink transition flex-shrink-0"><Icon name="x" size={18} /></button>
           </div>
 
           <div className="flex gap-1 px-5 border-b border-gray-800">
