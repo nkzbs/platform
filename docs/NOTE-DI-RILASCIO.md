@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.29 — Form a sezioni più leggibile: colori, caselle, avanzamento
+
+Il form «Nuovo»/«Modifica» (`CampiPerSezioni.jsx`) ora è anche più chiaro da vedere: **barra di avanzamento** in cima («12 campi compilati su 80», «Mancano 2 campi necessari»), i campi obbligatori in un **riquadro viola evidenziato** («Da compilare»), ogni **sezione con il suo colore** (fascia a sinistra, titolo su fondo colorato, pillola «compilati/totali» che diventa verde con ✓ quando è completa) e ogni **campo in una casella** propria. Colori con trasparenza, quindi vanno bene in tema chiaro e scuro. Non verificato nel browser: l'aspetto va guardato su telefono dopo «Aggiorna».
+
 ## 0.5.28 — Form di inserimento e modifica a sezioni
 
 Il form «Nuovo» e «Modifica» di Clienti e Immobili era un elenco unico di tutti i campi (un'ottantina per un immobile). Ora, per ogni modulo i cui campi hanno una `sezione` (le stesse del dettaglio), il form mostra in alto **«Da compilare»** (i campi obbligatori) e sotto le **sezioni chiuse**, ognuna con «compilati/totali» (Anagrafica, Contatti, Prezzi e valutazione, Edificio…); si aprono toccando il titolo. Se non c'è nessun obbligatorio si apre la prima. I moduli senza sezioni restano un elenco semplice. Componente: `ModulePage/CampiPerSezioni.jsx`, usato dal drawer «Nuovo» (`index.jsx`) e dalla modifica (`RecordDetailModal.jsx`). Non verificato nel browser, solo che si compila.
