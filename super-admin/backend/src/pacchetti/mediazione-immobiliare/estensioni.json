@@ -1554,6 +1554,65 @@
           }
         }
       ]
+    },
+    {
+      "key": "elenchi_scelta_multipla",
+      "_nota": "Cinque voci della scheda di acquisizione dove una casa può avere più di una risposta passano da menu a tendina a elenco con più scelte: Giardino (esclusivo e condominiale), Infissi — materiale (legno e PVC insieme), Tipo vetri, Riscaldamento (più impianti), Fognatura. I valori già scritti si conservano (diventano un elenco di una voce). Stato edificio, classe energetica, agibilità, stato degli impianti e tipologia di incarico restano a scelta singola: lì una risposta sola ha senso.",
+      "richiede": {
+        "immobili": [
+          "indirizzo"
+        ]
+      },
+      "converti": [
+        {
+          "key": "giardino",
+          "label": "Giardino",
+          "type": "multiselect",
+          "options": [
+            "Esclusivo",
+            "Condominiale"
+          ]
+        },
+        {
+          "key": "infissi_materiale",
+          "label": "Infissi — materiale",
+          "type": "multiselect",
+          "options": [
+            "Legno",
+            "PVC",
+            "Alluminio"
+          ]
+        },
+        {
+          "key": "tipo_vetri",
+          "label": "Tipo vetri",
+          "type": "multiselect",
+          "options": [
+            "Singolo",
+            "Doppio vetro",
+            "Triplo vetro"
+          ]
+        },
+        {
+          "key": "riscaldamento",
+          "label": "Riscaldamento",
+          "type": "multiselect",
+          "options": [
+            "Autonomo",
+            "Centralizzato",
+            "Teleriscaldamento"
+          ]
+        },
+        {
+          "key": "fognatura",
+          "label": "Fognatura",
+          "type": "multiselect",
+          "options": [
+            "Rete pubblica",
+            "Fossa biologica"
+          ]
+        }
+      ]
     }
   ],
   "clienti": [
