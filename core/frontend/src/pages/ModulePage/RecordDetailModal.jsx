@@ -456,7 +456,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
     setAvviso(null)
     const consensi = {}
     ;(az.consents || []).forEach((c) => { consensi[c.field] = !!(record && record.data && record.data[c.field]) })
-    setBozzaDoc({ key: az.key, label: az.label, icon: az.icon || 'mail', oggetto: res.data.oggetto, corpo: res.data.corpo, destinatario: res.data.destinatario, firma: az.delivery === 'firma', consents: az.consents || [], consensi, signedType: az.signed_type || az.key + '_firmato', file: null })
+    setBozzaDoc({ key: az.key, label: az.label, icon: az.icon || 'mail', oggetto: res.data.oggetto, corpo: res.data.corpo, destinatario: res.data.destinatario, firma: az.delivery === 'firma', modello: !!az.pdf_modello, consents: az.consents || [], consensi, signedType: az.signed_type || az.key + '_firmato', file: null })
   }
 
   // Documento da firmare: si scarica il PDF del testo approvato, si firma su carta, si ricarica la
@@ -622,10 +622,16 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                 <input value={bozzaDoc.oggetto} onChange={(e) => setBozzaDoc({ ...bozzaDoc, oggetto: e.target.value })}
                   className="w-full bg-surface-page border border-gray-800 rounded-lg px-3 py-2 text-sm text-ink mb-3" />
                 </>)}
+                {bozzaDoc.modello ? (
+                  <div className="rounded-xl border border-gray-800 bg-surface-page px-4 py-3 text-[13px] text-gray-300 leading-[1.6] mb-3">
+                    Questo documento è il <b className="text-ink">modulo originale dell'azienda</b>: «Scarica PDF da firmare» lo compila con i dati di questa scheda. Quello che la scheda non conosce resta da scrivere a mano o al computer, prima di firmare.
+                  </div>
+                ) : (<>
                 <label className="text-[10px] uppercase tracking-[0.14em] text-accent font-semibold block mb-1.5">Testo del documento</label>
                 <textarea value={bozzaDoc.corpo} onChange={(e) => setBozzaDoc({ ...bozzaDoc, corpo: e.target.value })} rows={16}
                   className="w-full bg-surface-page border border-gray-800 focus:border-accent/60 outline-none rounded-xl px-4 py-3 text-[13px] text-gray-200 leading-[1.7] mb-1 resize-y" />
                 <div className="text-[10px] text-gray-600 mb-3">Le righe tutte in maiuscolo diventano sezioni del PDF; «Etichetta: valore» diventa un campo con la riga per scrivere; «[ ] testo» una casella.</div>
+                </>)}
                 {bozzaDoc.firma ? (
                   <>
                     <div className="flex gap-2 mb-4">
