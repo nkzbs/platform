@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.38 — I moduli PDF combaciano con le schede del sistema
+
+I moduli originali dell'agenzia e i campi del sistema sono la stessa cosa: ogni voce dei moduli è un campo del Clienti o dell'Immobili, così un modulo che il cliente compila a mano si riporta nella scheda voce per voce (e viceversa). Una descrizione sola (`scripts/genera-mappe-moduli-pdf.js`) genera sia i campi sia la mappa dei PDF; il test `modelli-pdf.test.js` verifica che ogni voce citi un campo esistente e ogni casella una scelta esistente (ha già trovato e corretto 4 scelte della scheda scritte diversamente).
+- **Clienti**: 53 campi nuovi dell'Adeguata verifica (nascita, cittadinanze, domicilio, documento, titolare effettivo, deleghe, istruzione, professione e settori a rischio, PEP e cariche, rapporto, reddito, fondi), nelle sezioni del modulo. La verifica del soggetto resta manuale a pagamento (non parte da sola).
+- **Immobili**: i campi della Scheda di acquisizione ora stanno nel pacchetto (prima esistevano solo su Zucca, creati a mano: un tenant nuovo non li avrebbe avuti), in sezioni come la scheda; 10 campi del Contratto di incarico (qualità del mandante, occupazione, EPgl,nren, prezzo in lettere, caparra, durata e rinnovo); dati catastali di **garage** e di un'altra pertinenza (più unità catastali), riportati nel modulo nelle voci «Accessori» e «Altri documenti».
+- Giardino, infissi, vetri, riscaldamento e fognatura a scelta multipla. Pacchetto 30.
+
 ## 0.5.37 — Moduli originali dell'agenzia da firmare; comunicazioni al cliente
 
 **Moduli PDF compilabili.** I documenti da firmare di Mediazione immobiliare usano i **moduli originali** dell'agenzia (PDF con campi, grafica Zucca&Partners): «Scheda valutazione — acquisizione immobile», «Contratto di incarico di mediazione» (nuovo documento su Immobili), «Modulo di adeguata verifica della clientela» (italiano e inglese). Il record li compila (dati dei proprietari, immobile, dati catastali, caselle spuntate dagli elenchi, agenzia dai dati del tenant); ciò che il record non conosce resta da compilare a mano o al computer. Si scaricano compilabili; nel pacchetto per la firma con codice entrano appiattiti, con la pagina «Firma» in fondo. Il foglio compilato si conserva con la richiesta: chi firma vede ciò che gli è stato mandato anche se la scheda cambia. Un modulo compilato al computer si può rileggere (`modulo-pdf.leggi`): i valori tornano ai campi del record (caricamento in scheda: da collegare).

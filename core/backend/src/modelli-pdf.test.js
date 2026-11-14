@@ -38,8 +38,8 @@ const pdfDi = (f) => fs.readFileSync(D + f + '.pdf');
   await test('contratto: nome del proprietario nel campo giusto, «comproprietario» spuntato, «proprietario esclusivo» no, agenzia dai dati del tenant', async () => {
     const m = mappaDi('contratto-incarico'); const { buffer } = await modelli.compilaPer('contratto-incarico', get);
     eq((await campoDi(buffer, m.campi[0].campo)).getText(), 'Rossi Mario');
-    const esclusivo = m.campi.find((c) => c.chiave === 'comproprietario_2' && c.valore === '@vuoto'), co = m.campi.find((c) => c.chiave === 'comproprietario_2' && c.valore === '@pieno');
-    eq((await campoDi(buffer, co.campo)).isChecked(), true); eq((await campoDi(buffer, esclusivo.campo)).isChecked(), false);
+    const q = (v) => m.campi.find((c) => c.chiave === 'mandante_qualita' && c.valore === v).campo;
+    eq((await campoDi(buffer, q('Comproprietario'))).isChecked(), false, 'senza il campo nel record nessuna qualità è spuntata'); 
     eq((await campoDi(buffer, nomeCampo(m, (c) => c.testo === '{{@azienda|vuoto}}'))).getText(), 'Agenzia Prova');
   });
   await test('scheda: caselle da un elenco (composizione vani), da un Sì/No (ascensore) e da una scelta (contesto)', async () => {
@@ -65,6 +65,26 @@ const pdfDi = (f) => fs.readFileSync(D + f + '.pdf');
     const pk = await pacchettoDaFirmare(docs, {}, '2026-0001');
     const pdf = await PDFDocument.load(pk.buffer);
     eq(pk.pagine, 2 + 1 + 3 + 1); eq(pdf.getForm().getFields().length, 0, 'campi rimasti');
+  });
+  // IL PUNTO: i moduli devono combaciare con le schede del sistema. Ogni voce di ogni mappa deve citare un campo che esiste (nel Clienti o nell'Immobili dell'agenzia)
+  // e ogni casella un valore che quel campo ha tra le sue scelte: altrimenti un modulo compilato a mano non si può riportare nella scheda (o viceversa).
+  await test('i moduli combaciano con i campi del sistema: ogni voce cita un campo esistente e ogni casella una scelta esistente', async () => {
+    const est = JSON.parse(fs.readFileSync(path.join(D, '../estensioni.json'), 'utf8'));
+    const campi = {}; for (const mod of ['clienti', 'immobili']) for (const e of est[mod]) for (const b of [...(e.aggiungi || []), ...(e.converti || [])]) if (b.block_type !== 'document_action' && b.key && (b.block_type === 'field' || b.type)) campi[b.key] = { ...(campi[b.key] || {}), ...b };
+    const BASE = ['garage_foglio', 'nome', 'indirizzo', 'piano', 'tipologia', 'superficie_mq', 'prezzo_richiesto', 'note', 'proprietario', 'comproprietario_2', 'comproprietario_3', 'titolo', 'foglio_catastale', 'particella_catastale', 'subalterno_catastale', 'categoria_catastale', 'telefono', 'email'];
+    const problemi = [];
+    for (const f of ['contratto-incarico', 'scheda-immobile', 'adeguata-verifica-it', 'adeguata-verifica-en']) for (const c of mappaDi(f).campi) {
+      const chiavi = c.chiave ? [c.chiave] : [...c.testo.matchAll(/\{\{\s*[#^]?\s*([^}|\s/]+)/g)].map((x) => x[1]);
+      for (const k0 of chiavi) {
+        if (k0.startsWith('@')) continue;
+        const [rel, k] = k0.includes('.') ? k0.split('.') : [null, k0];
+        const def = campi[k];
+        if (!def && !BASE.includes(k) && !rel) problemi.push(f + ': «' + k0 + '» non è un campo del sistema');
+        if (c.chiave && def && Array.isArray(def.options) && typeof c.valore === 'string' && !c.valore.startsWith('@') && !def.options.includes(c.valore)) problemi.push(f + ': «' + c.valore + '» non è una scelta di «' + k + '» (' + def.options.join(' / ') + ')');
+        if (c.chiave && def && Array.isArray(def.options) && Array.isArray(c.valore)) for (const v of c.valore) if (!def.options.includes(v)) problemi.push(f + ': «' + v + '» non è una scelta di «' + k + '»');
+      }
+    }
+    ok(!problemi.length, '\n      ' + [...new Set(problemi)].join('\n      '));
   });
   console.log('\n' + passed + ' passati, ' + failed + ' falliti');
   process.exit(failed ? 1 : 0);

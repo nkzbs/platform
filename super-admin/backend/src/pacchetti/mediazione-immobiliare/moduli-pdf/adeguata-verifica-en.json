@@ -12,6 +12,10 @@
    "testo": "{{codice_fiscale_piva|vuoto}}"
   },
   {
+   "campo": "Campo testo 5",
+   "testo": "{{paese_nascita|vuoto}}"
+  },
+  {
    "campo": "Campo testo 135",
    "testo": "{{luogo_nascita|vuoto}}"
   },
@@ -21,7 +25,7 @@
   },
   {
    "campo": "Campo testo 6",
-   "testo": "{{indirizzo|vuoto}}"
+   "testo": "{{#indirizzo}}{{indirizzo}}{{/indirizzo}}{{^indirizzo}}{{residenza|vuoto}}{{/indirizzo}}"
   },
   {
    "campo": "Campo testo 105",
@@ -34,6 +38,682 @@
   {
    "campo": "Campo testo 1017",
    "testo": "{{cap|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 1018",
+   "testo": "{{paese_residenza|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 1019",
+   "testo": "{{nazionalita|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 134",
+   "chiave": "cittadinanza_multipla",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Casella di controllo 136",
+   "chiave": "cittadinanza_multipla",
+   "valore": "No"
+  },
+  {
+   "campo": "Campo testo 1020",
+   "testo": "{{cittadinanze_paesi|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 1021",
+   "testo": "{{residenza_fiscale|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 210",
+   "chiave": "attivita_altrove",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Casella di controllo 211",
+   "chiave": "attivita_altrove",
+   "valore": "No"
+  },
+  {
+   "campo": "Campo testo 1023",
+   "testo": "{{domicilio_paese|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 151",
+   "testo": "{{domicilio_indirizzo|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 107",
+   "testo": "{{domicilio_comune|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 108",
+   "testo": "{{domicilio_provincia|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 1022",
+   "testo": "{{domicilio_cap|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 114",
+   "chiave": "documento_tipo",
+   "valore": "Carta d'identità"
+  },
+  {
+   "campo": "Casella di controllo 123",
+   "chiave": "documento_tipo",
+   "valore": "Altro"
+  },
+  {
+   "campo": "Campo testo 1026",
+   "testo": "{{documento_altro|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 137",
+   "testo": "{{documento_numero|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 138",
+   "testo": "{{documento_rilasciato_da|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 139",
+   "testo": "{{documento_data_rilascio|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 140",
+   "testo": "{{documento_scadenza|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 139",
+   "chiave": "titolare_effettivo",
+   "valore": "No"
+  },
+  {
+   "campo": "Casella di controllo 140",
+   "chiave": "titolare_effettivo",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Campo testo 1027",
+   "testo": "{{titolare_effettivo_nome|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 141",
+   "chiave": "delegati",
+   "valore": "No"
+  },
+  {
+   "campo": "Casella di controllo 142",
+   "chiave": "delegati",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Campo testo 1028",
+   "testo": "{{delegati_nome|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 143",
+   "chiave": "stato_civile",
+   "valore": [
+    "Coniugato/a",
+    "Unito/a civilmente"
+   ]
+  },
+  {
+   "campo": "Casella di controllo 144",
+   "chiave": "stato_civile",
+   "valore": [
+    "Celibe / Nubile",
+    "Vedovo/a"
+   ]
+  },
+  {
+   "campo": "Casella di controllo 145",
+   "chiave": "stato_civile",
+   "valore": [
+    "Separato/a",
+    "Divorziato/a"
+   ]
+  },
+  {
+   "campo": "Casella di controllo 149",
+   "chiave": "familiari_a_carico",
+   "valore": "No"
+  },
+  {
+   "campo": "Casella di controllo 150",
+   "chiave": "familiari_a_carico",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Casella di controllo 151",
+   "chiave": "familiari_a_carico",
+   "valore": "Preferisco non rispondere"
+  },
+  {
+   "campo": "Casella di controllo 152",
+   "chiave": "livello_istruzione",
+   "valore": "Laurea triennale o magistrale in economia, giurisprudenza o ingegneria"
+  },
+  {
+   "campo": "Casella di controllo 160",
+   "chiave": "livello_istruzione",
+   "valore": "Licenza media"
+  },
+  {
+   "campo": "Casella di controllo 159",
+   "chiave": "livello_istruzione",
+   "valore": "Laurea in altre discipline / diploma di scuola secondaria di secondo grado"
+  },
+  {
+   "campo": "Casella di controllo 161",
+   "chiave": "livello_istruzione",
+   "valore": "Nessuno dei precedenti"
+  },
+  {
+   "campo": "Campo testo 149",
+   "testo": "{{tae_codice|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 163",
+   "chiave": "condizione_professionale",
+   "valore": "Non occupato/a"
+  },
+  {
+   "campo": "Casella di controllo 166",
+   "chiave": "condizione_professionale",
+   "valore": "Casalingo/a"
+  },
+  {
+   "campo": "Casella di controllo 167",
+   "chiave": "condizione_professionale",
+   "valore": "Studente/ssa"
+  },
+  {
+   "campo": "Casella di controllo 168",
+   "chiave": "condizione_professionale",
+   "valore": "Pensionato/a"
+  },
+  {
+   "campo": "Campo testo 150",
+   "testo": "{{pensionato_tae_precedente|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 169",
+   "chiave": "condizione_professionale",
+   "valore": "Altra attività"
+  },
+  {
+   "campo": "Campo testo 1029",
+   "testo": "{{altra_attivita|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 253",
+   "chiave": "settori_a_rischio",
+   "valore": "Commercio all’ingrosso e al dettaglio di gioielli e/o pietre preziose"
+  },
+  {
+   "campo": "Casella di controllo 243",
+   "chiave": "settori_a_rischio",
+   "valore": "Estrazione mineraria (cave, miniere, torbiere, pozzi)"
+  },
+  {
+   "campo": "Casella di controllo 252",
+   "chiave": "settori_a_rischio",
+   "valore": "Attività di compro oro"
+  },
+  {
+   "campo": "Casella di controllo 251",
+   "chiave": "settori_a_rischio",
+   "valore": "Commercio di pellicce e articoli in pelle"
+  },
+  {
+   "campo": "Casella di controllo 242",
+   "chiave": "settori_a_rischio",
+   "valore": "Raccolta, gestione e smaltimento dei rifiuti"
+  },
+  {
+   "campo": "Casella di controllo 250",
+   "chiave": "settori_a_rischio",
+   "valore": "Commercio di oggetti d’antiquariato / titolare di casa d’aste"
+  },
+  {
+   "campo": "Casella di controllo 241",
+   "chiave": "settori_a_rischio",
+   "valore": "Commercio e produzione di armi e materiale bellico"
+  },
+  {
+   "campo": "Casella di controllo 249",
+   "chiave": "settori_a_rischio",
+   "valore": "Operatore nel settore del gioco d’azzardo e delle scommesse"
+  },
+  {
+   "campo": "Casella di controllo 240",
+   "chiave": "settori_a_rischio",
+   "valore": "Costruzione e ristrutturazione di edifici"
+  },
+  {
+   "campo": "Casella di controllo 239",
+   "chiave": "settori_a_rischio",
+   "valore": "Società/organizzazione operante nel settore sportivo"
+  },
+  {
+   "campo": "Casella di controllo 248",
+   "chiave": "settori_a_rischio",
+   "valore": "Produzione di materiali da costruzione"
+  },
+  {
+   "campo": "Casella di controllo 238",
+   "chiave": "settori_a_rischio",
+   "valore": "Produzione, fornitura o gestione di energia elettrica, gas o acqua"
+  },
+  {
+   "campo": "Casella di controllo 247",
+   "chiave": "settori_a_rischio",
+   "valore": "Trasporto valori"
+  },
+  {
+   "campo": "Casella di controllo 237",
+   "chiave": "settori_a_rischio",
+   "valore": "Gestione o produzione di impianti per calore o energia da fonti rinnovabili"
+  },
+  {
+   "campo": "Casella di controllo 246",
+   "chiave": "settori_a_rischio",
+   "valore": "Cambio valuta"
+  },
+  {
+   "campo": "Casella di controllo 236",
+   "chiave": "settori_a_rischio",
+   "valore": "Attività di trasferimento di denaro"
+  },
+  {
+   "campo": "Casella di controllo 235",
+   "chiave": "settori_a_rischio",
+   "valore": "Fornitura o vendita al dettaglio di medicinali e/o apparecchiature sanitarie"
+  },
+  {
+   "campo": "Casella di controllo 245",
+   "chiave": "settori_a_rischio",
+   "valore": "Attività di consulenza"
+  },
+  {
+   "campo": "Casella di controllo 234",
+   "chiave": "settori_a_rischio",
+   "valore": "Attività di importazione/esportazione"
+  },
+  {
+   "campo": "Casella di controllo 244",
+   "chiave": "settori_a_rischio",
+   "valore": "Industria chimica, petrolchimica o biotecnologica"
+  },
+  {
+   "campo": "Casella di controllo 233",
+   "chiave": "settori_a_rischio",
+   "valore": "Nessuna delle precedenti"
+  },
+  {
+   "campo": "Casella di controllo 192",
+   "chiave": "anni_professione",
+   "valore": "Meno di 1 anno"
+  },
+  {
+   "campo": "Casella di controllo 193",
+   "chiave": "anni_professione",
+   "valore": "Tra 1 e 5 anni"
+  },
+  {
+   "campo": "Casella di controllo 194",
+   "chiave": "anni_professione",
+   "valore": "Oltre 5 anni"
+  },
+  {
+   "campo": "Casella di controllo 195",
+   "chiave": "anni_professione",
+   "valore": "Nessuna delle precedenti"
+  },
+  {
+   "campo": "Casella di controllo 196",
+   "chiave": "tae_precedente",
+   "valore": "@pieno"
+  },
+  {
+   "campo": "Campo testo 1030",
+   "testo": "{{tae_precedente|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 199",
+   "chiave": "fondi_pubblici",
+   "valore": "No"
+  },
+  {
+   "campo": "Casella di controllo 200",
+   "chiave": "fondi_pubblici",
+   "valore": "Sì, in misura marginale"
+  },
+  {
+   "campo": "Casella di controllo 198",
+   "chiave": "fondi_pubblici",
+   "valore": "Sì, costituiscono una componente importante del reddito"
+  },
+  {
+   "campo": "Casella di controllo 201",
+   "chiave": "sede_attivita",
+   "valore": "In Italia, nella regione di residenza/domicilio"
+  },
+  {
+   "campo": "Casella di controllo 202",
+   "chiave": "sede_attivita",
+   "valore": "In Italia, in una regione diversa"
+  },
+  {
+   "campo": "Casella di controllo 203",
+   "chiave": "sede_attivita",
+   "valore": "All’estero, in paesi UE"
+  },
+  {
+   "campo": "Casella di controllo 204",
+   "chiave": "sede_attivita",
+   "valore": "All’estero, in paesi extra-UE"
+  },
+  {
+   "campo": "Casella di controllo 205",
+   "chiave": "sede_attivita",
+   "valore": "All’estero, in paesi extra-UE indicati nella nota 4"
+  },
+  {
+   "campo": "Casella di controllo 206",
+   "chiave": "pep",
+   "valore": "No"
+  },
+  {
+   "campo": "Casella di controllo 207",
+   "chiave": "pep",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Casella di controllo 208",
+   "chiave": "pep_altre_cariche",
+   "valore": "No"
+  },
+  {
+   "campo": "Casella di controllo 209",
+   "chiave": "pep_altre_cariche",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Casella di controllo 2010",
+   "chiave": "pep_familiare",
+   "valore": "No"
+  },
+  {
+   "campo": "Casella di controllo 2011",
+   "chiave": "pep_familiare",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Casella di controllo 2012",
+   "chiave": "pep_rapporti",
+   "valore": "No"
+  },
+  {
+   "campo": "Casella di controllo 2013",
+   "chiave": "pep_rapporti",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Casella di controllo 2014",
+   "chiave": "ente_tipo",
+   "valore": "Associazione"
+  },
+  {
+   "campo": "Casella di controllo 2018",
+   "chiave": "ente_tipo",
+   "valore": "Fondazione"
+  },
+  {
+   "campo": "Casella di controllo 2019",
+   "chiave": "ente_tipo",
+   "valore": "Società"
+  },
+  {
+   "campo": "Casella di controllo 2020",
+   "chiave": "ente_tipo",
+   "valore": "Altro ente giuridico"
+  },
+  {
+   "campo": "Casella di controllo 2015",
+   "chiave": "ente_carica",
+   "valore": "Amministratore"
+  },
+  {
+   "campo": "Casella di controllo 2021",
+   "chiave": "ente_carica",
+   "valore": "Revisore"
+  },
+  {
+   "campo": "Casella di controllo 2022",
+   "chiave": "ente_carica",
+   "valore": "Socio con influenza significativa"
+  },
+  {
+   "campo": "Casella di controllo 2023",
+   "chiave": "ente_carica",
+   "valore": "Altro"
+  },
+  {
+   "campo": "Casella di controllo 2016",
+   "chiave": "ente_settori_rischio",
+   "valore": "No"
+  },
+  {
+   "campo": "Casella di controllo 2017",
+   "chiave": "ente_settori_rischio",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Casella di controllo 2024",
+   "chiave": "ente_sede",
+   "valore": "Italia/UE"
+  },
+  {
+   "campo": "Casella di controllo 2025",
+   "chiave": "ente_sede",
+   "valore": "Al di fuori dell’UE"
+  },
+  {
+   "campo": "Casella di controllo 2026",
+   "chiave": "ente_rapporti",
+   "valore": "Italia/UE"
+  },
+  {
+   "campo": "Casella di controllo 2027",
+   "chiave": "ente_rapporti",
+   "valore": "Al di fuori dell’UE"
+  },
+  {
+   "campo": "Casella di controllo 2028",
+   "chiave": "ente_contributi",
+   "valore": "No"
+  },
+  {
+   "campo": "Casella di controllo 2029",
+   "chiave": "ente_contributi",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Casella di controllo 2030",
+   "chiave": "rapporto_natura",
+   "valore": "Rapporto amministrato"
+  },
+  {
+   "campo": "Casella di controllo 2031",
+   "chiave": "rapporto_natura",
+   "valore": "Rapporto gestito"
+  },
+  {
+   "campo": "Casella di controllo 2032",
+   "chiave": "rapporto_natura",
+   "valore": "Servizi alle imprese (specialist, nomad, M&A)"
+  },
+  {
+   "campo": "Casella di controllo 2033",
+   "chiave": "rapporto_natura",
+   "valore": "Consulenza in materia di investimenti"
+  },
+  {
+   "campo": "Casella di controllo 2034",
+   "chiave": "rapporto_natura",
+   "valore": "Consulenza di corporate finance"
+  },
+  {
+   "campo": "Casella di controllo 2035",
+   "chiave": "rapporto_finalita",
+   "valore": "Trading"
+  },
+  {
+   "campo": "Casella di controllo 2036",
+   "chiave": "rapporto_finalita",
+   "valore": "Risparmio"
+  },
+  {
+   "campo": "Casella di controllo 2037",
+   "chiave": "rapporto_finalita",
+   "valore": "Consulenza in materia di investimenti"
+  },
+  {
+   "campo": "Casella di controllo 2038",
+   "chiave": "rapporto_finalita",
+   "valore": "Consulenza di corporate finance"
+  },
+  {
+   "campo": "Campo testo 1031",
+   "testo": "{{reddito_annuo|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 2040",
+   "chiave": "fonte_reddito",
+   "valore": "Reddito da lavoro dipendente o pensione"
+  },
+  {
+   "campo": "Casella di controllo 2041",
+   "chiave": "fonte_reddito",
+   "valore": "Reddito da lavoro autonomo"
+  },
+  {
+   "campo": "Casella di controllo 2042",
+   "chiave": "fonte_reddito",
+   "valore": "Reddito da immobili / redditi da investimento"
+  },
+  {
+   "campo": "Casella di controllo 2043",
+   "chiave": "fonte_reddito",
+   "valore": "Reddito d’impresa"
+  },
+  {
+   "campo": "Casella di controllo 2044",
+   "chiave": "fonte_reddito",
+   "valore": "Nessun reddito"
+  },
+  {
+   "campo": "Casella di controllo 2039",
+   "chiave": "rimpatrio_attivita",
+   "valore": "No"
+  },
+  {
+   "campo": "Casella di controllo 2045",
+   "chiave": "rimpatrio_attivita",
+   "valore": "Scudo fiscale"
+  },
+  {
+   "campo": "Casella di controllo 2046",
+   "chiave": "rimpatrio_attivita",
+   "valore": "Voluntary disclosure (collaborazione volontaria)"
+  },
+  {
+   "campo": "Casella di controllo 2047",
+   "chiave": "rimpatrio_attivita",
+   "valore": "Altro"
+  },
+  {
+   "campo": "Casella di controllo 2048",
+   "chiave": "fondi_provenienza",
+   "valore": "Lavoro"
+  },
+  {
+   "campo": "Casella di controllo 2049",
+   "chiave": "fondi_provenienza",
+   "valore": "Risparmio"
+  },
+  {
+   "campo": "Casella di controllo 2050",
+   "chiave": "fondi_provenienza",
+   "valore": "Vendita di beni materiali"
+  },
+  {
+   "campo": "Casella di controllo 2051",
+   "chiave": "fondi_provenienza",
+   "valore": "Vendita di strumenti finanziari"
+  },
+  {
+   "campo": "Casella di controllo 2052",
+   "chiave": "fondi_provenienza",
+   "valore": "Vincite"
+  },
+  {
+   "campo": "Casella di controllo 2053",
+   "chiave": "fondi_provenienza",
+   "valore": "Eredità"
+  },
+  {
+   "campo": "Casella di controllo 2054",
+   "chiave": "fondi_provenienza",
+   "valore": "Donazione"
+  },
+  {
+   "campo": "Casella di controllo 2055",
+   "chiave": "fondi_provenienza",
+   "valore": "Liquidità/titoli detenuti presso altro intermediario"
+  },
+  {
+   "campo": "Casella di controllo 2056",
+   "chiave": "fondi_origine",
+   "valore": "Banca/altro intermediario"
+  },
+  {
+   "campo": "Casella di controllo 2057",
+   "chiave": "fondi_origine",
+   "valore": "Altri mezzi di pagamento"
+  },
+  {
+   "campo": "Casella di controllo 2058",
+   "chiave": "fondi_paese",
+   "valore": "Italia/UE"
+  },
+  {
+   "campo": "Casella di controllo 2059",
+   "chiave": "fondi_paese",
+   "valore": "Extra UE"
+  },
+  {
+   "campo": "Casella di controllo 2060",
+   "chiave": "investimento_finalita",
+   "valore": "Ottenimento del visto per investitori in Italia"
+  },
+  {
+   "campo": "Casella di controllo 2061",
+   "chiave": "investimento_finalita",
+   "valore": "Altro"
+  },
+  {
+   "campo": "Campo testo 1032",
+   "testo": "{{investimento_finalita_altro|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 104",
+   "testo": "{{comune|vuoto}}, {{@oggi}}"
   }
  ]
 }

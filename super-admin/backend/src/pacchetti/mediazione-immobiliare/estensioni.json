@@ -870,6 +870,652 @@
   ],
   "immobili": [
     {
+      "key": "campi_scheda_immobile",
+      "_nota": "I campi della «Scheda valutazione — acquisizione immobile» dell'agenzia (comproprietari e quote, localizzazione, consistenza, serramenti, impianti, spese, valutazione, riacquisto), raggruppati nelle stesse sezioni della scheda, più i dati catastali di garage e altra pertinenza (un immobile con garage ha più unità catastali). Sui tenant dove i campi esistono già (creati a mano) non cambia nulla: si aggiunge solo ciò che manca. Estratto dallo script una tantum di Zucca.",
+      "richiede": {
+        "immobili": [
+          "indirizzo"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "quota_proprietario",
+          "label": "Quota proprietà (proprietario principale)",
+          "type": "text",
+          "sezione": "Proprietari"
+        },
+        {
+          "block_type": "relation",
+          "key": "comproprietario_2",
+          "label": "Comproprietario 2",
+          "type": "many_to_one",
+          "target_module": "clienti",
+          "display_field": "nome",
+          "sezione": "Proprietari"
+        },
+        {
+          "block_type": "field",
+          "key": "quota_comproprietario_2",
+          "label": "Quota proprietà (comproprietario 2)",
+          "type": "text",
+          "sezione": "Proprietari"
+        },
+        {
+          "block_type": "relation",
+          "key": "comproprietario_3",
+          "label": "Comproprietario 3",
+          "type": "many_to_one",
+          "target_module": "clienti",
+          "display_field": "nome",
+          "sezione": "Proprietari"
+        },
+        {
+          "block_type": "field",
+          "key": "quota_comproprietario_3",
+          "label": "Quota proprietà (comproprietario 3)",
+          "type": "text",
+          "sezione": "Proprietari"
+        },
+        {
+          "block_type": "field",
+          "key": "numero_civico",
+          "label": "Numero civico",
+          "type": "text",
+          "sezione": "Localizzazione e contesto"
+        },
+        {
+          "block_type": "field",
+          "key": "interno",
+          "label": "Interno",
+          "type": "text",
+          "sezione": "Localizzazione e contesto"
+        },
+        {
+          "block_type": "field",
+          "key": "cap",
+          "label": "CAP",
+          "type": "text",
+          "sezione": "Localizzazione e contesto"
+        },
+        {
+          "block_type": "field",
+          "key": "zona_quartiere",
+          "label": "Zona/quartiere",
+          "type": "text",
+          "sezione": "Localizzazione e contesto"
+        },
+        {
+          "block_type": "field",
+          "key": "localita",
+          "label": "Località",
+          "type": "text",
+          "sezione": "Localizzazione e contesto"
+        },
+        {
+          "block_type": "field",
+          "key": "piani_totali",
+          "label": "Piani totali edificio",
+          "type": "number",
+          "sezione": "Localizzazione e contesto"
+        },
+        {
+          "block_type": "field",
+          "key": "contesto_stabile",
+          "label": "Contesto stabile",
+          "type": "select",
+          "sezione": "Localizzazione e contesto",
+          "options": [
+            "Signorile",
+            "Medio",
+            "Popolare"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "stato_edificio",
+          "label": "Stato edificio",
+          "type": "select",
+          "sezione": "Localizzazione e contesto",
+          "options": [
+            "Ottimo",
+            "Buono",
+            "Da ristrutturare"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "anno_costruzione",
+          "label": "Anno costruzione",
+          "type": "number",
+          "sezione": "Localizzazione e contesto"
+        },
+        {
+          "block_type": "field",
+          "key": "anno_ristrutturazione",
+          "label": "Anno ristrutturazione",
+          "type": "number",
+          "sezione": "Localizzazione e contesto"
+        },
+        {
+          "block_type": "field",
+          "key": "numero_unita_condominio",
+          "label": "Numero unità condominio",
+          "type": "number",
+          "sezione": "Localizzazione e contesto"
+        },
+        {
+          "block_type": "field",
+          "key": "ascensore",
+          "label": "Ascensore",
+          "type": "boolean",
+          "sezione": "Localizzazione e contesto"
+        },
+        {
+          "block_type": "field",
+          "key": "portineria",
+          "label": "Portineria",
+          "type": "boolean",
+          "sezione": "Localizzazione e contesto"
+        },
+        {
+          "block_type": "field",
+          "key": "assenza_barriere_architettoniche",
+          "label": "Assenza barriere architettoniche",
+          "type": "boolean",
+          "sezione": "Localizzazione e contesto"
+        },
+        {
+          "block_type": "field",
+          "key": "totale_vani",
+          "label": "Totale vani",
+          "type": "number",
+          "sezione": "Caratteristiche interne"
+        },
+        {
+          "block_type": "field",
+          "key": "composizione_vani",
+          "label": "Composizione vani",
+          "type": "text",
+          "sezione": "Caratteristiche interne"
+        },
+        {
+          "block_type": "field",
+          "key": "numero_camere",
+          "label": "Numero camere",
+          "type": "number",
+          "sezione": "Caratteristiche interne"
+        },
+        {
+          "block_type": "field",
+          "key": "numero_bagni",
+          "label": "Numero bagni",
+          "type": "number",
+          "sezione": "Caratteristiche interne"
+        },
+        {
+          "block_type": "field",
+          "key": "sfogo_esterno",
+          "label": "Sfogo esterno (balcone/terrazzo/loggia/portico)",
+          "type": "text",
+          "sezione": "Caratteristiche interne"
+        },
+        {
+          "block_type": "field",
+          "key": "giardino",
+          "label": "Giardino",
+          "type": "select",
+          "sezione": "Caratteristiche interne",
+          "options": [
+            "Nessuno",
+            "Esclusivo",
+            "Condominiale"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "superficie_giardino_mq",
+          "label": "Superficie giardino (mq)",
+          "type": "number",
+          "sezione": "Caratteristiche interne"
+        },
+        {
+          "block_type": "field",
+          "key": "pertinenze_box",
+          "label": "Pertinenze e box (cantina, solaio, garage...)",
+          "type": "text",
+          "sezione": "Caratteristiche interne"
+        },
+        {
+          "block_type": "field",
+          "key": "posto_auto",
+          "label": "Posto auto",
+          "type": "select",
+          "sezione": "Caratteristiche interne",
+          "options": [
+            "Nessuno",
+            "Di proprietà",
+            "Condominiale",
+            "Coperto",
+            "Scoperto"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "numero_posti_auto",
+          "label": "Numero posti auto",
+          "type": "number",
+          "sezione": "Caratteristiche interne"
+        },
+        {
+          "block_type": "field",
+          "key": "infissi_materiale",
+          "label": "Infissi — materiale",
+          "type": "select",
+          "sezione": "Serramenti e finiture",
+          "options": [
+            "Legno",
+            "PVC",
+            "Alluminio"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "tipo_vetri",
+          "label": "Tipo vetri",
+          "type": "select",
+          "sezione": "Serramenti e finiture",
+          "options": [
+            "Singolo",
+            "Doppio vetro",
+            "Triplo vetro"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "oscuranti_protezioni",
+          "label": "Oscuranti e protezioni (tapparelle, inferriate...)",
+          "type": "text",
+          "sezione": "Serramenti e finiture"
+        },
+        {
+          "block_type": "field",
+          "key": "pavimenti",
+          "label": "Pavimenti",
+          "type": "select",
+          "sezione": "Serramenti e finiture",
+          "options": [
+            "Parquet",
+            "Ceramica",
+            "Gres",
+            "Laminato",
+            "Altro"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "cappotto_termico",
+          "label": "Cappotto termico",
+          "type": "boolean",
+          "sezione": "Serramenti e finiture"
+        },
+        {
+          "block_type": "field",
+          "key": "isolamento_acustico",
+          "label": "Isolamento acustico",
+          "type": "boolean",
+          "sezione": "Serramenti e finiture"
+        },
+        {
+          "block_type": "field",
+          "key": "vmc",
+          "label": "VMC (ventilazione meccanica)",
+          "type": "boolean",
+          "sezione": "Serramenti e finiture"
+        },
+        {
+          "block_type": "field",
+          "key": "riscaldamento",
+          "label": "Riscaldamento",
+          "type": "select",
+          "sezione": "Impianti ed energia",
+          "options": [
+            "Autonomo",
+            "Centralizzato",
+            "Teleriscaldamento"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "tipologia_diffusione_riscaldamento",
+          "label": "Tipologia diffusione riscaldamento",
+          "type": "select",
+          "sezione": "Impianti ed energia",
+          "options": [
+            "A pavimento",
+            "Radiatori"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "alimentazione_riscaldamento",
+          "label": "Alimentazione riscaldamento",
+          "type": "select",
+          "sezione": "Impianti ed energia",
+          "options": [
+            "Metano",
+            "Pompa di calore",
+            "Stufa a pellet",
+            "Stufa a legna",
+            "Altro"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "accessori_impianti",
+          "label": "Accessori impianti (condizionatori, allarme, videocitofono, domotica...)",
+          "type": "text",
+          "sezione": "Impianti ed energia"
+        },
+        {
+          "block_type": "field",
+          "key": "fotovoltaico_presente",
+          "label": "Fotovoltaico presente",
+          "type": "boolean",
+          "sezione": "Impianti ed energia"
+        },
+        {
+          "block_type": "field",
+          "key": "fotovoltaico_kw",
+          "label": "Fotovoltaico — kW installati",
+          "type": "number",
+          "sezione": "Impianti ed energia"
+        },
+        {
+          "block_type": "field",
+          "key": "batteria_accumulo",
+          "label": "Batteria di accumulo",
+          "type": "boolean",
+          "sezione": "Impianti ed energia"
+        },
+        {
+          "block_type": "field",
+          "key": "solare_termico",
+          "label": "Solare termico",
+          "type": "boolean",
+          "sezione": "Impianti ed energia"
+        },
+        {
+          "block_type": "field",
+          "key": "stato_impianto_elettrico",
+          "label": "Stato impianto elettrico",
+          "type": "select",
+          "sezione": "Impianti ed energia",
+          "options": [
+            "A norma",
+            "Da rifare"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "stato_impianto_idraulico",
+          "label": "Stato impianto idraulico",
+          "type": "select",
+          "sezione": "Impianti ed energia",
+          "options": [
+            "A norma",
+            "Da rifare"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "fognatura",
+          "label": "Fognatura",
+          "type": "select",
+          "sezione": "Impianti ed energia",
+          "options": [
+            "Rete pubblica",
+            "Fossa biologica"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "classe_energetica",
+          "label": "Classe energetica",
+          "type": "select",
+          "sezione": "Impianti ed energia",
+          "options": [
+            "A4",
+            "A3",
+            "A2",
+            "A1",
+            "B",
+            "C",
+            "D",
+            "E",
+            "F",
+            "G"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "agibilita",
+          "label": "Agibilità",
+          "type": "select",
+          "sezione": "Impianti ed energia",
+          "options": [
+            "Sì",
+            "No",
+            "In corso di rilascio"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "planimetria_conforme",
+          "label": "Planimetria conforme",
+          "type": "boolean",
+          "sezione": "Dati catastali e documenti"
+        },
+        {
+          "block_type": "field",
+          "key": "rendita_catastale",
+          "label": "Rendita catastale",
+          "type": "currency",
+          "sezione": "Dati catastali e documenti"
+        },
+        {
+          "block_type": "field",
+          "key": "documenti_disponibili",
+          "label": "Documenti disponibili (checklist)",
+          "type": "textarea",
+          "sezione": "Dati catastali e documenti"
+        },
+        {
+          "block_type": "field",
+          "key": "spese_condominiali_importo",
+          "label": "Spese condominiali",
+          "type": "currency",
+          "sezione": "Spese e mutuo"
+        },
+        {
+          "block_type": "field",
+          "key": "spese_condominiali_periodicita",
+          "label": "Periodicità spese condominiali",
+          "type": "select",
+          "sezione": "Spese e mutuo",
+          "options": [
+            "Annuali",
+            "Mensili"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "spese_condominiali_comprende",
+          "label": "Spese condominiali comprendono",
+          "type": "text",
+          "sezione": "Spese e mutuo"
+        },
+        {
+          "block_type": "field",
+          "key": "spese_deliberate",
+          "label": "Spese deliberate",
+          "type": "textarea",
+          "sezione": "Spese e mutuo"
+        },
+        {
+          "block_type": "field",
+          "key": "residuo_mutuo",
+          "label": "Residuo mutuo presente",
+          "type": "boolean",
+          "sezione": "Spese e mutuo"
+        },
+        {
+          "block_type": "field",
+          "key": "residuo_mutuo_importo",
+          "label": "Importo residuo mutuo",
+          "type": "currency",
+          "sezione": "Spese e mutuo"
+        },
+        {
+          "block_type": "field",
+          "key": "ipoteche_vincoli",
+          "label": "Ipoteche / vincoli",
+          "type": "text",
+          "sezione": "Spese e mutuo"
+        },
+        {
+          "block_type": "field",
+          "key": "valutazione_agente",
+          "label": "Valutazione agente/agenzia",
+          "type": "currency",
+          "sezione": "Valutazione e incarico"
+        },
+        {
+          "block_type": "field",
+          "key": "tipologia_incarico",
+          "label": "Tipologia incarico",
+          "type": "select",
+          "sezione": "Valutazione e incarico",
+          "options": [
+            "Esclusiva",
+            "Non esclusiva"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "durata_incarico",
+          "label": "Durata incarico",
+          "type": "text",
+          "sezione": "Valutazione e incarico"
+        },
+        {
+          "block_type": "field",
+          "key": "provvigione_accordata",
+          "label": "Provvigione accordata",
+          "type": "text",
+          "sezione": "Valutazione e incarico"
+        },
+        {
+          "block_type": "field",
+          "key": "riacquisto_tipologia",
+          "label": "Riacquisto — tipologia cercata",
+          "type": "text",
+          "sezione": "Esigenze di riacquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "riacquisto_budget_max",
+          "label": "Riacquisto — budget massimo",
+          "type": "currency",
+          "sezione": "Esigenze di riacquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "riacquisto_zona",
+          "label": "Riacquisto — zona/città",
+          "type": "text",
+          "sezione": "Esigenze di riacquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "riacquisto_caratteristiche",
+          "label": "Riacquisto — caratteristiche richieste",
+          "type": "textarea",
+          "sezione": "Esigenze di riacquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "garage_foglio",
+          "label": "Garage — foglio",
+          "type": "text",
+          "sezione": "Dati catastali e documenti"
+        },
+        {
+          "block_type": "field",
+          "key": "garage_particella",
+          "label": "Garage — particella",
+          "type": "text",
+          "sezione": "Dati catastali e documenti"
+        },
+        {
+          "block_type": "field",
+          "key": "garage_subalterno",
+          "label": "Garage — subalterno",
+          "type": "text",
+          "sezione": "Dati catastali e documenti"
+        },
+        {
+          "block_type": "field",
+          "key": "garage_categoria",
+          "label": "Garage — categoria (es. C/6)",
+          "type": "text",
+          "sezione": "Dati catastali e documenti"
+        },
+        {
+          "block_type": "field",
+          "key": "garage_rendita",
+          "label": "Garage — rendita (€)",
+          "type": "currency",
+          "sezione": "Dati catastali e documenti"
+        },
+        {
+          "block_type": "field",
+          "key": "pertinenza_foglio",
+          "label": "Altra pertinenza (cantina, posto auto…) — foglio",
+          "type": "text",
+          "sezione": "Dati catastali e documenti"
+        },
+        {
+          "block_type": "field",
+          "key": "pertinenza_particella",
+          "label": "Altra pertinenza (cantina, posto auto…) — particella",
+          "type": "text",
+          "sezione": "Dati catastali e documenti"
+        },
+        {
+          "block_type": "field",
+          "key": "pertinenza_subalterno",
+          "label": "Altra pertinenza (cantina, posto auto…) — subalterno",
+          "type": "text",
+          "sezione": "Dati catastali e documenti"
+        },
+        {
+          "block_type": "field",
+          "key": "pertinenza_categoria",
+          "label": "Altra pertinenza (cantina, posto auto…) — categoria (es. C/6)",
+          "type": "text",
+          "sezione": "Dati catastali e documenti"
+        },
+        {
+          "block_type": "field",
+          "key": "pertinenza_rendita",
+          "label": "Altra pertinenza (cantina, posto auto…) — rendita (€)",
+          "type": "currency",
+          "sezione": "Dati catastali e documenti"
+        }
+      ]
+    },
+    {
       "key": "scheda_completa",
       "_nota": "Porta il modulo Immobili a coprire per intero la scheda di acquisizione dell'agenzia: i campi che mancavano e le caselle da spuntare che erano testo libero (ora elenchi a scelta multipla).",
       "converti": [
@@ -1613,6 +2259,101 @@
           ]
         }
       ]
+    },
+    {
+      "key": "campi_contratto_incarico",
+      "_nota": "Le voci del «Contratto di incarico di mediazione» che la scheda non aveva (qualità del mandante, stato di occupazione, EPgl,nren, prezzo in lettere, caparra, durata e rinnovo dell'incarico). Generato da scripts/genera-mappe-moduli-pdf.js: non modificare a mano.",
+      "richiede": {
+        "immobili": [
+          "indirizzo"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "mandante_qualita",
+          "label": "Il mandante agisce come",
+          "type": "select",
+          "sezione": "Incarico di mediazione",
+          "options": [
+            "Proprietario esclusivo",
+            "Comproprietario",
+            "Legale rappresentante"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "stato_occupazione",
+          "label": "Stato di occupazione",
+          "type": "select",
+          "sezione": "Incarico di mediazione",
+          "options": [
+            "Libero al rogito",
+            "Occupato dalla proprietà",
+            "Locato"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "locazione_scadenza",
+          "label": "Locazione — scadenza",
+          "type": "date",
+          "sezione": "Incarico di mediazione"
+        },
+        {
+          "block_type": "field",
+          "key": "epgl_nren",
+          "label": "EPgl,nren (kWh/mq anno)",
+          "type": "text",
+          "sezione": "Incarico di mediazione"
+        },
+        {
+          "block_type": "field",
+          "key": "prezzo_in_lettere",
+          "label": "Prezzo in lettere",
+          "type": "text",
+          "sezione": "Incarico di mediazione"
+        },
+        {
+          "block_type": "field",
+          "key": "caparra_confirmatoria",
+          "label": "Caparra confirmatoria",
+          "type": "currency",
+          "sezione": "Incarico di mediazione"
+        },
+        {
+          "block_type": "field",
+          "key": "incarico_valido_fino_al",
+          "label": "Incarico valido fino al",
+          "type": "date",
+          "sezione": "Incarico di mediazione"
+        },
+        {
+          "block_type": "field",
+          "key": "incarico_rinnovo",
+          "label": "Alla scadenza l’incarico",
+          "type": "select",
+          "sezione": "Incarico di mediazione",
+          "options": [
+            "Cessato alla scadenza naturale",
+            "Rinnovato tacitamente"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "incarico_rinnovo_mesi",
+          "label": "Rinnovo tacito per (mesi)",
+          "type": "number",
+          "sezione": "Incarico di mediazione"
+        },
+        {
+          "block_type": "field",
+          "key": "incarico_preavviso_giorni",
+          "label": "Preavviso di disdetta (giorni)",
+          "type": "number",
+          "sezione": "Incarico di mediazione"
+        }
+      ]
     }
   ],
   "clienti": [
@@ -2258,6 +2999,559 @@
           "proprieta": {
             "pdf_modello": "adeguata-verifica-it"
           }
+        }
+      ]
+    },
+    {
+      "key": "campi_adeguata_verifica",
+      "_nota": "Tutte le voci del «Modulo di adeguata verifica della clientela» dell'agenzia diventano campi del Clienti, raggruppati nelle stesse sezioni del modulo: se il cliente lo compila a mano, si riporta qui voce per voce (e il PDF si precompila dagli stessi campi). Generato da scripts/genera-mappe-moduli-pdf.js: non modificare a mano.",
+      "richiede": {
+        "clienti": [
+          "nome"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "paese_nascita",
+          "label": "Paese di nascita",
+          "type": "text",
+          "sezione": "Anagrafica"
+        },
+        {
+          "block_type": "field",
+          "key": "nazionalita",
+          "label": "Nazionalità",
+          "type": "text",
+          "sezione": "Anagrafica"
+        },
+        {
+          "block_type": "field",
+          "key": "paese_residenza",
+          "label": "Paese di residenza",
+          "type": "text",
+          "sezione": "Residenza e domicilio"
+        },
+        {
+          "block_type": "field",
+          "key": "cittadinanza_multipla",
+          "label": "Più di una cittadinanza?",
+          "type": "select",
+          "sezione": "Anagrafica",
+          "options": [
+            "Sì",
+            "No"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "cittadinanze_paesi",
+          "label": "Altre cittadinanze (Paesi)",
+          "type": "text",
+          "sezione": "Anagrafica"
+        },
+        {
+          "block_type": "field",
+          "key": "residenza_fiscale",
+          "label": "Residenza fiscale",
+          "type": "text",
+          "sezione": "Residenza e domicilio"
+        },
+        {
+          "block_type": "field",
+          "key": "attivita_altrove",
+          "label": "Attività o vita privata in luogo diverso dalla residenza?",
+          "type": "select",
+          "sezione": "Residenza e domicilio",
+          "options": [
+            "Sì",
+            "No"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "domicilio_paese",
+          "label": "Domicilio — Paese",
+          "type": "text",
+          "sezione": "Residenza e domicilio"
+        },
+        {
+          "block_type": "field",
+          "key": "domicilio_indirizzo",
+          "label": "Domicilio — indirizzo",
+          "type": "text",
+          "sezione": "Residenza e domicilio"
+        },
+        {
+          "block_type": "field",
+          "key": "domicilio_comune",
+          "label": "Domicilio — comune",
+          "type": "text",
+          "sezione": "Residenza e domicilio"
+        },
+        {
+          "block_type": "field",
+          "key": "domicilio_provincia",
+          "label": "Domicilio — provincia",
+          "type": "text",
+          "sezione": "Residenza e domicilio"
+        },
+        {
+          "block_type": "field",
+          "key": "domicilio_cap",
+          "label": "Domicilio — CAP",
+          "type": "text",
+          "sezione": "Residenza e domicilio"
+        },
+        {
+          "block_type": "field",
+          "key": "documento_tipo",
+          "label": "Tipo di documento",
+          "type": "select",
+          "sezione": "Documento d'identità",
+          "options": [
+            "Carta d'identità",
+            "Altro"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "documento_altro",
+          "label": "Altro documento (patente, passaporto…)",
+          "type": "text",
+          "sezione": "Documento d'identità"
+        },
+        {
+          "block_type": "field",
+          "key": "documento_numero",
+          "label": "Numero del documento",
+          "type": "text",
+          "sezione": "Documento d'identità"
+        },
+        {
+          "block_type": "field",
+          "key": "documento_rilasciato_da",
+          "label": "Rilasciato da",
+          "type": "text",
+          "sezione": "Documento d'identità"
+        },
+        {
+          "block_type": "field",
+          "key": "documento_data_rilascio",
+          "label": "Data di rilascio",
+          "type": "date",
+          "sezione": "Documento d'identità"
+        },
+        {
+          "block_type": "field",
+          "key": "documento_scadenza",
+          "label": "Data di scadenza",
+          "type": "date",
+          "sezione": "Documento d'identità"
+        },
+        {
+          "block_type": "field",
+          "key": "titolare_effettivo",
+          "label": "Esiste un titolare effettivo diverso dal cliente?",
+          "type": "select",
+          "sezione": "Titolare effettivo e deleghe",
+          "options": [
+            "No",
+            "Sì"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "titolare_effettivo_nome",
+          "label": "Titolare effettivo — nominativo",
+          "type": "text",
+          "sezione": "Titolare effettivo e deleghe"
+        },
+        {
+          "block_type": "field",
+          "key": "delegati",
+          "label": "Sono presenti soggetti delegati ad operare?",
+          "type": "select",
+          "sezione": "Titolare effettivo e deleghe",
+          "options": [
+            "No",
+            "Sì"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "delegati_nome",
+          "label": "Delegati — nominativo",
+          "type": "text",
+          "sezione": "Titolare effettivo e deleghe"
+        },
+        {
+          "block_type": "field",
+          "key": "familiari_a_carico",
+          "label": "Familiari a carico privi di reddito",
+          "type": "select",
+          "sezione": "Situazione personale",
+          "options": [
+            "No",
+            "Sì",
+            "Preferisco non rispondere"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "livello_istruzione",
+          "label": "Livello di istruzione",
+          "type": "select",
+          "sezione": "Situazione personale",
+          "options": [
+            "Laurea triennale o magistrale in economia, giurisprudenza o ingegneria",
+            "Licenza media",
+            "Laurea in altre discipline / diploma di scuola secondaria di secondo grado",
+            "Nessuno dei precedenti"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "tae_codice",
+          "label": "Codice TAE (tipo di attività economica)",
+          "type": "text",
+          "sezione": "Professione"
+        },
+        {
+          "block_type": "field",
+          "key": "condizione_professionale",
+          "label": "Condizione professionale",
+          "type": "select",
+          "sezione": "Professione",
+          "options": [
+            "Non occupato/a",
+            "Casalingo/a",
+            "Studente/ssa",
+            "Pensionato/a",
+            "Altra attività"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "pensionato_tae_precedente",
+          "label": "Pensionato/a — TAE precedente",
+          "type": "text",
+          "sezione": "Professione"
+        },
+        {
+          "block_type": "field",
+          "key": "altra_attivita",
+          "label": "Altra attività — descrizione",
+          "type": "text",
+          "sezione": "Professione"
+        },
+        {
+          "block_type": "field",
+          "key": "settori_a_rischio",
+          "label": "Posizioni dirigenziali o settori a rischio",
+          "type": "multiselect",
+          "sezione": "Professione",
+          "options": [
+            "Commercio all’ingrosso e al dettaglio di gioielli e/o pietre preziose",
+            "Attività di compro oro",
+            "Commercio di pellicce e articoli in pelle",
+            "Commercio di oggetti d’antiquariato / titolare di casa d’aste",
+            "Operatore nel settore del gioco d’azzardo e delle scommesse",
+            "Società/organizzazione operante nel settore sportivo",
+            "Produzione, fornitura o gestione di energia elettrica, gas o acqua",
+            "Gestione o produzione di impianti per calore o energia da fonti rinnovabili",
+            "Fornitura o vendita al dettaglio di medicinali e/o apparecchiature sanitarie",
+            "Industria chimica, petrolchimica o biotecnologica",
+            "Estrazione mineraria (cave, miniere, torbiere, pozzi)",
+            "Raccolta, gestione e smaltimento dei rifiuti",
+            "Commercio e produzione di armi e materiale bellico",
+            "Costruzione e ristrutturazione di edifici",
+            "Produzione di materiali da costruzione",
+            "Trasporto valori",
+            "Cambio valuta",
+            "Attività di trasferimento di denaro",
+            "Attività di consulenza",
+            "Attività di importazione/esportazione",
+            "Nessuna delle precedenti"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "anni_professione",
+          "label": "Da quanti anni esercita la professione",
+          "type": "select",
+          "sezione": "Professione",
+          "options": [
+            "Meno di 1 anno",
+            "Tra 1 e 5 anni",
+            "Oltre 5 anni",
+            "Nessuna delle precedenti"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "tae_precedente",
+          "label": "TAE della professione precedente (se meno di 1 anno)",
+          "type": "text",
+          "sezione": "Professione"
+        },
+        {
+          "block_type": "field",
+          "key": "fondi_pubblici",
+          "label": "Gestione o uso di fondi pubblici",
+          "type": "select",
+          "sezione": "Professione",
+          "options": [
+            "No",
+            "Sì, in misura marginale",
+            "Sì, costituiscono una componente importante del reddito"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "sede_attivita",
+          "label": "Dove svolge prevalentemente l’attività",
+          "type": "select",
+          "sezione": "Professione",
+          "options": [
+            "In Italia, nella regione di residenza/domicilio",
+            "In Italia, in una regione diversa",
+            "All’estero, in paesi UE",
+            "All’estero, in paesi extra-UE",
+            "All’estero, in paesi extra-UE indicati nella nota 4"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "pep",
+          "label": "Persona politicamente esposta (PEP)",
+          "type": "select",
+          "sezione": "PEP e cariche",
+          "options": [
+            "No",
+            "Sì"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "pep_altre_cariche",
+          "label": "Titolare di altre cariche pubbliche (non PEP)",
+          "type": "select",
+          "sezione": "PEP e cariche",
+          "options": [
+            "No",
+            "Sì"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "pep_familiare",
+          "label": "Familiare stretto di una PEP o di un LIP",
+          "type": "select",
+          "sezione": "PEP e cariche",
+          "options": [
+            "No",
+            "Sì"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "pep_rapporti",
+          "label": "Stretti rapporti finanziari con una PEP",
+          "type": "select",
+          "sezione": "PEP e cariche",
+          "options": [
+            "No",
+            "Sì"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "ente_tipo",
+          "label": "Carica presso un ente: tipo di ente",
+          "type": "select",
+          "sezione": "PEP e cariche",
+          "options": [
+            "Associazione",
+            "Fondazione",
+            "Società",
+            "Altro ente giuridico"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "ente_carica",
+          "label": "Carica prevalente",
+          "type": "select",
+          "sezione": "PEP e cariche",
+          "options": [
+            "Amministratore",
+            "Revisore",
+            "Socio con influenza significativa",
+            "Altro"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "ente_settori_rischio",
+          "label": "L’ente opera in uno dei settori a rischio?",
+          "type": "select",
+          "sezione": "PEP e cariche",
+          "options": [
+            "No",
+            "Sì"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "ente_sede",
+          "label": "Sede dell’ente",
+          "type": "select",
+          "sezione": "PEP e cariche",
+          "options": [
+            "Italia/UE",
+            "Al di fuori dell’UE"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "ente_rapporti",
+          "label": "Paesi con cui l’ente intrattiene rapporti",
+          "type": "select",
+          "sezione": "PEP e cariche",
+          "options": [
+            "Italia/UE",
+            "Al di fuori dell’UE"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "ente_contributi",
+          "label": "L’ente riceve contributi pubblici o donazioni oltre 500.000 €?",
+          "type": "select",
+          "sezione": "PEP e cariche",
+          "options": [
+            "No",
+            "Sì"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "rapporto_natura",
+          "label": "Natura del rapporto continuativo",
+          "type": "multiselect",
+          "sezione": "Rapporto, reddito e fondi",
+          "options": [
+            "Rapporto amministrato",
+            "Rapporto gestito",
+            "Servizi alle imprese (specialist, nomad, M&A)",
+            "Consulenza in materia di investimenti",
+            "Consulenza di corporate finance"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "rapporto_finalita",
+          "label": "Finalità del rapporto continuativo",
+          "type": "multiselect",
+          "sezione": "Rapporto, reddito e fondi",
+          "options": [
+            "Trading",
+            "Risparmio",
+            "Consulenza in materia di investimenti",
+            "Consulenza di corporate finance"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "reddito_annuo",
+          "label": "Reddito annuo imponibile",
+          "type": "currency",
+          "sezione": "Rapporto, reddito e fondi"
+        },
+        {
+          "block_type": "field",
+          "key": "fonte_reddito",
+          "label": "Fonte principale del reddito",
+          "type": "multiselect",
+          "sezione": "Rapporto, reddito e fondi",
+          "options": [
+            "Reddito da lavoro dipendente o pensione",
+            "Reddito da lavoro autonomo",
+            "Reddito da immobili / redditi da investimento",
+            "Reddito d’impresa",
+            "Nessun reddito"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "rimpatrio_attivita",
+          "label": "Operazioni di rimpatrio o regolarizzazione di attività all’estero",
+          "type": "select",
+          "sezione": "Rapporto, reddito e fondi",
+          "options": [
+            "No",
+            "Scudo fiscale",
+            "Voluntary disclosure (collaborazione volontaria)",
+            "Altro"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "fondi_provenienza",
+          "label": "Provenienza dei fondi",
+          "type": "multiselect",
+          "sezione": "Rapporto, reddito e fondi",
+          "options": [
+            "Lavoro",
+            "Risparmio",
+            "Vendita di beni materiali",
+            "Vendita di strumenti finanziari",
+            "Vincite",
+            "Eredità",
+            "Donazione",
+            "Liquidità/titoli detenuti presso altro intermediario"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "fondi_origine",
+          "label": "Principale origine dei fondi",
+          "type": "select",
+          "sezione": "Rapporto, reddito e fondi",
+          "options": [
+            "Banca/altro intermediario",
+            "Altri mezzi di pagamento"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "fondi_paese",
+          "label": "Paese di origine dei fondi",
+          "type": "select",
+          "sezione": "Rapporto, reddito e fondi",
+          "options": [
+            "Italia/UE",
+            "Extra UE"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "investimento_finalita",
+          "label": "Finalità dell’investimento",
+          "type": "select",
+          "sezione": "Rapporto, reddito e fondi",
+          "options": [
+            "Ottenimento del visto per investitori in Italia",
+            "Altro"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "investimento_finalita_altro",
+          "label": "Finalità dell’investimento — altro",
+          "type": "text",
+          "sezione": "Rapporto, reddito e fondi"
         }
       ]
     }

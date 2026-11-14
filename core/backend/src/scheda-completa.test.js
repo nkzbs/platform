@@ -42,7 +42,7 @@ async function main() {
   const estensioni = { immobili: estensioniPacchetto.immobili.filter((e) => !SENZA.includes(e.key)), clienti: estensioniPacchetto.clienti.filter((e) => !SENZA.includes(e.key)) };
   const documenti = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/documenti.json');
   const scheda = documenti.immobili.find((d) => d.key === 'scheda_immobile_completa');
-  const est = estensioni.immobili[0];
+  const est = estensioni.immobili.find((e) => e.key === 'scheda_completa');
   const estC = estensioni.clienti.find((e) => e.key === 'anagrafica_scheda');
 
   const mk = (slug, steps) => db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES (?, ?, 'box', '#000', 1, 1, 70, ?)").run(slug, slug, JSON.stringify({ version: 3, steps }));
@@ -67,7 +67,7 @@ async function main() {
   let esiti;
   await test('si applica: nuovi campi del tipo giusto e caselle trasformate in elenchi a scelta multipla', async () => {
     esiti = await applicaSeed(estensioni, { tipo: 'estensione' });
-    assertEq(esiti.filter((e) => (e.slug === 'immobili' || e.slug === 'clienti') && e.key !== 'allegati' && e.key !== 'profilo_mediazione' && e.key !== 'moduli_pdf_azienda' && e.key !== 'elenchi_scelta_multipla' && e.key !== 'modulo_pdf_adeguata_verifica' && e.key !== 'verifica_soggetto' && e.key !== 'risk_visibilita' && e.key !== 'mappa_osm' && e.key !== 'conservazione_scaduta' && !['avviso_documenti_mancanti', 'avviso_richieste_compatibili', 'controllo_catastale', 'stato_alla_firma_scheda', 'auguri_cliente', 'servizi_vicini', 'verifica_soggetto_testi', 'credit_score_societa', 'dati_fatturazione', 'firma_in_un_pacchetto', 'firma_scheda_destinatario', 'firma_comproprietari', 'firma_cedente_cessionario'].includes(e.key)).map((e) => e.slug + ':' + e.esito), ['immobili:applicato', 'clienti:applicato']);
+    assertEq(esiti.filter((e) => (e.slug === 'immobili' || e.slug === 'clienti') && e.key !== 'allegati' && e.key !== 'profilo_mediazione' && e.key !== 'moduli_pdf_azienda' && e.key !== 'campi_scheda_immobile' && e.key !== 'campi_contratto_incarico' && e.key !== 'campi_adeguata_verifica' && e.key !== 'elenchi_scelta_multipla' && e.key !== 'modulo_pdf_adeguata_verifica' && e.key !== 'verifica_soggetto' && e.key !== 'risk_visibilita' && e.key !== 'mappa_osm' && e.key !== 'conservazione_scaduta' && !['avviso_documenti_mancanti', 'avviso_richieste_compatibili', 'controllo_catastale', 'stato_alla_firma_scheda', 'auguri_cliente', 'servizi_vicini', 'verifica_soggetto_testi', 'credit_score_societa', 'dati_fatturazione', 'firma_in_un_pacchetto', 'firma_scheda_destinatario', 'firma_comproprietari', 'firma_cedente_cessionario'].includes(e.key)).map((e) => e.slug + ':' + e.esito), ['immobili:applicato', 'clienti:applicato']);
     assertEq(campo('immobili', 'data_sopralluogo').type, 'date');
     assertEq(campo('immobili', 'prezzo_consigliato').type, 'currency');
     assertEq(campo('immobili', 'valore_ipe').type, 'number');

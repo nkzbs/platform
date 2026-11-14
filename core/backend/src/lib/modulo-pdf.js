@@ -17,6 +17,7 @@ const pieno = (v) => !(v == null || v === '' || v === false || (Array.isArray(v)
 
 // Vero se il valore `v` del record corrisponde al `valore` atteso della casella.
 function corrisponde(v, atteso) {
+  if (Array.isArray(atteso)) return atteso.some((x) => corrisponde(v, x)); // la casella copre più valori del sistema (es. «Coniugato/a o Unito/a civilmente»)
   if (atteso === '@pieno') return pieno(v);
   if (atteso === '@vuoto') return !pieno(v);
   if (v === true) return norma(atteso) === 'si';
@@ -70,7 +71,7 @@ async function leggi({ buffer, mappa }) {
       const m = /^\{\{\s*([^}|\s]+)\s*(?:\|\s*vuoto\s*)?\}\}$/.exec(c.testo.trim());
       const v = (campo.getText() || '').trim();
       if (m && v) out[m[1]] = v;
-    } else if (c.chiave && typeof campo.isChecked === 'function' && campo.isChecked() && !String(c.valore).startsWith('@')) {
+    } else if (c.chiave && typeof campo.isChecked === 'function' && campo.isChecked() && typeof c.valore === 'string' && !c.valore.startsWith('@')) {
       out[c.chiave] = Array.isArray(out[c.chiave]) ? [...out[c.chiave], c.valore] : out[c.chiave] !== undefined ? [out[c.chiave], c.valore] : c.valore;
     }
   }

@@ -25,13 +25,18 @@
   },
   {
    "campo": "Casella di controllo 108",
-   "chiave": "comproprietario_2",
-   "valore": "@vuoto"
+   "chiave": "mandante_qualita",
+   "valore": "Proprietario esclusivo"
   },
   {
    "campo": "Casella di controllo 109",
-   "chiave": "comproprietario_2",
-   "valore": "@pieno"
+   "chiave": "mandante_qualita",
+   "valore": "Comproprietario"
+  },
+  {
+   "campo": "Casella di controllo 1010",
+   "chiave": "mandante_qualita",
+   "valore": "Legale rappresentante"
   },
   {
    "campo": "Campo testo 105",
@@ -79,7 +84,26 @@
   },
   {
    "campo": "Campo testo 1014",
-   "testo": "{{pertinenze_box|vuoto}}"
+   "testo": "{{pertinenze_box|vuoto}}{{#garage_categoria}} Garage: Fg. {{garage_foglio|vuoto}} Part. {{garage_particella|vuoto}} Sub. {{garage_subalterno|vuoto}} Cat. {{garage_categoria}} Rendita € {{garage_rendita|vuoto}}.{{/garage_categoria}}{{#pertinenza_categoria}} Pertinenza: Fg. {{pertinenza_foglio|vuoto}} Part. {{pertinenza_particella|vuoto}} Sub. {{pertinenza_subalterno|vuoto}} Cat. {{pertinenza_categoria}} Rendita € {{pertinenza_rendita|vuoto}}.{{/pertinenza_categoria}}"
+  },
+  {
+   "campo": "Casella di controllo 114",
+   "chiave": "stato_occupazione",
+   "valore": "Libero al rogito"
+  },
+  {
+   "campo": "Casella di controllo 123",
+   "chiave": "stato_occupazione",
+   "valore": "Occupato dalla proprietà"
+  },
+  {
+   "campo": "Casella di controllo 124",
+   "chiave": "stato_occupazione",
+   "valore": "Locato"
+  },
+  {
+   "campo": "Campo testo 1012",
+   "testo": "{{locazione_scadenza|vuoto}}"
   },
   {
    "campo": "Campo testo 116",
@@ -87,11 +111,41 @@
   },
   {
    "campo": "Campo testo 117",
-   "testo": "{{valore_ipe|vuoto}}"
+   "testo": "{{epgl_nren|vuoto}}"
   },
   {
    "campo": "Campo testo 119",
    "testo": "{{prezzo_richiesto|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 125",
+   "testo": "{{prezzo_in_lettere|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 124",
+   "testo": "{{caparra_confirmatoria|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 126",
+   "testo": "{{incarico_valido_fino_al|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 125",
+   "chiave": "incarico_rinnovo",
+   "valore": "Cessato alla scadenza naturale"
+  },
+  {
+   "campo": "Casella di controllo 126",
+   "chiave": "incarico_rinnovo",
+   "valore": "Rinnovato tacitamente"
+  },
+  {
+   "campo": "Campo testo 129",
+   "testo": "{{incarico_rinnovo_mesi|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 130",
+   "testo": "{{incarico_preavviso_giorni|vuoto}}"
   },
   {
    "campo": "Casella di controllo 128",

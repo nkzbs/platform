@@ -323,7 +323,7 @@
   {
    "campo": "Casella di controllo 28",
    "chiave": "pertinenze_box",
-   "valore": "Solaio"
+   "valore": "Solaio / soffitta"
   },
   {
    "campo": "Casella di controllo 29",
@@ -521,12 +521,12 @@
   {
    "campo": "Casella di controllo 58",
    "chiave": "accessori_impianti",
-   "valore": "Condizionatori"
+   "valore": "Condizionatori / clima"
   },
   {
    "campo": "Casella di controllo 67",
    "chiave": "accessori_impianti",
-   "valore": "Allarme"
+   "valore": "Impianto allarme"
   },
   {
    "campo": "Casella di controllo 66",
@@ -594,7 +594,12 @@
   {
    "campo": "Casella di controllo 83",
    "chiave": "classe_energetica",
-   "valore": "A4-A1"
+   "valore": [
+    "A4",
+    "A3",
+    "A2",
+    "A1"
+   ]
   },
   {
    "campo": "Casella di controllo 82",
@@ -717,7 +722,7 @@
   },
   {
    "campo": "Campo testo 59",
-   "testo": "{{altri_documenti_note|vuoto}}"
+   "testo": "{{altri_documenti_note|vuoto}}{{#garage_categoria}} Garage: Fg. {{garage_foglio|vuoto}} Part. {{garage_particella|vuoto}} Sub. {{garage_subalterno|vuoto}} Cat. {{garage_categoria}} Rendita € {{garage_rendita|vuoto}}.{{/garage_categoria}}{{#pertinenza_categoria}} Pertinenza: Fg. {{pertinenza_foglio|vuoto}} Part. {{pertinenza_particella|vuoto}} Sub. {{pertinenza_subalterno|vuoto}} Cat. {{pertinenza_categoria}} Rendita € {{pertinenza_rendita|vuoto}}.{{/pertinenza_categoria}}"
   },
   {
    "campo": "Campo testo 60",
