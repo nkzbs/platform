@@ -4,15 +4,29 @@ import Portal from './Portal'
 
 // Invio di massa ai clienti della lista che stai guardando (filtri e ricerca compresi). Si scrive il messaggio, si guarda l'ANTEPRIMA (chi riceve, chi è saltato e perché, quanti SMS e quanto costano), poi si conferma.
 // Il server controlla il consenso alle comunicazioni commerciali per ogni destinatario: la lista non lo aggira.
+// Modelli di partenza: scegli il tipo e oggetto e testo si compilano (restano modificabili). «Messaggio libero» parte vuoto.
+const MODELLI = [
+  { id: 'libero', nome: 'Messaggio libero', oggetto: '', testo: '' },
+  { id: 'generico', nome: 'Messaggio generico', oggetto: 'Un messaggio per te, {nome}', testo: 'Caro {nome}, ti scriviamo per aggiornarti. Per qualsiasi cosa siamo a tua disposizione.' },
+  { id: 'compleanno', nome: 'Auguri di compleanno', oggetto: 'Tanti auguri, {nome}!', testo: 'Caro {nome}, tanti auguri di buon compleanno da tutti noi!' },
+  { id: 'natale', nome: 'Auguri di Natale e buon anno', oggetto: 'Buone feste, {nome}!', testo: 'Caro {nome}, a nome di tutti noi un augurio di buon Natale e di un sereno anno nuovo.' },
+  { id: 'pasqua', nome: 'Auguri di Pasqua', oggetto: 'Buona Pasqua, {nome}!', testo: 'Caro {nome}, buona Pasqua da tutti noi!' },
+  { id: 'ringraziamento', nome: 'Ringraziamento', oggetto: 'Grazie, {nome}', testo: 'Caro {nome}, grazie per la fiducia che ci hai accordato.' },
+  { id: 'promemoria', nome: 'Promemoria appuntamento', oggetto: 'Promemoria, {nome}', testo: 'Caro {nome}, ti ricordiamo il nostro appuntamento. Se hai bisogno di spostarlo, rispondici pure.' },
+  { id: 'aggiornamento', nome: 'Aggiornamento sulla pratica', oggetto: 'Novità sulla tua pratica', testo: 'Caro {nome}, ci sono novità sulla tua pratica: ti chiamiamo a breve per i dettagli.' },
+]
+
 export default function MessaggioMassivoModal({ token, slug, azione, ids, onClose }) {
   const api = useApi(token)
   const [canali, setCanali] = useState(['mail'])
+  const [modello, setModello] = useState('libero')
   const [oggetto, setOggetto] = useState('')
   const [testo, setTesto] = useState('')
   const [anteprima, setAnteprima] = useState(null)
   const [esito, setEsito] = useState(null)
   const [errore, setErrore] = useState('')
   const [lavoro, setLavoro] = useState(false)
+  const scegliModello = (id) => { const m = MODELLI.find((x) => x.id === id); setModello(id); setOggetto(m.oggetto); setTesto(m.testo); setAnteprima(null) }
   const corpo = (extra = {}) => ({ ids, canali, oggetto, testo, ...extra })
   const tog = (c) => { setAnteprima(null); setCanali((x) => (x.includes(c) ? x.filter((y) => y !== c) : [...x, c])) }
   const guarda = async () => {
@@ -45,6 +59,7 @@ export default function MessaggioMassivoModal({ token, slug, azione, ids, onClos
           ) : (
             <>
               <div className="flex gap-2 text-xs">{[['mail', 'Mail'], ['sms', 'SMS']].map(([c, l]) => <button key={c} type="button" onClick={() => tog(c)} aria-pressed={canali.includes(c)} className={'px-3 py-1.5 rounded-lg border transition ' + (canali.includes(c) ? 'bg-accent/20 border-accent/50 text-accent' : 'border-gray-700 text-gray-500')}>{l}</button>)}</div>
+              <label className="block"><span className="text-xs text-gray-400">Tipo di messaggio</span><select className={inp} value={modello} onChange={(e) => scegliModello(e.target.value)}>{MODELLI.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}</select></label>
               {canali.includes('mail') && <label className="block"><span className="text-xs text-gray-400">Oggetto</span><input className={inp} value={oggetto} onChange={(e) => { setOggetto(e.target.value); setAnteprima(null) }} /></label>}
               <label className="block"><span className="text-xs text-gray-400">Testo. Puoi usare {'{nome}'} e {'{cognome}'}. {canali.includes('sms') ? 'Per gli SMS ogni 160 caratteri costa un SMS.' : ''}</span><textarea rows={5} className={inp} value={testo} onChange={(e) => { setTesto(e.target.value); setAnteprima(null) }} /></label>
               <div className="text-xs text-gray-500">{testo.length} caratteri</div>

@@ -12,6 +12,7 @@ import { parseSchemaFrontend } from '../../lib/schema-v3-frontend'
 import { requisitiDallo } from '../../lib/requisiti-stato'
 import AbbinamentiSezione from '../../components/AbbinamentiSezione'
 import RichiestaFirma from './RichiestaFirma'
+import MessaggioMassivoModal from '../../components/MessaggioMassivoModal'
 import CampiPerSezioni from './CampiPerSezioni'
 import VaultPinGate from './VaultPinGate'
 import RigheFiglie from './RigheFiglie'
@@ -365,6 +366,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   const [vistaAperta, setVistaAperta] = useState({}) // l'esito di un'azione si mostra in una sezione chiusa; si apre da sola dopo averla eseguita
   // Perché un'azione non può partire (una frase, visibile in cima alla scheda e non solo in un avviso che sparisce): { testo, azione? }
   const [avviso, setAvviso] = useState(null)
+  const [messaggioA, setMessaggioA] = useState(null) // azione `messaggio_cliente` aperta: scelta del tipo di messaggio per questo record
   // Le connessioni che le azioni richiedono sono collegate? (null = non lo so ancora). Lo si dice prima, non dopo un errore.
   const [connessioni, setConnessioni] = useState(null)
   // Quali azioni possono partire ora (il servizio esterno è abilitato?). Quelle che dicono di no finiscono tra «Altre funzioni»; quando il servizio si attiva passano da sole tra i pulsanti.
@@ -389,6 +391,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
     if (Array.isArray(az.richiede_uno_di) && az.richiede_uno_di.length && !az.richiede_uno_di.some((k) => datoPresente(d, k))) { setAvviso({ testo: az.richiede_messaggio || 'Mancano dei dati per «' + az.label + '»: compilali da «Modifica» e riprova.', azione: 'modifica' }); return }
     if (az.connection && connessioni && connessioni[az.connection] === false) { setAvviso({ testo: 'La connessione «' + az.connection + '» non è collegata: senza di lei «' + az.label + '» non può partire. Si collega da Impostazioni → Connessioni.' }); return }
     setAvviso(null); setConfermaCosto(null)
+    if (az.adapter === 'messaggio_cliente') { setMessaggioA(az); return } // il tipo di messaggio si sceglie nella finestra, non parte subito
     setInEsecuzione(az.key)
     const res = await api.post('/records/' + mod.slug + '/' + recordId + '/azione/' + az.key, { conferma })
     setInEsecuzione(null)
@@ -577,6 +580,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
           </>
         ) : (
           <>
+            {messaggioA && <MessaggioMassivoModal token={token} slug={mod.slug} azione={messaggioA.key} ids={[recordId]} onClose={() => setMessaggioA(null)} />}
             {confermaCosto && (
               <div className="bg-accent/10 border border-accent/30 text-xs p-3 rounded-lg mb-4" role="alertdialog" aria-label="Conferma del costo">
                 <div className="font-semibold text-ink mb-1">{confermaCosto.az.label}: conferma il costo</div>

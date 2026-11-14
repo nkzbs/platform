@@ -1875,9 +1875,9 @@
         {
           "block_type": "external_action",
           "key": "auguri_cliente",
-          "label": "Auguri al cliente",
-          "icon": "gift",
-          "descrizione": "Manda gli auguri di compleanno ai clienti che hanno dato il consenso alle comunicazioni commerciali",
+          "label": "Auguri al cliente / comunicazioni varie",
+          "icon": "mail",
+          "descrizione": "Manda un messaggio (auguri, ringraziamento, promemoria, testo libero) ai clienti che hanno dato il consenso alle comunicazioni commerciali",
           "adapter": "da_attivare",
           "servizio_richiesto": "il tuo intervento: scegli il testo degli auguri e conferma che il consenso alle comunicazioni commerciali sia raccolto e registrato per ogni cliente",
           "come_attivare": "Scrivi il testo e dimmi quando metterlo in funzione: va collegato all'invio delle email del tenant e limitato ai clienti con «Comunicazioni commerciali» spuntato."
@@ -2030,9 +2030,17 @@
               "da": "da_attivare",
               "a": "messaggio_cliente"
             },
+            "label": {
+              "da": "Auguri al cliente",
+              "a": "Auguri al cliente / comunicazioni varie"
+            },
+            "icon": {
+              "da": "gift",
+              "a": "mail"
+            },
             "descrizione": {
               "da": "Manda gli auguri di compleanno ai clienti che hanno dato il consenso alle comunicazioni commerciali",
-              "a": "Manda ora gli auguri di compleanno a questo cliente (mail e/o SMS) se ha dato il consenso alle comunicazioni commerciali"
+              "a": "Scegli il tipo di messaggio (auguri, ringraziamento, promemoria, testo libero) e mandalo a questo cliente (mail e/o SMS) se ha dato il consenso alle comunicazioni commerciali"
             }
           }
         }
