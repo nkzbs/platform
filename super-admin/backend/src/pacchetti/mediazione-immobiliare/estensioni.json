@@ -2484,6 +2484,7 @@
             "Codice fiscale",
             "Attualità della residenza",
             "Atto di provenienza (venditore)",
+            "Documenti urbanistici e catastali",
             "Atto di matrimonio (acquirente, facoltativo)",
             "Privacy e incarico firmato",
             "Antiriciclaggio firmato",
@@ -3552,6 +3553,175 @@
           "label": "Finalità dell’investimento — altro",
           "type": "text",
           "sezione": "Rapporto, reddito e fondi"
+        }
+      ]
+    },
+    {
+      "key": "stato_civile_dettaglio",
+      "_nota": "Lo stato civile conta soprattutto per chi vende: il regime patrimoniale si mostra solo se il cliente è Coniugato/a o Unito/a civilmente (per gli altri non ha senso), e se è in comunione dei beni compaiono nome e codice fiscale del coniuge, che deve firmare anche lui. Sui tenant esistenti le condizioni si impostano solo dove mancano.",
+      "richiede": {
+        "clienti": [
+          "stato_civile",
+          "regime_patrimoniale"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "coniuge_nome",
+          "label": "Coniuge — cognome e nome",
+          "type": "text",
+          "sezione": "Anagrafica",
+          "visible_if": {
+            "enabled": true,
+            "field": "regime_patrimoniale",
+            "op": "==",
+            "value": "Comunione dei beni"
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "coniuge_codice_fiscale",
+          "label": "Coniuge — codice fiscale",
+          "type": "text",
+          "sezione": "Anagrafica",
+          "visible_if": {
+            "enabled": true,
+            "field": "regime_patrimoniale",
+            "op": "==",
+            "value": "Comunione dei beni"
+          }
+        }
+      ],
+      "imposta": [
+        {
+          "block_type": "field",
+          "key": "regime_patrimoniale",
+          "proprieta": {
+            "visible_if": {
+              "enabled": true,
+              "field": "stato_civile",
+              "op": "in",
+              "value": "Coniugato/a|Unito/a civilmente"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "key": "professionista_riferimento",
+      "_nota": "Il professionista che segue il cliente (geometra, notaio, commercialista…): nome, contatto e mail, in una sezione della scheda.",
+      "richiede": {
+        "clienti": [
+          "nome"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "professionista_nome",
+          "label": "Professionista di riferimento — nome",
+          "type": "text",
+          "sezione": "Professionista di riferimento"
+        },
+        {
+          "block_type": "field",
+          "key": "professionista_contatto",
+          "label": "Professionista di riferimento — contatto (telefono)",
+          "type": "text",
+          "sezione": "Professionista di riferimento"
+        },
+        {
+          "block_type": "field",
+          "key": "professionista_email",
+          "label": "Professionista di riferimento — mail",
+          "type": "email",
+          "sezione": "Professionista di riferimento"
+        }
+      ]
+    },
+    {
+      "key": "consensi_sola_lettura",
+      "_nota": "I consensi privacy e i dati della firma si scrivono solo quando il cliente firma l'informativa (carica del documento firmato), non a mano: nella scheda si vedono ma non si modificano. `sola_lettura` si imposta solo dove manca.",
+      "richiede": {
+        "clienti": [
+          "nome"
+        ]
+      },
+      "imposta": [
+        {
+          "block_type": "field",
+          "key": "consenso_marketing",
+          "proprieta": {
+            "sola_lettura": true
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "consenso_terzi",
+          "proprieta": {
+            "sola_lettura": true
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "privacy_firmata_il",
+          "proprieta": {
+            "sola_lettura": true
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "privacy_versione",
+          "proprieta": {
+            "sola_lettura": true
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "conservazione_fino_al",
+          "proprieta": {
+            "sola_lettura": true
+          }
+        }
+      ]
+    },
+    {
+      "key": "allegati_urbanistici",
+      "_nota": "Aggiunge ai tipi di allegato del cliente «Documenti urbanistici e catastali» (per chi vende: visure, planimetrie, conformità). L'elenco si cambia solo se è ancora quello di prima: un elenco scelto dall'agenzia non si tocca.",
+      "richiede": {
+        "clienti": [
+          "nome"
+        ]
+      },
+      "riscrivi": [
+        {
+          "block_type": "allegati",
+          "proprieta": {
+            "types": {
+              "da": [
+                "Documento di identità",
+                "Codice fiscale",
+                "Attualità della residenza",
+                "Atto di provenienza (venditore)",
+                "Atto di matrimonio (acquirente, facoltativo)",
+                "Privacy e incarico firmato",
+                "Antiriciclaggio firmato",
+                "Altro"
+              ],
+              "a": [
+                "Documento di identità",
+                "Codice fiscale",
+                "Attualità della residenza",
+                "Atto di provenienza (venditore)",
+                "Documenti urbanistici e catastali",
+                "Atto di matrimonio (acquirente, facoltativo)",
+                "Privacy e incarico firmato",
+                "Antiriciclaggio firmato",
+                "Altro"
+              ]
+            }
+          }
         }
       ]
     }

@@ -476,8 +476,10 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
   const canDelete = canDo('delete')
 
   const visibleEditableFields = editableFields.filter((f) => {
+    if (f.sola_lettura) return false // consensi privacy: li conferma solo la firma
     if (!f.visible_if || !f.visible_if.enabled || !f.visible_if.field) return true
     const v = String(form[f.visible_if.field] ?? '')
+    if (f.visible_if.op === 'in') return String(f.visible_if.value).split('|').includes(v) // più valori separati da | (es. «Coniugato/a|Unito/a civilmente»)
     return f.visible_if.op === '!=' ? v !== String(f.visible_if.value) : v === String(f.visible_if.value)
   })
 

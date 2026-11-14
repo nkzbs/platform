@@ -720,7 +720,9 @@ router.post('/:slug', requireAuth, requireModuleAccess, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const rule = ruleFor(schema, req.user.role);
   if (rule && !rule.create) return res.status(403).json({ error: 'Non hai i permessi per creare record in questo modulo' });
-  const withDefaults = applicaEredita(db, schema, applyDefaults(req.body, schema.fields));
+  // Campi di sola lettura (`sola_lettura`: es. i consensi privacy, che si confermano solo firmando): non si scrivono a mano, nascono vuoti.
+  const corpoCreazione = { ...(req.body || {}) }; for (const f of schema.fields || []) if (f.sola_lettura) delete corpoCreazione[f.key];
+  const withDefaults = applicaEredita(db, schema, applyDefaults(corpoCreazione, schema.fields));
   const uniqueError = checkUnique(req.params.slug, schema.fields, withDefaults, null);
   if (uniqueError) return res.status(400).json(uniqueError);
   const campoError = controllaValidazioni(schema.fields, withDefaults);
@@ -870,6 +872,7 @@ router.put('/:slug/:id', requireAuth, requireModuleAccess, (req, res) => {
   const beforeData = JSON.parse(existing.data);
 
   const corpo = applicaEredita(db, schema, req.body);
+  for (const f of schema.fields || []) if (f.sola_lettura) { if (beforeData[f.key] === undefined) delete corpo[f.key]; else corpo[f.key] = beforeData[f.key]; } // sola lettura: resta com'è (lo cambia solo la firma)
   const uniqueError = checkUnique(req.params.slug, schema.fields, corpo, req.params.id);
   if (uniqueError) return res.status(400).json(uniqueError);
   const campoError = controllaValidazioni(schema.fields, corpo, beforeData);

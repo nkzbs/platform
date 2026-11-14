@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.39 — Scheda cliente: stato civile, professionista, allegati urbanistici, consensi alla firma
+
+- **Consensi privacy di sola lettura**: «Consenso comunicazioni commerciali», «Consenso partner e portali», «Privacy firmata il», «Versione» e «Conserva fino al» non si scrivono più a mano: si vedono nella scheda ma li registra solo la firma dell'informativa (carica del documento firmato). Primitiva generale del core: proprietà `sola_lettura` su un campo (il server la fa rispettare: alla creazione il campo nasce vuoto, in modifica non cambia), fuori dai moduli di inserimento e di modifica.
+- **Stato civile**: il regime patrimoniale compare solo se il cliente è Coniugato/a o Unito/a civilmente; se è in comunione dei beni compaiono nome e codice fiscale del coniuge (deve firmare anche lui). Nuovo operatore `in` di `visible_if` (più valori separati da `|`).
+- **Professionista di riferimento**: nome, contatto e mail, in una sezione della scheda cliente.
+- **Allegati del cliente**: nuovo tipo «Documenti urbanistici e catastali». `riscrivi` ora riconosce anche i blocchi senza chiave (gli allegati) e confronta gli elenchi per contenuto: un elenco cambiato dall'agenzia non si tocca.
+- La verifica del soggetto (a pagamento) resta manuale. Pacchetto 31.
+
 ## 0.5.38 — I moduli PDF combaciano con le schede del sistema
 
 I moduli originali dell'agenzia e i campi del sistema sono la stessa cosa: ogni voce dei moduli è un campo del Clienti o dell'Immobili, così un modulo che il cliente compila a mano si riporta nella scheda voce per voce (e viceversa). Una descrizione sola (`scripts/genera-mappe-moduli-pdf.js`) genera sia i campi sia la mappa dei PDF; il test `modelli-pdf.test.js` verifica che ogni voce citi un campo esistente e ogni casella una scelta esistente (ha già trovato e corretto 4 scelte della scheda scritte diversamente).

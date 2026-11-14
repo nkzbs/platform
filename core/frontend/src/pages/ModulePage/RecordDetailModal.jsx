@@ -257,6 +257,14 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   const relations = (schema && schema.relations) || []
   const m2mRelations = relations.filter((r) => r.type === 'many_to_many')
   const editableFields = fields.filter((f) => f.type !== 'computed')
+  // In modifica: i campi di sola lettura (consensi privacy: li conferma la firma) non si toccano, e un campo con `visible_if` compare solo se la condizione vale (op '==', '!=', 'in' = uno tra più valori separati da |).
+  const campoVisibile = (f, form) => {
+    if (f.sola_lettura) return false
+    if (!f.visible_if || !f.visible_if.enabled || !f.visible_if.field) return true
+    const v = String(form[f.visible_if.field] ?? '')
+    if (f.visible_if.op === 'in') return String(f.visible_if.value).split('|').includes(v)
+    return f.visible_if.op === '!=' ? v !== String(f.visible_if.value) : v === String(f.visible_if.value)
+  }
   const workflow = schema && schema.workflow
 
   const loadM2mLinks = (relKey, targetModule) => {
@@ -552,7 +560,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
           <>
             {saveError && <div className="bg-red-900/30 text-red-400 text-xs p-3 rounded-lg mb-3 border border-red-900/50">{saveError}</div>}
             <div className="space-y-3 mb-5">
-              <CampiPerSezioni campi={editableFields} valori={editForm} renderCampo={(f) => (
+              <CampiPerSezioni campi={editableFields.filter((f) => campoVisibile(f, editForm))} valori={editForm} renderCampo={(f) => (
                 <div key={f.key}>
                   <label className="text-xs text-gray-400 block mb-1">{f.label}{f.required && ' *'}</label>
                   <FieldEditorInput f={f} value={editForm[f.key]} onChange={(v) => setEditForm({ ...editForm, [f.key]: v })} uploading={uploading[f.key]} onUploadFile={(file) => uploadFileInModal(f.key, file)} />

@@ -48,27 +48,32 @@
         {
           "key": "consenso_marketing",
           "label": "Consenso comunicazioni commerciali",
-          "type": "checkbox"
+          "type": "checkbox",
+          "sola_lettura": true
         },
         {
           "key": "consenso_terzi",
           "label": "Consenso comunicazione a partner e portali",
-          "type": "checkbox"
+          "type": "checkbox",
+          "sola_lettura": true
         },
         {
           "key": "privacy_firmata_il",
           "label": "Privacy firmata il",
-          "type": "date"
+          "type": "date",
+          "sola_lettura": true
         },
         {
           "key": "privacy_versione",
           "label": "Versione informativa firmata",
-          "type": "text"
+          "type": "text",
+          "sola_lettura": true
         },
         {
           "key": "conservazione_fino_al",
           "label": "Conserva i dati fino al",
-          "type": "date"
+          "type": "date",
+          "sola_lettura": true
         }
       ],
       "recipient": "email"
