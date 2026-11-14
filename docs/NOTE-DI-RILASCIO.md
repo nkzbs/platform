@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.37 — Moduli originali dell'agenzia da firmare; comunicazioni al cliente
+
+**Moduli PDF compilabili.** I documenti da firmare di Mediazione immobiliare usano i **moduli originali** dell'agenzia (PDF con campi, grafica Zucca&Partners): «Scheda valutazione — acquisizione immobile», «Contratto di incarico di mediazione» (nuovo documento su Immobili), «Modulo di adeguata verifica della clientela» (italiano e inglese). Il record li compila (dati dei proprietari, immobile, dati catastali, caselle spuntate dagli elenchi, agenzia dai dati del tenant); ciò che il record non conosce resta da compilare a mano o al computer. Si scaricano compilabili; nel pacchetto per la firma con codice entrano appiattiti, con la pagina «Firma» in fondo. Il foglio compilato si conserva con la richiesta: chi firma vede ciò che gli è stato mandato anche se la scheda cambia. Un modulo compilato al computer si può rileggere (`modulo-pdf.leggi`): i valori tornano ai campi del record (caricamento in scheda: da collegare).
+- Generico: `pdf_modello` su un documento da modello + archivio `modelli_pdf` nel tenant (`PUT /api/modelli-pdf/:chiave`). Il pacchetto porta i file in `moduli-pdf/` (PDF + mappa dei campi); Super Admin li invia prima del pacchetto. Pacchetto Mediazione immobiliare 28.
+- Non ancora: «Provvigione %» e «Penale %» del contratto sono righe di testo nel PDF, non campi (restano a mano); il modulo inglese è installato ma non collegato a un documento; Adeguata verifica si precompila solo con l'anagrafica.
+
+**Comunicazioni al cliente.** «Auguri al cliente» diventa «Auguri al cliente / comunicazioni varie»: apre una finestra con il menu «Tipo di messaggio» (libero, generico, compleanno, Natale, Pasqua, ringraziamento, promemoria, aggiornamento sulla pratica) che compila oggetto e testo, poi anteprima e invio con le stesse regole di consenso e tetto.
+
 ## 0.5.36 — Sfondo minimal per sezione, tessere con motivo
 
 Ogni pagina di modulo ha il suo sfondo: alone del colore del modulo in basso a destra, motivo a punti che sfuma verso l'alto e l'icona del modulo grande e trasparente (`GlassPageBackground` con `colore`/`icona`, stile in `index.css`; più leggero nel tema chiaro). Un modulo nuovo lo ha da solo, usa il colore e l'icona già scelti. Nessuna immagine da caricare. Le altre pagine (Dashboard, Libreria, Impostazioni…) restano con il marchio Platform. Le tessere dei moduli in Libreria (tenant e Super Admin) hanno lo stesso motivo a punti e l'icona grande, così non restano vuote senza descrizione. Visto nel browser in locale (tema scuro, desktop); il tema chiaro e il telefono per lo sfondo di sezione non sono stati guardati.

@@ -1,0 +1,115 @@
+{
+ "titolo": "Contratto di incarico di mediazione",
+ "file": "contratto-incarico.pdf",
+ "_nota": "Mappa dei campi compilabili del PDF: `testo` = modello con segnaposto, `chiave`+`valore` = casella spuntata se il campo vale quel valore (@vuoto/@pieno per assente/presente). I campi non elencati restano da compilare a mano.",
+ "campi": [
+  {
+   "campo": "Campo testo 4",
+   "testo": "{{proprietario.nome|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 7",
+   "testo": "{{proprietario.codice_fiscale_piva|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 5",
+   "testo": "{{proprietario.data_nascita|vuoto}} {{proprietario.luogo_nascita|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 8",
+   "testo": "{{proprietario.telefono|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 6",
+   "testo": "{{proprietario.residenza|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 108",
+   "chiave": "comproprietario_2",
+   "valore": "@vuoto"
+  },
+  {
+   "campo": "Casella di controllo 109",
+   "chiave": "comproprietario_2",
+   "valore": "@pieno"
+  },
+  {
+   "campo": "Campo testo 105",
+   "testo": "{{@azienda|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 106",
+   "testo": "{{@piva|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 11",
+   "testo": "{{@indirizzo|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 10",
+   "testo": "{{agente_acquisitore|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 107",
+   "testo": "{{indirizzo|vuoto}} {{numero_civico|vuoto}}, {{cap|vuoto}} {{comune|vuoto}} {{provincia|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 108",
+   "testo": "{{foglio_catastale|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 109",
+   "testo": "{{particella_catastale|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 1010",
+   "testo": "{{subalterno_catastale|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 1011",
+   "testo": "{{categoria_catastale|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 1015",
+   "testo": "{{rendita_catastale|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 1013",
+   "testo": "{{superficie_mq|vuoto}} mq, {{totale_vani|vuoto}} vani"
+  },
+  {
+   "campo": "Campo testo 1014",
+   "testo": "{{pertinenze_box|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 116",
+   "testo": "{{classe_energetica|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 117",
+   "testo": "{{valore_ipe|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 119",
+   "testo": "{{prezzo_richiesto|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 128",
+   "chiave": "tipologia_incarico",
+   "valore": "Esclusiva"
+  },
+  {
+   "campo": "Casella di controllo 129",
+   "chiave": "tipologia_incarico",
+   "valore": "Non esclusiva"
+  },
+  {
+   "campo": "Campo testo 104",
+   "testo": "{{@oggi}}"
+  },
+  {
+   "campo": "Campo testo 1016",
+   "testo": "{{comune|vuoto}}"
+  }
+ ]
+}

@@ -1156,6 +1156,14 @@ router.post('/:slug/:id/documento/:key/pdf', requireAuth, requireAdmin, requireM
   const ctx = contestoDocumento(req);
   if (ctx.errore) return res.status(ctx.errore[0]).json({ error: ctx.errore[1] });
   const { corpo } = req.body || {};
+  if (ctx.azione.pdf_modello) { // il modulo originale dell'azienda, compilato con i dati del record (resta compilabile a mano)
+    try {
+      const { buffer } = await require('../lib/modelli-pdf').compilaPer(ctx.azione.pdf_modello, ctx.get);
+      logAudit(req.user.username, 'record.scarica_documento', req.params.slug + '#' + ctx.record.id, { documento: ctx.azione.key, modello_pdf: ctx.azione.pdf_modello });
+      res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="' + ctx.azione.key + '-' + ctx.record.id + '.pdf"', 'Cache-Control': 'no-store' });
+      return res.send(buffer);
+    } catch (e) { return res.status(e.status || 500).json({ error: e.status ? e.message : 'Creazione del PDF non riuscita' }); }
+  }
   if (typeof corpo !== 'string' || !corpo.trim()) return res.status(400).json({ error: 'Testo del documento mancante' });
   try {
     const identita = await require('../lib/identita-pdf').caricaIdentita(db);

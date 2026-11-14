@@ -52,7 +52,9 @@ admin.post('/:slug/:id/richieste', requireAuth, requireAdmin, requireModuleAcces
         firmatari.push({ email, nome, telefono: tel });
       }
       if (!percorsi.length) { const e = indirizzoDelRecord(ctx.schema, ctx.record); if (e) firmatari.push({ email: e, nome: risolviDestinatario('nome', ctx.get), telefono: risolviDestinatario('telefono', ctx.get) }); }
-      documenti.push({ key: a.key, label: a.label || a.key, corpo: renderModello(a.body, ctx.get), consensi: (a.consents || []).map((c) => ({ field: c.field, label: c.label })) });
+      let foglio = null; // con un modulo PDF: il foglio compilato si conserva con la richiesta (chi firma vede ciò che gli è stato mandato)
+      if (a.pdf_modello) { try { foglio = (await require('../lib/modelli-pdf').compilaPer(a.pdf_modello, ctx.get)).campi; } catch (e) { return res.status(e.status || 500).json({ error: e.message }); } }
+      documenti.push({ key: a.key, label: a.label || a.key, corpo: renderModello(a.body, ctx.get), ...(foglio ? { pdf_modello: a.pdf_modello, foglio } : {}), consensi: (a.consents || []).map((c) => ({ field: c.field, label: c.label })) });
     }
     const out = await firma.inviaGruppo({ slug, id: Number(id), documenti, firmatari, utente: req.user.username, linkBase: String((req.body && req.body.link_base) || '').replace(/\/+$/, ''), canali: Array.isArray(req.body && req.body.canali) ? req.body.canali : [] });
     logAudit(req.user.username, 'firma.richiesta', slug + '#' + id, { documenti: documenti.map((d) => d.key), email: out.inviati.map((x) => x.destinatario) });

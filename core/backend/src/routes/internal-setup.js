@@ -71,6 +71,15 @@ router.post('/seed', async (req, res) => {
   catch (e) { res.status(500).json({ error: 'Seed del verticale non applicati: ' + e.message }); }
 });
 
+// Un modello PDF compilabile del pacchetto (il modulo originale dell'azienda con la mappa dei suoi campi): arriva a parte perché pesa, prima del pacchetto che lo cita.
+router.put('/modelli-pdf/:chiave', async (req, res) => {
+  try {
+    const b = req.body || {};
+    const r = await require('../lib/modelli-pdf').salva({ chiave: req.params.chiave, titolo: b.titolo, pdf: Buffer.from(String(b.pdf_base64 || ''), 'base64'), mappa: b.mappa });
+    res.json({ ok: true, ...r });
+  } catch (e) { res.status(e.status || 500).json({ error: e.status ? e.message : 'Modello PDF non installato' }); }
+});
+
 // Riceve un pacchetto di verticale da Super Admin (dati dei moduli di un settore: `{ slug, versione, parti }`), lo tiene nel tenant e lo applica. Senza `parti` riattiva e
 // riapplica un pacchetto già ricevuto. Un pacchetto sconosciuto è un errore chiaro (404), non un silenzio; ripetere la chiamata non fa danni.
 router.post('/pacchetto', async (req, res) => {

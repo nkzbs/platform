@@ -23,10 +23,22 @@ function leggi(slug) {
 }
 const elenco = () => disponibili().map((s) => { const p = leggi(s); return { slug: p.slug, nome: p.nome, descrizione: p.descrizione, versione: p.versione }; });
 
+// I modelli PDF compilabili del pacchetto: cartella `moduli-pdf/` con, per ognuno, `<chiave>.pdf` (il modulo con i suoi campi) e `<chiave>.json` (titolo e mappa dei campi).
+function modelliPdf(slug) {
+  const dir = path.join(CARTELLA, slug, 'moduli-pdf'); const out = [];
+  let nomi = []; try { nomi = fs.readdirSync(dir).filter((f) => f.endsWith('.json')).sort(); } catch (e) { return out; }
+  for (const f of nomi) {
+    const chiave = f.slice(0, -5);
+    try { const m = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')); out.push({ chiave, titolo: m.titolo || chiave, mappa: { campi: m.campi || [] }, pdf_base64: fs.readFileSync(path.join(dir, m.file || chiave + '.pdf')).toString('base64') }); } catch (e) { /* un modello illeggibile si salta: il pacchetto parte lo stesso */ }
+  }
+  return out;
+}
+
 // Invia un pacchetto a un tenant (che lo riceve, lo attiva e lo applica). Errore chiaro se il pacchetto non esiste qui.
 async function invia(tenantSlug, slug) {
   const p = leggi(slug);
   if (!p) throw new Error('Pacchetto «' + String(slug).slice(0, 60) + '» sconosciuto a Super Admin (disponibili: ' + (disponibili().join(', ') || 'nessuno') + ')');
+  for (const m of modelliPdf(slug)) await require('./tenant-api-client').callTenantAPI(tenantSlug, 'PUT', '/api/internal-setup/modelli-pdf/' + m.chiave, { titolo: m.titolo, mappa: m.mappa, pdf_base64: m.pdf_base64 });
   return require('./tenant-api-client').callTenantAPI(tenantSlug, 'POST', '/api/internal-setup/pacchetto', { slug: p.slug, versione: p.versione, parti: p.parti });
 }
 
@@ -45,4 +57,4 @@ async function sincronizza(tenantSlug) {
   return { inviati };
 }
 
-module.exports = { disponibili, leggi, elenco, invia, sincronizza, PARTI };
+module.exports = { modelliPdf, disponibili, leggi, elenco, invia, sincronizza, PARTI };

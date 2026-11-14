@@ -139,7 +139,7 @@ function badge(doc, x, y, lato, nome, colore, tipo) {
 // → Promise<Buffer>
 // `documenti` (facoltativo): più documenti nello stesso PDF, ognuno su pagine nuove, per la firma con codice (un solo file, una sola firma). `paginaFirma`: aggiunge in fondo una pagina «Firma»
 // con l'elenco dei documenti e lo spazio per la firma; ritorna anche quante pagine ha il PDF dietro `creaPdfPacchetto`.
-function creaPdf({ titolo, corpo, azienda, logo = null, etichetta = 'Documento', riquadroFirma = true, piePagina = '', numero = '', documenti = null, paginaFirma = false }) {
+function creaPdf({ titolo, corpo, azienda, logo = null, etichetta = 'Documento', riquadroFirma = true, piePagina = '', numero = '', documenti = null, paginaFirma = false, soloPaginaFirma = false }) {
   const az = typeof azienda === 'string' ? { nome: azienda } : (azienda || {});
   const colore = coloreValido(az.colore);
   const vivo = accento(colore), bordo = tinta(vivo, 0.3), chiaro = tinta(vivo, 0.14), chiaro2 = tinta(vivo, 0.24);
@@ -327,12 +327,12 @@ function creaPdf({ titolo, corpo, azienda, logo = null, etichetta = 'Documento',
     };
 
     const elenco = documenti && documenti.length ? documenti : [{ titolo, corpo, riquadroFirma }];
-    elenco.forEach((d, i) => {
+    if (!soloPaginaFirma) elenco.forEach((d, i) => {
       if (i > 0) { doc.addPage(); intestazione(doc, { azienda: az, logo, etichetta, numero, data: dataOggi }); }
       scrivi(d.titolo, d.corpo, d.riquadroFirma !== undefined ? d.riquadroFirma : riquadroFirma);
     });
     if (paginaFirma) {
-      doc.addPage(); intestazione(doc, { azienda: az, logo, etichetta, numero, data: dataOggi });
+      if (!soloPaginaFirma) { doc.addPage(); intestazione(doc, { azienda: az, logo, etichetta, numero, data: dataOggi }); } // con i soli moduli già nel PDF la prima pagina è già quella della firma
       doc.font(FONT_TITOLO).fontSize(24).fillColor(TESTO).text('Firma', M, ALTEZZA_FASCIA + 22, { width: W });
       doc.roundedRect(M, doc.y + 6, 46, 4, 2).fill(vivo); doc.y += 26;
       doc.font('Helvetica').fontSize(11).fillColor('#1c1917').text('Con la firma qui sotto il sottoscritto conferma di aver letto e di accettare i documenti seguenti, che precedono questa pagina:', M, doc.y, { width: W, lineGap: 2 });
@@ -346,8 +346,9 @@ function creaPdf({ titolo, corpo, azienda, logo = null, etichetta = 'Documento',
 }
 
 // Il PDF unico con tutti i documenti più la pagina «Firma»: { buffer, pagine } (la pagina della firma è l'ultima).
-async function creaPdfPacchetto({ documenti, azienda, logo = null, etichetta = 'Documenti da firmare', numero = '' }) {
-  const buffer = await creaPdf({ titolo: 'Documenti da firmare', corpo: '', azienda, logo, etichetta, piePagina: etichetta, numero, documenti: documenti.map((d) => ({ ...d, riquadroFirma: false })), paginaFirma: true });
+async function creaPdfPacchetto({ documenti, azienda, logo = null, etichetta = 'Documenti da firmare', numero = '', soloFirma = null }) {
+  // `soloFirma`: [{ titolo }] i documenti sono già nel PDF (moduli originali): si crea la sola pagina «Firma» con il loro elenco.
+  const buffer = await creaPdf({ titolo: 'Documenti da firmare', corpo: '', azienda, logo, etichetta, piePagina: etichetta, numero, documenti: (soloFirma || documenti).map((d) => ({ ...d, riquadroFirma: false })), paginaFirma: true, soloPaginaFirma: !!soloFirma });
   return { buffer, pagine: (buffer.toString('latin1').match(/\/Type \/Page\b/g) || []).length };
 }
 

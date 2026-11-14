@@ -83,6 +83,7 @@ async function pubblica(token) {
 async function pdf(token, key) {
   const r = riga(token); if (motivoNonValida(r)) throw err(motivoNonValida(r), 410);
   const d = JSON.parse(r.documenti).find((x) => x.key === key); if (!d) throw err('Documento non trovato.', 404);
+  if (d.pdf_modello) return { nome: d.key + '.pdf', buffer: await require('./modelli-pdf').dalFoglio(d.pdf_modello, d.foglio) }; // il modulo originale compilato, ancora compilabile a mano
   const identita = await require('./identita-pdf').caricaIdentita(db);
   return { nome: d.key + '.pdf', buffer: await require('./documento-pdf').creaPdf({ titolo: d.label || 'Documento', corpo: d.corpo, ...identita, riquadroFirma: true, piePagina: d.label || '', numero: new Date(r.creata_il.replace(' ', 'T') + 'Z').getUTCFullYear() + '-' + String(r.id).padStart(4, '0') }) };
 }
@@ -231,6 +232,19 @@ async function linkFirma(r) {
   try { const det = await require('./openapi-it').chiama({ dominio: 'esignature', percorso: '/signatures/' + r.esign_id + '/detail', scopi: [['POST', '/EU-SES'], ['GET', '/signatures']] }); return linkEsign(det && det.data); } catch (e) { return null; }
 }
 
+// Il PDF unico da firmare con codice. Solo testi: come sempre. Se qualche documento è un modulo PDF, quei moduli entrano appiattiti (testo stampato, non più campi)
+// nell'ordine dei documenti, e la pagina «Firma» (con l'elenco) chiude il pacchetto.
+async function pacchettoDaFirmare(docs, identita, numero) {
+  const documentoPdf = require('./documento-pdf');
+  if (!docs.some((d) => d.pdf_modello)) return documentoPdf.creaPdfPacchetto({ documenti: docs.map((d) => ({ titolo: d.label, corpo: d.corpo })), ...identita, numero });
+  const modulo = require('./modulo-pdf'), modelli = require('./modelli-pdf');
+  const pezzi = [];
+  for (const d of docs) pezzi.push(d.pdf_modello ? await modelli.dalFoglio(d.pdf_modello, d.foglio, { appiattisci: true }) : await documentoPdf.creaPdf({ titolo: d.label || 'Documento', corpo: d.corpo, ...identita, riquadroFirma: false, piePagina: d.label || '', numero }));
+  const firma = await documentoPdf.creaPdfPacchetto({ documenti: [], ...identita, numero, soloFirma: docs.map((d) => ({ titolo: d.label })) });
+  const buffer = await modulo.unisci([...pezzi, firma.buffer]);
+  return { buffer, pagine: await modulo.contaPagine(buffer) };
+}
+
 async function avviaCodice(token, { consensi, autenticazione, ip }) {
   const r = riga(token), motivo = motivoNonValida(r); if (motivo) throw err(motivo, 410);
   if (r.stato !== 'inviata') throw err('La firma con codice è già stata avviata.', 409);
@@ -246,7 +260,7 @@ async function avviaCodice(token, { consensi, autenticazione, ip }) {
   const identita = await require('./identita-pdf').caricaIdentita(db);
   const numero = new Date(r.creata_il.replace(' ', 'T') + 'Z').getUTCFullYear() + '-' + String(r.id).padStart(4, '0');
   const docs = JSON.parse(r.documenti);
-  const pk = await require('./documento-pdf').creaPdfPacchetto({ documenti: docs.map((d) => ({ titolo: d.label, corpo: d.corpo })), ...identita, numero });
+  const pk = await pacchettoDaFirmare(docs, identita, numero);
   const corpo = {
     title: ('Documenti da firmare' + (agenzia() ? ' — ' + agenzia() : '')).slice(0, 120),
     signers: [{ name, surname, ...(auth === 'email' ? { email: r.destinatario } : { mobile }), authentication: [auth], signatures: [{ page: pk.pagine, x: 60, y: 60 }] }],
@@ -344,4 +358,4 @@ function avviaSolleciti() {
   console.log('Solleciti delle richieste di firma: controllo ogni ora (dopo 3 e 7 giorni, scadenza a 14)');
 }
 
-module.exports = { controllaRichiesta, whatsappDi, inviaGruppo, avviaCodice, controllaDaPagina, controllaFirmeInCorso, controllaCodice, crea, invia, pubblica, pdf, completa, elenco, annulla, sollecita, eseguiSolleciti, avviaSolleciti, motivoNonValida, GIORNI_VALIDITA };
+module.exports = { pacchettoDaFirmare, controllaRichiesta, whatsappDi, inviaGruppo, avviaCodice, controllaDaPagina, controllaFirmeInCorso, controllaCodice, crea, invia, pubblica, pdf, completa, elenco, annulla, sollecita, eseguiSolleciti, avviaSolleciti, motivoNonValida, GIORNI_VALIDITA };

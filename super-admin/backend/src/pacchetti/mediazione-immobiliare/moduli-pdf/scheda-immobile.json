@@ -1,0 +1,832 @@
+{
+ "titolo": "Scheda valutazione — acquisizione immobile",
+ "file": "scheda-immobile.pdf",
+ "_nota": "Mappa dei campi compilabili del PDF: `testo` = modello con segnaposto, `chiave`+`valore` = casella spuntata se il campo vale quel valore (@vuoto/@pieno per assente/presente). I campi non elencati restano da compilare a mano.",
+ "campi": [
+  {
+   "campo": "Data visita e ubicazione immobile",
+   "testo": "{{data_sopralluogo|vuoto}} {{indirizzo|vuoto}}"
+  },
+  {
+   "campo": "Agente",
+   "testo": "{{agente_acquisitore|vuoto}}"
+  },
+  {
+   "campo": "Tel Mail",
+   "testo": "{{agente_contatto|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 4",
+   "testo": "{{proprietario.nome|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 7",
+   "testo": "{{proprietario.codice_fiscale_piva|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 5",
+   "testo": "{{proprietario.data_nascita|vuoto}} {{proprietario.luogo_nascita|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 8",
+   "testo": "{{proprietario.stato_civile|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 6",
+   "testo": "{{proprietario.residenza|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 11",
+   "testo": "{{proprietario.email|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 9",
+   "testo": "{{proprietario.telefono|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 10",
+   "testo": "{{quota_proprietario|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 77",
+   "testo": "{{comproprietario_2.nome|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 78",
+   "testo": "{{comproprietario_2.codice_fiscale_piva|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 79",
+   "testo": "{{comproprietario_2.data_nascita|vuoto}} {{comproprietario_2.luogo_nascita|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 80",
+   "testo": "{{comproprietario_2.stato_civile|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 81",
+   "testo": "{{comproprietario_2.residenza|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 83",
+   "testo": "{{comproprietario_2.email|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 84",
+   "testo": "{{comproprietario_2.telefono|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 82",
+   "testo": "{{quota_comproprietario_2|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 85",
+   "testo": "{{comproprietario_3.nome|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 86",
+   "testo": "{{comproprietario_3.codice_fiscale_piva|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 87",
+   "testo": "{{comproprietario_3.data_nascita|vuoto}} {{comproprietario_3.luogo_nascita|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 88",
+   "testo": "{{comproprietario_3.stato_civile|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 89",
+   "testo": "{{comproprietario_3.residenza|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 91",
+   "testo": "{{comproprietario_3.email|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 92",
+   "testo": "{{comproprietario_3.telefono|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 90",
+   "testo": "{{quota_comproprietario_3|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 28",
+   "testo": "{{indirizzo|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 30",
+   "testo": "{{numero_civico|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 32",
+   "testo": "{{interno|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 33",
+   "testo": "{{cap|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 36",
+   "testo": "{{comune|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 29",
+   "testo": "{{zona_quartiere|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 31",
+   "testo": "{{localita|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 34",
+   "testo": "{{piano|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 35",
+   "testo": "{{piani_totali|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 3",
+   "chiave": "contesto_stabile",
+   "valore": "Signorile"
+  },
+  {
+   "campo": "Casella di controllo 2",
+   "chiave": "contesto_stabile",
+   "valore": "Medio"
+  },
+  {
+   "campo": "Casella di controllo 1",
+   "chiave": "contesto_stabile",
+   "valore": "Popolare"
+  },
+  {
+   "campo": "Casella di controllo 5",
+   "chiave": "stato_edificio",
+   "valore": "Ottimo"
+  },
+  {
+   "campo": "Casella di controllo 6",
+   "chiave": "stato_edificio",
+   "valore": "Buono"
+  },
+  {
+   "campo": "Casella di controllo 7",
+   "chiave": "stato_edificio",
+   "valore": "Da ristrutturare"
+  },
+  {
+   "campo": "Campo testo 39",
+   "testo": "{{anno_costruzione|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 38",
+   "testo": "{{anno_ristrutturazione|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 37",
+   "testo": "{{numero_unita_condominio|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 9",
+   "chiave": "ascensore",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Casella di controllo 8",
+   "chiave": "portineria",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Casella di controllo 4",
+   "chiave": "assenza_barriere_architettoniche",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Campo testo 40",
+   "testo": "{{tipologia|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 41",
+   "testo": "{{superficie_mq|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 42",
+   "testo": "{{totale_vani|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 43",
+   "testo": "{{stato_interno|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 10",
+   "chiave": "composizione_vani",
+   "valore": "Ingresso"
+  },
+  {
+   "campo": "Casella di controllo 11",
+   "chiave": "composizione_vani",
+   "valore": "Soggiorno"
+  },
+  {
+   "campo": "Casella di controllo 12",
+   "chiave": "composizione_vani",
+   "valore": "Cucina separata"
+  },
+  {
+   "campo": "Casella di controllo 13",
+   "chiave": "composizione_vani",
+   "valore": "Cucina a vista"
+  },
+  {
+   "campo": "Casella di controllo 14",
+   "chiave": "composizione_vani",
+   "valore": "Cucina abitabile"
+  },
+  {
+   "campo": "Casella di controllo 15",
+   "chiave": "composizione_vani",
+   "valore": "Cucinotto"
+  },
+  {
+   "campo": "Casella di controllo 16",
+   "chiave": "composizione_vani",
+   "valore": "Corridoio"
+  },
+  {
+   "campo": "Casella di controllo 17",
+   "chiave": "composizione_vani",
+   "valore": "Ripostiglio"
+  },
+  {
+   "campo": "Casella di controllo 18",
+   "chiave": "composizione_vani",
+   "valore": "Veranda"
+  },
+  {
+   "campo": "Campo testo 46",
+   "testo": "{{numero_camere|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 45",
+   "testo": "{{numero_bagni|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 19",
+   "chiave": "sfogo_esterno",
+   "valore": "Balcone"
+  },
+  {
+   "campo": "Casella di controllo 20",
+   "chiave": "sfogo_esterno",
+   "valore": "Terrazzo"
+  },
+  {
+   "campo": "Campo testo 44",
+   "testo": "{{terrazzo_mq|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 21",
+   "chiave": "sfogo_esterno",
+   "valore": "Loggia"
+  },
+  {
+   "campo": "Casella di controllo 22",
+   "chiave": "sfogo_esterno",
+   "valore": "Portico"
+  },
+  {
+   "campo": "Campo testo 47",
+   "testo": "{{portico_mq|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 23",
+   "chiave": "giardino",
+   "valore": "Esclusivo"
+  },
+  {
+   "campo": "Casella di controllo 24",
+   "chiave": "giardino",
+   "valore": "Condominiale"
+  },
+  {
+   "campo": "Campo testo 48",
+   "testo": "{{superficie_giardino_mq|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 25",
+   "chiave": "pertinenze_box",
+   "valore": "Cantina"
+  },
+  {
+   "campo": "Casella di controllo 28",
+   "chiave": "pertinenze_box",
+   "valore": "Solaio"
+  },
+  {
+   "campo": "Casella di controllo 29",
+   "chiave": "pertinenze_box",
+   "valore": "Garage singolo"
+  },
+  {
+   "campo": "Casella di controllo 30",
+   "chiave": "pertinenze_box",
+   "valore": "Garage doppio (lungo)"
+  },
+  {
+   "campo": "Casella di controllo 31",
+   "chiave": "pertinenze_box",
+   "valore": "Garage doppio (largo)"
+  },
+  {
+   "campo": "Casella di controllo 26",
+   "chiave": "pertinenze_box",
+   "valore": "Basculante elettrica"
+  },
+  {
+   "campo": "Casella di controllo 32",
+   "chiave": "pertinenze_box",
+   "valore": "Basculante manuale"
+  },
+  {
+   "campo": "Casella di controllo 27",
+   "chiave": "posto_auto",
+   "valore": "Di proprietà"
+  },
+  {
+   "campo": "Casella di controllo 33",
+   "chiave": "posto_auto",
+   "valore": "Condominiale"
+  },
+  {
+   "campo": "Casella di controllo 34",
+   "chiave": "posto_auto",
+   "valore": "Coperto"
+  },
+  {
+   "campo": "Casella di controllo 35",
+   "chiave": "posto_auto",
+   "valore": "Scoperto"
+  },
+  {
+   "campo": "Campo testo 49",
+   "testo": "{{numero_posti_auto|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 36",
+   "chiave": "infissi_materiale",
+   "valore": "Legno"
+  },
+  {
+   "campo": "Casella di controllo 40",
+   "chiave": "infissi_materiale",
+   "valore": "PVC"
+  },
+  {
+   "campo": "Casella di controllo 42",
+   "chiave": "infissi_materiale",
+   "valore": "Alluminio"
+  },
+  {
+   "campo": "Casella di controllo 49",
+   "chiave": "tipo_vetri",
+   "valore": "Doppio vetro"
+  },
+  {
+   "campo": "Casella di controllo 50",
+   "chiave": "tipo_vetri",
+   "valore": "Triplo vetro"
+  },
+  {
+   "campo": "Casella di controllo 37",
+   "chiave": "oscuranti_protezioni",
+   "valore": "Tapparelle"
+  },
+  {
+   "campo": "Casella di controllo 41",
+   "chiave": "oscuranti_protezioni",
+   "valore": "Tapparelle elettriche"
+  },
+  {
+   "campo": "Casella di controllo 47",
+   "chiave": "oscuranti_protezioni",
+   "valore": "Ante / scuroni"
+  },
+  {
+   "campo": "Casella di controllo 48",
+   "chiave": "oscuranti_protezioni",
+   "valore": "Inferriate"
+  },
+  {
+   "campo": "Casella di controllo 51",
+   "chiave": "oscuranti_protezioni",
+   "valore": "Zanzariere"
+  },
+  {
+   "campo": "Casella di controllo 38",
+   "chiave": "pavimenti",
+   "valore": "Gres"
+  },
+  {
+   "campo": "Casella di controllo 39",
+   "chiave": "pavimenti",
+   "valore": "Parquet"
+  },
+  {
+   "campo": "Casella di controllo 43",
+   "chiave": "pavimenti",
+   "valore": "Ceramica"
+  },
+  {
+   "campo": "Casella di controllo 46",
+   "chiave": "pavimenti",
+   "valore": "Laminato"
+  },
+  {
+   "campo": "Campo testo 50",
+   "testo": "{{pavimenti_altro|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 44",
+   "chiave": "cappotto_termico",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Casella di controllo 45",
+   "chiave": "cappotto_termico",
+   "valore": "No"
+  },
+  {
+   "campo": "Casella di controllo 52",
+   "chiave": "isolamento_acustico",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Casella di controllo 53",
+   "chiave": "isolamento_acustico",
+   "valore": "No"
+  },
+  {
+   "campo": "Casella di controllo 54",
+   "chiave": "vmc",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Casella di controllo 55",
+   "chiave": "riscaldamento",
+   "valore": "Autonomo"
+  },
+  {
+   "campo": "Casella di controllo 60",
+   "chiave": "riscaldamento",
+   "valore": "Centralizzato"
+  },
+  {
+   "campo": "Casella di controllo 56",
+   "chiave": "riscaldamento",
+   "valore": "Teleriscaldamento"
+  },
+  {
+   "campo": "Casella di controllo 63",
+   "chiave": "tipologia_diffusione_riscaldamento",
+   "valore": "A pavimento"
+  },
+  {
+   "campo": "Casella di controllo 64",
+   "chiave": "tipologia_diffusione_riscaldamento",
+   "valore": "Radiatori"
+  },
+  {
+   "campo": "Casella di controllo 57",
+   "chiave": "alimentazione_riscaldamento",
+   "valore": "Metano"
+  },
+  {
+   "campo": "Casella di controllo 59",
+   "chiave": "alimentazione_riscaldamento",
+   "valore": "Pompa di calore"
+  },
+  {
+   "campo": "Casella di controllo 61",
+   "chiave": "alimentazione_riscaldamento",
+   "valore": "Stufa a pellet"
+  },
+  {
+   "campo": "Casella di controllo 62",
+   "chiave": "alimentazione_riscaldamento",
+   "valore": "Stufa a legna"
+  },
+  {
+   "campo": "Casella di controllo 58",
+   "chiave": "accessori_impianti",
+   "valore": "Condizionatori"
+  },
+  {
+   "campo": "Casella di controllo 67",
+   "chiave": "accessori_impianti",
+   "valore": "Allarme"
+  },
+  {
+   "campo": "Casella di controllo 66",
+   "chiave": "accessori_impianti",
+   "valore": "Videocitofono"
+  },
+  {
+   "campo": "Casella di controllo 65",
+   "chiave": "accessori_impianti",
+   "valore": "Domotica"
+  },
+  {
+   "campo": "Casella di controllo 68",
+   "chiave": "fotovoltaico_presente",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Campo testo 51",
+   "testo": "{{fotovoltaico_kw|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 69",
+   "chiave": "batteria_accumulo",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Campo testo 52",
+   "testo": "{{batteria_kw|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 70",
+   "chiave": "solare_termico",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Casella di controllo 71",
+   "chiave": "stato_impianto_elettrico",
+   "valore": "A norma"
+  },
+  {
+   "campo": "Casella di controllo 72",
+   "chiave": "stato_impianto_elettrico",
+   "valore": "Da rifare"
+  },
+  {
+   "campo": "Casella di controllo 73",
+   "chiave": "stato_impianto_idraulico",
+   "valore": "A norma"
+  },
+  {
+   "campo": "Casella di controllo 74",
+   "chiave": "stato_impianto_idraulico",
+   "valore": "Da rifare"
+  },
+  {
+   "campo": "Casella di controllo 75",
+   "chiave": "fognatura",
+   "valore": "Rete pubblica"
+  },
+  {
+   "campo": "Casella di controllo 76",
+   "chiave": "fognatura",
+   "valore": "Fossa biologica"
+  },
+  {
+   "campo": "Casella di controllo 83",
+   "chiave": "classe_energetica",
+   "valore": "A4-A1"
+  },
+  {
+   "campo": "Casella di controllo 82",
+   "chiave": "classe_energetica",
+   "valore": "B"
+  },
+  {
+   "campo": "Casella di controllo 81",
+   "chiave": "classe_energetica",
+   "valore": "C"
+  },
+  {
+   "campo": "Casella di controllo 80",
+   "chiave": "classe_energetica",
+   "valore": "D"
+  },
+  {
+   "campo": "Casella di controllo 79",
+   "chiave": "classe_energetica",
+   "valore": "E"
+  },
+  {
+   "campo": "Casella di controllo 78",
+   "chiave": "classe_energetica",
+   "valore": "F"
+  },
+  {
+   "campo": "Casella di controllo 77",
+   "chiave": "classe_energetica",
+   "valore": "G"
+  },
+  {
+   "campo": "Campo testo 53",
+   "testo": "{{valore_ipe|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 58",
+   "testo": "{{foglio_catastale|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 57",
+   "testo": "{{particella_catastale|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 56",
+   "testo": "{{subalterno_catastale|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 55",
+   "testo": "{{categoria_catastale|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 54",
+   "testo": "{{rendita_catastale|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 84",
+   "chiave": "agibilita",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Casella di controllo 85",
+   "chiave": "agibilita",
+   "valore": "No"
+  },
+  {
+   "campo": "Casella di controllo 86",
+   "chiave": "agibilita",
+   "valore": "In corso di rilascio"
+  },
+  {
+   "campo": "Casella di controllo 87",
+   "chiave": "planimetria_conforme",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Casella di controllo 88",
+   "chiave": "planimetria_conforme",
+   "valore": "No"
+  },
+  {
+   "campo": "Casella di controllo 95",
+   "chiave": "documenti_disponibili",
+   "valore": "Atto di provenienza"
+  },
+  {
+   "campo": "Casella di controllo 93",
+   "chiave": "documenti_disponibili",
+   "valore": "Atto di successione"
+  },
+  {
+   "campo": "Casella di controllo 91",
+   "chiave": "documenti_disponibili",
+   "valore": "Planimetria catastale"
+  },
+  {
+   "campo": "Casella di controllo 89",
+   "chiave": "documenti_disponibili",
+   "valore": "Visura catastale storica"
+  },
+  {
+   "campo": "Casella di controllo 96",
+   "chiave": "documenti_disponibili",
+   "valore": "Certificato APE"
+  },
+  {
+   "campo": "Casella di controllo 94",
+   "chiave": "documenti_disponibili",
+   "valore": "Regolamento condominio"
+  },
+  {
+   "campo": "Casella di controllo 92",
+   "chiave": "documenti_disponibili",
+   "valore": "Certificazione impianti"
+  },
+  {
+   "campo": "Casella di controllo 90",
+   "chiave": "documenti_disponibili",
+   "valore": "Verbali condominio"
+  },
+  {
+   "campo": "Campo testo 59",
+   "testo": "{{altri_documenti_note|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 60",
+   "testo": "{{spese_condominiali_importo|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 97",
+   "chiave": "spese_condominiali_periodicita",
+   "valore": "Annuali"
+  },
+  {
+   "campo": "Casella di controllo 98",
+   "chiave": "spese_condominiali_periodicita",
+   "valore": "Mensili"
+  },
+  {
+   "campo": "Casella di controllo 100",
+   "chiave": "spese_condominiali_comprende",
+   "valore": "Acqua fredda"
+  },
+  {
+   "campo": "Casella di controllo 101",
+   "chiave": "spese_condominiali_comprende",
+   "valore": "Acqua calda"
+  },
+  {
+   "campo": "Casella di controllo 102",
+   "chiave": "spese_condominiali_comprende",
+   "valore": "Riscaldamento"
+  },
+  {
+   "campo": "Campo testo 62",
+   "testo": "{{spese_deliberate|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 103",
+   "chiave": "residuo_mutuo",
+   "valore": "Sì"
+  },
+  {
+   "campo": "Casella di controllo 104",
+   "chiave": "residuo_mutuo",
+   "valore": "No"
+  },
+  {
+   "campo": "Campo testo 63",
+   "testo": "{{residuo_mutuo_importo|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 64",
+   "testo": "{{ipoteche_vincoli|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 93",
+   "testo": "{{prezzo_richiesto|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 94",
+   "testo": "{{valutazione_agente|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 95",
+   "testo": "{{prezzo_consigliato|vuoto}}"
+  },
+  {
+   "campo": "Casella di controllo 106",
+   "chiave": "tipologia_incarico",
+   "valore": "Esclusiva"
+  },
+  {
+   "campo": "Casella di controllo 107",
+   "chiave": "tipologia_incarico",
+   "valore": "Non esclusiva"
+  },
+  {
+   "campo": "Campo testo 96",
+   "testo": "{{durata_incarico|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 97",
+   "testo": "{{provvigione_accordata|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 98",
+   "testo": "{{riacquisto_tipologia|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 99",
+   "testo": "{{riacquisto_budget_max|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 100",
+   "testo": "{{riacquisto_zona|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 101",
+   "testo": "{{riacquisto_caratteristiche|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 102",
+   "testo": "{{punti_di_forza|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 103",
+   "testo": "{{@oggi}}"
+  },
+  {
+   "campo": "Campo testo 104",
+   "testo": "{{comune|vuoto}}"
+  }
+ ]
+}

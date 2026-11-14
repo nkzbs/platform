@@ -1,0 +1,39 @@
+{
+ "titolo": "Customer due diligence form",
+ "file": "adeguata-verifica-en.pdf",
+ "_nota": "Mappa dei campi compilabili del PDF: `testo` = modello con segnaposto, `chiave`+`valore` = casella spuntata se il campo vale quel valore (@vuoto/@pieno per assente/presente). I campi non elencati restano da compilare a mano.",
+ "campi": [
+  {
+   "campo": "Campo testo 4",
+   "testo": "{{nome|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 7",
+   "testo": "{{codice_fiscale_piva|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 135",
+   "testo": "{{luogo_nascita|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 8",
+   "testo": "{{data_nascita|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 6",
+   "testo": "{{indirizzo|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 105",
+   "testo": "{{comune|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 106",
+   "testo": "{{provincia|vuoto}}"
+  },
+  {
+   "campo": "Campo testo 1017",
+   "testo": "{{cap|vuoto}}"
+  }
+ ]
+}
