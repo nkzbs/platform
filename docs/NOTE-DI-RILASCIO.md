@@ -2,6 +2,12 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.41 — Stato civile come nel modulo di adeguata verifica
+
+- **Stato civile con le scelte del modulo**: «Coniugato/a o Unito/a civilmente», «Celibe/Nubile o Vedovo/a», «Separato/a o Divorziato/a», «Preferisco non rispondere» (prima erano sei stati; il modulo ne ha tre gruppi). Ogni casella del PDF corrisponde a una scelta sola, quindi l'import da PDF lo legge senza dubbi. Anche la casella «Preferisco non rispondere», che prima non era collegata a niente, ora lo è.
+- **Per chi aveva già i sei stati**: l'elenco si sostituisce e i valori già scritti passano al gruppo giusto (Coniugato/a e Unito/a civilmente → coniugati; Celibe/Nubile e Vedovo/a → il secondo gruppo; Separato/a e Divorziato/a → il terzo); un valore diverso non si tocca. Il regime patrimoniale resta legato ai coniugati. Primitiva generale del seed: `rimappa` dentro un `converti` ({ vecchio: nuovo } sui record già scritti). Pacchetto 32.
+- Si perde la distinzione fine tra Celibe e Vedovo, Separato e Divorziato: è la scelta fatta per allinearsi al modulo.
+
 ## 0.5.40 — Importa da modulo PDF
 
 - **Nuova voce «Importa da modulo PDF»** nel menu dei moduli che hanno moduli PDF originali (clienti: Antiriciclaggio; immobili: Scheda di acquisizione e Contratto di incarico). Carichi il modulo compilato, il sistema lo riconosce dai suoi campi, propone i dati di una scheda nuova e tu controlli, togli la spunta a ciò che non vuoi e confermi. La scheda nasce dalla creazione normale (stesse validazioni e permessi): l'import non scrive niente di suo.

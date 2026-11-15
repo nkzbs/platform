@@ -20,7 +20,6 @@ const D = path.join(__dirname, '../../../super-admin/backend/src/pacchetti/media
   for (const f of ['adeguata-verifica-it', 'contratto-incarico']) { const m = JSON.parse(fs.readFileSync(D + f + '.json', 'utf8')); await modelli.salva({ chiave: f, titolo: m.titolo, pdf: fs.readFileSync(D + (m.file || f + '.pdf')), mappa: { campi: m.campi } }); }
   const statiCivili = [...new Set(mappa.campi.filter((c) => c.chiave === 'stato_civile').map((c) => c.valore).flat())];
   const condizioni = mappa.campi.filter((c) => c.chiave === 'condizione_professionale').map((c) => c.valore); // scelta secca: una casella per voce
-  const statoMultiplo = mappa.campi.find((c) => c.chiave === 'stato_civile' && Array.isArray(c.valore)).valore;
   const schema = {
     document_actions: [{ key: 'adeguata_verifica', label: 'Adeguata verifica', pdf_modello: 'adeguata-verifica-it' }],
     fields: [
@@ -29,7 +28,7 @@ const D = path.join(__dirname, '../../../super-admin/backend/src/pacchetti/media
       { key: 'privacy_firmata_il', label: 'Privacy firmata il', type: 'date', sola_lettura: true },
     ],
   };
-  const record = { nome: 'Rossi Mario', luogo_nascita: 'Brescia', data_nascita: '1985-12-10', reddito_annuo: 45000, condizione_professionale: condizioni[3], privacy_firmata_il: '2026-10-02' };
+  const record = { nome: 'Rossi Mario', luogo_nascita: 'Brescia', data_nascita: '1985-12-10', reddito_annuo: 45000, condizione_professionale: condizioni[3], stato_civile: statiCivili[0], privacy_firmata_il: '2026-10-02' };
   const compilato = async (rec) => (await modelli.compilaPer('adeguata-verifica-it', costruisciGet({ record: rec, schema: { relations: [] }, tenant: {} }))).buffer;
   const per = (p) => Object.fromEntries(p.campi.map((c) => [c.key, c.valore]));
 
@@ -39,9 +38,9 @@ const D = path.join(__dirname, '../../../super-admin/backend/src/pacchetti/media
     const v = per(p);
     eq([v.nome, v.luogo_nascita, v.data_nascita, v.reddito_annuo, v.condizione_professionale], ['Rossi Mario', 'Brescia', '1985-12-10', 45000, condizioni[3]]);
   });
-  await test('una casella che copre più scelte del sistema (spuntata) non si indovina: si segnala con le scelte', async () => {
-    const p = await imp.proponi({ schema, buffer: await compilato({ ...record, stato_civile: statoMultiplo[0] }) });
-    ok(!('stato_civile' in per(p)), 'non deve proporre'); ok(p.non_collegati.some((x) => x.voce === 'Stato civile' && /più scelte/.test(x.motivo) && x.valore.includes(statoMultiplo[0])), JSON.stringify(p.non_collegati));
+  await test('lo stato civile ha le scelte del modulo: ogni casella torna al suo valore, anche «Preferisco non rispondere»', async () => {
+    eq(statiCivili.length, 4);
+    for (const st of statiCivili) eq(per(await imp.proponi({ schema, buffer: await compilato({ ...record, stato_civile: st, condizione_professionale: undefined }) })).stato_civile, st, st);
   });
   await test('i campi di sola lettura e quelli che la scheda non ha non si propongono come dati: finiscono tra i «non collegati» o restano fuori', async () => {
     const p = await imp.proponi({ schema, buffer: await compilato(record) });

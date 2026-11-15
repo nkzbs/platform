@@ -66,7 +66,7 @@ const av = [tk('nome'), tk('codice_fiscale_piva'), tk(paeseNascita), tk('luogo_n
   ...SN(cittMult), tk(cittPaesi), tk(resFisc), ...SN(altrove), tk(domPaese), tk(domInd), tk(domCom), tk(domProv), tk(domCap),
   C(docTipo, "Carta d'identità"), C(docTipo, 'Altro'), tk(docAltro), tk(docNum), tk(docEnte), tk(docRil), tk(docSca),
   ...NS(titEff), tk(titEffNome), ...NS(delegati), tk(delegatiNome),
-  C('stato_civile', ['Coniugato/a', 'Unito/a civilmente']), C('stato_civile', ['Celibe / Nubile', 'Vedovo/a']), C('stato_civile', ['Separato/a', 'Divorziato/a']), null,
+  C('stato_civile', 'Coniugato/a o Unito/a civilmente'), C('stato_civile', 'Celibe/Nubile o Vedovo/a'), C('stato_civile', 'Separato/a o Divorziato/a'), C('stato_civile', 'Preferisco non rispondere'),
   ...scelte(familiari, ['No', 'Sì', 'Preferisco non rispondere']),
   C(istruzione, istruzione && 'Laurea triennale o magistrale in economia, giurisprudenza o ingegneria'), C(istruzione, 'Licenza media'), C(istruzione, 'Laurea in altre discipline / diploma di scuola secondaria di secondo grado'), C(istruzione, 'Nessuno dei precedenti'),
   tk(tae), ...scelte(condizione, ['Non occupato/a', 'Casalingo/a', 'Studente/ssa', 'Pensionato/a']), tk(taePens), C(condizione, 'Altra attività'), tk(altraAtt)];

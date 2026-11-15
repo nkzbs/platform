@@ -30,7 +30,7 @@ async function main() {
   const SOLA = ['consenso_marketing', 'consenso_terzi', 'privacy_firmata_il', 'privacy_versione', 'conservazione_fino_al'];
   // Un Clienti «di prima»: i consensi sono caselle normali, l'elenco degli allegati è quello vecchio, il regime patrimoniale è sempre visibile.
   db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('Clienti', 'clienti', 'box', '#000', 1, 1, 70, ?)").run(JSON.stringify({ version: 3, steps: [
-    F('nome'), F('stato_civile', 'select', { options: ['Celibe / Nubile', 'Coniugato/a', 'Unito/a civilmente'] }), F('regime_patrimoniale', 'select', { options: ['Comunione dei beni', 'Separazione dei beni', 'Non applicabile'] }),
+    F('nome'), F('stato_civile', 'select', { options: ['Coniugato/a o Unito/a civilmente', 'Celibe/Nubile o Vedovo/a'] }), F('regime_patrimoniale', 'select', { options: ['Comunione dei beni', 'Separazione dei beni', 'Non applicabile'] }),
     F('consenso_marketing', 'checkbox'), F('consenso_terzi', 'checkbox'), F('privacy_firmata_il', 'date'), F('privacy_versione'), F('conservazione_fino_al', 'date'),
     { id: 'al1', block_type: 'allegati', label: 'Allegati', types: VECCHI_TIPI }] }));
   const schemaClienti = () => JSON.parse(db.prepare("SELECT schema_json FROM modules WHERE slug = 'clienti'").get().schema_json);
@@ -42,7 +42,7 @@ async function main() {
     const esiti = await applicaSeed({ clienti: nuove }, { tipo: 'estensione' });
     eq(esiti.map((e) => e.esito), ['applicato', 'applicato', 'applicato', 'applicato']);
     for (const k of SOLA) eq(blocco(k).sola_lettura, true, k);
-    eq(blocco('regime_patrimoniale').visible_if, { enabled: true, field: 'stato_civile', op: 'in', value: 'Coniugato/a|Unito/a civilmente' });
+    eq(blocco('regime_patrimoniale').visible_if, { enabled: true, field: 'stato_civile', op: 'in', value: 'Coniugato/a o Unito/a civilmente' });
     eq(blocco('coniuge_nome').visible_if.value, 'Comunione dei beni'); eq(blocco('coniuge_codice_fiscale').sezione, 'Anagrafica');
     eq(['professionista_nome', 'professionista_contatto', 'professionista_email'].map((k) => blocco(k).sezione), Array(3).fill('Professionista di riferimento'));
     const al = schemaClienti().steps.find((x) => x.block_type === 'allegati');

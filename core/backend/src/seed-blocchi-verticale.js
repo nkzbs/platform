@@ -208,6 +208,20 @@ async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs
             if (cambiato) agg.run(JSON.stringify(dati), r.id);
           }
         }
+        // `rimappa` (dentro un `converti`): { valoreVecchio: valoreNuovo } per un elenco a scelta singola le cui voci cambiano: i valori già scritti passano a quelli nuovi, gli altri non si toccano.
+        const daRimappare = daConvertire.filter((c) => c.rimappa && typeof c.rimappa === 'object');
+        if (daRimappare.length) {
+          const righe = db.prepare('SELECT id, data FROM records WHERE module_slug = ?').all(slug);
+          const agg = db.prepare('UPDATE records SET data = ? WHERE id = ?');
+          for (const r of righe) {
+            let dati; try { dati = JSON.parse(r.data); } catch (e) { continue; }
+            let cambiato = false;
+            for (const c of daRimappare) {
+              if (typeof dati[c.key] === 'string' && Object.prototype.hasOwnProperty.call(c.rimappa, dati[c.key]) && c.rimappa[dati[c.key]] !== dati[c.key]) { dati[c.key] = c.rimappa[dati[c.key]]; cambiato = true; }
+            }
+            if (cambiato) agg.run(JSON.stringify(dati), r.id);
+          }
+        }
         segna(chiave);
         delete moduliPerSlug[slug]; // i campi del modulo sono cambiati: le estensioni dopo questa devono rivederli
         esiti.push({ slug, key: az.key, esito: 'applicato' });

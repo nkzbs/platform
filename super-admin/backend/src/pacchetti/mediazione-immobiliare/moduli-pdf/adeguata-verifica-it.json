@@ -156,26 +156,22 @@
   {
    "campo": "Casella di controllo 143",
    "chiave": "stato_civile",
-   "valore": [
-    "Coniugato/a",
-    "Unito/a civilmente"
-   ]
+   "valore": "Coniugato/a o Unito/a civilmente"
   },
   {
    "campo": "Casella di controllo 144",
    "chiave": "stato_civile",
-   "valore": [
-    "Celibe / Nubile",
-    "Vedovo/a"
-   ]
+   "valore": "Celibe/Nubile o Vedovo/a"
   },
   {
    "campo": "Casella di controllo 145",
    "chiave": "stato_civile",
-   "valore": [
-    "Separato/a",
-    "Divorziato/a"
-   ]
+   "valore": "Separato/a o Divorziato/a"
+  },
+  {
+   "campo": "Casella di controllo 146",
+   "chiave": "stato_civile",
+   "valore": "Preferisco non rispondere"
   },
   {
    "campo": "Casella di controllo 149",
