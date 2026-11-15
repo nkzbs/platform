@@ -20,6 +20,7 @@ let statoTenant = { pacchetti: [], seed_applicati: [] }; const ricevuti = [];
 client.callTenantAPI = async (slug, method, p, body) => {
   if (method === 'GET' && p === '/api/internal-setup/pacchetti') return statoTenant;
   if (method === 'POST' && p === '/api/internal-setup/pacchetto') { ricevuti.push({ slug, body }); return { ok: true }; }
+  if (method === 'PUT' && p.startsWith('/api/internal-setup/modelli-pdf/')) return { ok: true }; // i moduli PDF originali del pacchetto
   throw new Error('chiamata inattesa ' + method + ' ' + p);
 };
 const P = require('./lib/pacchetti');
