@@ -2,6 +2,12 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.42 — Immobile: qualità del mandante e stato di occupazione a scelta multipla
+
+- **Cosa è cambiato**: «Il mandante agisce come» (proprietario esclusivo, comproprietario, legale rappresentante) e «Stato di occupazione» (libero al rogito, occupato dalla proprietà, locato) ora ammettono più risposte insieme: un comproprietario può essere anche legale rappresentante, un immobile può essere locato e libero al rogito. Il contratto di incarico in PDF spunta tutte le caselle scelte e l'import le rilegge tutte.
+- **Cosa resta a scelta singola, di proposito**: stato dell'edificio e dell'interno, impianti, classe energetica, agibilità, periodicità delle spese, tipologia e rinnovo dell'incarico, contesto dello stabile: sono risposte che si escludono a vicenda.
+- **Per chi aveva già i campi**: il tipo cambia e i valori già scritti diventano un elenco di una voce (blocco `qualita_e_occupazione_multiple`). Pacchetto 33. Test: `immobile-scelte-multiple.test.js`.
+
 ## 0.5.41 — Stato civile come nel modulo di adeguata verifica
 
 - **Stato civile con le scelte del modulo**: «Coniugato/a o Unito/a civilmente», «Celibe/Nubile o Vedovo/a», «Separato/a o Divorziato/a», «Preferisco non rispondere» (prima erano sei stati; il modulo ne ha tre gruppi). Ogni casella del PDF corrisponde a una scelta sola, quindi l'import da PDF lo legge senza dubbi. Anche la casella «Preferisco non rispondere», che prima non era collegata a niente, ora lo è.

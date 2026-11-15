@@ -2273,7 +2273,7 @@
           "block_type": "field",
           "key": "mandante_qualita",
           "label": "Il mandante agisce come",
-          "type": "select",
+          "type": "multiselect",
           "sezione": "Incarico di mediazione",
           "options": [
             "Proprietario esclusivo",
@@ -2285,7 +2285,7 @@
           "block_type": "field",
           "key": "stato_occupazione",
           "label": "Stato di occupazione",
-          "type": "select",
+          "type": "multiselect",
           "sezione": "Incarico di mediazione",
           "options": [
             "Libero al rogito",
@@ -2352,6 +2352,38 @@
           "label": "Preavviso di disdetta (giorni)",
           "type": "number",
           "sezione": "Incarico di mediazione"
+        }
+      ]
+    },
+    {
+      "key": "qualita_e_occupazione_multiple",
+      "_nota": "Qualità del mandante e stato di occupazione del contratto di incarico passano a scelta multipla: si può essere comproprietari e legali rappresentanti insieme, un immobile può essere locato e libero al rogito. I valori già scritti restano (diventano un elenco di una voce).",
+      "richiede": {
+        "immobili": [
+          "mandante_qualita",
+          "stato_occupazione"
+        ]
+      },
+      "converti": [
+        {
+          "key": "mandante_qualita",
+          "label": "Il mandante agisce come",
+          "type": "multiselect",
+          "options": [
+            "Proprietario esclusivo",
+            "Comproprietario",
+            "Legale rappresentante"
+          ]
+        },
+        {
+          "key": "stato_occupazione",
+          "label": "Stato di occupazione",
+          "type": "multiselect",
+          "options": [
+            "Libero al rogito",
+            "Occupato dalla proprietà",
+            "Locato"
+          ]
         }
       ]
     }

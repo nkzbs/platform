@@ -91,8 +91,8 @@ av.push(...scelte(anni, ['Meno di 1 anno', 'Tra 1 e 5 anni', 'Oltre 5 anni', 'Ne
 
 // ── Contratto di incarico (Immobili) ──
 const SC = 'Incarico di mediazione', im = (...a) => F('immobili', ...a);
-const qualita = im(SC, 'mandante_qualita', 'Il mandante agisce come', 'select', ['Proprietario esclusivo', 'Comproprietario', 'Legale rappresentante']);
-const occupazione = im(SC, 'stato_occupazione', 'Stato di occupazione', 'select', ['Libero al rogito', 'Occupato dalla proprietà', 'Locato']), locScad = im(SC, 'locazione_scadenza', 'Locazione — scadenza', 'date');
+const qualita = im(SC, 'mandante_qualita', 'Il mandante agisce come', 'multiselect', ['Proprietario esclusivo', 'Comproprietario', 'Legale rappresentante']);
+const occupazione = im(SC, 'stato_occupazione', 'Stato di occupazione', 'multiselect', ['Libero al rogito', 'Occupato dalla proprietà', 'Locato']), locScad = im(SC, 'locazione_scadenza', 'Locazione — scadenza', 'date');
 const epgl = im(SC, 'epgl_nren', 'EPgl,nren (kWh/mq anno)'), lettere = im(SC, 'prezzo_in_lettere', 'Prezzo in lettere'), caparra = im(SC, 'caparra_confirmatoria', 'Caparra confirmatoria', 'currency');
 const validoFino = im(SC, 'incarico_valido_fino_al', 'Incarico valido fino al', 'date'), rinnovo = im(SC, 'incarico_rinnovo', 'Alla scadenza l’incarico', 'select', ['Cessato alla scadenza naturale', 'Rinnovato tacitamente']);
 const rinnMesi = im(SC, 'incarico_rinnovo_mesi', 'Rinnovo tacito per (mesi)', 'number'), preavviso = im(SC, 'incarico_preavviso_giorni', 'Preavviso di disdetta (giorni)', 'number');
