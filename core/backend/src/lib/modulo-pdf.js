@@ -70,7 +70,8 @@ async function leggi({ buffer, mappa }) {
     if (c.testo !== undefined && typeof campo.getText === 'function') {
       const m = /^\{\{\s*([^}|\s]+)\s*(?:\|\s*vuoto\s*)?\}\}$/.exec(c.testo.trim());
       const v = (campo.getText() || '').trim();
-      if (m && v) out[m[1]] = v;
+      const it = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v); // la data scritta all'italiana torna nel formato del sistema
+      if (m && v) out[m[1]] = it ? it[3] + '-' + it[2] + '-' + it[1] : v;
     } else if (c.chiave && typeof campo.isChecked === 'function' && campo.isChecked() && typeof c.valore === 'string' && !c.valore.startsWith('@')) {
       out[c.chiave] = Array.isArray(out[c.chiave]) ? [...out[c.chiave], c.valore] : out[c.chiave] !== undefined ? [out[c.chiave], c.valore] : c.valore;
     }

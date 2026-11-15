@@ -38,6 +38,8 @@ function inTesto(v) {
   if (v === true) return 'Sì';
   if (v === false) return 'No';
   if (Array.isArray(v)) return v.join(', ');
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v)); // una data del sistema (AAAA-MM-GG) si scrive all'italiana
+  if (iso) return iso[3] + '/' + iso[2] + '/' + iso[1];
   return String(v);
 }
 

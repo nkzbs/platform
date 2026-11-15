@@ -175,6 +175,10 @@ test('destinatari del seed: email del cliente, email del proprietario collegato'
   assertEq(azione('immobili', 'scheda_immobile').recipient, 'proprietario.email');
 });
 
+test('le date del sistema (AAAA-MM-GG) si scrivono all\'italiana; il resto non cambia', () => {
+  assertEq(renderModello('{{d}} | {{t}}', getDa({ d: '1985-12-10', t: '2026-1-5 note' })), '10/12/1985 | 2026-1-5 note');
+});
+
 console.log(`\n${'─'.repeat(50)}`);
 console.log(`Risultato: ${passed} passati, ${failed} falliti`);
 if (failed > 0) process.exit(1);
