@@ -692,6 +692,12 @@ router.get('/:slug/azioni-stato', requireAuth, requireModuleAccess, async (req, 
   res.json(out);
 });
 
+// Quali moduli PDF originali si possono importare in questo modulo (per mostrare o nascondere la voce di menu).
+router.get('/:slug/importa-modulo', requireAuth, requireModuleAccess, (req, res) => {
+  const lista = require('../lib/importa-modulo-pdf').modelliDelModulo(getModuleSchema(req.params.slug) || {});
+  res.json({ modelli: lista.map((m) => ({ chiave: m.chiave, titolo: m.titolo })) });
+});
+
 router.get('/:slug/:id', requireAuth, requireModuleAccess, (req, res) => {
   const schema = getModuleSchema(req.params.slug) || {};
   const record = db.prepare('SELECT * FROM records WHERE id = ? AND module_slug = ?').get(req.params.id, req.params.slug);
@@ -737,6 +743,19 @@ router.post('/:slug', requireAuth, requireModuleAccess, (req, res) => {
   fireTrigger(req.params.slug, 'nuovo_record', attached.data, attached.id, {});
   logHistory(req.params.slug, attached.id, req.user.username, 'create', null, attached.data);
   res.json(attached);
+});
+
+// «Importa da modulo PDF»: carichi il modulo originale compilato e il sistema propone i dati per una nuova scheda (non scrive niente:
+// la creazione passa da POST /:slug, con le sue validazioni). Serve il permesso di creare, come per una scheda nuova.
+router.post('/:slug/importa-modulo/proposta', requireAuth, requireModuleAccess, async (req, res) => {
+  const schema = getModuleSchema(req.params.slug) || {};
+  const rule = ruleFor(schema, req.user.role);
+  if (rule && !rule.create) return res.status(403).json({ error: 'Non hai i permessi per creare record in questo modulo' });
+  const { pdf_base64: b64, modello } = req.body || {};
+  if (typeof b64 !== 'string' || !b64) return res.status(400).json({ error: 'Manca il PDF' });
+  try {
+    res.json(await require('../lib/importa-modulo-pdf').proponi({ schema, buffer: Buffer.from(b64, 'base64'), chiave: typeof modello === 'string' ? modello : undefined }));
+  } catch (e) { res.status(e.status || 500).json({ error: e.status ? e.message : 'Lettura del PDF non riuscita' }); }
 });
 
 // Creazione al volo da una relazione (es. "+ Nuovo cliente" nel dropdown dell'Ordine).

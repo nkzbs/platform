@@ -60,7 +60,7 @@ const compila = ({ buffer, mappa, get, appiattisci = false }) => applica({ buffe
 
 // Legge un modulo compilato al computer e riporta i valori delle voci che la mappa sa collegare a un campo del record:
 // { campo_del_record: valore }. Solo i modelli semplici ({{campo}}) e le caselle spuntate si possono rileggere.
-async function leggi({ buffer, mappa }) {
+async function leggi({ buffer, mappa }, opzioni = {}) {
   const pdf = await PDFDocument.load(buffer);
   const form = pdf.getForm();
   const out = {};
@@ -74,6 +74,8 @@ async function leggi({ buffer, mappa }) {
       if (m && v) out[m[1]] = it ? it[3] + '-' + it[2] + '-' + it[1] : v;
     } else if (c.chiave && typeof campo.isChecked === 'function' && campo.isChecked() && typeof c.valore === 'string' && !c.valore.startsWith('@')) {
       out[c.chiave] = Array.isArray(out[c.chiave]) ? [...out[c.chiave], c.valore] : out[c.chiave] !== undefined ? [out[c.chiave], c.valore] : c.valore;
+    } else if (c.chiave && typeof campo.isChecked === 'function' && campo.isChecked() && Array.isArray(c.valore) && opzioni.ambigue) {
+      (opzioni.ambigue[c.chiave] = opzioni.ambigue[c.chiave] || []).push(c.valore); // una casella che copre più valori del sistema: spuntata, ma non si sa quale
     }
   }
   return out;

@@ -13,6 +13,7 @@ import RecordDetailModal from './RecordDetailModal'
 import ReportPanel from './ReportPanel'
 import AiSuggestionsPanel from '../../components/AiSuggestionsPanel'
 import ImportPdf from '../../components/ImportPdf'
+import ImportaModuloPdf from '../../components/ImportaModuloPdf'
 import ImportPayslip from '../../components/ImportPayslip'
 import BustaPagaReportView from '../../components/BustaPagaReportView'
 import DriveSyncButton from '../../components/DriveSyncButton'
@@ -667,6 +668,7 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
               {/* Il pannello resta montato anche da chiuso (hidden): le finestre di Importa da PDF, Busta paga ecc. vivono dentro questi componenti e non devono sparire quando il menu si chiude. */}
               <div role="menu" hidden={!menuLista} onClick={() => setMenuLista(false)} className="absolute right-0 top-full mt-1 z-30 w-[min(20rem,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto bg-surface-card border border-gray-700 rounded-xl shadow-lg py-1">
                 {canCreate && <ImportPdf token={token} mod={mod} onCreated={loadRecords} voce />}
+                {canCreate && <ImportaModuloPdf token={token} mod={mod} onCreated={loadRecords} />}
                 {canCreate && <ImportPayslip token={token} mod={mod} user={user} onCreated={loadRecords} voce />}
                 {canCreate && mod.batch_upload_field && (
                   <>

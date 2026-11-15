@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.40 — Importa da modulo PDF
+
+- **Nuova voce «Importa da modulo PDF»** nel menu dei moduli che hanno moduli PDF originali (clienti: Antiriciclaggio; immobili: Scheda di acquisizione e Contratto di incarico). Carichi il modulo compilato, il sistema lo riconosce dai suoi campi, propone i dati di una scheda nuova e tu controlli, togli la spunta a ciò che non vuoi e confermi. La scheda nasce dalla creazione normale (stesse validazioni e permessi): l'import non scrive niente di suo.
+- **Non indovina**: ciò che non sta nella scheda (voci di un'altra scheda collegata, come il proprietario) o non è tra le scelte del campo, e le caselle che coprono più scelte (nel modulo Antiriciclaggio lo stato civile è in tre gruppi: «Coniugato/a o Unito/a civilmente», «Celibe/Nubile o Vedovo/a», «Separato/a o Divorziato/a») finiscono in «Da sistemare a mano».
+- **Date all'italiana** nei documenti e nei moduli PDF (10/12/1985); rilette nel formato del sistema.
+- Rotte: `GET /api/records/:slug/importa-modulo` (quali moduli), `POST /api/records/:slug/importa-modulo/proposta` (PDF → proposta). Motore: `lib/importa-modulo-pdf.js`, sulla stessa mappa che compila il modulo. Prova: `importa-modulo-pdf.test.js`.
+
 ## 0.5.39 — Scheda cliente: stato civile, professionista, allegati urbanistici, consensi alla firma
 
 - **Consensi privacy di sola lettura**: «Consenso comunicazioni commerciali», «Consenso partner e portali», «Privacy firmata il», «Versione» e «Conserva fino al» non si scrivono più a mano: si vedono nella scheda ma li registra solo la firma dell'informativa (carica del documento firmato). Primitiva generale del core: proprietà `sola_lettura` su un campo (il server la fa rispettare: alla creazione il campo nasce vuoto, in modifica non cambia), fuori dai moduli di inserimento e di modifica.
