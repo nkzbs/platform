@@ -1091,6 +1091,104 @@
           ]
         }
       ]
+    },
+    {
+      "key": "stati_trattativa_semplici",
+      "_nota": "Il workflow della trattativa passa da sette stati a quattro: «In trattativa» (incontro, catalogazione e trattativa in corso erano la stessa fase: la ricerca e la profilazione stanno nel cliente e nell'attività), «Preliminare firmato», «Rogito completato» e «Chiusa» (con i post-vendita). Le trattative che erano negli stati tolti passano a quello che li assorbe; i solleciti e le provvigioni seguono gli stati nuovi. Per arrivare al rogito serve anche l'Adeguata verifica firmata del cliente, caricata tra gli allegati (nuovo tipo «Adeguata verifica firmata»).",
+      "richiede": {
+        "trattative": [
+          "titolo",
+          "data_rogito"
+        ]
+      },
+      "stati": {
+        "rimuovi": [
+          {
+            "key": "incontro_profilazione",
+            "verso": "trattativa_in_corso"
+          },
+          {
+            "key": "catalogazione",
+            "verso": "trattativa_in_corso"
+          },
+          {
+            "key": "adempimenti_post_vendita",
+            "verso": "chiusa"
+          }
+        ],
+        "rinomina": [
+          {
+            "key": "trattativa_in_corso",
+            "da": "Trattativa in corso",
+            "a": "In trattativa"
+          }
+        ],
+        "collega": [
+          {
+            "from": "rogito_completato",
+            "to": "chiusa",
+            "label": "Chiudi pratica"
+          }
+        ]
+      },
+      "riscrivi": [
+        {
+          "block_type": "allegati",
+          "proprieta": {
+            "types": {
+              "da": [
+                "Proposta d'acquisto",
+                "Contratto preliminare",
+                "Atto di rogito",
+                "Altro"
+              ],
+              "a": [
+                "Proposta d'acquisto",
+                "Contratto preliminare",
+                "Adeguata verifica firmata",
+                "Atto di rogito",
+                "Altro"
+              ]
+            }
+          }
+        },
+        {
+          "block_type": "state_requirements",
+          "proprieta": {
+            "requisiti": {
+              "da": [
+                {
+                  "label": "Data del rogito",
+                  "tipo": "campo",
+                  "campo": "data_rogito"
+                },
+                {
+                  "label": "Atto di rogito",
+                  "tipo": "allegato",
+                  "valore": "Atto di rogito"
+                }
+              ],
+              "a": [
+                {
+                  "label": "Data del rogito",
+                  "tipo": "campo",
+                  "campo": "data_rogito"
+                },
+                {
+                  "label": "Atto di rogito",
+                  "tipo": "allegato",
+                  "valore": "Atto di rogito"
+                },
+                {
+                  "label": "Adeguata verifica del cliente firmata",
+                  "tipo": "allegato",
+                  "valore": "Adeguata verifica firmata"
+                }
+              ]
+            }
+          }
+        }
+      ]
     }
   ],
   "immobili": [
@@ -4438,6 +4536,47 @@
           }
         }
       ]
+    },
+    {
+      "key": "stati_cliente_semplici",
+      "_nota": "Il workflow del cliente passa da tre stati a due: «Da verificare» e «Verificato». «Documenti inviati» non era una fase ma un promemoria (i documenti mancanti li dicono i requisiti e l'avviso settimanale): i clienti che erano lì tornano «Da verificare», i suoi requisiti (codice fiscale e un recapito) passano a «Da verificare», e i documenti da firmare non cambiano più stato all'invio. Un solo pulsante («Segna come verificato») per passare, e uno per tornare indietro.",
+      "richiede": {
+        "clienti": [
+          "nome"
+        ]
+      },
+      "stati": {
+        "rimuovi": [
+          {
+            "key": "documenti_inviati",
+            "verso": "verifica_identita_cliente"
+          }
+        ],
+        "rinomina": [
+          {
+            "key": "verifica_identita_cliente",
+            "da": "Verifica identità cliente",
+            "a": "Da verificare"
+          },
+          {
+            "key": "cliente_verificato",
+            "da": "Cliente verificato",
+            "a": "Verificato"
+          }
+        ],
+        "collega": [
+          {
+            "from": "verifica_identita_cliente",
+            "to": "cliente_verificato",
+            "label": "Segna come verificato"
+          },
+          {
+            "from": "cliente_verificato",
+            "to": "verifica_identita_cliente",
+            "label": "Da rifare"
+          }
+        ]
+      }
     }
   ],
   "quote_societarie": [
@@ -4761,6 +4900,35 @@
           ]
         }
       ]
+    },
+    {
+      "key": "stati_attivita_semplici",
+      "_nota": "L'attività ha due stati, «Da fare» e «Fatto»: «In corso» non serve a niente per una telefonata o una visita. Le attività «In corso» tornano «Da fare».",
+      "richiede": {
+        "attivita": [
+          "titolo"
+        ]
+      },
+      "stati": {
+        "rimuovi": [
+          {
+            "key": "in_corso",
+            "verso": "da_fare"
+          }
+        ],
+        "collega": [
+          {
+            "from": "da_fare",
+            "to": "fatto",
+            "label": "Completa"
+          },
+          {
+            "from": "fatto",
+            "to": "da_fare",
+            "label": "Riapri"
+          }
+        ]
+      }
     }
   ]
 }

@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.45 — Workflow più semplici: cliente a 2 stati, trattativa a 4, attività a 2
+
+- **Cliente**: «Da verificare» e «Verificato» (prima tre stati: «Documenti inviati» era un promemoria, non una fase; i documenti mancanti li dicono i requisiti e l'avviso settimanale). I clienti in «Documenti inviati» tornano «Da verificare»; i documenti da firmare non cambiano più stato all'invio.
+- **Trattativa**: «In trattativa», «Preliminare firmato», «Rogito completato», «Chiusa» (prima sette: incontro, catalogazione e trattativa in corso erano la stessa fase; i post-vendita sono la chiusura). I solleciti e le provvigioni seguono gli stati nuovi. Per il rogito serve anche l'**Adeguata verifica firmata** del cliente tra gli allegati (nuovo tipo); su un tenant già in uso il requisito resta un promemoria, come gli altri.
+- **Attività**: «Da fare» e «Fatto» («In corso» non serviva).
+- **Primitiva generale `stati`** (estensioni del pacchetto): `rimuovi` (uno stato verso un altro: porta i record, unisce i requisiti, aggiorna trigger e filtri delle automazioni, toglie il cambio di stato dai documenti), `rinomina` (solo se l'etichetta è ancora quella di prima), `collega` (aggiunge un passaggio). Pacchetto 35. Test: `stati-semplici.test.js`.
+
 ## 0.5.44 — Tre tipi di cliente, Incarico di ricerca, Proposta d'acquisto e Accordo provvigionale
 
 - **Il cliente è di tre tipi**, in una scelta sola: «Acquirente che sa già cosa vuole», «Venditore», «Acquirente che cerca casa e non ha tempo». Prima c'erano «Venditore» e «Acquirente» più una «Esigenza» a parte. I clienti già «Acquirente» passano a «sa già cosa vuole» (chi era «Cerca immobile» va portato a mano al terzo tipo); la vecchia «Esigenza» resta nei dati ma non si vede più. I campi della ricerca (tipologia, budget, zona) compaiono solo per i due acquirenti; «Immobili adatti» e «Richieste compatibili» valgono per entrambi.

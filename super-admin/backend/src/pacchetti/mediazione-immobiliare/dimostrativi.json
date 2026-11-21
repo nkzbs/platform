@@ -268,7 +268,7 @@
     {
       "alias": "trat_bilo",
       "modulo": "trattative",
-      "stato": "incontro_profilazione",
+      "stato": "trattativa_in_corso",
       "relazioni": {
         "cliente": "acq2",
         "venditore": "ven2",

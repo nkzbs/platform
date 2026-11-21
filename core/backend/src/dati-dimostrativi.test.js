@@ -133,7 +133,7 @@ async function main() {
     ok(d.fonti.every((f) => Array.isArray(f.se_manca) && f.se_manca.every((m) => m.modulo && /da attivare/i.test(JSON.stringify(m.campi)))), 'ogni fonte dice «da attivare» se non dà dati');
     ok(d.fonti.every((f) => (f.escludi || []).every((e) => { try { new RegExp(e.regex); return !!e.campo; } catch (x) { return false; } })), 'escludi ben formati');
     eq(d.statici.filter((s) => s.modulo === 'immobili').map((s) => s.stato).sort(), ['da_valutare', 'in_mandato', 'in_trattativa', 'in_vendita'], 'immobili in stati diversi');
-    eq(d.statici.filter((s) => s.modulo === 'trattative').map((s) => s.stato).sort(), ['incontro_profilazione', 'preliminare_firmato', 'trattativa_in_corso'], 'una trattativa per fase');
+    eq(d.statici.filter((s) => s.modulo === 'trattative').map((s) => s.stato).sort(), ['preliminare_firmato', 'trattativa_in_corso', 'trattativa_in_corso'], 'trattative negli stati del workflow semplice (in trattativa, preliminare firmato)');
   });
 
   console.log(`\n${passed} passati, ${failed} falliti`);

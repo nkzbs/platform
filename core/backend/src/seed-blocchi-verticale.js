@@ -114,6 +114,50 @@ function campiDelModulo(slug) {
   } catch (e) { return null; }
 }
 
+
+// `stati` di un'estensione: semplifica il workflow di un modulo già pubblicato. { rimuovi: [{ key, verso }], rinomina: [{ key, da, a }], collega: [{ from, to, label }] }.
+// `rimuovi` toglie lo stato `key` (e i passaggi che lo toccano) e porta ovunque a `verso`: i requisiti per stato (uniti a quelli di `verso`), i trigger e i filtri `_stato` delle
+// automazioni; un documento che portava a quello stato dopo l'invio/la firma smette di farlo. Se era lo stato iniziale, `verso` lo diventa. `rinomina` cambia l'etichetta solo se è ancora `da`.
+// `collega` aggiunge un passaggio se non c'è già. Ritorna { steps, spostati: { key: verso }, cambiato }; non scrive niente (i record si spostano a chi chiama).
+function semplificaStati(steps, op) {
+  let out = steps.map((x) => ({ ...x })), cambiato = false; const spostati = {};
+  const stati = () => new Set(out.filter((x) => x.block_type === 'workflow_state').map((x) => x.key));
+  for (const r of (op && op.rimuovi) || []) {
+    const s = stati(); if (!s.has(r.key) || !s.has(r.verso) || r.key === r.verso) continue;
+    cambiato = true; spostati[r.key] = r.verso;
+    const eraIniziale = !!out.find((x) => x.block_type === 'workflow_state' && x.key === r.key).initial;
+    out = out.filter((x) => !(x.block_type === 'workflow_state' && x.key === r.key) && !(x.block_type === 'workflow_transition' && (x.from === r.key || x.to === r.key)));
+    if (eraIniziale) out = out.map((x) => (x.block_type === 'workflow_state' ? { ...x, initial: x.key === r.verso } : x));
+    out = out.map((x) => {
+      if (x.block_type === 'state_requirements' && x.stato === r.key) return { ...x, stato: r.verso };
+      if (x.block_type === 'automation' && x.trigger) {
+        const t = { ...x.trigger }; if (t.stato === r.key) t.stato = r.verso;
+        if (Array.isArray(t.filtro)) t.filtro = t.filtro.map((f) => (f && f.campo === '_stato' && f.valore === r.key ? { ...f, valore: r.verso } : f));
+        return { ...x, trigger: t };
+      }
+      if (x.block_type === 'document_action') { const c = { ...x }; for (const k of ['on_send_state', 'on_signed_state']) if (c[k] === r.key) delete c[k]; return c; }
+      return x;
+    });
+  }
+  // più requisiti per lo stesso stato (dopo l'unione): un blocco solo, voci senza doppioni (per etichetta)
+  const visti = new Map();
+  out = out.filter((x) => {
+    if (x.block_type !== 'state_requirements') return true;
+    const primo = visti.get(x.stato); if (!primo) { visti.set(x.stato, x); return true; }
+    const etichette = new Set((primo.requisiti || []).map((q) => q.label));
+    primo.requisiti = [...(primo.requisiti || []), ...(x.requisiti || []).filter((q) => !etichette.has(q.label))]; primo.bloccante = !!(primo.bloccante || x.bloccante); return false;
+  });
+  for (const r of (op && op.rinomina) || []) {
+    const i = out.findIndex((x) => x.block_type === 'workflow_state' && x.key === r.key && x.label === r.da);
+    if (i >= 0) { out[i] = { ...out[i], label: r.a }; cambiato = true; }
+  }
+  for (const c of (op && op.collega) || []) {
+    const s = stati(); if (!s.has(c.from) || !s.has(c.to) || out.some((x) => x.block_type === 'workflow_transition' && x.from === c.from && x.to === c.to)) continue;
+    out.push({ id: 'wt_' + Math.random().toString(36).slice(2, 10), block_type: 'workflow_transition', from: c.from, to: c.to, label: c.label }); cambiato = true;
+  }
+  return { steps: out, spostati, cambiato };
+}
+
 async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs, tipo = 'document_action' } = {}) {
   const cfg = TIPI[tipo];
   const esiti = [];
@@ -150,7 +194,7 @@ async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs
         // `ricalcola`: [{ key, da, a, in_fondo? }] cambia la formula di un campo calcolato già presente SOLO se è ancora quella di prima (`da`): una formula che l'utente ha
         // modificato dal Builder non si tocca mai. `in_fondo` sposta il campo dopo gli altri (un calcolo vede solo i campi che lo precedono): servono quando la nuova formula usa campi aggiunti più tardi.
         const ricalcolati = [];
-        const stepsRicalcolati = stepsConvertiti0.map((x) => {
+        let stepsRicalcolati = stepsConvertiti0.map((x) => {
           const r = (az.ricalcola || []).find((y) => y.key === x.key);
           if (r && x.block_type === 'field' && x.type === 'computed' && x.expr === r.da) { ricalcolati.push(r); return { ...x, expr: r.a }; }
           return x;
@@ -182,11 +226,14 @@ async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs
           for (const [k, v] of Object.entries(r.proprieta || {})) if (v && uguali(x[k], v.da) && !uguali(v.a, v.da)) nuove[k] = v.a;
           if (Object.keys(nuove).length) { stepsRicalcolati[i] = { ...x, ...nuove }; impostati.push(r.key); }
         }
+        // `stati`: workflow semplificato (stati tolti, rinominati, passaggi aggiunti); i record negli stati tolti passano allo stato di destinazione dopo la pubblicazione.
+        let statiSpostati = {}, statiCambiati = false;
+        if (az.stati) { const rs = semplificaStati(stepsRicalcolati, az.stati); stepsRicalcolati = rs.steps; statiSpostati = rs.spostati; statiCambiati = rs.cambiato; if (statiCambiati) impostati.push('stati'); }
         const inFondo = ricalcolati.filter((r) => r.in_fondo).map((r) => r.key);
         const stepsConvertiti = inFondo.length ? [...stepsRicalcolati.filter((x) => !(x.block_type === 'field' && inFondo.includes(x.key))), ...inFondo.map((k) => stepsRicalcolati.find((x) => x.block_type === 'field' && x.key === k))] : stepsRicalcolati;
         const nuoviDaConvertire = daConvertire.filter((c) => !schema.steps.some((x) => x.key === c.key))
           .map((c) => ({ id: cfg.idPrefisso + Math.random().toString(36).slice(2, 10), block_type: 'field', key: c.key, label: c.label || c.key, type: c.type || 'multiselect', options: c.options }));
-        if (!daAggiungere.length && !daConvertire.length && !ricalcolati.length && !rinominati.length && !impostati.length) { segna(chiave); esiti.push({ slug, key: az.key, esito: 'nulla da fare' }); continue; } // formule già cambiate dall'utente (o già giuste): niente da pubblicare
+        if (!daAggiungere.length && !daConvertire.length && !ricalcolati.length && !rinominati.length && !impostati.length && !statiCambiati) { segna(chiave); esiti.push({ slug, key: az.key, esito: 'nulla da fare' }); continue; } // formule già cambiate dall'utente (o già giuste): niente da pubblicare
         const bozzaE = await callAs(admin, 'PUT', '/builder/' + slug + '/draft', { schema: { version: 3, steps: [...stepsConvertiti, ...nuoviDaConvertire, ...daAggiungere] } });
         if (!bozzaE.ok) { console.error('[seed-blocchi] bozza ' + slug + '/' + az.key + ' fallita:', JSON.stringify(bozzaE.data)); esiti.push({ slug, key: az.key, esito: 'errore bozza' }); continue; }
         const pubE = await callAs(admin, 'POST', '/builder/' + slug + '/publish', {});
@@ -207,6 +254,10 @@ async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs
             }
             if (cambiato) agg.run(JSON.stringify(dati), r.id);
           }
+        }
+        if (Object.keys(statiSpostati).length) {
+          const righe = db.prepare('SELECT id, data FROM records WHERE module_slug = ?').all(slug), agg = db.prepare('UPDATE records SET data = ? WHERE id = ?');
+          for (const r of righe) { let dati; try { dati = JSON.parse(r.data); } catch (e) { continue; } if (dati && Object.prototype.hasOwnProperty.call(statiSpostati, dati._stato)) { dati._stato = statiSpostati[dati._stato]; agg.run(JSON.stringify(dati), r.id); } }
         }
         // `rimappa` (dentro un `converti`): { valoreVecchio: valoreNuovo } per un elenco a scelta singola le cui voci cambiano: i valori già scritti passano a quelli nuovi, gli altri non si toccano.
         const daRimappare = daConvertire.filter((c) => c.rimappa && typeof c.rimappa === 'object');
@@ -536,4 +587,4 @@ async function run() {
   try { if (aggiungiWidgetAgenda()) console.log('[seed-blocchi] widget «Da fare» aggiunto alla Dashboard'); } catch (e) { console.error('[seed-blocchi] widget Da fare non aggiunto:', e.message); }
 }
 
-module.exports = { migraModuli, aggiungiWidgetAgenda, pacchettiDisponibili, leggiPacchetto, riceviPacchetto, statoPacchetti, pacchettiAttivi, attivaPacchetto, marcatoriDelPacchetto, migraDaMarcatori, applicaSeed, modelloApplicabile, abbinamentoApplicabile, TIPI, dichiaraRuoli, creaModuli, riallineaRelazioni, impostaProprieta, assegnaSezioni, run };
+module.exports = { semplificaStati, migraModuli, aggiungiWidgetAgenda, pacchettiDisponibili, leggiPacchetto, riceviPacchetto, statoPacchetti, pacchettiAttivi, attivaPacchetto, marcatoriDelPacchetto, migraDaMarcatori, applicaSeed, modelloApplicabile, abbinamentoApplicabile, TIPI, dichiaraRuoli, creaModuli, riallineaRelazioni, impostaProprieta, assegnaSezioni, run };
