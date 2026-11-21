@@ -1,0 +1,250 @@
+{
+ "titolo": "Proposta irrevocabile d'acquisto immobiliare",
+ "file": "proposta-acquisto.pdf",
+ "_nota": "Mappa dei campi compilabili del PDF (generata da scripts/genera-pdf-compilabili.js): `testo` = modello con segnaposto, `chiave`+`valore` = casella spuntata se il campo vale quel valore. I campi `x_…` non hanno un dato nel sistema: restano da compilare a mano.",
+ "campi": [
+  {
+   "campo": "venditore__nome",
+   "testo": "{{venditore.nome|vuoto}}"
+  },
+  {
+   "campo": "venditore__codice_fiscale_piva",
+   "testo": "{{venditore.codice_fiscale_piva|vuoto}}"
+  },
+  {
+   "campo": "venditore__residenza",
+   "testo": "{{venditore.residenza|vuoto}}"
+  },
+  {
+   "campo": "ag_denominazione",
+   "testo": "{{@azienda}}"
+  },
+  {
+   "campo": "ag_piva",
+   "testo": "{{@piva}}"
+  },
+  {
+   "campo": "ag_sede",
+   "testo": "{{@indirizzo}}"
+  },
+  {
+   "campo": "cliente__nome",
+   "testo": "{{cliente.nome|vuoto}}"
+  },
+  {
+   "campo": "cliente__codice_fiscale_piva",
+   "testo": "{{cliente.codice_fiscale_piva|vuoto}}"
+  },
+  {
+   "campo": "cliente__luogo_nascita",
+   "testo": "{{cliente.luogo_nascita|vuoto}}"
+  },
+  {
+   "campo": "cliente__data_nascita",
+   "testo": "{{cliente.data_nascita|vuoto}}"
+  },
+  {
+   "campo": "cliente__stato_civile",
+   "testo": "{{cliente.stato_civile|vuoto}}"
+  },
+  {
+   "campo": "cliente__residenza",
+   "testo": "{{cliente.residenza|vuoto}}"
+  },
+  {
+   "campo": "cliente__documento_tipo",
+   "testo": "{{cliente.documento_tipo|vuoto}}"
+  },
+  {
+   "campo": "cliente__documento_numero",
+   "testo": "{{cliente.documento_numero|vuoto}}"
+  },
+  {
+   "campo": "cliente__documento_rilasciato_da",
+   "testo": "{{cliente.documento_rilasciato_da|vuoto}}"
+  },
+  {
+   "campo": "cliente__telefono",
+   "testo": "{{cliente.telefono|vuoto}}"
+  },
+  {
+   "campo": "cliente__email",
+   "testo": "{{cliente.email|vuoto}}"
+  },
+  {
+   "campo": "immobile__comune",
+   "testo": "{{immobile.comune|vuoto}}"
+  },
+  {
+   "campo": "immobile__provincia",
+   "testo": "{{immobile.provincia|vuoto}}"
+  },
+  {
+   "campo": "immobile__indirizzo",
+   "testo": "{{immobile.indirizzo|vuoto}}"
+  },
+  {
+   "campo": "immobile__numero_civico",
+   "testo": "{{immobile.numero_civico|vuoto}}"
+  },
+  {
+   "campo": "immobile__piano",
+   "testo": "{{immobile.piano|vuoto}}"
+  },
+  {
+   "campo": "immobile__interno",
+   "testo": "{{immobile.interno|vuoto}}"
+  },
+  {
+   "campo": "immobile__tipologia",
+   "testo": "{{immobile.tipologia|vuoto}}"
+  },
+  {
+   "campo": "immobile__composizione_vani",
+   "testo": "{{immobile.composizione_vani|vuoto}}"
+  },
+  {
+   "campo": "immobile__numero_camere",
+   "testo": "{{immobile.numero_camere|vuoto}}"
+  },
+  {
+   "campo": "immobile__numero_bagni",
+   "testo": "{{immobile.numero_bagni|vuoto}}"
+  },
+  {
+   "campo": "immobile__sfogo_esterno",
+   "testo": "{{immobile.sfogo_esterno|vuoto}}"
+  },
+  {
+   "campo": "immobile__pertinenze_box",
+   "testo": "{{immobile.pertinenze_box|vuoto}}"
+  },
+  {
+   "campo": "immobile__comune_catasto",
+   "testo": "{{immobile.comune|vuoto}}"
+  },
+  {
+   "campo": "immobile__foglio_catastale",
+   "testo": "{{immobile.foglio_catastale|vuoto}}"
+  },
+  {
+   "campo": "immobile__particella_catastale",
+   "testo": "{{immobile.particella_catastale|vuoto}}"
+  },
+  {
+   "campo": "immobile__subalterno_catastale",
+   "testo": "{{immobile.subalterno_catastale|vuoto}}"
+  },
+  {
+   "campo": "immobile__categoria_catastale",
+   "testo": "{{immobile.categoria_catastale|vuoto}}"
+  },
+  {
+   "campo": "immobile__rendita_catastale",
+   "testo": "{{immobile.rendita_catastale|vuoto}}"
+  },
+  {
+   "campo": "immobile__classe_energetica",
+   "testo": "{{immobile.classe_energetica|vuoto}}"
+  },
+  {
+   "campo": "immobile__valore_ipe",
+   "testo": "{{immobile.valore_ipe|vuoto}}"
+  },
+  {
+   "campo": "immobile__stato_occupazione",
+   "testo": "{{immobile.stato_occupazione|vuoto}}"
+  },
+  {
+   "campo": "proposta_prezzo",
+   "testo": "{{proposta_prezzo|vuoto}}"
+  },
+  {
+   "campo": "proposta_prezzo_lettere",
+   "testo": "{{proposta_prezzo_lettere|vuoto}}"
+  },
+  {
+   "campo": "proposta_caparra",
+   "testo": "{{proposta_caparra|vuoto}}"
+  },
+  {
+   "campo": "proposta_caparra_lettere",
+   "testo": "{{proposta_caparra_lettere|vuoto}}"
+  },
+  {
+   "campo": "proposta_assegno_numero",
+   "testo": "{{proposta_assegno_numero|vuoto}}"
+  },
+  {
+   "campo": "proposta_assegno_banca",
+   "testo": "{{proposta_assegno_banca|vuoto}}"
+  },
+  {
+   "campo": "proposta_assegno_intestatario",
+   "testo": "{{proposta_assegno_intestatario|vuoto}}"
+  },
+  {
+   "campo": "proposta_integrazione",
+   "testo": "{{proposta_integrazione|vuoto}}"
+  },
+  {
+   "campo": "proposta_integrazione_lettere",
+   "testo": "{{proposta_integrazione_lettere|vuoto}}"
+  },
+  {
+   "campo": "proposta_integrazione_data",
+   "testo": "{{proposta_integrazione_data|vuoto}}"
+  },
+  {
+   "campo": "proposta_notaio",
+   "testo": "{{proposta_notaio|vuoto}}"
+  },
+  {
+   "campo": "proposta_saldo",
+   "testo": "{{proposta_saldo|vuoto}}"
+  },
+  {
+   "campo": "proposta_saldo_lettere",
+   "testo": "{{proposta_saldo_lettere|vuoto}}"
+  },
+  {
+   "campo": "proposta_rogito_entro",
+   "testo": "{{proposta_rogito_entro|vuoto}}"
+  },
+  {
+   "campo": "proposta_validita_ora",
+   "testo": "{{proposta_validita_ora|vuoto}}"
+  },
+  {
+   "campo": "proposta_validita_data",
+   "testo": "{{proposta_validita_data|vuoto}}"
+  },
+  {
+   "campo": "prop_cond_nessuna",
+   "chiave": "proposta_cond_nessuna",
+   "valore": "Sì"
+  },
+  {
+   "campo": "prop_cond_mutuo",
+   "chiave": "proposta_cond_mutuo",
+   "valore": "Sì"
+  },
+  {
+   "campo": "proposta_mutuo_importo",
+   "testo": "{{proposta_mutuo_importo|vuoto}}"
+  },
+  {
+   "campo": "proposta_mutuo_data",
+   "testo": "{{proposta_mutuo_data|vuoto}}"
+  },
+  {
+   "campo": "prop_cond_urb",
+   "chiave": "proposta_cond_urbanistica",
+   "valore": "Sì"
+  },
+  {
+   "campo": "proposta_urbanistica_data",
+   "testo": "{{proposta_urbanistica_data|vuoto}}"
+  }
+ ]
+}

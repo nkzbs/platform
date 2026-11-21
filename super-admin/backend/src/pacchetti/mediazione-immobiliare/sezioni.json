@@ -149,10 +149,29 @@
       ],
       "Cosa cerca": [
         "tipo_cliente",
-        "esigenza_acquisto",
         "ricerca_tipologia",
         "ricerca_budget_max",
         "ricerca_zona"
+      ],
+      "Incarico di ricerca": [
+        "ricerca_operazione",
+        "ricerca_uso",
+        "ricerca_superficie_da",
+        "ricerca_superficie_a",
+        "ricerca_caratteristiche",
+        "ricerca_budget_lettere",
+        "ricerca_esclusiva",
+        "ricerca_durata_mesi",
+        "ricerca_scadenza",
+        "ricerca_rinnovo",
+        "ricerca_preavviso_giorni",
+        "ricerca_provvigione_perc",
+        "ricerca_compenso_forfettario",
+        "ricerca_pagamento_modalita",
+        "ricerca_rimborso_spese_max",
+        "ricerca_penale_perc",
+        "ricerca_recesso_contatto",
+        "ricerca_foro"
       ],
       "Privacy e consensi": [
         "consenso_marketing",

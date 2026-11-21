@@ -426,7 +426,16 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   // che verifica con possibilità di modifica da parte dell'utente admin", richiesto dal vivo):
   // «anteprima» riempie la bozza e non spedisce nulla, «invia» manda esattamente il testo nel
   // riquadro (che l'admin può aver modificato). Il destinatario lo decide il server.
-  const documenti = ((schema && schema.document_actions) || []).filter((a) => !a.archiviato) // «archiviato»: un documento tolto dall'uso che resta nel modulo
+  // «archiviato»: un documento tolto dall'uso che resta nel modulo. `visible_if` (stessa forma dei campi: op '==', '!=', 'in' con valori separati da |): il documento
+  // compare solo per i record che soddisfano la condizione (es. l'incarico di ricerca solo per chi cerca casa senza tempo).
+  const documentoVisibile = (a) => {
+    const c = a.visible_if
+    if (!c || !c.enabled || !c.field) return true
+    const v = String(((record && record.data) || {})[c.field] ?? '')
+    if (c.op === 'in') return String(c.value).split('|').includes(v)
+    return c.op === '!=' ? v !== String(c.value) : v === String(c.value)
+  }
+  const documenti = ((schema && schema.document_actions) || []).filter((a) => !a.archiviato && documentoVisibile(a))
   const [docInPreparazione, setDocInPreparazione] = useState(null) // chiave del documento in corso
   const [inviandoDoc, setInviandoDoc] = useState(false)
   const [bozzaDoc, setBozzaDoc] = useState(null) // { key, label, icon, oggetto, corpo, destinatario } oppure null = pannello chiuso

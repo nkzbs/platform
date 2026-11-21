@@ -1,0 +1,159 @@
+{
+ "titolo": "Accordo provvigionale con il Proponente all'acquisto",
+ "file": "accordo-provvigionale.pdf",
+ "_nota": "Mappa dei campi compilabili del PDF (generata da scripts/genera-pdf-compilabili.js): `testo` = modello con segnaposto, `chiave`+`valore` = casella spuntata se il campo vale quel valore. I campi `x_…` non hanno un dato nel sistema: restano da compilare a mano.",
+ "campi": [
+  {
+   "campo": "ag_denominazione",
+   "testo": "{{@azienda}}"
+  },
+  {
+   "campo": "ag_piva",
+   "testo": "{{@piva}}"
+  },
+  {
+   "campo": "ag_sede",
+   "testo": "{{@indirizzo}}"
+  },
+  {
+   "campo": "cliente__nome",
+   "testo": "{{cliente.nome|vuoto}}"
+  },
+  {
+   "campo": "cliente__codice_fiscale_piva",
+   "testo": "{{cliente.codice_fiscale_piva|vuoto}}"
+  },
+  {
+   "campo": "cliente__luogo_nascita",
+   "testo": "{{cliente.luogo_nascita|vuoto}}"
+  },
+  {
+   "campo": "cliente__data_nascita",
+   "testo": "{{cliente.data_nascita|vuoto}}"
+  },
+  {
+   "campo": "cliente__stato_civile",
+   "testo": "{{cliente.stato_civile|vuoto}}"
+  },
+  {
+   "campo": "cliente__residenza",
+   "testo": "{{cliente.residenza|vuoto}}"
+  },
+  {
+   "campo": "cliente__documento_tipo",
+   "testo": "{{cliente.documento_tipo|vuoto}}"
+  },
+  {
+   "campo": "cliente__documento_numero",
+   "testo": "{{cliente.documento_numero|vuoto}}"
+  },
+  {
+   "campo": "cliente__documento_rilasciato_da",
+   "testo": "{{cliente.documento_rilasciato_da|vuoto}}"
+  },
+  {
+   "campo": "cliente__telefono",
+   "testo": "{{cliente.telefono|vuoto}}"
+  },
+  {
+   "campo": "cliente__email",
+   "testo": "{{cliente.email|vuoto}}"
+  },
+  {
+   "campo": "proposta_data",
+   "testo": "{{proposta_data|vuoto}}"
+  },
+  {
+   "campo": "proposta_validita_ora",
+   "testo": "{{proposta_validita_ora|vuoto}}"
+  },
+  {
+   "campo": "proposta_validita_data",
+   "testo": "{{proposta_validita_data|vuoto}}"
+  },
+  {
+   "campo": "immobile__comune",
+   "testo": "{{immobile.comune|vuoto}}"
+  },
+  {
+   "campo": "immobile__provincia",
+   "testo": "{{immobile.provincia|vuoto}}"
+  },
+  {
+   "campo": "immobile__indirizzo",
+   "testo": "{{immobile.indirizzo|vuoto}}"
+  },
+  {
+   "campo": "immobile__numero_civico",
+   "testo": "{{immobile.numero_civico|vuoto}}"
+  },
+  {
+   "campo": "immobile__piano",
+   "testo": "{{immobile.piano|vuoto}}"
+  },
+  {
+   "campo": "immobile__interno",
+   "testo": "{{immobile.interno|vuoto}}"
+  },
+  {
+   "campo": "immobile__comune_catasto",
+   "testo": "{{immobile.comune|vuoto}}"
+  },
+  {
+   "campo": "immobile__foglio_catastale",
+   "testo": "{{immobile.foglio_catastale|vuoto}}"
+  },
+  {
+   "campo": "immobile__particella_catastale",
+   "testo": "{{immobile.particella_catastale|vuoto}}"
+  },
+  {
+   "campo": "immobile__subalterno_catastale",
+   "testo": "{{immobile.subalterno_catastale|vuoto}}"
+  },
+  {
+   "campo": "proposta_prezzo",
+   "testo": "{{proposta_prezzo|vuoto}}"
+  },
+  {
+   "campo": "proposta_prezzo_lettere",
+   "testo": "{{proposta_prezzo_lettere|vuoto}}"
+  },
+  {
+   "campo": "acc_tipo_perc",
+   "chiave": "accordo_tipo",
+   "valore": "Percentuale"
+  },
+  {
+   "campo": "accordo_perc",
+   "testo": "{{accordo_perc|vuoto}}"
+  },
+  {
+   "campo": "acc_tipo_forf",
+   "chiave": "accordo_tipo",
+   "valore": "Forfettario"
+  },
+  {
+   "campo": "accordo_forfettario",
+   "testo": "{{accordo_forfettario|vuoto}}"
+  },
+  {
+   "campo": "accordo_forfettario_lettere",
+   "testo": "{{accordo_forfettario_lettere|vuoto}}"
+  },
+  {
+   "campo": "accordo_pagamento_termini",
+   "testo": "{{accordo_pagamento_termini|vuoto}}"
+  },
+  {
+   "campo": "acc_mezzo_bon",
+   "chiave": "accordo_pagamento_mezzo",
+   "valore": "Bonifico bancario"
+  },
+  {
+   "campo": "acc_mezzo_ass",
+   "chiave": "accordo_pagamento_mezzo",
+   "valore": "Assegno non trasferibile"
+  }
+ ]
+}

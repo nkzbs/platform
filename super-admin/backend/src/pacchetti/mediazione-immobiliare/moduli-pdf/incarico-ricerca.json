@@ -1,0 +1,180 @@
+{
+ "titolo": "Incarico di ricerca immobiliare (Property Finder)",
+ "file": "incarico-ricerca.pdf",
+ "_nota": "Mappa dei campi compilabili del PDF (generata da scripts/genera-pdf-compilabili.js): `testo` = modello con segnaposto, `chiave`+`valore` = casella spuntata se il campo vale quel valore. I campi `x_…` non hanno un dato nel sistema: restano da compilare a mano.",
+ "campi": [
+  {
+   "campo": "nome",
+   "testo": "{{nome|vuoto}}"
+  },
+  {
+   "campo": "codice_fiscale_piva",
+   "testo": "{{codice_fiscale_piva|vuoto}}"
+  },
+  {
+   "campo": "luogo_nascita",
+   "testo": "{{luogo_nascita|vuoto}}"
+  },
+  {
+   "campo": "data_nascita",
+   "testo": "{{data_nascita|vuoto}}"
+  },
+  {
+   "campo": "telefono",
+   "testo": "{{telefono|vuoto}}"
+  },
+  {
+   "campo": "residenza",
+   "testo": "{{residenza|vuoto}}"
+  },
+  {
+   "campo": "documento_tipo",
+   "testo": "{{documento_tipo|vuoto}}"
+  },
+  {
+   "campo": "documento_numero",
+   "testo": "{{documento_numero|vuoto}}"
+  },
+  {
+   "campo": "documento_rilasciato_da",
+   "testo": "{{documento_rilasciato_da|vuoto}}"
+  },
+  {
+   "campo": "email",
+   "testo": "{{email|vuoto}}"
+  },
+  {
+   "campo": "pec",
+   "testo": "{{pec|vuoto}}"
+  },
+  {
+   "campo": "azienda",
+   "testo": "{{azienda|vuoto}}"
+  },
+  {
+   "campo": "ag_denominazione",
+   "testo": "{{@azienda}}"
+  },
+  {
+   "campo": "ag_piva",
+   "testo": "{{@piva}}"
+  },
+  {
+   "campo": "ag_sede",
+   "testo": "{{@indirizzo}}"
+  },
+  {
+   "campo": "ric_op_acq",
+   "chiave": "ricerca_operazione",
+   "valore": "Acquisto"
+  },
+  {
+   "campo": "ric_op_loc",
+   "chiave": "ricerca_operazione",
+   "valore": "Locazione"
+  },
+  {
+   "campo": "ric_uso_abi",
+   "chiave": "ricerca_uso",
+   "valore": "Abitativo"
+  },
+  {
+   "campo": "ric_uso_com",
+   "chiave": "ricerca_uso",
+   "valore": "Commerciale"
+  },
+  {
+   "campo": "ric_uso_inv",
+   "chiave": "ricerca_uso",
+   "valore": "Investimento"
+  },
+  {
+   "campo": "ricerca_tipologia",
+   "testo": "{{ricerca_tipologia|vuoto}}"
+  },
+  {
+   "campo": "ricerca_zona",
+   "testo": "{{ricerca_zona|vuoto}}"
+  },
+  {
+   "campo": "ricerca_superficie_da",
+   "testo": "{{ricerca_superficie_da|vuoto}}"
+  },
+  {
+   "campo": "ricerca_superficie_a",
+   "testo": "{{ricerca_superficie_a|vuoto}}"
+  },
+  {
+   "campo": "ricerca_caratteristiche",
+   "testo": "{{ricerca_caratteristiche|vuoto}}"
+  },
+  {
+   "campo": "ricerca_budget_max",
+   "testo": "{{ricerca_budget_max|vuoto}}"
+  },
+  {
+   "campo": "ricerca_budget_lettere",
+   "testo": "{{ricerca_budget_lettere|vuoto}}"
+  },
+  {
+   "campo": "ric_esc_si",
+   "chiave": "ricerca_esclusiva",
+   "valore": "In esclusiva"
+  },
+  {
+   "campo": "ric_esc_no",
+   "chiave": "ricerca_esclusiva",
+   "valore": "Non in esclusiva"
+  },
+  {
+   "campo": "ricerca_durata_mesi",
+   "testo": "{{ricerca_durata_mesi|vuoto}}"
+  },
+  {
+   "campo": "ricerca_scadenza",
+   "testo": "{{ricerca_scadenza|vuoto}}"
+  },
+  {
+   "campo": "ric_rin_no",
+   "chiave": "ricerca_rinnovo",
+   "valore": "Cessa senza disdetta"
+  },
+  {
+   "campo": "ric_rin_si",
+   "chiave": "ricerca_rinnovo",
+   "valore": "Rinnovo tacito"
+  },
+  {
+   "campo": "ricerca_preavviso_giorni",
+   "testo": "{{ricerca_preavviso_giorni|vuoto}}"
+  },
+  {
+   "campo": "ricerca_provvigione_perc",
+   "testo": "{{ricerca_provvigione_perc|vuoto}}"
+  },
+  {
+   "campo": "ricerca_compenso_forfettario",
+   "testo": "{{ricerca_compenso_forfettario|vuoto}}"
+  },
+  {
+   "campo": "ricerca_pagamento_modalita",
+   "testo": "{{ricerca_pagamento_modalita|vuoto}}"
+  },
+  {
+   "campo": "ricerca_rimborso_spese_max",
+   "testo": "{{ricerca_rimborso_spese_max|vuoto}}"
+  },
+  {
+   "campo": "ricerca_penale_perc",
+   "testo": "{{ricerca_penale_perc|vuoto}}"
+  },
+  {
+   "campo": "ricerca_recesso_contatto",
+   "testo": "{{ricerca_recesso_contatto|vuoto}}"
+  },
+  {
+   "campo": "ricerca_foro",
+   "testo": "{{ricerca_foro|vuoto}}"
+  }
+ ]
+}

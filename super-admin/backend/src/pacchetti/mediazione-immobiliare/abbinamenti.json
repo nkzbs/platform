@@ -7,7 +7,7 @@
       "target_module": "immobili",
       "display_field": "titolo",
       "subtitle_fields": ["comune", "tipologia", "prezzo_richiesto"],
-      "when": { "field": "tipo_cliente", "equals": "Acquirente" },
+      "when": { "field": "tipo_cliente", "in": ["Acquirente che sa già cosa vuole", "Acquirente che cerca casa e non ha tempo"] },
       "target_filter": { "field": "_stato", "in": ["in_mandato", "in_vendita"] },
       "rules": [
         { "mine": "ricerca_tipologia", "theirs": ["tipologia", "titolo"], "op": "testo", "label": "Tipologia" },
@@ -23,7 +23,7 @@
       "target_module": "clienti",
       "display_field": "nome",
       "subtitle_fields": ["ricerca_tipologia", "ricerca_zona", "ricerca_budget_max"],
-      "target_filter": { "field": "tipo_cliente", "equals": "Acquirente" },
+      "target_filter": { "field": "tipo_cliente", "in": ["Acquirente che sa già cosa vuole", "Acquirente che cerca casa e non ha tempo"] },
       "rules": [
         { "mine": "tipologia", "theirs": "ricerca_tipologia", "op": "testo", "label": "Tipologia" },
         { "mine": "prezzo_richiesto", "theirs": "ricerca_budget_max", "op": "theirs>=mine", "label": "Nel budget", "required": true },

@@ -866,6 +866,231 @@
           }
         }
       ]
+    },
+    {
+      "key": "campi_proposta_acquisto",
+      "_nota": "I dati della «Proposta irrevocabile d'acquisto immobiliare» e dell'«Accordo provvigionale con il Proponente» che la trattativa non ha già: prezzo offerto, caparra e assegno, integrazione, saldo, termine del rogito, validità della proposta, condizioni sospensive (nessuna, mutuo, verifica urbanistico-catastale), data della proposta e provvigione dell'accordo (percentuale o forfettaria, termini e mezzo di pagamento). Il resto (acquirente, immobile, venditore) si legge dal cliente, dall'immobile e dal venditore collegati alla trattativa. Sezione «Proposta d'acquisto».",
+      "richiede": {
+        "trattative": [
+          "titolo",
+          "cliente",
+          "immobile",
+          "venditore"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "proposta_prezzo",
+          "label": "Prezzo offerto (€)",
+          "type": "currency",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_prezzo_lettere",
+          "label": "Prezzo offerto in lettere",
+          "type": "text",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_caparra",
+          "label": "Caparra confirmatoria alla firma (€)",
+          "type": "currency",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_caparra_lettere",
+          "label": "Caparra in lettere",
+          "type": "text",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_assegno_numero",
+          "label": "Assegno n.",
+          "type": "text",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_assegno_banca",
+          "label": "Assegno tratto su (banca)",
+          "type": "text",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_assegno_intestatario",
+          "label": "Assegno intestato a",
+          "type": "text",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_integrazione",
+          "label": "Integrazione della caparra (€)",
+          "type": "currency",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_integrazione_lettere",
+          "label": "Integrazione in lettere",
+          "type": "text",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_integrazione_data",
+          "label": "Integrazione entro il",
+          "type": "date",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_notaio",
+          "label": "Luogo / studio notarile del preliminare",
+          "type": "text",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_saldo",
+          "label": "Saldo al rogito (€)",
+          "type": "currency",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_saldo_lettere",
+          "label": "Saldo in lettere",
+          "type": "text",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_rogito_entro",
+          "label": "Rogito entro il",
+          "type": "date",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_validita_data",
+          "label": "Proposta irrevocabile fino al",
+          "type": "date",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_validita_ora",
+          "label": "Fino alle ore (es. 20:00)",
+          "type": "text",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_cond_nessuna",
+          "label": "Nessuna condizione sospensiva",
+          "type": "checkbox",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_cond_mutuo",
+          "label": "Condizione sospensiva: mutuo",
+          "type": "checkbox",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_mutuo_importo",
+          "label": "Mutuo — importo (€)",
+          "type": "currency",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_mutuo_data",
+          "label": "Mutuo — delibera entro il",
+          "type": "date",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_cond_urbanistica",
+          "label": "Condizione sospensiva: verifica urbanistico-catastale",
+          "type": "checkbox",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_urbanistica_data",
+          "label": "Verifica urbanistico-catastale entro il",
+          "type": "date",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "proposta_data",
+          "label": "Proposta formulata il",
+          "type": "date",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "accordo_tipo",
+          "label": "Provvigione dell'accordo",
+          "type": "select",
+          "sezione": "Proposta d'acquisto",
+          "options": [
+            "Percentuale",
+            "Forfettario"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "accordo_perc",
+          "label": "Provvigione (% oltre IVA sul prezzo effettivo)",
+          "type": "number",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "accordo_forfettario",
+          "label": "Compenso forfettario (€ oltre IVA)",
+          "type": "currency",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "accordo_forfettario_lettere",
+          "label": "Compenso forfettario in lettere",
+          "type": "text",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "accordo_pagamento_termini",
+          "label": "Termini di pagamento della provvigione (es. 50% al preliminare e 50% al rogito)",
+          "type": "text",
+          "sezione": "Proposta d'acquisto"
+        },
+        {
+          "block_type": "field",
+          "key": "accordo_pagamento_mezzo",
+          "label": "Mezzo di pagamento della provvigione",
+          "type": "select",
+          "sezione": "Proposta d'acquisto",
+          "options": [
+            "Bonifico bancario",
+            "Assegno non trasferibile"
+          ]
+        }
+      ]
     }
   ],
   "immobili": [
@@ -2386,6 +2611,38 @@
           ]
         }
       ]
+    },
+    {
+      "key": "richieste_compatibili_due_acquirenti",
+      "_nota": "«Richieste compatibili» sull'immobile cerca i clienti che cercano casa: ora sono i due tipi di acquirente (prima il tipo si chiamava solo «Acquirente»). Si riscrive solo se il filtro è ancora quello di prima.",
+      "richiede": {
+        "immobili": [
+          "tipologia",
+          "prezzo_richiesto",
+          "comune"
+        ]
+      },
+      "riscrivi": [
+        {
+          "block_type": "match_view",
+          "key": "richieste_compatibili",
+          "proprieta": {
+            "target_filter": {
+              "da": {
+                "field": "tipo_cliente",
+                "equals": "Acquirente"
+              },
+              "a": {
+                "field": "tipo_cliente",
+                "in": [
+                  "Acquirente che sa già cosa vuole",
+                  "Acquirente che cerca casa e non ha tempo"
+                ]
+              }
+            }
+          }
+        }
+      ]
     }
   ],
   "clienti": [
@@ -3805,6 +4062,380 @@
           "label": "Finalità dell’investimento — altro",
           "type": "text",
           "sezione": "Rapporto, reddito e fondi"
+        }
+      ]
+    },
+    {
+      "key": "tre_tipi_cliente",
+      "_nota": "Il cliente è di tre tipi: «Acquirente che sa già cosa vuole», «Venditore» e «Acquirente che cerca casa e non ha tempo» (l'agenzia la cerca per lui, con l'Incarico di ricerca). Prima c'erano «Venditore»/«Acquirente» più un'esigenza a parte: ora è una scelta sola. I clienti già «Acquirente» passano a «sa già cosa vuole» (`rimappa`: chi era «Cerca immobile» va portato a mano al terzo tipo). I campi della ricerca compaiono solo per i due tipi di acquirente; l'«Esigenza» di prima resta nei dati ma si vede solo se il cliente è ancora «Acquirente» (cioè mai).",
+      "richiede": {
+        "clienti": [
+          "tipo_cliente",
+          "esigenza_acquisto",
+          "ricerca_tipologia",
+          "ricerca_budget_max",
+          "ricerca_zona"
+        ]
+      },
+      "converti": [
+        {
+          "key": "tipo_cliente",
+          "type": "select",
+          "label": "Tipo cliente",
+          "options": [
+            "Acquirente che sa già cosa vuole",
+            "Venditore",
+            "Acquirente che cerca casa e non ha tempo"
+          ],
+          "rimappa": {
+            "Acquirente": "Acquirente che sa già cosa vuole"
+          }
+        }
+      ],
+      "imposta": [
+        {
+          "block_type": "field",
+          "key": "ricerca_tipologia",
+          "proprieta": {
+            "visible_if": {
+              "enabled": true,
+              "field": "tipo_cliente",
+              "op": "in",
+              "value": "Acquirente che sa già cosa vuole|Acquirente che cerca casa e non ha tempo"
+            }
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_budget_max",
+          "proprieta": {
+            "visible_if": {
+              "enabled": true,
+              "field": "tipo_cliente",
+              "op": "in",
+              "value": "Acquirente che sa già cosa vuole|Acquirente che cerca casa e non ha tempo"
+            }
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_zona",
+          "proprieta": {
+            "visible_if": {
+              "enabled": true,
+              "field": "tipo_cliente",
+              "op": "in",
+              "value": "Acquirente che sa già cosa vuole|Acquirente che cerca casa e non ha tempo"
+            }
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "esigenza_acquisto",
+          "proprieta": {
+            "visible_if": {
+              "enabled": true,
+              "field": "tipo_cliente",
+              "op": "==",
+              "value": "Acquirente"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "key": "campi_incarico_ricerca",
+      "_nota": "I dati dell'«Incarico di ricerca immobiliare (Property Finder)» per il cliente che cerca casa e non ha tempo: tipo di operazione, uso, superficie, caratteristiche, budget in lettere, esclusiva e durata, rinnovo, provvigione o compenso forfettario, pagamento, rimborso spese, penale, foro. Compaiono solo per quel tipo di cliente. Sezione «Incarico di ricerca».",
+      "richiede": {
+        "clienti": [
+          "tipo_cliente",
+          "ricerca_tipologia",
+          "ricerca_budget_max",
+          "ricerca_zona"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "ricerca_operazione",
+          "label": "Acquisto o locazione",
+          "type": "select",
+          "sezione": "Incarico di ricerca",
+          "visible_if": {
+            "enabled": true,
+            "field": "tipo_cliente",
+            "op": "==",
+            "value": "Acquirente che cerca casa e non ha tempo"
+          },
+          "options": [
+            "Acquisto",
+            "Locazione"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_uso",
+          "label": "Uso dell'immobile",
+          "type": "select",
+          "sezione": "Incarico di ricerca",
+          "visible_if": {
+            "enabled": true,
+            "field": "tipo_cliente",
+            "op": "==",
+            "value": "Acquirente che cerca casa e non ha tempo"
+          },
+          "options": [
+            "Abitativo",
+            "Commerciale",
+            "Investimento"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_superficie_da",
+          "label": "Superficie da (mq)",
+          "type": "number",
+          "sezione": "Incarico di ricerca",
+          "visible_if": {
+            "enabled": true,
+            "field": "tipo_cliente",
+            "op": "==",
+            "value": "Acquirente che cerca casa e non ha tempo"
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_superficie_a",
+          "label": "Superficie fino a (mq)",
+          "type": "number",
+          "sezione": "Incarico di ricerca",
+          "visible_if": {
+            "enabled": true,
+            "field": "tipo_cliente",
+            "op": "==",
+            "value": "Acquirente che cerca casa e non ha tempo"
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_caratteristiche",
+          "label": "Caratteristiche specifiche (locali, piano, ascensore, terrazzo/giardino, box, stato, classe energetica)",
+          "type": "textarea",
+          "sezione": "Incarico di ricerca",
+          "visible_if": {
+            "enabled": true,
+            "field": "tipo_cliente",
+            "op": "==",
+            "value": "Acquirente che cerca casa e non ha tempo"
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_budget_lettere",
+          "label": "Budget massimo in lettere",
+          "type": "text",
+          "sezione": "Incarico di ricerca",
+          "visible_if": {
+            "enabled": true,
+            "field": "tipo_cliente",
+            "op": "==",
+            "value": "Acquirente che cerca casa e non ha tempo"
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_esclusiva",
+          "label": "Incarico",
+          "type": "select",
+          "sezione": "Incarico di ricerca",
+          "visible_if": {
+            "enabled": true,
+            "field": "tipo_cliente",
+            "op": "==",
+            "value": "Acquirente che cerca casa e non ha tempo"
+          },
+          "options": [
+            "In esclusiva",
+            "Non in esclusiva"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_durata_mesi",
+          "label": "Durata (mesi)",
+          "type": "number",
+          "sezione": "Incarico di ricerca",
+          "visible_if": {
+            "enabled": true,
+            "field": "tipo_cliente",
+            "op": "==",
+            "value": "Acquirente che cerca casa e non ha tempo"
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_scadenza",
+          "label": "Scadenza dell'incarico",
+          "type": "date",
+          "sezione": "Incarico di ricerca",
+          "visible_if": {
+            "enabled": true,
+            "field": "tipo_cliente",
+            "op": "==",
+            "value": "Acquirente che cerca casa e non ha tempo"
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_rinnovo",
+          "label": "Alla scadenza",
+          "type": "select",
+          "sezione": "Incarico di ricerca",
+          "visible_if": {
+            "enabled": true,
+            "field": "tipo_cliente",
+            "op": "==",
+            "value": "Acquirente che cerca casa e non ha tempo"
+          },
+          "options": [
+            "Cessa senza disdetta",
+            "Rinnovo tacito"
+          ]
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_preavviso_giorni",
+          "label": "Preavviso di disdetta (giorni)",
+          "type": "number",
+          "sezione": "Incarico di ricerca",
+          "visible_if": {
+            "enabled": true,
+            "field": "tipo_cliente",
+            "op": "==",
+            "value": "Acquirente che cerca casa e non ha tempo"
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_provvigione_perc",
+          "label": "Provvigione (% oltre IVA sul prezzo)",
+          "type": "number",
+          "sezione": "Incarico di ricerca",
+          "visible_if": {
+            "enabled": true,
+            "field": "tipo_cliente",
+            "op": "==",
+            "value": "Acquirente che cerca casa e non ha tempo"
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_compenso_forfettario",
+          "label": "Oppure compenso forfettario (€ oltre IVA)",
+          "type": "currency",
+          "sezione": "Incarico di ricerca",
+          "visible_if": {
+            "enabled": true,
+            "field": "tipo_cliente",
+            "op": "==",
+            "value": "Acquirente che cerca casa e non ha tempo"
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_pagamento_modalita",
+          "label": "Pagamento della provvigione (es. 100% al preliminare)",
+          "type": "text",
+          "sezione": "Incarico di ricerca",
+          "visible_if": {
+            "enabled": true,
+            "field": "tipo_cliente",
+            "op": "==",
+            "value": "Acquirente che cerca casa e non ha tempo"
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_rimborso_spese_max",
+          "label": "Rimborso spese massimo (€)",
+          "type": "currency",
+          "sezione": "Incarico di ricerca",
+          "visible_if": {
+            "enabled": true,
+            "field": "tipo_cliente",
+            "op": "==",
+            "value": "Acquirente che cerca casa e non ha tempo"
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_penale_perc",
+          "label": "Penale (% della provvigione)",
+          "type": "number",
+          "sezione": "Incarico di ricerca",
+          "visible_if": {
+            "enabled": true,
+            "field": "tipo_cliente",
+            "op": "==",
+            "value": "Acquirente che cerca casa e non ha tempo"
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_recesso_contatto",
+          "label": "Indirizzo o PEC per il recesso",
+          "type": "text",
+          "sezione": "Incarico di ricerca",
+          "visible_if": {
+            "enabled": true,
+            "field": "tipo_cliente",
+            "op": "==",
+            "value": "Acquirente che cerca casa e non ha tempo"
+          }
+        },
+        {
+          "block_type": "field",
+          "key": "ricerca_foro",
+          "label": "Foro competente (città)",
+          "type": "text",
+          "sezione": "Incarico di ricerca",
+          "visible_if": {
+            "enabled": true,
+            "field": "tipo_cliente",
+            "op": "==",
+            "value": "Acquirente che cerca casa e non ha tempo"
+          }
+        }
+      ]
+    },
+    {
+      "key": "immobili_adatti_due_acquirenti",
+      "_nota": "«Immobili adatti» sul cliente vale per i due tipi di acquirente. Si riscrive solo se la condizione è ancora quella di prima.",
+      "richiede": {
+        "clienti": [
+          "tipo_cliente",
+          "ricerca_budget_max"
+        ]
+      },
+      "riscrivi": [
+        {
+          "block_type": "match_view",
+          "key": "immobili_adatti",
+          "proprieta": {
+            "when": {
+              "da": {
+                "field": "tipo_cliente",
+                "equals": "Acquirente"
+              },
+              "a": {
+                "field": "tipo_cliente",
+                "in": [
+                  "Acquirente che sa già cosa vuole",
+                  "Acquirente che cerca casa e non ha tempo"
+                ]
+              }
+            }
+          }
         }
       ]
     }

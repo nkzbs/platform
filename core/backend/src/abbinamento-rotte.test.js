@@ -180,7 +180,7 @@ async function main() {
     assertEq(chiaviMv('clienti'), ['immobili_adatti']); assertEq(chiaviMv('immobili'), ['richieste_compatibili']);
   });
   await test('con i dati veri: un acquirente vede gli immobili in vendita nel suo budget, in zona', async () => {
-    const acq = rec('clienti', { nome: 'Elena', tipo_cliente: 'Acquirente', ricerca_tipologia: 'trilocale', ricerca_budget_max: 250000, ricerca_zona: 'Sirmione' });
+    const acq = rec('clienti', { nome: 'Elena', tipo_cliente: 'Acquirente che sa già cosa vuole', ricerca_tipologia: 'trilocale', ricerca_budget_max: 250000, ricerca_zona: 'Sirmione' });
     const ven = rec('clienti', { nome: 'Fabio', tipo_cliente: 'Venditore', ricerca_budget_max: 250000 });
     const i1 = rec('immobili', { titolo: 'Trilocale vista lago', tipologia: 'Appartamento', comune: 'Sirmione', prezzo_richiesto: 240000, _stato: 'in_vendita' });
     const i2 = rec('immobili', { titolo: 'Villa grande', tipologia: 'Villa', comune: 'Sirmione', prezzo_richiesto: 900000, _stato: 'in_vendita' });
