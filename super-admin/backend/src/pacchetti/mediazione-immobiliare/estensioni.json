@@ -1094,7 +1094,7 @@
     },
     {
       "key": "stati_trattativa_semplici",
-      "_nota": "Il workflow della trattativa passa da sette stati a quattro: «In trattativa» (incontro, catalogazione e trattativa in corso erano la stessa fase: la ricerca e la profilazione stanno nel cliente e nell'attività), «Preliminare firmato», «Rogito completato» e «Chiusa» (con i post-vendita). Le trattative che erano negli stati tolti passano a quello che li assorbe; i solleciti e le provvigioni seguono gli stati nuovi. Per arrivare al rogito serve anche l'Adeguata verifica firmata del cliente, caricata tra gli allegati (nuovo tipo «Adeguata verifica firmata»).",
+      "_nota": "Il workflow della trattativa passa da sette stati a quattro: «In trattativa» (incontro, catalogazione e trattativa in corso erano la stessa fase: la ricerca e la profilazione stanno nel cliente e nell'attività), «Preliminare firmato», «Rogito completato» e «Chiusa» (con i post-vendita). Le trattative che erano negli stati tolti passano a quello che li assorbe; i solleciti e le provvigioni seguono gli stati nuovi. Una pratica chiusa si può riaprire («Riapri pratica» torna a «Rogito completato») e un preliminare saltato torna in trattativa. Per arrivare al rogito serve anche l'Adeguata verifica firmata del cliente, caricata tra gli allegati (nuovo tipo «Adeguata verifica firmata»).",
       "richiede": {
         "trattative": [
           "titolo",
@@ -1128,6 +1128,16 @@
             "from": "rogito_completato",
             "to": "chiusa",
             "label": "Chiudi pratica"
+          },
+          {
+            "from": "chiusa",
+            "to": "rogito_completato",
+            "label": "Riapri pratica"
+          },
+          {
+            "from": "preliminare_firmato",
+            "to": "trattativa_in_corso",
+            "label": "Torna in trattativa"
           }
         ]
       },

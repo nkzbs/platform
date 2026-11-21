@@ -2,9 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
-## 0.5.46 — Trattativa: si può riaprire
+## 0.5.47 — Trattativa: si può riaprire
 
 - Una trattativa **chiusa** si riapre con «Riapri pratica» (torna a «Rogito completato»); un **preliminare saltato** torna «In trattativa» con «Torna in trattativa». Prima dalla chiusa non si poteva più tornare indietro.
+- La 0.5.46 (tag `v0.5.46`) conteneva per errore solo il cambio di numero di versione: il codice è in questa.
 
 ## 0.5.45 — Workflow più semplici: cliente a 2 stati, trattativa a 4, attività a 2
 

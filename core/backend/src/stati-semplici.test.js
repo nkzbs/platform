@@ -73,7 +73,7 @@ const PAC = path.join(__dirname, '../../../super-admin/backend/src/pacchetti/med
     eq(chiavi('trattative'), ['trattativa_in_corso', 'preliminare_firmato', 'rogito_completato', 'chiusa']);
     eq(steps('trattative').filter((x) => x.block_type === 'workflow_state').filter((x) => x.initial).map((x) => x.key), ['trattativa_in_corso']);
     eq(steps('trattative').find((x) => x.key === 'trattativa_in_corso').label, 'In trattativa');
-    eq(passaggi('trattative'), ['trattativa_in_corso>preliminare_firmato', 'preliminare_firmato>rogito_completato', 'rogito_completato>chiusa']);
+    eq(passaggi('trattative'), ['trattativa_in_corso>preliminare_firmato', 'preliminare_firmato>rogito_completato', 'rogito_completato>chiusa', 'chiusa>rogito_completato', 'preliminare_firmato>trattativa_in_corso']);
     eq([stato(t1), stato(t2), stato(t3), stato(t4)], ['trattativa_in_corso', 'trattativa_in_corso', 'chiusa', 'preliminare_firmato']);
   });
   await test('trattativa: i solleciti e le provvigioni restano sugli stati che esistono; per il rogito serve l\'Adeguata verifica firmata', () => {
