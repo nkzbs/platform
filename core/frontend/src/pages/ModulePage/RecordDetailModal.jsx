@@ -895,7 +895,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
                             </span>
                           )
                         })()
-                      : (record.data[f.key] !== undefined && record.data[f.key] !== null ? String(record.data[f.key]) : '—')}
+                      : (record.data[f.key] !== undefined && record.data[f.key] !== null ? (Array.isArray(record.data[f.key]) ? (record.data[f.key].join(', ') || '—') : String(record.data[f.key])) : '—')}
                   </span>
                 </div>
                   ))}

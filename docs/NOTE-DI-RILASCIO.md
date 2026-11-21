@@ -2,6 +2,12 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.43 — Scelta multipla e numeri nel form
+
+- **Scelta multipla funzionante**: i campi `multiselect` nel form (nuovo record, modifica, dettaglio) erano disegnati come menu a scelta singola: si poteva scegliere una voce sola anche dove il modulo PDF ne ammette più (vani, sfogo esterno, giardino, qualità del mandante, occupazione, fonte del reddito…). Ora sono tessere da accendere e spegnere, il valore è un elenco; un vecchio valore singolo si legge come elenco di una voce. Nel dettaglio le voci sono separate da virgola.
+- **Numeri e importi**: campo di testo con tastiera numerica invece di `<input type="number">`, che con il fuoco cambiava valore con la rotellina o il trackpad (3 diventava -38). Virgola italiana accettata. `autocomplete="off"` su tutti i campi.
+- Nessuna modifica ai pacchetti: serve solo «Aggiorna» sul tenant.
+
 ## 0.5.42 — Immobile: qualità del mandante e stato di occupazione a scelta multipla
 
 - **Cosa è cambiato**: «Il mandante agisce come» (proprietario esclusivo, comproprietario, legale rappresentante) e «Stato di occupazione» (libero al rogito, occupato dalla proprietà, locato) ora ammettono più risposte insieme: un comproprietario può essere anche legale rappresentante, un immobile può essere locato e libero al rogito. Il contratto di incarico in PDF spunta tutte le caselle scelte e l'import le rilegge tutte.

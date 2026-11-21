@@ -85,7 +85,26 @@ function FieldEditorInput({ f, value, onChange, uploading, onUploadFile, placeho
   if (f.type === 'textarea') {
     return <textarea className="w-full bg-surface-page text-ink px-4 py-3 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition placeholder-gray-600 resize-none" rows={3} placeholder={f.placeholder || ''} value={value || ''} onChange={(e) => onChange(e.target.value)} />
   }
-  if ((f.type === 'select' || f.type === 'multiselect') && f.options) {
+  // Scelta multipla: tutte le voci sempre visibili come tessere da accendere/spegnere (ogni tocco aggiunge o toglie una voce, il pannello non si chiude).
+  // Il valore è un elenco; un valore vecchio scritto a scelta singola (testo) si legge come elenco di una voce.
+  if (f.type === 'multiselect' && f.options) {
+    const scelte = Array.isArray(value) ? value : (value === undefined || value === null || value === '' ? [] : [value])
+    const alterna = (o) => onChange(scelte.includes(o) ? scelte.filter((x) => x !== o) : [...scelte, o])
+    return (
+      <div className="flex flex-wrap gap-2" role="group" aria-label={f.label}>
+        {f.options.map((o) => {
+          const acceso = scelte.includes(o)
+          return (
+            <button key={o} type="button" aria-pressed={acceso} onClick={() => alterna(o)}
+              className={'px-3 py-2 rounded-lg text-sm border transition text-left flex items-center gap-1.5 ' + (acceso ? 'border-accent text-ink bg-accent/15' : 'border-gray-800 text-gray-400 bg-surface-page hover:border-gray-600')}>
+              {acceso && <Icon name="check" size={13} />}{o}
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
+  if (f.type === 'select' && f.options) {
     return <Select value={value || ''} onChange={onChange} options={f.options.map((o) => ({ value: o, label: o }))} />
   }
   // 'boolean' è un alias legacy di 'checkbox' — alcuni moduli più vecchi (es. Coffee,
@@ -174,8 +193,13 @@ function FieldEditorInput({ f, value, onChange, uploading, onUploadFile, placeho
   // il campo Data sfondava il bordo destro dello schermo su telefono.
   return (
     <input className="w-full min-w-0 max-w-full bg-surface-page text-ink px-4 py-3 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition placeholder-gray-600"
-      type={f.type === 'date' ? 'date' : f.type === 'datetime' ? 'datetime-local' : f.type === 'time' ? 'time' : (f.type === 'number' || f.type === 'currency') ? 'number' : f.type === 'email' ? 'email' : f.type === 'phone' ? 'tel' : f.type === 'url' ? 'url' : 'text'}
-      placeholder={ph} value={value || ''} onChange={(e) => onChange(e.target.value)} />
+      type={f.type === 'date' ? 'date' : f.type === 'datetime' ? 'datetime-local' : f.type === 'time' ? 'time' : f.type === 'email' ? 'email' : f.type === 'phone' ? 'tel' : f.type === 'url' ? 'url' : 'text'}
+      // Numeri e importi: campo di testo con tastiera numerica, NON <input type="number">. Quello cambia il valore con la rotellina/il trackpad quando ha il fuoco
+      // (si scrive 3 e scorrendo la pagina diventa -38) e con le frecce; qui il valore cambia solo se lo scrivi. Virgola italiana accettata come decimale.
+      inputMode={(f.type === 'number' || f.type === 'currency') ? 'decimal' : undefined}
+      placeholder={ph} value={value ?? ''}
+      onChange={(e) => onChange((f.type === 'number' || f.type === 'currency') ? e.target.value.replace(',', '.').replace(/[^0-9.-]/g, '') : e.target.value)}
+      autoComplete="off" />
   )
 }
 
