@@ -2,6 +2,17 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.43 – 0.5.47 — 21 novembre 2026
+
+**Il perché delle scelte di queste versioni** (cosa è stato costruito: `NOTE-DI-RILASCIO.md`; come: `ARCHITETTURA.md`).
+
+- **Il cliente è di tre tipi in una scelta sola** («sa già cosa vuole», «venditore», «cerca casa e non ha tempo»), non una coppia tipo + esigenza: un campo da scegliere invece di due che dipendono l'uno dall'altro, e la ricerca/l'incarico si mostrano solo dove servono.
+- **I tre moduli nuovi sono PDF compilabili generati da noi** (`scripts/genera-pdf-compilabili.js`), non testi da stampare: il flusso reale è «l'agente compila il PDF dal cliente, lo carica, il sistema legge i dati, si firma in digitale», e i testi dell'agenzia (Google Docs) non hanno campi. Il PDF e la mappa nascono da una sola descrizione, come per gli altri moduli. Il carattere è Times, non quello originale (incorporato e non riusabile): da riprendere se l'agenzia vuole la grafica identica.
+- **Proposta e Accordo stanno sulla trattativa, non sul cliente**: la trattativa è l'unico posto che collega acquirente, immobile e venditore. Il venditore si sceglie sulla trattativa perché il modello legge un solo livello di relazione (non il proprietario dell'immobile).
+- **Workflow ridotti, non aumentati**: lo stato che era un promemoria (documenti inviati) è un requisito, le fasi che erano la stessa cosa sono una sola. Gli stati si toccano con una primitiva generale (`stati`), che sposta i record e i riferimenti, e non a mano sui tenant. Dalla chiusura si può tornare indietro («Riapri pratica»). Aperto: una trattativa non conclusa non ha ancora uno stato suo («chiusa senza vendita») e l'Adeguata verifica firmata per il rogito è un promemoria su un tenant già in uso.
+- **I numeri e le scelte multiple nel form**: i campi numerici sono testo con tastiera numerica (il campo numerico del browser cambia valore con la rotellina/il trackpad), e la scelta multipla è un elenco di tessere (prima era un menu a scelta singola: i dati dei moduli PDF non si potevano scrivere per intero).
+- **I pacchetti arrivano ai tenant da Super Admin**: dopo ogni cambio in `pacchetti/` prima si ridistribuisce Super Admin (`redeploy-nas.sh backend` e `frontend`), poi «Aggiorna» sul tenant; un Aggiorna da solo porta il core ma non il pacchetto.
+
 ## 0.4.60 – 0.4.71 — 8 novembre 2026
 
 **Il perché delle scelte di queste versioni** (cosa è stato costruito: `NOTE-DI-RILASCIO.md`; come: `ARCHITETTURA.md`).
