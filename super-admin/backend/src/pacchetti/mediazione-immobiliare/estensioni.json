@@ -1199,6 +1199,41 @@
           }
         }
       ]
+    },
+    {
+      "key": "trattativa_chiusa_senza_vendita",
+      "_nota": "Una trattativa che non si conclude (l'acquirente rinuncia, l'offerta non è accettata, il preliminare salta) si chiude da sola come «Chiusa senza vendita», senza i requisiti di «Chiusa» (le provvigioni non si generano) e si può riaprire. Si arriva da «In trattativa» e da «Preliminare firmato». L'immobile resta com'è: se torna in vendita lo si dice a mano.",
+      "richiede": {
+        "trattative": [
+          "titolo"
+        ]
+      },
+      "stati": {
+        "aggiungi": [
+          {
+            "key": "chiusa_senza_vendita",
+            "label": "Chiusa senza vendita",
+            "color": "#9CA3AF"
+          }
+        ],
+        "collega": [
+          {
+            "from": "trattativa_in_corso",
+            "to": "chiusa_senza_vendita",
+            "label": "Chiudi senza vendita"
+          },
+          {
+            "from": "preliminare_firmato",
+            "to": "chiusa_senza_vendita",
+            "label": "Chiudi senza vendita"
+          },
+          {
+            "from": "chiusa_senza_vendita",
+            "to": "trattativa_in_corso",
+            "label": "Riapri trattativa"
+          }
+        ]
+      }
     }
   ],
   "immobili": [
@@ -2748,6 +2783,24 @@
                 ]
               }
             }
+          }
+        }
+      ]
+    },
+    {
+      "key": "incarico_firmato_in_mandato",
+      "_nota": "Anche il Contratto di incarico firmato porta l'immobile da «Da valutare» a «In mandato» (come già la Scheda di acquisizione): chi firma l'incarico ha dato il mandato, non serve un clic. Vale solo se il passaggio esiste nel workflow.",
+      "richiede": {
+        "immobili": [
+          "titolo"
+        ]
+      },
+      "imposta": [
+        {
+          "block_type": "document_action",
+          "key": "contratto_incarico",
+          "proprieta": {
+            "on_signed_state": "in_mandato"
           }
         }
       ]
@@ -4587,6 +4640,24 @@
           }
         ]
       }
+    },
+    {
+      "key": "verificato_alla_firma",
+      "_nota": "Quando il cliente firma l'Adeguata verifica (o il firmato torna caricato), passa da solo da «Da verificare» a «Verificato» (proprietà `on_signed_state` del documento, già gestita dal server alla consegna del firmato). Vale solo se il passaggio esiste nel workflow. I requisiti per «Verificato» (documento d'identità, privacy firmata) restano un promemoria. Non tocca un'impostazione già scelta dal Builder.",
+      "richiede": {
+        "clienti": [
+          "nome"
+        ]
+      },
+      "imposta": [
+        {
+          "block_type": "document_action",
+          "key": "antiriciclaggio",
+          "proprieta": {
+            "on_signed_state": "cliente_verificato"
+          }
+        }
+      ]
     }
   ],
   "quote_societarie": [

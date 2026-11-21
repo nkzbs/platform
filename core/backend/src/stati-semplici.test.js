@@ -91,6 +91,21 @@ const PAC = path.join(__dirname, '../../../super-admin/backend/src/pacchetti/med
     eq(chiavi('attivita'), ['da_fare', 'fatto']); eq(passaggi('attivita'), ['da_fare>fatto', 'fatto>da_fare']); eq(stato(a1), 'da_fare');
   });
 
+  await test('trattativa: «Chiusa senza vendita» (stato nuovo) si raggiunge da «In trattativa» e «Preliminare firmato» e si riapre; senza requisiti', async () => {
+    eq((await applicaSeed({ trattative: [blocco('trattative', 'trattativa_chiusa_senza_vendita')] }, { tipo: 'estensione' })).map((e) => e.esito), ['applicato']);
+    eq(chiavi('trattative').includes('chiusa_senza_vendita'), true);
+    eq(steps('trattative').find((x) => x.key === 'chiusa_senza_vendita').label, 'Chiusa senza vendita');
+    eq(['trattativa_in_corso>chiusa_senza_vendita', 'preliminare_firmato>chiusa_senza_vendita', 'chiusa_senza_vendita>trattativa_in_corso'].every((p) => passaggi('trattative').includes(p)), true);
+    eq(steps('trattative').some((x) => x.block_type === 'state_requirements' && x.stato === 'chiusa_senza_vendita'), false);
+    eq(await applicaSeed({ trattative: [blocco('trattative', 'trattativa_chiusa_senza_vendita')] }, { tipo: 'estensione' }), [], 'secondo avvio');
+  });
+  await test('firma: l\'Adeguata verifica firmata porta il cliente a «Verificato»; il Contratto di incarico firmato porta l\'immobile «In mandato»', async () => {
+    eq((await applicaSeed({ clienti: [blocco('clienti', 'verificato_alla_firma')] }, { tipo: 'estensione' })).map((e) => e.esito), ['applicato']);
+    eq(steps('clienti').find((x) => x.block_type === 'document_action' && x.key === 'antiriciclaggio').on_signed_state, 'cliente_verificato');
+    mk('immobili', [F('titolo'), S('da_valutare', 'Da valutare', true), S('in_mandato', 'In mandato'), T('da_valutare', 'in_mandato', 'x'), { id: 'd2', block_type: 'document_action', key: 'contratto_incarico', label: 'Contratto', subject: 's', body: 'x', recipient: 'titolo' }]);
+    eq((await applicaSeed({ immobili: [blocco('immobili', 'incarico_firmato_in_mandato')] }, { tipo: 'estensione' })).map((e) => e.esito), ['applicato']);
+    eq(steps('immobili').find((x) => x.block_type === 'document_action').on_signed_state, 'in_mandato');
+  });
   await test('funzione pura: un\'etichetta cambiata dall\'utente non si rinomina; uno stato che non c\'è non fa niente', () => {
     const base = [S('a', 'Mia etichetta', true), S('b', 'B'), T('a', 'b', 'x')];
     const r = semplificaStati(base, { rinomina: [{ key: 'a', da: 'Vecchia', a: 'Nuova' }], rimuovi: [{ key: 'zzz', verso: 'a' }] });

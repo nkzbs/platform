@@ -2,6 +2,12 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.48 — Chiusa senza vendita e passaggi automatici alla firma
+
+- **«Chiusa senza vendita»**: una trattativa che non si conclude (rinuncia, offerta non accettata, preliminare saltato) si chiude con «Chiudi senza vendita» da «In trattativa» e da «Preliminare firmato», senza i requisiti di «Chiusa» (le provvigioni non si generano), e si riapre con «Riapri trattativa». L'immobile resta com'è.
+- **Passaggi automatici alla firma**: l'**Adeguata verifica** firmata porta il cliente da «Da verificare» a «Verificato»; il **Contratto di incarico** firmato porta l'immobile da «Da valutare» a «In mandato» (come già la Scheda di acquisizione). Vale solo se il passaggio esiste nel workflow; i requisiti per «Verificato» restano un promemoria.
+- La primitiva `stati` ha anche `aggiungi` (uno stato nuovo). Pacchetto 36. Test: `stati-semplici.test.js`.
+
 ## 0.5.47 — Trattativa: si può riaprire
 
 - Una trattativa **chiusa** si riapre con «Riapri pratica» (torna a «Rogito completato»); un **preliminare saltato** torna «In trattativa» con «Torna in trattativa». Prima dalla chiusa non si poteva più tornare indietro.

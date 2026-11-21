@@ -115,10 +115,10 @@ function campiDelModulo(slug) {
 }
 
 
-// `stati` di un'estensione: semplifica il workflow di un modulo già pubblicato. { rimuovi: [{ key, verso }], rinomina: [{ key, da, a }], collega: [{ from, to, label }] }.
+// `stati` di un'estensione: semplifica il workflow di un modulo già pubblicato. { rimuovi: [{ key, verso }], rinomina: [{ key, da, a }], aggiungi: [{ key, label, color }], collega: [{ from, to, label }] }.
 // `rimuovi` toglie lo stato `key` (e i passaggi che lo toccano) e porta ovunque a `verso`: i requisiti per stato (uniti a quelli di `verso`), i trigger e i filtri `_stato` delle
 // automazioni; un documento che portava a quello stato dopo l'invio/la firma smette di farlo. Se era lo stato iniziale, `verso` lo diventa. `rinomina` cambia l'etichetta solo se è ancora `da`.
-// `collega` aggiunge un passaggio se non c'è già. Ritorna { steps, spostati: { key: verso }, cambiato }; non scrive niente (i record si spostano a chi chiama).
+// `aggiungi` crea uno stato nuovo ({ key, label, color }) se non c'è già. `collega` aggiunge un passaggio se non c'è già. Ritorna { steps, spostati: { key: verso }, cambiato }; non scrive niente (i record si spostano a chi chiama).
 function semplificaStati(steps, op) {
   let out = steps.map((x) => ({ ...x })), cambiato = false; const spostati = {};
   const stati = () => new Set(out.filter((x) => x.block_type === 'workflow_state').map((x) => x.key));
@@ -150,6 +150,10 @@ function semplificaStati(steps, op) {
   for (const r of (op && op.rinomina) || []) {
     const i = out.findIndex((x) => x.block_type === 'workflow_state' && x.key === r.key && x.label === r.da);
     if (i >= 0) { out[i] = { ...out[i], label: r.a }; cambiato = true; }
+  }
+  for (const n of (op && op.aggiungi) || []) { // stati nuovi: { key, label, color }
+    if (stati().has(n.key)) continue;
+    out.push({ id: 'ws_' + Math.random().toString(36).slice(2, 10), block_type: 'workflow_state', key: n.key, label: n.label, color: n.color || '#6B7280' }); cambiato = true;
   }
   for (const c of (op && op.collega) || []) {
     const s = stati(); if (!s.has(c.from) || !s.has(c.to) || out.some((x) => x.block_type === 'workflow_transition' && x.from === c.from && x.to === c.to)) continue;
