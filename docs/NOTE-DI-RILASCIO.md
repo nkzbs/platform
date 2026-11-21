@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.46 — Trattativa: si può riaprire
+
+- Una trattativa **chiusa** si riapre con «Riapri pratica» (torna a «Rogito completato»); un **preliminare saltato** torna «In trattativa» con «Torna in trattativa». Prima dalla chiusa non si poteva più tornare indietro.
+
 ## 0.5.45 — Workflow più semplici: cliente a 2 stati, trattativa a 4, attività a 2
 
 - **Cliente**: «Da verificare» e «Verificato» (prima tre stati: «Documenti inviati» era un promemoria, non una fase; i documenti mancanti li dicono i requisiti e l'avviso settimanale). I clienti in «Documenti inviati» tornano «Da verificare»; i documenti da firmare non cambiano più stato all'invio.
