@@ -1,0 +1,8 @@
+{
+  "debiti_personali": [
+    { "id": "rate_numerate", "blocco": "aut_rate", "percorso": "azioni.0.config.dati.descrizione", "da": "campo:nome", "a": "numerata:nome" }
+  ],
+  "debiti_casa": [
+    { "id": "rate_numerate", "blocco": "aut_rate", "percorso": "azioni.0.config.dati.descrizione", "da": "campo:nome", "a": "numerata:nome" }
+  ]
+}

@@ -13,6 +13,9 @@ export default function RigheFiglie({ figli, childSchemas, childData, childRelat
               const cFields = cSchema ? (cSchema.fields || []).filter((f) => f.key !== c.relation_key && f.type !== 'computed') : []
               const cRelations = cSchema ? (cSchema.relations || []).filter((r) => r.key !== c.relation_key) : []
               const displayFields = cFields.slice(0, 6)
+              // Lo stato del figlio (es. «Da pagare» / «Pagato» di una rata) si vede nella tabella se il suo modulo ha un workflow: prima mancava e per saperlo bisognava aprire ogni riga.
+              const statiFiglio = cSchema && cSchema.workflow && Array.isArray(cSchema.workflow.states) && cSchema.workflow.states.length > 0 ? cSchema.workflow.states : null
+              const badgeStato = (v) => { const st = statiFiglio && statiFiglio.find((x) => x.key === v); return st ? <span className="inline-block px-1.5 py-0.5 rounded-full text-[10px] whitespace-nowrap" style={{ backgroundColor: (st.color || '#6B7280') + '26', color: st.color || '#9CA3AF' }}>{st.label || st.key}</span> : <span className="text-gray-600">—</span> }
               const rows = childData[c.module_slug] || []
               const isAddingRow = !!childAddingRow[c.module_slug]
               const addForm = childAddForms[c.module_slug] || {}
@@ -61,6 +64,7 @@ export default function RigheFiglie({ figli, childSchemas, childData, childRelat
                               {displayFields.map((f) => (
                                 <th key={f.key} className="px-3 py-1.5 text-left text-[10px] text-gray-600 font-medium">{f.label}</th>
                               ))}
+                              {statiFiglio && <th className="px-3 py-1.5 text-left text-[10px] text-gray-600 font-medium">Stato</th>}
                               {cRelations.slice(0, 2).map((r) => (
                                 <th key={r.key} className="px-3 py-1.5 text-left text-[10px] text-gray-600 font-medium">{r.label}</th>
                               ))}
@@ -83,6 +87,7 @@ export default function RigheFiglie({ figli, childSchemas, childData, childRelat
                                       {renderChildFieldInput(f, editForm[f.key], (v) => setChildEditForms((p) => ({ ...p, [c.module_slug]: { ...(p[c.module_slug] || {}), [f.key]: v } })))}
                                     </td>
                                   ))}
+                                  {statiFiglio && <td className="px-3 py-2">{badgeStato(cr.data._stato)}</td>}
                                   {cRelations.slice(0, 2).map((r) => {
                                     const relData = childRelatedRecs[r.target_module]
                                     return (
@@ -125,6 +130,7 @@ export default function RigheFiglie({ figli, childSchemas, childData, childRelat
                                       : (cr.data[f.key] !== undefined && cr.data[f.key] !== null ? String(cr.data[f.key]) : '')}
                                   </td>
                                 ))}
+                                {statiFiglio && <td className="px-3 py-2">{badgeStato(cr.data._stato)}</td>}
                                 {cRelations.slice(0, 2).map((r) => (
                                   <td key={r.key} className="px-3 py-2 text-gray-500 text-[10px]">{cr.data[r.key] ? '#' + cr.data[r.key] : ''}</td>
                                 ))}

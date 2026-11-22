@@ -2,6 +2,12 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.50 — 22 novembre 2026
+
+- **«x su y» è nel nome, non in una colonna**: l'utente lo vuole nel nome della rata. Il token `numerata:` lo calcola alla creazione (posizione e totale), quindi vale anche per i piani di Smista e per ogni tenant.
+- **Il passato si rinomina solo con uno script a mano**, prova a secco e copia prima: i nomi esistenti sono scritti a mano in vari modi («RATA 6/11 ROMANIELLO», «Cartella … rata 37/66») e non si riscrivono da soli all'avvio.
+- **Lo stato si vede nella tabella delle righe collegate** per ogni modulo con workflow, non con un campo in più: è lo stato che c'è già.
+
 ## 0.5.49 — 22 novembre 2026
 
 **Il perché delle scelte di questa versione** (cosa è stato costruito: `NOTE-DI-RILASCIO.md`).

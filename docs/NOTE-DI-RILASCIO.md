@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.50 — Rate: stato visibile e nome «rata x su y»
+
+- **Colonna «Stato» nelle righe collegate** (`RigheFiglie.jsx`): aprendo un piano, la tabella delle rate (e di ogni modulo collegato che ha un workflow) mostra «Da pagare» / «Pagato» con il suo colore. Prima per saperlo bisognava aprire ogni riga.
+- **Nome delle rate «Nome — rata 3 su 11»**: nuovo token `numerata:campo` nelle automazioni (`resolveDati`); con una rata sola resta il nome. Il blocco `aut_rate` dei piani passa da `campo:nome` a `numerata:nome` all'avvio sui tenant che lo hanno così (`ritocchi-schema.js` + `seeds/ritocchi-schema.json`, una volta sola, solo se il valore è quello atteso: una scelta del Builder non si tocca). Vale anche per i piani creati da «Dividi in rate».
+- **Rate già esistenti**: `scripts/numera-rate.js` le rinomina in ordine di data (prova a secco di default, copia prima di scrivere, salta un piano che non ha tante rate quante dice `n_rate`). `scripts/imposta-stato.js` cambia lo stato di righe scelte (es. le due rate Romaniello con lo stato vuoto). Entrambi usano un token API e non scrivono mai senza `--applica`.
+- Test: `ritocchi-schema.test.js`, `numera-rate.test.js`, `imposta-stato.test.js` (nuovi), `smista.test.js` (nomi delle rate). **Non verificato online**: serve «Aggiorna» su Finance; i nomi delle rate già create cambiano solo con lo script.
+
 ## 0.5.49 — Ricevuta di pagamento, «Trasforma in rate» e competenza al mese dopo
 
 - **Campo «Ricevuta di pagamento»** su Spese casa e Spese personali (file, dopo «Data pagamento»). Le rate sono righe di Spese e vedevano solo Documenti, collegato alla spesa ma non alla rata dentro il piano: ora ogni rata ha il suo spazio. Il campo si aggiunge da solo all'avvio ai tenant che già hanno quei moduli (`campi-garantiti.js`, dichiarazioni in `seeds/campi-garantiti.json`), una volta sola: se lo togli dal Builder non ricompare. Se c'è una bozza dello schema, il campo entra anche lì.

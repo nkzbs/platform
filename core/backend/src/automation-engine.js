@@ -345,6 +345,7 @@ function calcolaScadenza(oggiISO, tipoPagamento) {
 // Risolve i token nei valori di un oggetto dati per crea_record / crea_record_n_volte /
 // crea_record_da_padre. Supporta: 'campo:chiave', '__indice__', '_oggi_', '_ora_',
 // 'mese_offset:chiave', più tre token che richiedono un contesto più ampio (opts):
+// - 'numerata:chiave': il testo del campo con «— rata x su y» (x = indice, y = quante righe nella serie).
 // - 'numero_annuale': "<anno>/<contatore a 4 cifre>", riparte da 1 ogni anno, contando
 //   nel modulo di destinazione i record il cui campo 'numero' inizia già con l'anno
 //   corrente — a differenza di nico, che usa un contatore globale mai azzerato.
@@ -394,6 +395,12 @@ function resolveDati(datiConfig, recordData, indice, opts) {
           .find((r) => { try { return JSON.parse(r.data || '{}').codice === codice; } catch { return false; } });
         dati[k] = row ? row.id : null;
       } catch (e) { dati[k] = null; }
+      return;
+    }
+    // 'numerata:chiave' — il testo del campo indicato con la posizione nella serie: «Nome — rata 3 su 11». Con una serie di una sola riga resta il testo com'è.
+    if (v.startsWith('numerata:')) {
+      const base = String((recordData && recordData[v.slice('numerata:'.length)]) || '').trim();
+      dati[k] = o.totale > 1 && indice != null ? base + ' — rata ' + indice + ' su ' + o.totale : base;
       return;
     }
     if (v.startsWith('campo:')) { dati[k] = recordData && recordData[v.slice(6)]; return; }
@@ -725,7 +732,7 @@ function runAzioni(azioni, recordData, moduleSlug, automationLabel, recordId, lo
           : (parseInt(cfg.n) || 0);
         if (dryRun) { dryLog.push({ desc: 'crea_record_n_volte (' + n + ') in ' + cfg.modulo }); return; }
         for (let i = 1; i <= n && i <= 500; i++) {
-          const dati = resolveDati(cfg.dati || {}, recordData, i, { targetModuleSlug: cfg.modulo, sourceRecordId: recordId });
+          const dati = resolveDati(cfg.dati || {}, recordData, i, { targetModuleSlug: cfg.modulo, sourceRecordId: recordId, totale: n });
           try {
             const resultN = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(cfg.modulo, require('./record-owner').ownerFor(recordId, cfg.modulo), JSON.stringify(dati));
             fireNuovoRecordCascata(cfg.modulo, resultN.lastInsertRowid, dati);
@@ -801,4 +808,4 @@ function fireTrigger(moduleSlug, event, recordData, recordId, details) {
   }
 }
 
-module.exports = { fireTrigger, runAzioni, compare };
+module.exports = { fireTrigger, runAzioni, compare, resolveDati };

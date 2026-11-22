@@ -38,7 +38,7 @@ const DEBITI = { version: 3, steps: [
   F('nome', 'Nome', 'text'), F('importo_totale', 'Totale', 'currency'), F('n_rate', 'Rate', 'number'), F('importo_rata', 'Rata', 'currency'), F('data_prima_rata', 'Prima rata', 'date'),
   { id: 'ws1', block_type: 'workflow_state', key: 'attivo', label: 'Attivo', initial: true },
   { id: 'aut', block_type: 'automation', label: 'Crea piano rateale', trigger: { evento: 'nuovo_record' }, azioni: [{ target: '__interno__', azione: 'crea_record_n_volte', config: { modulo: 'costi', n_field: 'n_rate',
-    dati: { descrizione: 'campo:nome', importo: 'campo:importo_rata', data: 'mese_offset:data_prima_rata', categoria: 'Altro', debito: '__origine_id__', _stato: 'da_pagare' } } }] },
+    dati: { descrizione: 'numerata:nome', importo: 'campo:importo_rata', data: 'mese_offset:data_prima_rata', categoria: 'Altro', debito: '__origine_id__', _stato: 'da_pagare' } } }] },
 ] };
 
 async function main() {
@@ -96,6 +96,7 @@ async function main() {
     const piano = JSON.parse(db.prepare('SELECT data FROM records WHERE id = ?').get(j.piano.id).data);
     assertEq(piano.nome, 'A2A Energia'); assertEq(piano.importo_totale, 90); assertEq(piano.n_rate, 3); assertEq(piano.importo_rata, 30);
     assertEq(j.rate.map((x) => data(x.id)._stato), ['da_pagare', 'da_pagare', 'da_pagare']);
+    assertEq(j.rate.map((x) => data(x.id).descrizione), ['A2A Energia — rata 1 su 3', 'A2A Energia — rata 2 su 3', 'A2A Energia — rata 3 su 3'], 'ogni rata ha nel nome «rata x su y»');
     assertEq(db.prepare("SELECT record_id FROM record_attachments WHERE upload_id = ?").get(up).record_id, j.rate[0].id, 'il PDF segue la prima rata');
   });
   await test('rate con un importo che non si divide esatto: la rata è arrotondata e il messaggio dice quanto', async () => {
