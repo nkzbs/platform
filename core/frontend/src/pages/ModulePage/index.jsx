@@ -10,6 +10,7 @@ import Select from '../../components/Select'
 import FieldEditorInput from './FieldEditorInput'
 import CampiPerSezioni from './CampiPerSezioni'
 import RecordDetailModal from './RecordDetailModal'
+import ErrorBoundary from '../../components/ErrorBoundary'
 import ReportPanel from './ReportPanel'
 import AiSuggestionsPanel from '../../components/AiSuggestionsPanel'
 import ImportPdf from '../../components/ImportPdf'
@@ -1246,7 +1247,9 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
       )}
 
       {detailId && (
-        <RecordDetailModal mod={mod} schema={schema} recordId={detailId} relatedCache={relatedCache} onClose={() => setDetailId(null)} token={token} onSaved={loadRecords} user={user} canDelete={canDelete} onDeleted={loadRecords} />
+        <ErrorBoundary key={detailId} nome="questa scheda" onClose={() => setDetailId(null)}>
+  <RecordDetailModal mod={mod} schema={schema} recordId={detailId} relatedCache={relatedCache} onClose={() => setDetailId(null)} token={token} onSaved={loadRecords} user={user} canDelete={canDelete} onDeleted={loadRecords} />
+        </ErrorBoundary>
       )}
 
       {branchCreateOpen && (

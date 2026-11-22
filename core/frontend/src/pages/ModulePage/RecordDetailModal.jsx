@@ -147,9 +147,12 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
         const rels = (sch && sch.relations) || []
         rels.filter((r) => r.key !== c.relation_key && r.target_module).forEach((r) => {
           api.get('/records/' + r.target_module).then((recs) => {
-            if (!recs) return
+            if (!recs || !Array.isArray(recs)) return
             const byId = {}
-            recs.forEach((rec) => { byId[rec.id] = r.display_field ? (rec.data[r.display_field] ?? ('#' + rec.id)) : (rec.data[Object.keys(rec.data)[0]] ?? ('#' + rec.id)) })
+            if (!Array.isArray(recs)) return
+            // l'etichetta è sempre testo: un campo che non lo è (file, data…) non deve poter rompere il disegno della scheda
+            const testo = (v, id) => (v === undefined || v === null || v === '' ? '#' + id : (typeof v === 'object' ? (v.name || v.label || '#' + id) : String(v)))
+            recs.forEach((rec) => { byId[rec.id] = testo(r.display_field ? rec.data[r.display_field] : rec.data[Object.keys(rec.data)[0]], rec.id) })
             setChildRelatedRecs((p) => ({ ...p, [r.target_module]: { records: recs, byId } }))
           })
         })

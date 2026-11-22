@@ -23,7 +23,7 @@ export default function RigheFiglie({ figli, childSchemas, childData, childRelat
               const relAggiunta = cRelations.filter((r) => r.required)
               const relAltre = cRelations.filter((r) => !r.required)
               // Voci con lo stesso nome (es. tre «A2A-energia-192») non si distinguono: si aggiunge il numero della riga.
-              const opzioniRel = (relData) => { const conta = {}; relData.records.forEach((rec) => { const l = relData.byId[rec.id] || ''; conta[l] = (conta[l] || 0) + 1 }); return relData.records.map((rec) => { const l = relData.byId[rec.id] || '#' + rec.id; return { value: rec.id, label: conta[relData.byId[rec.id] || ''] > 1 ? l + ' · #' + rec.id : l } }) }
+              const opzioniRel = (relData) => { const recs = Array.isArray(relData && relData.records) ? relData.records : []; const nome = (rec) => { const v = (relData.byId || {})[rec.id]; return v === undefined || v === null || v === '' ? '#' + rec.id : String(v) }; const conta = {}; recs.forEach((rec) => { const l = nome(rec); conta[l] = (conta[l] || 0) + 1 }); return recs.map((rec) => { const l = nome(rec); return { value: rec.id, label: conta[l] > 1 ? l + ' · #' + rec.id : l } }) }
               const isAddingRow = !!childAddingRow[c.module_slug]
               const addForm = childAddForms[c.module_slug] || {}
               const isSaving = !!childSaving[c.module_slug]
@@ -139,7 +139,7 @@ export default function RigheFiglie({ figli, childSchemas, childData, childRelat
                                 ))}
                                 {statiFiglio && <td className="px-3 py-2">{badgeStato(cr.data._stato)}</td>}
                                 {relColonne.map((r) => (
-                                  <td key={r.key} className="px-3 py-2 text-gray-500 text-[10px]">{cr.data[r.key] ? (((childRelatedRecs[r.target_module] || {}).byId || {})[cr.data[r.key]] || '#' + cr.data[r.key]) : ''}</td>
+                                  <td key={r.key} className="px-3 py-2 text-gray-500 text-[10px]">{cr.data[r.key] ? String(((childRelatedRecs[r.target_module] || {}).byId || {})[cr.data[r.key]] || '#' + cr.data[r.key]) : ''}</td>
                                 ))}
                                 {computedFields.map((f) => (
                                   <td key={f.key} className="px-3 py-2 text-gray-400 font-mono">{cr.data[f.key] !== undefined && cr.data[f.key] !== null ? String(cr.data[f.key]) : '—'}</td>

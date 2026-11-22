@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
+import ErrorBoundary from './components/ErrorBoundary'
 import InvitePage from './components/InvitePage'
 import FirmaPage from './components/FirmaPage'
 import './index.css'
@@ -12,6 +13,8 @@ const firma = window.location.pathname.match(/^\/firma\/([A-Za-z0-9_-]+)\/?$/)
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    {invito ? <InvitePage token={invito[1]} /> : firma ? <FirmaPage token={firma[1]} /> : <App />}
+    <ErrorBoundary nome="l'app">
+      {invito ? <InvitePage token={invito[1]} /> : firma ? <FirmaPage token={firma[1]} /> : <App />}
+    </ErrorBoundary>
   </React.StrictMode>
 )

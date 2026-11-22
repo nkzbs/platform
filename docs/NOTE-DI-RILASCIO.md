@@ -2,6 +2,11 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.52 — Niente più schermata bianca
+
+- **Rete di sicurezza contro la schermata bianca** (`ErrorBoundary.jsx`): se una scheda o la pagina va in errore mentre si disegna, compare un messaggio con il dettaglio dell'errore e «Chiudi» / «Ricarica», invece della pagina bianca. L'errore resta in `localStorage` (`platform_ultimo_errore`: quando, dove, testo e componenti) per capire la causa. Non si conosce ancora la causa della schermata bianca segnalata aprendo una rata: se ricapita, il messaggio la mostra.
+- Le etichette dei collegamenti sono sempre testo (un campo che non lo è, come un file, non può più rompere il disegno della scheda) e un elenco di collegati non valido si ignora.
+
 ## 0.5.51 — Righe collegate più chiare e piano a rate più facile
 
 - **Righe collegate (`RigheFiglie.jsx`)**: nella tabella e nel form «Aggiungi riga» di un modulo collegato non compaiono più le prime due relazioni del modulo qualunque esse siano (da una spesa personale si vedeva «Spesa Casa» e «Debito Casa», non c'entravano). Le colonne di relazione sono solo quelle in cui almeno una riga ha un valore e mostrano il nome del collegato, non `#id`; nel form i collegamenti obbligatori restano in vista e gli altri stanno sotto **«Altri collegamenti (n)»**. Nei menu di scelta le voci con lo stesso nome si distinguono con il numero della riga («A2A-energia-192 · #8343»).
