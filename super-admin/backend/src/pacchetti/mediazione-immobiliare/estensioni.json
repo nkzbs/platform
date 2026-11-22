@@ -1249,31 +1249,6 @@
           "key": "firma_elettronica"
         }
       ]
-    },
-    {
-      "key": "documenti_trattativa_a_mano",
-      "_nota": "Proposta e Accordo si compilano, si firmano su carta e si ricaricano: niente invio per la firma digitale. Dove i due documenti ci sono già, aggiunge la proprietà `solo_a_mano`.",
-      "richiede": {
-        "trattative": [
-          "titolo"
-        ]
-      },
-      "imposta": [
-        {
-          "block_type": "document_action",
-          "key": "proposta_acquisto",
-          "proprieta": {
-            "solo_a_mano": true
-          }
-        },
-        {
-          "block_type": "document_action",
-          "key": "accordo_provvigionale",
-          "proprieta": {
-            "solo_a_mano": true
-          }
-        }
-      ]
     }
   ],
   "immobili": [

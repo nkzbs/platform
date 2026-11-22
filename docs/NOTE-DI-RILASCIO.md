@@ -2,10 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
-## 0.5.57 — Proposta e Accordo solo a mano (pacchetto 39)
+## 0.5.58 — «Invia per la firma» resta su Proposta e Accordo (0.5.57 ritirata)
 
-- **Niente invio per la firma digitale sulla Trattativa**: la Proposta d'acquisto e l'Accordo provvigionale hanno la proprietà `solo_a_mano`. Dalla scheda si scarica il PDF già compilato, si fa firmare su carta e si ricarica («Scarica PDF · Carica firmato»); il pulsante «Invia per la firma» non compare e il server non li manda (`firma.js`). Restano sulla Trattativa perché un cliente ha più trattative e ogni proposta riguarda un immobile.
-- Sui tenant che hanno già i due documenti la proprietà arriva con il blocco `documenti_trattativa_a_mano` (`imposta`); Cliente e Immobile non cambiano.
+- La 0.5.57 (tag `v0.5.57`, mai distribuita) aveva tolto «Invia per la firma» da Proposta d'acquisto e Accordo provvigionale: era un errore, quei documenti vanno firmati. Qui è annullata. Quello che non serve è solo la **«Firma elettronica»** a pagamento tra le Azioni della Trattativa (0.5.56), che resta tolta.
+- Pacchetto 39 = contenuto del 38 (senza `solo_a_mano`).
 
 ## 0.5.56 — Via la «Firma elettronica» a pagamento dalla trattativa (pacchetto 38)
 

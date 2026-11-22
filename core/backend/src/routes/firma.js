@@ -35,7 +35,7 @@ admin.post('/:slug/:id/richieste', requireAuth, requireAdmin, requireModuleAcces
   try {
     const records = require('./records'), { renderModello, risolviDestinatario } = require('../lib/modello-documento');
     const { slug, id } = req.params;
-    const tutte = ((records.getModuleSchema(slug) || {}).document_actions || []).filter((a) => a.delivery === 'firma' && !a.archiviato && !a.solo_a_mano); // `solo_a_mano`: il PDF si compila, si firma su carta e si ricarica; niente invio per la firma digitale
+    const tutte = ((records.getModuleSchema(slug) || {}).document_actions || []).filter((a) => a.delivery === 'firma' && !a.archiviato);
     const scelte = Array.isArray(req.body && req.body.documenti) && req.body.documenti.length ? tutte.filter((a) => req.body.documenti.includes(a.key)) : tutte;
     if (!scelte.length) return res.status(400).json({ error: 'Questo modulo non ha documenti da far firmare.' });
     const firmatari = []; const documenti = [];

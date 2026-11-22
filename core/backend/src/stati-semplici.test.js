@@ -124,12 +124,5 @@ const PAC = path.join(__dirname, '../../../super-admin/backend/src/pacchetti/med
     await applicaSeed({ trattative_g: [bl] }, { tipo: 'estensione' });
     eq(steps('trattative_g').map((x) => x.key), ['titolo', 'dato']);
   });
-  await test('documenti della trattativa: Proposta e Accordo diventano «solo a mano», gli altri no', async () => {
-    const D = (key) => ({ id: 'd_' + key, block_type: 'document_action', key, label: key, delivery: 'firma', subject: 's', body: 'x', recipient: 'nome' });
-    mk('trattative_h', [F('titolo'), D('proposta_acquisto'), D('accordo_provvigionale'), D('altro')]);
-    const bl = { ...blocco('trattative', 'documenti_trattativa_a_mano'), richiede: { trattative_h: ['titolo'] } };
-    eq((await applicaSeed({ trattative_h: [bl] }, { tipo: 'estensione' })).map((e) => e.esito), ['applicato']);
-    eq(steps('trattative_h').filter((x) => x.block_type === 'document_action').map((x) => !!x.solo_a_mano), [true, true, false]);
-  });
   console.log(`\n${passed} passati, ${failed} falliti`); process.exit(failed ? 1 : 0);
 })();
