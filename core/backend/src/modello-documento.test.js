@@ -154,10 +154,11 @@ const azione = (mod, key) => seed[mod].find((a) => a.key === key);
 const oggiIt = new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
 const senzaData = (t) => t.split(oggiIt).join('<OGGI>');
 
-for (const caso of fixture.casi) {
+// La mail «Scheda immobile» è stata tolta dal pacchetto (0.5.60): i suoi casi congelati restano nella fixture ma non si confrontano più.
+const casi = fixture.casi.filter((c) => c.documento !== 'scheda_immobile');
+for (const caso of casi) {
   test(`${caso.id}: documento identico al testo originale`, () => {
-    const mod = caso.documento === 'scheda_immobile' ? 'immobili' : 'clienti';
-    const a = azione(mod, caso.documento);
+    const a = azione('clienti', caso.documento);
     const get = caso.immobile
       ? costruisciGet({ record: caso.immobile, schema: schemaImm, tenant: caso.tenant, leggiRecord: leggi })
       : getCliente(caso.cliente, caso.tenant);
@@ -165,14 +166,13 @@ for (const caso of fixture.casi) {
     assertEq(senzaData(renderModello(a.subject, get)), caso.oggetto, 'oggetto');
   });
 }
-test('la fixture copre tre documenti e almeno 40 casi', () => {
-  assertEq([...new Set(fixture.casi.map((c) => c.documento))].sort(), ['antiriciclaggio', 'privacy_incarico', 'scheda_immobile']);
-  assertTrue(fixture.casi.length >= 40, 'casi: ' + fixture.casi.length);
+test('la fixture copre i due documenti rimasti (antiriciclaggio e privacy) con almeno 24 casi', () => {
+  assertEq([...new Set(casi.map((c) => c.documento))].sort(), ['antiriciclaggio', 'privacy_incarico']);
+  assertTrue(casi.length >= 24, 'casi: ' + casi.length);
 });
 
-test('destinatari del seed: email del cliente, email del proprietario collegato', () => {
+test('destinatari del seed: email del cliente', () => {
   assertEq(azione('clienti', 'privacy_incarico').recipient, 'email');
-  assertEq(azione('immobili', 'scheda_immobile').recipient, 'proprietario.email');
 });
 
 test('le date del sistema (AAAA-MM-GG) si scrivono all\'italiana; il resto non cambia', () => {
