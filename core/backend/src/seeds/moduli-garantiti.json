@@ -1,0 +1,136 @@
+{
+  "fornitori": {
+    "se_esiste": [
+      "debiti_personali",
+      "debiti_casa",
+      "spese_personali",
+      "spese_casa"
+    ],
+    "name": "Fornitori",
+    "icon": "store",
+    "color": "#0EA5E9",
+    "schema": {
+      "version": 3,
+      "steps": [
+        {
+          "id": "fld_forn_nome",
+          "block_type": "field",
+          "key": "nome",
+          "label": "Nome",
+          "type": "text",
+          "required": true,
+          "unique": true
+        },
+        {
+          "id": "fld_forn_cat",
+          "block_type": "field",
+          "key": "categoria",
+          "label": "Categoria",
+          "type": "select",
+          "options": [
+            "Auto",
+            "Casa e utenze",
+            "Tasse e imposte",
+            "Assicurazioni",
+            "Abbonamenti",
+            "Acquisti e finanziamenti",
+            "Persone",
+            "Altro"
+          ]
+        },
+        {
+          "id": "fld_forn_note",
+          "block_type": "field",
+          "key": "note",
+          "label": "Note",
+          "type": "textarea"
+        }
+      ]
+    },
+    "records": [
+      {
+        "nome": "Lanzanova Auto",
+        "categoria": "Auto"
+      },
+      {
+        "nome": "ACI",
+        "categoria": "Auto"
+      },
+      {
+        "nome": "R.A.M.",
+        "categoria": "Casa e utenze",
+        "note": "Caldaia"
+      },
+      {
+        "nome": "A2A",
+        "categoria": "Casa e utenze",
+        "note": "Luce, gas e acqua"
+      },
+      {
+        "nome": "Intred",
+        "categoria": "Casa e utenze",
+        "note": "Internet"
+      },
+      {
+        "nome": "Agenzia Entrate Riscossione",
+        "categoria": "Tasse e imposte"
+      },
+      {
+        "nome": "Groupama",
+        "categoria": "Assicurazioni"
+      },
+      {
+        "nome": "IKEA",
+        "categoria": "Acquisti e finanziamenti"
+      },
+      {
+        "nome": "LG",
+        "categoria": "Acquisti e finanziamenti"
+      },
+      {
+        "nome": "Cofidis",
+        "categoria": "Acquisti e finanziamenti"
+      },
+      {
+        "nome": "Scalapay",
+        "categoria": "Acquisti e finanziamenti"
+      },
+      {
+        "nome": "Klarna",
+        "categoria": "Acquisti e finanziamenti"
+      },
+      {
+        "nome": "iCloud",
+        "categoria": "Abbonamenti"
+      },
+      {
+        "nome": "DAZN",
+        "categoria": "Abbonamenti"
+      },
+      {
+        "nome": "Patreon",
+        "categoria": "Abbonamenti"
+      },
+      {
+        "nome": "Google",
+        "categoria": "Abbonamenti"
+      },
+      {
+        "nome": "Amazon Prime",
+        "categoria": "Abbonamenti"
+      },
+      {
+        "nome": "Antonio Romaniello",
+        "categoria": "Persone"
+      },
+      {
+        "nome": "Federica Scanu",
+        "categoria": "Persone"
+      },
+      {
+        "nome": "Cristian Bai",
+        "categoria": "Persone"
+      }
+    ]
+  }
+}

@@ -416,7 +416,7 @@ router.get('/:slug/valori/:key', requireAuth, requireModuleAccess, (req, res) =>
   if (!f || !f.suggerisci || f.type !== 'text') return res.json([]);
   const rule = ruleFor(schema, req.user.role);
   if (rule && !rule.view) return res.status(403).json({ error: 'Non hai i permessi per vedere questo modulo' });
-  res.json(valoriSuggeriti.valoriUsati(req.params.slug, req.params.key).map((x) => x.valore));
+  res.json(valoriSuggeriti.valoriUsati(req.params.slug, req.params.key, f).map((x) => x.valore));
 });
 
 router.get('/:slug/parent-children/:key', requireAuth, requireModuleAccess, (req, res) => {
@@ -741,7 +741,7 @@ router.post('/:slug', requireAuth, requireModuleAccess, (req, res) => {
   if (rule && !rule.create) return res.status(403).json({ error: 'Non hai i permessi per creare record in questo modulo' });
   // Campi di sola lettura (`sola_lettura`: es. i consensi privacy, che si confermano solo firmando): non si scrivono a mano, nascono vuoti.
   const corpoCreazione = { ...(req.body || {}) }; for (const f of schema.fields || []) if (f.sola_lettura) delete corpoCreazione[f.key];
-  const withDefaults = valoriSuggeriti.allinea(req.params.slug, schema, pianoRata.applica(req.params.slug, competenza.applica(req.params.slug, applicaEredita(db, schema, applyDefaults(corpoCreazione, schema.fields)), null)));
+  const withDefaults = valoriSuggeriti.allinea(req.params.slug, schema, pianoRata.applica(req.params.slug, competenza.applica(req.params.slug, applicaEredita(db, schema, applyDefaults(corpoCreazione, schema.fields)), null)), req.user.id);
   const uniqueError = checkUnique(req.params.slug, schema.fields, withDefaults, null);
   if (uniqueError) return res.status(400).json(uniqueError);
   const campoError = controllaValidazioni(schema.fields, withDefaults);
@@ -903,7 +903,7 @@ router.put('/:slug/:id', requireAuth, requireModuleAccess, (req, res) => {
   // invariato) farebbe scattare tutte le automazioni "modifica_campo" del modulo.
   const beforeData = JSON.parse(existing.data);
 
-  const corpo = valoriSuggeriti.allinea(req.params.slug, schema, competenza.applica(req.params.slug, applicaEredita(db, schema, req.body), beforeData));
+  const corpo = valoriSuggeriti.allinea(req.params.slug, schema, competenza.applica(req.params.slug, applicaEredita(db, schema, req.body), beforeData), req.user.id);
   for (const f of schema.fields || []) if (f.sola_lettura) { if (beforeData[f.key] === undefined) delete corpo[f.key]; else corpo[f.key] = beforeData[f.key]; } // sola lettura: resta com'è (lo cambia solo la firma)
   const uniqueError = checkUnique(req.params.slug, schema.fields, corpo, req.params.id);
   if (uniqueError) return res.status(400).json(uniqueError);

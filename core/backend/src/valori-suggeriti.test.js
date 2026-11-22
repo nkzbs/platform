@@ -57,6 +57,28 @@ async function main() {
     assertEq((await crea({ nome: 'ikea' })).data.nome, 'ikea');
   });
 
+  // lista da un altro modulo (es. Fornitori) con aggiunta automatica
+  db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('forn', 'forn', 'box', '#000', 1, 1, 71, ?)").run(JSON.stringify({ version: 3, steps: [F('nome', 'Nome', 'text')] }));
+  db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('piani2', 'piani2', 'box', '#000', 1, 1, 72, ?)").run(JSON.stringify({ version: 3, steps: [F('nome', 'Nome', 'text'), F('creditore', 'Creditore', 'text', { suggerisci: true, suggerisci_da: { modulo: 'forn', campo: 'nome', crea: true } })] }));
+  for (const n of ['Lanzanova Auto', 'A2A']) db.prepare("INSERT INTO records (module_slug, user_id, data) VALUES ('forn', NULL, ?)").run(JSON.stringify({ nome: n }));
+  const crea2 = async (body) => (await (await fetch(BASE + '/api/records/piani2', { method: 'POST', headers: H, body: JSON.stringify(body) })).json());
+  const nomiForn = () => db.prepare("SELECT data FROM records WHERE module_slug = 'forn'").all().map((r) => JSON.parse(r.data).nome).sort();
+  await test('con una lista (suggerisci_da) un nome scritto in modo diverso torna alla grafia della lista, anche se nessun piano lo usa ancora', async () => {
+    assertEq((await crea2({ nome: 'x', creditore: 'AUTOLANZANOVA' })).data.creditore, 'AUTOLANZANOVA', 'senza «Auto» uguale non c\'è corrispondenza: nuovo');
+    assertEq((await crea2({ nome: 'y', creditore: 'lanzanova auto' })).data.creditore, 'Lanzanova Auto');
+    assertEq((await crea2({ nome: 'z', creditore: ' a2a ' })).data.creditore, 'A2A');
+  });
+  await test('un nome nuovo si aggiunge da solo alla lista (una volta), uno già in lista no', async () => {
+    assertEq(nomiForn().includes('AUTOLANZANOVA'), true);
+    const n0 = nomiForn().length;
+    await crea2({ nome: 'w', creditore: 'AUTOLANZANOVA' }); await crea2({ nome: 'v', creditore: 'a2a' });
+    assertEq(nomiForn().length, n0, 'nessun doppione');
+  });
+  await test('l\'elenco dei suggerimenti ha prima la lista (in ordine alfabetico), poi i valori già usati e non in lista', async () => {
+    const v = await valori('creditore', 'piani2');
+    assertEq(v.slice(0, 2), ['A2A', 'AUTOLANZANOVA']); assertEq(new Set(v.map((x) => x.toLowerCase())).size, v.length, 'nessun doppione');
+  });
+
   console.log(`\n${'='.repeat(60)}`);
   console.log(passed + ' passati, ' + failed + ' falliti su ' + (passed + failed) + ' test.');
   try { fs.unlinkSync(dbPath); } catch (e) {}

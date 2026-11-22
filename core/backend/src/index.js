@@ -252,6 +252,7 @@ require('./record-owner').adoptOrphans();
 require('./legacy-cleanup').removeStubModules();
 if (moduleRoles.seedIfEmpty()) console.log('Ruoli dei moduli: dichiarati per i moduli di finanza già presenti');
 if (require('./ritocchi-schema').apply()) console.log('Moduli: ritoccati i blocchi dichiarati (es. nome delle rate)');
+if (require('./moduli-garantiti').apply()) console.log('Moduli: creati quelli dichiarati dove mancavano');
 { const cg = require('./campi-garantiti'); if (cg.apply() + cg.applyBlocchi()) console.log('Moduli: aggiunti i campi e i blocchi dichiarati dove mancavano'); }
 if (features.seedIfEmpty()) console.log('Funzioni: tenant con moduli di finanza, funzioni accese; le altre restano spente');
 require('./pwa-icon').apply(); // icona del dock/PWA sul colore del tenant, se scelto (vedi Impostazioni → Aspetto)

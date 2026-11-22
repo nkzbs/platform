@@ -13,6 +13,17 @@
       "percorso": "suggerisci",
       "da": null,
       "a": true
+    },
+    {
+      "id": "creditore_da_fornitori",
+      "blocco": "campo:creditore",
+      "percorso": "suggerisci_da",
+      "da": null,
+      "a": {
+        "modulo": "fornitori",
+        "campo": "nome",
+        "crea": true
+      }
     }
   ],
   "debiti_casa": [
@@ -29,6 +40,17 @@
       "percorso": "suggerisci",
       "da": null,
       "a": true
+    },
+    {
+      "id": "creditore_da_fornitori",
+      "blocco": "campo:creditore",
+      "percorso": "suggerisci_da",
+      "da": null,
+      "a": {
+        "modulo": "fornitori",
+        "campo": "nome",
+        "crea": true
+      }
     }
   ]
 }
