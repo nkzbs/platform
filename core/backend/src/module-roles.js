@@ -98,7 +98,7 @@ function clean(input) {
     valore_bolletta: word(doc.valore_bolletta, '', 60), campo_file: stateKey(doc.campo_file), campo_data: stateKey(doc.campo_data), relazione: stateKey(doc.relazione),
   };
   const cg = Number(input && input.competenza && input.competenza.giorno);
-  const competenza = { giorno: Number.isInteger(cg) && cg >= 2 && cg <= 28 ? cg : 0 };
+  const competenza = { giorno: Number.isInteger(cg) && cg >= 2 && cg <= 28 ? cg : 0, ...(input && input.competenza && input.competenza.esplicita ? { esplicita: true } : {}) }; // `esplicita`: spenta per scelta, il valore di partenza non la riaccende
   const ow = input && input.owner_user_id;
   const owner_user_id = ow === undefined ? undefined : (Number.isInteger(Number(ow)) && Number(ow) > 0 ? Number(ow) : null); // undefined = non indicato: si conserva quello che c'è
   return { kind, uses, roles, avvisi, riepiloghi, estratto, documenti, competenza, owner_user_id };
@@ -107,9 +107,14 @@ function clean(input) {
 function set(slug, input) {
   const c = clean(input);
   if (c.owner_user_id === undefined) { const cur = get(slug); c.owner_user_id = cur ? cur.owner_user_id : null; }
-  if (!(input && input.competenza)) { const cur = get(slug); if (cur) c.competenza = cur.competenza; } // il Builder non la conosce ancora: salvando altro non si spegne
+  // La competenza si scrive solo se è stata dichiarata (da chi salva, o già prima): salvare altro dal Builder, che non la conosce ancora, non la spegne
+  // e non la «dichiara» a zero — altrimenti il valore di partenza dei moduli di finanza (seedIfEmpty) non la troverebbe più mancante.
+  const prec = db.prepare('SELECT extra FROM module_roles WHERE module_slug = ?').get(slug);
+  let extraPrec = {}; try { extraPrec = JSON.parse((prec && prec.extra) || '{}'); } catch (e) { /* vuoto */ }
+  const dichiarata = !!(input && input.competenza) || !!(extraPrec && extraPrec.competenza);
+  if (!(input && input.competenza) && extraPrec && extraPrec.competenza) c.competenza = clean({ competenza: extraPrec.competenza }).competenza;
   db.prepare('INSERT INTO module_roles (module_slug, kind, uses, roles, extra) VALUES (?, ?, ?, ?, ?) ON CONFLICT(module_slug) DO UPDATE SET kind = excluded.kind, uses = excluded.uses, roles = excluded.roles, extra = excluded.extra')
-    .run(slug, c.kind, JSON.stringify(c.uses), JSON.stringify(c.roles), JSON.stringify({ v: SCHEMA_V, owner_user_id: c.owner_user_id, avvisi: c.avvisi, riepiloghi: c.riepiloghi, estratto: c.estratto, documenti: c.documenti, competenza: c.competenza }));
+    .run(slug, c.kind, JSON.stringify(c.uses), JSON.stringify(c.roles), JSON.stringify({ v: SCHEMA_V, owner_user_id: c.owner_user_id, avvisi: c.avvisi, riepiloghi: c.riepiloghi, estratto: c.estratto, documenti: c.documenti, ...(dichiarata ? { competenza: c.competenza } : {}) }));
   return get(slug);
 }
 
@@ -145,7 +150,8 @@ function seedIfEmpty() {
     // dichiarato prima dell'archiviazione in Documenti: si aggiunge dove salvare gli allegati della mail
     const needDocumenti = cfg.documenti && !parsed.documenti;
     // competenza dichiarata dopo: si scrive una volta sola, se non c'è ancora (una scelta già fatta, anche «spenta», non si tocca)
-    const needCompetenza = cfg.competenza && !parsed.competenza;
+    // (uno zero senza `esplicita` non è una scelta: lo scrisse un salvataggio che non la conosceva)
+    const needCompetenza = cfg.competenza && (!parsed.competenza || (!parsed.competenza.giorno && !parsed.competenza.esplicita));
     if (!(needAvvisi || needRiep || needPiano || needEstratto || nuoviRuoli.length || needRate || needDocumenti || needCompetenza)) continue;
     let avvisi = needAvvisi ? cfg.avvisi : cur.avvisi, roles = cur.roles;
     if (needPiano) {

@@ -93,6 +93,24 @@ async function main() {
     assertEq(roles.get('con').competenza.giorno, 27);
   });
 
+  console.log('\n--- il valore di partenza sui moduli già in uso ---');
+  const FIN = require('./seeds/finance-roles.json');
+  const dichiara = (slug, extra) => { db.prepare("INSERT OR IGNORE INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES (?, ?, 'box', '#000', 1, 1, 70, '{}')").run(slug, slug); const cfg = { ...FIN.spese_casa }; delete cfg.competenza; roles.set(slug, cfg); db.prepare('UPDATE module_roles SET extra = ? WHERE module_slug = ?').run(JSON.stringify({ ...JSON.parse(db.prepare('SELECT extra FROM module_roles WHERE module_slug = ?').get(slug).extra), ...extra }), slug); };
+  const estra = (slug) => JSON.parse(db.prepare('SELECT extra FROM module_roles WHERE module_slug = ?').get(slug).extra);
+  await test('una dichiarazione senza competenza (come su Finance prima dell\'aggiornamento) riceve il 27 all\'avvio, una volta sola', async () => {
+    dichiara('spese_casa', {}); const e = estra('spese_casa'); delete e.competenza; db.prepare('UPDATE module_roles SET extra = ? WHERE module_slug = ?').run(JSON.stringify(e), 'spese_casa');
+    assertEq(roles.get('spese_casa').competenza.giorno, 0);
+    assertEq(roles.seedIfEmpty() >= 1, true);
+    assertEq(roles.get('spese_casa').competenza.giorno, 27);
+    assertEq(roles.seedIfEmpty(), 0, 'il secondo avvio non cambia niente');
+  });
+  await test('uno zero lasciato da un salvataggio che non la conosceva viene riempito; uno zero scelto (esplicita) resta spento', async () => {
+    dichiara('spese_personali', { competenza: { giorno: 0 } });
+    assertEq(roles.seedIfEmpty() >= 1, true); assertEq(roles.get('spese_personali').competenza.giorno, 27);
+    roles.set('spese_personali', { ...FIN.spese_personali, competenza: { giorno: 0, esplicita: true } });
+    assertEq(roles.seedIfEmpty(), 0); assertEq(roles.get('spese_personali').competenza.giorno, 0);
+  });
+
   console.log(`\n${'='.repeat(60)}`);
   console.log(passed + ' passati, ' + failed + ' falliti su ' + (passed + failed) + ' test.');
   try { fs.unlinkSync(dbPath); } catch (e) {}
