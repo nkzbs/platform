@@ -12,6 +12,7 @@ import TenantCreatingOverlay from '../components/TenantCreatingOverlay'
 import RegisterExistingModal from '../components/RegisterExistingModal'
 import GlassPageBackground from '../components/GlassPageBackground'
 import Portal from '../components/Portal'
+import { avvia, allaFine } from '../lib/aggiornamento'
 
 // F7 (PLATFORM-MASTER-ROADMAP.md) — Provisioning Engine: se un tenant resta
 // bloccato in status 'creating' (es. il processo Super Admin è stato riavviato
@@ -190,6 +191,9 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
     return () => { clearInterval(iv); clearInterval(ivActive) }
   }, [])
 
+  // a fine aggiornamento (anche se la finestra era ridotta) la lista si ricarica subito
+  useEffect(() => allaFine(() => { load() }), []) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Poll live delle statistiche solo per il tenant espanso
   useEffect(() => {
     if (!expandedSlug) return
@@ -325,35 +329,8 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
 
   // Aggiorna: ricrea il container del tenant con l'ultima immagine, sullo stesso volume dati (i dati non si toccano).
   // Il popup mostra i passi veri man mano che il server li esegue (stream di righe JSON) e chiude con AGGIORNATO / NON AGGIORNATO.
-  const [upd, setUpd] = useState(null) // { t, lines: [{at,msg}], state: 'running'|'ok'|'ko'|'busy', note }
-  const runUpdate = async (t, force) => {
-    setUpd({ t, lines: [], state: 'running', note: '' })
-    const add = (msg, at) => setUpd((u) => u && { ...u, lines: [...u.lines, { at: at || new Date().toISOString(), msg }] })
-    try {
-      const res = await fetch(API + '/tenants/' + t.slug + '/redeploy?stream=1', { method: 'POST', headers, body: JSON.stringify({ force: !!force }) })
-      if (!res.ok || !res.body) { const d = await res.json().catch(() => ({})); add('Errore: ' + (d.error || res.status)); setUpd((u) => u && { ...u, state: 'ko' }); return }
-      const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = ''; let last = null
-      for (;;) {
-        const { value, done } = await reader.read()
-        if (done) break
-        buf += dec.decode(value, { stream: true })
-        let i
-        while ((i = buf.indexOf('\n')) >= 0) {
-          const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1)
-          if (!line) continue
-          let o; try { o = JSON.parse(line) } catch (e) { continue }
-          if (o.msg) add(o.msg, o.at)
-          if (o.done) last = o
-        }
-      }
-      if (!last) setUpd((u) => u && { ...u, state: 'ko', note: 'Collegamento interrotto: controlla lo stato nei Dettagli.' })
-      else if (last.ok) setUpd((u) => u && { ...u, state: last.healthy === false ? 'ko' : 'ok', note: last.healthy === false ? 'Il container è stato ricreato ma il tenant non risponde ancora.' : '' })
-      else if (last.skipped === 'active_session') setUpd((u) => u && { ...u, state: 'busy', note: 'Sessione attiva: ' + last.active_session.username })
-      else setUpd((u) => u && { ...u, state: 'ko', note: last.error || '' })
-    } catch (e) {
-      add('Errore di rete: ' + e.message); setUpd((u) => u && { ...u, state: 'ko' })
-    } finally { load() }
-  }
+  // L'aggiornamento vive in lib/aggiornamento.js e la sua finestra in components/AggiornamentoDock.jsx (montata in App): continua in background e si riduce a una pastiglia.
+  const runUpdate = (t, force) => avvia(t, force, token)
   const redeploy = (t) => runUpdate(t, false)
   // Sposta su Linode: il tenant si ferma sul NAS per qualche minuto, poi riparte sul suo server con lo stesso indirizzo. Si segue lo stato vero finché non finisce.
   const spostaSuLinode = async (t) => {
@@ -1168,45 +1145,6 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                 </div>
               </>
             )}
-          </div>
-        </div>
-        </Portal>
-      )}
-      {upd && (
-        <Portal>
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-surface-card border border-gray-800 rounded-xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="px-6 pt-6 pb-4 flex items-center gap-3">
-              <div className={'w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ' + (upd.state === 'ok' ? 'bg-green-500/15 text-green-500' : upd.state === 'ko' ? 'bg-red-500/15 text-red-500' : upd.state === 'busy' ? 'bg-amber-500/15 text-amber-500' : 'bg-cp-primary/15 text-cp-primary')}>
-                <Icon name={upd.state === 'ok' ? 'check' : upd.state === 'ko' ? 'alert-triangle' : 'refresh'} size={18} className={upd.state === 'running' ? 'animate-spin' : ''} />
-              </div>
-              <div className="min-w-0">
-                <h2 className="text-base font-semibold text-ink leading-tight">{upd.state === 'ok' ? 'Aggiornato' : upd.state === 'ko' ? 'Non aggiornato' : upd.state === 'busy' ? 'Sessione attiva' : 'Aggiornamento in corso'}</h2>
-                <div className="text-sm text-gray-500">{upd.t.name}</div>
-              </div>
-            </div>
-            <ol className="px-6 pb-4 space-y-2.5 max-h-72 overflow-y-auto">
-              {upd.lines.map((l, i) => {
-                const last = i === upd.lines.length - 1
-                const working = upd.state === 'running' && last
-                return (
-                  <li key={i} className="flex items-start gap-3 text-sm">
-                    <span className="mt-0.5 w-4 h-4 flex-shrink-0 flex items-center justify-center">
-                      {working ? <Icon name="refresh" size={14} className="animate-spin text-cp-primary" /> : <Icon name="check" size={14} className="text-green-500" />}
-                    </span>
-                    <span className="flex-1 text-ink">{l.msg}</span>
-                    <span className="text-xs text-gray-500 tabular-nums mt-0.5">{new Date(l.at).toLocaleTimeString('it-IT')}</span>
-                  </li>
-                )
-              })}
-            </ol>
-            {upd.state === 'ok' && <div className="mx-6 mb-5 rounded-lg bg-green-500/10 border border-green-500/30 text-green-600 text-center font-semibold tracking-wide py-3">AGGIORNATO</div>}
-            {upd.state === 'ko' && <div className="mx-6 mb-5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-600 text-center py-3"><div className="font-semibold tracking-wide">NON AGGIORNATO</div>{upd.note && <div className="text-xs mt-1 px-3">{upd.note}</div>}</div>}
-            {upd.state === 'busy' && <div className="mx-6 mb-5 text-sm text-gray-500">{upd.note}. Aggiornando, l'utente collegato viene scollegato per qualche secondo.</div>}
-            <div className="px-6 py-4 border-t border-gray-800 flex justify-end gap-2">
-              {upd.state === 'busy' && <button onClick={() => runUpdate(upd.t, true)} className="text-sm px-4 py-2 rounded-lg bg-cp-primary hover:bg-cp-primary-hover text-white transition">Aggiorna comunque</button>}
-              <button onClick={() => setUpd(null)} disabled={upd.state === 'running'} className="text-sm px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 transition disabled:opacity-40">{upd.state === 'running' ? 'Attendi…' : 'Chiudi'}</button>
-            </div>
           </div>
         </div>
         </Portal>

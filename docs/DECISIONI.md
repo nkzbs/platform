@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.61 — 22 novembre 2026
+
+- **L'aggiornamento di un tenant si può ridurre e continua in background**: la finestra bloccante obbligava a stare fermi per minuti (la costruzione dell'immagine è la parte lunga). La barra è una **stima**, non una misura: il server non conosce la percentuale; meglio una barra onesta che sale per tappe riconoscibili che un numero finto preciso.
+- **La ricevuta per «pagato» è un promemoria, non un blocco**: «Segna pagato» passa anche dal bot Telegram e da Smista; un blocco fermerebbe un pagamento in contanti o con carta che un PDF non ce l'ha.
+- **La lista dei fornitori è creata per l'utente, non vuota**: i nomi arrivano dai dati veri; un nome nuovo si aggiunge da solo per non lasciare mai fuori nessuno. Il creditore resta un campo di testo con suggerimenti (nessuna migrazione dei piani e dei riepiloghi); un collegamento vero tra fornitore e pagamenti si può aggiungere dopo.
+- **Un modulo garantito nasce solo dove serve** (`se_esiste`): senza, i Fornitori sarebbero comparsi su ogni tenant vuoto, anche su zucca.
+
 ## 0.5.53 — 22 novembre 2026
 
 - **Il state OAuth si pretende, non si segnala**: le rotte di redirect restano fuori da `requireAuth` (sono navigazioni del browser), quindi il solo controllo è il `state`: deve essere casuale, nostro, usato una volta e non scaduto. Un collegamento rifiutato costa un clic in più, uno sbagliato collega il Google di un altro.

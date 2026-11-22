@@ -7,6 +7,7 @@ import DashboardPage from './pages/DashboardPage'
 
 // Pagine caricate a richiesta (2026-11-06, velocità): prima un unico bundle da 723 KB (180 KB
 // compressi) ad ogni apertura. La Dashboard resta nel bundle principale (prima schermata).
+import AggiornamentoDock from './components/AggiornamentoDock'
 const TenantsPage = lazy(() => import('./pages/TenantsPage'))
 const LibreriaPage = lazy(() => import('./pages/LibreriaPage'))
 const ActivityPage = lazy(() => import('./pages/ActivityPage'))
@@ -146,6 +147,7 @@ export default function App() {
           </Suspense>
         </div>
       </main>
+      <AggiornamentoDock token={token} />
     </div>
   )
 }
