@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tema Bento — Super Admin, Finance, Zucca</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&display=swap" rel="stylesheet">
+<style>
+  /* ═══════════ TOKEN DEL TEMA ═══════════
+     Il tema è questo blocco di variabili: chiaro e scuro, e UN colore fisso per tipo di componente
+     (stesso significato in ogni ambiente). L'accento cambia per ambiente/tenant. */
+  :root {
+    --bg: #f4f1ff; --card: #ffffff; --ink: #231f3b; --ink2: rgba(35,31,59,.62); --line: rgba(35,31,59,.10); --glass: rgba(255,255,255,.66);
+    --kpi: #d6efff;       /* numeri e riepiloghi */
+    --coda: #e3dcff;      /* code e liste da lavorare (da smistare, tenant, trattative) */
+    --attivita: #ffe3d2;  /* attività, agenda, cose da fare oggi */
+    --archivio: #d8f4df;  /* archivi, anagrafiche, elenchi di cose a posto */
+    --scadenze: #fff0b8;  /* rate, scadenze, provvigioni da incassare */
+    --avvisi: #ffd9ea;    /* avvisi, checklist, cose che richiedono attenzione */
+    --ok: #bff0cf; --okt: #0d5a32; --att: #ffe08a; --attt: #6b4800; --er: #ffc2cb; --ert: #8c1730;
+    --ombra: 0 1px 0 rgba(255,255,255,.7) inset, 0 8px 24px rgba(60,50,120,.08);
+    --r: 28px; --rs: 18px;
+  }
+  [data-modo="scuro"] {
+    --bg: #0e0d17; --card: #1a1925; --ink: #f1efff; --ink2: rgba(241,239,255,.62); --line: rgba(241,239,255,.10); --glass: rgba(255,255,255,.07);
+    --kpi: #153248; --coda: #2a2350; --attivita: #4a2c1d; --archivio: #1b3b29; --scadenze: #473d12; --avvisi: #4a2136;
+    --ok: #1f5a39; --okt: #8df0b5; --att: #5c4a10; --attt: #ffd266; --er: #5e2230; --ert: #ff9fb0;
+    --ombra: 0 1px 0 rgba(255,255,255,.06) inset, 0 10px 30px rgba(0,0,0,.35);
+  }
+  [data-app="admin"]   { --acc: #584aec; --accw: #fff; }
+  [data-app="finance"] { --acc: #0f9d8a; --accw: #fff; }
+  [data-app="zucca"]   { --acc: #2f78d6; --accw: #fff; }
+
+  * { box-sizing: border-box; margin: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: 'DM Sans', system-ui, sans-serif; font-size: 15px; line-height: 1.35; transition: background .25s, color .25s; min-height: 100vh; }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+  svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  svg.i.s { width: 15px; height: 15px; }
+
+  /* ── barra del mockup (non fa parte dell'app) ── */
+  .mock { position: sticky; top: 0; z-index: 30; display: flex; gap: 8px; align-items: center; padding: 8px 12px; background: #15141c; color: #fff; overflow-x: auto; font: 600 12px system-ui, sans-serif; }
+  .mock .grp { display: flex; gap: 4px; flex: none; padding-right: 10px; border-right: 1px solid #333; }
+  .mock .grp:last-child { border: 0; }
+  .mock button { padding: 6px 12px; border-radius: 99px; background: #2b2a35; color: #ddd; white-space: nowrap; }
+  .mock button[aria-pressed="true"] { background: #fff; color: #111; }
+  .mock .et { color: #8a8a99; padding: 0 4px; align-self: center; }
+
+  /* ── guscio dell'app ── */
+  .app { display: grid; grid-template-columns: 1fr; min-height: calc(100vh - 44px); }
+  .rail { display: none; }
+  .main { padding: 18px 14px 120px; max-width: 1180px; width: 100%; margin: 0 auto; }
+  @media (min-width: 860px) {
+    .app { grid-template-columns: 232px 1fr; }
+    .rail { display: flex; flex-direction: column; gap: 4px; padding: 18px 12px; position: sticky; top: 44px; height: calc(100vh - 44px); }
+    .main { padding: 26px 30px 60px; }
+    .dock { display: none !important; }
+  }
+  .logo { display: flex; align-items: center; gap: 10px; padding: 6px 10px 16px; font-weight: 800; font-size: 17px; letter-spacing: -.02em; }
+  .logo b { width: 32px; height: 32px; border-radius: 11px; background: var(--acc); color: var(--accw); display: grid; place-items: center; font-size: 15px; }
+  .logo small { display: block; font-weight: 500; font-size: 11px; color: var(--ink2); letter-spacing: 0; }
+  .voce { display: flex; align-items: center; gap: 11px; padding: 11px 13px; border-radius: 16px; color: var(--ink2); font-weight: 500; text-align: left; width: 100%; }
+  .voce:hover { background: var(--glass); }
+  .voce[aria-current="page"] { background: var(--acc); color: var(--accw); font-weight: 700; box-shadow: 0 6px 18px -6px var(--acc); }
+  .rail .sp { flex: 1; }
+  .ver { font-size: 11px; color: var(--ink2); padding: 8px 12px; }
+
+  /* dock flottante (solo telefono, come nell'app) */
+  .dock { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 20; display: flex; gap: 4px; padding: 7px; border-radius: 999px; background: var(--glass); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid var(--line); box-shadow: var(--ombra); }
+  .dock button { width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; color: var(--ink2); }
+  .dock button[aria-current="page"] { background: var(--acc); color: var(--accw); box-shadow: 0 6px 16px -4px var(--acc); }
+
+  /* ── testata di pagina ── */
+  .pg { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .pg h1 { font-size: clamp(28px, 6vw, 42px); font-weight: 800; letter-spacing: -.04em; line-height: 1; }
+  .pg p { color: var(--ink2); font-size: 13px; margin-top: 6px; }
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 11px 18px; border-radius: 999px; background: var(--acc); color: var(--accw); font-weight: 700; box-shadow: 0 8px 20px -8px var(--acc); }
+  .btn.sec { background: var(--glass); color: var(--ink); box-shadow: none; border: 1px solid var(--line); }
+  .btn.sm { padding: 7px 13px; font-size: 13px; }
+
+  /* ── schede (colore FISSO per componente) ── */
+  .gr { display: grid; gap: 14px; grid-template-columns: repeat(12, 1fr); }
+  .c { grid-column: span 12; background: var(--card); border-radius: var(--r); padding: 20px; box-shadow: var(--ombra); position: relative; }
+  @media (min-width: 860px) { .s3 { grid-column: span 3; } .s4 { grid-column: span 4; } .s5 { grid-column: span 5; } .s6 { grid-column: span 6; } .s7 { grid-column: span 7; } .s8 { grid-column: span 8; } }
+  @media (min-width: 560px) and (max-width: 859px) { .s3, .s4 { grid-column: span 6; } }
+  .c.kpi { background: var(--kpi); } .c.coda { background: var(--coda); } .c.attivita { background: var(--attivita); }
+  .c.archivio { background: var(--archivio); } .c.scadenze { background: var(--scadenze); } .c.avvisi { background: var(--avvisi); }
+  .ct { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+  .ct h2 { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .ct small { color: var(--ink2); font-size: 12px; }
+  .gran { font-size: clamp(44px, 10vw, 72px); font-weight: 800; letter-spacing: -.05em; line-height: .95; font-variant-numeric: tabular-nums; }
+  .gran small { font-size: .32em; font-weight: 500; opacity: .65; letter-spacing: 0; margin-left: 4px; }
+  .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink2); }
+  .val { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .kg { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-top: 16px; }
+  .it { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 0; }
+  .it + .it { border-top: 1px solid var(--line); }
+  .it .sx { display: flex; align-items: center; gap: 11px; min-width: 0; }
+  .it .sx > div { min-width: 0; } .it .sx b { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .it .sx span { font-size: 12px; color: var(--ink2); }
+  .av { width: 38px; height: 38px; border-radius: 13px; background: var(--glass); display: grid; place-items: center; font-weight: 700; flex: none; }
+  .pl { font-size: 11.5px; padding: 4px 11px; border-radius: 99px; font-weight: 700; white-space: nowrap; }
+  .pl.ok { background: var(--ok); color: var(--okt); } .pl.att { background: var(--att); color: var(--attt); } .pl.er { background: var(--er); color: var(--ert); } .pl.n { background: var(--glass); color: var(--ink2); }
+  .bar { height: 12px; border-radius: 99px; background: var(--glass); overflow: hidden; margin-top: 9px; }
+  .bar i { display: block; height: 100%; border-radius: 99px; background: var(--acc); }
+  .due { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .chips { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
+  .chip { flex: none; min-width: 148px; padding: 12px 14px; border-radius: var(--rs); background: var(--glass); text-align: left; }
+  .chip.on { outline: 2.5px solid var(--acc); }
+  .chip em { display: block; font-style: normal; font-size: 12px; color: var(--ink2); }
+  .chip b { display: block; font-size: 19px; font-variant-numeric: tabular-nums; margin: 2px 0; }
+  .chip span { font-size: 11px; color: var(--ink2); }
+  .rate { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .rata { padding: 12px 14px; border-radius: var(--rs); background: var(--glass); }
+  .rata .d { font-size: 11px; color: var(--ink2); } .rata .i { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rata .r { margin-top: 8px; font-size: 11.5px; font-weight: 700; padding: 5px 8px; border-radius: 99px; text-align: center; background: var(--ok); color: var(--okt); }
+  .rata .r.no { background: transparent; border: 2px dashed var(--attt); color: var(--attt); }
+  .cerchi { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 12px; }
+  .cerchi i { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font: 700 12px 'DM Sans'; border: 2.5px solid var(--line); color: var(--ink2); font-style: normal; }
+  .cerchi i.f { background: var(--acc); border-color: var(--acc); color: var(--accw); }
+  .filtri { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 14px; scrollbar-width: none; }
+  .filtri button { flex: none; padding: 8px 15px; border-radius: 99px; background: var(--glass); font-weight: 600; font-size: 13px; border: 1px solid var(--line); }
+  .filtri button.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .foto { height: 120px; border-radius: 20px; margin-bottom: 12px; background: linear-gradient(135deg, var(--acc), #ffb36b); position: relative; overflow: hidden; }
+  .foto::after { content: ''; position: absolute; inset: auto -10% -30% -10%; height: 70%; background: rgba(255,255,255,.22); border-radius: 50% 50% 0 0; }
+  .pipe { display: grid; gap: 12px; grid-template-columns: 1fr; }
+  @media (min-width: 860px) { .pipe { grid-template-columns: repeat(4, 1fr); } }
+  .col h3 { font-size: 13px; margin: 0 4px 9px; display: flex; justify-content: space-between; }
+  .kb { background: var(--card); border-radius: var(--rs); padding: 13px; margin-bottom: 9px; box-shadow: var(--ombra); }
+  .kb b { display: block; font-size: 14px; } .kb span { font-size: 12px; color: var(--ink2); }
+  .cart { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .cart div { background: var(--glass); border-radius: var(--rs); padding: 14px; font-weight: 700; display: flex; flex-direction: column; gap: 6px; }
+  .cart small { font-weight: 500; color: var(--ink2); font-size: 12px; }
+  .tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 99px; background: var(--glass); margin-bottom: 14px; }
+  .tabs button { padding: 8px 18px; border-radius: 99px; font-weight: 600; color: var(--ink2); }
+  .tabs button.on { background: var(--card); color: var(--ink); box-shadow: var(--ombra); }
+  .opz { display: flex; gap: 12px; flex-wrap: wrap; }
+  .opz .o { flex: 1 1 160px; border-radius: var(--rs); border: 2px solid var(--line); padding: 14px; background: var(--glass); }
+  .opz .o.on { border-color: var(--acc); }
+  .sw { display: flex; gap: 8px; margin-top: 8px; } .sw i { width: 26px; height: 26px; border-radius: 50%; }
+  .velo { position: fixed; inset: 0; z-index: 40; background: rgba(10,8,20,.5); display: grid; place-items: center; padding: 16px; }
+  .vet { background: var(--card); border-radius: 28px; width: 100%; max-width: 420px; padding: 22px; box-shadow: 0 30px 80px rgba(0,0,0,.4); }
+  .vet h3 { font-size: 19px; margin-bottom: 2px; }
+  .legenda { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+  .legenda div { border-radius: var(--rs); padding: 12px 14px; font-size: 13px; }
+  .legenda b { display: block; margin-bottom: 2px; }
+  .nota { font-size: 11px; color: var(--ink2); margin-top: 24px; max-width: 700px; }
+</style>
+</head>
+<body data-app="finance" data-modo="chiaro">
+<div class="mock" role="toolbar" aria-label="Controlli del mockup">
+  <span class="et">Ambiente</span>
+  <div class="grp" id="gApp"></div>
+  <span class="et">Modo</span>
+  <div class="grp" id="gModo"></div>
+  <span class="et">Schermata</span>
+  <div class="grp" id="gPag"></div>
+</div>
+<div class="app">
+  <nav class="rail" id="rail" aria-label="Menu"></nav>
+  <main class="main" id="main"></main>
+</div>
+<nav class="dock" id="dock" aria-label="Menu"></nav>
+<div id="velo"></div>
+
+<script>
+/* ═══════════ icone ═══════════ */
+var P = {
+  home: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',
+  building: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M10 21v-4h4v4"/>',
+  store: '<path d="M4 9l1-5h14l1 5M4 9v11h16V9"/><path d="M9 20v-6h6v6"/>',
+  wallet: '<path d="M3 7h16a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/><path d="M3 7l12-3v3"/>',
+  file: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>',
+  users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.7a3.5 3.5 0 010 6.6M18 14.8c2 .7 3.2 2.4 3.5 5"/>',
+  sliders: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+  bell: '<path d="M6 16v-5a6 6 0 0112 0v5l2 2H4z"/><path d="M10 21h4"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  check: '<path d="M5 12l4 4 10-10"/>',
+  refresh: '<path d="M20 12a8 8 0 10-3 6.2M20 5v7h-7"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  tag: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/>',
+  scale: '<path d="M12 3v18M5 21h14M5 7h14"/><path d="M5 7l-3 7a3 3 0 006 0zM19 7l-3 7a3 3 0 006 0z"/>',
+  layers: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+  activity: '<path d="M3 12h4l3-8 4 16 3-8h4"/>',
+  book: '<path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M5 17a3 3 0 013-3h11"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  euro: '<path d="M17 6a7 7 0 100 12M5 10h9M5 14h9"/>'
+};
+function ic(n, s) { return '<svg class="i' + (s ? ' s' : '') + '" viewBox="0 0 24 24">' + (P[n] || '') + '</svg>'; }
+function pl(t, k) { return '<span class="pl ' + (k || 'n') + '">' + t + '</span>'; }
+
+/* ═══════════ schermate ═══════════ */
+var A = {};
+
+/* ───────── SUPER ADMIN ───────── */
+A.admin = { nome: 'Platform', sub: 'Super Admin', ver: '0.5.65', logo: 'P',
+  menu: [['dash', 'Dashboard', 'home'], ['tenant', 'Tenant', 'building'], ['lib', 'Libreria', 'store'], ['att', 'Attività', 'activity'], ['imp', 'Impostazioni', 'sliders']],
+  pagine: {
+    dash: { t: 'Dashboard', s: 'Benvenuto, Admin', h: function () { return '' +
+      '<div class="gr">' +
+      '<section class="c kpi s4"><div class="ct"><h2>' + ic('building', 1) + ' Tenant</h2><small>attivi</small></div><div class="gran">2<small>su 2</small></div><div class="lbl" style="margin-top:8px">zucca · Finance</div></section>' +
+      '<section class="c archivio s4"><div class="ct"><h2>' + ic('check', 1) + ' Backup</h2><small>stanotte</small></div><div class="gran">100<small>%</small></div><div class="lbl" style="margin-top:8px">Ultimo: 03:00 · verificato</div></section>' +
+      '<section class="c scadenze s4"><div class="ct"><h2>' + ic('refresh', 1) + ' Versione</h2><small>da aggiornare</small></div><div class="gran" style="font-size:44px">0.5.65</div><div class="lbl" style="margin-top:8px">Finance 0.5.64 · zucca 0.5.60</div></section>' +
+      '<section class="c attivita s7"><div class="ct"><h2>' + ic('activity', 1) + ' Attività recente</h2><small>oggi</small></div>' +
+        '<div class="it"><div class="sx"><div class="av">F</div><div><b>Finance aggiornato alla 0.5.64</b><span>Nima · 16:02</span></div></div>' + pl('ok', 'ok').replace('ok', 'Riuscito') + '</div>' +
+        '<div class="it"><div class="sx"><div class="av">Z</div><div><b>Pacchetto 41 inviato a zucca</b><span>Sistema · 15:20</span></div></div>' + pl('Riuscito', 'ok') + '</div>' +
+        '<div class="it"><div class="sx"><div class="av">F</div><div><b>Backup Finance verificato</b><span>Sistema · 03:00</span></div></div>' + pl('Riuscito', 'ok') + '</div></section>' +
+      '<section class="c avvisi s5"><div class="ct"><h2>' + ic('bell', 1) + ' Da guardare</h2><small>2</small></div>' +
+        '<div class="it"><div class="sx"><div><b>zucca: aggiornamento disponibile</b><span>pacchetto 42 · stima IMU</span></div></div>' + pl('Aggiorna', 'att') + '</div>' +
+        '<div class="it"><div class="sx"><div><b>Prova di ripristino mensile</b><span>mai eseguita</span></div></div>' + pl('Da fare', 'er') + '</div></section>' +
+      '</div>'; } },
+    tenant: { t: 'Tenant', s: '2 attivi su 2 totali', az: '<button class="btn" onclick="velo()">' + ic('plus', 1) + ' Nuovo tenant</button>', h: function () { return '' +
+      '<div class="filtri"><button class="on">Tutti</button><button>Attivi</button><button>Fermi</button></div>' +
+      '<div class="gr">' +
+      '<section class="c coda s6"><div class="ct"><h2>zucca</h2>' + pl('Linode · 203.0.113.10', 'n') + '</div><div class="lbl">zucca.platform-core.it · :4007</div><div style="display:flex;gap:8px;margin:12px 0">' + pl('Attivo', 'ok') + pl('10 moduli', 'n') + pl('0.5.60', 'att') + '</div><div style="display:flex;gap:8px"><button class="btn sm">Apri</button><button class="btn sm sec">Dettagli</button><button class="btn sm sec" onclick="velo()">Aggiorna</button></div></section>' +
+      '<section class="c coda s6"><div class="ct"><h2>Finance</h2>' + pl('Linode · 203.0.113.20', 'n') + '</div><div class="lbl">finance.platform-core.it · :4002</div><div style="display:flex;gap:8px;margin:12px 0">' + pl('Attivo', 'ok') + pl('11 moduli', 'n') + pl('0.5.64', 'att') + '</div><div style="display:flex;gap:8px"><button class="btn sm">Apri</button><button class="btn sm sec">Dettagli</button><button class="btn sm sec" onclick="velo()">Aggiorna</button></div></section>' +
+      '</div><p class="nota">Tocca «Aggiorna» per vedere la finestra con la barra di avanzamento (si può ridurre a una pastiglia).</p>'; } },
+    lib: { t: 'Libreria', s: 'Moduli e pacchetti', h: function () { return '<div class="gr">' +
+      ['Mediazione immobiliare|pacchetto 42|archivio', 'Spese e debiti|moduli finanza|archivio', 'Timbrature|presenze|archivio', 'Busta paga|PDF e foto|archivio'].map(function (x) { var a = x.split('|'); return '<section class="c ' + a[2] + ' s4"><div class="ct"><h2>' + ic('layers', 1) + ' ' + a[0] + '</h2></div><div class="lbl">' + a[1] + '</div><div style="margin-top:14px">' + pl('Installato', 'ok') + '</div></section>'; }).join('') + '</div>'; } },
+    att: { t: 'Attività', s: 'Registro degli eventi', h: function () { return '<section class="c attivita"><div class="ct"><h2>' + ic('activity', 1) + ' Ultimi eventi</h2><small>tutti i tenant</small></div>' +
+      ['Aggiornamento Finance|Nima|16:02|Riuscito|ok', 'Reset password tenant|Nima|12:40|Riuscito|ok', 'Redeploy Super Admin|Sistema|14:44|Riuscito|ok', 'Login con passkey|Nima|09:10|Riuscito|ok', 'Tentativo di accesso|sconosciuto|02:31|Rifiutato|er'].map(function (x) { var a = x.split('|'); return '<div class="it"><div class="sx"><div><b>' + a[0] + '</b><span>' + a[1] + ' · ' + a[2] + '</span></div></div>' + pl(a[3], a[4]) + '</div>'; }).join('') + '</section>'; } },
+    imp: { t: 'Impostazioni', s: 'Il tuo accesso e l\'aspetto', h: function () { return aspetto('Platform'); } }
+  } };
+
+/* ───────── FINANCE ───────── */
+A.finance = { nome: 'Finance', sub: 'Platform', ver: '0.5.64', logo: 'F',
+  menu: [['dash', 'Dashboard', 'home'], ['spese', 'Spese', 'wallet'], ['debiti', 'Debiti', 'scale'], ['doc', 'Documenti', 'file'], ['imp', 'Impostazioni', 'sliders']],
+  pagine: {
+    dash: { t: 'Dashboard', s: 'Domenica 22 novembre · cambio mese il 27', h: function () { return '' +
+      '<div class="gr">' +
+      '<section class="c coda s5"><div class="ct"><h2>' + ic('tag', 1) + ' Da smistare</h2><small>3 in coda</small></div>' +
+        ['Bolletta A2A — luce|27/11|Smista', 'Condominio — 4ª rata|27/11|Smista', 'Notifica fattura elettronica|10/11|Smista'].map(function (x) { var a = x.split('|'); return '<div class="it"><div class="sx"><div><b>' + a[0] + '</b><span>scade ' + a[1] + '</span></div></div><button class="btn sm sec">' + a[2] + '</button></div>'; }).join('') + '</section>' +
+      '<section class="c kpi s7"><div class="ct"><h2>' + ic('euro', 1) + ' Riepilogo mensile</h2><small>novembre 2026</small></div><div class="gran">1.043<small>,42 €</small></div><div class="lbl" style="margin-top:6px">Spendibile</div>' +
+        '<div class="kg"><div><div class="val">1.799,58 €</div><div class="lbl">Entrate</div></div><div><div class="val">2.208,66 €</div><div class="lbl">Uscite</div></div><div><div class="val">1.121,30 €</div><div class="lbl">Pagato</div></div><div><div class="val">1.087,36 €</div><div class="lbl">Da pagare</div></div><div><div class="val">1.640,00 €</div><div class="lbl">Fisse</div></div><div><div class="val">0,00 €</div><div class="lbl">Prev. carta</div></div></div></section>' +
+      '<section class="c kpi s6"><div class="ct"><h2>Come sta andando</h2><small>Mese</small></div><div class="due"><div><div class="lbl">Personale · entrate</div><div class="val">1.799,58 €</div><div class="lbl" style="margin-top:8px">Spese</div><div class="val">1.321,45 €</div><div class="bar"><i style="width:73%"></i></div></div><div><div class="lbl">Casa · già pagate</div><div class="val">684,10 €</div><div class="lbl" style="margin-top:8px">Ancora da pagare</div><div class="val">524,06 €</div><div class="bar"><i style="width:57%"></i></div></div></div></section>' +
+      '<section class="c avvisi s6"><div class="ct"><h2>' + ic('bell', 1) + ' Checklist</h2><small>novembre</small></div>' +
+        [['Affitto', 'Pagato', 'ok'], ['Rata PayPal', 'Da pagare', 'att'], ['Assicurazione auto', 'Scaduta', 'er'], ['Abbonamento DAZN', 'Pagato', 'ok']].map(function (x) { return '<div class="it"><div class="sx"><b>' + x[0] + '</b></div>' + pl(x[1], x[2]) + '</div>'; }).join('') + '</section>' +
+      '</div>'; } },
+    spese: { t: 'Spese personali', s: '427 record · novembre 2026', az: '<button class="btn">' + ic('plus', 1) + ' Nuova spesa</button>', h: function () { return '' +
+      '<div class="filtri"><button class="on">Tutti</button><button>Da smistare</button><button>Da pagare</button><button>Pagato</button><button>Rate</button></div>' +
+      '<section class="c archivio"><div class="ct"><h2>' + ic('wallet', 1) + ' Novembre</h2><small>totale 1.321,45 €</small></div>' +
+      [['Benzina + treno', 'Auto & Benzina', '48,20 €', 'Pagato', 'ok'], ['DAZN', 'Abbonamenti', '29,90 €', 'Pagato', 'ok'], ['Lanzanova 2026/160 — rata 2 su 4', 'Rata · 27/11', '105,00 €', 'Pagato', 'ok'], ['Marco Romani — rata 5 su 11', 'Rata · 27/11', '100,00 €', 'Da pagare', 'att'], ['TV LG — rata 7 su 12', 'Rata · 28/11', '135,87 €', 'Da pagare', 'att'], ['Cartella AR238494 rata 47/66', 'Rata · 17/11', '50,58 €', 'Pagato', 'ok']].map(function (x) { return '<div class="it"><div class="sx"><div class="av">' + x[0][0] + '</div><div><b>' + x[0] + '</b><span>' + x[1] + '</span></div></div><div style="display:flex;align-items:center;gap:10px"><span class="val" style="font-size:16px">' + x[2] + '</span>' + pl(x[3], x[4]) + '</div></div>'; }).join('') + '</section>'; } },
+    debiti: { t: 'Debiti', s: 'Piani a rate', az: '<button class="btn">' + ic('plus', 1) + ' Nuovo piano</button>', h: function () { return '' +
+      '<section class="c scadenze" style="margin-bottom:14px"><div class="ct"><h2>' + ic('scale', 1) + ' Da pagare per creditore</h2><small>totale 2.114,50 €</small></div><div class="chips">' +
+      [['Agenzia Entrate Risc.', '720,34 €', '20 rate · 1 piano'], ['Lanzanova Auto', '795,00 €', '8 rate · 3 piani'], ['Marco Romani', '700,00 €', '7 rate · 1 piano'], ['LG', '407,61 €', '3 rate · 1 piano']].map(function (x, i) { return '<button class="chip' + (i === 1 ? ' on' : '') + '"><em>' + x[0] + '</em><b>' + x[1] + '</b><span>' + x[2] + '</span></button>'; }).join('') + '</div></section>' +
+      '<div class="gr"><section class="c scadenze s8"><div class="ct"><h2>Lanzanova Auto · 2026/160</h2><small>420,00 € in 4 rate</small></div><div class="rate">' +
+        '<div class="rata"><div class="d">Rata 1 · 27 ott</div><div class="i">100,00 €</div><div class="r">Ricevuta ✓</div></div><div class="rata"><div class="d">Rata 2 · 27 nov</div><div class="i">105,00 €</div><div class="r">Ricevuta ✓</div></div>' +
+        '<div class="rata"><div class="d">Rata 3 · 27 dic</div><div class="i">107,50 €</div><div class="r no">＋ Carica ricevuta</div></div><div class="rata"><div class="d">Rata 4 · 27 gen</div><div class="i">107,50 €</div><div class="r no">＋ Carica ricevuta</div></div></div></section>' +
+      '<section class="c scadenze s4"><div class="ct"><h2>Marco Romani</h2><small>1.109,50 €</small></div><div class="lbl">5 di 11 pagate</div><div class="bar"><i style="width:45%"></i></div><div class="cerchi"><i class="f">1</i><i class="f">2</i><i class="f">3</i><i class="f">4</i><i>5</i><i>6</i><i>7</i><i>8</i><i>9</i><i>10</i><i>11</i></div></section></div>'; } },
+    doc: { t: 'Documenti', s: '716 documenti', az: '<button class="btn">' + ic('plus', 1) + ' Carica</button>', h: function () { return '<section class="c archivio"><div class="ct"><h2>' + ic('file', 1) + ' Cartelle</h2><small>11 tipi</small></div><div class="cart">' +
+      [['Bolletta', 229], ['Ricevuta di pagamento', 201], ['Busta Paga', 140], ['Documenti Personali', 93], ['Estratto conto', 37], ['CUD / 730', 9], ['Fattura', 0], ['Altro', 4]].map(function (x) { return '<div>' + ic('file') + x[0] + '<small>' + x[1] + ' documenti</small></div>'; }).join('') + '</div></section>'; } },
+    imp: { t: 'Impostazioni', s: 'Aspetto, connessioni e report', h: function () { return aspetto('Finance'); } }
+  } };
+
+/* ───────── ZUCCA ───────── */
+A.zucca = { nome: 'zucca', sub: 'Mediazione immobiliare', ver: '0.5.60', logo: 'z',
+  menu: [['dash', 'Dashboard', 'home'], ['imm', 'Immobili', 'building'], ['tratt', 'Trattative', 'tag'], ['cli', 'Clienti', 'users'], ['imp', 'Impostazioni', 'sliders']],
+  pagine: {
+    dash: { t: 'Dashboard', s: 'Domenica 22 novembre', h: function () { return '' +
+      '<div class="gr">' +
+      '<section class="c attivita s6"><div class="ct"><h2>' + ic('calendar', 1) + ' Da fare oggi</h2><small>3</small></div>' +
+        [['Visita Villa Brescia', '10:30 · Via Verdi 12'], ['Telefonata offerta Bianchi', '14:00'], ['Firma incarico Verdi', '17:30']].map(function (x) { return '<div class="it"><div class="sx"><div class="av">' + ic('check', 1) + '</div><div><b>' + x[0] + '</b><span>' + x[1] + '</span></div></div></div>'; }).join('') + '</section>' +
+      '<section class="c coda s6"><div class="ct"><h2>' + ic('tag', 1) + ' Trattative aperte</h2><small>4</small></div>' +
+        [['Villa Brescia · Bianchi', 'In trattativa', 'att'], ['Trilocale Orzinuovi · Verdi', 'Preliminare firmato', 'ok'], ['Capannone Soncino', 'In trattativa', 'att']].map(function (x) { return '<div class="it"><div class="sx"><b>' + x[0] + '</b></div>' + pl(x[1], x[2]) + '</div>'; }).join('') + '</section>' +
+      '<section class="c kpi s4"><div class="ct"><h2>' + ic('building', 1) + ' In mandato</h2></div><div class="gran">18</div><div class="lbl" style="margin-top:8px">immobili · 3 nuovi</div></section>' +
+      '<section class="c scadenze s4"><div class="ct"><h2>' + ic('euro', 1) + ' Provvigioni</h2><small>da incassare</small></div><div class="gran" style="font-size:46px">24.600<small>€</small></div><div class="lbl" style="margin-top:8px">3 pratiche</div></section>' +
+      '<section class="c avvisi s4"><div class="ct"><h2>' + ic('bell', 1) + ' Compleanni</h2><small>7 giorni</small></div><div class="it"><div class="sx"><b>Marco Verdi</b></div>' + pl('26/11', 'n') + '</div><div class="it"><div class="sx"><b>Anna Bianchi</b></div>' + pl('28/11', 'n') + '</div></section>' +
+      '</div>'; } },
+    imm: { t: 'Immobili', s: '18 in mandato', az: '<button class="btn">' + ic('plus', 1) + ' Nuovo immobile</button>', h: function () { return '' +
+      '<div class="filtri"><button class="on">Tutti</button><button>In mandato</button><button>Da valutare</button><button>Venduti</button></div><div class="gr">' +
+      [['Villa a Brescia', 'Via Verdi 12 · 220 mq', '€ 485.000', 'In mandato', 'ok', 'IMU stimata 1.980 €'], ['Trilocale Orzinuovi', 'Via Garibaldi 8 · 85 mq', '€ 142.000', 'Preliminare', 'att', 'IMU stimata 640 €'], ['Capannone Soncino', 'Zona artigianale · 640 mq', '€ 390.000', 'In mandato', 'ok', 'IMU stimata 3.210 €']].map(function (x) { return '<section class="c archivio s4"><div class="foto"></div><div class="ct" style="margin-bottom:4px"><h2>' + x[0] + '</h2>' + pl(x[3], x[4]) + '</div><div class="lbl">' + x[1] + '</div><div class="val" style="margin-top:10px">' + x[2] + '</div><div class="lbl" style="margin-top:6px">' + x[5] + '</div></section>'; }).join('') + '</div>'; } },
+    tratt: { t: 'Trattative', s: 'Pipeline', h: function () { return '<div class="pipe">' +
+      [['In trattativa', 3, [['Villa Brescia', 'Bianchi · 478.000 €'], ['Capannone Soncino', 'Rossi · 380.000 €']]], ['Preliminare firmato', 1, [['Trilocale Orzinuovi', 'Verdi · 140.000 €']]], ['Chiusa', 2, [['Bilocale Chiari', 'provv. 6.200 €']]], ['Chiusa senza vendita', 1, [['Casa Rovato', 'offerta non accettata']]]].map(function (c, i) { var col = ['coda', 'scadenze', 'archivio', 'avvisi'][i]; return '<div class="col c ' + col + '" style="padding:14px"><h3>' + c[0] + '<span>' + c[1] + '</span></h3>' + c[2].map(function (k) { return '<div class="kb"><b>' + k[0] + '</b><span>' + k[1] + '</span></div>'; }).join('') + '</div>'; }).join('') + '</div>'; } },
+    cli: { t: 'Clienti', s: 'Mario Bianchi', h: function () { return '<div class="gr"><section class="c kpi s4"><div class="ct"><h2>Scheda cliente</h2>' + pl('Verificato', 'ok') + '</div><div class="av" style="width:64px;height:64px;font-size:24px;margin-bottom:12px">MB</div><div class="val">Mario Bianchi</div><div class="lbl" style="margin-top:6px">Sa già cosa vuole · acquirente</div><div class="lbl" style="margin-top:10px">m.bianchi@esempio.it · 333 123 4567</div></section>' +
+      '<section class="c avvisi s8"><div class="tabs"><button>Dati</button><button>Azioni</button><button class="on">Documenti</button></div>' +
+      [['Adeguata verifica', 'Firmata 12/11', 'ok'], ['Privacy e incarico', 'Firmata 12/11', 'ok'], ['Proposta d\'acquisto', 'Da compilare', 'att'], ['Accordo provvigionale', 'Da compilare', 'att']].map(function (x) { return '<div class="it"><div class="sx"><div class="av">' + ic('file', 1) + '</div><div><b>' + x[0] + '</b><span>' + x[1] + '</span></div></div>' + pl(x[2] === 'ok' ? 'Firmato' : 'Da fare', x[2]) + '</div>'; }).join('') + '</section></div>'; } },
+    imp: { t: 'Impostazioni', s: 'Aspetto e connessioni', h: function () { return aspetto('zucca'); } }
+  } };
+
+/* ───────── Impostazioni → Aspetto (il tema è un'impostazione) ───────── */
+function aspetto(nome) {
+  return '<div class="gr"><section class="c kpi s7"><div class="ct"><h2>' + ic('sliders', 1) + ' Aspetto di ' + nome + '</h2></div>' +
+    '<div class="lbl">Stile</div><div class="opz" style="margin:8px 0 18px"><div class="o"><b>Classico</b><div class="lbl" style="margin-top:4px">L\'aspetto di oggi</div></div><div class="o on"><b>Bento</b><div class="lbl" style="margin-top:4px">Schede grandi e colorate</div></div></div>' +
+    '<div class="lbl">Modo</div><div class="opz" style="margin:8px 0 18px"><div class="o">Chiaro</div><div class="o">Scuro</div><div class="o on">Automatico</div></div>' +
+    '<div class="lbl">Colore principale (accento)</div><div class="sw"><i style="background:#584aec"></i><i style="background:#2f78d6"></i><i style="background:#0f9d8a"></i><i style="background:#e0752b"></i><i style="background:#c2417c"></i></div></section>' +
+    '<section class="c attivita s5"><div class="ct"><h2>Come funziona</h2></div><div class="it"><div class="sx"><div><b>Per tenant</b><span>L\'amministratore sceglie stile e accento: vale per tutti gli utenti.</span></div></div></div><div class="it"><div class="sx"><div><b>Chiaro e scuro</b><span>Ogni stile ha le due versioni.</span></div></div></div><div class="it"><div class="sx"><div><b>Colori fissi</b><span>Ogni tipo di componente ha sempre lo stesso colore, in ogni schermata.</span></div></div></div></section></div>' +
+    '<section class="c" style="margin-top:14px"><div class="ct"><h2>Colori fissi per componente</h2></div><div class="legenda">' +
+    [['kpi', 'Numeri e riepiloghi', 'azzurro'], ['coda', 'Code e liste da lavorare', 'lilla'], ['attivita', 'Attività e agenda', 'pesca'], ['archivio', 'Archivi e anagrafiche', 'verde'], ['scadenze', 'Rate, scadenze, provvigioni', 'giallo'], ['avvisi', 'Avvisi e checklist', 'rosa']].map(function (x) { return '<div style="background:var(--' + x[0] + ')"><b>' + x[2] + '</b>' + x[1] + '</div>'; }).join('') + '</div></section>';
+}
+
+/* ═══════════ finestra «Aggiornamento in corso» ═══════════ */
+function velo() {
+  var pct = 0, righe = ['Scarico il sorgente più recente (commit a9b4dd7)…', 'Sorgente scaricato ed estratto. Costruisco l\'immagine…', 'Fermo il vecchio container e ne creo uno nuovo…', 'Nuovo container creato.', 'Attendo che il tenant risponda…', 'Il tenant risponde correttamente.'];
+  var el = document.getElementById('velo');
+  function disegna(n) {
+    var p = [5, 20, 78, 85, 88, 100][Math.min(n, 5)];
+    el.innerHTML = '<div class="velo" onclick="if(event.target===this)this.remove()"><div class="vet"><div style="display:flex;gap:12px;align-items:center"><div class="av" style="background:var(--kpi)">' + ic('refresh') + '</div><div style="flex:1"><h3>' + (n >= 5 ? 'Aggiornato' : 'Aggiornamento in corso') + '</h3><div class="lbl">Finance</div></div><b>' + p + '%</b></div>' +
+      '<div class="bar" style="height:14px;margin:16px 0"><i style="width:' + p + '%;transition:width .6s"></i></div>' +
+      righe.slice(0, n + 1).map(function (r) { return '<div class="it" style="padding:7px 0"><div class="sx"><span style="color:var(--okt)">' + ic('check', 1) + '</span><b style="font-weight:500;white-space:normal">' + r + '</b></div></div>'; }).join('') +
+      '<div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn sm" onclick="document.getElementById(\'velo\').innerHTML=\'\'">' + (n >= 5 ? 'Chiudi' : 'Riduci e continua') + '</button></div></div></div>';
+  }
+  var n = 0; disegna(0);
+  var t = setInterval(function () { n++; if (!document.querySelector('.velo')) { clearInterval(t); return; } disegna(n); if (n >= 5) clearInterval(t); }, 1100);
+}
+
+/* ═══════════ motore del mockup ═══════════ */
+var S = { app: 'finance', modo: 'chiaro', pag: 'dash' };
+try { var m = JSON.parse(localStorage.getItem('bento-mock') || '{}'); if (m.app && A[m.app]) S = Object.assign(S, m); } catch (e) {}
+function salva() { try { localStorage.setItem('bento-mock', JSON.stringify(S)); } catch (e) {} }
+function bt(txt, on, fn) { var b = document.createElement('button'); b.textContent = txt; b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.onclick = fn; return b; }
+function disegna() {
+  document.body.setAttribute('data-app', S.app); document.body.setAttribute('data-modo', S.modo);
+  var ap = A[S.app]; if (!ap.pagine[S.pag]) S.pag = 'dash';
+  var gA = document.getElementById('gApp'), gM = document.getElementById('gModo'), gP = document.getElementById('gPag');
+  gA.innerHTML = gM.innerHTML = gP.innerHTML = '';
+  [['admin', 'Super Admin'], ['finance', 'Finance'], ['zucca', 'Zucca']].forEach(function (x) { gA.appendChild(bt(x[1], S.app === x[0], function () { S.app = x[0]; S.pag = 'dash'; salva(); disegna(); })); });
+  [['chiaro', 'Chiaro'], ['scuro', 'Scuro']].forEach(function (x) { gM.appendChild(bt(x[1], S.modo === x[0], function () { S.modo = x[0]; salva(); disegna(); })); });
+  ap.menu.forEach(function (v) { gP.appendChild(bt(v[1], S.pag === v[0], function () { S.pag = v[0]; salva(); disegna(); })); });
+  var menu = ap.menu.map(function (v) { return '<button class="voce" aria-current="' + (S.pag === v[0] ? 'page' : 'false') + '" data-p="' + v[0] + '">' + ic(v[2]) + '<span>' + v[1] + '</span></button>'; }).join('');
+  document.getElementById('rail').innerHTML = '<div class="logo"><b>' + ap.logo + '</b><div>' + ap.nome + '<small>' + ap.sub + '</small></div></div>' + menu + '<div class="sp"></div><div class="ver">Platform ' + ap.ver + '</div>';
+  document.getElementById('dock').innerHTML = ap.menu.map(function (v) { return '<button aria-label="' + v[1] + '" aria-current="' + (S.pag === v[0] ? 'page' : 'false') + '" data-p="' + v[0] + '">' + ic(v[2]) + '</button>'; }).join('');
+  var pg = ap.pagine[S.pag];
+  document.getElementById('main').innerHTML = '<div class="pg"><div><h1>' + pg.t + '</h1><p>' + pg.s + '</p></div>' + (pg.az || '') + '</div>' + pg.h();
+  document.querySelectorAll('[data-p]').forEach(function (b) { b.onclick = function () { S.pag = b.dataset.p; salva(); disegna(); window.scrollTo(0, 0); }; });
+}
+disegna();
+</script>
+</body>
+</html>
