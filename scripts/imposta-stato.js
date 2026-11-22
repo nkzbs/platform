@@ -55,7 +55,7 @@ async function main() {
 
   const cartella = a.cartella || path.join(os.homedir(), 'Desktop', 'platform-backup-nas');
   fs.mkdirSync(cartella, { recursive: true });
-  const copia = path.join(cartella, 'finance-prima-' + a.nome + '-' + new Date().toISOString().slice(0, 10) + '.json');
+  const copia = path.join(cartella, 'finance-prima-' + a.nome + '-' + new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '') + '.json');  // con l'ora: due lanci lo stesso giorno non si sovrascrivono la copia
   fs.writeFileSync(copia, JSON.stringify(daFare, null, 2));
   console.log('\nCopia salvata: ' + copia);
 
