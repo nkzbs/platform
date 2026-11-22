@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Varianti Bento — Finance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* ═══════ Struttura comune (identica in tutte le varianti) ═══════ */
+  * { box-sizing: border-box; margin: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+  svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+  body { min-height: 100vh; font-family: var(--font); font-size: 15px; line-height: 1.35; color: var(--ink); background: var(--bg); background-attachment: fixed; transition: background .3s, color .3s; }
+  .mock { position: sticky; top: 0; z-index: 30; display: flex; gap: 8px; align-items: center; padding: 8px 12px; background: #15141c; color: #fff; overflow-x: auto; font: 600 12px system-ui, sans-serif; }
+  .mock .g { display: flex; gap: 4px; flex: none; padding-right: 10px; border-right: 1px solid #333; } .mock .g:last-child { border: 0; }
+  .mock button { padding: 6px 12px; border-radius: 99px; background: #2b2a35; color: #ddd; white-space: nowrap; }
+  .mock button[aria-pressed="true"] { background: #fff; color: #111; }
+  .mock .et { color: #8a8a99; align-self: center; }
+
+  .main { padding: 18px 14px 40px; max-width: 1100px; margin: 0 auto; }
+  .pg { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .pg h1 { font-family: var(--fontH); font-size: clamp(28px, 6vw, 42px); font-weight: var(--wH, 800); letter-spacing: -.035em; line-height: 1; }
+  .pg p { color: var(--ink2); font-size: 13px; margin-top: 6px; }
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 11px 18px; border-radius: var(--rb, 999px); background: var(--acc); color: var(--accw, #fff); font-weight: 700; box-shadow: var(--shb); }
+  .btn.sm { padding: 7px 13px; font-size: 13px; background: var(--chip); color: var(--ink); box-shadow: none; border: var(--bchip, 1px solid var(--line)); }
+
+  .gr { display: grid; gap: var(--gap, 14px); grid-template-columns: repeat(12, 1fr); }
+  .c { grid-column: span 12; border-radius: var(--r); padding: 20px; position: relative; background: var(--card); box-shadow: var(--sh); border: var(--bc, 0); transition: all .3s; }
+  @media (min-width: 860px) { .s4 { grid-column: span 4; } .s5 { grid-column: span 5; } .s6 { grid-column: span 6; } .s7 { grid-column: span 7; } .s8 { grid-column: span 8; } }
+  .c.kpi { background: var(--kpi); } .c.coda { background: var(--coda); } .c.attivita { background: var(--attivita); }
+  .c.archivio { background: var(--archivio); } .c.scadenze { background: var(--scadenze); } .c.avvisi { background: var(--avvisi); }
+  .ct { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+  .ct h2 { font-family: var(--fontH); font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .ct small { color: var(--ink2); font-size: 12px; }
+  .gran { font-family: var(--fontH); font-size: clamp(44px, 10vw, 70px); font-weight: var(--wH, 800); letter-spacing: -.05em; line-height: .95; font-variant-numeric: tabular-nums; }
+  .gran small { font-family: var(--font); font-size: .32em; font-weight: 500; opacity: .65; letter-spacing: 0; margin-left: 4px; }
+  .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink2); }
+  .val { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .kg { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-top: 16px; }
+  .it { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 0; }
+  .it + .it { border-top: 1px solid var(--line); }
+  .it b { font-weight: 600; } .it span.s { display: block; font-size: 12px; color: var(--ink2); }
+  .pl { font-size: 11.5px; padding: 4px 11px; border-radius: var(--rp, 99px); font-weight: 700; white-space: nowrap; }
+  .pl.ok { background: var(--ok); color: var(--okt); } .pl.att { background: var(--att); color: var(--attt); } .pl.er { background: var(--er); color: var(--ert); }
+  .bar { height: 12px; border-radius: 99px; background: var(--chip); overflow: hidden; margin-top: 9px; }
+  .bar i { display: block; height: 100%; border-radius: 99px; background: var(--acc); }
+  .due { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .chips { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
+  .chip { flex: none; min-width: 150px; padding: 12px 14px; border-radius: var(--rs); background: var(--chip); border: var(--bchip, 0); text-align: left; }
+  .chip.on { outline: 2.5px solid var(--acc); }
+  .chip em { display: block; font-style: normal; font-size: 12px; color: var(--ink2); } .chip b { display: block; font-size: 19px; font-variant-numeric: tabular-nums; margin: 2px 0; } .chip span { font-size: 11px; color: var(--ink2); }
+  .rate { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .rata { padding: 12px 14px; border-radius: var(--rs); background: var(--chip); border: var(--bchip, 0); }
+  .rata .d { font-size: 11px; color: var(--ink2); } .rata .i { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rata .r { margin-top: 8px; font-size: 11.5px; font-weight: 700; padding: 5px 8px; border-radius: 99px; text-align: center; background: var(--ok); color: var(--okt); }
+  .rata .r.no { background: transparent; border: 2px dashed var(--attt); color: var(--attt); }
+  .nota { font-size: 11px; color: var(--ink2); margin-top: 24px; max-width: 760px; }
+  .legenda { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .legenda div { border-radius: var(--rs); padding: 12px 14px; font-size: 13px; background: var(--k); box-shadow: var(--sh); } .legenda b { display: block; }
+
+  /* ═══════ 1 · PASTELLO (quello che hai visto) ═══════ */
+  [data-stile="pastello"] { --font: 'DM Sans', system-ui, sans-serif; --fontH: var(--font); --r: 28px; --rs: 18px;
+    --bg: #f4f1ff; --card: #fff; --ink: #231f3b; --ink2: rgba(35,31,59,.62); --line: rgba(35,31,59,.10); --chip: rgba(255,255,255,.66); --sh: 0 1px 0 rgba(255,255,255,.7) inset, 0 8px 24px rgba(60,50,120,.08); --shb: 0 8px 20px -8px var(--acc);
+    --kpi: #d6efff; --coda: #e3dcff; --attivita: #ffe3d2; --archivio: #d8f4df; --scadenze: #fff0b8; --avvisi: #ffd9ea; --ok: #bff0cf; --okt: #0d5a32; --att: #ffe08a; --attt: #6b4800; --er: #ffc2cb; --ert: #8c1730; }
+  [data-stile="pastello"][data-modo="scuro"] { --bg: #0e0d17; --card: #1a1925; --ink: #f1efff; --ink2: rgba(241,239,255,.62); --line: rgba(241,239,255,.10); --chip: rgba(255,255,255,.07); --sh: 0 1px 0 rgba(255,255,255,.06) inset, 0 10px 30px rgba(0,0,0,.35);
+    --kpi: #153248; --coda: #2a2350; --attivita: #4a2c1d; --archivio: #1b3b29; --scadenze: #473d12; --avvisi: #4a2136; --ok: #1f5a39; --okt: #8df0b5; --att: #5c4a10; --attt: #ffd266; --er: #5e2230; --ert: #ff9fb0; }
+
+  /* ═══════ 2 · VETRO (schede trasparenti su sfondo sfumato) ═══════ */
+  [data-stile="vetro"] { --font: 'DM Sans', system-ui, sans-serif; --fontH: var(--font); --r: 30px; --rs: 20px;
+    --bg: radial-gradient(1000px 600px at 10% -10%, color-mix(in srgb, var(--acc) 38%, transparent), transparent 60%), radial-gradient(900px 600px at 100% 10%, rgba(255,160,120,.35), transparent 60%), radial-gradient(900px 700px at 40% 110%, rgba(80,200,200,.30), transparent 60%), #f2f0fb;
+    --ink: #1c1b33; --ink2: rgba(28,27,51,.6); --line: rgba(255,255,255,.55); --chip: rgba(255,255,255,.45); --bchip: 1px solid rgba(255,255,255,.6); --bc: 1px solid rgba(255,255,255,.65);
+    --card: rgba(255,255,255,.5); --sh: 0 10px 40px rgba(60,50,120,.12); --shb: 0 8px 24px -8px var(--acc);
+    --kpi: rgba(120,200,255,.34); --coda: rgba(160,130,255,.34); --attivita: rgba(255,170,120,.36); --archivio: rgba(110,220,150,.32); --scadenze: rgba(255,215,80,.38); --avvisi: rgba(255,130,180,.30);
+    --ok: rgba(70,200,120,.28); --okt: #0b5a30; --att: rgba(255,190,60,.38); --attt: #6b4800; --er: rgba(255,90,110,.28); --ert: #8c1730; }
+  [data-stile="vetro"] .c { backdrop-filter: blur(22px) saturate(1.4); -webkit-backdrop-filter: blur(22px) saturate(1.4); }
+  [data-stile="vetro"][data-modo="scuro"] { --bg: radial-gradient(1000px 600px at 10% -10%, color-mix(in srgb, var(--acc) 55%, transparent), transparent 60%), radial-gradient(900px 600px at 100% 10%, rgba(255,120,90,.30), transparent 60%), radial-gradient(900px 700px at 40% 110%, rgba(40,170,190,.30), transparent 60%), #0a0914;
+    --ink: #f3f1ff; --ink2: rgba(243,241,255,.62); --line: rgba(255,255,255,.12); --chip: rgba(255,255,255,.08); --bchip: 1px solid rgba(255,255,255,.12); --bc: 1px solid rgba(255,255,255,.14); --card: rgba(255,255,255,.07); --sh: 0 10px 40px rgba(0,0,0,.4);
+    --kpi: rgba(70,170,255,.20); --coda: rgba(150,110,255,.22); --attivita: rgba(255,140,90,.20); --archivio: rgba(70,210,130,.18); --scadenze: rgba(255,205,60,.18); --avvisi: rgba(255,90,160,.20);
+    --ok: rgba(70,210,130,.25); --okt: #8df0b5; --att: rgba(255,190,60,.25); --attt: #ffd266; --er: rgba(255,90,110,.25); --ert: #ff9fb0; }
+
+  /* ═══════ 3 · TONO SU TONO (una famiglia di colore: quella dell'accento) ═══════ */
+  [data-stile="tono"] { --font: 'DM Sans', system-ui, sans-serif; --fontH: var(--font); --r: 26px; --rs: 16px;
+    --bg: hsl(var(--h) 40% 96%); --ink: hsl(var(--h) 45% 14%); --ink2: hsl(var(--h) 20% 40%); --line: hsl(var(--h) 30% 85%); --chip: hsl(var(--h) 60% 98% / .75); --card: #fff; --sh: 0 1px 2px hsl(var(--h) 40% 50% / .08); --shb: 0 6px 16px -6px var(--acc);
+    --kpi: hsl(var(--h) 85% 90%); --coda: hsl(calc(var(--h) + 16) 70% 91%); --attivita: hsl(calc(var(--h) - 16) 65% 92%); --archivio: hsl(calc(var(--h) + 32) 45% 90%); --scadenze: hsl(calc(var(--h) - 32) 60% 91%); --avvisi: hsl(calc(var(--h) + 48) 55% 92%);
+    --ok: hsl(150 50% 86%); --okt: hsl(150 60% 22%); --att: hsl(42 85% 80%); --attt: hsl(36 80% 24%); --er: hsl(350 70% 88%); --ert: hsl(350 65% 30%); }
+  [data-stile="tono"][data-modo="scuro"] { --bg: hsl(var(--h) 35% 8%); --ink: hsl(var(--h) 40% 94%); --ink2: hsl(var(--h) 18% 66%); --line: hsl(var(--h) 25% 20%); --chip: hsl(var(--h) 40% 100% / .06); --card: hsl(var(--h) 30% 13%);
+    --kpi: hsl(var(--h) 55% 20%); --coda: hsl(calc(var(--h) + 16) 45% 18%); --attivita: hsl(calc(var(--h) - 16) 42% 17%); --archivio: hsl(calc(var(--h) + 32) 32% 16%); --scadenze: hsl(calc(var(--h) - 32) 40% 17%); --avvisi: hsl(calc(var(--h) + 48) 36% 17%);
+    --ok: hsl(150 45% 22%); --okt: hsl(150 70% 75%); --att: hsl(40 60% 24%); --attt: hsl(42 90% 70%); --er: hsl(350 45% 26%); --ert: hsl(350 90% 80%); }
+  [data-app="admin"] { --h: 247; } [data-app="finance"] { --h: 172; } [data-app="zucca"] { --h: 214; }
+
+  /* ═══════ 4 · CARTA (calda, editoriale, colori di terra) ═══════ */
+  [data-stile="carta"] { --font: 'DM Sans', system-ui, sans-serif; --fontH: 'Fraunces', Georgia, serif; --wH: 700; --r: 24px; --rs: 14px; --rb: 14px; --rp: 8px;
+    --bg: #f3ecde; --card: #fbf6ea; --ink: #2b2417; --ink2: rgba(43,36,23,.62); --line: rgba(43,36,23,.13); --chip: rgba(255,252,243,.8); --bchip: 1px solid rgba(43,36,23,.10); --bc: 1px solid rgba(43,36,23,.10); --sh: 0 1px 0 #fff inset, 0 2px 0 rgba(43,36,23,.06); --shb: none;
+    --kpi: #d9e4ea; --coda: #e6dcec; --attivita: #f2d9c4; --archivio: #dbe5cd; --scadenze: #f1e1a8; --avvisi: #efcfc8; --ok: #cfe3bd; --okt: #2c5a16; --att: #f0d98a; --attt: #6b4a08; --er: #eab8ae; --ert: #86281a; }
+  [data-stile="carta"][data-modo="scuro"] { --bg: #1b1710; --card: #26211a; --ink: #f1e8d6; --ink2: rgba(241,232,214,.62); --line: rgba(241,232,214,.13); --chip: rgba(255,248,230,.06); --bchip: 1px solid rgba(241,232,214,.10); --bc: 1px solid rgba(241,232,214,.10); --sh: 0 2px 0 rgba(0,0,0,.3);
+    --kpi: #26363f; --coda: #35293f; --attivita: #45301f; --archivio: #2c3a23; --scadenze: #463d17; --avvisi: #4a2a24; --ok: #2f4a1f; --okt: #b6e08f; --att: #5c4710; --attt: #f2cf6a; --er: #5c2a20; --ert: #ffa896; }
+
+  /* ═══════ 5 · NEON (blocchi vivaci di giorno, bagliori di notte) ═══════ */
+  [data-stile="neon"] { --font: 'Space Grotesk', system-ui, sans-serif; --fontH: var(--font); --r: 22px; --rs: 14px; --rp: 8px; --gap: 12px;
+    --bg: #fafafa; --card: #fff; --ink: #0d0d12; --ink2: rgba(13,13,18,.62); --line: rgba(13,13,18,.14); --chip: rgba(255,255,255,.55); --bchip: 2px solid #0d0d12; --bc: 2px solid #0d0d12; --sh: 4px 4px 0 #0d0d12; --shb: 3px 3px 0 #0d0d12;
+    --kpi: #5ee0ff; --coda: #b69bff; --attivita: #ffa05a; --archivio: #6ef0a0; --scadenze: #ffe14d; --avvisi: #ff7ab8; --ok: #6ef0a0; --okt: #052e16; --att: #ffe14d; --attt: #3a2a00; --er: #ff7a8a; --ert: #3d0010; }
+  [data-stile="neon"] .btn { border: 2px solid #0d0d12; color: #0d0d12; background: var(--acc); }
+  [data-stile="neon"][data-modo="scuro"] { --bg: #07070c; --card: #11111a; --ink: #f4f4ff; --ink2: rgba(244,244,255,.62); --line: rgba(244,244,255,.14); --chip: rgba(255,255,255,.05); --bchip: 1px solid rgba(255,255,255,.16); --bc: 1px solid var(--g); --sh: 0 0 28px -6px var(--g); --shb: 0 0 24px -4px var(--acc);
+    --kpi: #0b1f2b; --coda: #1a1233; --attivita: #2b1708; --archivio: #0a2316; --scadenze: #2a2308; --avvisi: #2b0d1e; --ok: rgba(110,240,160,.16); --okt: #6ef0a0; --att: rgba(255,225,77,.16); --attt: #ffe14d; --er: rgba(255,122,138,.18); --ert: #ff7a8a; }
+  [data-stile="neon"][data-modo="scuro"] .btn { color: #07070c; border: 0; }
+  [data-stile="neon"][data-modo="scuro"] .c.kpi { --g: #2ad4ff; } [data-stile="neon"][data-modo="scuro"] .c.coda { --g: #9a73ff; } [data-stile="neon"][data-modo="scuro"] .c.attivita { --g: #ff8a3d; }
+  [data-stile="neon"][data-modo="scuro"] .c.archivio { --g: #38e88a; } [data-stile="neon"][data-modo="scuro"] .c.scadenze { --g: #ffd633; } [data-stile="neon"][data-modo="scuro"] .c.avvisi { --g: #ff4fa3; }
+  [data-stile="neon"][data-modo="scuro"] .gran { text-shadow: 0 0 22px var(--g); }
+
+  /* ═══════ 6 · ARGILLA (morbido, rigonfio, quasi tridimensionale) ═══════ */
+  [data-stile="argilla"] { --font: 'DM Sans', system-ui, sans-serif; --fontH: var(--font); --r: 38px; --rs: 24px; --gap: 18px;
+    --bg: #eceaf4; --card: #eceaf4; --ink: #2a2740; --ink2: rgba(42,39,64,.6); --line: rgba(42,39,64,.10); --chip: rgba(255,255,255,.55);
+    --sh: 12px 12px 28px rgba(110,100,170,.22), -10px -10px 24px rgba(255,255,255,.9), inset -3px -3px 8px rgba(0,0,0,.04), inset 3px 3px 8px rgba(255,255,255,.7); --shb: 8px 8px 18px rgba(0,0,0,.18), -4px -4px 12px rgba(255,255,255,.6);
+    --kpi: #d3e8f5; --coda: #ded6f5; --attivita: #f5dccb; --archivio: #d3ecd9; --scadenze: #f5e8b5; --avvisi: #f3d0e0; --ok: #bfe8cd; --okt: #0d5a32; --att: #f3dc8a; --attt: #6b4800; --er: #f6bfc8; --ert: #8c1730; }
+  [data-stile="argilla"][data-modo="scuro"] { --bg: #1b1a26; --card: #1b1a26; --ink: #efedff; --ink2: rgba(239,237,255,.6); --line: rgba(239,237,255,.10); --chip: rgba(255,255,255,.05);
+    --sh: 12px 12px 28px rgba(0,0,0,.5), -8px -8px 22px rgba(255,255,255,.04), inset -3px -3px 8px rgba(0,0,0,.25), inset 3px 3px 8px rgba(255,255,255,.05); --shb: 8px 8px 18px rgba(0,0,0,.5), -3px -3px 10px rgba(255,255,255,.05);
+    --kpi: #223648; --coda: #2e2748; --attivita: #3f2d22; --archivio: #243a2c; --scadenze: #3d3620; --avvisi: #3f2533; --ok: #24503a; --okt: #8df0b5; --att: #574812; --attt: #ffd266; --er: #5a2733; --ert: #ff9fb0; }
+
+  /* accenti per ambiente (comuni) */
+  [data-app="admin"] { --acc: #584aec; } [data-app="finance"] { --acc: #0f9d8a; } [data-app="zucca"] { --acc: #2f78d6; }
+</style>
+</head>
+<body data-stile="pastello" data-modo="chiaro" data-app="finance">
+<div class="mock" role="toolbar" aria-label="Controlli del mockup">
+  <span class="et">Variante</span><div class="g" id="gS"></div>
+  <span class="et">Modo</span><div class="g" id="gM"></div>
+  <span class="et">Accento</span><div class="g" id="gA"></div>
+</div>
+<main class="main">
+  <div class="pg"><div><h1>Finance</h1><p id="descr"></p></div><button class="btn">＋ Nuova spesa</button></div>
+  <div class="gr">
+    <section class="c coda s5"><div class="ct"><h2>Da smistare</h2><small>3 in coda</small></div>
+      <div class="it"><div><b>Bolletta luce</b><span class="s">scade 27/11</span></div><button class="btn sm">Smista</button></div>
+      <div class="it"><div><b>Condominio — 4ª rata</b><span class="s">scade 27/11</span></div><button class="btn sm">Smista</button></div>
+      <div class="it"><div><b>Notifica fattura elettronica</b><span class="s">scade 10/11</span></div><button class="btn sm">Smista</button></div></section>
+    <section class="c kpi s7"><div class="ct"><h2>Riepilogo mensile</h2><small>novembre 2026</small></div><div class="gran">1.043<small>,42 €</small></div><div class="lbl" style="margin-top:6px">Spendibile</div>
+      <div class="kg"><div><div class="val">1.799,58 €</div><div class="lbl">Entrate</div></div><div><div class="val">2.208,66 €</div><div class="lbl">Uscite</div></div><div><div class="val">1.121,30 €</div><div class="lbl">Pagato</div></div><div><div class="val">1.087,36 €</div><div class="lbl">Da pagare</div></div><div><div class="val">1.640,00 €</div><div class="lbl">Fisse</div></div><div><div class="val">0,00 €</div><div class="lbl">Prev. carta</div></div></div></section>
+    <section class="c attivita s6"><div class="ct"><h2>Come sta andando</h2><small>Mese</small></div><div class="due"><div><div class="lbl">Personale · entrate</div><div class="val">1.799,58 €</div><div class="lbl" style="margin-top:8px">Spese</div><div class="val">1.321,45 €</div><div class="bar"><i style="width:73%"></i></div></div><div><div class="lbl">Casa · già pagate</div><div class="val">684,10 €</div><div class="lbl" style="margin-top:8px">Ancora da pagare</div><div class="val">524,06 €</div><div class="bar"><i style="width:57%"></i></div></div></div></section>
+    <section class="c avvisi s6"><div class="ct"><h2>Checklist</h2><small>novembre</small></div>
+      <div class="it"><b>Affitto</b><span class="pl ok">Pagato</span></div><div class="it"><b>Rata PayPal</b><span class="pl att">Da pagare</span></div><div class="it"><b>Assicurazione auto</b><span class="pl er">Scaduta</span></div><div class="it"><b>Abbonamento DAZN</b><span class="pl ok">Pagato</span></div></section>
+    <section class="c archivio s5"><div class="ct"><h2>Da pagare per creditore</h2><small>totale 2.114,50 €</small></div><div class="chips">
+      <button class="chip on"><em>Officina Rossi</em><b>795,00 €</b><span>8 rate · 3 piani</span></button><button class="chip"><em>Agenzia Entrate Risc.</em><b>720,34 €</b><span>20 rate · 1 piano</span></button><button class="chip"><em>Marco Romani</em><b>700,00 €</b><span>7 rate · 1 piano</span></button></div></section>
+    <section class="c scadenze s7"><div class="ct"><h2>Officina Rossi · fattura 2026/160</h2><small>420,00 € in 4 rate</small></div><div class="rate">
+      <div class="rata"><div class="d">Rata 1 · 27 ott</div><div class="i">100,00 €</div><div class="r">Ricevuta ✓</div></div><div class="rata"><div class="d">Rata 2 · 27 nov</div><div class="i">105,00 €</div><div class="r">Ricevuta ✓</div></div>
+      <div class="rata"><div class="d">Rata 3 · 27 dic</div><div class="i">107,50 €</div><div class="r no">＋ Carica ricevuta</div></div><div class="rata"><div class="d">Rata 4 · 27 gen</div><div class="i">107,50 €</div><div class="r no">＋ Carica ricevuta</div></div></div></section>
+  </div>
+  <section class="c" style="margin-top:14px"><div class="ct"><h2>Colori fissi per componente</h2></div><div class="legenda">
+    <div style="--k:var(--kpi)">Numeri e riepiloghi</div><div style="--k:var(--coda)">Code e liste</div><div style="--k:var(--attivita)">Attività</div><div style="--k:var(--archivio)">Archivi</div><div style="--k:var(--scadenze)">Rate e scadenze</div><div style="--k:var(--avvisi)">Avvisi</div></div></section>
+  <p class="nota">Mockup di studio, dati inventati. Le sei varianti hanno la stessa struttura (schede grandi, un colore fisso per tipo di componente, chiaro e scuro): cambiano materiale, forma e carattere. Lo stile si sceglie in Impostazioni → Aspetto, per tenant.</p>
+</main>
+<script>
+  var DESC = {
+    pastello: 'Pastello — schede piene, colori tenui, la linea che hai già visto.',
+    vetro: 'Vetro — schede trasparenti sfocate su uno sfondo sfumato dal colore dell\'ambiente.',
+    tono: 'Tono su tono — una sola famiglia di colore (quella dell\'accento), schede che differiscono per luminosità: calmo e professionale.',
+    carta: 'Carta — fondo crema, titoli a grazie, colori di terra: caldo ed editoriale.',
+    neon: 'Neon — di giorno blocchi vivaci con bordo nero e ombra piena, di notte bagliori colorati.',
+    argilla: 'Argilla — morbido e rigonfio, quasi tridimensionale, ombre ampie e angoli molto tondi.'
+  };
+  var S = { stile: 'pastello', modo: 'chiaro', app: 'finance' };
+  try { var m = JSON.parse(localStorage.getItem('bento-var') || '{}'); S = Object.assign(S, m); } catch (e) {}
+  function bt(t, on, fn) { var b = document.createElement('button'); b.textContent = t; b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.onclick = fn; return b; }
+  function draw() {
+    document.body.setAttribute('data-stile', S.stile); document.body.setAttribute('data-modo', S.modo); document.body.setAttribute('data-app', S.app);
+    document.getElementById('descr').textContent = DESC[S.stile];
+    var gS = document.getElementById('gS'), gM = document.getElementById('gM'), gA = document.getElementById('gA'); gS.innerHTML = gM.innerHTML = gA.innerHTML = '';
+    [['pastello', '1 · Pastello'], ['vetro', '2 · Vetro'], ['tono', '3 · Tono su tono'], ['carta', '4 · Carta'], ['neon', '5 · Neon'], ['argilla', '6 · Argilla']].forEach(function (x) { gS.appendChild(bt(x[1], S.stile === x[0], function () { S.stile = x[0]; save(); draw(); })); });
+    [['chiaro', 'Chiaro'], ['scuro', 'Scuro']].forEach(function (x) { gM.appendChild(bt(x[1], S.modo === x[0], function () { S.modo = x[0]; save(); draw(); })); });
+    [['finance', 'Verde (Finance)'], ['zucca', 'Blu (Zucca)'], ['admin', 'Viola (Super Admin)']].forEach(function (x) { gA.appendChild(bt(x[1], S.app === x[0], function () { S.app = x[0]; save(); draw(); })); });
+  }
+  function save() { try { localStorage.setItem('bento-var', JSON.stringify(S)); } catch (e) {} }
+  draw();
+</script>
+</body>
+</html>
