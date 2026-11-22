@@ -1,4 +1,5 @@
 import React from 'react'
+import Portal from './Portal'
 
 // Rete di sicurezza: se qualcosa dentro va in errore mentre si disegna, invece della schermata bianca di tutta l'app compare un messaggio
 // con il dettaglio dell'errore (da copiare e mandare) e un modo per tornare indietro. L'errore resta anche in localStorage («platform_ultimo_errore»).
@@ -18,6 +19,7 @@ export default class ErrorBoundary extends React.Component {
     const e = this.state.errore
     const messaggio = (e && e.message) || String(e)
     return (
+      <Portal>
       <div role="alert" className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60">
         <div className="bg-surface-card border border-red-900/50 rounded-xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto">
           <div className="text-base font-bold text-ink mb-1">Qualcosa non è andato</div>
@@ -29,6 +31,7 @@ export default class ErrorBoundary extends React.Component {
           </div>
         </div>
       </div>
+      </Portal>
     )
   }
 }

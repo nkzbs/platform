@@ -2,6 +2,11 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.52 — 22 novembre 2026
+
+- **Prima di mettere online si lancia `bash scripts/verifica.sh`** (circa 15 minuti: lint, test del core, di Super Admin, del frontend e le due compilazioni). La 0.5.48 è uscita con un manifesto di pacchetto vuoto e un test rosso che il controllo completo avrebbe fermato.
+- **Una schermata d'errore al posto della pagina bianca**, con il testo dell'errore: la causa della schermata bianca segnalata non è nota, ora se ricapita si vede.
+
 ## 0.5.51 — 22 novembre 2026
 
 - **I collegamenti non obbligatori stanno sotto «Altri collegamenti»**, non nascosti: un modulo figlio può avere relazioni legittime verso moduli che non sono il padre (righe d'ordine → prodotto), quindi non si toglie niente, si mette in secondo piano; le colonne vuote spariscono dalla tabella.

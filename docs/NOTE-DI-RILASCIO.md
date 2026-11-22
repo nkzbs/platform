@@ -5,6 +5,8 @@ Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la 
 ## 0.5.52 — Niente più schermata bianca
 
 - **Rete di sicurezza contro la schermata bianca** (`ErrorBoundary.jsx`): se una scheda o la pagina va in errore mentre si disegna, compare un messaggio con il dettaglio dell'errore e «Chiudi» / «Ricarica», invece della pagina bianca. L'errore resta in `localStorage` (`platform_ultimo_errore`: quando, dove, testo e componenti) per capire la causa. Non si conosce ancora la causa della schermata bianca segnalata aprendo una rata: se ricapita, il messaggio la mostra.
+- **Pacchetto «Mediazione immobiliare» ripristinato**: nel commit della 0.5.48 il file `pacchetto.json` era stato salvato **vuoto** (0 byte). Super Admin lo leggeva come pacchetto di nome «mediazione-immobiliare» alla **versione 1**, quindi lo «pacchetto 36» (chiusa senza vendita, passaggi automatici alla firma) non arrivava a nessun tenant e il test `pacchetti.test.js` falliva. Ripristinato (nome, descrizione, versione **36**). Serve ridistribuire Super Admin (`redeploy-nas.sh backend` e `frontend`) e poi «Aggiorna» su zucca.
+- La schermata di errore usa il portale come ogni altro overlay (lo richiede `overlay-in-portale.test.js`).
 - Le etichette dei collegamenti sono sempre testo (un campo che non lo è, come un file, non può più rompere il disegno della scheda) e un elenco di collegati non valido si ignora.
 
 ## 0.5.51 — Righe collegate più chiare e piano a rate più facile

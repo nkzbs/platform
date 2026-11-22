@@ -441,6 +441,8 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
   const togglePair = (() => {
     if (mod.quick_toggle === 0) return null
     if (!workflow || !workflow.transitions) return null
+    // Il cerchio di spunta ha senso solo per un «fatto / da fare» a due stati: con più stati (es. Trattative con «Riapri») non serve e confonde.
+    if (!workflow.states || workflow.states.length !== 2) return null
     for (const t1 of workflow.transitions) {
       if (workflow.transitions.some((t2) => t2.from === t1.to && t2.to === t1.from)) {
         return { off: t1.from, on: t1.to }
@@ -667,7 +669,7 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
                 <Icon name="more" size={18} />
               </button>
               {/* Il pannello resta montato anche da chiuso (hidden): le finestre di Importa da PDF, Busta paga ecc. vivono dentro questi componenti e non devono sparire quando il menu si chiude. */}
-              <div role="menu" hidden={!menuLista} onClick={() => setMenuLista(false)} className="absolute right-0 top-full mt-1 z-30 w-[min(20rem,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto bg-surface-card border border-gray-700 rounded-xl shadow-lg py-1">
+              <div role="menu" hidden={!menuLista} onClick={() => setMenuLista(false)} className="absolute right-0 top-full mt-1 z-30 w-[min(20rem,calc(100vw-2rem))] max-sm:fixed max-sm:inset-x-4 max-sm:right-4 max-sm:top-auto max-sm:w-auto max-h-[70vh] overflow-y-auto bg-surface-card border border-gray-700 rounded-xl shadow-lg py-1">
                 {canCreate && <ImportPdf token={token} mod={mod} onCreated={loadRecords} voce />}
                 {canCreate && <ImportaModuloPdf token={token} mod={mod} onCreated={loadRecords} />}
                 {canCreate && <ImportPayslip token={token} mod={mod} user={user} onCreated={loadRecords} voce />}
