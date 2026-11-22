@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup stili — Finance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { min-height: 100vh; padding: 14px 14px 60px; transition: background .25s, color .25s; font-size: 15px; line-height: 1.35; }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+
+  /* ── selettore ── */
+  .scelta { position: sticky; top: 0; z-index: 5; margin: -14px -14px 14px; padding: 10px 14px; background: rgba(20,20,20,.88); backdrop-filter: blur(8px); display: flex; gap: 6px; overflow-x: auto; align-items: center; font-family: system-ui, sans-serif; }
+  .scelta span { color: #aaa; font-size: 12px; margin-right: 6px; flex: none; }
+  .scelta button { flex: none; font: 600 13px system-ui, sans-serif; border: 0; padding: 7px 14px; border-radius: 999px; background: #2a2a2a; color: #eee; cursor: pointer; }
+  .scelta button[aria-pressed="true"] { background: #fff; color: #111; }
+
+  /* ── struttura comune ── */
+  .testa { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .testa h1 { font-size: clamp(30px, 6vw, 46px); line-height: 1; }
+  .testa .data { font-size: 13px; opacity: .75; text-align: right; }
+  .griglia { display: grid; gap: 12px; grid-template-columns: repeat(12, 1fr); }
+  .box { grid-column: span 12; padding: 16px; }
+  @media (min-width: 820px) { .a6 { grid-column: span 6; } .a7 { grid-column: span 7; } .a5 { grid-column: span 5; } .a4 { grid-column: span 4; } .a8 { grid-column: span 8; } }
+  .tit { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+  .tit h2 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+  .tit small { font-size: 12px; opacity: .7; }
+  .num { font-variant-numeric: tabular-nums; }
+  .grande { font-size: clamp(46px, 11vw, 78px); line-height: .95; font-weight: 700; }
+  .grande small { font-size: .36em; opacity: .7; margin-left: 4px; font-weight: 500; }
+  .kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 10px; margin-top: 14px; }
+  .kpi div { padding: 8px 0; }
+  .kpi b { display: block; font-size: 19px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .kpi span { font-size: 11px; opacity: .7; text-transform: uppercase; letter-spacing: .05em; }
+  .riga { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 0; }
+  .riga + .riga { border-top: 1px solid var(--linea); }
+  .pil { font-size: 11px; padding: 3px 10px; border-radius: 999px; white-space: nowrap; font-weight: 600; }
+  .barra { height: 8px; border-radius: 99px; background: var(--linea); overflow: hidden; margin-top: 8px; }
+  .barra i { display: block; height: 100%; border-radius: 99px; background: var(--acc); }
+  .coppia { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .coppia .l { font-size: 11px; opacity: .7; text-transform: uppercase; letter-spacing: .05em; }
+  .coppia .v { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .chip { flex: none; min-width: 132px; padding: 10px 12px; text-align: left; }
+  .chip b { display: block; font-size: 17px; font-variant-numeric: tabular-nums; }
+  .chip span { font-size: 11px; opacity: .7; }
+  .chip em { font-style: normal; display: block; font-size: 12px; opacity: .85; margin-bottom: 2px; }
+  .rate { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .rata { padding: 10px 12px; }
+  .rata .d { font-size: 11px; opacity: .7; }
+  .rata .i { font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .rata .r { margin-top: 6px; font-size: 11px; padding: 4px 8px; border-radius: 999px; text-align: center; font-weight: 600; }
+  .rata .r.no { border: 1.5px dashed currentColor; background: transparent; }
+  .ok { background: var(--ok); color: var(--okt); } .att { background: var(--att); color: var(--attt); } .err { background: var(--er); color: var(--ert); }
+  .nota { font-size: 11px; opacity: .6; margin-top: 18px; font-family: system-ui, sans-serif; text-transform: none; letter-spacing: 0; }
+
+  /* ═════ A · REGISTRO (carta e inchiostro) ═════ */
+  body[data-stile="registro"] { --linea: #cfc5ad; --acc: #2f5d3a; --ok: #dfead9; --okt: #2f5d3a; --att: #f3e2b8; --attt: #6b4a08; --er: #f3d4cc; --ert: #8a2a18;
+    background: #f1ebdc; color: #1d261d; font-family: 'Fraunces', Georgia, serif; }
+  body[data-stile="registro"] .testa h1 { font-weight: 800; letter-spacing: -.02em; border-bottom: 3px double #1d261d; padding-bottom: 6px; }
+  body[data-stile="registro"] .box { background: #f8f3e6; border: 1px solid #cfc5ad; border-radius: 3px; box-shadow: 0 1px 0 #fff inset, 0 2px 0 #e3dac3; }
+  body[data-stile="registro"] .tit h2 { font-variant: small-caps; text-transform: none; font-size: 16px; letter-spacing: .03em; font-weight: 600; }
+  body[data-stile="registro"] .grande { color: #2f5d3a; font-weight: 800; }
+  body[data-stile="registro"] .chip, body[data-stile="registro"] .rata { background: #fffaf0; border: 1px solid #cfc5ad; border-radius: 2px; }
+  body[data-stile="registro"] .pil, body[data-stile="registro"] .rata .r { border-radius: 2px; font-family: 'DM Sans', sans-serif; font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; }
+  body[data-stile="registro"] .barra, body[data-stile="registro"] .barra i { border-radius: 0; height: 6px; }
+  body[data-stile="registro"] .riga { border-bottom: 1px dotted #b8ad92; } body[data-stile="registro"] .riga + .riga { border-top: 0; }
+
+  /* ═════ B · NOTTE (minimale denso) ═════ */
+  body[data-stile="notte"] { --linea: #262a33; --acc: #7c8cff; --ok: rgba(80,200,140,.14); --okt: #5fd49c; --att: rgba(255,190,80,.14); --attt: #ffc35c; --er: rgba(255,100,100,.14); --ert: #ff7a7a;
+    background: #0d0e12; color: #e6e8ee; font-family: 'DM Sans', system-ui, sans-serif; }
+  body[data-stile="notte"] .testa h1 { font-weight: 700; letter-spacing: -.03em; }
+  body[data-stile="notte"] .box { background: #14161c; border: 1px solid #23262e; border-radius: 12px; }
+  body[data-stile="notte"] .tit h2 { color: #8b91a1; font-weight: 500; font-size: 12px; }
+  body[data-stile="notte"] .grande { letter-spacing: -.04em; background: linear-gradient(180deg, #fff, #9aa3ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  body[data-stile="notte"] .chip, body[data-stile="notte"] .rata { background: #191c23; border: 1px solid #262a33; border-radius: 10px; }
+  body[data-stile="notte"] .chip:hover { border-color: #7c8cff; }
+
+  /* ═════ C · BENTO PASTELLO ═════ */
+  body[data-stile="bento"] { --linea: rgba(0,0,0,.08); --acc: #6a4cff; --ok: #c9f1dc; --okt: #0f6b3f; --att: #ffe7a8; --attt: #7a5200; --er: #ffd0d6; --ert: #9a1b30;
+    background: #f4f1ff; color: #231f3b; font-family: 'DM Sans', system-ui, sans-serif; }
+  body[data-stile="bento"] .testa h1 { font-weight: 700; letter-spacing: -.03em; }
+  body[data-stile="bento"] .box { border-radius: 28px; padding: 20px; border: 0; }
+  body[data-stile="bento"] .b1 { background: #e1d9ff; } body[data-stile="bento"] .b2 { background: #d4f0ff; } body[data-stile="bento"] .b3 { background: #ffe3d2; }
+  body[data-stile="bento"] .b4 { background: #dcf5e4; } body[data-stile="bento"] .b5 { background: #fff1b8; } body[data-stile="bento"] .b6 { background: #ffd9ea; }
+  body[data-stile="bento"] .tit h2 { font-size: 14px; letter-spacing: 0; text-transform: none; font-weight: 700; }
+  body[data-stile="bento"] .grande { font-weight: 800; letter-spacing: -.05em; }
+  body[data-stile="bento"] .chip, body[data-stile="bento"] .rata { background: rgba(255,255,255,.7); border-radius: 18px; }
+  body[data-stile="bento"] .pil, body[data-stile="bento"] .rata .r { font-weight: 700; }
+  body[data-stile="bento"] .barra { background: rgba(255,255,255,.7); height: 12px; }
+
+  /* ═════ D · BRUTALISTA ═════ */
+  body[data-stile="brutale"] { --linea: #111; --acc: #ff3d7f; --ok: #7dffb0; --okt: #003b1c; --att: #ffe14d; --attt: #111; --er: #ff7a7a; --ert: #111;
+    background: #fff4c4; color: #111; font-family: 'Space Grotesk', system-ui, sans-serif; }
+  body[data-stile="brutale"] .testa h1 { font-weight: 700; text-transform: uppercase; letter-spacing: -.04em; background: #111; color: #fff4c4; display: inline-block; padding: 4px 12px; transform: rotate(-1deg); }
+  body[data-stile="brutale"] .box { background: #fff; border: 3px solid #111; border-radius: 0; box-shadow: 6px 6px 0 #111; }
+  body[data-stile="brutale"] .b1 { background: #a8d8ff; } body[data-stile="brutale"] .b3 { background: #ffb3d1; } body[data-stile="brutale"] .b5 { background: #c9ffb0; }
+  body[data-stile="brutale"] .tit h2 { font-weight: 700; font-size: 14px; }
+  body[data-stile="brutale"] .grande { font-weight: 700; letter-spacing: -.05em; }
+  body[data-stile="brutale"] .chip, body[data-stile="brutale"] .rata { background: #fff; border: 2.5px solid #111; border-radius: 0; box-shadow: 3px 3px 0 #111; }
+  body[data-stile="brutale"] .pil, body[data-stile="brutale"] .rata .r { border: 2px solid #111; border-radius: 0; font-weight: 700; text-transform: uppercase; }
+  body[data-stile="brutale"] .barra { border: 2.5px solid #111; border-radius: 0; height: 16px; background: #fff; }
+  body[data-stile="brutale"] .barra i { border-radius: 0; background: repeating-linear-gradient(45deg, #ff3d7f 0 8px, #ff7aa6 8px 16px); }
+  body[data-stile="brutale"] .riga + .riga { border-top: 2px dashed #111; }
+
+  /* ═════ E · TERMINALE AMBRA ═════ */
+  body[data-stile="terminale"] { --linea: #3a2a00; --acc: #ffb000; --ok: transparent; --okt: #6dff9a; --att: transparent; --attt: #ffb000; --er: transparent; --ert: #ff6a5a;
+    background: #0a0804; color: #ffb000; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13.5px; }
+  body[data-stile="terminale"] .testa h1 { font-weight: 600; font-size: clamp(24px, 5vw, 34px); }
+  body[data-stile="terminale"] .testa h1::before { content: '> '; opacity: .6; }
+  body[data-stile="terminale"] .box { background: #0f0c05; border: 1px solid #5a4100; border-radius: 0; }
+  body[data-stile="terminale"] .tit h2 { font-weight: 600; letter-spacing: .12em; }
+  body[data-stile="terminale"] .tit h2::before { content: '┌─ '; opacity: .6; }
+  body[data-stile="terminale"] .grande { font-weight: 600; text-shadow: 0 0 14px rgba(255,176,0,.45); }
+  body[data-stile="terminale"] .chip, body[data-stile="terminale"] .rata { background: transparent; border: 1px solid #5a4100; border-radius: 0; }
+  body[data-stile="terminale"] .pil, body[data-stile="terminale"] .rata .r { border: 1px solid currentColor; border-radius: 0; background: transparent; text-transform: uppercase; font-weight: 600; }
+  body[data-stile="terminale"] .pil::before { content: '[ '; } body[data-stile="terminale"] .pil::after { content: ' ]'; }
+  body[data-stile="terminale"] .barra { height: 12px; border-radius: 0; background: repeating-linear-gradient(90deg, #3a2a00 0 6px, transparent 6px 8px); }
+  body[data-stile="terminale"] .barra i { border-radius: 0; background: repeating-linear-gradient(90deg, #ffb000 0 6px, transparent 6px 8px); }
+</style>
+</head>
+<body data-stile="registro">
+<div class="wrap">
+  <div class="scelta" role="group" aria-label="Stile">
+    <span>Stile</span>
+    <button data-s="registro" aria-pressed="true">A · Registro</button>
+    <button data-s="notte" aria-pressed="false">B · Notte</button>
+    <button data-s="bento" aria-pressed="false">C · Bento</button>
+    <button data-s="brutale" aria-pressed="false">D · Brutale</button>
+    <button data-s="terminale" aria-pressed="false">E · Terminale</button>
+  </div>
+
+  <div class="testa">
+    <h1>Finance</h1>
+    <div class="data">Domenica 22 novembre 2026<br>novembre · cambio mese il 27</div>
+  </div>
+
+  <div class="griglia">
+    <section class="box b1 a5">
+      <div class="tit"><h2>Da smistare</h2><small>3 in coda</small></div>
+      <div class="riga"><span>Bolletta A2A — luce</span><span class="pil att">Smista</span></div>
+      <div class="riga"><span>Condominio — 4ª rata</span><span class="pil att">Smista</span></div>
+      <div class="riga"><span>Notifica fattura elettronica</span><span class="pil att">Smista</span></div>
+    </section>
+
+    <section class="box b2 a7">
+      <div class="tit"><h2>Riepilogo mensile</h2><small>novembre 2026</small></div>
+      <div class="grande num">1.043<small>,42 €</small></div>
+      <div style="font-size:12px;opacity:.7;margin-top:4px">Spendibile</div>
+      <div class="kpi">
+        <div><b>1.799,58 €</b><span>Entrate</span></div>
+        <div><b>2.208,66 €</b><span>Uscite</span></div>
+        <div><b>1.121,30 €</b><span>Pagato</span></div>
+        <div><b>1.087,36 €</b><span>Da pagare</span></div>
+        <div><b>1.640,00 €</b><span>Fisse</span></div>
+        <div><b>0,00 €</b><span>Prev. carta</span></div>
+      </div>
+    </section>
+
+    <section class="box b3 a6">
+      <div class="tit"><h2>Come sta andando</h2><small>Mese</small></div>
+      <div class="coppia">
+        <div><div class="l">Personale · entrate</div><div class="v">1.799,58 €</div><div class="l" style="margin-top:8px">Spese</div><div class="v">1.321,45 €</div><div class="barra"><i style="width:73%"></i></div></div>
+        <div><div class="l">Casa · già pagate</div><div class="v">684,10 €</div><div class="l" style="margin-top:8px">Ancora da pagare</div><div class="v">524,06 €</div><div class="barra"><i style="width:57%"></i></div></div>
+      </div>
+    </section>
+
+    <section class="box b4 a6">
+      <div class="tit"><h2>Da pagare per creditore</h2><small>totale 2.114,50 €</small></div>
+      <div class="chips">
+        <div class="chip"><em>Agenzia Entrate Risc.</em><b>720,34 €</b><span>20 rate · 1 piano</span></div>
+        <div class="chip"><em>Antonio Romaniello</em><b>700,00 €</b><span>7 rate · 1 piano</span></div>
+        <div class="chip"><em>Lanzanova Auto</em><b>795,00 €</b><span>8 rate · 3 piani</span></div>
+        <div class="chip"><em>LG</em><b>407,61 €</b><span>3 rate · 1 piano</span></div>
+      </div>
+    </section>
+
+    <section class="box b5 a8">
+      <div class="tit"><h2>Piano a rate · Lanzanova 2026/160</h2><small>420,00 € in 4 rate</small></div>
+      <div class="rate">
+        <div class="rata"><div class="d">Rata 1 · 27 ott</div><div class="i">100,00 €</div><div class="r ok">Ricevuta ✓</div></div>
+        <div class="rata"><div class="d">Rata 2 · 27 nov</div><div class="i">105,00 €</div><div class="r ok">Ricevuta ✓</div></div>
+        <div class="rata"><div class="d">Rata 3 · 27 dic</div><div class="i">107,50 €</div><div class="r att no">＋ Carica ricevuta</div></div>
+        <div class="rata"><div class="d">Rata 4 · 27 gen</div><div class="i">107,50 €</div><div class="r att no">＋ Carica ricevuta</div></div>
+      </div>
+    </section>
+
+    <section class="box b6 a4">
+      <div class="tit"><h2>Checklist</h2><small>novembre</small></div>
+      <div class="riga"><span>Affitto</span><span class="pil ok">Pagato</span></div>
+      <div class="riga"><span>Rata PayPal</span><span class="pil att">Da pagare</span></div>
+      <div class="riga"><span>Assicurazione auto</span><span class="pil err">Scaduta</span></div>
+      <div class="riga"><span>Abbonamento DAZN</span><span class="pil ok">Pagato</span></div>
+    </section>
+  </div>
+
+  <p class="nota">Mockup di studio, non collegato a Platform: stessa dashboard in cinque linguaggi grafici (carta contabile, notte minimale, bento colorato, brutalista, terminale). Dati in parte di esempio. Un tema in Platform sarebbe un insieme di variabili (colori, font, raggi, ombre) scelto per tenant o per utente.</p>
+</div>
+<script>
+  document.querySelectorAll('.scelta button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.body.setAttribute('data-stile', b.dataset.s);
+      document.querySelectorAll('.scelta button').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+      try { localStorage.setItem('mock-stile', b.dataset.s); } catch (e) {}
+    });
+  });
+  try { var s = localStorage.getItem('mock-stile'); if (s) { var b = document.querySelector('.scelta button[data-s="' + s + '"]'); if (b) b.click(); } } catch (e) {}
+</script>
+</body>
+</html>
