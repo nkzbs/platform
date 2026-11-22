@@ -2,6 +2,11 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.53 — Sicurezza: dipendenze e collegamento Google
+
+- **Dipendenze con falle note corrette** (`npm audit fix`, solo i file di blocco): `body-parser` (blocco del servizio con corpo compresso) nel core e in Super Admin, `nodemailer` in Super Admin, `hono` nel server MCP. `npm audit` ora dà 0 falle in core, Super Admin, frontend e MCP.
+- **Collegamento Google (`oauth/start` e `oauth/callback`)**: il parametro `state` ora è casuale (24 byte, prima `Math.random`), vale una volta sola e per 10 minuti, e se manca, è diverso o scaduto il collegamento è **rifiutato** (prima veniva solo scritto nel log e il collegamento andava avanti: chi faceva aprire all'amministratore un link con un codice suo poteva collegare il proprio account Google). Il state si consuma anche se sbagliato. Test: `google-oauth-state.test.js`. **Non provato dal vivo**: serve un collegamento vero a Google dopo «Aggiorna» (Impostazioni → Connessioni → Google).
+
 ## 0.5.52 — Niente più schermata bianca
 
 - **Rete di sicurezza contro la schermata bianca** (`ErrorBoundary.jsx`): se una scheda o la pagina va in errore mentre si disegna, compare un messaggio con il dettaglio dell'errore e «Chiudi» / «Ricarica», invece della pagina bianca. L'errore resta in `localStorage` (`platform_ultimo_errore`: quando, dove, testo e componenti) per capire la causa. Non si conosce ancora la causa della schermata bianca segnalata aprendo una rata: se ricapita, il messaggio la mostra.

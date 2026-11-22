@@ -2,6 +2,11 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.53 — 22 novembre 2026
+
+- **Il state OAuth si pretende, non si segnala**: le rotte di redirect restano fuori da `requireAuth` (sono navigazioni del browser), quindi il solo controllo è il `state`: deve essere casuale, nostro, usato una volta e non scaduto. Un collegamento rifiutato costa un clic in più, uno sbagliato collega il Google di un altro.
+- **Le falle delle dipendenze si correggono dentro la versione già in uso** (`npm audit fix`, nessun salto di versione maggiore): cambiano solo i file di blocco.
+
 ## 0.5.52 — 22 novembre 2026
 
 - **Prima di mettere online si lancia `bash scripts/verifica.sh`** (circa 15 minuti: lint, test del core, di Super Admin, del frontend e le due compilazioni). La 0.5.48 è uscita con un manifesto di pacchetto vuoto e un test rosso che il controllo completo avrebbe fermato.

@@ -96,8 +96,9 @@ router.get('/oauth/start', (req, res) => {
   if (!cfg.client_id || !cfg.client_secret) {
     return res.status(400).json({ error: 'Configura prima Client ID e Client Secret' });
   }
-  const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
-  setCreds({ ...cfg, oauth_state: state });
+  // Casuale e non indovinabile (prima era Math.random); vale una volta sola e per pochi minuti (vedi il callback).
+  const state = crypto.randomBytes(24).toString('hex');
+  setCreds({ ...cfg, oauth_state: state, oauth_state_at: Date.now() });
   const redirectUri = getRedirectUri(req);
   const params = new URLSearchParams({
     client_id: cfg.client_id,
@@ -128,8 +129,15 @@ router.get('/oauth/callback', async (req, res) => {
   if (error) return res.redirect(`${frontendUrl}/?google_error=${encodeURIComponent(error)}`);
 
   const cfg = getCreds();
-  if (state !== cfg.oauth_state) {
-    console.warn('[Google OAuth] state mismatch — ricevuto:', state, '| atteso:', cfg.oauth_state);
+  // Il state deve esserci, essere quello emesso da noi e non scaduto (10 minuti): altrimenti niente scambio del codice e niente collegamento. Prima
+  // una discordanza veniva solo scritta nel log e il collegamento andava avanti: chi faceva aprire all'amministratore un link con un codice suo poteva
+  // collegare il proprio account Google. Il state si consuma comunque, valido o no: ogni tentativo ne richiede uno nuovo.
+  const statoValido = typeof state === 'string' && !!cfg.oauth_state && state.length === cfg.oauth_state.length
+    && crypto.timingSafeEqual(Buffer.from(state), Buffer.from(cfg.oauth_state)) && Date.now() - (cfg.oauth_state_at || 0) < 10 * 60 * 1000;
+  if (!statoValido) {
+    console.warn('[Google OAuth] state non valido o scaduto: collegamento rifiutato');
+    if (cfg.oauth_state) setCreds({ ...cfg, oauth_state: undefined, oauth_state_at: undefined });
+    return res.redirect(`${frontendUrl}/?google_error=${encodeURIComponent('Richiesta non valida o scaduta: riprova a collegare Google')}`);
   }
 
   try {
@@ -158,6 +166,7 @@ router.get('/oauth/callback', async (req, res) => {
       email: profile.email,
       scopes: (tokens.scope || '').split(' ').filter(Boolean),
       oauth_state: undefined,
+      oauth_state_at: undefined,
     }, true);
 
     console.log('[Google OAuth] Connesso come:', profile.email);
