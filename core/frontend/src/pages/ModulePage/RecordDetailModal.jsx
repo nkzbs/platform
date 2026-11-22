@@ -16,6 +16,7 @@ import MessaggioMassivoModal from '../../components/MessaggioMassivoModal'
 import CampiPerSezioni from './CampiPerSezioni'
 import VaultPinGate from './VaultPinGate'
 import RigheFiglie from './RigheFiglie'
+import SmistaPanel from '../../components/SmistaPanel'
 import { VISTE_AZIONE } from './viste-azione'
 
 // Un modulo può puntare a questo record con PIÙ relazioni (es. Trattative: «Venditore» e «Acquirente» verso lo stesso Cliente). Prima erano due voci uguali («Trattative 1» due volte)
@@ -40,6 +41,9 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   const api = useApi(token)
   const [record, setRecord] = useState(null)
   const [children, setChildren] = useState([])
+  // «Trasforma in rate»: solo su una spesa già registrata e ancora da pagare, in un modulo che dichiara il piano a rate (Builder → Avvisi)
+  const [codaRate, setCodaRate] = useState(null)
+  const [pannelloRate, setPannelloRate] = useState(false)
   const [childData, setChildData] = useState({})
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({})
@@ -124,6 +128,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
       setRecord(data)
     })
     api.get('/modules/' + mod.slug + '/children-modules').then((data) => { if (!cancelled && data) setChildren(unisciPerModulo(data)) })
+    api.get('/module-roles/queues').then((qs) => { if (!cancelled && Array.isArray(qs)) setCodaRate(qs.find((x) => x.module_slug === mod.slug && x.rate && x.da_fare) || null) })
     if (!cancelled && allegatiConfig) {
       api.get('/records/' + mod.slug + '/' + recordId + '/attachments').then((data) => { if (!cancelled && data) setAttachments(data) })
     }
@@ -527,7 +532,9 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   }
 
   // Le azioni del record, nell'ordine in cui il modulo le dichiara: attive, report PDF, poi quelle ancora da attivare. Le mostra la scheda «Azioni».
+  const trasformabile = codaRate && record && record.data && record.data[codaRate.stato] === codaRate.da_fare
   const voci = [
+    ...(trasformabile ? [{ key: 'trasforma-rate', label: 'Trasforma in rate', titolo: 'Dividi questa spesa in più rate: nasce un piano e le rate prendono il suo posto', icon: 'calendar', onClick: () => setPannelloRate(true) }] : []),
     ...azioniEsterne.filter((az) => !inAttesa(az)).map((az) => ({ key: az.key, label: az.label, titolo: az.descrizione || '', icon: az.icon || 'sparkles', onClick: () => eseguiAzione(az), pag: statoAzioni && statoAzioni[az.key], spenta: az.adapter === 'da_attivare' || !!(az.connection && connessioni && connessioni[az.connection] === false) })),
     ...azioniEsterne.filter((az) => az.pdf && !az.vista && !inAttesa(az) && az.risultato_in && record && record.data[az.risultato_in] && record.data[az.risultato_in].id).map((az) => ({ key: az.key + '-pdf', label: az.label.split(' ')[0] === 'Verifica' ? 'Report PDF' : 'PDF', titolo: 'Scarica il PDF del report (nessun costo)', icon: 'file', onClick: () => scaricaAzionePdf(az) })),
     ...azioniEsterne.filter((az) => inAttesa(az)).map((az) => ({ key: az.key, label: az.label, titolo: az.descrizione || 'Legata a un servizio esterno ancora da attivare', icon: az.icon || 'sparkles', onClick: () => eseguiAzione(az), attesa: true })),
@@ -1056,6 +1063,9 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
             )}
           </>
         )}
+      {pannelloRate && codaRate && record && (
+        <SmistaPanel soloRate token={token} q={codaRate} row={{ id: recordId, data: record.data }} modules={[mod]} canDelete={false} onClose={() => setPannelloRate(false)} onDone={() => { setPannelloRate(false); if (onDeleted) onDeleted(); onClose() }} />
+      )}
     </FormDrawer>
   )
 }

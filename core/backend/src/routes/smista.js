@@ -137,11 +137,13 @@ router.post('/:slug/:id', requireAuth, (req, res) => {
   if (rule && (!rule.edit || !ownedOrAllowed(rule, row, req.user))) return fail(res, 403, 'Non hai i permessi per modificare questa riga');
 
   const before = decryptFields(JSON.parse(row.data), schema.fields);
-  if (before[R.stato] !== A.states.nuovo) return fail(res, 409, 'Questa riga non è più da smistare.');
-
   const b = req.body || {};
   const modo = ['uno', 'rate', 'pagata', 'sposta'].includes(b.modo) ? b.modo : null;
   if (!modo) return fail(res, 400, 'Scegli come smistare: un pagamento, in rate, già pagata o spostala in un altro modulo.');
+  // Una riga «da smistare» si smista in tutti i modi. Una già registrata (stato «da fare», cioè ancora da pagare) si può solo trasformare in rate:
+  // una pagata, o già in un altro stato, non si divide (le rate sostituirebbero un pagamento che c'è già stato).
+  const daRegistrata = modo === 'rate' && !!A.states.da_fare && before[R.stato] === A.states.da_fare;
+  if (before[R.stato] !== A.states.nuovo && !daRegistrata) return fail(res, 409, modo === 'rate' && before[R.stato] !== A.states.nuovo && before[R.stato] ? 'Questa riga non si può dividere in rate: serve una spesa ancora da pagare.' : 'Questa riga non è più da smistare.');
 
   // Modifiche fatte nel pannello prima di confermare
   const data = { ...before };

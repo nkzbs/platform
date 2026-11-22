@@ -118,6 +118,30 @@ async function main() {
     assertEq(r.status, 400); assertEq(data(id)._stato, 'da_smistare');
   });
 
+  console.log('\n--- spesa già registrata: si trasforma in rate ---');
+  await test('una spesa «da pagare» si trasforma in rate: piano e rate creati, la riga originale sostituita, il PDF segue la prima rata', async () => {
+    const id = newRow('costi', { importo: 120, _stato: 'da_pagare', scadenza: '2026-12-01' });
+    const up = db.prepare("INSERT INTO uploads (original_name, stored_name, mime_type, size) VALUES ('fattura.pdf', 'y.pdf', 'application/pdf', 10)").run().lastInsertRowid;
+    db.prepare("INSERT INTO record_attachments (module_slug, record_id, upload_id, tipo) VALUES ('costi', ?, ?, 'gmail')").run(id, up);
+    const r = await post('costi', id, { modo: 'rate', n_rate: 4, data_prima_rata: '2026-12-01' });
+    const j = await r.json(); assertEq(r.status, 200, JSON.stringify(j));
+    assertEq(j.rate.length, 4); assertEq(j.rate.map((x) => x.importo), [30, 30, 30, 30]);
+    assertEq(data(id), null, 'la spesa originale è sostituita dalle rate');
+    assertEq(db.prepare('SELECT record_id FROM record_attachments WHERE upload_id = ?').get(up).record_id, j.rate[0].id);
+  });
+  await test('una spesa già pagata non si divide in rate (409) e non cambia', async () => {
+    const id = newRow('costi', { importo: 120, _stato: 'pagato' });
+    const r = await post('costi', id, { modo: 'rate', n_rate: 3, data_prima_rata: '2026-12-01' });
+    assertEq(r.status, 409); assertTrue(/ancora da pagare/.test((await r.json()).error));
+    assertEq(data(id)._stato, 'pagato');
+  });
+  await test('una spesa «da pagare» si può solo dividere in rate: «un pagamento» o «già pagata» restano 409', async () => {
+    const id = newRow('costi', { importo: 120, _stato: 'da_pagare' });
+    assertEq((await post('costi', id, { modo: 'uno' })).status, 409);
+    assertEq((await post('costi', id, { modo: 'pagata' })).status, 409);
+    assertEq(data(id)._stato, 'da_pagare');
+  });
+
   console.log('\n--- proposta dell\'AI per precompilare il pannello ---');
   const moduleAi = require('./module-ai');
   await test('con l\'AI spenta (o "Smistare" spento sul modulo) la proposta si rifiuta: 403', async () => {

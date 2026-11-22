@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.49 — 22 novembre 2026
+
+**Il perché delle scelte di questa versione** (cosa è stato costruito: `NOTE-DI-RILASCIO.md`).
+
+- **Il posto della ricevuta è un campo sulla spesa, non solo Documenti**: dall'analisi della copia di Finance (10/10) nessuna delle 109 rate aveva una ricevuta. Documenti si collega alla spesa ma non alla rata vista dentro il piano; il campo è raggiungibile ovunque la rata compare. Documenti resta l'archivio.
+- **Il campo lo aggiunge il codice all'avvio, non il Builder a mano**: Finance non ha pacchetti, e una modifica fatta a mano in produzione non si ripete su un altro tenant. Dichiarazioni in `seeds/campi-garantiti.json` (nessun nome di modulo nel codice), una volta sola e ricordata, così togliere il campo dal Builder è una scelta che resta.
+- **Il PDF della bolletta non si copia su tutte le rate**: ogni allegato ha un file suo e cancellare il collegamento cancella il file; condividerlo lo farebbe sparire dalle altre rate. Resta sulla prima.
+- **«Trasforma in rate» solo da «da pagare»**: una spesa già pagata non si divide (le rate sostituirebbero un pagamento che c'è già stato); per quelle si registrano le rate come pagate.
+
 ## 0.5.43 – 0.5.47 — 21 novembre 2026
 
 **Il perché delle scelte di queste versioni** (cosa è stato costruito: `NOTE-DI-RILASCIO.md`; come: `ARCHITETTURA.md`).

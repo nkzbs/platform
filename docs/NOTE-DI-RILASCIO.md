@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.49 — Ricevuta di pagamento sulle spese e «Trasforma in rate»
+
+- **Campo «Ricevuta di pagamento»** su Spese casa e Spese personali (file, dopo «Data pagamento»). Le rate sono righe di Spese e vedevano solo Documenti, collegato alla spesa ma non alla rata dentro il piano: ora ogni rata ha il suo spazio. Il campo si aggiunge da solo all'avvio ai tenant che già hanno quei moduli (`campi-garantiti.js`, dichiarazioni in `seeds/campi-garantiti.json`), una volta sola: se lo togli dal Builder non ricompare. Se c'è una bozza dello schema, il campo entra anche lì.
+- **«Trasforma in rate»** su una spesa già registrata e ancora da pagare: scheda «Azioni» del record, stesso pannello di «Smista» solo con «Dividi in rate». Il server accetta `modo: rate` anche per le righe nello stato «da fare» (prima solo «da smistare»); una spesa pagata, o già in un altro stato, risponde 409. Il PDF e gli allegati passano alla prima rata, come già per Smista.
+- **Non fatto, di proposito**: il PDF della bolletta resta solo sulla prima rata. Ogni allegato ha un file suo e cancellare un collegamento cancella il file: condividerlo tra le rate lo farebbe sparire dalle altre.
+- Test: `campi-garantiti.test.js` (nuovo), `smista.test.js` (3 casi nuovi). **Non verificato online**: serve «Aggiorna» su Finance; il campo compare all'avvio.
+
 ## 0.5.48 — Chiusa senza vendita e passaggi automatici alla firma
 
 - **«Chiusa senza vendita»**: una trattativa che non si conclude (rinuncia, offerta non accettata, preliminare saltato) si chiude con «Chiudi senza vendita» da «In trattativa» e da «Preliminare firmato», senza i requisiti di «Chiusa» (le provvigioni non si generano), e si riapre con «Riapri trattativa». L'immobile resta com'è.

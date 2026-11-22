@@ -1,0 +1,8 @@
+{
+  "spese_casa": [
+    { "key": "ricevuta", "label": "Ricevuta di pagamento", "type": "file", "dopo": "data_pagamento" }
+  ],
+  "spese_personali": [
+    { "key": "ricevuta", "label": "Ricevuta di pagamento", "type": "file", "dopo": "data_pagamento" }
+  ]
+}

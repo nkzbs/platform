@@ -174,7 +174,7 @@ app.use('/__root_public', rootPublicRouter);
 
 app.get('/health', (req, res) => res.json({
   status: 'ok',
-  version: '0.5.48',
+  version: '0.5.49',
   tenant: process.env.TENANT_SLUG || 'unknown',
   name: process.env.TENANT_NAME || 'Platform Core'
 }));
@@ -251,6 +251,7 @@ require('./record-owner').adoptOrphans();
 { const m = require('./secrets-at-rest').migrate(); if (m.connessioni || m.totp || m.falliti) console.log('Segreti cifrati a riposo: ' + m.connessioni + ' collegamenti, ' + m.totp + ' segreti 2FA' + (m.falliti ? ' (' + m.falliti + ' NON riusciti)' : '')); }
 require('./legacy-cleanup').removeStubModules();
 if (moduleRoles.seedIfEmpty()) console.log('Ruoli dei moduli: dichiarati per i moduli di finanza già presenti');
+if (require('./campi-garantiti').apply()) console.log('Moduli: aggiunti i campi dichiarati dove mancavano');
 if (features.seedIfEmpty()) console.log('Funzioni: tenant con moduli di finanza, funzioni accese; le altre restano spente');
 require('./pwa-icon').apply(); // icona del dock/PWA sul colore del tenant, se scelto (vedi Impostazioni → Aspetto)
 

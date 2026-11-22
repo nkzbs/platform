@@ -11,14 +11,15 @@ const fmt = (iso) => String(iso || '').split('-').reverse().join('/')
 const addMonths = (iso, k) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() + k); return d.toISOString().slice(0, 10) }
 const today = () => new Date().toISOString().slice(0, 10)
 
-export default function SmistaPanel({ token, q, row, modules, canDelete, onClose, onDone }) {
+// `soloRate`: aperto da una spesa già registrata (ancora da pagare) per trasformarla in rate — niente scelte «un pagamento / già pagata / sposta / elimina», niente AI.
+export default function SmistaPanel({ token, q, row, modules, canDelete, onClose, onDone, soloRate = false }) {
   const api = useApi(token)
   const d = row.data
   const mod = (modules || []).find((m) => m.slug === q.module_slug)
   const catField = mod && q.categoria ? (parseSchemaFrontend(mod.schema_json).fields || []).find((f) => f.key === q.categoria) : null
   const catOptions = catField && Array.isArray(catField.options) ? catField.options.map((o) => (typeof o === 'string' ? o : o.value)) : []
 
-  const [modo, setModo] = useState('uno')
+  const [modo, setModo] = useState(soloRate ? 'rate' : 'uno')
   const [importo, setImporto] = useState(d[q.importo] != null && d[q.importo] !== '' ? String(d[q.importo]) : '')
   const [scadenza, setScadenza] = useState(d[q.scadenza] || '')
   const [categoria, setCategoria] = useState(d[q.categoria] || '')
@@ -29,14 +30,14 @@ export default function SmistaPanel({ token, q, row, modules, canDelete, onClose
   // Moduli di spesa in cui si può spostare questa riga (es. da Casa a Personale) e cosa non passerebbe
   const [dest, setDest] = useState([])
   const [verso, setVerso] = useState('')
-  useEffect(() => { api.get('/smista/' + q.module_slug + '/' + row.id + '/destinazioni').then((r) => { if (Array.isArray(r)) { setDest(r); if (r.length) setVerso(r[0].slug) } }) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (soloRate) return; api.get('/smista/' + q.module_slug + '/' + row.id + '/destinazioni').then((r) => { if (Array.isArray(r)) { setDest(r); if (r.length) setVerso(r[0].slug) } }) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [err, setErr] = useState('')
   // Proposta dell'AI (se il modulo ha "Smistare" acceso): precompila i campi che non hai ancora toccato
-  const [ai, setAi] = useState(q.ai ? { loading: true } : null)
+  const [ai, setAi] = useState(q.ai && !soloRate ? { loading: true } : null)
   const touched = useRef({})
   const touch = (k) => { touched.current[k] = true }
   useEffect(() => {
-    if (!q.ai) return
+    if (!q.ai || soloRate) return
     let vivo = true
     api.post('/smista/' + q.module_slug + '/' + row.id + '/proposta', {}).then((res) => {
       if (!vivo) return
@@ -54,13 +55,13 @@ export default function SmistaPanel({ token, q, row, modules, canDelete, onClose
   const imp = parseFloat(String(importo).replace(',', '.')) || 0
   const n = Math.max(2, Math.min(60, parseInt(nRate, 10) || 2))
   const rata = imp > 0 ? Math.round((imp / n) * 100) / 100 : 0
-  const scelte = [['uno', 'Un pagamento', 'Resta una sola riga, passa a «' + q.da_fare.replace(/_/g, ' ') + '».']]
-  if (q.rate) scelte.push(['rate', 'Dividi in rate', 'Crea un piano a rate: le rate sostituiscono questa riga.'])
-  if (dest.length) scelte.push(['sposta', 'Sposta in un altro modulo', 'La riga cambia modulo e resta «da smistare» lì.'])
-  if (q.fatto) scelte.push(['pagata', 'Già pagata', 'La riga passa direttamente a «' + q.fatto.replace(/_/g, ' ') + '».'])
+  const scelte = soloRate ? [['rate', 'Dividi in rate', 'Crea un piano a rate: le rate sostituiscono questa spesa (il PDF resta sulla prima rata).']] : [['uno', 'Un pagamento', 'Resta una sola riga, passa a «' + q.da_fare.replace(/_/g, ' ') + '».']]
+  if (!soloRate && q.rate) scelte.push(['rate', 'Dividi in rate', 'Crea un piano a rate: le rate sostituiscono questa riga.'])
+  if (!soloRate && dest.length) scelte.push(['sposta', 'Sposta in un altro modulo', 'La riga cambia modulo e resta «da smistare» lì.'])
+  if (!soloRate && q.fatto) scelte.push(['pagata', 'Già pagata', 'La riga passa direttamente a «' + q.fatto.replace(/_/g, ' ') + '».'])
   // Scartare una riga arrivata per errore (es. mail smistata nel modulo sbagliato, spam) — prima bisognava
   // uscire da qui e andare a cercarla nell'elenco del modulo per usare il cestino lì (segnalato dall'utente).
-  if (canDelete) scelte.push(['elimina', 'Elimina', 'Scarta la riga: non diventa una spesa, non si può annullare.'])
+  if (!soloRate && canDelete) scelte.push(['elimina', 'Elimina', 'Scarta la riga: non diventa una spesa, non si può annullare.'])
   const manca = modo === 'rate' && !(imp > 0)
 
   const conferma = async () => {
@@ -92,7 +93,7 @@ export default function SmistaPanel({ token, q, row, modules, canDelete, onClose
   return createPortal(
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
       <div className="bg-surface-card rounded-md p-6 w-full max-w-lg border border-gray-800 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-base font-bold text-ink">Smista</h2>
+        <h2 className="text-base font-bold text-ink">{soloRate ? 'Trasforma in rate' : 'Smista'}</h2>
         <div className="text-sm text-gray-400 mb-4">{d[q.descrizione] || '(senza descrizione)'} · {q.name}</div>
 
         {ai && (
