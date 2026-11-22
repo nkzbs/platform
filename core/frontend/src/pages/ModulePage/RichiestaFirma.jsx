@@ -6,7 +6,10 @@ import Icon from '../../components/Icon'
 const quando = (d) => (d ? new Date(d.includes('T') ? d : d.replace(' ', 'T') + 'Z').toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }) : '')
 const STATI = { inviata: ['In attesa di firma', 'text-amber-500'], in_firma: ['Firma con codice in corso', 'text-amber-500'], firmata: ['Firmata', 'text-green-500'], scaduta: ['Scaduta', 'text-gray-400'], annullata: ['Annullata', 'text-gray-400'] }
 
-export default function RichiestaFirma({ api, slug, recordId, documentiFirma, onManuale }) {
+export default function RichiestaFirma({ api, slug, recordId, documentiFirma: tuttiDocumentiFirma, onManuale }) {
+  // Un documento «solo a mano» (es. la Proposta d'acquisto sulla trattativa) non parte per la firma digitale: resta solo il giro «scarica, firma, ricarica».
+  const documentiFirma = tuttiDocumentiFirma.filter((d) => !d.solo_a_mano)
+  const soloMano = tuttiDocumentiFirma.filter((d) => d.solo_a_mano)
   const [richieste, setRichieste] = useState([])
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState(null)
@@ -47,6 +50,26 @@ export default function RichiestaFirma({ api, slug, recordId, documentiFirma, on
   }
   const ultima = richieste[0]
   const gruppo = ultima ? (ultima.gruppo ? richieste.filter((x) => x.gruppo === ultima.gruppo) : [ultima]) : []
+  if (!documentiFirma.length) {
+    return (
+      <div className="rounded-xl border border-gray-800 p-4 mb-4">
+        <div className="flex items-start gap-3">
+          <Icon name="edit" size={20} className="text-accent mt-0.5 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-ink">Da firmare a mano</div>
+            <div className="text-xs text-gray-500 mt-0.5">Scarichi il PDF già compilato, lo fai firmare e lo carichi tu.</div>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-col gap-1">
+          {soloMano.map((d) => (
+            <button key={d.key} type="button" onClick={() => onManuale && onManuale(d)} className="text-left text-xs px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 flex items-center justify-between gap-2">
+              <span className="min-w-0 truncate">{d.label}</span><span className="text-accent flex-shrink-0">Scarica PDF · Carica firmato</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
   const inAttesa = gruppo.some((x) => x.stato === 'inviata' || x.stato === 'in_firma')
   return (
     <div className="rounded-xl border border-gray-800 p-4 mb-4">
@@ -72,7 +95,7 @@ export default function RichiestaFirma({ api, slug, recordId, documentiFirma, on
         <div className="mt-4 pt-3 border-t border-gray-800">
           <div className="text-xs text-gray-400">Oppure a mano: scarichi il PDF, lo fai firmare e lo carichi tu (anche per chi è in studio con te).</div>
           <div className="mt-2 flex flex-col gap-1">
-            {documentiFirma.map((d) => (
+            {[...documentiFirma, ...soloMano].map((d) => (
               <button key={d.key} type="button" onClick={() => onManuale(d)} className="text-left text-xs px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 flex items-center justify-between gap-2">
                 <span className="min-w-0 truncate">{d.label}</span><span className="text-accent flex-shrink-0">Scarica PDF · Carica firmato</span>
               </button>

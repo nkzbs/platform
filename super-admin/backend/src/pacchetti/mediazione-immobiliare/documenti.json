@@ -162,7 +162,8 @@
       "recipient": "cliente.email",
       "delivery": "firma",
       "signed_type": "proposta_acquisto_firmata",
-      "pdf_modello": "proposta-acquisto"
+      "pdf_modello": "proposta-acquisto",
+      "solo_a_mano": true
     },
     {
       "key": "accordo_provvigionale",
@@ -173,7 +174,8 @@
       "recipient": "cliente.email",
       "delivery": "firma",
       "signed_type": "accordo_provvigionale_firmato",
-      "pdf_modello": "accordo-provvigionale"
+      "pdf_modello": "accordo-provvigionale",
+      "solo_a_mano": true
     }
   ]
 }
