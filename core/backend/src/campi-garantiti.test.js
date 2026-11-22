@@ -80,9 +80,38 @@ test('schema a elenco piatto (non v3): il campo entra in fields', () => {
 });
 test('le dichiarazioni reali (seeds/campi-garantiti.json) sono ben formate', () => {
   for (const [slug, defs] of Object.entries(cg.GARANTITI)) {
+    if (slug === '_blocchi') continue;
     assertTrue(Array.isArray(defs) && defs.length, slug);
     for (const d of defs) assertTrue(d.key && d.label && d.type, slug + ': chiave, etichetta e tipo');
   }
+});
+
+console.log('\n--- blocchi garantiti ---');
+const REQ = { block_type: 'state_requirements', stato: 'pagato', bloccante: false, requisiti: [{ label: 'Ricevuta', tipo: 'campo', campo: 'ricevuta' }] };
+const reqs = (slug) => schema(slug).steps.filter((x) => x.block_type === 'state_requirements');
+test('un blocco mancante si aggiunge una volta sola, con versione e storico; il secondo avvio non fa niente', () => {
+  add('b1', { version: 3, steps: [F('descrizione')] });
+  const v0 = db.prepare('SELECT schema_version v FROM modules WHERE slug = ?').get('b1').v;
+  assertEq(cg.applyBlocchi({ b1: [REQ] }), 1);
+  assertEq(reqs('b1').length, 1); assertEq(reqs('b1')[0].stato, 'pagato'); assertEq(reqs('b1')[0].bloccante, false);
+  assertEq(db.prepare('SELECT schema_version v FROM modules WHERE slug = ?').get('b1').v, v0 + 1);
+  assertEq(cg.applyBlocchi({ b1: [REQ] }), 0); assertEq(reqs('b1').length, 1);
+});
+test('se il modulo ha già un blocco per quello stato non si tocca; se lo togli non ricompare', () => {
+  add('b2', { version: 3, steps: [F('descrizione'), { id: 'x', block_type: 'state_requirements', stato: 'pagato', bloccante: true, requisiti: [{ label: 'Importo', tipo: 'campo', campo: 'importo' }] }] });
+  assertEq(cg.applyBlocchi({ b2: [REQ] }), 0); assertEq(reqs('b2')[0].bloccante, true);
+  const s = schema('b1'); s.steps = s.steps.filter((x) => x.block_type !== 'state_requirements'); db.prepare('UPDATE modules SET schema_json = ? WHERE slug = ?').run(JSON.stringify(s), 'b1');
+  assertEq(cg.applyBlocchi({ b1: [REQ] }), 0); assertEq(reqs('b1').length, 0);
+});
+test('la bozza si ritocca insieme; un modulo che non c\'è o con schema illeggibile si salta', () => {
+  add('b3', { version: 3, steps: [F('descrizione')] }, { version: 3, steps: [F('descrizione'), F('extra')] });
+  assertEq(cg.applyBlocchi({ b3: [REQ], non_esiste: [REQ] }), 1);
+  assertEq(JSON.parse(db.prepare('SELECT schema_json_draft d FROM modules WHERE slug = ?').get('b3').d).steps.filter((x) => x.block_type === 'state_requirements').length, 1);
+  db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('x', 'b4', 'box', '#000', 1, 1, 70, '{rotto')").run();
+  assertEq(cg.applyBlocchi({ b4: [REQ] }), 0);
+});
+test('i blocchi dichiarati davvero (_blocchi) sono ben formati', () => {
+  for (const [slug, bl] of Object.entries(cg.GARANTITI._blocchi || {})) for (const b of bl) assertTrue(b.block_type && b.stato && Array.isArray(b.requisiti) && b.requisiti.length, slug);
 });
 
 console.log(`\n${'='.repeat(60)}`);

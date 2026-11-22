@@ -11,6 +11,8 @@ const RITOCCHI = require('./seeds/ritocchi-schema.json');
 db.exec('CREATE TABLE IF NOT EXISTS ritocchi_schema_applicati (module_slug TEXT NOT NULL, ritocco_id TEXT NOT NULL, applied_at DATETIME DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (module_slug, ritocco_id))');
 
 const trovaBlocco = (schema, id) => {
+  // «campo:chiave» = il blocco campo con quella chiave (gli id dei blocchi sono casuali e cambiano da un tenant all'altro)
+  if (typeof id === 'string' && id.startsWith('campo:')) return (Array.isArray(schema.steps) ? schema.steps : []).find((x) => x && x.block_type === 'field' && x.key === id.slice(6)) || null;
   let out = null;
   const visita = (x) => { if (out || !x || typeof x !== 'object') return; if (!Array.isArray(x) && x.id === id) { out = x; return; } (Array.isArray(x) ? x : Object.values(x)).forEach(visita); };
   visita(schema.steps); visita(schema.automations); visita(schema.blocks);
@@ -29,7 +31,8 @@ function raggiungi(blocco, percorso) {
 function ritocca(schema, r) {
   const b = trovaBlocco(schema, r.blocco);
   const t = b && raggiungi(b, r.percorso);
-  if (!t || t.oggetto[t.chiave] !== r.da) return false;
+  // `da: null` = la proprietà non c'è ancora (si aggiunge)
+  if (!t || (r.da === null ? t.oggetto[t.chiave] !== undefined : t.oggetto[t.chiave] !== r.da)) return false;
   t.oggetto[t.chiave] = r.a;
   return true;
 }

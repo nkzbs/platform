@@ -1,8 +1,34 @@
 {
   "debiti_personali": [
-    { "id": "rate_numerate", "blocco": "aut_rate", "percorso": "azioni.0.config.dati.descrizione", "da": "campo:nome", "a": "numerata:nome" }
+    {
+      "id": "rate_numerate",
+      "blocco": "aut_rate",
+      "percorso": "azioni.0.config.dati.descrizione",
+      "da": "campo:nome",
+      "a": "numerata:nome"
+    },
+    {
+      "id": "creditore_suggerito",
+      "blocco": "campo:creditore",
+      "percorso": "suggerisci",
+      "da": null,
+      "a": true
+    }
   ],
   "debiti_casa": [
-    { "id": "rate_numerate", "blocco": "aut_rate", "percorso": "azioni.0.config.dati.descrizione", "da": "campo:nome", "a": "numerata:nome" }
+    {
+      "id": "rate_numerate",
+      "blocco": "aut_rate",
+      "percorso": "azioni.0.config.dati.descrizione",
+      "da": "campo:nome",
+      "a": "numerata:nome"
+    },
+    {
+      "id": "creditore_suggerito",
+      "blocco": "campo:creditore",
+      "percorso": "suggerisci",
+      "da": null,
+      "a": true
+    }
   ]
 }

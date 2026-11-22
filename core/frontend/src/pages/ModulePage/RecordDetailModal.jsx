@@ -17,6 +17,7 @@ import CampiPerSezioni from './CampiPerSezioni'
 import VaultPinGate from './VaultPinGate'
 import RigheFiglie from './RigheFiglie'
 import SmistaPanel from '../../components/SmistaPanel'
+import useSuggerimenti from '../../lib/useSuggerimenti'
 import { VISTE_AZIONE } from './viste-azione'
 
 // Un modulo può puntare a questo record con PIÙ relazioni (es. Trattative: «Venditore» e «Acquirente» verso lo stesso Cliente). Prima erano due voci uguali («Trattative 1» due volte)
@@ -39,6 +40,7 @@ async function caricaRigheFiglie(api, c, recordId) {
 
 function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token, onSaved, user, canDelete, onDeleted }) {
   const api = useApi(token)
+  const suggerimenti = useSuggerimenti(api, mod.slug, schema && schema.fields)
   const [record, setRecord] = useState(null)
   const [children, setChildren] = useState([])
   // «Trasforma in rate»: solo su una spesa già registrata e ancora da pagare, in un modulo che dichiara il piano a rate (Builder → Avvisi)
@@ -582,7 +584,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
               <CampiPerSezioni campi={editableFields.filter((f) => campoVisibile(f, editForm))} valori={editForm} renderCampo={(f) => (
                 <div key={f.key}>
                   <label className="text-xs text-gray-400 block mb-1">{f.label}{f.required && ' *'}</label>
-                  <FieldEditorInput f={f} value={editForm[f.key]} onChange={(v) => setEditForm({ ...editForm, [f.key]: v })} uploading={uploading[f.key]} onUploadFile={(file) => uploadFileInModal(f.key, file)} />
+                  <FieldEditorInput f={f} value={editForm[f.key]} onChange={(v) => setEditForm({ ...editForm, [f.key]: v })} uploading={uploading[f.key]} onUploadFile={(file) => uploadFileInModal(f.key, file)} suggerimenti={suggerimenti[f.key]} />
                 </div>
               )} />
               {relations.map((r) => {

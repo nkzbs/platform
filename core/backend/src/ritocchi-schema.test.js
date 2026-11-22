@@ -61,7 +61,18 @@ test('modulo assente, blocco assente, percorso sbagliato, schema illeggibile: ni
   assertEq(rit.apply(DEF('p6')), 0); assertEq(db.prepare('SELECT schema_json s FROM modules WHERE slug = ?').get('p6').s, '{rotto');
 });
 test('le dichiarazioni reali (seeds/ritocchi-schema.json) sono ben formate', () => {
-  for (const [slug, lista] of Object.entries(rit.RITOCCHI)) for (const r of lista) if (!(r.id && r.blocco && r.percorso && r.da && r.a)) throw new Error(slug + ': ritocco incompleto');
+  for (const [slug, lista] of Object.entries(rit.RITOCCHI)) for (const r of lista) if (!(r.id && r.blocco && r.percorso && 'da' in r && r.a !== undefined)) throw new Error(slug + ': ritocco incompleto');
+});
+
+test('«campo:chiave» trova il campo e «da: null» aggiunge una proprietà che non c\'è; già presente, non si tocca', () => {
+  add('c1', [{ id: 'f1', block_type: 'field', key: 'creditore', label: 'Creditore', type: 'text' }]);
+  const R = { id: 'cs', blocco: 'campo:creditore', percorso: 'suggerisci', da: null, a: true };
+  assertEq(rit.apply({ c1: [R] }), 1);
+  assertEq(JSON.parse(db.prepare('SELECT schema_json s FROM modules WHERE slug = ?').get('c1').s).steps[0].suggerisci, true);
+  assertEq(rit.apply({ c1: [R] }), 0);
+  add('c2', [{ id: 'f2', block_type: 'field', key: 'creditore', label: 'Creditore', type: 'text', suggerisci: false }]);
+  assertEq(rit.apply({ c2: [R] }), 0, 'una scelta già fatta (anche «no») non si cambia');
+  assertEq(JSON.parse(db.prepare('SELECT schema_json s FROM modules WHERE slug = ?').get('c2').s).steps[0].suggerisci, false);
 });
 
 console.log(`\n${'='.repeat(60)}`);

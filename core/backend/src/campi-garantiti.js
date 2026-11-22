@@ -40,6 +40,7 @@ function inserisci(schema, def) {
 function apply(elenco = GARANTITI) {
   let n = 0;
   for (const [slug, defs] of Object.entries(elenco)) {
+    if (slug === '_blocchi') continue; // sono i blocchi, li gestisce applyBlocchi
     const row = db.prepare('SELECT id, schema_json, schema_json_draft, schema_version FROM modules WHERE slug = ? AND installed = 1').get(slug);
     if (!row) continue;
     for (const def of defs) {
@@ -63,4 +64,38 @@ function apply(elenco = GARANTITI) {
   return n;
 }
 
-module.exports = { apply, inserisci, GARANTITI };
+// ── Blocchi garantiti (stessa idea dei campi): un blocco dello schema che un modulo deve avere, es. i requisiti per passare a «pagato».
+// Dichiarati in seeds/campi-garantiti.json sotto `_blocchi` ({ modulo: [blocco] }); un blocco si aggiunge solo se il modulo non ne ha già uno
+// dello stesso tipo e per lo stesso stato; una volta sola (se lo togli dal Builder non ricompare). Anche nella bozza, se c'è.
+const chiaveBlocco = (b) => 'blocco:' + b.block_type + ':' + (b.stato || '');
+const haBlocco = (schema, b) => (Array.isArray(schema.steps) ? schema.steps : []).some((x) => x && x.block_type === b.block_type && (x.stato || '') === (b.stato || ''));
+function inserisciBlocco(schema, b) {
+  if (!isV3(schema) || haBlocco(schema, b)) return false;
+  schema.steps = [...(Array.isArray(schema.steps) ? schema.steps : []), { id: 'blk_' + Math.random().toString(36).slice(2, 12), ...b }];
+  return true;
+}
+function applyBlocchi(elenco = GARANTITI._blocchi || {}) {
+  let n = 0;
+  for (const [slug, blocchi] of Object.entries(elenco)) {
+    for (const b of blocchi) {
+      const row = db.prepare('SELECT id, schema_json, schema_json_draft, schema_version FROM modules WHERE slug = ? AND installed = 1').get(slug);
+      if (!row) continue;
+      if (db.prepare('SELECT 1 FROM campi_garantiti_applicati WHERE module_slug = ? AND field_key = ?').get(slug, chiaveBlocco(b))) continue;
+      let pubblicato, bozza = null;
+      try { pubblicato = JSON.parse(row.schema_json || '{}'); if (row.schema_json_draft) bozza = JSON.parse(row.schema_json_draft); } catch (e) { continue; }
+      const cambiato = inserisciBlocco(pubblicato, b);
+      if (bozza) inserisciBlocco(bozza, b);
+      if (cambiato) {
+        db.prepare('INSERT INTO modules_schema_history (module_id, schema_json, version, published_by) VALUES (?, ?, ?, NULL)').run(row.id, row.schema_json, row.schema_version);
+        db.prepare('UPDATE modules SET schema_json = ?, schema_json_draft = ?, schema_version = schema_version + 1, published_at = CURRENT_TIMESTAMP WHERE id = ?')
+          .run(JSON.stringify(pubblicato), bozza ? JSON.stringify(bozza) : row.schema_json_draft, row.id);
+        try { logAudit('sistema', 'module.blocco_garantito', slug, { blocco: chiaveBlocco(b) }); } catch (e) { /* il registro non deve fermare l'avvio */ }
+        n++;
+      }
+      db.prepare('INSERT OR IGNORE INTO campi_garantiti_applicati (module_slug, field_key) VALUES (?, ?)').run(slug, chiaveBlocco(b));
+    }
+  }
+  return n;
+}
+
+module.exports = { apply, applyBlocchi, inserisci, inserisciBlocco, GARANTITI };

@@ -12,7 +12,8 @@ import BarcodeScanModal from './BarcodeScanModal.jsx'
 // dalla modifica inline nel modale dettaglio, così i due punti non divergono nel
 // tempo (prima solo il form "Nuovo record" sapeva disegnare i vari tipi di campo, il
 // modale dettaglio era sempre e solo in sola lettura).
-function FieldEditorInput({ f, value, onChange, uploading, onUploadFile, placeholder: placeholderProp }) {
+// `suggerimenti`: i valori già usati di un campo di testo con «suggerisci» (es. il creditore): si scelgono dal menu o se ne scrive uno nuovo.
+function FieldEditorInput({ f, value, onChange, uploading, onUploadFile, placeholder: placeholderProp, suggerimenti }) {
   const [showSecret, setShowSecret] = useState(false)
   const [scanning, setScanning] = useState(false)
   if (f.type === 'soglia') {
@@ -191,8 +192,11 @@ function FieldEditorInput({ f, value, onChange, uploading, onUploadFile, placeho
   // nativo di un <input type="date"> ha una larghezza intrinseca propria che può
   // superare quella del contenitore — "w-full" da solo non basta a farla rispettare,
   // il campo Data sfondava il bordo destro dello schermo su telefono.
+  const lista = f.type === 'text' && f.suggerisci && Array.isArray(suggerimenti) && suggerimenti.length > 0 ? 'sug-' + f.key : undefined
   return (
+    <>
     <input className="w-full min-w-0 max-w-full bg-surface-page text-ink px-4 py-3 rounded-lg text-sm outline-none border border-gray-800 focus:border-accent transition placeholder-gray-600"
+      list={lista}
       type={f.type === 'date' ? 'date' : f.type === 'datetime' ? 'datetime-local' : f.type === 'time' ? 'time' : f.type === 'email' ? 'email' : f.type === 'phone' ? 'tel' : f.type === 'url' ? 'url' : 'text'}
       // Numeri e importi: campo di testo con tastiera numerica, NON <input type="number">. Quello cambia il valore con la rotellina/il trackpad quando ha il fuoco
       // (si scrive 3 e scorrendo la pagina diventa -38) e con le frecce; qui il valore cambia solo se lo scrivi. Virgola italiana accettata come decimale.
@@ -200,6 +204,8 @@ function FieldEditorInput({ f, value, onChange, uploading, onUploadFile, placeho
       placeholder={ph} value={value ?? ''}
       onChange={(e) => onChange((f.type === 'number' || f.type === 'currency') ? e.target.value.replace(',', '.').replace(/[^0-9.-]/g, '') : e.target.value)}
       autoComplete="off" />
+    {lista && <datalist id={lista}>{suggerimenti.map((v) => <option key={v} value={v} />)}</datalist>}
+    </>
   )
 }
 

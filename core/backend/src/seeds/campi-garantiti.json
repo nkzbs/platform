@@ -1,8 +1,48 @@
 {
   "spese_casa": [
-    { "key": "ricevuta", "label": "Ricevuta di pagamento", "type": "file", "dopo": "data_pagamento" }
+    {
+      "key": "ricevuta",
+      "label": "Ricevuta di pagamento",
+      "type": "file",
+      "dopo": "data_pagamento"
+    }
   ],
   "spese_personali": [
-    { "key": "ricevuta", "label": "Ricevuta di pagamento", "type": "file", "dopo": "data_pagamento" }
-  ]
+    {
+      "key": "ricevuta",
+      "label": "Ricevuta di pagamento",
+      "type": "file",
+      "dopo": "data_pagamento"
+    }
+  ],
+  "_blocchi": {
+    "spese_casa": [
+      {
+        "block_type": "state_requirements",
+        "stato": "pagato",
+        "bloccante": false,
+        "requisiti": [
+          {
+            "label": "Ricevuta di pagamento",
+            "tipo": "campo",
+            "campo": "ricevuta"
+          }
+        ]
+      }
+    ],
+    "spese_personali": [
+      {
+        "block_type": "state_requirements",
+        "stato": "pagato",
+        "bloccante": false,
+        "requisiti": [
+          {
+            "label": "Ricevuta di pagamento",
+            "tipo": "campo",
+            "campo": "ricevuta"
+          }
+        ]
+      }
+    ]
+  }
 }

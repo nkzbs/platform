@@ -10,6 +10,7 @@ import Select from '../../components/Select'
 import FieldEditorInput from './FieldEditorInput'
 import CampiPerSezioni from './CampiPerSezioni'
 import RecordDetailModal from './RecordDetailModal'
+import useSuggerimenti from '../../lib/useSuggerimenti'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import ReportPanel from './ReportPanel'
 import AiSuggestionsPanel from '../../components/AiSuggestionsPanel'
@@ -42,6 +43,7 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
   const api = useApi(token)
   const [records, setRecords] = useState([])
   const [schema, setSchema] = useState(null)
+  const suggerimenti = useSuggerimenti(api, mod.slug, schema && schema.fields)
   const [showNew, setShowNew] = useState(false)
   const [showSourceSearch, setShowSourceSearch] = useState(false)
   const [branchCreateOpen, setBranchCreateOpen] = useState(null)
@@ -517,7 +519,7 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
   const renderRegularField = (f) => (
     <div key={f.key}>
       <label className="text-xs text-gray-400 block mb-1">{f.label}{f.required && ' *'}</label>
-      <FieldEditorInput f={f} value={form[f.key]} onChange={(v) => setForm({ ...form, [f.key]: v })} uploading={uploading[f.key]} onUploadFile={(file) => uploadFile(f.key, file)} />
+      <FieldEditorInput f={f} value={form[f.key]} onChange={(v) => setForm({ ...form, [f.key]: v })} uploading={uploading[f.key]} onUploadFile={(file) => uploadFile(f.key, file)} suggerimenti={suggerimenti[f.key]} />
     </div>
   )
 
