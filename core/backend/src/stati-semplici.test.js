@@ -124,5 +124,16 @@ const PAC = path.join(__dirname, '../../../super-admin/backend/src/pacchetti/med
     await applicaSeed({ trattative_g: [bl] }, { tipo: 'estensione' });
     eq(steps('trattative_g').map((x) => x.key), ['titolo', 'dato']);
   });
+  await test('incarico di ricerca: lo stato si aggiunge al cliente e al rogito completato diventa «Concluso»', async () => {
+    mk('clienti_i', [F('nome'), F('tipo_cliente'), F('ricerca_scadenza', 'date')]);
+    const f = blocco('clienti', 'stato_incarico_ricerca'), a = blocco('trattative', 'incarico_ricerca_concluso');
+    eq((await applicaSeed({ clienti_i: [{ ...f, richiede: { clienti_i: ['nome'] } }] }, { tipo: 'estensione' })).map((e) => e.esito), ['applicato']);
+    const campo = steps('clienti_i').find((x) => x.key === 'ricerca_incarico_stato');
+    eq(campo.options, ['Attivo', 'Concluso', 'Scaduto', 'Rinunciato']);
+    const az = a.aggiungi[0];
+    eq([az.trigger.evento, az.trigger.stato], ['cambio_stato', 'rogito_completato']);
+    eq([az.azioni[0].azione, az.azioni[0].config.modulo, az.azioni[0].config.id_field, az.azioni[0].config.campo, az.azioni[0].config.valore], ['aggiorna_record', 'clienti', 'acquirente', 'ricerca_incarico_stato', 'Concluso']);
+    eq(campo.options.includes(az.azioni[0].config.valore), true, 'il valore impostato è una delle scelte del campo');
+  });
   console.log(`\n${passed} passati, ${failed} falliti`); process.exit(failed ? 1 : 0);
 })();

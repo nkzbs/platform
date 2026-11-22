@@ -1249,6 +1249,39 @@
           "key": "firma_elettronica"
         }
       ]
+    },
+    {
+      "key": "incarico_ricerca_concluso",
+      "_nota": "Al rogito completato l'incarico di ricerca dell'acquirente risulta «Concluso» (se il cliente non ha un incarico il campo non si vede e non conta).",
+      "richiede": {
+        "trattative": [
+          "titolo",
+          "acquirente"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "automation",
+          "label": "Incarico di ricerca concluso al rogito",
+          "trigger": {
+            "evento": "cambio_stato",
+            "stato": "rogito_completato"
+          },
+          "azioni": [
+            {
+              "target": "__interno__",
+              "azione": "aggiorna_record",
+              "config": {
+                "modulo": "clienti",
+                "id_field": "acquirente",
+                "campo": "ricerca_incarico_stato",
+                "operazione": "set",
+                "valore": "Concluso"
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "immobili": [
@@ -4671,6 +4704,37 @@
           "proprieta": {
             "on_signed_state": "cliente_verificato"
           }
+        }
+      ]
+    },
+    {
+      "key": "stato_incarico_ricerca",
+      "_nota": "Lo stato dell'Incarico di ricerca del cliente che cerca casa e non ha tempo: Attivo, Concluso (si imposta da solo al rogito completato), Scaduto o Rinunciato. Sezione «Incarico di ricerca».",
+      "richiede": {
+        "clienti": [
+          "tipo_cliente",
+          "ricerca_scadenza"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "ricerca_incarico_stato",
+          "label": "Stato dell'incarico",
+          "type": "select",
+          "sezione": "Incarico di ricerca",
+          "visible_if": {
+            "enabled": true,
+            "field": "tipo_cliente",
+            "op": "==",
+            "value": "Acquirente che cerca casa e non ha tempo"
+          },
+          "options": [
+            "Attivo",
+            "Concluso",
+            "Scaduto",
+            "Rinunciato"
+          ]
         }
       ]
     }

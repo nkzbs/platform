@@ -2,6 +2,12 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.59 — L'incarico di ricerca si chiude al rogito (pacchetto 40)
+
+- **Stato dell'incarico di ricerca** sul cliente che cerca casa e non ha tempo (campo «Stato dell'incarico»: Attivo, Concluso, Scaduto, Rinunciato, nella sezione «Incarico di ricerca»).
+- **Al rogito completato** della trattativa l'incarico dell'acquirente passa da solo a «Concluso» (automazione sulla Trattativa). L'incarico resta sul Cliente e non sulla Trattativa: un incarico può dare più trattative e al momento della firma l'immobile non c'è.
+- Non c'è ancora l'avviso prima della scadenza, né il passaggio a «Scaduto».
+
 ## 0.5.58 — «Invia per la firma» resta su Proposta e Accordo (0.5.57 ritirata)
 
 - La 0.5.57 (tag `v0.5.57`, mai distribuita) aveva tolto «Invia per la firma» da Proposta d'acquisto e Accordo provvigionale: era un errore, quei documenti vanno firmati. Qui è annullata. Quello che non serve è solo la **«Firma elettronica»** a pagamento tra le Azioni della Trattativa (0.5.56), che resta tolta.

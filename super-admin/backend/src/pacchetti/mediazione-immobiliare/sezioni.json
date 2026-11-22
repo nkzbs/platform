@@ -171,7 +171,8 @@
         "ricerca_rimborso_spese_max",
         "ricerca_penale_perc",
         "ricerca_recesso_contatto",
-        "ricerca_foro"
+        "ricerca_foro",
+        "ricerca_incarico_stato"
       ],
       "Privacy e consensi": [
         "consenso_marketing",
