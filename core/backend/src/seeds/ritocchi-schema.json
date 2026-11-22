@@ -24,6 +24,27 @@
         "campo": "nome",
         "crea": true
       }
+    },
+    {
+      "id": "piani_raggruppa",
+      "blocco": "tipo:parent_children_view",
+      "percorso": "gruppi",
+      "da": null,
+      "a": [
+        {
+          "key": "creditore",
+          "label": "Creditore"
+        },
+        {
+          "key": "creditore",
+          "label": "Categoria",
+          "via": {
+            "modulo": "fornitori",
+            "campo_nome": "nome",
+            "campo": "categoria"
+          }
+        }
+      ]
     }
   ],
   "debiti_casa": [
@@ -51,6 +72,27 @@
         "campo": "nome",
         "crea": true
       }
+    },
+    {
+      "id": "piani_raggruppa",
+      "blocco": "tipo:parent_children_view",
+      "percorso": "gruppi",
+      "da": null,
+      "a": [
+        {
+          "key": "creditore",
+          "label": "Creditore"
+        },
+        {
+          "key": "creditore",
+          "label": "Categoria",
+          "via": {
+            "modulo": "fornitori",
+            "campo_nome": "nome",
+            "campo": "categoria"
+          }
+        }
+      ]
     }
   ]
 }

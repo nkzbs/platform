@@ -2,6 +2,12 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.66 — «Da pagare» per categoria (Finance)
+
+- **Debiti: menu «Raggruppa per» nel riquadro dei creditori.** Oltre a **Creditore**, c'è **Categoria**: la categoria si prende dal modulo **Fornitori** (il creditore del piano → la categoria del fornitore); un creditore non in lista va in «Senza categoria». Funziona per qualunque vista «genitori con figli» che dichiari `gruppi: [{ key, label, via?: { modulo, campo_nome, campo } }]`; arriva ai Debiti casa e personali all'avvio (`ritocchi-schema.js`, nuovo selettore `tipo:<blocco>`). Il filtro con un tocco su un riquadro vale anche per le categorie.
+- **Spese: riquadro «Ancora da pagare per» con menu Categoria / Mese** (`DaPagareBox.jsx`) sulle pagine dei moduli di spese che dichiarano «da pagare» (Builder → Avvisi): le righe ancora da pagare, raggruppate per categoria (dal totale più alto) o per mese (in ordine di tempo), con il totale e il numero di voci. I campi (stato, importo, categoria, data) sono i ruoli del modulo: nessun nome scritto nel codice.
+- Provato su una copia di Finance (10/10): per categoria dei fornitori «Acquisti e finanziamenti», «Persone», «Tasse e imposte», «Auto»; nelle Spese personali per categoria e per mese. Test: `riepilogo-gruppi.test.js` (raggruppamenti), `ritocchi-schema.test.js` (selettore `tipo:`). **Non provato dal vivo**: serve «Aggiorna» su Finance.
+
 ## 0.5.65 — Stima IMU sull'immobile (pacchetto 42)
 
 - **«IMU annua stimata»** nella sezione «Catasto e documenti» dell'immobile: rendita catastale × 1,05 × moltiplicatore catastale × aliquota del comune. Due campi nuovi da compilare (`imu_moltiplicatore`, `imu_aliquota_perc`); se restano vuoti usa **160** (abitazioni) e **0,86 %** (aliquota base). È **una stima per un uso diverso dall'abitazione principale**: l'aliquota vera la decide ogni comune, e per la prima casa non di lusso l'IMU non c'è.

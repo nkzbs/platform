@@ -11,6 +11,7 @@ import FieldEditorInput from './FieldEditorInput'
 import CampiPerSezioni from './CampiPerSezioni'
 import RecordDetailModal from './RecordDetailModal'
 import useSuggerimenti from '../../lib/useSuggerimenti'
+import DaPagareBox from '../../components/DaPagareBox'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import ReportPanel from './ReportPanel'
 import AiSuggestionsPanel from '../../components/AiSuggestionsPanel'
@@ -44,6 +45,9 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
   const [records, setRecords] = useState([])
   const [schema, setSchema] = useState(null)
   const suggerimenti = useSuggerimenti(api, mod.slug, schema && schema.fields)
+  // Per i moduli di spese che dichiarano «da pagare» (Builder → Avvisi): il riquadro «Ancora da pagare per categoria / mese»
+  const [codaDaPagare, setCodaDaPagare] = useState(null)
+  useEffect(() => { let vivo = true; api.get('/module-roles/queues').then((qs) => { if (vivo && Array.isArray(qs)) setCodaDaPagare(qs.find((x) => x.module_slug === mod.slug && x.da_fare && x.importo) || null) }); return () => { vivo = false } }, [mod.slug]) // eslint-disable-line react-hooks/exhaustive-deps
   const [showNew, setShowNew] = useState(false)
   const [showSourceSearch, setShowSourceSearch] = useState(false)
   const [branchCreateOpen, setBranchCreateOpen] = useState(null)
@@ -845,6 +849,8 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
           ))}
         </div>
       )}
+
+      {codaDaPagare && mod.list_view !== 'archive' && records.length > 0 && <DaPagareBox q={codaDaPagare} records={records} />}
 
       {records.length > 0 && (
         <div className="mb-4">

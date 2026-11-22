@@ -75,6 +75,16 @@ test('«campo:chiave» trova il campo e «da: null» aggiunge una proprietà che
   assertEq(JSON.parse(db.prepare('SELECT schema_json s FROM modules WHERE slug = ?').get('c2').s).steps[0].suggerisci, false);
 });
 
+test('«tipo:blocco» trova il primo blocco di quel tipo (anche se l\'id cambia da un tenant all\'altro) e vi aggiunge una proprietà una volta sola', () => {
+  const G = [{ key: 'creditore', label: 'Creditore' }, { key: 'creditore', label: 'Categoria', via: { modulo: 'fornitori', campo_nome: 'nome', campo: 'categoria' } }];
+  const R = { id: 'pg', blocco: 'tipo:parent_children_view', percorso: 'gruppi', da: null, a: G };
+  add('e1', [{ id: 'pcv_a1', block_type: 'parent_children_view', key: 'piani', label: 'Piani' }]); add('e2', [{ id: 'pcv_zz9', block_type: 'parent_children_view', key: 'piani', label: 'Piani' }]);
+  assertEq(rit.apply({ e1: [R], e2: [R] }), 2);
+  for (const slug of ['e1', 'e2']) assertEq(JSON.parse(db.prepare('SELECT schema_json s FROM modules WHERE slug = ?').get(slug).s).steps[0].gruppi, G);
+  assertEq(rit.apply({ e1: [R] }), 0);
+  add('e3', [{ id: 'x', block_type: 'field', key: 'k', label: 'K', type: 'text' }]); assertEq(rit.apply({ e3: [R] }), 0, 'senza quel tipo di blocco non fa niente');
+});
+
 console.log(`\n${'='.repeat(60)}`);
 console.log(passed + ' passati, ' + failed + ' falliti su ' + (passed + failed) + ' test.');
 try { fs.unlinkSync(dbPath); } catch (e) {}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import useApi from '../../lib/useApi'
 import RecordDetailModal from './RecordDetailModal'
 import { parseSchemaFrontend } from '../../lib/schema-v3-frontend'
-import { riepilogoPerGruppo } from '../../lib/riepilogo-gruppi'
+import { riepilogoPerGruppo, mappaDaElenco, normalizza } from '../../lib/riepilogo-gruppi'
 
 // Lista di genitori con riepilogo dei figli — GET /records/:slug/parent-children/:key
 // (records.js + parent-children-view.js). Sostituisce l'intera vista del modulo, stesso
@@ -44,6 +44,17 @@ function ParentChildrenView({ config, mod, schema, token, tableColumns, records,
   const [detailId, setDetailId] = useState(null)
   // Filtro per creditore: un tocco su un riquadro del riepilogo mostra solo i suoi piani, un secondo tocco lo toglie.
   const [filtroGruppo, setFiltroGruppo] = useState('')
+  // Come raggruppare il riepilogo: il blocco può dichiarare più scelte (`gruppi`: [{ key, label, via? }]); `via` = la categoria si prende da un altro modulo
+  // (es. il creditore → la categoria del fornitore): { modulo, campo_nome, campo }. Senza `gruppi` c'è solo il creditore, com'era.
+  const scelteGruppo = Array.isArray(config.gruppi) && config.gruppi.length ? config.gruppi : [{ key: config.group_field || 'creditore', label: 'Creditore' }]
+  const [gruppoSel, setGruppoSel] = useState(0)
+  const gruppoCorrente = scelteGruppo[Math.min(gruppoSel, scelteGruppo.length - 1)]
+  const [mappaVia, setMappaVia] = useState({})
+  useEffect(() => {
+    scelteGruppo.filter((g) => g.via && g.via.modulo).forEach((g) => {
+      api.get('/records/' + g.via.modulo).then((recs) => { if (Array.isArray(recs)) setMappaVia((p) => ({ ...p, [g.via.modulo + '.' + g.via.campo]: mappaDaElenco(recs, g.via.campo_nome, g.via.campo) })) })
+    })
+  }, [mod.slug, config.key]) // eslint-disable-line react-hooks/exhaustive-deps
   const [childDetailId, setChildDetailId] = useState(null)
   const [childMod, setChildMod] = useState(null)
   const [childSchema, setChildSchema] = useState(null)
@@ -85,16 +96,24 @@ function ParentChildrenView({ config, mod, schema, token, tableColumns, records,
   const togglePair = findTogglePair(schema && schema.workflow)
   const saldato = (p) => (togglePair && recordById[p.__id] && recordById[p.__id].data._stato === togglePair.on) || (p.residuo <= 0 && p.n_children > 0)
   const nSaldati = data.rows.filter(saldato).length
-  const gruppoKey = config.group_field || 'creditore'
-  const gruppi = riepilogoPerGruppo(data.rows, recordById, gruppoKey, saldato)
-  const perFiltro = (p) => !filtroGruppo || (recordById[p.__id] && String(recordById[p.__id].data[gruppoKey] || '').trim() === filtroGruppo)
+  const gruppoKey = gruppoCorrente.key
+  const via = gruppoCorrente.via && mappaVia[gruppoCorrente.via.modulo + '.' + gruppoCorrente.via.campo]
+  const traduci = gruppoCorrente.via ? (nome) => (via ? via[normalizza(nome)] : '') : null
+  const gruppi = riepilogoPerGruppo(data.rows, recordById, gruppoKey, saldato, traduci)
+  const valoreDi = (p) => { const v = recordById[p.__id] ? String(recordById[p.__id].data[gruppoKey] || '').trim() : ''; return traduci ? (v ? (traduci(v) || 'Senza categoria') : '') : v }
+  const perFiltro = (p) => !filtroGruppo || valoreDi(p) === filtroGruppo
   const visibleRows = (mostraSaldati ? data.rows : data.rows.filter((p) => !saldato(p))).filter(perFiltro)
 
   return (
     <div>
       {gruppi.length > 0 && (
         <div className="mb-4">
-          <div className="text-[11px] uppercase tracking-wide text-gray-500 mb-2">Da pagare per {gruppoKey === 'creditore' ? 'creditore' : gruppoKey}</div>
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <div className="text-[11px] uppercase tracking-wide text-gray-500">Da pagare per</div>
+            {scelteGruppo.length > 1
+              ? <select aria-label="Raggruppa per" value={gruppoSel} onChange={(e) => { setGruppoSel(Number(e.target.value)); setFiltroGruppo('') }} className="bg-surface-card text-ink text-xs font-medium rounded-lg border border-gray-700 px-2 py-1 outline-none focus:border-accent">{scelteGruppo.map((g, i) => <option key={g.key + i} value={i}>{g.label || g.key}</option>)}</select>
+              : <div className="text-[11px] uppercase tracking-wide text-gray-500">{(gruppoCorrente.label || gruppoKey).toLowerCase()}</div>}
+          </div>
           <div className="flex gap-2 overflow-x-auto pb-1">
             {gruppi.map((g) => (
               <button key={g.nome} type="button" onClick={() => setFiltroGruppo((f) => (f === g.nome ? '' : g.nome))} aria-pressed={filtroGruppo === g.nome}

@@ -1,6 +1,6 @@
 {
   "name": "platform-super-admin-frontend",
-  "version": "0.5.65",
+  "version": "0.5.66",
   "type": "module",
   "scripts": {
     "dev": "vite",
