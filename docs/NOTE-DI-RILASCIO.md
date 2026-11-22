@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.54 — Debiti per creditore
+
+- **Riepilogo «Da pagare per creditore»** in cima alla vista dei piani (Debiti, e la scheda Debiti di Spese): un riquadro per creditore con il **residuo**, le **rate rimaste** e i **piani** aperti, dal più alto al più basso, più il totale. I piani saldati non contano; un piano senza rate (un saldo) conta col suo residuo. Un tocco su un riquadro mostra solo i piani di quel creditore, un secondo tocco toglie il filtro. Il campo è `creditore`, cambiabile con `group_field` nella vista. Calcolato nel frontend dai dati già caricati (`lib/riepilogo-gruppi.js`, test `riepilogo-gruppi.test.js`); provato su una copia di Finance del 10/10.
+
 ## 0.5.53 — Sicurezza: dipendenze e collegamento Google
 
 - **Dipendenze con falle note corrette** (`npm audit fix`, solo i file di blocco): `body-parser` (blocco del servizio con corpo compresso) nel core e in Super Admin, `nodemailer` in Super Admin, `hono` nel server MCP. `npm audit` ora dà 0 falle in core, Super Admin, frontend e MCP.

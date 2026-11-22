@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import useApi from '../../lib/useApi'
 import RecordDetailModal from './RecordDetailModal'
 import { parseSchemaFrontend } from '../../lib/schema-v3-frontend'
+import { riepilogoPerGruppo } from '../../lib/riepilogo-gruppi'
 
 // Lista di genitori con riepilogo dei figli — GET /records/:slug/parent-children/:key
 // (records.js + parent-children-view.js). Sostituisce l'intera vista del modulo, stesso
@@ -41,6 +42,8 @@ function ParentChildrenView({ config, mod, schema, token, tableColumns, records,
   // Richiesto dall'utente il 28/10.
   const [mostraSaldati, setMostraSaldati] = useState(false)
   const [detailId, setDetailId] = useState(null)
+  // Filtro per creditore: un tocco su un riquadro del riepilogo mostra solo i suoi piani, un secondo tocco lo toglie.
+  const [filtroGruppo, setFiltroGruppo] = useState('')
   const [childDetailId, setChildDetailId] = useState(null)
   const [childMod, setChildMod] = useState(null)
   const [childSchema, setChildSchema] = useState(null)
@@ -82,10 +85,29 @@ function ParentChildrenView({ config, mod, schema, token, tableColumns, records,
   const togglePair = findTogglePair(schema && schema.workflow)
   const saldato = (p) => (togglePair && recordById[p.__id] && recordById[p.__id].data._stato === togglePair.on) || (p.residuo <= 0 && p.n_children > 0)
   const nSaldati = data.rows.filter(saldato).length
-  const visibleRows = mostraSaldati ? data.rows : data.rows.filter((p) => !saldato(p))
+  const gruppoKey = config.group_field || 'creditore'
+  const gruppi = riepilogoPerGruppo(data.rows, recordById, gruppoKey, saldato)
+  const perFiltro = (p) => !filtroGruppo || (recordById[p.__id] && String(recordById[p.__id].data[gruppoKey] || '').trim() === filtroGruppo)
+  const visibleRows = (mostraSaldati ? data.rows : data.rows.filter((p) => !saldato(p))).filter(perFiltro)
 
   return (
     <div>
+      {gruppi.length > 0 && (
+        <div className="mb-4">
+          <div className="text-[11px] uppercase tracking-wide text-gray-500 mb-2">Da pagare per {gruppoKey === 'creditore' ? 'creditore' : gruppoKey}</div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {gruppi.map((g) => (
+              <button key={g.nome} type="button" onClick={() => setFiltroGruppo((f) => (f === g.nome ? '' : g.nome))} aria-pressed={filtroGruppo === g.nome}
+                className={'flex-shrink-0 text-left rounded-xl px-3 py-2 border transition min-w-[130px] ' + (filtroGruppo === g.nome ? 'border-accent bg-accent/10' : 'border-gray-800 bg-surface-card hover:border-gray-600')}>
+                <div className="text-xs text-gray-400 truncate max-w-[180px]">{g.nome}</div>
+                <div className="text-base font-semibold text-ink">{eur(g.residuo)}</div>
+                <div className="text-[10px] text-gray-500">{g.rate} {g.rate === 1 ? 'rata' : 'rate'} · {g.piani} {g.piani === 1 ? 'piano' : 'piani'}</div>
+              </button>
+            ))}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">Totale da pagare: <span className="text-ink font-medium">{eur(gruppi.reduce((t, g) => t + g.residuo, 0))}</span></div>
+        </div>
+      )}
       {nSaldati > 0 && (
         <div className="mb-3">
           <button type="button" onClick={() => setMostraSaldati((v) => !v)} className="text-xs text-gray-500 hover:text-accent transition">
