@@ -168,5 +168,11 @@ const PAC = path.join(__dirname, '../../../super-admin/backend/src/pacchetti/med
     eq((await applicaSeed({ immobili_t: [{ ...blocco('immobili', 'stima_imu'), richiede: { immobili_t: ['rendita_catastale'] } }] }, { tipo: 'estensione' })).map((e) => e.esito), ['non applicabile']);
     eq(steps('immobili_t').map((x) => x.key), ['rendita_catastale']);
   });
+  await test('Auguri al cliente: l\'azione resta nel modulo ma non compare nella scheda (serve all\'invio di massa)', async () => {
+    mk('clienti_a', [F('nome'), { id: 'x_a', block_type: 'external_action', key: 'auguri_cliente', label: 'Auguri', adapter: 'messaggio_cliente' }]);
+    eq((await applicaSeed({ clienti_a: [{ ...blocco('clienti', 'auguri_senza_pulsante_nella_scheda'), richiede: { clienti_a: ['nome'] } }] }, { tipo: 'estensione' })).map((e) => e.esito), ['applicato']);
+    const az = steps('clienti_a').find((x) => x.key === 'auguri_cliente');
+    eq([az.adapter, az.nascosta_nella_scheda], ['messaggio_cliente', true]);
+  });
   console.log(`\n${passed} passati, ${failed} falliti`); process.exit(failed ? 1 : 0);
 })();

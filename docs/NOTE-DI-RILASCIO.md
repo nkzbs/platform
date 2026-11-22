@@ -2,6 +2,11 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.67 — «Auguri al cliente» non più tra le Azioni della scheda (pacchetto 43)
+
+- **Nascosta nella scheda del cliente** l'azione «Auguri al cliente / comunicazioni varie» (nuova proprietà `nascosta_nella_scheda` di un'azione esterna, `RecordDetailModal.jsx`). L'azione resta nel modulo: serve al **«Messaggio ai clienti»** di massa e agli auguri automatici di compleanno (spenti finché non si attivano). Sui tenant esistenti la proprietà arriva con il blocco `auguri_senza_pulsante_nella_scheda`.
+- Nella 0.5.60 era stata tolta solo la mail «Auguri» tra i Documenti: erano due voci diverse.
+
 ## 0.5.66 — «Da pagare» per categoria (Finance)
 
 - **Debiti: menu «Raggruppa per» nel riquadro dei creditori.** Oltre a **Creditore**, c'è **Categoria**: la categoria si prende dal modulo **Fornitori** (il creditore del piano → la categoria del fornitore); un creditore non in lista va in «Senza categoria». Funziona per qualunque vista «genitori con figli» che dichiari `gruppi: [{ key, label, via?: { modulo, campo_nome, campo } }]`; arriva ai Debiti casa e personali all'avvio (`ritocchi-schema.js`, nuovo selettore `tipo:<blocco>`). Il filtro con un tocco su un riquadro vale anche per le categorie.

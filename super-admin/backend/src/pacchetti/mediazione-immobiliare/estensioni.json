@@ -4830,6 +4830,24 @@
           "key": "auguri"
         }
       ]
+    },
+    {
+      "key": "auguri_senza_pulsante_nella_scheda",
+      "_nota": "«Auguri al cliente» non compare più tra le Azioni della scheda del cliente (non serve mandarli uno per uno). L'azione resta nel modulo: serve al «Messaggio ai clienti» di massa e agli auguri automatici di compleanno.",
+      "richiede": {
+        "clienti": [
+          "nome"
+        ]
+      },
+      "imposta": [
+        {
+          "block_type": "external_action",
+          "key": "auguri_cliente",
+          "proprieta": {
+            "nascosta_nella_scheda": true
+          }
+        }
+      ]
     }
   ],
   "quote_societarie": [

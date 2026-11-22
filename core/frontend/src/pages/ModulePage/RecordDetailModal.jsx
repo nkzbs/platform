@@ -379,7 +379,8 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   // quale vista mostrarlo (VISTE_AZIONE): qui non ci sono nomi di moduli né di servizi.
   // `visibile_se` { campo, op, valore }: l'azione compare solo per i record che lo soddisfano (come `visible_if` dei campi): così un cliente persona fisica non vede il credit score società.
   const visibileSe = (az) => { const v = az.visibile_se; if (!v || !v.campo) return true; const x = String(((record && record.data) || {})[v.campo] ?? ''); return v.op === '!=' ? x !== String(v.valore) : x === String(v.valore) }
-  const azioniEsterne = ((schema && schema.external_actions) || []).filter(visibileSe)
+  // `nascosta_nella_scheda`: l'azione non compare nella scheda del singolo record ma resta nel modulo (es. «Auguri al cliente»: serve all'invio di massa e agli auguri automatici).
+  const azioniEsterne = ((schema && schema.external_actions) || []).filter(visibileSe).filter((a) => !a.nascosta_nella_scheda)
   const [inEsecuzione, setInEsecuzione] = useState(null) // chiave dell'azione in corso
   const [vistaAperta, setVistaAperta] = useState({}) // l'esito di un'azione si mostra in una sezione chiusa; si apre da sola dopo averla eseguita
   // Perché un'azione non può partire (una frase, visibile in cima alla scheda e non solo in un avviso che sparisce): { testo, azione? }
