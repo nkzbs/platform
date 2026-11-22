@@ -111,5 +111,18 @@ const PAC = path.join(__dirname, '../../../super-admin/backend/src/pacchetti/med
     const r = semplificaStati(base, { rinomina: [{ key: 'a', da: 'Vecchia', a: 'Nuova' }], rimuovi: [{ key: 'zzz', verso: 'a' }] });
     eq(r.cambiato, false); eq(r.steps.find((x) => x.key === 'a').label, 'Mia etichetta');
   });
+  await test('togli: l\'azione Firma elettronica sparisce, i campi restano, una sola volta', async () => {
+    mk('trattative_f', [F('titolo'), F('firma_esito'), { id: 'x1', block_type: 'external_action', key: 'firma_elettronica', label: 'Firma elettronica', adapter: 'da_attivare' }, { id: 'x2', block_type: 'external_action', key: 'altra', label: 'Altra', adapter: 'da_attivare' }]);
+    const bl = { ...blocco('trattative', 'senza_firma_elettronica'), richiede: { trattative_f: ['titolo'] } };
+    eq((await applicaSeed({ trattative_f: [bl] }, { tipo: 'estensione' })).map((e) => e.esito), ['applicato']);
+    eq(steps('trattative_f').map((x) => x.key), ['titolo', 'firma_esito', 'altra']);
+    eq((await applicaSeed({ trattative_f: [bl] }, { tipo: 'estensione' })).length, 0);
+  });
+  await test('togli: un campo non si toglie mai', async () => {
+    mk('trattative_g', [F('titolo'), F('dato')]);
+    const bl = { key: 'x_togli', richiede: { trattative_g: ['titolo'] }, togli: [{ block_type: 'field', key: 'dato' }] };
+    await applicaSeed({ trattative_g: [bl] }, { tipo: 'estensione' });
+    eq(steps('trattative_g').map((x) => x.key), ['titolo', 'dato']);
+  });
   console.log(`\n${passed} passati, ${failed} falliti`); process.exit(failed ? 1 : 0);
 })();

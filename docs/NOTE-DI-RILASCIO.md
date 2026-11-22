@@ -2,6 +2,11 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.56 — Via la «Firma elettronica» a pagamento dalla trattativa (pacchetto 38)
+
+- **«Firma elettronica» tolta dalle Azioni della Trattativa** (era a pagamento, circa 0,49 €, e non serve: i moduli si compilano a mano e si caricano). Il blocco `senza_firma_elettronica` usa la nuova primitiva **`togli`** delle estensioni, che toglie un blocco senza dati (azione esterna, documento, automazione); i campi e i collegamenti non si toccano mai. Solo sui tenant che l'avevano; i campi «Firma — esito/data» restano.
+- La firma digitale con «Invia per la firma» resta su Cliente e Immobile.
+
 ## 0.5.55 — Le attività stanno dentro le schede (pacchetto 37)
 
 - **Attività tolte dal menu** nel verticale Mediazione immobiliare (`proprieta.json`: `menu_nascosto: 1`, come le Quote societarie): i dati restano, si vedono e si aggiungono dalla scheda di Cliente, Immobile e Trattativa. Si applica una volta sola sui tenant esistenti (poi si cambia dal Builder). Dopo la ridistribuzione di Super Admin serve «Aggiorna».

@@ -233,6 +233,10 @@ async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs
         // `stati`: workflow semplificato (stati tolti, rinominati, passaggi aggiunti); i record negli stati tolti passano allo stato di destinazione dopo la pubblicazione.
         let statiSpostati = {}, statiCambiati = false;
         if (az.stati) { const rs = semplificaStati(stepsRicalcolati, az.stati); stepsRicalcolati = rs.steps; statiSpostati = rs.spostati; statiCambiati = rs.cambiato; if (statiCambiati) impostati.push('stati'); }
+        // `togli`: toglie blocchi che non portano dati (azioni esterne, documenti, automazioni…); i campi e i collegamenti non si toccano mai.
+        const daTogliere = (az.togli || []).filter((t) => t.block_type !== 'field' && t.block_type !== 'relation');
+        const tolti = stepsRicalcolati.filter((x) => daTogliere.some((t) => t.block_type === x.block_type && (t.key || '') === (x.key || '')));
+        if (tolti.length) { stepsRicalcolati = stepsRicalcolati.filter((x) => !tolti.includes(x)); impostati.push('togli'); }
         const inFondo = ricalcolati.filter((r) => r.in_fondo).map((r) => r.key);
         const stepsConvertiti = inFondo.length ? [...stepsRicalcolati.filter((x) => !(x.block_type === 'field' && inFondo.includes(x.key))), ...inFondo.map((k) => stepsRicalcolati.find((x) => x.block_type === 'field' && x.key === k))] : stepsRicalcolati;
         const nuoviDaConvertire = daConvertire.filter((c) => !schema.steps.some((x) => x.key === c.key))

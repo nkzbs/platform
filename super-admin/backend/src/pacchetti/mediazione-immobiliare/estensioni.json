@@ -1234,6 +1234,21 @@
           }
         ]
       }
+    },
+    {
+      "key": "senza_firma_elettronica",
+      "_nota": "La firma a pagamento dalla trattativa non serve: i moduli si compilano a mano e si caricano. Toglie l'azione «Firma elettronica» anche dai tenant che l'avevano già.",
+      "richiede": {
+        "trattative": [
+          "titolo"
+        ]
+      },
+      "togli": [
+        {
+          "block_type": "external_action",
+          "key": "firma_elettronica"
+        }
+      ]
     }
   ],
   "immobili": [
