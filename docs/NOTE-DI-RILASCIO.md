@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.64 — Documenti: i tipi doppi non tornano più (Drive)
+
+- **Perché «Ricevute» e «Prova» tornavano**: la pulizia della 0.5.63 li aveva tolti (verificato sul vero Finance), ma entro un secondo il **poller di Google Drive** li ha rimessi: sul Drive esistono due cartelle (vuote) con quei nomi e il poller registra come scelta ogni sottocartella nuova, anche vuota (richiesta del 25/10).
+- **Alias e cartelle ignorate** (`cartelle-drive.js`, `seeds/cartelle-drive.json`): una cartella di Drive «Ricevute» conta come **«Ricevuta di pagamento»** (anche per i file dentro) e una cartella «Prova» **non diventa una scelta** (i file dentro, senza cartella, finiscono in «Altro» come ogni file senza cartella). Valgono sia per la registrazione delle cartelle sia per l'importazione dei file. Le cartelle restano nel Drive: si possono anche eliminare da lì.
+- **La pulizia si rifà**: nuova versione della regola (`v: 2` in `seeds/pulizia-opzioni.json`, chiave `unisci@2:`/`togli@2:`) così all'avvio «Ricevute» e «Prova» escono di nuovo, e ora non tornano. Il comportamento è generico: una regola già applicata si rifà aumentando `v`.
+- Test: `cartelle-drive.test.js` (nuovo), caso del poller in `drive-poller.test.js`, caso `v` in `pulizia-opzioni.test.js`. **Non provato dal vivo**: serve «Aggiorna» su Finance.
+
 ## 0.5.63 — Documenti: tipi doppi ripuliti
 
 - **«Ricevute» passa a «Ricevuta di pagamento» e «Prova» esce** dall'elenco dei tipi dei Documenti (nell'archivio sono le cartelle). Parte da sola una volta all'avvio (`pulizia-opzioni.js`, dichiarata in `seeds/pulizia-opzioni.json`): le righe che hanno «Ricevute» passano a «Ricevuta di pagamento» (che deve già esistere, altrimenti si riprova al prossimo avvio) e «Ricevute» esce dalle scelte; «Prova» esce **solo se nessuna riga la usa** (se qualcuna la usa resta, e si riprova). Prima di cambiare le righe i valori vecchi si salvano nella tabella `pulizia_opzioni_copia`; lo schema ha versione e storico (anche la bozza). Regole generiche: `unisci: { vecchio: nuovo }` e `togli_se_inutilizzata: [...]`. Test: `pulizia-opzioni.test.js`. **Non provato dal vivo**: serve «Aggiorna» su Finance.

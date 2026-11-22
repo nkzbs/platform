@@ -2,6 +2,11 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.64 — 22 novembre 2026
+
+- **Pulire un'opzione non basta se la fonte la rimette**: la causa dei tipi doppi era il poller di Drive (cartelle vuote registrate come scelte, volute dall'utente il 25/10). Si interviene alla fonte con alias e cartelle ignorate, non si toglie la registrazione delle cartelle vuote per tutti.
+- **Alias, non cancellazione**: «Ricevute» in Drive conta come «Ricevuta di pagamento», così un file messo lì finisce nella cartella giusta invece di sparire.
+
 ## 0.5.63 — 22 novembre 2026
 
 - **I tipi doppi si puliscono dal codice, con copia, e non da un accesso a mano ai dati**: col token revocato non si scrive più su Finance dal Mac, e una pulizia che parte da sola all'«Aggiorna» è verificabile con un test e ripetibile su un altro tenant. Le righe che cambiano si salvano prima; «Prova» non si toglie se qualcuno la usa.

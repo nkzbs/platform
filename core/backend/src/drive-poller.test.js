@@ -180,6 +180,19 @@ require.cache[internalApiPath] = {
     fakeCartelle = [];
   });
 
+  await test('cartelle-drive.json: una cartella «Ricevute» conta come «Ricevuta di pagamento» (anche per i file dentro) e una cartella «Prova» non diventa una scelta, nemmeno vuota', async () => {
+    const schemaOpz = () => JSON.parse(db.prepare("SELECT schema_json FROM modules WHERE slug = 'documenti'").get().schema_json);
+    const s0 = schemaOpz(); s0.steps.find((x) => x.key === 'tipo').options.push('Ricevuta di pagamento'); db.prepare("UPDATE modules SET schema_json = ? WHERE slug = 'documenti'").run(JSON.stringify(s0));
+    fakeFiles = [{ id: 'ric_1', name: 'contabile.pdf', mimeType: 'application/pdf', size: '50', createdTime: '2026-10-07T00:00:00Z', cartella: 'Ricevute' }, { id: 'pr_1', name: 'prova.pdf', mimeType: 'application/pdf', size: '50', createdTime: '2026-10-07T00:00:00Z', cartella: 'Prova' }];
+    fakeCartelle = ['Ricevute', 'Prova'];
+    await pollDrive();
+    const opz = schemaOpz().steps.find((x) => x.key === 'tipo').options;
+    assertEq([opz.includes('Ricevute'), opz.includes('Prova')], [false, false], 'né «Ricevute» né «Prova» diventano scelte');
+    assertEq(records('documenti').find((r) => r.data.titolo === 'contabile').data.tipo, 'Ricevuta di pagamento');
+    assertEq(records('documenti').find((r) => r.data.titolo === 'prova').data.tipo, 'Altro', 'il file dentro una cartella ignorata non sparisce: senza cartella finisce in «Altro», come ogni file senza cartella');
+    fakeFiles = []; fakeCartelle = [];
+  });
+
   await test('un documento con un file già su Drive ma senza cartella finisce in "Altro" (e si sposta lì)', async () => {
     db.exec('DELETE FROM records; DELETE FROM uploads;');
     sottocartelleCreate.length = 0; spostamenti.length = 0;

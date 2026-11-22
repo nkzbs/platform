@@ -65,6 +65,7 @@ function nonImportabile(mimeType) {
 // azione "add"): stessa convalida (nome non doppio, ≤60 caratteri), stessa
 // cronologia di pubblicazione. Ritorna i nomi aggiunti con successo, per
 // aggiornare subito le opzioni note in questo stesso giro del poller.
+const cartelleDrive = require('./cartelle-drive');
 async function registraCartelleNuove(m, cartelleTrovate) {
   if (!m.folderField) return [];
   const opzioni = new Set((m.folderField.options || []).map((o) => (typeof o === 'string' ? o : o.value)));
@@ -164,7 +165,8 @@ async function pollDrive() {
     return { disponibile: true, errore: e.message };
   }
 
-  const cartelleRegistrate = await registraCartelleNuove(m, cartelleTrovate);
+  // alias e cartelle da ignorare (cartelle-drive.js): una cartella «Ricevute» conta come «Ricevuta di pagamento», una di prova non diventa una scelta
+  const cartelleRegistrate = await registraCartelleNuove(m, cartelleDrive.nomiCartelle(m.slug, cartelleTrovate));
   if (cartelleRegistrate.length) console.log('[drive-poller] nuove cartelle registrate:', cartelleRegistrate.join(', '));
 
   const noti = db.prepare("SELECT stored_name FROM uploads WHERE stored_name LIKE 'drive:%'").all().map((r) => r.stored_name.slice(6));
@@ -182,7 +184,8 @@ async function pollDrive() {
       const data = { [m.fileField.key]: { id: uploadId, name: f.name, size: parseInt(f.size, 10) || 0, mime_type: f.mimeType || 'application/octet-stream' } };
       if (m.titleField) data[m.titleField.key] = titolo;
       if (m.dateField) data[m.dateField.key] = (f.createdTime || '').slice(0, 10) || new Date().toISOString().slice(0, 10);
-      if (m.folderField && f.cartella && opzioniCartella.has(f.cartella)) data[m.folderField.key] = f.cartella;
+      const cartellaVera = cartelleDrive.nomeCartella(m.slug, f.cartella);
+      if (m.folderField && cartellaVera && opzioniCartella.has(cartellaVera)) data[m.folderField.key] = cartellaVera;
 
       const result = db.prepare('INSERT INTO records (module_slug, user_id, data) VALUES (?, ?, ?)').run(m.slug, ownerId, JSON.stringify(data));
       try { fireTrigger(m.slug, 'nuovo_record', data, result.lastInsertRowid, {}); } catch (e) { console.error('[drive-poller] fireTrigger fallito:', e.message); }

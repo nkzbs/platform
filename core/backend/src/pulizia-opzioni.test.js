@@ -60,6 +60,17 @@ test('la bozza si ripulisce insieme e resta una bozza; modulo assente o schema i
   db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('x', 'd7', 'box', '#000', 1, 1, 70, '{rotto')").run();
   assertEq(pu.apply(REGOLE('d7')), 0); assertEq(db.prepare("SELECT schema_json s FROM modules WHERE slug = 'd7'").get().s, '{rotto');
 });
+test('una regola già applicata si rifà aumentando `v` (quando la fonte che rimetteva il valore è stata chiusa); senza aumentarla non si ripete', () => {
+  add('d8', v2()); const a = riga('d8', { titolo: 'a', tipo: 'Ricevute' });
+  assertEq(pu.apply(REGOLE('d8')), 2); assertEq(opzioni('d8').includes('Prova'), false);
+  // qualcuno rimette le scelte (es. una sincronizzazione): con la stessa regola non succede niente, con `v: 2` si ripulisce di nuovo
+  const s = JSON.parse(db.prepare("SELECT schema_json s FROM modules WHERE slug = 'd8'").get().s); s.fields[0].options = OPZ; db.prepare("UPDATE modules SET schema_json = ? WHERE slug = 'd8'").run(JSON.stringify(s));
+  db.prepare('UPDATE records SET data = ? WHERE id = ?').run(JSON.stringify({ titolo: 'a', tipo: 'Ricevute' }), a);
+  assertEq(pu.apply(REGOLE('d8')), 0); assertEq(opzioni('d8').includes('Ricevute'), true, 'la stessa regola non si ripete');
+  const R2 = { d8: { tipo: { ...REGOLE('d8').d8.tipo, v: 2 } } };
+  assertEq(pu.apply(R2), 2); assertEq(opzioni('d8'), ['Bolletta', 'Ricevuta di pagamento', 'Altro']); assertEq(dati(a).tipo, 'Ricevuta di pagamento');
+  assertEq(pu.apply(R2), 0);
+});
 test('le pulizie dichiarate davvero (seeds/pulizia-opzioni.json) sono ben formate', () => {
   for (const [slug, campi] of Object.entries(pu.PULIZIE)) for (const [k, r] of Object.entries(campi)) {
     assertTrue(slug && k, 'modulo e campo');

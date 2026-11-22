@@ -1,0 +1,6 @@
+{
+  "documenti": {
+    "alias": { "Ricevute": "Ricevuta di pagamento" },
+    "ignora": ["Prova"]
+  }
+}

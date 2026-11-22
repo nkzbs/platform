@@ -34,12 +34,13 @@ function apply(elenco = PULIZIE) {
       let pubblicato, bozza = null;
       try { pubblicato = JSON.parse(row.schema_json || '{}'); if (row.schema_json_draft) bozza = JSON.parse(row.schema_json_draft); } catch (e) { continue; } // schema illeggibile: non si tocca
       let cambiato = false;
+      const versione = regole.v && regole.v > 1 ? '@' + regole.v : ''; // una regola già applicata si rifà aumentando `v` (es. quando la fonte che rimetteva il valore è stata chiusa)
       const fatto = (azione) => db.prepare('SELECT 1 FROM pulizia_opzioni_applicate WHERE module_slug = ? AND field_key = ? AND azione = ?').get(slug, key, azione);
       const segna = (azione) => db.prepare('INSERT OR IGNORE INTO pulizia_opzioni_applicate (module_slug, field_key, azione) VALUES (?, ?, ?)').run(slug, key, azione);
       const righe = () => db.prepare('SELECT id, data FROM records WHERE module_slug = ?').all(slug).map((r) => { let d = null; try { d = JSON.parse(r.data); } catch (e) { /* riga illeggibile: si salta */ } return { id: r.id, d }; }).filter((r) => r.d);
 
       for (const [vecchio, nuovo] of Object.entries(regole.unisci || {})) {
-        const azione = 'unisci:' + vecchio;
+        const azione = 'unisci' + versione + ':' + vecchio;
         if (fatto(azione)) continue;
         if (!haScelta(pubblicato, key, nuovo)) continue; // la destinazione deve esistere: altrimenti si riprova al prossimo avvio
         db.transaction(() => {
@@ -55,7 +56,7 @@ function apply(elenco = PULIZIE) {
         n++;
       }
       for (const v of regole.togli_se_inutilizzata || []) {
-        const azione = 'togli:' + v;
+        const azione = 'togli' + versione + ':' + v;
         if (fatto(azione)) continue;
         if (righe().some((r) => r.d[key] === v)) continue; // qualcuno lo usa: resta, e si riprova al prossimo avvio
         const tolta = togliScelta(pubblicato, key, v);
