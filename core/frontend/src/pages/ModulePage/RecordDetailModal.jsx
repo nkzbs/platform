@@ -532,7 +532,7 @@ function RecordDetailModal({ mod, schema, recordId, relatedCache, onClose, token
   }
 
   // Le azioni del record, nell'ordine in cui il modulo le dichiara: attive, report PDF, poi quelle ancora da attivare. Le mostra la scheda «Azioni».
-  const trasformabile = codaRate && record && record.data && record.data[codaRate.stato] === codaRate.da_fare
+  const trasformabile = codaRate && record && record.data && record.data[codaRate.stato] === codaRate.da_fare && !(codaRate.debito && record.data[codaRate.debito]) // una rata di un piano non si divide di nuovo
   const voci = [
     ...(trasformabile ? [{ key: 'trasforma-rate', label: 'Trasforma in rate', titolo: 'Dividi questa spesa in più rate: nasce un piano e le rate prendono il suo posto', icon: 'calendar', onClick: () => setPannelloRate(true) }] : []),
     ...azioniEsterne.filter((az) => !inAttesa(az)).map((az) => ({ key: az.key, label: az.label, titolo: az.descrizione || '', icon: az.icon || 'sparkles', onClick: () => eseguiAzione(az), pag: statoAzioni && statoAzioni[az.key], spenta: az.adapter === 'da_attivare' || !!(az.connection && connessioni && connessioni[az.connection] === false) })),

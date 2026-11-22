@@ -136,6 +136,15 @@ async function main() {
     assertEq(r.status, 409); assertTrue(/ancora da pagare/.test((await r.json()).error));
     assertEq(data(id)._stato, 'pagato');
   });
+  await test('una spesa che è già una rata di un piano non si divide di nuovo (409)', async () => {
+    roles.set('costi', { ...roles.get('costi'), roles: { ...roles.get('costi').roles, debito: 'debito' } });
+    const id = newRow('costi', { importo: 120, _stato: 'da_pagare', debito: 99 });
+    const r = await post('costi', id, { modo: 'rate', n_rate: 3, data_prima_rata: '2026-12-01' });
+    assertEq(r.status, 409); assertTrue(/già una rata di un piano/.test((await r.json()).error));
+    assertEq(data(id)._stato, 'da_pagare');
+    const q = await (await fetch(BASE + '/api/module-roles/queues', { headers: H })).json();
+    assertEq(q.find((x) => x.module_slug === 'costi').debito, 'debito', 'le code dicono qual è il campo del piano');
+  });
   await test('una spesa «da pagare» si può solo dividere in rate: «un pagamento» o «già pagata» restano 409', async () => {
     const id = newRow('costi', { importo: 120, _stato: 'da_pagare' });
     assertEq((await post('costi', id, { modo: 'uno' })).status, 409);

@@ -144,6 +144,7 @@ router.post('/:slug/:id', requireAuth, (req, res) => {
   // Una riga «da smistare» si smista in tutti i modi. Una già registrata (stato «da fare», cioè ancora da pagare) si può solo trasformare in rate:
   // una pagata, o già in un altro stato, non si divide (le rate sostituirebbero un pagamento che c'è già stato).
   const daRegistrata = modo === 'rate' && !!A.states.da_fare && before[R.stato] === A.states.da_fare;
+  if (daRegistrata && R.debito && before[R.debito]) return fail(res, 409, 'Questa spesa è già una rata di un piano: non si divide di nuovo.');
   if (before[R.stato] !== A.states.nuovo && !daRegistrata) return fail(res, 409, modo === 'rate' && before[R.stato] !== A.states.nuovo && before[R.stato] ? 'Questa riga non si può dividere in rate: serve una spesa ancora da pagare.' : 'Questa riga non è più da smistare.');
 
   // Modifiche fatte nel pannello prima di confermare

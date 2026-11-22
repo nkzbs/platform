@@ -17,6 +17,13 @@ export default function RigheFiglie({ figli, childSchemas, childData, childRelat
               const statiFiglio = cSchema && cSchema.workflow && Array.isArray(cSchema.workflow.states) && cSchema.workflow.states.length > 0 ? cSchema.workflow.states : null
               const badgeStato = (v) => { const st = statiFiglio && statiFiglio.find((x) => x.key === v); return st ? <span className="inline-block px-1.5 py-0.5 rounded-full text-[10px] whitespace-nowrap" style={{ backgroundColor: (st.color || '#6B7280') + '26', color: st.color || '#9CA3AF' }}>{st.label || st.key}</span> : <span className="text-gray-600">—</span> }
               const rows = childData[c.module_slug] || []
+              // Colonne di relazione: solo quelle in cui almeno una riga ha un valore (prima erano le prime due del modulo, anche se vuote e non c'entravano: es. «Spesa Casa» su una spesa personale).
+              const relColonne = cRelations.filter((r) => rows.some((cr) => cr.data[r.key])).slice(0, 3)
+              // Nel form «Aggiungi riga» i collegamenti obbligatori restano in vista, gli altri stanno sotto «Altri collegamenti».
+              const relAggiunta = cRelations.filter((r) => r.required)
+              const relAltre = cRelations.filter((r) => !r.required)
+              // Voci con lo stesso nome (es. tre «A2A-energia-192») non si distinguono: si aggiunge il numero della riga.
+              const opzioniRel = (relData) => { const conta = {}; relData.records.forEach((rec) => { const l = relData.byId[rec.id] || ''; conta[l] = (conta[l] || 0) + 1 }); return relData.records.map((rec) => { const l = relData.byId[rec.id] || '#' + rec.id; return { value: rec.id, label: conta[relData.byId[rec.id] || ''] > 1 ? l + ' · #' + rec.id : l } }) }
               const isAddingRow = !!childAddingRow[c.module_slug]
               const addForm = childAddForms[c.module_slug] || {}
               const isSaving = !!childSaving[c.module_slug]
@@ -65,7 +72,7 @@ export default function RigheFiglie({ figli, childSchemas, childData, childRelat
                                 <th key={f.key} className="px-3 py-1.5 text-left text-[10px] text-gray-600 font-medium">{f.label}</th>
                               ))}
                               {statiFiglio && <th className="px-3 py-1.5 text-left text-[10px] text-gray-600 font-medium">Stato</th>}
-                              {cRelations.slice(0, 2).map((r) => (
+                              {relColonne.map((r) => (
                                 <th key={r.key} className="px-3 py-1.5 text-left text-[10px] text-gray-600 font-medium">{r.label}</th>
                               ))}
                               {computedFields.map((f) => (
@@ -88,7 +95,7 @@ export default function RigheFiglie({ figli, childSchemas, childData, childRelat
                                     </td>
                                   ))}
                                   {statiFiglio && <td className="px-3 py-2">{badgeStato(cr.data._stato)}</td>}
-                                  {cRelations.slice(0, 2).map((r) => {
+                                  {relColonne.map((r) => {
                                     const relData = childRelatedRecs[r.target_module]
                                     return (
                                       <td key={r.key} className="px-1.5 py-1.5">
@@ -97,7 +104,7 @@ export default function RigheFiglie({ figli, childSchemas, childData, childRelat
                                             value={editForm[r.key] || ''}
                                             onChange={(v) => setChildEditForms((p) => ({ ...p, [c.module_slug]: { ...(p[c.module_slug] || {}), [r.key]: v } }))}
                                             placeholder={r.label + '...'}
-                                            options={relData.records.map((rec) => ({ value: rec.id, label: relData.byId[rec.id] || '#' + rec.id }))}
+                                            options={opzioniRel(relData)}
                                           />
                                         ) : (
                                           <input type="text" className="w-full bg-surface-input text-ink px-2 py-1 rounded text-xs outline-none border border-gray-700 focus:border-accent"
@@ -131,8 +138,8 @@ export default function RigheFiglie({ figli, childSchemas, childData, childRelat
                                   </td>
                                 ))}
                                 {statiFiglio && <td className="px-3 py-2">{badgeStato(cr.data._stato)}</td>}
-                                {cRelations.slice(0, 2).map((r) => (
-                                  <td key={r.key} className="px-3 py-2 text-gray-500 text-[10px]">{cr.data[r.key] ? '#' + cr.data[r.key] : ''}</td>
+                                {relColonne.map((r) => (
+                                  <td key={r.key} className="px-3 py-2 text-gray-500 text-[10px]">{cr.data[r.key] ? (((childRelatedRecs[r.target_module] || {}).byId || {})[cr.data[r.key]] || '#' + cr.data[r.key]) : ''}</td>
                                 ))}
                                 {computedFields.map((f) => (
                                   <td key={f.key} className="px-3 py-2 text-gray-400 font-mono">{cr.data[f.key] !== undefined && cr.data[f.key] !== null ? String(cr.data[f.key]) : '—'}</td>
@@ -189,7 +196,7 @@ export default function RigheFiglie({ figli, childSchemas, childData, childRelat
                             )}
                           </div>
                         ))}
-                        {cRelations.slice(0, 2).map((r) => {
+                        {relAggiunta.map((r) => {
                           const relData = childRelatedRecs[r.target_module]
                           return (
                             <div key={r.key}>
@@ -199,7 +206,7 @@ export default function RigheFiglie({ figli, childSchemas, childData, childRelat
                                   value={addForm[r.key] || ''}
                                   onChange={(v) => setChildAddForms((p) => ({ ...p, [c.module_slug]: { ...(p[c.module_slug] || {}), [r.key]: v } }))}
                                   placeholder={r.label + '...'}
-                                  options={relData.records.map((rec) => ({ value: rec.id, label: relData.byId[rec.id] || '#' + rec.id }))}
+                                  options={opzioniRel(relData)}
                                 />
                               ) : (
                                 <input
@@ -213,6 +220,37 @@ export default function RigheFiglie({ figli, childSchemas, childData, childRelat
                             </div>
                           )
                         })}
+                        {relAltre.length > 0 && (
+                          <details className="rounded-lg border border-gray-800 px-2.5 py-2" open={relAltre.some((r) => addForm[r.key])}>
+                            <summary className="text-[11px] text-gray-400 cursor-pointer select-none">Altri collegamenti ({relAltre.length})</summary>
+                            <div className="space-y-2.5 mt-2.5">
+                        {relAltre.map((r) => {
+                                const relData = childRelatedRecs[r.target_module]
+                                return (
+                                  <div key={r.key}>
+                                    <label className="text-[10px] text-gray-500 block mb-1">{r.label}</label>
+                                    {relData ? (
+                                      <Select
+                                        value={addForm[r.key] || ''}
+                                        onChange={(v) => setChildAddForms((p) => ({ ...p, [c.module_slug]: { ...(p[c.module_slug] || {}), [r.key]: v } }))}
+                                        placeholder={r.label + '...'}
+                                        options={opzioniRel(relData)}
+                                      />
+                                    ) : (
+                                      <input
+                                        type="text"
+                                        className="w-full bg-surface-input text-ink px-2 py-1.5 rounded text-xs outline-none border border-gray-700 focus:border-green-500"
+                                        placeholder={r.label}
+                                        value={addForm[r.key] || ''}
+                                        onChange={(e) => setChildAddForms((p) => ({ ...p, [c.module_slug]: { ...(p[c.module_slug] || {}), [r.key]: e.target.value } }))}
+                                      />
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </details>
+                        )}
                         <div className="flex gap-2 pt-1">
                           <button onClick={() => setChildAddingRow((p) => ({ ...p, [c.module_slug]: false }))} className="flex-1 bg-gray-800 hover:bg-gray-700 text-ink py-1.5 rounded text-xs transition">Annulla</button>
                           <button onClick={() => saveChildRow(c)} disabled={isSaving} className="flex-1 bg-green-600 hover:opacity-90 disabled:opacity-50 text-white py-1.5 rounded text-xs font-medium transition">{isSaving ? 'Salvo...' : 'Salva'}</button>

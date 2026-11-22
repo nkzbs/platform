@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.51 — Righe collegate più chiare e piano a rate più facile
+
+- **Righe collegate (`RigheFiglie.jsx`)**: nella tabella e nel form «Aggiungi riga» di un modulo collegato non compaiono più le prime due relazioni del modulo qualunque esse siano (da una spesa personale si vedeva «Spesa Casa» e «Debito Casa», non c'entravano). Le colonne di relazione sono solo quelle in cui almeno una riga ha un valore e mostrano il nome del collegato, non `#id`; nel form i collegamenti obbligatori restano in vista e gli altri stanno sotto **«Altri collegamenti (n)»**. Nei menu di scelta le voci con lo stesso nome si distinguono con il numero della riga («A2A-energia-192 · #8343»).
+- **«Trasforma in rate» non compare su una rata**: una spesa che è già una rata di un piano non si divide di nuovo (il server risponde 409, la scheda non mostra la voce). `/module-roles/queues` espone il campo `debito`.
+- **Piano a rate creato a mano**: se indichi importo totale e numero di rate, l'importo della rata si calcola da solo (`piano-rata.js`, come fa «Dividi in rate»); uno scritto a mano non si tocca. Quali moduli sono piani lo dichiara Builder → Avvisi → Piano a rate.
+- Test: `piano-rata.test.js` (nuovo), `smista.test.js` (rata già di un piano). **Non fatto**: il counter dei debiti per creditore (da costruire) e l'elenco «Tipo» di Documenti, da controllare su Finance.
+
 ## 0.5.50 — Rate: stato visibile e nome «rata x su y»
 
 - **Colonna «Stato» nelle righe collegate** (`RigheFiglie.jsx`): aprendo un piano, la tabella delle rate (e di ogni modulo collegato che ha un workflow) mostra «Da pagare» / «Pagato» con il suo colore. Prima per saperlo bisognava aprire ogni riga.

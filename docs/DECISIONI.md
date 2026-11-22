@@ -2,6 +2,12 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.51 — 22 novembre 2026
+
+- **I collegamenti non obbligatori stanno sotto «Altri collegamenti»**, non nascosti: un modulo figlio può avere relazioni legittime verso moduli che non sono il padre (righe d'ordine → prodotto), quindi non si toglie niente, si mette in secondo piano; le colonne vuote spariscono dalla tabella.
+- **Una rata di un piano non si divide di nuovo**: dividerla sostituirebbe un pagamento che fa già parte di un piano.
+- **La rata si calcola solo se manca e c'è tutto il resto**: senza numero di rate il piano resta com'è (esistono piani senza rate, come un saldo da pareggiare).
+
 ## 0.5.50 — 22 novembre 2026
 
 - **«x su y» è nel nome, non in una colonna**: l'utente lo vuole nel nome della rata. Il token `numerata:` lo calcola alla creazione (posizione e totale), quindi vale anche per i piani di Smista e per ogni tenant.

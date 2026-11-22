@@ -9,6 +9,7 @@ const { encryptFields, decryptFields } = require('../crypto-fields');
 const { controllaValidazioni } = require('../validazioni-campo');
 const { applicaEredita } = require('../lib/eredita-relazione');
 const competenza = require('../competenza');
+const pianoRata = require('../piano-rata');
 const { attachComputedFields: attachComputedFieldsShared } = require('../computed-fields');
 const { runSourceScript } = require('../source-engine');
 const { ruleFor, ownedOrAllowed, filterViewable, isOwnRecord } = require('../permissions');
@@ -729,7 +730,7 @@ router.post('/:slug', requireAuth, requireModuleAccess, (req, res) => {
   if (rule && !rule.create) return res.status(403).json({ error: 'Non hai i permessi per creare record in questo modulo' });
   // Campi di sola lettura (`sola_lettura`: es. i consensi privacy, che si confermano solo firmando): non si scrivono a mano, nascono vuoti.
   const corpoCreazione = { ...(req.body || {}) }; for (const f of schema.fields || []) if (f.sola_lettura) delete corpoCreazione[f.key];
-  const withDefaults = competenza.applica(req.params.slug, applicaEredita(db, schema, applyDefaults(corpoCreazione, schema.fields)), null);
+  const withDefaults = pianoRata.applica(req.params.slug, competenza.applica(req.params.slug, applicaEredita(db, schema, applyDefaults(corpoCreazione, schema.fields)), null));
   const uniqueError = checkUnique(req.params.slug, schema.fields, withDefaults, null);
   if (uniqueError) return res.status(400).json(uniqueError);
   const campoError = controllaValidazioni(schema.fields, withDefaults);
