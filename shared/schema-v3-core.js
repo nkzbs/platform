@@ -233,6 +233,7 @@ export const INTERNAL_ACTIONS = {
   notifica_requisiti_mancanti: { label: 'Avvisa cosa manca per passare a uno stato' },
   notifica_abbinamenti: { label: 'Avvisa se ci sono record compatibili (abbinamento)' },
   notifica_riepilogo: { label: 'Riepilogo del modulo (nuovi e per stato)' },
+  notifica_compleanno: { label: 'Avvisa se oggi è il compleanno (data di nascita)' },
   invia_notifica: { label: 'Invia notifica (WhatsApp — CallMeBot)', connector_id: 'whatsapp_callmebot' },
   invia_report_periodico: { label: 'Invia report periodico (WhatsApp — CallMeBot)', connector_id: 'whatsapp_callmebot' },
   aggiorna_record: { label: 'Aggiorna un campo di un record' },

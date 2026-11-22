@@ -254,14 +254,14 @@ async function main() {
   let primoGiro;
   await test('il seed reale si applica ai moduli che hanno i campi giusti (passa dalla validazione del Builder)', async () => {
     primoGiro = await applicaSeed(seed);
-    assertEq(primoGiro.filter((e) => e.esito === 'applicato').map((e) => e.key).sort(), ['anagrafica_privacy', 'antiriciclaggio', 'auguri', 'incarico_ricerca', 'privacy_incarico', 'scheda_immobile', 'scheda_immobile_completa']);
-    assertEq(chiaviDocumento('clienti').sort(), ['anagrafica_privacy', 'antiriciclaggio', 'auguri', 'incarico_ricerca', 'privacy_incarico']);
+    assertEq(primoGiro.filter((e) => e.esito === 'applicato').map((e) => e.key).sort(), ['anagrafica_privacy', 'antiriciclaggio', 'incarico_ricerca', 'privacy_incarico', 'scheda_immobile_completa']);
+    assertEq(chiaviDocumento('clienti').sort(), ['anagrafica_privacy', 'antiriciclaggio', 'incarico_ricerca', 'privacy_incarico']);
     // Il seed ha creato i campi dei consensi, del tipo giusto, e il documento è «da firmare».
     const campi = documentiDi('clienti').steps.filter((st) => st.block_type === 'field');
     assertEq(campi.find((f) => f.key === 'consenso_marketing').type, 'checkbox');
     assertEq(campi.find((f) => f.key === 'conservazione_fino_al').type, 'date');
     assertEq(documentiDi('clienti').steps.find((st) => st.key === 'anagrafica_privacy').delivery, 'firma');
-    assertEq(chiaviDocumento('immobili'), ['scheda_immobile', 'scheda_immobile_completa']);
+    assertEq(chiaviDocumento('immobili'), ['scheda_immobile_completa']);
   });
   await test('dopo l\'applicazione i tre documenti funzionano davvero: anteprima di un cliente e di un immobile', async () => {
     const idC = rec('clienti', { nome: 'Mario Bianchi', email: 'mario@esempio.it', tipo_cliente: 'Venditore', _stato: 'nuovo' });
@@ -269,20 +269,19 @@ async function main() {
     assertTrue(rc.corpo.startsWith('INFORMATIVA PRIVACY (GDPR) E MODULO DI INCARICO\n\nStudio Prova (P.IVA 01234567890)'), rc.corpo.slice(0, 120));
     assertEq(rc.destinatario, 'mario@esempio.it'); assertEq(rc.oggetto, 'Documenti da firmare — Mario Bianchi');
     const idI = rec('immobili', { titolo: 'Villa', proprietario: idC });
-    const ri = await (await post(`/records/immobili/${idI}/documento/scheda_immobile/anteprima`)).json();
-    assertTrue(ri.corpo.includes('Proprietario: Mario Bianchi'), ri.corpo.slice(0, 200));
-    assertEq(ri.destinatario, 'mario@esempio.it');
+    const ri = await (await post(`/records/immobili/${idI}/documento/scheda_immobile_completa/anteprima`)).json();
+    assertTrue(JSON.stringify(ri).includes('Mario Bianchi'), JSON.stringify(ri).slice(0, 200));
   });
   await test('secondo avvio: niente da fare, nessun documento duplicato', async () => {
     assertEq(await applicaSeed(seed), []);
-    assertEq(chiaviDocumento('clienti').sort(), ['anagrafica_privacy', 'antiriciclaggio', 'auguri', 'incarico_ricerca', 'privacy_incarico']);
+    assertEq(chiaviDocumento('clienti').sort(), ['anagrafica_privacy', 'antiriciclaggio', 'incarico_ricerca', 'privacy_incarico']);
   });
   await test('se il documento viene tolto dal Builder, al riavvio NON ricompare', async () => {
     const sc = documentiDi('clienti');
     sc.steps = sc.steps.filter((st) => st.key !== 'antiriciclaggio');
     db.prepare("UPDATE modules SET schema_json = ? WHERE slug = 'clienti'").run(JSON.stringify(sc));
     assertEq(await applicaSeed(seed), []);
-    assertEq(chiaviDocumento('clienti').sort(), ['anagrafica_privacy', 'auguri', 'incarico_ricerca', 'privacy_incarico']);
+    assertEq(chiaviDocumento('clienti').sort(), ['anagrafica_privacy', 'incarico_ricerca', 'privacy_incarico']);
   });
   await test('un modulo con lo stesso nome ma senza i campi del modello non viene toccato (e non riprova all\'infinito)', async () => {
     mk('altro_t', [F('nome', 'Nome'), F('email', 'Email')]);

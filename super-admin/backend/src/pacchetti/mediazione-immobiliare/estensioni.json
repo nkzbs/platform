@@ -2852,6 +2852,21 @@
           }
         }
       ]
+    },
+    {
+      "key": "senza_mail_scheda_immobile",
+      "_nota": "La mail «Scheda immobile» non serve (c'è la Scheda di acquisizione da firmare): si toglie anche dai tenant che l'avevano.",
+      "richiede": {
+        "immobili": [
+          "titolo"
+        ]
+      },
+      "togli": [
+        {
+          "block_type": "document_action",
+          "key": "scheda_immobile"
+        }
+      ]
     }
   ],
   "clienti": [
@@ -4735,6 +4750,48 @@
             "Scaduto",
             "Rinunciato"
           ]
+        }
+      ]
+    },
+    {
+      "key": "compleanni_in_campanella",
+      "_nota": "Ogni giorno (circa le 7) la campanella avvisa chi ha il compleanno oggi, dalla data di nascita del cliente. Al posto della mail «Auguri» sulla scheda, che si toglie anche dai tenant che l'avevano.",
+      "richiede": {
+        "clienti": [
+          "nome",
+          "data_nascita"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "automation",
+          "label": "Compleanno di un cliente",
+          "trigger": {
+            "evento": "schedulato",
+            "schedulazione": {
+              "tipo": "ogni_N_giorni",
+              "giorni": 1,
+              "ora": 6
+            },
+            "modalita": "per_record"
+          },
+          "azioni": [
+            {
+              "target": "__interno__",
+              "azione": "notifica_compleanno",
+              "config": {
+                "campo": "data_nascita",
+                "messaggio": "Oggi è il compleanno di {{nome}}.",
+                "roles": []
+              }
+            }
+          ]
+        }
+      ],
+      "togli": [
+        {
+          "block_type": "document_action",
+          "key": "auguri"
         }
       ]
     }

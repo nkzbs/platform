@@ -135,5 +135,22 @@ const PAC = path.join(__dirname, '../../../super-admin/backend/src/pacchetti/med
     eq([az.azioni[0].azione, az.azioni[0].config.modulo, az.azioni[0].config.id_field, az.azioni[0].config.campo, az.azioni[0].config.valore], ['aggiorna_record', 'clienti', 'acquirente', 'ricerca_incarico_stato', 'Concluso']);
     eq(campo.options.includes(az.azioni[0].config.valore), true, 'il valore impostato è una delle scelte del campo');
   });
+  await test('compleanni: la campanella avvisa solo il giorno giusto; la mail Auguri e la mail Scheda immobile si tolgono', async () => {
+    const { avvisoCompleanno, compleannoOggi } = require('./lib/avvisi-automatici');
+    const g = new Date('2026-11-23T08:00:00Z');
+    eq(compleannoOggi('1980-11-23', g), true); eq(compleannoOggi('1980-11-24', g), false); eq(compleannoOggi('', g), false); eq(compleannoOggi('1980-11-22T23:30:00Z', g), false);
+    eq(avvisoCompleanno({ campo: 'data_nascita', messaggio: 'Oggi è il compleanno di {{nome}}.' }, { nome: 'Anna', data_nascita: '1975-11-23' }, g), 'Oggi è il compleanno di Anna.');
+    eq(avvisoCompleanno({ campo: 'data_nascita' }, { nome: 'Anna', data_nascita: '1975-03-02' }, g), null);
+    const D = (key) => ({ id: 'd_' + key, block_type: 'document_action', key, label: key, subject: 's', body: 'x', recipient: 'nome' });
+    mk('clienti_c', [F('nome'), F('data_nascita', 'date'), D('auguri'), D('antiriciclaggio')]);
+    const bl = { ...blocco('clienti', 'compleanni_in_campanella'), richiede: { clienti_c: ['nome', 'data_nascita'] } };
+    eq((await applicaSeed({ clienti_c: [bl] }, { tipo: 'estensione' })).map((e) => e.esito), ['applicato']);
+    eq(steps('clienti_c').filter((x) => x.block_type === 'document_action').map((x) => x.key), ['antiriciclaggio']);
+    const au = steps('clienti_c').find((x) => x.block_type === 'automation' && x.label === 'Compleanno di un cliente');
+    eq([au.trigger.evento, au.trigger.modalita, au.azioni[0].azione, au.azioni[0].config.campo], ['schedulato', 'per_record', 'notifica_compleanno', 'data_nascita']);
+    mk('immobili_c', [F('titolo'), F('nome'), D('scheda_immobile'), D('scheda_immobile_completa')]);
+    eq((await applicaSeed({ immobili_c: [{ ...blocco('immobili', 'senza_mail_scheda_immobile'), richiede: { immobili_c: ['titolo'] } }] }, { tipo: 'estensione' })).map((e) => e.esito), ['applicato']);
+    eq(steps('immobili_c').filter((x) => x.block_type === 'document_action').map((x) => x.key), ['scheda_immobile_completa']);
+  });
   console.log(`\n${passed} passati, ${failed} falliti`); process.exit(failed ? 1 : 0);
 })();

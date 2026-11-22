@@ -2,6 +2,11 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.60 — Compleanni in campanella, via «Auguri» e la mail «Scheda immobile» (pacchetto 41)
+
+- **Compleanni nella campanella**: ogni giorno (circa le 7) chi ha il compleanno oggi, dalla data di nascita del cliente, compare tra le notifiche («Oggi è il compleanno di …»). Nuova azione generica delle automazioni **`notifica_compleanno`** (`{ campo, messaggio }`, giorno e mese sul fuso italiano; negli altri giorni non scrive niente).
+- **Tolte** la voce **«Auguri»** dal cliente e la mail **«Scheda immobile»** dall'immobile (blocchi `compleanni_in_campanella` e `senza_mail_scheda_immobile`, con `togli`; anche sui tenant che le avevano). Restano la Scheda di acquisizione da firmare e gli auguri automatici ai clienti di Impostazioni → Messaggi ai clienti (spenti finché non si attivano).
+
 ## 0.5.59 — L'incarico di ricerca si chiude al rogito (pacchetto 40)
 
 - **Stato dell'incarico di ricerca** sul cliente che cerca casa e non ha tempo (campo «Stato dell'incarico»: Attivo, Concluso, Scaduto, Rinunciato, nella sezione «Incarico di ricerca»).

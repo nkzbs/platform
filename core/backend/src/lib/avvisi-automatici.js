@@ -3,6 +3,7 @@
 //   notifica_requisiti_mancanti  { stato, messaggio }      cosa manca a un record per passare a `stato` (blocco state_requirements, allegati compresi)
 //   notifica_abbinamenti         { abbinamento, messaggio } quanti record dell'altro modulo corrispondono (blocco match_view)
 //   notifica_riepilogo           { giorni, titolo }         quante schede nuove e quante per stato in questo modulo
+//   notifica_compleanno          { campo, messaggio }       avvisa se la data nel `campo` del record cade oggi (giorno e mese, ora italiana); in tutti gli altri giorni non scrive niente
 // Ognuna restituisce il testo da notificare, oppure null quando non c'è niente da dire (nessuna notifica: un avviso vuoto è rumore).
 // Il motore (automation-engine.js) scrive la notifica e il log. Segnaposto nel messaggio: {{campo}} del record, più quelli indicati sotto.
 
@@ -11,7 +12,7 @@ const { parseSchemaNormalized } = require('../schema-v3');
 const requisiti = require('../requisiti-stato');
 const { calcolaAbbinamenti } = require('./abbinamento');
 
-const AZIONI = ['notifica_requisiti_mancanti', 'notifica_abbinamenti', 'notifica_riepilogo'];
+const AZIONI = ['notifica_requisiti_mancanti', 'notifica_abbinamenti', 'notifica_riepilogo', 'notifica_compleanno'];
 
 function schemaDi(slug) {
   const mod = db.prepare('SELECT schema_json FROM modules WHERE slug = ?').get(slug);
@@ -64,12 +65,26 @@ function riepilogoModulo(cfg, moduleSlug) {
 }
 
 // Calcola il testo (o null) dell'azione `nome`. Un errore non deve fermare le altre azioni: il chiamante lo registra.
+// Il compleanno è oggi? `valore` è una data AAAA-MM-GG; `ora` (per i test) è il momento di riferimento, letto sul fuso italiano.
+function compleannoOggi(valore, ora = new Date()) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(valore || ''));
+  if (!m) return false;
+  const oggi = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit' }).format(ora).split('-');
+  return m[2] === oggi[1] && m[3] === oggi[2];
+}
+
+function avvisoCompleanno(cfg, dati, ora) {
+  if (!cfg.campo || !compleannoOggi(dati && dati[cfg.campo], ora)) return null;
+  return interpola(cfg.messaggio || 'Oggi è il compleanno di {{nome}}.', dati);
+}
+
 function testoAvviso(nome, cfg, moduleSlug, recordId, dati) {
   const c = cfg && typeof cfg === 'object' ? cfg : {};
   if (nome === 'notifica_requisiti_mancanti') return requisitiMancanti(c, moduleSlug, recordId, dati);
   if (nome === 'notifica_abbinamenti') return abbinamentiTrovati(c, moduleSlug, recordId, dati);
   if (nome === 'notifica_riepilogo') return riepilogoModulo(c, moduleSlug);
+  if (nome === 'notifica_compleanno') return avvisoCompleanno(c, dati);
   return null;
 }
 
-module.exports = { AZIONI, testoAvviso };
+module.exports = { AZIONI, testoAvviso, compleannoOggi, avvisoCompleanno };

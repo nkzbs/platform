@@ -77,14 +77,6 @@
       "recipient": "email"
     },
     {
-      "key": "auguri",
-      "label": "Auguri",
-      "icon": "mail",
-      "subject": "Auguri da {{#@azienda}}{{@azienda}}{{/@azienda}}{{^@azienda}}tutta l'agenzia{{/@azienda}}",
-      "body": "Gentile {{nome|vuoto}},\n\ncolgo l'occasione per farLe i miei migliori auguri: che sia un periodo sereno, per Lei e per la Sua famiglia.\n\nRingraziandoLa per la fiducia, resto a disposizione per qualsiasi esigenza legata alla casa.\n\nUn caro saluto\n{{#@azienda}}{{@azienda}}{{/@azienda}}{{^@azienda}}L'agenzia{{/@azienda}}\n",
-      "recipient": "email"
-    },
-    {
       "key": "incarico_ricerca",
       "label": "Incarico di ricerca (Property Finder)",
       "icon": "search",
@@ -103,14 +95,6 @@
     }
   ],
   "immobili": [
-    {
-      "key": "scheda_immobile",
-      "label": "Scheda immobile",
-      "icon": "file",
-      "subject": "Scheda immobile da verificare e firmare — {{#titolo}}{{titolo}}{{/titolo}}{{^titolo}}immobile{{/titolo}}",
-      "body": "SCHEDA VALUTAZIONE — ACQUISIZIONE IMMOBILE\n\n{{#@azienda}}{{@azienda}}{{/@azienda}}{{^@azienda}}l'agenzia{{/@azienda}}\nData sopralluogo: {{@oggi}}\nProprietario: {{proprietario.nome}}\n\nDATI IDENTIFICATIVI\nTitolo annuncio: {{titolo}}\nTipologia: {{tipologia}}\nSuperficie (mq): {{superficie_mq}}\nStato edificio: {{stato_edificio}}\n\nLOCALIZZAZIONE\nIndirizzo: {{indirizzo}}\nNumero civico: {{numero_civico}}\nInterno: {{interno}}\nCAP: {{cap}}\nComune: {{comune}}\nProvincia: {{provincia}}\nZona/quartiere: {{zona_quartiere}}\nLocalità: {{localita}}\nPiano: {{piano}}\nPiani totali edificio: {{piani_totali}}\nContesto stabile: {{contesto_stabile}}\nAnno costruzione: {{anno_costruzione}}\nAnno ristrutturazione: {{anno_ristrutturazione}}\nNumero unità condominio: {{numero_unita_condominio}}\nAscensore: {{ascensore}}\nPortineria: {{portineria}}\nAssenza barriere architettoniche: {{assenza_barriere_architettoniche}}\n\nCARATTERISTICHE INTERNE\nTotale vani: {{totale_vani}}\nComposizione vani: {{composizione_vani}}\nNumero camere: {{numero_camere}}\nNumero bagni: {{numero_bagni}}\nSfogo esterno: {{sfogo_esterno}}\nGiardino: {{giardino}}\nSuperficie giardino (mq): {{superficie_giardino_mq}}\nPertinenze e box: {{pertinenze_box}}\nPosto auto: {{posto_auto}}\nNumero posti auto: {{numero_posti_auto}}\n\nSERRAMENTI, FINITURE, ISOLAMENTO\nInfissi: {{infissi_materiale}}\nVetri: {{tipo_vetri}}\nOscuranti e protezioni: {{oscuranti_protezioni}}\nPavimenti: {{pavimenti}}\nCappotto termico: {{cappotto_termico}}\nIsolamento acustico: {{isolamento_acustico}}\nVMC: {{vmc}}\n\nIMPIANTI E CERTIFICAZIONE ENERGETICA\nRiscaldamento: {{riscaldamento}}\nDiffusione riscaldamento: {{tipologia_diffusione_riscaldamento}}\nAlimentazione: {{alimentazione_riscaldamento}}\nAccessori impianti: {{accessori_impianti}}\nFotovoltaico: {{fotovoltaico_presente}}\nFotovoltaico — kW: {{fotovoltaico_kw}}\nBatteria di accumulo: {{batteria_accumulo}}\nSolare termico: {{solare_termico}}\nImpianto elettrico: {{stato_impianto_elettrico}}\nImpianto idraulico: {{stato_impianto_idraulico}}\nFognatura: {{fognatura}}\nClasse energetica: {{classe_energetica}}\nAgibilità: {{agibilita}}\n\nDATI CATASTALI E DOCUMENTI\nFoglio: {{foglio_catastale}}\nParticella: {{particella_catastale}}\nSubalterno: {{subalterno_catastale}}\nCategoria: {{categoria_catastale}}\nRendita catastale: {{rendita_catastale}}\nPlanimetria conforme: {{planimetria_conforme}}\nDocumenti disponibili: {{documenti_disponibili}}\n\nSPESE CONDOMINIALI E MUTUO\nSpese condominiali: {{spese_condominiali_importo}}\nPeriodicità: {{spese_condominiali_periodicita}}\nComprendono: {{spese_condominiali_comprende}}\nSpese deliberate: {{spese_deliberate}}\nResiduo mutuo: {{residuo_mutuo}}\nImporto residuo: {{residuo_mutuo_importo}}\nIpoteche/vincoli: {{ipoteche_vincoli}}\n\nVALUTAZIONE ECONOMICA E INCARICO\nPrezzo richiesto dal proprietario: {{prezzo_richiesto}}\nValutazione agente/agenzia: {{valutazione_agente}}\nTipologia incarico: {{tipologia_incarico}}\nDurata incarico: {{durata_incarico}}\nProvvigione accordata: {{provvigione_accordata}}\n\nESIGENZE DI RIACQUISTO\nTipologia cercata: {{riacquisto_tipologia}}\nBudget massimo: {{riacquisto_budget_max}}\nZona/città: {{riacquisto_zona}}\nCaratteristiche richieste: {{riacquisto_caratteristiche}}\n\nNOTE\n{{note}}\n\nIl sottoscritto proprietario dichiara che i dati sopra riportati corrispondono allo stato reale dell'immobile e conferisce incarico di mediazione a {{#@azienda}}{{@azienda}}{{/@azienda}}{{^@azienda}}l'agenzia{{/@azienda}} alle condizioni concordate.\n\nData: {{@oggi}}\nFirma proprietario: ___________________________\nFirma agente: ___________________________",
-      "recipient": "proprietario.email"
-    },
     {
       "key": "scheda_immobile_completa",
       "label": "Scheda di acquisizione (da firmare)",
