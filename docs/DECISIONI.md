@@ -2,6 +2,16 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.48 – 0.5.67 — 23 novembre 2026 (zucca, Mediazione immobiliare)
+
+- **Pochi moduli, le cose dentro le schede**: Cliente, Immobile e Trattativa sono i tre moduli di lavoro; le **Attività** vivono dentro le tre schede (`menu_nascosto`, come le Quote societarie). **Provvigioni resta un modulo**: porta la fattura elettronica, una per parte (venditore e acquirente), e non si compila a mano (nasce dalla trattativa).
+- **Le firme**: «Invia per la firma» resta su Cliente, Immobile e su Proposta e Accordo della Trattativa (la 0.5.57 lo aveva tolto per errore, annullata in 0.5.58). Va via solo la **«Firma elettronica» a pagamento** (circa 0,49 €) tra le Azioni della Trattativa. I documenti stanno dove sono validi: Antiriciclaggio, Privacy e Incarico di ricerca sul Cliente (valgono una volta per persona), Scheda e Contratto di incarico sull'Immobile, Proposta e Accordo sulla Trattativa (un cliente ha più trattative e ogni proposta riguarda un immobile).
+- **Incarico di ricerca sul Cliente, non sulla Trattativa**: un incarico può dare più trattative e alla firma l'immobile non c'è. «Stato dell'incarico» (Attivo, Concluso, Scaduto, Rinunciato); al rogito completato passa a «Concluso». Ancora da fare: avviso prima della scadenza e passaggio a «Scaduto».
+- **Voci tolte perché non servono**: mail «Auguri» (Documenti del cliente), mail «Scheda immobile». «Auguri al cliente» resta nel modulo ma nascosta nella scheda: serve al «Messaggio ai clienti» di massa e agli auguri automatici (spenti). I compleanni li legge l'utente nella **campanella** (ogni giorno alle 7 circa).
+- **IMU come stima, non come tributo**: rendita × 1,05 × moltiplicatore × aliquota, con 160 e 0,86 % se i campi sono vuoti; solo «altro uso» (per la prima casa non di lusso l'IMU non c'è e non lo si distingue: le formule non leggono il testo «A/2»).
+- **Primitive nate qui**: `togli` (toglie un blocco senza dati, mai un campo), `richiede_numerici` (il blocco si applica solo se quei campi sono numero/valuta), `nascosta_nella_scheda` (azione esterna), azione di automazione `notifica_compleanno`.
+- **Lezione**: un'istruzione corta («l'azione firma non serve») può indicare due cose (la firma a pagamento o «Invia per la firma»): prima di togliere una funzione, nominarla come la vede l'utente nella scheda. E mai dichiarare «distribuito» senza `docker exec` sul NAS.
+
 ## 0.5.66 — 22 novembre 2026
 
 - **Un solo riquadro, con un menu, invece di tanti riquadri**: «per creditore», «per categoria» e (sulle spese) «per mese» stanno nello stesso posto e si cambiano con la tendina. La categoria dei debiti viene dalla lista Fornitori, non dalle rate (che sono tutte «Rata»); se la lista è sbagliata si corregge lì.
