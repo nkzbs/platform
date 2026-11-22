@@ -9,6 +9,7 @@ Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la 
 - **Il posto della ricevuta è un campo sulla spesa, non solo Documenti**: dall'analisi della copia di Finance (10/10) nessuna delle 109 rate aveva una ricevuta. Documenti si collega alla spesa ma non alla rata vista dentro il piano; il campo è raggiungibile ovunque la rata compare. Documenti resta l'archivio.
 - **Il campo lo aggiunge il codice all'avvio, non il Builder a mano**: Finance non ha pacchetti, e una modifica fatta a mano in produzione non si ripete su un altro tenant. Dichiarazioni in `seeds/campi-garantiti.json` (nessun nome di modulo nel codice), una volta sola e ricordata, così togliere il campo dal Builder è una scelta che resta.
 - **Il PDF della bolletta non si copia su tutte le rate**: ogni allegato ha un file suo e cancellare il collegamento cancella il file; condividerlo lo farebbe sparire dalle altre rate. Resta sulla prima.
+- **La competenza non è un campo in più**: si poteva scegliere un mese di competenza modificabile, ma sarebbe un campo di troppo. Il mese lo decide già `data` in ogni riepilogo, quindi `data` segue la scadenza (cambio al 27: chi paga il 27 conta quello che scade dopo nel mese seguente). La data scritta a mano vince sempre sul calcolo. Non si correggono i mesi passati: cambierebbero totali già visti.
 - **«Trasforma in rate» solo da «da pagare»**: una spesa già pagata non si divide (le rate sostituirebbero un pagamento che c'è già stato); per quelle si registrano le rate come pagate.
 
 ## 0.5.43 – 0.5.47 — 21 novembre 2026

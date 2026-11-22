@@ -11,6 +11,7 @@ const { logAudit } = require('../audit-log');
 const { encryptFields, decryptFields } = require('../crypto-fields');
 const { ruleFor, ownedOrAllowed } = require('../permissions');
 const moduleRoles = require('../module-roles');
+const competenza = require('../competenza');
 const moduleAi = require('../module-ai');
 const aiSuggestions = require('../ai-suggestions');
 
@@ -148,7 +149,7 @@ router.post('/:slug/:id', requireAuth, (req, res) => {
   // Modifiche fatte nel pannello prima di confermare
   const data = { ...before };
   if (b.importo != null && b.importo !== '') { const n = Number(b.importo); if (!(n >= 0)) return fail(res, 400, 'Importo non valido.'); if (R.importo) data[R.importo] = round2(n); }
-  if (b.scadenza) { if (!ISO.test(b.scadenza)) return fail(res, 400, 'Scadenza non valida (AAAA-MM-GG).'); if (R.scadenza) data[R.scadenza] = b.scadenza; }
+  if (b.scadenza) { if (!ISO.test(b.scadenza)) return fail(res, 400, 'Scadenza non valida (AAAA-MM-GG).'); if (R.scadenza) data[R.scadenza] = b.scadenza; Object.assign(data, competenza.applica(slug, data, before)); }
   if (b.categoria && R.categoria) {
     const f = (schema.fields || []).find((x) => x.key === R.categoria);
     const opts = f && Array.isArray(f.options) ? f.options.map((o) => (typeof o === 'string' ? o : o.value)) : null;

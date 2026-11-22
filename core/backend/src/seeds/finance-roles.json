@@ -69,6 +69,9 @@
       "campo_file": "file",
       "campo_data": "data",
       "relazione": "spesa_personale"
+    },
+    "competenza": {
+      "giorno": 27
     }
   },
   "spese_casa": {
@@ -138,6 +141,9 @@
       "campo_file": "file",
       "campo_data": "data",
       "relazione": "spesa_casa"
+    },
+    "competenza": {
+      "giorno": 27
     }
   },
   "timbrature": {

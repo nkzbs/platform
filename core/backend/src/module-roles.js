@@ -38,6 +38,10 @@ const DEFAULT_AVVISI = { states: { nuovo: '', da_fare: '', fatto: '' }, piano: D
 // modulo/campo scritto in gmail-poller.js, che legge solo questa configurazione.
 const DEFAULT_DOCUMENTI = { modulo: '', campo_titolo: '', campo_tipo: '', valore_bolletta: '', campo_file: '', campo_data: '', relazione: '' };
 
+// Competenza: il mese a cui appartiene una voce che ha una scadenza. `giorno` = dal quale giorno (2-28) la scadenza conta nel mese dopo (chi paga il 27:
+// 27); 0 = spenta. La applica competenza.js sul campo `data`, che è quello che riepiloghi, checklist e report leggono per assegnare il mese.
+const DEFAULT_COMPETENZA = { giorno: 0 };
+
 function parse(row) {
   if (!row) return null;
   let uses = [], roles = {}, extra = {};
@@ -49,7 +53,8 @@ function parse(row) {
     avvisi: { ...DEFAULT_AVVISI, ...av, states: { ...DEFAULT_AVVISI.states, ...(av.states || {}) }, piano: { ...DEFAULT_PIANO, ...(av.piano || {}), campi: { ...DEFAULT_PIANO.campi, ...((av.piano || {}).campi || {}) } } },
     riepiloghi: { ...DEFAULT_RIEPILOGHI, ...(extra.riepiloghi || {}) },
     estratto: { ...DEFAULT_ESTRATTO, ...(extra.estratto || {}) },
-    documenti: { ...DEFAULT_DOCUMENTI, ...(extra.documenti || {}) } };
+    documenti: { ...DEFAULT_DOCUMENTI, ...(extra.documenti || {}) },
+    competenza: { ...DEFAULT_COMPETENZA, ...(extra.competenza || {}) } };
 }
 
 function get(slug) { return parse(db.prepare('SELECT * FROM module_roles WHERE module_slug = ?').get(slug)); }
@@ -92,16 +97,19 @@ function clean(input) {
     modulo: stateKey(doc.modulo), campo_titolo: stateKey(doc.campo_titolo), campo_tipo: stateKey(doc.campo_tipo),
     valore_bolletta: word(doc.valore_bolletta, '', 60), campo_file: stateKey(doc.campo_file), campo_data: stateKey(doc.campo_data), relazione: stateKey(doc.relazione),
   };
+  const cg = Number(input && input.competenza && input.competenza.giorno);
+  const competenza = { giorno: Number.isInteger(cg) && cg >= 2 && cg <= 28 ? cg : 0 };
   const ow = input && input.owner_user_id;
   const owner_user_id = ow === undefined ? undefined : (Number.isInteger(Number(ow)) && Number(ow) > 0 ? Number(ow) : null); // undefined = non indicato: si conserva quello che c'è
-  return { kind, uses, roles, avvisi, riepiloghi, estratto, documenti, owner_user_id };
+  return { kind, uses, roles, avvisi, riepiloghi, estratto, documenti, competenza, owner_user_id };
 }
 
 function set(slug, input) {
   const c = clean(input);
   if (c.owner_user_id === undefined) { const cur = get(slug); c.owner_user_id = cur ? cur.owner_user_id : null; }
+  if (!(input && input.competenza)) { const cur = get(slug); if (cur) c.competenza = cur.competenza; } // il Builder non la conosce ancora: salvando altro non si spegne
   db.prepare('INSERT INTO module_roles (module_slug, kind, uses, roles, extra) VALUES (?, ?, ?, ?, ?) ON CONFLICT(module_slug) DO UPDATE SET kind = excluded.kind, uses = excluded.uses, roles = excluded.roles, extra = excluded.extra')
-    .run(slug, c.kind, JSON.stringify(c.uses), JSON.stringify(c.roles), JSON.stringify({ v: SCHEMA_V, owner_user_id: c.owner_user_id, avvisi: c.avvisi, riepiloghi: c.riepiloghi, estratto: c.estratto, documenti: c.documenti }));
+    .run(slug, c.kind, JSON.stringify(c.uses), JSON.stringify(c.roles), JSON.stringify({ v: SCHEMA_V, owner_user_id: c.owner_user_id, avvisi: c.avvisi, riepiloghi: c.riepiloghi, estratto: c.estratto, documenti: c.documenti, competenza: c.competenza }));
   return get(slug);
 }
 
@@ -136,7 +144,9 @@ function seedIfEmpty() {
     const needRate = vecchia && cfg.riepiloghi && cfg.riepiloghi.rate_categories && parsed.riepiloghi && !('rate_categories' in parsed.riepiloghi);
     // dichiarato prima dell'archiviazione in Documenti: si aggiunge dove salvare gli allegati della mail
     const needDocumenti = cfg.documenti && !parsed.documenti;
-    if (!(needAvvisi || needRiep || needPiano || needEstratto || nuoviRuoli.length || needRate || needDocumenti)) continue;
+    // competenza dichiarata dopo: si scrive una volta sola, se non c'è ancora (una scelta già fatta, anche «spenta», non si tocca)
+    const needCompetenza = cfg.competenza && !parsed.competenza;
+    if (!(needAvvisi || needRiep || needPiano || needEstratto || nuoviRuoli.length || needRate || needDocumenti || needCompetenza)) continue;
     let avvisi = needAvvisi ? cfg.avvisi : cur.avvisi, roles = cur.roles;
     if (needPiano) {
       avvisi = { ...avvisi, states: { ...avvisi.states, fatto: cfg.avvisi.states.fatto }, piano: cfg.avvisi.piano };
@@ -149,7 +159,7 @@ function seedIfEmpty() {
     for (const k of nuoviRuoli) roles = { ...roles, [k]: cfg.roles[k] };
     let riepiloghi = needRiep ? cfg.riepiloghi : cur.riepiloghi;
     if (needRate) riepiloghi = { ...riepiloghi, rate_categories: cfg.riepiloghi.rate_categories };
-    set(slug, { kind: cur.kind, uses, roles, avvisi, riepiloghi, estratto: needEstratto ? cfg.estratto : cur.estratto, documenti: needDocumenti ? cfg.documenti : cur.documenti }); n++;
+    set(slug, { kind: cur.kind, uses, roles, avvisi, riepiloghi, estratto: needEstratto ? cfg.estratto : cur.estratto, documenti: needDocumenti ? cfg.documenti : cur.documenti, competenza: needCompetenza ? cfg.competenza : cur.competenza }); n++;
   }
   return n;
 }

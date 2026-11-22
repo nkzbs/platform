@@ -20,6 +20,7 @@
 // di hearth, allegati generici invece di una tabella allegati_spese dedicata).
 
 const db = require('./db');
+const competenza = require('./competenza');
 const { getValidAccessToken, createCalendarEvent } = require('./routes/google-oauth');
 const { saveUploadBuffer } = require('./lib/upload-storage');
 const { fireTrigger } = require('./automation-engine');
@@ -216,7 +217,7 @@ function costruisciRiga({ rule, declared, subject, importo, scadenza, dataSpesa 
   if (nuovo) d[F.stato] = nuovo;
   if (F.fisso) d[F.fisso] = false;
   if (F.scadenza && scadenza && !semplice) d[F.scadenza] = scadenza;
-  return { data: d, campi: F };
+  return { data: competenza.applica(declared.module_slug || '', d, null), campi: F };
 }
 
 async function processaMessaggio(accessToken, msgId, rule) {
