@@ -110,7 +110,7 @@ async function main() {
 
   await test('il cerchio rapido si toglie da Immobili e Clienti una volta sola, senza rimetterlo se poi lo si riaccende; senza il modulo riprova', async () => {
     const proprietaPacchetto = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/proprieta.json');
-    eq(proprietaPacchetto.immobili, { quick_toggle: 0 }); eq(proprietaPacchetto.clienti, { quick_toggle: 0 }); eq(proprietaPacchetto.quote_societarie, { menu_nascosto: 1 }, 'Quote societarie tolte dal menu (restano dentro il Cliente)');
+    eq(proprietaPacchetto.immobili, { quick_toggle: 0 }); eq(proprietaPacchetto.clienti, { quick_toggle: 0 }); eq(proprietaPacchetto.quote_societarie, { menu_nascosto: 1 }, 'Quote societarie tolte dal menu (restano dentro il Cliente)'); eq(proprietaPacchetto.attivita, { menu_nascosto: 1 }, 'Attività tolte dal menu (restano dentro Cliente, Immobile e Trattativa)');
     const seed = { immobili: proprietaPacchetto.immobili, clienti: proprietaPacchetto.clienti };
     const prop = []; const callAs = async (u, m, p, b) => { prop.push(m + ' ' + p + ' ' + JSON.stringify(b)); return { ok: true, data: {} }; };
     db.prepare("DELETE FROM seed_applicati WHERE chiave LIKE 'proprieta:%'").run(); db.prepare("DELETE FROM modules WHERE slug = 'immobili'").run();

@@ -1,5 +1,5 @@
 {
-  "_descrizione": "Proprietà a livello di modulo del verticale Mediazione immobiliare, applicate una volta sola da seed-blocchi-verticale.js (poi si cambiano dal Builder e non tornano indietro). `quick_toggle: 0` toglie il cerchio rapido dalla tabella: ricavato da una coppia di stati che si rimandano indietro (Immobili: In vendita ↔ In trattativa; Clienti: Documenti inviati ↔ Verifica identità), non è un «fatto / da fare», quindi sulle righe non vuol dire niente. `menu_nascosto: 1` toglie il modulo dal menu laterale lasciandolo attivo: i dati si raggiungono dalle schede collegate (Quote societarie dentro il Cliente).",
+  "_descrizione": "Proprietà a livello di modulo del verticale Mediazione immobiliare, applicate una volta sola da seed-blocchi-verticale.js (poi si cambiano dal Builder e non tornano indietro). `quick_toggle: 0` toglie il cerchio rapido dalla tabella: ricavato da una coppia di stati che si rimandano indietro (Immobili: In vendita ↔ In trattativa; Clienti: Documenti inviati ↔ Verifica identità), non è un «fatto / da fare», quindi sulle righe non vuol dire niente. `menu_nascosto: 1` toglie il modulo dal menu laterale lasciandolo attivo: i dati si raggiungono dalle schede collegate (Quote societarie dentro il Cliente; Attività dentro Cliente, Immobile e Trattativa, da cui si aggiungono).",
   "immobili": {
     "quick_toggle": 0
   },
@@ -7,6 +7,9 @@
     "quick_toggle": 0
   },
   "quote_societarie": {
+    "menu_nascosto": 1
+},
+  "attivita": {
     "menu_nascosto": 1
   }
 }
