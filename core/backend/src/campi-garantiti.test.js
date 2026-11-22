@@ -110,6 +110,15 @@ test('la bozza si ritocca insieme; un modulo che non c\'è o con schema illeggib
   db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('x', 'b4', 'box', '#000', 1, 1, 70, '{rotto')").run();
   assertEq(cg.applyBlocchi({ b4: [REQ] }), 0);
 });
+test('schema a elenco piatto (v2): i requisiti per stato vanno in state_requirements, una volta sola; un blocco di altro tipo non si aggiunge', () => {
+  db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('x', 'b5', 'box', '#000', 1, 1, 70, ?)").run(JSON.stringify({ fields: [{ key: 'descrizione', label: 'D', type: 'text' }], workflow: { states: [{ key: 'pagato', label: 'Pagato' }], transitions: [] } }));
+  assertEq(cg.applyBlocchi({ b5: [REQ] }), 1);
+  const s = schema('b5'); assertEq(s.state_requirements.map((x) => [x.stato, x.bloccante, x.requisiti[0].campo, x.block_type]), [['pagato', false, 'ricevuta', undefined]]);
+  assertEq(cg.applyBlocchi({ b5: [REQ] }), 0);
+  assertEq(schema('b5').state_requirements.length, 1);
+  db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES ('x', 'b6', 'box', '#000', 1, 1, 70, ?)").run(JSON.stringify({ fields: [] }));
+  assertEq(cg.applyBlocchi({ b6: [{ block_type: 'altro_blocco', stato: 'x' }] }), 0);
+});
 test('i blocchi dichiarati davvero (_blocchi) sono ben formati', () => {
   for (const [slug, bl] of Object.entries(cg.GARANTITI._blocchi || {})) for (const b of bl) assertTrue(b.block_type && b.stato && Array.isArray(b.requisiti) && b.requisiti.length, slug);
 });

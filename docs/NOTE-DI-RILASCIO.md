@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.62 — Il promemoria «ricevuta» arriva anche ai moduli con lo schema a elenco piatto
+
+- **Correzione**: il blocco «requisiti per passare a Pagato» (ricevuta) non era arrivato su **Spese casa e Spese personali di Finance**, perché quei moduli hanno lo schema a elenco piatto (v2) e `campi-garantiti.js` sapeva aggiungere i blocchi solo agli schemi v3, ma li segnava lo stesso come fatti. Ora per uno schema v2 il blocco entra in `state_requirements`; la chiave di «fatto» è cambiata (`blocco2:`), così su Finance si riprova una volta all'avvio. Test: caso v2 in `campi-garantiti.test.js`. **Verificato sul vero Finance** (solo lettura) prima della correzione: il modulo Fornitori c'è con 20 record e il creditore dei piani suggerisce dalla lista; il campo «Ricevuta di pagamento» c'è. Serve «Aggiorna» su Finance.
+
 ## 0.5.61 — Aggiornamento dei tenant in background; Finance: ricevuta e fornitori
 
 - **«Aggiorna» non blocca più Super Admin** (`lib/aggiornamento.js`, `components/AggiornamentoDock.jsx`, montata in `App.jsx`): la finestra mostra i passi veri con una **barra di avanzamento** e la percentuale, e ha «**Riduci e continua**»: si riduce a una pastiglia in basso (tenant e %) e il lavoro prosegue sul server, anche cambiando pagina. A fine lavoro la finestra si riapre da sola con AGGIORNATO / NON AGGIORNATO; la lista dei tenant si ricarica. Un solo aggiornamento alla volta. L'avanzamento è **stimato** dai messaggi (`shared/frontend/avanzamento-aggiornamento.js`): il server non manda una percentuale, quindi durante la costruzione dell'immagine sale piano senza mai arrivare al 70% da sola. Test: `avanzamento-aggiornamento.test.js`, `aggiornamento-dock.test.jsx` (la finestra, la pastiglia, l'esito, «Aggiorna comunque»). **Non provato dal vivo** (il browser di prova era nascosto): serve un aggiornamento vero dopo la ridistribuzione di Super Admin.

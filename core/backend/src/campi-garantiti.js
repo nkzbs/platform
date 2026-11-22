@@ -67,11 +67,18 @@ function apply(elenco = GARANTITI) {
 // ── Blocchi garantiti (stessa idea dei campi): un blocco dello schema che un modulo deve avere, es. i requisiti per passare a «pagato».
 // Dichiarati in seeds/campi-garantiti.json sotto `_blocchi` ({ modulo: [blocco] }); un blocco si aggiunge solo se il modulo non ne ha già uno
 // dello stesso tipo e per lo stesso stato; una volta sola (se lo togli dal Builder non ricompare). Anche nella bozza, se c'è.
-const chiaveBlocco = (b) => 'blocco:' + b.block_type + ':' + (b.stato || '');
-const haBlocco = (schema, b) => (Array.isArray(schema.steps) ? schema.steps : []).some((x) => x && x.block_type === b.block_type && (x.stato || '') === (b.stato || ''));
+// (la chiave porta «v2»: i moduli con lo schema a elenco piatto non ricevevano il blocco ma venivano segnati come fatti; con la chiave nuova si riprova una volta)
+const chiaveBlocco = (b) => 'blocco2:' + b.block_type + ':' + (b.stato || '');
+// Schema v3: il blocco sta in `steps`. Schema a elenco piatto (v2): i requisiti per stato stanno in `state_requirements` (senza tipo di blocco).
+const haBlocco = (schema, b) => (isV3(schema)
+  ? (Array.isArray(schema.steps) ? schema.steps : []).some((x) => x && x.block_type === b.block_type && (x.stato || '') === (b.stato || ''))
+  : b.block_type === 'state_requirements' && (Array.isArray(schema.state_requirements) ? schema.state_requirements : []).some((x) => x && (x.stato || '') === (b.stato || '')));
 function inserisciBlocco(schema, b) {
-  if (!isV3(schema) || haBlocco(schema, b)) return false;
-  schema.steps = [...(Array.isArray(schema.steps) ? schema.steps : []), { id: 'blk_' + Math.random().toString(36).slice(2, 12), ...b }];
+  if (haBlocco(schema, b)) return false;
+  if (isV3(schema)) { schema.steps = [...(Array.isArray(schema.steps) ? schema.steps : []), { id: 'blk_' + Math.random().toString(36).slice(2, 12), ...b }]; return true; }
+  if (b.block_type !== 'state_requirements') return false; // gli altri tipi di blocco non hanno un posto nello schema piatto
+  const { block_type, ...resto } = b; // eslint-disable-line no-unused-vars
+  schema.state_requirements = [...(Array.isArray(schema.state_requirements) ? schema.state_requirements : []), resto];
   return true;
 }
 function applyBlocchi(elenco = GARANTITI._blocchi || {}) {
