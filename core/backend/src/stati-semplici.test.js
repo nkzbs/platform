@@ -152,5 +152,21 @@ const PAC = path.join(__dirname, '../../../super-admin/backend/src/pacchetti/med
     eq((await applicaSeed({ immobili_c: [{ ...blocco('immobili', 'senza_mail_scheda_immobile'), richiede: { immobili_c: ['titolo'] } }] }, { tipo: 'estensione' })).map((e) => e.esito), ['applicato']);
     eq(steps('immobili_c').filter((x) => x.block_type === 'document_action').map((x) => x.key), ['scheda_immobile_completa']);
   });
+  await test('IMU: la stima si calcola dalla rendita; vuoti aliquota e moltiplicatore usano 0,86 % e 160', async () => {
+    const { evaluateFormula } = require('./formula');
+    mk('immobili_i', [F('rendita_catastale', 'currency')]);
+    eq((await applicaSeed({ immobili_i: [{ ...blocco('immobili', 'stima_imu'), richiede: { immobili_i: ['rendita_catastale'] } }] }, { tipo: 'estensione' })).map((e) => e.esito), ['applicato']);
+    const campo = steps('immobili_i').find((x) => x.key === 'imu_stima');
+    eq(campo.type, 'computed');
+    const val = (d) => evaluateFormula(campo.expr, db, { currentModule: 'immobili_i', currentRecordId: 1, currentRecordData: d }).value;
+    eq(val({ rendita_catastale: 1000 }), 1444.8);
+    eq(val({ rendita_catastale: 1000, imu_moltiplicatore: 55, imu_aliquota_perc: 1.06 }), 612.15);
+    eq(val({}), 0);
+  });
+  await test('IMU: se la rendita è un campo di testo il blocco non si applica (niente errore di pubblicazione a ogni avvio)', async () => {
+    mk('immobili_t', [F('rendita_catastale')]);
+    eq((await applicaSeed({ immobili_t: [{ ...blocco('immobili', 'stima_imu'), richiede: { immobili_t: ['rendita_catastale'] } }] }, { tipo: 'estensione' })).map((e) => e.esito), ['non applicabile']);
+    eq(steps('immobili_t').map((x) => x.key), ['rendita_catastale']);
+  });
   console.log(`\n${passed} passati, ${failed} falliti`); process.exit(failed ? 1 : 0);
 })();

@@ -73,6 +73,8 @@ function estensioneApplicabile(est, steps, moduliPerSlug) {
     if (!presenti) return false;
     if (!campi.every((c) => presenti.has(c))) return false;
   }
+  // `richiede_numerici`: campi di QUESTO modulo che devono essere numero o valuta (un calcolo sopra un campo di testo non si pubblica): altrimenti il blocco non si applica.
+  for (const c of est.richiede_numerici || []) { const x = steps.find((y) => y.block_type === 'field' && y.key === c); if (!x || !['number', 'currency'].includes(x.type)) return false; }
   for (const b of est.aggiungi || []) {
     if (b.block_type === 'allegati' && steps.some((x) => x.block_type === 'allegati')) return false; // un modulo ha un solo riquadro Allegati
     if (b.block_type === 'relation' && !moduliPerSlug[b.target_module]) return false;

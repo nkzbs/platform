@@ -87,7 +87,10 @@
         "documenti_disponibili",
         "altri_documenti_note",
         "controllo_catastale_data",
-        "controllo_catastale_esito"
+        "controllo_catastale_esito",
+        "imu_moltiplicatore",
+        "imu_aliquota_perc",
+        "imu_stima"
       ],
       "Spese e vincoli": [
         "spese_condominiali_importo",

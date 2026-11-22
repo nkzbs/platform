@@ -2867,6 +2867,42 @@
           "key": "scheda_immobile"
         }
       ]
+    },
+    {
+      "key": "stima_imu",
+      "_nota": "Stima dell'IMU annua (altro uso, non abitazione principale) dalla rendita catastale: rendita × 1,05 × moltiplicatore catastale (160 per le abitazioni) × aliquota del comune. Con aliquota e moltiplicatore vuoti usa 0,86 % e 160. È una stima: l'aliquota vera la decide ogni comune. Sezione «Catasto e documenti».",
+      "richiede": {
+        "immobili": [
+          "rendita_catastale"
+        ]
+      },
+      "richiede_numerici": [
+        "rendita_catastale"
+      ],
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "imu_moltiplicatore",
+          "label": "Moltiplicatore catastale (160 abitazioni, 55 negozi, 65 capannoni)",
+          "type": "number",
+          "sezione": "Catasto e documenti"
+        },
+        {
+          "block_type": "field",
+          "key": "imu_aliquota_perc",
+          "label": "Aliquota IMU del comune (%)",
+          "type": "number",
+          "sezione": "Catasto e documenti"
+        },
+        {
+          "block_type": "field",
+          "key": "imu_stima",
+          "label": "IMU annua stimata (€)",
+          "type": "computed",
+          "expr": "if(rendita_catastale > 0, round(rendita_catastale * 1.05 * if(imu_moltiplicatore > 0, imu_moltiplicatore, 160) * if(imu_aliquota_perc > 0, imu_aliquota_perc, 0.86) / 100, 2), 0)",
+          "sezione": "Catasto e documenti"
+        }
+      ]
     }
   ],
   "clienti": [

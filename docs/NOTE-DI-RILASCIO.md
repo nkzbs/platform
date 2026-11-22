@@ -2,6 +2,11 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.65 — Stima IMU sull'immobile (pacchetto 42)
+
+- **«IMU annua stimata»** nella sezione «Catasto e documenti» dell'immobile: rendita catastale × 1,05 × moltiplicatore catastale × aliquota del comune. Due campi nuovi da compilare (`imu_moltiplicatore`, `imu_aliquota_perc`); se restano vuoti usa **160** (abitazioni) e **0,86 %** (aliquota base). È **una stima per un uso diverso dall'abitazione principale**: l'aliquota vera la decide ogni comune, e per la prima casa non di lusso l'IMU non c'è.
+- Nuova opzione delle estensioni **`richiede_numerici`**: il blocco si applica solo se quei campi del modulo sono numero o valuta (un calcolo su un campo di testo non si pubblica).
+
 ## 0.5.64 — Documenti: i tipi doppi non tornano più (Drive)
 
 - **Perché «Ricevute» e «Prova» tornavano**: la pulizia della 0.5.63 li aveva tolti (verificato sul vero Finance), ma entro un secondo il **poller di Google Drive** li ha rimessi: sul Drive esistono due cartelle (vuote) con quei nomi e il poller registra come scelta ogni sottocartella nuova, anche vuota (richiesta del 25/10).
