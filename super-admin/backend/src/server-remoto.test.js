@@ -68,7 +68,9 @@ async function main() {
   remoto.deps.proveHttps = async () => true;
 
   const tenant = (slug) => ({ slug, name: 'Prova ' + slug, jwt_secret: 'j'.repeat(64), encryption_key: 'e'.repeat(64) });
-  const inserisci = (slug) => db.prepare("INSERT INTO tenants (name, slug, port, db_path, status) VALUES (?, ?, ?, ?, 'active')").run('Prova ' + slug, slug, 48000 + Math.floor(Math.random() * 900), '/data/' + slug + '/' + slug + '.db');
+  // la prima porta libera dopo l'ultima in uso (come fa l'API per i tenant nuovi): con una porta a caso due prove, o una delle porte fisse 485xx, potevano collidere e il test falliva ogni tanto
+  const portaProssima = () => (db.prepare('SELECT COALESCE(MAX(port), 47999) + 1 AS p FROM tenants').get().p)
+  const inserisci = (slug) => db.prepare("INSERT INTO tenants (name, slug, port, db_path, status) VALUES (?, ?, ?, ?, 'active')").run('Prova ' + slug, slug, portaProssima(), '/data/' + slug + '/' + slug + '.db');
 
   await test('la chiave SSH di Super Admin si crea una volta, la privata è cifrata nel database', async () => {
     const k = remoto.chiave(); ok(k.pubblica.startsWith('ssh-ed25519 '), 'pubblica'); ok(k.privata.includes('OPENSSH PRIVATE KEY'), 'privata');
