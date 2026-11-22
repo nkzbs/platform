@@ -2,6 +2,11 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.63 — Documenti: tipi doppi ripuliti
+
+- **«Ricevute» passa a «Ricevuta di pagamento» e «Prova» esce** dall'elenco dei tipi dei Documenti (nell'archivio sono le cartelle). Parte da sola una volta all'avvio (`pulizia-opzioni.js`, dichiarata in `seeds/pulizia-opzioni.json`): le righe che hanno «Ricevute» passano a «Ricevuta di pagamento» (che deve già esistere, altrimenti si riprova al prossimo avvio) e «Ricevute» esce dalle scelte; «Prova» esce **solo se nessuna riga la usa** (se qualcuna la usa resta, e si riprova). Prima di cambiare le righe i valori vecchi si salvano nella tabella `pulizia_opzioni_copia`; lo schema ha versione e storico (anche la bozza). Regole generiche: `unisci: { vecchio: nuovo }` e `togli_se_inutilizzata: [...]`. Test: `pulizia-opzioni.test.js`. **Non provato dal vivo**: serve «Aggiorna» su Finance.
+- Tolto dal repository un doppione accidentale (`avanzamento-aggiornamento 2.js`, copia identica creata fuori dal codice).
+
 ## 0.5.62 — Il promemoria «ricevuta» arriva anche ai moduli con lo schema a elenco piatto
 
 - **Correzione**: il blocco «requisiti per passare a Pagato» (ricevuta) non era arrivato su **Spese casa e Spese personali di Finance**, perché quei moduli hanno lo schema a elenco piatto (v2) e `campi-garantiti.js` sapeva aggiungere i blocchi solo agli schemi v3, ma li segnava lo stesso come fatti. Ora per uno schema v2 il blocco entra in `state_requirements`; la chiave di «fatto» è cambiata (`blocco2:`), così su Finance si riprova una volta all'avvio. Test: caso v2 in `campi-garantiti.test.js`. **Verificato sul vero Finance** (solo lettura) prima della correzione: il modulo Fornitori c'è con 20 record e il creditore dei piani suggerisce dalla lista; il campo «Ricevuta di pagamento» c'è. Serve «Aggiorna» su Finance.

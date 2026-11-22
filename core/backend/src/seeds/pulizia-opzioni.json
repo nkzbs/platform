@@ -1,0 +1,8 @@
+{
+  "documenti": {
+    "tipo": {
+      "unisci": { "Ricevute": "Ricevuta di pagamento" },
+      "togli_se_inutilizzata": ["Prova"]
+    }
+  }
+}

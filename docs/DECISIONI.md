@@ -2,6 +2,11 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.63 — 22 novembre 2026
+
+- **I tipi doppi si puliscono dal codice, con copia, e non da un accesso a mano ai dati**: col token revocato non si scrive più su Finance dal Mac, e una pulizia che parte da sola all'«Aggiorna» è verificabile con un test e ripetibile su un altro tenant. Le righe che cambiano si salvano prima; «Prova» non si toglie se qualcuno la usa.
+- **Le date di pagamento mancanti restano vuote**: l'abbinamento dell'estratto conto (`bank-import.js`) legge `data_pagamento`; date inventate sulle 310 spese vecchie potrebbero produrre abbinamenti sbagliati a gennaio.
+
 ## 0.5.61 — 22 novembre 2026
 
 - **L'aggiornamento di un tenant si può ridurre e continua in background**: la finestra bloccante obbligava a stare fermi per minuti (la costruzione dell'immagine è la parte lunga). La barra è una **stima**, non una misura: il server non conosce la percentuale; meglio una barra onesta che sale per tappe riconoscibili che un numero finto preciso.

@@ -174,7 +174,7 @@ app.use('/__root_public', rootPublicRouter);
 
 app.get('/health', (req, res) => res.json({
   status: 'ok',
-  version: '0.5.62',
+  version: '0.5.63',
   tenant: process.env.TENANT_SLUG || 'unknown',
   name: process.env.TENANT_NAME || 'Platform Core'
 }));
@@ -252,6 +252,7 @@ require('./record-owner').adoptOrphans();
 require('./legacy-cleanup').removeStubModules();
 if (moduleRoles.seedIfEmpty()) console.log('Ruoli dei moduli: dichiarati per i moduli di finanza già presenti');
 if (require('./ritocchi-schema').apply()) console.log('Moduli: ritoccati i blocchi dichiarati (es. nome delle rate)');
+if (require('./pulizia-opzioni').apply()) console.log('Moduli: ripulite le scelte doppie o di prova dichiarate');
 if (require('./moduli-garantiti').apply()) console.log('Moduli: creati quelli dichiarati dove mancavano');
 { const cg = require('./campi-garantiti'); if (cg.apply() + cg.applyBlocchi()) console.log('Moduli: aggiunti i campi e i blocchi dichiarati dove mancavano'); }
 if (features.seedIfEmpty()) console.log('Funzioni: tenant con moduli di finanza, funzioni accese; le altre restano spente');
