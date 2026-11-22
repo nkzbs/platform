@@ -205,6 +205,7 @@ docker logs --tail 50 super-admin-backend
 
 - Mai committare `.env`, `*.db`, né il contenuto di `deploy-secrets/`.
 - Prima di importare o correggere dati in un tenant, salva una copia dei record interessati (per Finance: `~/Desktop/platform-backup-nas/finance-prima-<cosa>-<data>.json`) e fai sempre una prova senza scrivere.
+- Per cambiare lo stato di alcune righe di un tenant (es. rate con lo stato vuoto) c'è `scripts/imposta-stato.js`: prova a secco di default, con `--applica` salva prima la copia in `~/Desktop/platform-backup-nas/finance-prima-stato-<data>.json`, scrive e rilegge. Usa `PLATFORM_URL` e `PLATFORM_API_TOKEN` (Il mio account → Token API); il token non va scritto in file né in chat.
 - Dopo ogni deploy di Finance verifica i numeri che contano (per esempio `/api/insights`) confrontandoli con quelli di prima: se il deploy è stato saltato il confronto non prova niente.
 - Lo script `redeploy-nas.sh` si lancia solo con i test verdi (`cd core/backend && npm test`). Non concatenare i comandi con `;`: usa `&&`.
 - Il Mac non è affidabile per costruire le immagini (Docker Desktop può bloccarsi scaricando le immagini base
