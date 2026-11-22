@@ -26,6 +26,13 @@ Spunta man mano; se qualcosa non torna, annota cosa hai visto (schermata e passo
 
 - [ ] **Smista → «Sposta in un altro modulo»**: su una riga in coda scegli la destinazione (Casa ↔ Personale): il pannello elenca ciò che non passerebbe; dopo la conferma la riga è nell'altra coda, ancora «da smistare».
 
+## 2a. Rate, ricevute e competenza (0.5.49)
+
+- [x] **Piano a rate** (Smista → «Dividi in rate»): funziona (provato dal vivo il 22/11/2026).
+- [ ] **Ricevuta di pagamento**: su una spesa e su una rata di Spese casa/personali c'è il campo «Ricevuta di pagamento»; carica un PDF e riaprilo.
+- [ ] **Trasforma in rate**: su una spesa «da pagare», scheda **Azioni** → «Trasforma in rate»: la spesa è sostituita dal piano e dalle rate, il PDF è sulla prima. Su una spesa pagata la voce non compare.
+- [ ] **Competenza (cambio al 27)**: una spesa **nuova** con scadenza 15/11 ha data 15/11; con scadenza 27/11 o dopo ha data **01/12**. Cambiando la scadenza a mano la data la segue; se cambi a mano anche la data, vale la tua. Le righe già esistenti non cambiano.
+
 ## 2b. Riepilogo mensile
 
 - [ ] Mostra **tutte** le voci: Spendibile, Entrate, Uscite, Pagato, Da pagare, Fissa, Variabile, **Previsto Carta e Previsto Conto anche a 0,00 €**.
