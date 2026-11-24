@@ -14,6 +14,17 @@ const os = require('os');
 const path = require('path');
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
+const attendi = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Una richiesta che, se il server risponde «troppe richieste» (429), aspetta (il tempo che dice, altrimenti 30 secondi) e riprova: il limite del server non deve fermare un lavoro lungo.
+async function conRiprova(url, opzioni, { tentativi = 20, pausa = attendi } = {}) {
+  for (let i = 0; ; i++) {
+    const res = await fetch(url, opzioni);
+    if (res.status !== 429 || i >= tentativi) return res;
+    const dichiarata = parseInt(res.headers.get('retry-after'), 10);
+    await pausa(Number.isFinite(dichiarata) && dichiarata > 0 ? Math.min(dichiarata, 120) * 1000 : 30000);
+  }
+}
 
 function leggiArgomenti(argv) {
   const a = { modulo: [], applica: false, statoPagato: 'pagato', giorno: 27, campoPagamento: 'data_pagamento', campoScadenza: 'scadenza', campoData: 'data', nome: 'data-pagamento' };
@@ -57,7 +68,7 @@ async function main() {
   const token = process.env.PLATFORM_API_TOKEN;
   if (!base || !token) throw new Error('Imposta PLATFORM_URL e PLATFORM_API_TOKEN (variabili d\'ambiente).');
   const H = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' };
-  const get = async (p) => { const r = await fetch(base + p, { headers: H }); if (!r.ok) throw new Error(p + ' → ' + r.status); return r.json(); };
+  const get = async (p) => { const r = await conRiprova(base + p, { headers: H }); if (!r.ok) throw new Error(p + ' → ' + r.status); return r.json(); };
   const oggi = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 
   console.log((a.applica ? 'APPLICO' : 'PROVA A SECCO (non scrive)') + ' — data di pagamento = il ' + a.giorno + ' del mese della scadenza, mai oltre oggi (' + oggi + ')');
@@ -84,7 +95,7 @@ async function main() {
   let ko = 0;
   for (const x of tutte) {
     const url = '/api/records/' + encodeURIComponent(x.modulo) + '/' + x.r.id;
-    const res = await fetch(base + url, { method: 'PUT', headers: H, body: JSON.stringify({ ...x.r.data, [a.campoPagamento]: x.nuova }) });
+    const res = await conRiprova(base + url, { method: 'PUT', headers: H, body: JSON.stringify({ ...x.r.data, [a.campoPagamento]: x.nuova }) });
     const dopo = res.ok ? (await get(url)).data : null;
     const ok = !!dopo && dopo[a.campoPagamento] === x.nuova && dopo._stato === a.statoPagato;
     if (!ok) { ko++; console.log('  #' + x.r.id + '  NON RIUSCITA (' + res.status + ')'); }
@@ -94,4 +105,4 @@ async function main() {
 }
 
 if (require.main === module) main().catch((e) => { console.error('Errore: ' + e.message); process.exit(1); });
-module.exports = { leggiArgomenti, calcola, giornoDiPagamento };
+module.exports = { leggiArgomenti, calcola, giornoDiPagamento, conRiprova };

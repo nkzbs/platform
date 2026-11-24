@@ -32,7 +32,7 @@ const SCHEMA = { version: 3, steps: [F('descrizione', 'Descrizione', 'text'), F(
   { id: 't1', block_type: 'workflow_transition', from: 'da_pagare', to: 'pagato', label: 'Segna pagato' }] };
 
 async function main() {
-  const { calcola, giornoDiPagamento, leggiArgomenti } = require('../../../scripts/imposta-data-pagamento');
+  const { calcola, giornoDiPagamento, leggiArgomenti, conRiprova } = require('../../../scripts/imposta-data-pagamento');
 
   console.log('\n--- il calcolo ---');
   await test('il 27 del mese della scadenza; senza scadenza il mese della data; mai oltre oggi', async () => {
@@ -52,6 +52,18 @@ async function main() {
     const r = calcola(righe, a, '2026-11-24');
     assertEq(r.daFare.map((x) => [x.r.id, x.nuova]), [[1, '2026-03-27'], [2, '2026-04-27']]);
     assertEq(r.saltate.map((x) => x.id), [5]);
+  });
+  await test('«troppe richieste» (429): aspetta il tempo dichiarato e riprova; alla fine riesce, e un altro errore non fa riprovare', async () => {
+    const reale = global.fetch; const attese = []; let n = 0;
+    global.fetch = async () => (++n < 3 ? { status: 429, headers: { get: () => '7' } } : { status: 200, headers: { get: () => null } });
+    try {
+      const r = await conRiprova('http://x', {}, { pausa: async (ms) => { attese.push(ms); } });
+      assertEq(r.status, 200); assertEq(attese, [7000, 7000], 'ha aspettato 7 secondi due volte');
+      n = 0; global.fetch = async () => { n++; return { status: 500, headers: { get: () => null } }; };
+      assertEq((await conRiprova('http://x', {}, { pausa: async () => {} })).status, 500); assertEq(n, 1, 'un errore diverso non si riprova');
+      global.fetch = async () => ({ status: 429, headers: { get: () => null } }); const dormite = [];
+      assertEq((await conRiprova('http://x', {}, { tentativi: 2, pausa: async (ms) => { dormite.push(ms); } })).status, 429); assertEq(dormite, [30000, 30000], 'senza indicazioni 30 secondi, e dopo i tentativi si arrende');
+    } finally { global.fetch = reale; }
   });
   await test('opzioni: giorno fuori da 2–28 o nessun modulo → errore chiaro', async () => {
     let e1 = ''; try { leggiArgomenti(['--modulo', 'x', '--giorno', '31']); } catch (e) { e1 = e.message; } assertTrue(/giorno/.test(e1), e1);
