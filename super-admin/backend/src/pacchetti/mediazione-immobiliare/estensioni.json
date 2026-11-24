@@ -2903,6 +2903,36 @@
           "sezione": "Catasto e documenti"
         }
       ]
+    },
+    {
+      "key": "imu_abitazione_principale",
+      "_nota": "Campo «Abitazione principale / prima casa» (1 = sì; la formula accetta solo numeri, non caselle): l'IMU stimata va a zero (l'abitazione principale è esente). Non vale per le categorie A/1, A/8, A/9 (lusso): lì lascia il campo vuoto e metti l'aliquota 0,6 (la detrazione di 200 € non è calcolata). Cambia solo l'espressione della stima, già pubblicata.",
+      "richiede": {
+        "immobili": [
+          "imu_stima"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "imu_abitazione_principale",
+          "label": "Abitazione principale / prima casa (scrivi 1 se sì: IMU esente)",
+          "type": "number",
+          "sezione": "Catasto e documenti"
+        }
+      ],
+      "riscrivi": [
+        {
+          "block_type": "field",
+          "key": "imu_stima",
+          "proprieta": {
+            "expr": {
+              "da": "if(rendita_catastale > 0, round(rendita_catastale * 1.05 * if(imu_moltiplicatore > 0, imu_moltiplicatore, 160) * if(imu_aliquota_perc > 0, imu_aliquota_perc, 0.86) / 100, 2), 0)",
+              "a": "if(imu_abitazione_principale > 0, 0, if(rendita_catastale > 0, round(rendita_catastale * 1.05 * if(imu_moltiplicatore > 0, imu_moltiplicatore, 160) * if(imu_aliquota_perc > 0, imu_aliquota_perc, 0.86) / 100, 2), 0))"
+            }
+          }
+        }
+      ]
     }
   ],
   "clienti": [
@@ -4846,6 +4876,165 @@
           "proprieta": {
             "nascosta_nella_scheda": true
           }
+        }
+      ]
+    },
+    {
+      "key": "incarico_ricerca_in_scadenza",
+      "_nota": "Avvisa in campanella 30 e 7 giorni prima della «Scadenza dell'incarico» di ricerca; il giorno dopo la scadenza lo stato passa da solo a «Scaduto» (con un avviso). Non tocca gli incarichi già Conclusi, Rinunciati o Scaduti; uno stato rimasto vuoto conta come attivo.",
+      "richiede": {
+        "clienti": [
+          "nome",
+          "ricerca_scadenza",
+          "ricerca_incarico_stato"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "automation",
+          "label": "Incarico di ricerca in scadenza (30 giorni)",
+          "trigger": {
+            "evento": "schedulato",
+            "schedulazione": {
+              "tipo": "ogni_N_giorni",
+              "giorni": 1,
+              "ora": 6
+            },
+            "modalita": "per_record",
+            "filtro": [
+              {
+                "campo": "ricerca_incarico_stato",
+                "op": "!=",
+                "valore": "Concluso"
+              },
+              {
+                "campo": "ricerca_incarico_stato",
+                "op": "!=",
+                "valore": "Rinunciato"
+              },
+              {
+                "campo": "ricerca_incarico_stato",
+                "op": "!=",
+                "valore": "Scaduto"
+              },
+              {
+                "campo": "ricerca_scadenza",
+                "op": "==",
+                "valore": "_oggi_piu:30"
+              }
+            ]
+          },
+          "azioni": [
+            {
+              "target": "__interno__",
+              "azione": "notifica_interna",
+              "config": {
+                "message": "L'incarico di ricerca di {{nome}} scade tra 30 giorni ({{ricerca_scadenza}}): proponi il rinnovo o chiudilo.",
+                "roles": []
+              }
+            }
+          ]
+        },
+        {
+          "block_type": "automation",
+          "label": "Incarico di ricerca in scadenza (7 giorni)",
+          "trigger": {
+            "evento": "schedulato",
+            "schedulazione": {
+              "tipo": "ogni_N_giorni",
+              "giorni": 1,
+              "ora": 6
+            },
+            "modalita": "per_record",
+            "filtro": [
+              {
+                "campo": "ricerca_incarico_stato",
+                "op": "!=",
+                "valore": "Concluso"
+              },
+              {
+                "campo": "ricerca_incarico_stato",
+                "op": "!=",
+                "valore": "Rinunciato"
+              },
+              {
+                "campo": "ricerca_incarico_stato",
+                "op": "!=",
+                "valore": "Scaduto"
+              },
+              {
+                "campo": "ricerca_scadenza",
+                "op": "==",
+                "valore": "_oggi_piu:7"
+              }
+            ]
+          },
+          "azioni": [
+            {
+              "target": "__interno__",
+              "azione": "notifica_interna",
+              "config": {
+                "message": "L'incarico di ricerca di {{nome}} scade tra 7 giorni ({{ricerca_scadenza}}).",
+                "roles": []
+              }
+            }
+          ]
+        },
+        {
+          "block_type": "automation",
+          "label": "Incarico di ricerca scaduto",
+          "trigger": {
+            "evento": "schedulato",
+            "schedulazione": {
+              "tipo": "ogni_N_giorni",
+              "giorni": 1,
+              "ora": 6
+            },
+            "modalita": "per_record",
+            "filtro": [
+              {
+                "campo": "ricerca_incarico_stato",
+                "op": "!=",
+                "valore": "Concluso"
+              },
+              {
+                "campo": "ricerca_incarico_stato",
+                "op": "!=",
+                "valore": "Rinunciato"
+              },
+              {
+                "campo": "ricerca_incarico_stato",
+                "op": "!=",
+                "valore": "Scaduto"
+              },
+              {
+                "campo": "ricerca_scadenza",
+                "op": "<",
+                "valore": "_oggi_"
+              }
+            ]
+          },
+          "azioni": [
+            {
+              "target": "__interno__",
+              "azione": "notifica_interna",
+              "config": {
+                "message": "L'incarico di ricerca di {{nome}} è scaduto il {{ricerca_scadenza}}: lo stato passa a «Scaduto».",
+                "roles": []
+              }
+            },
+            {
+              "target": "__interno__",
+              "azione": "aggiorna_record",
+              "config": {
+                "modulo": "clienti",
+                "id_field": "__self__",
+                "campo": "ricerca_incarico_stato",
+                "operazione": "set",
+                "valore": "Scaduto"
+              }
+            }
+          ]
         }
       ]
     }

@@ -90,6 +90,7 @@
         "controllo_catastale_esito",
         "imu_moltiplicatore",
         "imu_aliquota_perc",
+        "imu_abitazione_principale",
         "imu_stima"
       ],
       "Spese e vincoli": [

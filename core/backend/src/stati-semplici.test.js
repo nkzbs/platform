@@ -163,6 +163,33 @@ const PAC = path.join(__dirname, '../../../super-admin/backend/src/pacchetti/med
     eq(val({ rendita_catastale: 1000, imu_moltiplicatore: 55, imu_aliquota_perc: 1.06 }), 612.15);
     eq(val({}), 0);
   });
+  await test('IMU prima casa: con il campo «Abitazione principale» a 1 la stima va a zero (anche su un tenant dove la stima era già pubblicata)', async () => {
+    const { evaluateFormula } = require('./formula');
+    mk('immobili_p', [F('rendita_catastale', 'currency')]);
+    eq((await applicaSeed({ immobili_p: [{ ...blocco('immobili', 'stima_imu'), richiede: { immobili_p: ['rendita_catastale'] } }] }, { tipo: 'estensione' })).map((e) => e.esito), ['applicato']);
+    eq((await applicaSeed({ immobili_p: [{ ...blocco('immobili', 'imu_abitazione_principale'), richiede: { immobili_p: ['imu_stima'] } }] }, { tipo: 'estensione' })).map((e) => e.esito), ['applicato']);
+    const campo = steps('immobili_p').find((x) => x.key === 'imu_stima');
+    eq(steps('immobili_p').find((x) => x.key === 'imu_abitazione_principale').type, 'number');
+    const val = (d) => evaluateFormula(campo.expr, db, { currentModule: 'immobili_p', currentRecordId: 1, currentRecordData: d }).value;
+    eq(val({ rendita_catastale: 1000 }), 1444.8);
+    eq(val({ rendita_catastale: 1000, imu_abitazione_principale: 0 }), 1444.8);
+    eq(val({ rendita_catastale: 1000, imu_abitazione_principale: 1 }), 0);
+  });
+  await test('Incarico di ricerca: avvisi a 30 e 7 giorni dalla scadenza e passaggio a «Scaduto» il giorno dopo', async () => {
+    mk('clienti_s', [F('nome'), F('ricerca_scadenza', 'date'), F('ricerca_incarico_stato')]);
+    eq((await applicaSeed({ clienti_s: [{ ...blocco('clienti', 'incarico_ricerca_in_scadenza'), richiede: { clienti_s: ['nome', 'ricerca_scadenza', 'ricerca_incarico_stato'] } }] }, { tipo: 'estensione' })).map((e) => e.esito), ['applicato']);
+    const aus = steps('clienti_s').filter((x) => x.block_type === 'automation');
+    eq(aus.length, 3);
+    const { matchesFiltro } = require('./scheduler');
+    const giorno = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+    const passa = (au, d) => au.trigger.filtro.every((f) => matchesFiltro(d, f));
+    const [a30, a7, scaduto] = aus;
+    eq([passa(a30, { ricerca_scadenza: giorno(30), ricerca_incarico_stato: 'Attivo' }), passa(a30, { ricerca_scadenza: giorno(29), ricerca_incarico_stato: 'Attivo' })], [true, false]);
+    eq(passa(a7, { ricerca_scadenza: giorno(7) }), true); // stato rimasto vuoto: conta come attivo
+    eq(passa(a7, { ricerca_scadenza: giorno(7), ricerca_incarico_stato: 'Concluso' }), false);
+    eq([passa(scaduto, { ricerca_scadenza: giorno(-1), ricerca_incarico_stato: 'Attivo' }), passa(scaduto, { ricerca_scadenza: giorno(-1), ricerca_incarico_stato: 'Scaduto' }), passa(scaduto, { ricerca_scadenza: giorno(0) }), passa(scaduto, {})], [true, false, false, false]);
+    eq(scaduto.azioni[1].config.valore, 'Scaduto');
+  });
   await test('IMU: se la rendita è un campo di testo il blocco non si applica (niente errore di pubblicazione a ogni avvio)', async () => {
     mk('immobili_t', [F('rendita_catastale')]);
     eq((await applicaSeed({ immobili_t: [{ ...blocco('immobili', 'stima_imu'), richiede: { immobili_t: ['rendita_catastale'] } }] }, { tipo: 'estensione' })).map((e) => e.esito), ['non applicabile']);

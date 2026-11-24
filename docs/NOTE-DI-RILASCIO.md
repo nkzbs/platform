@@ -11,6 +11,13 @@ Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la 
 - Tolte quattro copie identiche con «2» nel nome (file di sincronizzazione finiti nel repository).
 - Provato dal vivo su una copia locale: selettore, salvataggio, i quattro casi (pastello/vetro × chiaro/scuro) e il colore dei riquadri. **Non provato**: le pagine dei moduli con dati veri e il telefono. La prima passata copre forma, sfondo e riquadri della Dashboard; le schermate con colori scritti a mano restano come sono e si ritoccano dopo averle viste.
 
+## 0.5.69 — Incarico di ricerca: avvisi di scadenza; IMU: prima casa (pacchetto 45)
+
+- **Incarico di ricerca in scadenza**: la campanella avvisa 30 e 7 giorni prima della «Scadenza dell'incarico»; il giorno dopo la scadenza lo stato passa da solo a «Scaduto» (con un avviso). Non tocca gli incarichi Conclusi, Rinunciati o già Scaduti; uno stato rimasto vuoto conta come attivo. Nuovo blocco `incarico_ricerca_in_scadenza` (3 automazioni giornaliere alle 6).
+- **Filtro `_oggi_piu:N`** nelle automazioni schedulate per record: «la data è tra N giorni». `matchesFiltro` è esportato dallo scheduler per i test.
+- **IMU prima casa**: nuovo campo «Abitazione principale / prima casa (scrivi 1 se sì: IMU esente)» nella sezione Catasto e documenti; con 1 la stima è 0. È un numero e non una casella perché la formula accetta solo numeri. Non vale per A/1, A/8, A/9 (lasciare vuoto e mettere aliquota 0,6; la detrazione di 200 € non è calcolata). La formula già pubblicata si riscrive da sola (`riscrivi`).
+- Provato con i test (stati-semplici 18, scheda-completa, moduli-verticale, tre-tipi-cliente, documento-da-modello); **non provato dal vivo** su zucca (campanella, passaggio a Scaduto).
+
 ## Pacchetto 44 (Mediazione immobiliare) — clausola risolutiva espressa nella Proposta
 
 - **Proposta irrevocabile d'acquisto**: Art. 5, nuovo comma 3, clausola risolutiva espressa (art. 1456 c.c.): la proposta è automaticamente risolta in caso di morte del proponente. PDF rigenerato con `scripts/genera-pdf-compilabili.js`; solo il pacchetto cambia (versione 44), il core resta 0.5.68. Su zucca dal 24/11 (Super Admin ridistribuito, poi Aggiorna).

@@ -16,6 +16,7 @@
 //
 // Filtro per trigger.modalita === 'per_record' — token speciali per f.valore:
 //   '_oggi_'       — data di oggi (YYYY-MM-DD)
+//   '_oggi_piu:N'  — data tra N giorni (YYYY-MM-DD): «scade tra 30 giorni» = campo == '_oggi_piu:30'
 //   '_ore_fa:N'    — timestamp di N ore fa (per confronti su '_creato_at')
 // '_creato_at' è un campo di sistema iniettato automaticamente in ogni record
 // scansionato (records.created_at) — filtrabile come qualunque altro campo, utile
@@ -112,6 +113,7 @@ function matchesFiltro(d, f) {
   let valore = f.valore
   if (valore === '_giorno_oggi_') return matchesGiornoOggi(d, f)
   if (valore === '_oggi_') valore = new Date().toISOString().slice(0, 10)
+  else if (typeof valore === 'string' && /^_oggi_piu:\d+$/.test(valore)) valore = new Date(Date.now() + parseInt(valore.split(':')[1], 10) * 86400000).toISOString().slice(0, 10)
   else if (typeof valore === 'string' && /^_ore_fa:\d+$/.test(valore)) {
     const ore = parseInt(valore.split(':')[1], 10)
     valore = sqliteDatetime(new Date(Date.now() - ore * 3600 * 1000))
@@ -206,4 +208,4 @@ function startScheduler() {
   console.log('Scheduler trigger temporale avviato (intervallo: 1 min)');
 }
 
-module.exports = { startScheduler, eseguiAutomazioneSchedulata };
+module.exports = { startScheduler, eseguiAutomazioneSchedulata, matchesFiltro };
