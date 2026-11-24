@@ -2,6 +2,12 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## Riordino interno — rotte dei record divise per argomento (nessun cambio di versione)
+
+- `routes/records.js` da **1.398 a 453 righe**: ora monta cinque file (`records-viste`, `-csv`, `-transizioni`, `-documenti`, `-allegati`) più `records-helpers`. Le rotte restano agli stessi indirizzi e nello stesso ordine; il codice è stato spostato senza modifiche. `records.js` riesporta le funzioni che usavano altri moduli.
+- Verifica completa verde (lint, test di core, Super Admin e frontend, compilazione). Un test, «logo in versione chiara», è fallito una volta con `fetch failed` e poi passato 3 volte su 3: instabilità del test, non del riordino.
+- **Non è stato toccato altro**: i file grandi restanti (Builder `index.jsx` 3.567 righe, `site-renderer.js` 3.022, `SitoWebPage.jsx` 2.093, `tenants.js` 1.443) non servono ora; si dividono solo se ci si lavora spesso.
+
 ## 0.5.68 — Stile grafico «Bento» (pastello e vetro), chiaro e scuro
 
 - **Nuova impostazione «Stile»** in Impostazioni → Aspetto e funzioni: **Classico** (com'è sempre stata, resta il predefinito), **Bento pastello** (riquadri pieni, tinte tenui) e **Bento vetro** (riquadri trasparenti su sfondo sfumato). Si salva per ogni tenant (`tenant_settings.stile_app`, validato da `lib/stili.js`, esce in `/api/tenant-info`) e si applica subito, senza ricaricare.

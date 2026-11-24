@@ -2,6 +2,12 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## Riordino di routes/records.js — 24 novembre 2026
+
+- **Dividere per argomento, non per dimensione**: `records.js` cresceva a ogni funzione (competenza, rate, ricevute) perché ogni controllo sulle righe veniva aggiunto nello stesso file. Ora ogni argomento ha il suo; una rotta nuova va nel suo file.
+- **Spostare senza cambiare**: solo spostamento di blocchi, stessi indirizzi e stesso ordine di montaggio (le rotte con `/:slug/:id` vanno dopo quelle con parole fisse). Garanzie: lint (nomi mancanti), 197 file di test, `verifica.sh`.
+- **Non rifare il resto adesso**: i file più grandi (Builder, renderer del sito) cambiano di rado, quindi dividerli costa più di quanto rende.
+
 ## 0.5.68 — 24 novembre 2026 (stile grafico Bento)
 
 - **Lo stile è un'impostazione per tenant, non un tema separato**: `stile_app` (vuoto = Classico) in Aspetto, come il carattere. Perché: l'utente voleva un tema «applicabile» che non rompa nulla; con il valore vuoto il CSS non cambia di una riga. Per Super Admin, che non ha impostazioni salvate sul server, la scelta resta nel browser (localStorage).
