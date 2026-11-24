@@ -9,17 +9,21 @@ import Icon from './Icon'
 // da bot-timbrature.js), nessun nome di modulo scritto qui. Scrive con la
 // stessa API /records di sempre — stessi permessi di chiunque altro,
 // "solo propri" per chi non è admin compreso.
-// Due righe sempre visibili, data e orario sempre modificabili PRIMA di
-// premere (non un tocco cieco sull'ora corrente): Entrata registra una
-// nuova riga, Uscita chiude l'ultimo turno aperto. Niente stati nascosti
-// o pagine a parte per l'uso di tutti i giorni (feedback dell'utente,
-// due versioni precedenti erano troppo complicate).
+// Un solo modulo sempre visibile (data e orario modificabili PRIMA di
+// premere, non un tocco cieco sull'ora corrente) e un interruttore
+// Entrata / Uscita: Entrata registra una nuova riga, Uscita chiude il turno
+// aperto. L'interruttore segue lo stato (al lavoro → Uscita) ma si cambia a
+// mano. Contatore grande delle ore di oggi (24/11/2026, scelta «1» tra sei
+// bozze in docs/mockup-timbrature-ef.html). Niente stati nascosti o pagine a
+// parte per l'uso di tutti i giorni (feedback dell'utente, due versioni
+// precedenti erano troppo complicate).
 const pad2 = (n) => String(n).padStart(2, '0')
 const oggiLocale = () => { const d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) }
 const oraLocale = () => { const d = new Date(); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()) }
 const shiftDay = (iso, delta) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + delta); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) }
 const toMin = (hhmm) => { if (!hhmm) return null; const [h, m] = String(hhmm).slice(0, 5).split(':').map(Number); return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : null }
 const hhmm = (v) => (v ? String(v).slice(0, 5) : '')
+const ore = (min) => { const t = Math.max(0, Math.round(min || 0)); return Math.floor(t / 60) + 'h ' + pad2(t % 60) + 'm' } // contatore grande: sempre «Xh YYm»
 const durata = (min) => { if (min == null || min < 0) return '—'; const h = Math.floor(min / 60), m = Math.round(min % 60); return (h ? h + 'h ' : '') + (m || !h ? m + 'm' : '') }
 
 export default function TimbratureWidget({ token, user, onNavigate }) {
@@ -28,10 +32,10 @@ export default function TimbratureWidget({ token, user, onNavigate }) {
   const [rows, setRows] = useState([])
   const [busy, setBusy] = useState('') // '' | 'entrata' | 'uscita'
   const [error, setError] = useState('')
-  const [eData, setEData] = useState(oggiLocale())
-  const [eOra, setEOra] = useState(oraLocale())
-  const [uData, setUData] = useState(oggiLocale())
-  const [uOra, setUOra] = useState(oraLocale())
+  const [modo, setModo] = useState(null) // null = segue lo stato (al lavoro → uscita), altrimenti 'entrata' | 'uscita' scelto a mano
+  const [dataScelta, setDataScelta] = useState(null) // null = oggi (o, per un'uscita, il giorno del turno aperto)
+  const [ora, setOra] = useState(oraLocale())
+  const [, ticchetta] = useState(0)
 
   const load = async () => {
     const list = await api.get('/module-roles/presenze')
@@ -43,6 +47,7 @@ export default function TimbratureWidget({ token, user, onNavigate }) {
     }
   }
   useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { const t = setInterval(() => ticchetta((n) => n + 1), 30000); return () => clearInterval(t) }, []) // il contatore avanza da solo mentre si è al lavoro
 
   if (mod === undefined) return <div className="p-5 text-sm text-gray-600">Caricamento…</div>
   if (mod === null) return (
@@ -62,68 +67,73 @@ export default function TimbratureWidget({ token, user, onNavigate }) {
   let totaleMin = turniOggi.reduce((t, r) => { const a = toMin(r.data[mod.inizio]), b = toMin(r.data[mod.fine]); return t + (a != null && b != null ? Math.max(0, b - a) : 0) }, 0)
   if (aperta && String(aperta.data[mod.data]).slice(0, 10) === oggi) totaleMin += Math.max(0, toMin(oraLocale()) - toMin(aperta.data[mod.inizio]))
 
+  const modoEff = modo || (aperta ? 'uscita' : 'entrata')
+  const data = dataScelta || (modoEff === 'uscita' && aperta ? String(aperta.data[mod.data]).slice(0, 10) : oggi)
+  const riparti = () => { setModo(null); setDataScelta(null); setOra(oraLocale()); load() }
+
   const registraEntrata = async () => {
-    if (!eData || !eOra) { setError('Data e orario di entrata obbligatori'); return }
+    if (!data || !ora) { setError('Data e orario di entrata obbligatori'); return }
     setBusy('entrata'); setError('')
-    const res = await api.post('/records/' + mod.module_slug, { [mod.data]: eData, [mod.inizio]: eOra })
+    const res = await api.post('/records/' + mod.module_slug, { [mod.data]: data, [mod.inizio]: ora })
     setBusy('')
     if (!res.ok) { setError((res.data && res.data.error) || 'Non riuscito'); return }
-    setEData(oggiLocale()); setEOra(oraLocale()); load()
+    riparti()
   }
-  // La data della riga «Uscita» non sposta il turno a un altro giorno (un turno ha una sola data):
+  // La data dell'uscita non sposta il turno a un altro giorno (un turno ha una sola data):
   // sceglie QUALE turno aperto chiudere, quando ce n'è più di uno (es. uno dimenticato di ieri).
-  const daChiudere = aperte.find((r) => String(r.data[mod.data]).slice(0, 10) === uData) || null
+  const daChiudere = aperte.find((r) => String(r.data[mod.data]).slice(0, 10) === data) || null
   const registraUscita = async () => {
-    if (!uData || !uOra) { setError('Data e orario di uscita obbligatori'); return }
+    if (!data || !ora) { setError('Data e orario di uscita obbligatori'); return }
     if (!daChiudere) { setError('Nessun turno aperto in quella data.'); return }
     setBusy('uscita'); setError('')
-    const res = await api.put('/records/' + mod.module_slug + '/' + daChiudere.id, { ...daChiudere.data, [mod.fine]: uOra })
+    const res = await api.put('/records/' + mod.module_slug + '/' + daChiudere.id, { ...daChiudere.data, [mod.fine]: ora })
     setBusy('')
     if (!res.ok) { setError((res.data && res.data.error) || 'Non riuscito'); return }
-    setUData(oggiLocale()); setUOra(oraLocale()); load()
+    riparti()
   }
 
-  const inp = 'bg-gray-900 border border-gray-800 rounded-lg px-2 py-1.5 text-sm text-ink min-w-0'
+  const inp = 'bg-surface-input border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-ink min-w-0 w-full'
+  const interruttore = (chiave, etichetta, attivoCls) => (
+    <button type="button" role="radio" aria-checked={modoEff === chiave} onClick={() => setModo(chiave)}
+      className={'py-2 rounded-lg text-sm transition ' + (modoEff === chiave ? attivoCls + ' text-white font-semibold' : 'text-gray-400 hover:text-ink')}>{etichetta}</button>
+  )
 
   return (
     <div className="p-5">
-      <div className="flex items-center justify-between gap-3 mb-3">
+      <div className="flex items-center justify-between gap-3 mb-1">
         <div className="flex items-center gap-2">
           <Icon name="clock" size={15} className={aperta ? 'text-green-500' : 'text-gray-500'} />
           <h2 className="text-sm font-semibold text-ink">Timbrature</h2>
         </div>
-        <div className="text-xs text-gray-500">Oggi: <span className="text-ink font-medium">{durata(totaleMin)}</span></div>
+        <span className={'inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full ' + (aperta ? 'bg-green-900/30 text-green-400' : 'bg-surface-input text-gray-500')}>
+          <span className={'w-2 h-2 rounded-full ' + (aperta ? 'bg-green-500' : 'bg-gray-600')} />
+          {aperta ? 'Al lavoro dalle ' + hhmm(aperta.data[mod.inizio]) : 'Non al lavoro'}
+        </span>
       </div>
+      <div className="mt-2 text-4xl font-bold text-ink tracking-tight leading-none tabular-nums">{ore(totaleMin)}</div>
+      <div className="text-xs text-gray-500 mt-1 mb-3">ore di oggi</div>
       {error && <div className="text-xs text-red-400 bg-red-900/20 border border-red-900/40 rounded-lg p-2.5 mb-3">{error}</div>}
-      <div className={'text-xs mb-3 ' + (aperta ? 'text-green-400' : 'text-gray-500')}>{aperta ? '🟢 Al lavoro dalle ' + hhmm(aperta.data[mod.inizio]) : '⚪ Non al lavoro'}</div>
 
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-gray-400 w-14 flex-shrink-0">Entrata</span>
-          <input type="date" value={eData} onChange={(e) => setEData(e.target.value)} className={inp + ' flex-1'} />
-          <input type="time" value={eOra} onChange={(e) => setEOra(e.target.value)} className={inp + ' w-24'} />
-          <button onClick={registraEntrata} disabled={!!busy} className="bg-accent hover:opacity-90 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition flex-shrink-0">
-            {busy === 'entrata' ? '...' : 'Entra'}
-          </button>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-gray-400 w-14 flex-shrink-0">Uscita</span>
-          <input type="date" value={uData} onChange={(e) => setUData(e.target.value)} className={inp + ' flex-1'} />
-          <input type="time" value={uOra} onChange={(e) => setUOra(e.target.value)} className={inp + ' w-24'} />
-          <button onClick={registraUscita} disabled={!!busy || !daChiudere} title={daChiudere ? '' : 'Nessun turno aperto in quella data'} className="bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition flex-shrink-0">
-            {busy === 'uscita' ? '...' : 'Esci'}
-          </button>
-        </div>
+      <div role="radiogroup" aria-label="Cosa registrare" className="grid grid-cols-2 gap-0.5 p-0.5 rounded-xl bg-surface-input border border-gray-800 mb-3">
+        {interruttore('entrata', 'Entrata', 'bg-accent')}
+        {interruttore('uscita', 'Uscita', 'bg-red-700')}
       </div>
+      <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-2 mb-3">
+        <input type="date" aria-label="Data" value={data} onChange={(e) => setDataScelta(e.target.value)} className={inp} />
+        <input type="time" aria-label="Orario" value={ora} onChange={(e) => setOra(e.target.value)} className={inp} />
+      </div>
+      {modoEff === 'entrata'
+        ? <button onClick={registraEntrata} disabled={!!busy} className="w-full bg-accent hover:opacity-90 disabled:opacity-50 text-white py-2.5 rounded-xl text-sm font-semibold transition">{busy === 'entrata' ? '...' : 'Registra entrata'}</button>
+        : <button onClick={registraUscita} disabled={!!busy} className="w-full bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white py-2.5 rounded-xl text-sm font-semibold transition">{busy === 'uscita' ? '...' : 'Registra uscita'}</button>}
 
       {turniOggi.length > 0 && (
-        <div className="text-xs text-gray-500 mt-3 pt-3 border-t border-gray-800 space-y-0.5">
-          {turniOggi.map((r) => <div key={r.id}>{hhmm(r.data[mod.inizio])} – {hhmm(r.data[mod.fine]) || 'in corso'}</div>)}
+        <div className="text-xs text-gray-500 mt-3 pt-3 border-t border-gray-800 flex flex-wrap gap-x-3 gap-y-0.5">
+          {turniOggi.map((r) => <span key={r.id}>{hhmm(r.data[mod.inizio])} – {hhmm(r.data[mod.fine]) || 'in corso'}</span>)}
         </div>
       )}
       {onNavigate && (
         <button type="button" onClick={() => onNavigate(mod.module_slug)} className="text-xs text-gray-500 hover:text-accent transition mt-3 underline">
-          Apri il modulo (modifica o elimina un turno) →
+          Modifica o elimina un turno
         </button>
       )}
     </div>

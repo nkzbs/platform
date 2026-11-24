@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Timbrature — E e F mescolate</title>
+<style>
+  :root { --bg:#f4f1ff; --card:#fff; --ink:#231f3b; --ink2:#6c6788; --line:#e3def4; --field:#f6f4fc; --blu:#2f5fea; --ros:#c0485a; --ver:#0f7a55; --verbg:#d8f4df; --gri:#b7b3cc; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0e0d17; --card:#1a1925; --ink:#f1efff; --ink2:#a9a4c4; --line:#2e2c42; --field:#14131d; --blu:#5b8def; --ros:#e0697a; --ver:#52d890; --verbg:#1b3b29; --gri:#6c6788; } }
+  * { box-sizing:border-box; margin:0; }
+  body { font:15px/1.4 system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--ink); padding:16px; max-width:460px; margin:0 auto; }
+  h1 { font-size:19px; margin:4px 0; } .sub { color:var(--ink2); font-size:13px; margin-bottom:18px; }
+  .cap { font-size:13px; font-weight:600; margin:24px 0 4px; } .cap small { font-weight:400; color:var(--ink2); }
+  .stato { font-size:12px; color:var(--ink2); margin:0 0 8px; }
+  .w { background:var(--card); border-radius:22px; padding:16px; box-shadow:0 6px 20px rgba(60,50,120,.08); margin-bottom:6px; }
+  .h { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+  .h b { font-size:16px; } .pill { font-size:12px; padding:4px 10px; border-radius:99px; background:var(--field); color:var(--ink2); display:inline-flex; align-items:center; gap:6px; }
+  .pill.on { background:var(--verbg); color:var(--ver); } .dot { width:8px; height:8px; border-radius:50%; background:var(--gri); } .pill.on .dot { background:var(--ver); }
+  .big { font-size:42px; font-weight:700; letter-spacing:-1.2px; line-height:1.05; margin-top:6px; } .big small { font-size:13px; font-weight:500; letter-spacing:0; color:var(--ink2); display:block; margin-top:2px; }
+  .f { background:var(--field); border:1px solid var(--line); border-radius:12px; padding:11px 12px; font-size:15px; min-width:0; }
+  .g { display:grid; gap:8px; } .g2 { grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); }
+  .b { border:0; border-radius:12px; padding:13px 0; font-size:15px; font-weight:600; color:#fff; text-align:center; background:var(--blu); } .b.out { background:var(--ros); }
+  .seg { display:grid; grid-template-columns:1fr 1fr; background:var(--field); border:1px solid var(--line); border-radius:12px; padding:3px; margin:14px 0 10px; }
+  .seg div { text-align:center; padding:9px 0; border-radius:9px; color:var(--ink2); } .seg .on { background:var(--blu); color:#fff; font-weight:600; } .seg .on.out { background:var(--ros); }
+  .lnk { display:block; font-size:12px; color:var(--ink2); text-decoration:underline; margin-top:12px; }
+  .oggi { font-size:13px; color:var(--ink2); margin:10px 0 0; } .oggi b { color:var(--ink); font-weight:600; }
+  .top { display:flex; justify-content:space-between; align-items:flex-end; gap:12px; }
+  .nota { font-size:12px; color:var(--ink2); margin-top:26px; }
+</style>
+</head>
+<body>
+<h1>Timbrature: E e F mescolate</h1>
+<p class="sub">Contatore grande (F) più interruttore Entrata o Uscita con un solo modulo (E). Tre modi di mescolarli. Larghezza telefono, chiaro e scuro automatici.</p>
+
+<p class="cap">1 · il contatore sopra, un solo modulo sotto <small>(il mix più semplice)</small></p>
+<p class="stato">Non al lavoro. Interruttore su Entrata.</p>
+<div class="w">
+  <div class="h"><b>Timbrature</b><span class="pill"><span class="dot"></span>Non al lavoro</span></div>
+  <div class="big">0h 00m<small>ore di oggi</small></div>
+  <div class="seg"><div class="on">Entrata</div><div>Uscita</div></div>
+  <div class="g g2" style="margin-bottom:12px"><div class="f">24 nov 2026</div><div class="f">22:53</div></div>
+  <div class="b">Registra entrata</div>
+  <a class="lnk">Modifica o elimina un turno</a>
+</div>
+<p class="stato">Al lavoro da 14:00. L'interruttore passa su Uscita.</p>
+<div class="w">
+  <div class="h"><b>Timbrature</b><span class="pill on"><span class="dot"></span>Al lavoro</span></div>
+  <div class="big">4h 30m<small>ore di oggi</small></div>
+  <div class="seg"><div>Entrata</div><div class="on out">Uscita</div></div>
+  <div class="g g2" style="margin-bottom:12px"><div class="f">24 nov 2026</div><div class="f">18:30</div></div>
+  <div class="b out">Registra uscita</div>
+  <a class="lnk">Modifica o elimina un turno</a>
+</div>
+
+<p class="cap">2 · contatore e pulsante sulla stessa riga <small>(il più basso)</small></p>
+<p class="stato">Il pulsante sta accanto al contatore, l'interruttore e i campi sotto.</p>
+<div class="w">
+  <div class="top">
+    <div><span class="pill on"><span class="dot"></span>Al lavoro</span><div class="big">4h 30m</div></div>
+    <div class="b out" style="padding:13px 22px">Esci</div>
+  </div>
+  <div class="seg"><div>Entrata</div><div class="on out">Uscita</div></div>
+  <div class="g g2"><div class="f">24 nov 2026</div><div class="f">18:30</div></div>
+  <a class="lnk">Modifica o elimina un turno</a>
+</div>
+
+<p class="cap">3 · con i turni di oggi in una riga <small>(il più informativo)</small></p>
+<p class="stato">Contatore, interruttore, modulo, e una riga con gli orari di oggi.</p>
+<div class="w">
+  <div class="h"><b>Timbrature</b><span class="pill on"><span class="dot"></span>Al lavoro</span></div>
+  <div class="big">4h 30m<small>ore di oggi</small></div>
+  <p class="oggi"><b>08:30–12:30</b> · <b>14:00–in corso</b></p>
+  <div class="seg"><div>Entrata</div><div class="on out">Uscita</div></div>
+  <div class="g g2" style="margin-bottom:12px"><div class="f">24 nov 2026</div><div class="f">18:30</div></div>
+  <div class="b out">Registra uscita</div>
+  <a class="lnk">Modifica o elimina un turno</a>
+</div>
+
+<p class="nota">Nelle tre idee l'interruttore è sempre visibile e cambia da solo dopo ogni timbratura, ma si può spostare a mano. Bozze di disegno: nessun dato vero.</p>
+</body>
+</html>

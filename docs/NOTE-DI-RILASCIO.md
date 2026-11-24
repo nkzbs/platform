@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## Widget Timbrature: nuova interfaccia (nessun cambio di versione)
+
+- **Contatore grande** delle ore di oggi («0h 00m»), che avanza da solo ogni mezzo minuto mentre sei al lavoro; stato «Al lavoro dalle…» / «Non al lavoro» in una pastiglia.
+- **Un solo modulo** (data e orario) con un **interruttore Entrata / Uscita** e un solo pulsante («Registra entrata» / «Registra uscita») al posto delle due righe con due pulsanti. Prima era alto sei righe.
+- L'interruttore **segue lo stato** (al lavoro → Uscita; dopo ogni timbratura torna a seguirlo) ma si cambia a mano. Per un'uscita la data parte dal giorno del turno aperto (un turno dimenticato di ieri si chiude senza cambiare la data a mano).
+- Cambiano solo l'aspetto e il flusso: stesse chiamate di prima (`POST /records/<modulo>` per l'entrata, `PUT` per chiudere il turno). Test: `TimbratureWidget.test.jsx` (6). Provato dal vivo su una copia locale, in scuro e in chiaro con Bento, da telefono. Scelta «1» tra sei bozze: `docs/mockup-timbrature.html`, `docs/mockup-timbrature-ef.html`. **Non ancora online**: serve «Aggiorna».
+
 ## Impostazioni: tolte le voci «(TMP)» (nessun cambio di versione)
 
 - Via il gruppo **«Strumenti temporanei»** dal menu delle Impostazioni (`ImpostazioniPage.jsx`): «Rivedi collegamenti (TMP)» e «Movimenti (TMP)». Il codice delle due pagine **resta**, non cancellato: «Movimenti» (estratti conto letti dai PDF) è raggiungibile ancora dal link «Vedi i movimenti →» della dashboard, quando ci sono movimenti non registrati; si rimette nel menu con una riga.
