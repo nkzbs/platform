@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Report mensile — bozza del messaggio</title>
+<style>
+  :root { --bg:#e9e6f5; --bub:#fff; --ink:#1d1a2e; --ink2:#6c6788; --line:#e3def4; --acc:#584aec; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0e0d17; --bub:#1f1e2c; --ink:#f1efff; --ink2:#a9a4c4; --line:#34324a; --acc:#8476ff; } }
+  * { box-sizing:border-box; margin:0; }
+  body { font:15px/1.4 system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--ink); padding:16px; max-width:460px; margin:0 auto; }
+  h1 { font-size:19px; margin:4px 0; } .sub { color:var(--ink2); font-size:13px; margin-bottom:16px; }
+  .cap { font-size:13px; font-weight:600; margin:22px 0 8px; } .cap small { font-weight:400; color:var(--ink2); }
+  .bub { background:var(--bub); border-radius:4px 18px 18px 18px; padding:12px 14px; box-shadow:0 2px 8px rgba(40,30,90,.08); font-size:14.5px; }
+  .bub p { margin:0 0 10px; } .bub p:last-child { margin:0; }
+  .r { display:flex; justify-content:space-between; gap:10px; padding:1px 0; } .r span:last-child { font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .tit { font-weight:700; } .mut { color:var(--ink2); font-size:13px; }
+  .sep { border-top:1px solid var(--line); margin:10px 0; }
+  .data { font-weight:700; }
+  .nota { font-size:12px; color:var(--ink2); margin-top:22px; }
+</style>
+</head>
+<body>
+<h1>Report mensile</h1>
+<p class="sub">Bozza del messaggio su Telegram e WhatsApp. Dati inventati. Cambia tra chiaro e scuro da sola.</p>
+
+<p class="cap">Come è oggi <small>(si ferma a 8 voci, niente pagato)</small></p>
+<div class="bub">
+  <p class="tit">💳 Da pagare · fino al 26 dic</p>
+  <p>Ti restano <b>1.842 €</b> da pagare (Casa 1.112 · Personali 730).</p>
+  <p><b>In arrivo</b><br>• <b>28 nov</b> Bolletta luce — 84 €<br>• <b>30 nov</b> Rata auto — 310 €<br>• <b>1 dic</b> Assicurazione — 126 €<br>• <b>3 dic</b> Gas — 97 €<br>• <b>5 dic</b> Telefono — 29 €<br>• <b>10 dic</b> Condominio — 210 €<br>• <b>15 dic</b> Rata TV — 90 €<br>• <b>20 dic</b> Bollo — 160 €<br>+ altre 6</p>
+  <p>💰 Con lo stipendio di 2.400 € ti restano <b>558 €</b> liberi</p>
+</div>
+
+<p class="cap">Bozza nuova <small>(elenco completo, per settimana, con il pagato dell'anno)</small></p>
+<div class="bub">
+  <p class="tit">💳 Spese di dicembre · fino al 26 dic</p>
+  <p>Da pagare <b>1.842 €</b> in <b>14 voci</b><br><span class="mut">Casa 1.112 € · Personali 730 €</span></p>
+  <p class="mut">⚠ Già scaduto: <b>126 €</b> (1 voce, dal 24 nov)</p>
+  <div class="sep"></div>
+  <p class="tit">Questa settimana <span class="mut">28 nov – 4 dic · 717 €</span></p>
+  <div class="r"><span><span class="data">28 nov</span> Bolletta luce</span><span>84 €</span></div>
+  <div class="r"><span><span class="data">30 nov</span> Rata auto</span><span>310 €</span></div>
+  <div class="r"><span><span class="data">1 dic</span> Assicurazione</span><span>126 €</span></div>
+  <div class="r"><span><span class="data">3 dic</span> Gas</span><span>97 €</span></div>
+  <div class="r"><span><span class="data">4 dic</span> Palestra</span><span>100 €</span></div>
+  <p style="margin-top:10px" class="tit">Settimana dopo <span class="mut">5 – 11 dic · 239 €</span></p>
+  <div class="r"><span><span class="data">5 dic</span> Telefono</span><span>29 €</span></div>
+  <div class="r"><span><span class="data">10 dic</span> Condominio</span><span>210 €</span></div>
+  <p class="mut" style="margin-top:8px">… e così per le altre settimane, fino a fine periodo</p>
+  <div class="sep"></div>
+  <p class="tit">✅ Pagato nel 2026</p>
+  <div class="r"><span>Totale pagato</span><span><b>21.460 €</b></span></div>
+  <div class="r"><span class="mut">Casa</span><span class="mut">12.980 €</span></div>
+  <div class="r"><span class="mut">Personali</span><span class="mut">8.480 €</span></div>
+  <div class="r"><span class="mut">Novembre</span><span class="mut">1.930 €</span></div>
+  <div class="sep"></div>
+  <p>💰 Con lo stipendio di 2.400 € ti restano <b>558 €</b> liberi</p>
+</div>
+
+<p class="nota">Il pagato dell'anno si calcola dalla data della spesa: in Finance 310 spese pagate non hanno la data di pagamento e non voglio inventarla. Un messaggio troppo lungo si divide in due (WhatsApp ammette circa 4.000 caratteri).</p>
+</body>
+</html>

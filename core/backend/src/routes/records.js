@@ -359,7 +359,7 @@ router.put('/:slug/:id', requireAuth, requireModuleAccess, (req, res) => {
   // invariato) farebbe scattare tutte le automazioni "modifica_campo" del modulo.
   const beforeData = JSON.parse(existing.data);
 
-  const corpo = valoriSuggeriti.allinea(req.params.slug, schema, competenza.applica(req.params.slug, applicaEredita(db, schema, req.body), beforeData), req.user.id);
+  const corpo = require('../data-pagamento').applica(req.params.slug, valoriSuggeriti.allinea(req.params.slug, schema, competenza.applica(req.params.slug, applicaEredita(db, schema, req.body), beforeData), req.user.id), beforeData);
   for (const f of schema.fields || []) if (f.sola_lettura) { if (beforeData[f.key] === undefined) delete corpo[f.key]; else corpo[f.key] = beforeData[f.key]; } // sola lettura: resta com'è (lo cambia solo la firma)
   const uniqueError = checkUnique(req.params.slug, schema.fields, corpo, req.params.id);
   if (uniqueError) return res.status(400).json(uniqueError);

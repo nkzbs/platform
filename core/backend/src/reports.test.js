@@ -105,9 +105,12 @@ global.fetch = async (url) => {
     put('entrate', { descrizione: 'Stipendio', importo: 100, data: '2026-09-26', categoria: 'Stipendio' }); // più recente: conta questo
     ok(R.build('pagare', IL27).text.includes('mancano *744,17 €*'), R.build('pagare', IL27).text);
   });
-  await test('oltre 8 righe: le prime 8 e «+ altre N», con il totale su tutte', () => {
+  await test('elenco completo di default (nessun «+ altre»); se abbassi le righe mostrate: le prime N e «+ altre», con il totale su tutte', () => {
     reset(); for (let i = 1; i <= 28; i++) put('spese_casa', { descrizione: 'Voce ' + i, importo: 10, data: '2026-11-' + String(Math.min(i, 25)).padStart(2, '0'), ...stato('da_pagare') });
-    const t = R.build('pagare', IL27).text; ok(t.includes('+ altre 20'), t); ok(t.includes('*280,00 €*'), t);
+    let t = R.build('pagare', IL27).text; ok(t.includes('Voce 28') && !t.includes('+ altre'), t); ok(t.includes('*280,00 €*'), t);
+    R.saveSettings('pagare', { max_righe: 8 });
+    t = R.build('pagare', IL27).text; ok(t.includes('+ altre 20'), t); ok(t.includes('*280,00 €*'), t);
+    R.saveSettings('pagare', { max_righe: 100 });
   });
   await test('niente da pagare: il report lo dice (è mensile, una conferma serve)', () => {
     reset(); ok(R.build('pagare', IL27).text.includes('Niente da pagare'));
@@ -244,6 +247,83 @@ global.fetch = async (url) => {
     ok(R.saveSettings(id, { soglia_ore: 0 }).error);
     eq(R.build(id, rome('2027-03-14', 20)), null, 'nessuna timbratura questa settimana → niente messaggio');
     R.removeDefinition(id); db.prepare("DELETE FROM records WHERE module_slug = 'tmb'").run();
+  });
+
+  console.log('\n--- mensile nuovo: per settimana e pagato dell\'anno ---');
+  await test('le voci in arrivo sono raggruppate per settimana (lunedì–domenica) con il totale di ogni settimana', () => {
+    reset();
+    put('spese_casa', { descrizione: 'Luce', importo: 80, data: '2026-10-27', ...stato('da_pagare') });        // martedì: questa settimana
+    put('spese_casa', { descrizione: 'Gas', importo: 20, data: '2026-10-30', ...stato('da_pagare') });        // stessa settimana
+    put('spese_personali', { descrizione: 'Palestra', importo: 30, data: '2026-11-03', ...stato('da_pagare') }); // settimana dal 02/11
+    put('spese_casa', { descrizione: 'Condominio', importo: 200, data: '2026-11-10', ...stato('da_pagare') });  // settimana dal 09/11
+    const t = R.build('pagare', IL27).text;
+    ok(t.includes('*In arrivo* · 4 voci'), t);
+    ok(t.includes('*Questa settimana* · 100 €'), t); ok(t.includes('*Dal 02/11 al 08/11* · 30 €'), t); ok(t.includes('*Dal 09/11 al 15/11* · 200 €'), t);
+    ok(t.indexOf('Luce') < t.indexOf('Palestra') && t.indexOf('Palestra') < t.indexOf('Condominio'), 'in ordine di data');
+    R.saveSettings('pagare', { settimane: false }); ok(!R.build('pagare', IL27).text.includes('Questa settimana'), 'si può tornare all\'elenco semplice'); R.saveSettings('pagare', { settimane: true });
+  });
+  await test('«Pagato nel 2026»: totale dell\'anno, per modulo, di cui nel mese; data di pagamento se c\'è, altrimenti la data della spesa', () => {
+    reset();
+    put('spese_casa', { descrizione: 'Da pagare', importo: 50, data: '2026-10-28', ...stato('da_pagare') });
+    put('spese_casa', { descrizione: 'Pagata A', importo: 1000, data: '2026-03-10', data_pagamento: '2026-03-12', ...stato('pagato') });
+    put('spese_casa', { descrizione: 'Pagata B', importo: 200, data: '2026-10-05', ...stato('pagato') });            // senza data di pagamento: vale la data
+    put('spese_personali', { descrizione: 'Pagata C', importo: 300, data: '2026-10-09', data_pagamento: '2026-10-09', ...stato('pagato') });
+    put('spese_casa', { descrizione: 'Anno scorso', importo: 999, data: '2025-12-30', ...stato('pagato') });         // altro anno: non conta
+    const t = R.build('pagare', IL27).text;
+    ok(t.includes('✅ *Pagato nel 2026*: *1.500 €*'), t); ok(/casa 1\.200 €/.test(t) && /pers\. 300 €/.test(t), t); ok(t.includes('Di cui in ottobre: 500 €'), t);
+    R.saveSettings('pagare', { pagato_anno: false }); ok(!R.build('pagare', IL27).text.includes('Pagato nel'), 'si può spegnere'); R.saveSettings('pagare', { pagato_anno: true });
+  });
+
+  console.log('\n--- prossimi giorni e promemoria a N giorni ---');
+  const LUN = rome('2026-10-26', 8, 5, 1);
+  await test('prossimi_giorni: le voci dei prossimi 7 giorni con il totale; niente nel periodo → nessun messaggio', () => {
+    reset();
+    put('spese_casa', { descrizione: 'Luce', importo: 80, data: '2026-10-27', ...stato('da_pagare') });
+    put('spese_casa', { descrizione: 'Tra otto giorni', importo: 5, data: '2026-11-03', ...stato('da_pagare') });
+    const { id } = R.addDefinition('prossimi_giorni', 'Settimana');
+    const t = R.build(id, LUN).text; ok(t.includes('Prossimi giorni* · 7 giorni · 80,00 €'), t); ok(t.includes('Luce') && !t.includes('Tra otto giorni'), t);
+    reset(); eq(R.build(id, LUN), null); R.removeDefinition(id);
+  });
+  await test('«esatto»: solo le voci che scadono tra esattamente N giorni (un promemoria per voce)', () => {
+    reset();
+    put('spese_casa', { descrizione: 'Rata cartella', importo: 291.26, data: '2026-11-02', ...stato('da_pagare') }); // 07 giorni dopo il 26/10 → 02/11
+    put('spese_casa', { descrizione: 'Prima', importo: 5, data: '2026-10-30', ...stato('da_pagare') });
+    const { id } = R.addDefinition('prossimi_giorni', 'Rata vicina'); R.saveSettings(id, { esatto: true, freq: 'giornaliera', giorni_prima: 7 });
+    const t = R.build(id, LUN).text; ok(t.includes('tra 7 giorni, il 02/11') && t.includes('Rata cartella') && !t.includes('Prima'), t);
+    eq(R.build(id, rome('2026-10-27', 8, 5, 1)), null, 'il giorno dopo non c\'è nulla che scada tra esattamente 7 giorni'); R.removeDefinition(id);
+  });
+
+  console.log('\n--- com\'è andata: pagato del mese o dell\'anno ---');
+  const PRIMO = rome('2026-11-01', 9, 5, 1);
+  await test('mese scorso: totale, per categoria con le percentuali, confronto con il mese prima', () => {
+    reset();
+    put('spese_casa', { descrizione: 'Luce', importo: 300, categoria: 'Utenze', data: '2026-10-05', data_pagamento: '2026-10-06', ...stato('pagato') });
+    put('spese_personali', { descrizione: 'Cena', importo: 100, categoria: 'Svago', data: '2026-10-12', data_pagamento: '2026-10-12', ...stato('pagato') });
+    put('spese_casa', { descrizione: 'Luce set', importo: 250, categoria: 'Utenze', data: '2026-09-05', data_pagamento: '2026-09-06', ...stato('pagato') });
+    put('spese_casa', { descrizione: 'Non pagata', importo: 777, categoria: 'Utenze', data: '2026-10-20', ...stato('da_pagare') });
+    const { id } = R.addDefinition('pagato_periodo', 'Com\'è andata');
+    const t = R.build(id, PRIMO).text;
+    ok(t.includes('ottobre · 400,00 €'), t); ok(t.includes('• Utenze — 300 € (75%)') && t.includes('• Svago — 100 € (25%)'), t); ok(t.includes('Rispetto a settembre: *+60%* (era 250 €)'), t);
+    ok(!t.includes('777'), 'una voce non pagata non conta');
+    R.saveSettings(id, { max_righe: 1 }); ok(R.build(id, PRIMO).text.includes('+ altre 1 categoria'));
+    db.prepare("DELETE FROM records WHERE module_slug IN ('spese_casa', 'spese_personali')").run(); eq(R.build(id, PRIMO), null, 'niente di pagato → nessun messaggio'); R.removeDefinition(id);
+  });
+  await test('annuale: parte il 31/12 dall\'ora scelta, fino a 3 giorni dopo se il NAS era spento; il report dell\'anno è quello giusto anche il 2 gennaio', () => {
+    reset();
+    put('spese_casa', { descrizione: 'Luce', importo: 300, categoria: 'Utenze', data: '2026-03-05', data_pagamento: '2026-03-06', ...stato('pagato') });
+    put('spese_casa', { descrizione: 'Nuova', importo: 40, categoria: 'Utenze', data: '2027-01-02', data_pagamento: '2027-01-02', ...stato('pagato') });
+    const { id } = R.addDefinition('pagato_periodo', 'Fine anno'); R.saveSettings(id, { freq: 'annuale', periodo: 'anno', mese_anno: 12, giorno: 31, ora: 9 });
+    const d = R.definizione(id);
+    eq(R.dueKey(d, rome('2026-12-31', 8, 59, 1)), null, 'prima delle 9'); eq(R.dueKey(d, rome('2026-12-31', 9, 0, 1)), '2026-12-31');
+    eq(R.dueKey(d, rome('2027-01-02', 10, 0, 1)), '2026-12-31', 'NAS spento: parte appena torna'); eq(R.dueKey(d, rome('2027-01-05', 10, 0, 1)), null, 'dopo 3 giorni non più'); eq(R.dueKey(d, rome('2026-06-15', 10, 0, 1)), null, 'a giugno no');
+    const t = R.build(id, rome('2027-01-02', 10, 0, 1)).text; ok(t.includes('2026 · 300,00 €') && !t.includes('40'), 'è il 2026, non il 2027: ' + t);
+    ok(R.saveSettings(id, { giorno: 32 }).error, 'giorno oltre 31'); ok(R.saveSettings(id, { mese_anno: 13 }).error, 'mese oltre 12'); R.removeDefinition(id);
+  });
+  await test('validazioni: righe mostrate fino a 100; periodo «anno» solo per il pagato; il giorno del mensile resta fino a 28', () => {
+    ok(R.saveSettings('pagare', { max_righe: 101 }).error); ok(!R.saveSettings('pagare', { max_righe: 100 }).error);
+    const a = R.addDefinition('pagato_periodo', 'x'); ok(!R.saveSettings(a.id, { periodo: 'anno' }).error); R.removeDefinition(a.id);
+    const o = R.addDefinition('ore_periodo', 'y'); ok(R.saveSettings(o.id, { periodo: 'anno' }).error); R.removeDefinition(o.id);
+    ok(R.saveSettings('pagare', { giorno: 29 }).error);
   });
 
   console.log(`\n${'='.repeat(60)}\n${passed} passati, ${failed} falliti su ${passed + failed} test.`);

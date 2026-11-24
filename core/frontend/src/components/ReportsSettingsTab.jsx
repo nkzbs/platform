@@ -10,8 +10,10 @@ const GIORNI = [[1, 'lunedì'], [2, 'martedì'], [3, 'mercoledì'], [4, 'gioved�
 const ORE = Array.from({ length: 17 }, (_, i) => i + 6) // 6..22
 const STATI = [['nuovo', '«nuovo» (da smistare)'], ['da_fare', '«da fare» (da pagare)'], ['fatto', '«fatto» (pagato)']]
 const PERIODI = [['oggi', 'Oggi'], ['settimana', 'Questa settimana'], ['settimana_scorsa', 'Settimana scorsa'], ['mese', 'Questo mese'], ['mese_scorso', 'Mese scorso']]
-const FREQ = { mensile: 'Ogni mese', giornaliera: 'Ogni giorno', settimanale: 'Ogni settimana' }
-const ICONA = { riepilogo_periodo: 'credit-card', coda: 'inbox', in_ritardo: 'alert-triangle', ore_periodo: 'clock', ore_settimana: 'clock', ricorrenze: 'calendar' }
+const FREQ = { mensile: 'Ogni mese', giornaliera: 'Ogni giorno', settimanale: 'Ogni settimana', annuale: 'Ogni anno' }
+const MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre']
+const PERIODI_PAGATO = [['mese_scorso', 'Mese scorso'], ['mese', 'Questo mese'], ['anno', 'Quest\'anno']]
+const ICONA = { riepilogo_periodo: 'credit-card', coda: 'inbox', in_ritardo: 'alert-triangle', ore_periodo: 'clock', ore_settimana: 'clock', ricorrenze: 'calendar', prossimi_giorni: 'calendar', pagato_periodo: 'check' }
 
 // *testo* è il grassetto di WhatsApp: nell'anteprima lo si mostra come tale.
 function renderWa(text) {
@@ -94,6 +96,10 @@ export default function ReportsSettingsTab({ token, user, features = {} }) {
       </select>
       {d.freq === 'mensile' && <>
         il giorno <select className={sel} value={d.giorno} onChange={(e) => save(d.id, { giorno: parseInt(e.target.value, 10) })} disabled={!!busy}>{Array.from({ length: d.tipo === 'riepilogo_periodo' ? 27 : 28 }, (_, i) => i + (d.tipo === 'riepilogo_periodo' ? 2 : 1)).map((g) => <option key={g} value={g}>{g}</option>)}</select>
+      </>}
+      {d.freq === 'annuale' && <>
+        il giorno <select className={sel} value={d.giorno} onChange={(e) => save(d.id, { giorno: parseInt(e.target.value, 10) })} disabled={!!busy}>{Array.from({ length: 31 }, (_, i) => i + 1).map((g) => <option key={g} value={g}>{g}</option>)}</select>
+        di <select className={sel} value={d.mese_anno} onChange={(e) => save(d.id, { mese_anno: parseInt(e.target.value, 10) })} disabled={!!busy}>{MESI.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}</select>
       </>}
       {d.freq === 'settimanale' && <>
         il <select className={sel} value={d.weekday} onChange={(e) => save(d.id, { weekday: parseInt(e.target.value, 10) })} disabled={!!busy}>{GIORNI.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
@@ -183,13 +189,16 @@ export default function ReportsSettingsTab({ token, user, features = {} }) {
                   <Campo label="Titolo nel messaggio"><input className={txt} defaultValue={d.titolo} key={d.id + 't' + d.titolo} onBlur={(e) => e.target.value !== d.titolo && save(d.id, { titolo: e.target.value })} /></Campo>
                   <Campo label="Simbolo"><input className={txt} defaultValue={d.emoji} maxLength={8} key={d.id + 'e' + d.emoji} onBlur={(e) => e.target.value !== d.emoji && save(d.id, { emoji: e.target.value })} /></Campo>
                   {has('stato') && <Campo label="Righe in stato"><select className={txt} value={d.stato} onChange={(e) => save(d.id, { stato: e.target.value })} disabled={!!busy}>{STATI.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Campo>}
-                  {has('periodo') && <Campo label="Periodo"><select className={txt} value={d.periodo} onChange={(e) => save(d.id, { periodo: e.target.value })} disabled={!!busy}>{PERIODI.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Campo>}
+                  {has('periodo') && <Campo label="Periodo"><select className={txt} value={d.periodo} onChange={(e) => save(d.id, { periodo: e.target.value })} disabled={!!busy}>{(d.tipo === 'pagato_periodo' ? PERIODI_PAGATO : PERIODI).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Campo>}
                   {has('giorni_prima') && <Campo label="Avvisa quando mancano … giorni"><input type="number" min="1" max="60" className={txt} defaultValue={d.giorni_prima} key={d.id + 'r' + d.giorni_prima} onBlur={(e) => parseInt(e.target.value, 10) !== d.giorni_prima && save(d.id, { giorni_prima: e.target.value })} /></Campo>}
                   {has('soglia_ore') && <Campo label="Straordinario: ore oltre … a settimana"><input type="number" min="1" max="100" className={txt} defaultValue={d.soglia_ore} key={d.id + 's' + d.soglia_ore} onBlur={(e) => parseInt(e.target.value, 10) !== d.soglia_ore && save(d.id, { soglia_ore: e.target.value })} /></Campo>}
                   {has('mese') && <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer"><input type="checkbox" checked={!!d.mese} onChange={(e) => save(d.id, { mese: e.target.checked })} disabled={!!busy} /> Aggiungi il recap del mese</label>}
-                  {has('max_righe') && <Campo label="Righe mostrate (massimo)"><input type="number" min="1" max="30" className={txt} defaultValue={d.max_righe} key={d.id + 'm' + d.max_righe} onBlur={(e) => parseInt(e.target.value, 10) !== d.max_righe && save(d.id, { max_righe: e.target.value })} /></Campo>}
+                  {has('max_righe') && <Campo label="Righe mostrate (massimo)"><input type="number" min="1" max="100" className={txt} defaultValue={d.max_righe} key={d.id + 'm' + d.max_righe} onBlur={(e) => parseInt(e.target.value, 10) !== d.max_righe && save(d.id, { max_righe: e.target.value })} /></Campo>}
                   {has('scadute_max_giorni') && <Campo label="Una voce scaduta da oltre … giorni non conta"><input type="number" min="1" max="365" className={txt} defaultValue={d.scadute_max_giorni} key={d.id + 'g' + d.scadute_max_giorni} onBlur={(e) => parseInt(e.target.value, 10) !== d.scadute_max_giorni && save(d.id, { scadute_max_giorni: e.target.value })} /></Campo>}
                   {has('piede') && <div className="sm:col-span-2"><Campo label="Frase in fondo (facoltativa)"><input className={txt} defaultValue={d.piede || ''} key={d.id + 'p' + d.piede} onBlur={(e) => e.target.value !== (d.piede || '') && save(d.id, { piede: e.target.value })} /></Campo></div>}
+                  {has('settimane') && <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer sm:col-span-2"><input type="checkbox" checked={!!d.settimane} onChange={(e) => save(d.id, { settimane: e.target.checked })} disabled={!!busy} /> Raggruppa le voci in arrivo per settimana (con il totale di ogni settimana)</label>}
+                  {has('pagato_anno') && <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer sm:col-span-2"><input type="checkbox" checked={!!d.pagato_anno} onChange={(e) => save(d.id, { pagato_anno: e.target.checked })} disabled={!!busy} /> Aggiungi «Pagato nell'anno» in fondo</label>}
+                  {has('esatto') && <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer sm:col-span-2"><input type="checkbox" checked={!!d.esatto} onChange={(e) => save(d.id, { esatto: e.target.checked })} disabled={!!busy} /> Solo le voci che scadono esattamente tra … giorni (un promemoria per voce)</label>}
                   {has('include_scadute') && <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer sm:col-span-2"><input type="checkbox" checked={!!d.include_scadute} onChange={(e) => save(d.id, { include_scadute: e.target.checked })} disabled={!!busy} /> Includi anche le voci già scadute</label>}
                   <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer sm:col-span-2"><input type="checkbox" checked={!!d.invia_se_vuoto} onChange={(e) => save(d.id, { invia_se_vuoto: e.target.checked })} disabled={!!busy} /> Manda il messaggio anche se non c'è niente da segnalare</label>
                 </div>

@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## Report e data di pagamento — 24 novembre 2026
+
+- **Elenco completo per settimana, non troncato**: l'utente voleva «l'elenco completo delle spese in arrivo»; il vecchio limite di 8 righe resta come impostazione ma di partenza è 100.
+- **Il pagato non inventa date**: dove manca `data_pagamento` vale la data della spesa. Perché: le 310 spese vecchie non l'hanno e **non è recuperabile** dal backup di Collections (il campo non è mai esistito lì). Da ora si compila da sola al passaggio a «pagato», solo in quel momento: una riga creata già pagata o già pagata e modificata non si tocca.
+- **Il promemoria a N giorni è un report «esatto»**, non un nuovo tipo di evento: reuse del tempo fisso (giornaliero) con una condizione («scade tra esattamente N giorni»), così non serve un motore di eventi.
+- **Nuovi report spenti**: come tutti i report nuovi, nascono spenti; l'utente li accende e li guarda con l'anteprima.
+
 ## Riordino di routes/records.js — 24 novembre 2026
 
 - **Dividere per argomento, non per dimensione**: `records.js` cresceva a ogni funzione (competenza, rate, ricevute) perché ogni controllo sulle righe veniva aggiunto nello stesso file. Ora ogni argomento ha il suo; una rotta nuova va nel suo file.

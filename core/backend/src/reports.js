@@ -7,6 +7,8 @@
 //   in_ritardo         le righe nello stato scelto con la scadenza passata (da quanti giorni): giornaliero o settimanale, solo se ce ne sono.
 //   ore_periodo        le ore lavorate dai moduli di timbrature (ruoli data/inizio/fine) in un periodo, per persona. Mensile o settimanale.
 //   ricorrenze         le date che tornano ogni anno (compleanni, anniversari) dei moduli «anagrafica» entro N giorni: giornaliero o settimanale, solo se ce ne sono.
+//   prossimi_giorni    le voci da pagare nei prossimi N giorni (elenco per data, con il totale), oppure, con «esatto», solo quelle che scadono tra esattamente N giorni (un avviso per voce).
+//   pagato_periodo     quanto è stato pagato in un mese o in un anno: totale, per categoria e il confronto con il periodo prima. Mensile o annuale, solo se c'è del pagato.
 //   ore_settimana      il riepilogo ore di una persona: la settimana, il mese in corso e lo straordinario (oltre una soglia settimanale). Di solito la domenica sera.
 // Quali moduli contano, cosa significa «da fare» o «nuovo», come si chiamano le righe, e cosa sono le timbrature lo dichiara il modulo (Builder → Ruoli del modulo):
 // qui non ci sono nomi di moduli né di campi. Giorno e ora sono quelli italiani. I tre report storici (pagare, smistare, scadute) sono tre definizioni di partenza.
@@ -26,7 +28,7 @@ const TIPI = {
     nome: 'Totale in un periodo', frequenze: ['mensile'],
     descrizione: 'Tutto ciò che è nello stato scelto dal giorno del report al giorno prima del mese dopo, più le voci scadute: totale, divisione per modulo ed elenco per data.',
     vuoto: 'Niente da pagare in questo periodo.',
-    base: { stato: 'da_fare', freq: 'mensile', giorno: 27, ora: 18, weekend: 'venerdi_prima', stipendio: true, include_scadute: true, scadute_max_giorni: 45, max_righe: 8, titolo: 'Da pagare', emoji: '💳', invia_se_vuoto: true },
+    base: { stato: 'da_fare', freq: 'mensile', giorno: 27, ora: 18, weekend: 'venerdi_prima', stipendio: true, include_scadute: true, scadute_max_giorni: 45, max_righe: 100, settimane: true, pagato_anno: true, titolo: 'Da pagare', emoji: '💳', invia_se_vuoto: true },
   },
   coda: {
     nome: 'Righe da trattare', frequenze: ['giornaliera', 'settimanale'],
@@ -52,6 +54,18 @@ const TIPI = {
     vuoto: 'Nessuna ricorrenza in arrivo: il messaggio non partirebbe.',
     base: { freq: 'settimanale', weekday: 1, ora: 9, giorni_prima: 7, max_righe: 10, titolo: 'Ricorrenze', emoji: '🎂', piede: '', invia_se_vuoto: false },
   },
+  prossimi_giorni: {
+    nome: 'Prossimi giorni', frequenze: ['settimanale', 'giornaliera'],
+    descrizione: 'Le voci nello stato scelto (di solito «da fare») che scadono nei prossimi giorni, con il totale. Con «esatto» parte solo per le voci che scadono tra esattamente N giorni: un avviso per voce, come un promemoria.',
+    vuoto: 'Niente in scadenza nei prossimi giorni: il messaggio non partirebbe.',
+    base: { stato: 'da_fare', freq: 'settimanale', weekday: 1, ora: 8, giorni_prima: 7, esatto: false, max_righe: 100, titolo: 'Prossimi giorni', emoji: '🗓', invia_se_vuoto: false },
+  },
+  pagato_periodo: {
+    nome: 'Com\'è andata (pagato)', frequenze: ['mensile', 'annuale'],
+    descrizione: 'Quanto è stato pagato nel periodo (il mese scorso, o l\'anno), per categoria, con il confronto con il periodo prima. Parte solo se c\'è del pagato. La data è quella di pagamento se c\'è, altrimenti la data della spesa.',
+    vuoto: 'Niente di pagato nel periodo: il messaggio non partirebbe.',
+    base: { freq: 'mensile', giorno: 1, weekday: 1, ora: 9, weekend: 'nessuno', mese_anno: 12, periodo: 'mese_scorso', max_righe: 8, titolo: 'Com\'è andata', emoji: '✅', invia_se_vuoto: false },
+  },
   ore_periodo: {
     nome: 'Ore lavorate', frequenze: ['mensile', 'settimanale'],
     descrizione: 'Le ore lavorate (dai moduli di timbrature) in un periodo, per persona. Ogni telefono Telegram riceve solo le sue.',
@@ -59,7 +73,7 @@ const TIPI = {
     base: { freq: 'mensile', giorno: 1, weekday: 1, ora: 9, weekend: 'nessuno', periodo: 'mese_scorso', titolo: 'Ore lavorate', emoji: '🕒', invia_se_vuoto: false },
   },
 };
-const FREQUENZE = ['mensile', 'giornaliera', 'settimanale'];
+const FREQUENZE = ['mensile', 'giornaliera', 'settimanale', 'annuale'];
 // A chi arriva (per ogni definizione): `utenti` = gli utenti che li ricevono su Telegram (vuoto = tutti i telefoni collegati), `tag` = il tag dei destinatari WhatsApp.
 const DESTINATARI = { utenti: [], tag: 'scadenza' };
 
@@ -147,16 +161,18 @@ function saveSettings(id, patch) {
   const T = TIPI[d.tipo];
   const int = (v, lo, hi) => { const n = parseInt(v, 10); return Number.isInteger(n) && n >= lo && n <= hi ? n : null; };
   if (p.enabled != null) d.enabled = !!p.enabled;
+  // la frequenza per prima: il giorno ammesso dipende da lei (1–31 se annuale, 1–28 se mensile)
+  if (p.freq != null) { if (!T.frequenze.includes(p.freq)) return { error: 'Questo tipo di report non può essere «' + p.freq + '».' }; d.freq = p.freq; }
   const ora = p.ora != null ? p.ora : p.hour; // `hour`, `day`: i nomi della forma vecchia
   if (ora != null) { const h = int(ora, 6, 22); if (h == null) return { error: "L'ora deve essere tra le 6 e le 22." }; d.ora = h; }
   const giorno = p.giorno != null ? p.giorno : p.day;
-  if (giorno != null) { const g = int(giorno, d.tipo === 'riepilogo_periodo' ? 2 : 1, 28); if (g == null) return { error: 'Il giorno deve essere tra ' + (d.tipo === 'riepilogo_periodo' ? 2 : 1) + ' e 28.' }; d.giorno = g; }
+  if (giorno != null) { const lo = d.tipo === 'riepilogo_periodo' ? 2 : 1, hi = d.freq === 'annuale' ? 31 : 28; const g = int(giorno, lo, hi); if (g == null) return { error: 'Il giorno deve essere tra ' + lo + ' e ' + hi + '.' }; d.giorno = g; }
+  if (p.mese_anno != null && 'mese_anno' in T.base) { const m = int(p.mese_anno, 1, 12); if (m == null) return { error: 'Il mese deve essere tra 1 e 12.' }; d.mese_anno = m; }
   if (p.weekday != null) { const w = int(p.weekday, 0, 6); if (w == null) return { error: 'Giorno della settimana non valido.' }; d.weekday = w; }
-  if (p.freq != null) { if (!T.frequenze.includes(p.freq)) return { error: 'Questo tipo di report non può essere «' + p.freq + '».' }; d.freq = p.freq; }
   if (p.weekend != null) { if (!['venerdi_prima', 'nessuno'].includes(p.weekend)) return { error: 'Scelta non valida.' }; d.weekend = p.weekend; }
   if (p.stato != null && 'stato' in T.base) { if (!STATI.includes(p.stato)) return { error: 'Stato non valido.' }; d.stato = p.stato; }
-  if (p.periodo != null && 'periodo' in T.base) { if (!oreCalc.PERIODI[p.periodo]) return { error: 'Periodo non valido.' }; d.periodo = p.periodo; }
-  if (p.max_righe != null) { const n = int(p.max_righe, 1, 30); if (n == null) return { error: 'Le righe mostrate vanno da 1 a 30.' }; d.max_righe = n; }
+  if (p.periodo != null && 'periodo' in T.base) { if (!(oreCalc.PERIODI[p.periodo] || (d.tipo === 'pagato_periodo' && p.periodo === 'anno'))) return { error: 'Periodo non valido.' }; d.periodo = p.periodo; }
+  if (p.max_righe != null) { const n = int(p.max_righe, 1, 100); if (n == null) return { error: 'Le righe mostrate vanno da 1 a 100.' }; d.max_righe = n; }
   if (p.scadute_max_giorni != null) { const n = int(p.scadute_max_giorni, 1, 365); if (n == null) return { error: 'I giorni vanno da 1 a 365.' }; d.scadute_max_giorni = n; }
   if (p.utenti != null) {
     if (!Array.isArray(p.utenti)) return { error: 'Scelta degli utenti non valida.' };
@@ -170,6 +186,9 @@ function saveSettings(id, patch) {
   if (p.mese != null) d.mese = !!p.mese;
   if (p.stipendio != null) d.stipendio = !!p.stipendio;
   if (p.include_scadute != null) d.include_scadute = !!p.include_scadute;
+  if (p.settimane != null && 'settimane' in T.base) d.settimane = !!p.settimane;
+  if (p.pagato_anno != null && 'pagato_anno' in T.base) d.pagato_anno = !!p.pagato_anno;
+  if (p.esatto != null && 'esatto' in T.base) d.esatto = !!p.esatto;
   if (p.invia_se_vuoto != null) d.invia_se_vuoto = !!p.invia_se_vuoto;
   for (const [k, n] of [['nome', 40], ['titolo', 40], ['piede', 120], ['emoji', 8]]) if (p[k] != null) d[k] = word(p[k], n);
   if (!d.nome) d.nome = T.nome;
@@ -253,6 +272,62 @@ function ultimoStipendio(scope) {
 // ── i messaggi, uno per tipo ───────────────────────────────────────────────────────────────────────────────────────
 const intestazione = (d, resto) => d.emoji + ' *' + d.titolo + '*' + (resto ? ' · ' + resto : '');
 
+const MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+const nomeMese = (iso) => MESI[parseInt(iso.slice(5, 7), 10) - 1];
+const lunediDi = (iso) => addDays(iso, -((weekdayOf(iso) + 6) % 7));
+const ddmm = (iso) => iso.slice(8, 10) + '/' + iso.slice(5, 7);
+const sommaImporti = (a) => a.reduce((t, x) => t + (x.importo || 0), 0);
+
+// Le righe già pagate (stato «fatto») dei moduli con gli avvisi accesi e un importo: { label, importo, categoria, quando }. `quando` = la data di pagamento se c'è,
+// altrimenti la data della spesa (in Finance molte spese vecchie non hanno la data di pagamento e non si inventa).
+function righePagate(scope) {
+  const out = [];
+  for (const m of avvisiModules(scope)) {
+    const R = m.roles;
+    if (!m.states.fatto || !R.importo) continue;
+    for (const { data: d } of rows(m.slug, scope)) {
+      if (d[R.stato || '_stato'] !== m.states.fatto) continue;
+      const quando = String(d[R.data_pagamento] || d[R.data] || d[R.scadenza] || '').slice(0, 10);
+      const importo = Number(d[R.importo]) || 0;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(quando) || importo <= 0) continue;
+      out.push({ label: m.label, importo, categoria: (R.categoria && String(d[R.categoria] || '').trim()) || 'Senza categoria', quando });
+    }
+  }
+  return out;
+}
+// Somma per chiave (modulo, categoria…), dal più grande al più piccolo.
+function perChiave(items, chiave) {
+  const m = new Map();
+  items.forEach((x) => m.set(chiave(x), (m.get(chiave(x)) || 0) + x.importo));
+  return [...m.entries()].sort((a, b) => b[1] - a[1]);
+}
+// Il blocco «Pagato nel 2026» in fondo al mensile: totale dell'anno, per modulo, e il mese in corso.
+function bloccoPagatoAnno(scope, today) {
+  const anno = today.slice(0, 4);
+  const dellAnno = righePagate(scope).filter((x) => x.quando.slice(0, 4) === anno);
+  const tot = sommaImporti(dellAnno);
+  if (!tot) return null;
+  const mod = perChiave(dellAnno, (x) => x.label);
+  const mese = sommaImporti(dellAnno.filter((x) => x.quando.slice(0, 7) === today.slice(0, 7)));
+  return '✅ *Pagato nel ' + anno + '*: *' + fmtCompact(tot) + '*' + (mod.length > 1 ? ' (' + mod.map(([l, v]) => l + ' ' + fmtCompact(v)).join(' · ') + ')' : '')
+    + (mese ? '\nDi cui in ' + nomeMese(today) + ': ' + fmtCompact(mese) : '');
+}
+// Le voci raggruppate per settimana (lunedì–domenica), con il totale di ogni settimana.
+function perSettimana(items, today, max, riga) {
+  const gruppi = new Map();
+  items.forEach((x) => { const w = lunediDi(x.due); (gruppi.get(w) || gruppi.set(w, []).get(w)).push(x); });
+  const out = []; let n = 0;
+  for (const [w, voci] of [...gruppi.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    if (n >= max) break;
+    const tit = w === lunediDi(today) ? 'Questa settimana' : 'Dal ' + ddmm(w) + ' al ' + ddmm(addDays(w, 6));
+    const tot = sommaImporti(voci);
+    const prese = voci.slice(0, max - n); n += prese.length;
+    out.push('*' + tit + '*' + (tot ? ' · ' + fmtCompact(tot) : '') + '\n' + prese.map(riga).join('\n'));
+  }
+  if (items.length > n) out.push('+ altre ' + (items.length - n));
+  return out;
+}
+
 function buildRiepilogo(d, now = new Date(), scope = null) {
   const cfg = settings(), today = romeParts(now).date;
   const fine = endOfWindow(today, d.giorno), lateFrom = addDays(today, -d.scadute_max_giorni);
@@ -279,16 +354,68 @@ function buildRiepilogo(d, now = new Date(), scope = null) {
       + (altro ? '\n→ l\'elenco è nel messaggio «' + altro.nome + '»' : ''));
     if (!altro) parts.push(scadute.slice(0, d.max_righe).map(riga).join('\n'));
   }
-  if (nel.length) {
+  if (nel.length && d.settimane) {
+    parts.push('*In arrivo* · ' + nel.length + (nel.length === 1 ? ' voce' : ' voci'));
+    parts.push(...perSettimana(nel, today, d.max_righe, riga));
+  } else if (nel.length) {
     const lines = nel.slice(0, d.max_righe).map(riga);
     if (nel.length > d.max_righe) lines.push('+ altre ' + (nel.length - d.max_righe));
     parts.push('*In arrivo*\n' + lines.join('\n'));
   }
+  if (d.pagato_anno) { const b = bloccoPagatoAnno(scope, today); if (b) parts.push(b); }
   if (d.stipendio) {
     const st = ultimoStipendio(scope);
     if (st) { const resto = st.importo - totale; parts.push('💰 Con lo stipendio di ' + fmtCompact(st.importo) + (resto >= 0 ? ' ti restano *' + fmtCompact(resto) + '* liberi' : ' ti mancano *' + fmtCompact(-resto) + '*')); }
   }
   return { text: parts.join('\n\n'), counts: { voci: nel.length, scadute: scadute.length, totale } };
+}
+
+// Le voci in scadenza nei prossimi N giorni (o, con `esatto`, solo quelle che scadono tra esattamente N giorni: un promemoria per voce).
+function buildProssimi(d, now = new Date(), scope = null) {
+  const today = romeParts(now).date, fine = addDays(today, d.giorni_prima);
+  const sel = righeInStato(scope, d.stato).filter((x) => (d.esatto ? x.due === fine : x.due >= today && x.due <= fine)).sort((a, b) => a.due.localeCompare(b.due) || b.importo - a.importo);
+  if (!sel.length) return null;
+  const totale = sommaImporti(sel), conImporto = sel.some((x) => x.importo != null);
+  const lines = sel.slice(0, d.max_righe).map((x) => '• *' + shortDate(x.due) + '*  ' + x.descrizione + (x.importo == null ? '' : ' — ' + fmtCompact(x.importo)));
+  if (sel.length > d.max_righe) lines.push('+ altre ' + (sel.length - d.max_righe));
+  const quando = d.esatto ? 'tra ' + d.giorni_prima + (d.giorni_prima === 1 ? ' giorno' : ' giorni') + ', il ' + shortDate(fine) : d.giorni_prima + (d.giorni_prima === 1 ? ' giorno' : ' giorni');
+  return { text: intestazione(d, quando + (conImporto ? ' · ' + fmtEur(totale) : '')) + '\n\n' + lines.join('\n'), counts: { voci: sel.length, totale } };
+}
+
+// L'anno di un report annuale: se oggi è nei 3 giorni dopo il giorno stabilito (il NAS era spento) è l'anno di quel giorno, altrimenti l'anno in corso.
+function annoDelReport(d, today) {
+  const y = Number(today.slice(0, 4));
+  for (const anno of [y, y - 1]) { const sd = giornoAnnuale(d, anno); if (today >= sd && today <= addDays(sd, 3)) return anno; }
+  return y;
+}
+function giornoAnnuale(d, anno) {
+  const m = d.mese_anno || 12, ultimo = new Date(Date.UTC(anno, m, 0)).getUTCDate();
+  return anno + '-' + pad(m) + '-' + pad(Math.min(d.giorno || 1, ultimo));
+}
+// Quanto è stato pagato in un mese o in un anno, per categoria, con il confronto con il periodo prima.
+function buildPagato(d, now = new Date(), scope = null) {
+  const today = romeParts(now).date;
+  let iv, prec, nome, nomePrec;
+  if (d.periodo === 'anno') {
+    const y = d.freq === 'annuale' ? annoDelReport(d, today) : Number(today.slice(0, 4));
+    iv = { da: y + '-01-01', a: y + '-12-31' }; prec = { da: (y - 1) + '-01-01', a: (y - 1) + '-12-31' }; nome = String(y); nomePrec = String(y - 1);
+  } else {
+    iv = oreCalc.intervallo(d.periodo, today); nome = nomeMese(iv.da) + (iv.da.slice(0, 4) !== today.slice(0, 4) ? ' ' + iv.da.slice(0, 4) : '');
+    if (d.periodo === 'mese_scorso') { const fine = addDays(iv.da, -1); prec = { da: fine.slice(0, 8) + '01', a: fine }; nomePrec = nomeMese(fine); }
+  }
+  const tutti = righePagate(scope);
+  const dentro = (a, p) => a.filter((x) => x.quando >= p.da && x.quando <= p.a);
+  const pagate = dentro(tutti, iv), totale = sommaImporti(pagate);
+  if (!pagate.length) return null;
+  const cat = perChiave(pagate, (x) => x.categoria), mod = perChiave(pagate, (x) => x.label);
+  const lines = cat.slice(0, d.max_righe).map(([c, v]) => '• ' + c + ' — ' + fmtCompact(v) + ' (' + Math.round((v / totale) * 100) + '%)');
+  if (cat.length > d.max_righe) lines.push('+ altre ' + (cat.length - d.max_righe) + (cat.length - d.max_righe === 1 ? ' categoria' : ' categorie'));
+  const parts = [intestazione(d, nome + ' · ' + fmtEur(totale)), 'Hai pagato *' + fmtEur(totale) + '* in ' + pagate.length + (pagate.length === 1 ? ' voce' : ' voci') + (mod.length > 1 ? ' (' + mod.map(([l, v]) => l + ' ' + fmtCompact(v)).join(' · ') + ')' : '') + '.', '*Per categoria*\n' + lines.join('\n')];
+  if (prec) {
+    const pt = sommaImporti(dentro(tutti, prec));
+    if (pt > 0) { const diff = Math.round(((totale - pt) / pt) * 100); parts.push('Rispetto a ' + nomePrec + ': *' + (diff > 0 ? '+' : '') + diff + '%* (era ' + fmtCompact(pt) + ')'); }
+  }
+  return { text: parts.join('\n\n'), counts: { voci: pagate.length, totale } };
 }
 
 function buildCoda(d, now = new Date(), scope = null) {
@@ -397,7 +524,7 @@ function buildRicorrenze(d, now = new Date(), scope = null) {
   return { text: intestazione(d, voci.length + (voci.length === 1 ? ' ricorrenza' : ' ricorrenze')) + '\n\n' + lines.join('\n') + (d.piede ? '\n\n' + d.piede : ''), counts: { voci: voci.length }, items: voci };
 }
 
-const BUILDERS = { ricorrenze: buildRicorrenze, riepilogo_periodo: buildRiepilogo, coda: buildCoda, in_ritardo: buildInRitardo, ore_periodo: buildOre, ore_settimana: buildOreSettimana };
+const BUILDERS = { prossimi_giorni: buildProssimi, pagato_periodo: buildPagato, ricorrenze: buildRicorrenze, riepilogo_periodo: buildRiepilogo, coda: buildCoda, in_ritardo: buildInRitardo, ore_periodo: buildOre, ore_settimana: buildOreSettimana };
 // Il messaggio di una definizione (un oggetto definizione o il suo id); null se non c'è niente da dire (o la definizione non esiste).
 function build(def, now, scope) {
   const d = typeof def === 'string' ? definizione(def) : def;
@@ -469,6 +596,14 @@ function dueKey(d, now) {
     if (date === sd) return hour >= d.ora ? sd : null;
     return date > sd && date <= giornoPaga ? sd : null; // il NAS era spento il giorno stabilito: parte appena torna, fino al giorno-paga
   }
+  if (d.freq === 'annuale') { // un giorno all'anno (mese + giorno scelti); se il NAS era spento parte appena torna, fino a 3 giorni dopo
+    for (const anno of [Number(date.slice(0, 4)), Number(date.slice(0, 4)) - 1]) {
+      const sd = giornoAnnuale(d, anno);
+      if (date === sd) return hour >= d.ora ? sd : null;
+      if (date > sd && date <= addDays(sd, 3)) return sd;
+    }
+    return null;
+  }
   if (d.freq === 'giornaliera') return inFinestra ? date : null;
   if (d.freq === 'settimanale') return weekdayOf(date) === d.weekday && inFinestra ? date : null;
   return null;
@@ -508,4 +643,4 @@ function startReports() {
   console.log('Report: controllo ogni minuto (le definizioni si scelgono in Impostazioni → Report)');
 }
 
-module.exports = { prossimaRicorrenza, rows, avvisiModules, TIPI, STATI, FREQUENZE, TAG, DEFAULTS, settings, definizione, saveSettings, addDefinition, removeDefinition, isEnabled, build, sendReport, tick, dueKey, lastSent, startReports, romeParts, sendDateFor, endOfWindow, addDays, weekdayOf };
+module.exports = { prossimaRicorrenza, rows, avvisiModules, TIPI, STATI, FREQUENZE, righePagate, TAG, DEFAULTS, settings, definizione, saveSettings, addDefinition, removeDefinition, isEnabled, build, sendReport, tick, dueKey, lastSent, startReports, romeParts, sendDateFor, endOfWindow, addDays, weekdayOf };

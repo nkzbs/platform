@@ -85,7 +85,7 @@ function runTransition(user, slug, id, to) {
     }
   }
 
-  const newData = { ...beforeData, _stato: to };
+  const newData = require('../data-pagamento').applica(slug, { ...beforeData, _stato: to }, beforeData); // pagata a mano: scrive la data di oggi se manca
   db.prepare('UPDATE records SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND module_slug = ?').run(JSON.stringify(newData), id, slug);
   const record = db.prepare('SELECT * FROM records WHERE id = ?').get(id);
   const decryptedData = decryptFields(JSON.parse(record.data), schema.fields);

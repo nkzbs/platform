@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## Report: mensile completo, pagato e nuovi report; data di pagamento automatica (nessun cambio di versione)
+
+- **Mensile «Quanto devo pagare»**: l'elenco delle voci in arrivo è **completo** (prima si fermava a 8 con «+ altre N») e **raggruppato per settimana** con il totale di ogni settimana; in fondo, «✅ Pagato nel 2026» (totale, per modulo, di cui nel mese). Si spegne con «Raggruppa per settimana» e «Aggiungi “Pagato nell'anno”» (Impostazioni → Report). Le righe mostrate arrivano fino a 100.
+- **Report nuovi** (si aggiungono da Impostazioni → Report, nascono spenti): **Prossimi giorni** (le voci dei prossimi N giorni; con «esatto», un promemoria per voce che scade tra esattamente N giorni, per rate e cartelle) e **Com'è andata** (pagato del mese scorso o dell'anno, per categoria con le percentuali, confronto con il periodo prima; mensile o **annuale**, es. 31 dicembre).
+- **Frequenza «ogni anno»** (mese e giorno a scelta, fino a 3 giorni dopo se il NAS era spento).
+- **Data di pagamento automatica**: una voce che passa a «pagato» a mano riceve la data di oggi se il campo è vuoto. **Solo da ora**, solo nel passaggio di stato. Le 310 spese vecchie senza data **restano vuote**: il backup di Collections non l'ha mai avuta (nessun campo; `modifiedAt` non è affidabile: per 249 righe su 557 pagate dista oltre 45 giorni dalla scadenza e 131 righe hanno la stessa data, il 18/04/2025). Per questo il «pagato dell'anno» usa la data della spesa quando manca quella di pagamento.
+- Test: `data-pagamento.test.js` (8), `reports.test.js` (da 28 a 35). Mockup: `docs/mockup-report-mensile.html`. **Non provato**: l'invio vero su Telegram e WhatsApp; la lunghezza dei messaggi con tante voci (WhatsApp circa 4.000 caratteri).
+
 ## Widget Timbrature: nuova interfaccia (nessun cambio di versione)
 
 - **Contatore grande** delle ore di oggi («0h 00m»), che avanza da solo ogni mezzo minuto mentre sei al lavoro; stato «Al lavoro dalle…» / «Non al lavoro» in una pastiglia.
