@@ -11,6 +11,10 @@ Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la 
 - Tolte quattro copie identiche con «2» nel nome (file di sincronizzazione finiti nel repository).
 - Provato dal vivo su una copia locale: selettore, salvataggio, i quattro casi (pastello/vetro × chiaro/scuro) e il colore dei riquadri. **Non provato**: le pagine dei moduli con dati veri e il telefono. La prima passata copre forma, sfondo e riquadri della Dashboard; le schermate con colori scritti a mano restano come sono e si ritoccano dopo averle viste.
 
+## Pacchetto 44 (Mediazione immobiliare) — clausola risolutiva espressa nella Proposta
+
+- **Proposta irrevocabile d'acquisto**: Art. 5, nuovo comma 3, clausola risolutiva espressa (art. 1456 c.c.): la proposta è automaticamente risolta in caso di morte del proponente. PDF rigenerato con `scripts/genera-pdf-compilabili.js`; solo il pacchetto cambia (versione 44), il core resta 0.5.68. Su zucca dal 24/11 (Super Admin ridistribuito, poi Aggiorna).
+
 ## 0.5.67 — «Auguri al cliente» non più tra le Azioni della scheda (pacchetto 43)
 
 - **Nascosta nella scheda del cliente** l'azione «Auguri al cliente / comunicazioni varie» (nuova proprietà `nascosta_nella_scheda` di un'azione esterna, `RecordDetailModal.jsx`). L'azione resta nel modulo: serve al **«Messaggio ai clienti»** di massa e agli auguri automatici di compleanno (spenti finché non si attivano). Sui tenant esistenti la proprietà arriva con il blocco `auguri_senza_pulsante_nella_scheda`.
