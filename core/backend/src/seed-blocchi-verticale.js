@@ -164,6 +164,159 @@ function semplificaStati(steps, op) {
   return { steps: out, spostati, cambiato };
 }
 
+// ── Le primitive di un'estensione ──────────────────────────────────────────────────────────────────────────────────────────────────
+// Ogni primitiva è una funzione che prende l'elenco dei blocchi del modulo e ne ritorna uno nuovo (mai modificato sul posto); `trasformaEstensione` le mette in fila nell'ordine
+// che serve (un calcolo si cambia prima di poterlo spostare, uno stato si toglie prima dei blocchi che lo citavano). Nessuna scrive niente: la pubblicazione e i record li tocca `applicaEstensione`.
+const idNuovo = (prefisso) => prefisso + Math.random().toString(36).slice(2, 10);
+
+// `converti`: campi già presenti che diventano un elenco a scelta multipla (id ed etichetta restano). I valori già scritti come testo si spezzano in elenco più avanti (`convertiValori`).
+function convertiCampi(steps, daConvertire) {
+  return steps.map((x) => {
+    const c = daConvertire.find((y) => y.key === x.key && x.block_type === 'field');
+    return c ? { ...x, type: c.type || 'multiselect', options: c.options, label: c.label || x.label } : x;
+  });
+}
+
+// `ricalcola`: [{ key, da, a, in_fondo? }] cambia la formula di un campo calcolato già presente SOLO se è ancora quella di prima (`da`): una formula che l'utente ha
+// modificato dal Builder non si tocca mai. `in_fondo` sposta il campo dopo gli altri (un calcolo vede solo i campi che lo precedono): servono quando la nuova formula usa campi aggiunti più tardi.
+function ricalcolaFormule(steps, regole) {
+  const ricalcolati = [];
+  const out = steps.map((x) => {
+    const r = (regole || []).find((y) => y.key === x.key);
+    if (r && x.block_type === 'field' && x.type === 'computed' && x.expr === r.da) { ricalcolati.push(r); return { ...x, expr: r.a }; }
+    return x;
+  });
+  return { steps: out, ricalcolati };
+}
+
+// `rinomina`: [{ key, da, a }] cambia l'etichetta di un campo SOLO se è ancora quella di prima (`da`): un nome scelto dall'utente non si tocca.
+function rinominaEtichette(steps, regole) {
+  const rinominati = [], out = steps.slice();
+  for (let i = 0; i < out.length; i++) {
+    const x = out[i], r = (regole || []).find((y) => y.key === x.key);
+    if (r && ['field', 'relation'].includes(x.block_type) && x.label === r.da) { out[i] = { ...x, label: r.a }; rinominati.push(r.key); }
+  }
+  return { steps: out, rinominati };
+}
+
+// `imposta`: [{ block_type, key, proprieta: { nome: valore } }] dà a un blocco già presente le proprietà che NON ha ancora (mai sopra un valore scelto
+// dall'utente, nemmeno vuoto di proposito: si guarda solo se manca del tutto). Serve per un blocco creato in una versione precedente del pacchetto
+// (es. `on_signed_state` di un documento da firmare). `on_signed_state` si imposta solo se lo stato esiste nel workflow del modulo.
+function impostaProprietaMancanti(steps, regole, statiModulo) {
+  const impostati = [], out = steps.slice();
+  for (let i = 0; i < out.length; i++) {
+    const x = out[i], r = (regole || []).find((y) => y.block_type === x.block_type && y.key === x.key);
+    if (!r) continue;
+    const nuove = {};
+    for (const [k, v] of Object.entries(r.proprieta || {})) if (x[k] === undefined && !(k === 'on_signed_state' && !statiModulo.has(v))) nuove[k] = v;
+    if (Object.keys(nuove).length) { out[i] = { ...x, ...nuove }; impostati.push(r.key); }
+  }
+  return { steps: out, impostati };
+}
+
+// `riscrivi`: [{ block_type, key, proprieta: { nome: { da, a } } }] cambia il TESTO di una proprietà di un blocco già presente solo se vale ancora `da` (il testo di prima del pacchetto):
+// un testo cambiato dall'utente dal Builder non si tocca. Per aggiornare etichette e descrizioni di un blocco già pubblicato (`imposta` dà solo ciò che manca).
+function riscriviTesti(steps, regole) {
+  const impostati = [], out = steps.slice(), uguali = (p, q) => JSON.stringify(p) === JSON.stringify(q); // anche gli elenchi (es. i tipi di allegato) si confrontano per contenuto
+  for (let i = 0; i < out.length; i++) {
+    const x = out[i], r = (regole || []).find((y) => y.block_type === x.block_type && (y.key || '') === (x.key || '')); // un blocco senza chiave (es. gli allegati) si trova dal tipo
+    if (!r) continue;
+    const nuove = {};
+    for (const [k, v] of Object.entries(r.proprieta || {})) if (v && uguali(x[k], v.da) && !uguali(v.a, v.da)) nuove[k] = v.a;
+    if (Object.keys(nuove).length) { out[i] = { ...x, ...nuove }; impostati.push(r.key); }
+  }
+  return { steps: out, impostati };
+}
+
+// `togli`: toglie blocchi che non portano dati (azioni esterne, documenti, automazioni…); i campi e i collegamenti non si toccano mai.
+function togliBlocchi(steps, regole) {
+  const daTogliere = (regole || []).filter((t) => t.block_type !== 'field' && t.block_type !== 'relation');
+  const tolti = steps.filter((x) => daTogliere.some((t) => t.block_type === x.block_type && (t.key || '') === (x.key || '')));
+  return { steps: tolti.length ? steps.filter((x) => !tolti.includes(x)) : steps, tolti: tolti.length };
+}
+
+// I blocchi che un'estensione produce dai blocchi di un modulo, senza scrivere niente. `schema.steps` è lo stato di partenza (serve per sapere cosa c'è già).
+function trasformaEstensione(az, schemaSteps, cfg) {
+  const presenti = new Set(schemaSteps.map((x) => x.block_type + ':' + (x.key || x.label)));
+  const daAggiungere = (az.aggiungi || []).filter((b) => !presenti.has(b.block_type + ':' + (b.key || b.label))).map((b) => ({ id: idNuovo(cfg.idPrefisso), ...b }));
+  const daConvertire = az.converti || [];
+  const impostati = [];
+  let steps = convertiCampi(schemaSteps, daConvertire);
+  const rc = ricalcolaFormule(steps, az.ricalcola); steps = rc.steps;
+  const rn = rinominaEtichette(steps, az.rinomina); steps = rn.steps;
+  const im = impostaProprietaMancanti(steps, az.imposta, new Set(schemaSteps.filter((x) => x.block_type === 'workflow_state').map((x) => x.key))); steps = im.steps; impostati.push(...im.impostati);
+  const ri = riscriviTesti(steps, az.riscrivi); steps = ri.steps; impostati.push(...ri.impostati);
+  // `stati`: workflow semplificato (stati tolti, rinominati, passaggi aggiunti); i record negli stati tolti passano allo stato di destinazione dopo la pubblicazione.
+  let statiSpostati = {}, statiCambiati = false;
+  if (az.stati) { const rs = semplificaStati(steps, az.stati); steps = rs.steps; statiSpostati = rs.spostati; statiCambiati = rs.cambiato; if (statiCambiati) impostati.push('stati'); }
+  const tg = togliBlocchi(steps, az.togli); steps = tg.steps; if (tg.tolti) impostati.push('togli');
+  const inFondo = rc.ricalcolati.filter((r) => r.in_fondo).map((r) => r.key);
+  if (inFondo.length) steps = [...steps.filter((x) => !(x.block_type === 'field' && inFondo.includes(x.key))), ...inFondo.map((k) => steps.find((x) => x.block_type === 'field' && x.key === k))];
+  const nuoviDaConvertire = daConvertire.filter((c) => !schemaSteps.some((x) => x.key === c.key))
+    .map((c) => ({ id: idNuovo(cfg.idPrefisso), block_type: 'field', key: c.key, label: c.label || c.key, type: c.type || 'multiselect', options: c.options }));
+  const niente = !daAggiungere.length && !daConvertire.length && !rc.ricalcolati.length && !rn.rinominati.length && !impostati.length && !statiCambiati;
+  return { steps: [...steps, ...nuoviDaConvertire, ...daAggiungere], niente, statiSpostati };
+}
+
+// ── I record toccati da un'estensione (dopo la pubblicazione) ─────────────────────────────────────────────────────────────────────────
+// `cambia(dati)` ritorna true se ha modificato il record: solo allora si riscrive. Un record illeggibile si salta.
+function aggiornaDatiRecord(slug, cambia) {
+  const agg = db.prepare('UPDATE records SET data = ? WHERE id = ?');
+  for (const r of db.prepare('SELECT id, data FROM records WHERE module_slug = ?').all(slug)) {
+    let dati; try { dati = JSON.parse(r.data); } catch (e) { continue; }
+    if (cambia(dati)) agg.run(JSON.stringify(dati), r.id);
+  }
+}
+
+// Un valore scritto prima come testo («Balcone, Loggia») diventa l'elenco corrispondente; gli altri non si toccano.
+function convertiValoriInElenco(slug, campiConvertiti) {
+  if (!campiConvertiti.length) return;
+  aggiornaDatiRecord(slug, (dati) => {
+    let cambiato = false;
+    for (const c of campiConvertiti) if (typeof dati[c.key] === 'string') { dati[c.key] = dati[c.key].split(/[,;\n]+/).map((t) => t.trim()).filter(Boolean); cambiato = true; }
+    return cambiato;
+  });
+}
+
+// I record negli stati tolti passano allo stato di destinazione.
+function spostaRecordDiStato(slug, statiSpostati) {
+  if (!Object.keys(statiSpostati).length) return;
+  aggiornaDatiRecord(slug, (dati) => {
+    if (!dati || !Object.prototype.hasOwnProperty.call(statiSpostati, dati._stato)) return false;
+    dati._stato = statiSpostati[dati._stato]; return true;
+  });
+}
+
+// `rimappa` (dentro un `converti`): { valoreVecchio: valoreNuovo } per un elenco a scelta singola le cui voci cambiano: i valori già scritti passano a quelli nuovi, gli altri non si toccano.
+function rimappaValori(slug, daRimappare) {
+  if (!daRimappare.length) return;
+  aggiornaDatiRecord(slug, (dati) => {
+    let cambiato = false;
+    for (const c of daRimappare) {
+      if (typeof dati[c.key] === 'string' && Object.prototype.hasOwnProperty.call(c.rimappa, dati[c.key]) && c.rimappa[dati[c.key]] !== dati[c.key]) { dati[c.key] = c.rimappa[dati[c.key]]; cambiato = true; }
+    }
+    return cambiato;
+  });
+}
+
+// Applica UNA estensione a UN modulo. Ritorna: 'applicato', 'non applicabile', 'nulla da fare', 'errore bozza', 'errore pubblicazione'; oppure null se non c'è l'admin (riprova al prossimo avvio).
+async function applicaEstensione(slug, az, schema, { cfg, admin, mappa, chiave, callAs }) {
+  if (!cfg.applicabile(az, schema.steps, mappa)) { segna(chiave); return 'non applicabile'; }
+  if (!admin) return null;
+  const t = trasformaEstensione(az, schema.steps, cfg);
+  if (t.niente) { segna(chiave); return 'nulla da fare'; } // formule già cambiate dall'utente (o già giuste): niente da pubblicare
+  const bozza = await callAs(admin, 'PUT', '/builder/' + slug + '/draft', { schema: { version: 3, steps: t.steps } });
+  if (!bozza.ok) { console.error('[seed-blocchi] bozza ' + slug + '/' + az.key + ' fallita:', JSON.stringify(bozza.data)); return 'errore bozza'; }
+  const pub = await callAs(admin, 'POST', '/builder/' + slug + '/publish', {});
+  if (!pub.ok) { console.error('[seed-blocchi] pubblicazione ' + slug + '/' + az.key + ' fallita:', JSON.stringify(pub.data)); return 'errore pubblicazione'; }
+  const daConvertire = az.converti || [];
+  convertiValoriInElenco(slug, daConvertire.filter((c) => schema.steps.some((x) => x.key === c.key && x.block_type === 'field' && x.type !== (c.type || 'multiselect'))));
+  spostaRecordDiStato(slug, t.statiSpostati);
+  rimappaValori(slug, daConvertire.filter((c) => c.rimappa && typeof c.rimappa === 'object'));
+  segna(chiave);
+  return 'applicato';
+}
+
 async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs, tipo = 'document_action' } = {}) {
   const cfg = TIPI[tipo];
   const esiti = [];
@@ -185,107 +338,10 @@ async function applicaSeed(seed, { callAs = require('./lib/internal-api').callAs
       if (schema.version !== 3 || !Array.isArray(schema.steps)) continue;
       if (tipo !== 'estensione' && schema.steps.some((s) => s.block_type === tipo && s.key === az.key)) { segna(chiave); continue; }
       if (tipo === 'estensione') {
-        const presenti = new Set(schema.steps.map((x) => x.block_type + ':' + (x.key || x.label)));
-        const daAggiungere = (az.aggiungi || []).filter((b) => !presenti.has(b.block_type + ':' + (b.key || b.label)))
-          .map((b) => ({ id: cfg.idPrefisso + Math.random().toString(36).slice(2, 10), ...b }));
-        if (!cfg.applicabile(az, schema.steps, mappa)) { segna(chiave); esiti.push({ slug, key: az.key, esito: 'non applicabile' }); continue; }
-        if (!admin) continue;
-        // `converti`: campi già presenti che diventano un elenco a scelta multipla (id ed etichetta restano), o
-        // si creano se mancano. I valori già scritti come testo si spezzano in elenco (vedi sotto).
-        const daConvertire = (az.converti || []);
-        const stepsConvertiti0 = schema.steps.map((x) => {
-          const c = daConvertire.find((y) => y.key === x.key && x.block_type === 'field');
-          return c ? { ...x, type: c.type || 'multiselect', options: c.options, label: c.label || x.label } : x;
-        });
-        // `ricalcola`: [{ key, da, a, in_fondo? }] cambia la formula di un campo calcolato già presente SOLO se è ancora quella di prima (`da`): una formula che l'utente ha
-        // modificato dal Builder non si tocca mai. `in_fondo` sposta il campo dopo gli altri (un calcolo vede solo i campi che lo precedono): servono quando la nuova formula usa campi aggiunti più tardi.
-        const ricalcolati = [];
-        let stepsRicalcolati = stepsConvertiti0.map((x) => {
-          const r = (az.ricalcola || []).find((y) => y.key === x.key);
-          if (r && x.block_type === 'field' && x.type === 'computed' && x.expr === r.da) { ricalcolati.push(r); return { ...x, expr: r.a }; }
-          return x;
-        });
-        // `rinomina`: [{ key, da, a }] cambia l'etichetta di un campo SOLO se è ancora quella di prima (`da`): un nome scelto dall'utente non si tocca.
-        const rinominati = [];
-        for (let i = 0; i < stepsRicalcolati.length; i++) {
-          const x = stepsRicalcolati[i], r = (az.rinomina || []).find((y) => y.key === x.key);
-          if (r && ['field', 'relation'].includes(x.block_type) && x.label === r.da) { stepsRicalcolati[i] = { ...x, label: r.a }; rinominati.push(r.key); }
-        }
-        // `imposta`: [{ block_type, key, proprieta: { nome: valore } }] dà a un blocco già presente le proprietà che NON ha ancora (mai sopra un valore scelto
-        // dall'utente, nemmeno vuoto di proposito: si guarda solo se manca del tutto). Serve per un blocco creato in una versione precedente del pacchetto
-        // (es. `on_signed_state` di un documento da firmare). `on_signed_state` si imposta solo se lo stato esiste nel workflow del modulo.
-        const impostati = [];
-        const statiModulo = new Set(schema.steps.filter((x) => x.block_type === 'workflow_state').map((x) => x.key));
-        for (let i = 0; i < stepsRicalcolati.length; i++) {
-          const x = stepsRicalcolati[i], r = (az.imposta || []).find((y) => y.block_type === x.block_type && y.key === x.key);
-          if (!r) continue;
-          const nuove = {};
-          for (const [k, v] of Object.entries(r.proprieta || {})) if (x[k] === undefined && !(k === 'on_signed_state' && !statiModulo.has(v))) nuove[k] = v;
-          if (Object.keys(nuove).length) { stepsRicalcolati[i] = { ...x, ...nuove }; impostati.push(r.key); }
-        }
-        // `riscrivi`: [{ block_type, key, proprieta: { nome: { da, a } } }] cambia il TESTO di una proprietà di un blocco già presente solo se vale ancora `da` (il testo di prima del pacchetto):
-        // un testo cambiato dall'utente dal Builder non si tocca. Per aggiornare etichette e descrizioni di un blocco già pubblicato (`imposta` dà solo ciò che manca).
-        for (let i = 0; i < stepsRicalcolati.length; i++) {
-          const x = stepsRicalcolati[i], r = (az.riscrivi || []).find((y) => y.block_type === x.block_type && (y.key || '') === (x.key || '')); // un blocco senza chiave (es. gli allegati) si trova dal tipo
-          if (!r) continue;
-          const nuove = {}, uguali = (p, q) => JSON.stringify(p) === JSON.stringify(q); // anche gli elenchi (es. i tipi di allegato) si confrontano per contenuto
-          for (const [k, v] of Object.entries(r.proprieta || {})) if (v && uguali(x[k], v.da) && !uguali(v.a, v.da)) nuove[k] = v.a;
-          if (Object.keys(nuove).length) { stepsRicalcolati[i] = { ...x, ...nuove }; impostati.push(r.key); }
-        }
-        // `stati`: workflow semplificato (stati tolti, rinominati, passaggi aggiunti); i record negli stati tolti passano allo stato di destinazione dopo la pubblicazione.
-        let statiSpostati = {}, statiCambiati = false;
-        if (az.stati) { const rs = semplificaStati(stepsRicalcolati, az.stati); stepsRicalcolati = rs.steps; statiSpostati = rs.spostati; statiCambiati = rs.cambiato; if (statiCambiati) impostati.push('stati'); }
-        // `togli`: toglie blocchi che non portano dati (azioni esterne, documenti, automazioni…); i campi e i collegamenti non si toccano mai.
-        const daTogliere = (az.togli || []).filter((t) => t.block_type !== 'field' && t.block_type !== 'relation');
-        const tolti = stepsRicalcolati.filter((x) => daTogliere.some((t) => t.block_type === x.block_type && (t.key || '') === (x.key || '')));
-        if (tolti.length) { stepsRicalcolati = stepsRicalcolati.filter((x) => !tolti.includes(x)); impostati.push('togli'); }
-        const inFondo = ricalcolati.filter((r) => r.in_fondo).map((r) => r.key);
-        const stepsConvertiti = inFondo.length ? [...stepsRicalcolati.filter((x) => !(x.block_type === 'field' && inFondo.includes(x.key))), ...inFondo.map((k) => stepsRicalcolati.find((x) => x.block_type === 'field' && x.key === k))] : stepsRicalcolati;
-        const nuoviDaConvertire = daConvertire.filter((c) => !schema.steps.some((x) => x.key === c.key))
-          .map((c) => ({ id: cfg.idPrefisso + Math.random().toString(36).slice(2, 10), block_type: 'field', key: c.key, label: c.label || c.key, type: c.type || 'multiselect', options: c.options }));
-        if (!daAggiungere.length && !daConvertire.length && !ricalcolati.length && !rinominati.length && !impostati.length && !statiCambiati) { segna(chiave); esiti.push({ slug, key: az.key, esito: 'nulla da fare' }); continue; } // formule già cambiate dall'utente (o già giuste): niente da pubblicare
-        const bozzaE = await callAs(admin, 'PUT', '/builder/' + slug + '/draft', { schema: { version: 3, steps: [...stepsConvertiti, ...nuoviDaConvertire, ...daAggiungere] } });
-        if (!bozzaE.ok) { console.error('[seed-blocchi] bozza ' + slug + '/' + az.key + ' fallita:', JSON.stringify(bozzaE.data)); esiti.push({ slug, key: az.key, esito: 'errore bozza' }); continue; }
-        const pubE = await callAs(admin, 'POST', '/builder/' + slug + '/publish', {});
-        if (!pubE.ok) { console.error('[seed-blocchi] pubblicazione ' + slug + '/' + az.key + ' fallita:', JSON.stringify(pubE.data)); esiti.push({ slug, key: az.key, esito: 'errore pubblicazione' }); continue; }
-        // Un valore scritto prima come testo («Balcone, Loggia») diventa l'elenco corrispondente; gli altri non si toccano.
-        const convertiti = daConvertire.filter((c) => schema.steps.some((x) => x.key === c.key && x.block_type === 'field' && x.type !== (c.type || 'multiselect')));
-        if (convertiti.length) {
-          const righe = db.prepare('SELECT id, data FROM records WHERE module_slug = ?').all(slug);
-          const agg = db.prepare('UPDATE records SET data = ? WHERE id = ?');
-          for (const r of righe) {
-            let dati; try { dati = JSON.parse(r.data); } catch (e) { continue; }
-            let cambiato = false;
-            for (const c of convertiti) {
-              if (typeof dati[c.key] === 'string') {
-                dati[c.key] = dati[c.key].split(/[,;\n]+/).map((t) => t.trim()).filter(Boolean);
-                cambiato = true;
-              }
-            }
-            if (cambiato) agg.run(JSON.stringify(dati), r.id);
-          }
-        }
-        if (Object.keys(statiSpostati).length) {
-          const righe = db.prepare('SELECT id, data FROM records WHERE module_slug = ?').all(slug), agg = db.prepare('UPDATE records SET data = ? WHERE id = ?');
-          for (const r of righe) { let dati; try { dati = JSON.parse(r.data); } catch (e) { continue; } if (dati && Object.prototype.hasOwnProperty.call(statiSpostati, dati._stato)) { dati._stato = statiSpostati[dati._stato]; agg.run(JSON.stringify(dati), r.id); } }
-        }
-        // `rimappa` (dentro un `converti`): { valoreVecchio: valoreNuovo } per un elenco a scelta singola le cui voci cambiano: i valori già scritti passano a quelli nuovi, gli altri non si toccano.
-        const daRimappare = daConvertire.filter((c) => c.rimappa && typeof c.rimappa === 'object');
-        if (daRimappare.length) {
-          const righe = db.prepare('SELECT id, data FROM records WHERE module_slug = ?').all(slug);
-          const agg = db.prepare('UPDATE records SET data = ? WHERE id = ?');
-          for (const r of righe) {
-            let dati; try { dati = JSON.parse(r.data); } catch (e) { continue; }
-            let cambiato = false;
-            for (const c of daRimappare) {
-              if (typeof dati[c.key] === 'string' && Object.prototype.hasOwnProperty.call(c.rimappa, dati[c.key]) && c.rimappa[dati[c.key]] !== dati[c.key]) { dati[c.key] = c.rimappa[dati[c.key]]; cambiato = true; }
-            }
-            if (cambiato) agg.run(JSON.stringify(dati), r.id);
-          }
-        }
-        segna(chiave);
-        delete moduliPerSlug[slug]; // i campi del modulo sono cambiati: le estensioni dopo questa devono rivederli
-        esiti.push({ slug, key: az.key, esito: 'applicato' });
+        const esito = await applicaEstensione(slug, az, schema, { cfg, admin, mappa, chiave, callAs });
+        if (!esito) continue; // niente admin: riprova al prossimo avvio
+        if (esito === 'applicato') delete moduliPerSlug[slug]; // i campi del modulo sono cambiati: le estensioni dopo questa devono rivederli
+        esiti.push({ slug, key: az.key, esito });
         continue;
       }
       // `aggiungi_campi`: campi che il blocco usa (es. i consensi di un documento da firmare) e che il

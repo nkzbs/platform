@@ -67,7 +67,23 @@ async function main() {
   let esiti;
   await test('si applica: nuovi campi del tipo giusto e caselle trasformate in elenchi a scelta multipla', async () => {
     esiti = await applicaSeed(estensioni, { tipo: 'estensione' });
-    assertEq(esiti.filter((e) => (e.slug === 'immobili' || e.slug === 'clienti') && e.key !== 'allegati' && e.key !== 'stato_civile_come_modulo' && !['tre_tipi_cliente', 'campi_incarico_ricerca', 'stato_incarico_ricerca', 'stima_imu', 'auguri_senza_pulsante_nella_scheda', 'compleanni_in_campanella', 'incarico_ricerca_in_scadenza', 'imu_abitazione_principale', 'senza_mail_scheda_immobile', 'immobili_adatti_due_acquirenti', 'richieste_compatibili_due_acquirenti', 'stati_cliente_semplici', 'stati_trattativa_semplici', 'stati_attivita_semplici', 'verificato_alla_firma', 'incarico_firmato_in_mandato', 'trattativa_chiusa_senza_vendita'].includes(e.key) && e.key !== 'profilo_mediazione' && e.key !== 'moduli_pdf_azienda' && e.key !== 'campi_scheda_immobile' && e.key !== 'campi_contratto_incarico' && e.key !== 'campi_adeguata_verifica' && !['stato_civile_dettaglio', 'professionista_riferimento', 'allegati_urbanistici', 'consensi_sola_lettura'].includes(e.key) && e.key !== 'elenchi_scelta_multipla' && e.key !== 'qualita_e_occupazione_multiple' && e.key !== 'modulo_pdf_adeguata_verifica' && e.key !== 'verifica_soggetto' && e.key !== 'risk_visibilita' && e.key !== 'mappa_osm' && e.key !== 'conservazione_scaduta' && !['avviso_documenti_mancanti', 'avviso_richieste_compatibili', 'controllo_catastale', 'stato_alla_firma_scheda', 'auguri_cliente', 'servizi_vicini', 'verifica_soggetto_testi', 'credit_score_societa', 'dati_fatturazione', 'firma_in_un_pacchetto', 'firma_scheda_destinatario', 'firma_comproprietari', 'firma_cedente_cessionario'].includes(e.key)).map((e) => e.slug + ':' + e.esito), ['immobili:applicato', 'clienti:applicato']);
+    // Estensioni del pacchetto che NON riguardano questa scheda (altri moduli, altri temi): il test guarda solo quelle che aggiungono i campi della scheda. Una estensione nuova che non c'entra si aggiunge qui.
+    const ALTRE_ESTENSIONI = new Set([
+      'allegati', 'stato_civile_come_modulo', 'tre_tipi_cliente', 'campi_incarico_ricerca',
+      'stato_incarico_ricerca', 'stima_imu', 'auguri_senza_pulsante_nella_scheda', 'compleanni_in_campanella',
+      'incarico_ricerca_in_scadenza', 'imu_abitazione_principale', 'senza_mail_scheda_immobile', 'immobili_adatti_due_acquirenti',
+      'richieste_compatibili_due_acquirenti', 'stati_cliente_semplici', 'stati_trattativa_semplici', 'stati_attivita_semplici',
+      'verificato_alla_firma', 'incarico_firmato_in_mandato', 'trattativa_chiusa_senza_vendita', 'profilo_mediazione',
+      'moduli_pdf_azienda', 'campi_scheda_immobile', 'campi_contratto_incarico', 'campi_adeguata_verifica',
+      'stato_civile_dettaglio', 'professionista_riferimento', 'allegati_urbanistici', 'consensi_sola_lettura',
+      'elenchi_scelta_multipla', 'qualita_e_occupazione_multiple', 'modulo_pdf_adeguata_verifica', 'verifica_soggetto',
+      'risk_visibilita', 'mappa_osm', 'conservazione_scaduta', 'avviso_documenti_mancanti',
+      'avviso_richieste_compatibili', 'controllo_catastale', 'stato_alla_firma_scheda', 'auguri_cliente',
+      'servizi_vicini', 'verifica_soggetto_testi', 'credit_score_societa', 'dati_fatturazione',
+      'firma_in_un_pacchetto', 'firma_scheda_destinatario', 'firma_comproprietari', 'firma_cedente_cessionario',
+    ]);
+    const dellaScheda = (e) => (e.slug === 'immobili' || e.slug === 'clienti') && !ALTRE_ESTENSIONI.has(e.key);
+    assertEq(esiti.filter(dellaScheda).map((e) => e.slug + ':' + e.esito), ['immobili:applicato', 'clienti:applicato']);
     assertEq(campo('immobili', 'data_sopralluogo').type, 'date');
     assertEq(campo('immobili', 'prezzo_consigliato').type, 'currency');
     assertEq(campo('immobili', 'valore_ipe').type, 'number');
