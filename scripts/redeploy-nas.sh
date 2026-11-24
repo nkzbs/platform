@@ -11,9 +11,10 @@ set -euo pipefail
 PARTS=("$@"); [ ${#PARTS[@]} -eq 0 ] && PARTS=(backend frontend provisioner core)
 has() { local p; for p in "${PARTS[@]}"; do [ "$p" = "$1" ] && return 0; done; return 1; }
 
-NAS="claude@192.168.1.2"; D=/usr/local/bin/docker; BUILD=/volume1/docker/platform-build-01; SECRETS=/volume1/docker/deploy-secrets
+NAS="${NAS_HOST:-claude@192.168.1.2}"; D=/usr/local/bin/docker; BUILD=/volume1/docker/platform-build-01; SECRETS=/volume1/docker/deploy-secrets
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"; BK="$HOME/Desktop/platform-backup-nas"
-nas() { ssh -p 1988 -o BatchMode=yes "$NAS" "$@"; }
+# Da fuori casa: NAS_HOST=claude@<indirizzo pubblico> NAS_KEY=~/.ssh/id_ed25519_nas bash scripts/redeploy-nas.sh ... (di default indirizzo e chiave di casa, da ~/.ssh/config).
+nas() { ssh -p 1988 ${NAS_KEY:+-i "$NAS_KEY" -o IdentitiesOnly=yes} -o BatchMode=yes "$NAS" "$@"; }
 
 echo "== Mando il sorgente"
 nas "mkdir -p $BUILD && cd $BUILD && rm -rf core shared super-admin && tar -xzf - 2>/dev/null; true" < <(cd "$REPO" && COPYFILE_DISABLE=1 tar --exclude=node_modules --exclude=dist --exclude=.DS_Store -czf - core shared super-admin)
