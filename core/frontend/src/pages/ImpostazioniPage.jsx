@@ -548,11 +548,6 @@ const SETTINGS_GROUPS = [
     { key: 'export_dati', icon: 'download', label: 'Dati e sicurezza', schede: [['export_dati', 'Dati e backup'], ['sicurezza', 'Sicurezza']] },
     { key: 'guida', icon: 'info', label: 'Guida d\'uso' },
   ] },
-  // (TMP) — 30/10/2026, richiesto dall'utente: pagine di lavoro temporanee (una revisione da chiudere, uno strumento di debug), non funzioni stabili del prodotto.
-  { label: 'Strumenti temporanei', chiuso: true, items: [
-    { key: 'collegamenti', icon: 'link', label: 'Rivedi collegamenti (TMP)' },
-    { key: 'movimenti', icon: 'credit-card', label: 'Movimenti (TMP)' },
-  ] },
 ]
 
 function ImpostazioniPage({ token, user, initialTab, features = {}, modules = [], onFeaturesChanged, onOpenInBuilder, onCreateNewModule, onUserUpdate }) {

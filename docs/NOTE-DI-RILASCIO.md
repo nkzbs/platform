@@ -2,6 +2,10 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## Impostazioni: tolte le voci «(TMP)» (nessun cambio di versione)
+
+- Via il gruppo **«Strumenti temporanei»** dal menu delle Impostazioni (`ImpostazioniPage.jsx`): «Rivedi collegamenti (TMP)» e «Movimenti (TMP)». Il codice delle due pagine **resta**, non cancellato: «Movimenti» (estratti conto letti dai PDF) è raggiungibile ancora dal link «Vedi i movimenti →» della dashboard, quando ci sono movimenti non registrati; si rimette nel menu con una riga.
+
 ## Riordino interno — rotte dei record divise per argomento (nessun cambio di versione)
 
 - `routes/records.js` da **1.398 a 453 righe**: ora monta cinque file (`records-viste`, `-csv`, `-transizioni`, `-documenti`, `-allegati`) più `records-helpers`. Le rotte restano agli stessi indirizzi e nello stesso ordine; il codice è stato spostato senza modifiche. `records.js` riesporta le funzioni che usavano altri moduli.
