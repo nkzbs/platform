@@ -29,7 +29,7 @@ const SPESE = { version: 3, steps: [F('descrizione', 'Descrizione', 'text'), F('
 const AV = { states: { nuovo: '', da_fare: 'da_pagare', fatto: 'pagato' }, scadenze: true };
 
 async function main() {
-  const { applica, oggi, ultimoGiornoDiPagamento } = require('./data-pagamento');
+  const { applica, oggi, giornoDiPagamento } = require('./data-pagamento');
   require('./index.js');
   for (let i = 0; i < 100; i++) { try { if ((await fetch(BASE + '/health')).ok) break; } catch (e) { await new Promise((r) => setTimeout(r, 100)); } }
   const db = require('./db');
@@ -50,11 +50,10 @@ async function main() {
     eq(oggi(new Date('2026-06-24T10:00:00Z')), '2026-06-24');
   });
 
-  console.log('\n--- il giorno di pagamento della competenza (il 27) ---');
-  await test('l\'ultimo 27 uguale o precedente alla data: dicembre → 27 novembre; il 27 stesso; novembre → 27 ottobre; gennaio → 27 dicembre dell\'anno prima', async () => {
-    eq(ultimoGiornoDiPagamento('2026-12-01', 27), '2026-11-27'); eq(ultimoGiornoDiPagamento('2026-11-27', 27), '2026-11-27');
-    eq(ultimoGiornoDiPagamento('2026-11-05', 27), '2026-10-27'); eq(ultimoGiornoDiPagamento('2027-01-01', 27), '2026-12-27');
-    eq(ultimoGiornoDiPagamento('2027-01-15', 27), '2026-12-27'); eq(ultimoGiornoDiPagamento('', 27), null); eq(ultimoGiornoDiPagamento('2026-12-01', 0), null);
+  console.log('\n--- il giorno di pagamento (il 27 del mese della scadenza) ---');
+  await test('il 27 del mese della scadenza, qualunque sia il giorno: 15 novembre → 27 novembre; 28 novembre → 27 novembre; 5 gennaio → 27 gennaio', async () => {
+    eq(giornoDiPagamento('2026-11-15', 27), '2026-11-27'); eq(giornoDiPagamento('2026-11-28', 27), '2026-11-27'); eq(giornoDiPagamento('2027-01-05', 27), '2027-01-27');
+    eq(giornoDiPagamento('', 27), null); eq(giornoDiPagamento('2026-12-01', 0), null); eq(giornoDiPagamento('15/11/2026', 27), null);
   });
 
   console.log('\n--- nei record ---');
@@ -87,9 +86,14 @@ async function main() {
     const m = await modifica('senza', a.id, { ...a.data, _stato: 'pagato' });
     eq(m.data.data_pagamento, undefined);
   });
-  await test('con il giorno di pagamento dichiarato: voce di competenza aprile (scadenza 30/3) pagata a mano → 27 marzo, non oggi', async () => {
+  await test('con il giorno di pagamento dichiarato: scadenza 30/3 (competenza aprile) pagata a mano → 27 marzo, non oggi', async () => {
     const a = await crea('pag27', { descrizione: 'G', importo: 10, scadenza: '2026-03-30', _stato: 'da_pagare' });
     eq(a.data.data, '2026-04-01', 'la competenza è aprile');
+    const m = await modifica('pag27', a.id, { ...a.data, _stato: 'pagato' });
+    eq(m.data.data_pagamento, '2026-03-27');
+  });
+  await test('scadenza a metà mese (15/3): il 27 dello stesso mese, come nello storico di Collections', async () => {
+    const a = await crea('pag27', { descrizione: 'G2', importo: 10, scadenza: '2026-03-15', _stato: 'da_pagare' });
     const m = await modifica('pag27', a.id, { ...a.data, _stato: 'pagato' });
     eq(m.data.data_pagamento, '2026-03-27');
   });

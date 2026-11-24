@@ -1,18 +1,17 @@
 'use strict';
-// Data di pagamento automatica: quando una voce passa a «fatto» (pagata) e il suo campo `data_pagamento` è vuoto, si scrive la data del giorno di pagamento della sua
-// competenza: l'ultimo «giorno di pagamento» (module_roles.competenza.giorno, es. il 27) uguale o precedente alla data di competenza, ma mai nel futuro (se la segni pagata
-// prima di quel giorno vale oggi). Senza giorno dichiarato, o senza data di competenza, vale oggi. Prima la data
+// Data di pagamento automatica: quando una voce passa a «fatto» (pagata) e il suo campo `data_pagamento` è vuoto, si scrive il giorno di pagamento del mese della sua
+// scadenza: il giorno dichiarato dal modulo (module_roles.competenza.giorno, es. il 27) di quel mese, ma mai nel futuro (se la segni pagata prima di quel giorno vale
+// oggi). Senza scadenza vale la data della riga; senza giorno dichiarato vale oggi. Scelta dell'utente il 24/11/2026 («una bolletta che scade il 15 novembre: 27 novembre»),
+// e coerente con lo storico di Collections (182 scadenze su 193 pagate il 27 del loro mese). Prima la data
 // si scriveva solo da «Smista» (già pagata) e dal bot: cambiando lo stato a mano restava vuota, e il pagato dell'anno non si poteva calcolare.
 // Vale SOLO da ora e SOLO nel passaggio di stato: una riga creata già pagata, o una già pagata che si modifica, non si tocca (la data non si inventa).
 // Lo dichiara il modulo: ruolo `data_pagamento` e stato «fatto» negli avvisi (Builder → Ruoli del modulo); nessun nome scritto qui.
 const moduleRoles = require('./module-roles');
 
-// L'ultimo giorno `giorno` del mese uguale o precedente a `iso` (AAAA-MM-GG): con giorno 27, 2026-12-01 → 2026-11-27; 2026-11-27 → 2026-11-27; 2026-11-05 → 2026-10-27.
-function ultimoGiornoDiPagamento(iso, giorno) {
+// Il giorno `giorno` del mese di `iso` (AAAA-MM-GG): con giorno 27, 2026-11-15 → 2026-11-27; 2026-12-30 → 2026-12-27. Null se la data o il giorno non sono validi.
+function giornoDiPagamento(iso, giorno) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(iso || '')) || !(giorno >= 2 && giorno <= 28)) return null;
-  let y = parseInt(iso.slice(0, 4), 10), m = parseInt(iso.slice(5, 7), 10);
-  if (parseInt(iso.slice(8, 10), 10) < giorno) { m -= 1; if (m === 0) { m = 12; y -= 1; } }
-  return y + '-' + String(m).padStart(2, '0') + '-' + String(giorno).padStart(2, '0');
+  return iso.slice(0, 8) + String(giorno).padStart(2, '0');
 }
 
 const oggi = (now = new Date()) => { const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now); return p; };
@@ -30,8 +29,9 @@ function applica(slug, dati, prima, now = new Date()) {
   if (dati[campo]) return dati; // già scritta (a mano, o da Smista)
   const adesso = oggi(now);
   const giorno = decl.competenza && decl.competenza.giorno;
-  const run = decl.roles.data && giorno ? ultimoGiornoDiPagamento(String(dati[decl.roles.data] || '').slice(0, 10), giorno) : null;
+  const base = String(dati[decl.roles.scadenza] || dati[decl.roles.data] || '').slice(0, 10);
+  const run = giorno ? giornoDiPagamento(base, giorno) : null;
   return { ...dati, [campo]: run && run < adesso ? run : adesso };
 }
 
-module.exports = { applica, oggi, ultimoGiornoDiPagamento };
+module.exports = { applica, oggi, giornoDiPagamento };
