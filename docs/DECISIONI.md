@@ -5,7 +5,7 @@ Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la 
 ## Report e data di pagamento — 24 novembre 2026
 
 - **Elenco completo per settimana, non troncato**: l'utente voleva «l'elenco completo delle spese in arrivo»; il vecchio limite di 8 righe resta come impostazione ma di partenza è 100.
-- **Il pagato non inventa date**: dove manca `data_pagamento` vale la data della spesa. Perché: le 310 spese vecchie non l'hanno e **non è recuperabile** dal backup di Collections (il campo non è mai esistito lì). Da ora si compila da sola al passaggio a «pagato», solo in quel momento: una riga creata già pagata o già pagata e modificata non si tocca.
+- **Il pagato non inventa date**: dove manca `data_pagamento` vale la data della spesa. Perché: le 310 spese vecchie non l'hanno e **non è recuperabile** dal backup di Collections (il campo non è mai esistito lì). Da ora si compila da sola al passaggio a «pagato» con il **giorno di pagamento della competenza** (l'ultimo 27 uguale o precedente alla data di competenza, mai nel futuro; scelto dall'utente: «imposta il pagamento sul mese competenza… al 27»), solo in quel momento: una riga creata già pagata o già pagata e modificata non si tocca.
 - **Il promemoria a N giorni è un report «esatto»**, non un nuovo tipo di evento: reuse del tempo fisso (giornaliero) con una condizione («scade tra esattamente N giorni»), così non serve un motore di eventi.
 - **Nuovi report spenti**: come tutti i report nuovi, nascono spenti; l'utente li accende e li guarda con l'anteprima.
 

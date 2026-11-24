@@ -25,18 +25,19 @@ async function test(name, fn) {
 const eq = (a, e, m) => { if (JSON.stringify(a) !== JSON.stringify(e)) throw new Error(`${m || ''}: atteso ${JSON.stringify(e)}, ottenuto ${JSON.stringify(a)}`); };
 
 const F = (key, label, type) => ({ id: 'f_' + key, block_type: 'field', key, label, type });
-const SPESE = { version: 3, steps: [F('descrizione', 'Descrizione', 'text'), F('importo', 'Importo', 'currency'), F('scadenza', 'Scadenza', 'date'), F('data_pagamento', 'Data pagamento', 'date')] };
+const SPESE = { version: 3, steps: [F('descrizione', 'Descrizione', 'text'), F('importo', 'Importo', 'currency'), F('data', 'Data', 'date'), F('scadenza', 'Scadenza', 'date'), F('data_pagamento', 'Data pagamento', 'date')] };
 const AV = { states: { nuovo: '', da_fare: 'da_pagare', fatto: 'pagato' }, scadenze: true };
 
 async function main() {
-  const { applica, oggi } = require('./data-pagamento');
+  const { applica, oggi, ultimoGiornoDiPagamento } = require('./data-pagamento');
   require('./index.js');
   for (let i = 0; i < 100; i++) { try { if ((await fetch(BASE + '/health')).ok) break; } catch (e) { await new Promise((r) => setTimeout(r, 100)); } }
   const db = require('./db');
   const roles = require('./module-roles');
   const add = (slug) => db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES (?, ?, 'box', '#000', 1, 1, 70, ?)").run(slug, slug, JSON.stringify(SPESE));
-  add('con'); add('senza');
+  add('con'); add('senza'); add('pag27');
   roles.set('con', { kind: 'spesa', uses: ['avvisi'], roles: { importo: 'importo', scadenza: 'scadenza', descrizione: 'descrizione', data_pagamento: 'data_pagamento' }, avvisi: AV });
+  roles.set('pag27', { kind: 'spesa', uses: ['avvisi'], roles: { importo: 'importo', data: 'data', scadenza: 'scadenza', descrizione: 'descrizione', data_pagamento: 'data_pagamento' }, avvisi: AV, competenza: { giorno: 27 } });
   roles.set('senza', { kind: 'spesa', uses: ['avvisi'], roles: { importo: 'importo', scadenza: 'scadenza', descrizione: 'descrizione' }, avvisi: AV });
   const login = await (await fetch(BASE + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: process.env.INITIAL_ADMIN_PASSWORD }) })).json();
   const H = { Authorization: 'Bearer ' + login.token, 'Content-Type': 'application/json' };
@@ -47,6 +48,13 @@ async function main() {
   await test('«oggi» è la data italiana (non quella UTC) e ha la forma AAAA-MM-GG', async () => {
     eq(oggi(new Date('2026-11-24T23:30:00Z')), '2026-11-25', 'dopo mezzanotte in Italia è già il giorno dopo');
     eq(oggi(new Date('2026-06-24T10:00:00Z')), '2026-06-24');
+  });
+
+  console.log('\n--- il giorno di pagamento della competenza (il 27) ---');
+  await test('l\'ultimo 27 uguale o precedente alla data: dicembre → 27 novembre; il 27 stesso; novembre → 27 ottobre; gennaio → 27 dicembre dell\'anno prima', async () => {
+    eq(ultimoGiornoDiPagamento('2026-12-01', 27), '2026-11-27'); eq(ultimoGiornoDiPagamento('2026-11-27', 27), '2026-11-27');
+    eq(ultimoGiornoDiPagamento('2026-11-05', 27), '2026-10-27'); eq(ultimoGiornoDiPagamento('2027-01-01', 27), '2026-12-27');
+    eq(ultimoGiornoDiPagamento('2027-01-15', 27), '2026-12-27'); eq(ultimoGiornoDiPagamento('', 27), null); eq(ultimoGiornoDiPagamento('2026-12-01', 0), null);
   });
 
   console.log('\n--- nei record ---');
@@ -78,6 +86,17 @@ async function main() {
     const a = await crea('senza', { descrizione: 'F', importo: 10, scadenza: '2026-11-30', _stato: 'da_pagare' });
     const m = await modifica('senza', a.id, { ...a.data, _stato: 'pagato' });
     eq(m.data.data_pagamento, undefined);
+  });
+  await test('con il giorno di pagamento dichiarato: voce di competenza aprile (scadenza 30/3) pagata a mano → 27 marzo, non oggi', async () => {
+    const a = await crea('pag27', { descrizione: 'G', importo: 10, scadenza: '2026-03-30', _stato: 'da_pagare' });
+    eq(a.data.data, '2026-04-01', 'la competenza è aprile');
+    const m = await modifica('pag27', a.id, { ...a.data, _stato: 'pagato' });
+    eq(m.data.data_pagamento, '2026-03-27');
+  });
+  await test('mai nel futuro: una voce di competenza lontana, segnata pagata oggi, riceve oggi', async () => {
+    const a = await crea('pag27', { descrizione: 'H', importo: 10, scadenza: '2099-03-30', _stato: 'da_pagare' });
+    const m = await modifica('pag27', a.id, { ...a.data, _stato: 'pagato' });
+    eq(m.data.data_pagamento, oggi());
   });
   await test('applica(): senza «prima» (creazione) o con lo stato già «fatto» restituisce gli stessi dati', async () => {
     const d = { _stato: 'pagato', descrizione: 'x' };
