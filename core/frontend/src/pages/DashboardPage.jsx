@@ -18,6 +18,9 @@ import PercorsoWidget from '../components/PercorsoWidget'
 import SegnaliWidget from '../components/SegnaliWidget'
 import { apriModulo } from '../lib/filtroWidget'
 
+// Colore fisso per tipo di riquadro nello stile Bento (index/shared stile-bento.css: attributo data-comp). Senza stile Bento non ha alcun effetto.
+const COMPONENTE_DI_WIDGET = { kpi: 'kpi', aggregate_value: 'kpi', computed: 'kpi', count: 'kpi', formula: 'kpi', riepilogo_mensile: 'kpi', come_sta_andando: 'kpi', coda: 'coda', agenda: 'scadenze', checklist: 'attivita', percorso: 'attivita', timbrature_rapide: 'attivita', segnali: 'avvisi' }
+
 // ─── DASHBOARD / REPORT ─────────────────────────────────────────────────────────
 // Stesso motore widget per due pagine — page='dashboard' (default, invariato) o
 // page='report': stessa tabella (dashboard_widgets, colonna 'page'), stesso editor,
@@ -441,7 +444,7 @@ function DashboardPage({ user, modules, token, page = 'dashboard', onNavigate, o
           // slegati invece di uno. Ora il wrapper porta il vetro (come checklist/coda/
           // riepilogo_mensile) e InsightsCard non disegna più un proprio sfondo.
           return (
-            <div key={w.id} className={(!isAperto(w) ? 'max-lg:[&>*:not(.wbar)]:hidden ' : '') + (['yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? 'relative' : 'glass-panel overflow-hidden relative') + (['checklist', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'percorso', 'segnali'].includes(w.type) ? ' col-span-full' : ['coda', 'agenda'].includes(w.type) ? ' col-span-full' : ['come_sta_andando', 'riepilogo_mensile'].includes(w.type) ? ' col-span-full sm:col-span-1 lg:col-span-3' : ' lg:col-span-2')}>
+            <div key={w.id} data-comp={COMPONENTE_DI_WIDGET[w.type] || (['yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? undefined : 'archivio')} className={(!isAperto(w) ? 'max-lg:[&>*:not(.wbar)]:hidden ' : '') + (['yearly_breakdown', 'category_pivot', 'weekly_breakdown'].includes(w.type) ? 'relative' : 'glass-panel overflow-hidden relative') + (['checklist', 'yearly_breakdown', 'category_pivot', 'weekly_breakdown', 'percorso', 'segnali'].includes(w.type) ? ' col-span-full' : ['coda', 'agenda'].includes(w.type) ? ' col-span-full' : ['come_sta_andando', 'riepilogo_mensile'].includes(w.type) ? ' col-span-full sm:col-span-1 lg:col-span-3' : ' lg:col-span-2')}>
               {['come_sta_andando', 'checklist', 'coda', 'riepilogo_mensile'].includes(w.type) && !editMode && (
                 /* "Liquid Glass" (2026-10-31) — questa barra, da chiusa, sta DENTRO la card già
                    di vetro (.glass-panel sul wrapper, sopra): prima aveva un suo sfondo opaco

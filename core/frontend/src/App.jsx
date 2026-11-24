@@ -151,6 +151,7 @@ export default function App() {
     if (hex2rgbTriplet(data.accent_color)) accentoScelto.current = hex2rgbTriplet(data.accent_color).split(' ').map(Number)
     applicaAccento()
     document.documentElement.dataset.fontApp = data.font_app || '' // il carattere scelto in Aspetto (vuoto = predefinito)
+    if (data.stile_app) document.documentElement.dataset.stile = data.stile_app; else delete document.documentElement.dataset.stile // lo stile scelto in Aspetto (vuoto = Classico)
     document.title = data.app_name ? data.app_name : (data.name ? data.name + ' — Platform' : 'Platform')
   }
 

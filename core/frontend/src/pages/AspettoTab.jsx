@@ -55,6 +55,11 @@ export default function AspettoTab({ token }) {
     if (ok) document.documentElement.dataset.fontApp = font_app || '' // subito, senza ricaricare
   }
 
+  const scegliStile = async (stile_app) => {
+    const ok = await salvaAzienda({ stile_app: stile_app || null })
+    if (ok) { if (stile_app) document.documentElement.dataset.stile = stile_app; else delete document.documentElement.dataset.stile } // subito, senza ricaricare
+  }
+
   const scegliLogoApp = (e) => {
     const file = e.target.files && e.target.files[0]
     e.target.value = ''
@@ -128,6 +133,27 @@ export default function AspettoTab({ token }) {
           </div>
           <span className="text-[11px] text-gray-600">Un logo chiaro (per esempio bianco su fondo trasparente) compare al posto di quello normale quando l'app è in tema scuro. Si cambia o si toglie quando vuoi: se il logo cambia, basta ricaricare i due file.</span>
         </div>
+      </div>
+
+      <p className="text-sm text-gray-500 mt-6 mb-3">Lo stile grafico dell'app: forma e colori dei riquadri. Funziona sia nel tema chiaro sia in quello scuro; ogni tipo di riquadro ha sempre lo stesso colore. Si cambia quando vuoi.</p>
+      <div className="glass-panel p-4 grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label="Stile grafico">
+        {[
+          { chiave: '', nome: 'Classico', nota: 'Com\'è sempre stata: riquadri scuri o chiari con bordo sottile.', colori: [] },
+          { chiave: 'bento_pastello', nome: 'Bento pastello', nota: 'Riquadri morbidi e pieni, una tinta tenue per ogni tipo.', colori: ['#d6efff', '#e3dcff', '#ffe3d2', '#d8f4df', '#fff0b8', '#ffd9ea'] },
+          { chiave: 'bento_vetro', nome: 'Bento vetro', nota: 'Riquadri trasparenti su uno sfondo sfumato.', colori: ['#9fd8ff', '#c3b0ff', '#ffc9a8', '#a6ecc0', '#ffe27a', '#ffa9cf'] },
+        ].map((o) => {
+          const attivo = (azienda.stile_app || '') === o.chiave
+          return (
+            <button key={o.chiave || 'classico'} type="button" role="radio" aria-checked={attivo} onClick={() => scegliStile(o.chiave)}
+              className={'text-left rounded-lg border p-3 transition ' + (attivo ? 'border-accent bg-accent/10' : 'border-gray-800 hover:border-gray-600')}>
+              <div className="text-ink text-base font-medium leading-tight">{o.nome}</div>
+              <div className="flex gap-1.5 mt-2 h-5">
+                {o.colori.length ? o.colori.map((c) => <span key={c} className="flex-1 rounded-md" style={{ background: c }} />) : <span className="flex-1 rounded-md bg-surface-page border border-gray-700" />}
+              </div>
+              <div className="text-[11px] text-gray-500 mt-1.5">{o.nota}{attivo ? ' · In uso' : ''}</div>
+            </button>
+          )
+        })}
       </div>
 
       <p className="text-sm text-gray-500 mt-6 mb-3">Il carattere dell'app: cambia testi e titoli ovunque (anche nella schermata di accesso) e nei titoli dei PDF.</p>

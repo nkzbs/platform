@@ -5,6 +5,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import InvitePage from './components/InvitePage'
 import FirmaPage from './components/FirmaPage'
 import './index.css'
+import '@shared/stile-bento.css' // stile «Bento» (Impostazioni → Aspetto): inerte finché data-stile non è impostato
 
 // /invito/<token>: la pagina pubblica di un invito, senza login e senza il resto dell'app.
 const invito = window.location.pathname.match(/^\/invito\/([A-Za-z0-9_-]+)\/?$/)

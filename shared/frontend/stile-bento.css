@@ -1,0 +1,86 @@
+/* Stile «Bento» (Impostazioni → Aspetto → Stile): riquadri morbidi e arrotondati, un colore FISSO per tipo di componente, sempre in chiaro e in scuro.
+   Due varianti: «pastello» (riquadri pieni, tinte tenui) e «vetro» (riquadri trasparenti su sfondo sfumato).
+   Si attiva con data-stile="bento_pastello" | "bento_vetro" sull'elemento radice (lo imposta App.jsx dal valore salvato); senza l'attributo non cambia NULLA («Classico»).
+   Il chiaro/scuro è quello già esistente (data-theme="light" = chiaro, altrimenti scuro): qui si ridefiniscono solo i token, quindi i componenti non vanno toccati.
+   Comune a core e Super Admin (importato da entrambi i main.jsx). I colori per componente arrivano dall'attributo data-comp sui riquadri:
+   kpi (azzurro), coda (lilla), attivita (pesca), archivio (verde), scadenze (giallo), avvisi (rosa). */
+
+/* ── Pastello · scuro ── */
+:root[data-stile="bento_pastello"] {
+  --surface-page: 14 13 23; --surface-card: 26 25 37; --surface-input: 21 20 31; --surface-hover: 36 35 51; --surface-footer: 14 13 23;
+  --ink: 241 239 255;
+  --gray-700: 58 56 80; --gray-800: 44 42 60; --gray-900: 30 29 42;
+  --cp-success: 141 240 181; --cp-success-bg: 31 90 57; --cp-warning: 255 210 102; --cp-warning-bg: 92 74 16; --cp-danger: 255 159 176; --cp-danger-bg: 94 34 48;
+  --c-kpi: #153248; --c-coda: #2a2350; --c-attivita: #4a2c1d; --c-archivio: #1b3b29; --c-scadenze: #473d12; --c-avvisi: #4a2136;
+  --bento-sh: 0 1px 0 rgb(255 255 255 / .05) inset, 0 8px 24px rgb(0 0 0 / .35);
+  --bento-bg: rgb(var(--surface-page));
+}
+/* ── Pastello · chiaro ── */
+:root[data-theme="light"][data-stile="bento_pastello"] {
+  --surface-page: 244 241 255; --surface-card: 255 255 255; --surface-input: 244 241 255; --surface-hover: 238 234 252; --surface-footer: 238 234 252;
+  --ink: 35 31 59;
+  --gray-200: 35 31 59; --gray-300: 58 53 86; --gray-400: 84 79 112; --gray-500: 112 106 140; --gray-600: 160 154 186;
+  --gray-700: 220 215 240; --gray-800: 232 228 246; --gray-900: 244 241 255;
+  --cp-success: 13 90 50; --cp-success-bg: 191 240 207; --cp-warning: 107 72 0; --cp-warning-bg: 255 224 138; --cp-danger: 140 23 48; --cp-danger-bg: 255 194 203;
+  --c-kpi: #d6efff; --c-coda: #e3dcff; --c-attivita: #ffe3d2; --c-archivio: #d8f4df; --c-scadenze: #fff0b8; --c-avvisi: #ffd9ea;
+  --bento-sh: 0 1px 0 rgb(255 255 255 / .7) inset, 0 8px 24px rgb(60 50 120 / .08);
+}
+
+/* ── Vetro · scuro ── */
+:root[data-stile="bento_vetro"] {
+  --surface-page: 16 14 28; --surface-card: 34 32 52; --surface-input: 24 22 40; --surface-hover: 46 43 68; --surface-footer: 16 14 28;
+  --ink: 243 241 255;
+  --gray-700: 70 66 98; --gray-800: 52 49 76; --gray-900: 34 32 52;
+  --cp-success: 141 240 181; --cp-success-bg: 31 90 57; --cp-warning: 255 210 102; --cp-warning-bg: 92 74 16; --cp-danger: 255 159 176; --cp-danger-bg: 94 34 48;
+  --c-kpi: rgb(70 170 255 / .20); --c-coda: rgb(150 110 255 / .22); --c-attivita: rgb(255 140 90 / .20); --c-archivio: rgb(70 210 130 / .18); --c-scadenze: rgb(255 205 60 / .18); --c-avvisi: rgb(255 90 160 / .20);
+  --bento-card-bg: rgb(255 255 255 / .07); --bento-card-line: rgb(255 255 255 / .14);
+  --bento-sh: 0 10px 40px rgb(0 0 0 / .4);
+  --bento-bg: radial-gradient(1000px 600px at 10% -10%, rgb(var(--accent) / .45), transparent 60%), radial-gradient(900px 600px at 100% 10%, rgb(255 120 90 / .28), transparent 60%), radial-gradient(900px 700px at 40% 110%, rgb(70 210 160 / .28), transparent 60%), rgb(var(--surface-page));
+}
+/* ── Vetro · chiaro ── */
+:root[data-theme="light"][data-stile="bento_vetro"] {
+  --surface-page: 240 236 255; --surface-card: 255 255 255; --surface-input: 255 255 255; --surface-hover: 255 255 255; --surface-footer: 240 236 255;
+  --ink: 28 27 51;
+  --gray-200: 28 27 51; --gray-300: 52 50 84; --gray-400: 78 75 110; --gray-500: 106 102 138; --gray-600: 156 152 184;
+  --gray-700: 214 210 238; --gray-800: 226 222 246; --gray-900: 240 236 255;
+  --cp-success: 11 90 48; --cp-success-bg: 190 236 208; --cp-warning: 107 72 0; --cp-warning-bg: 255 226 150; --cp-danger: 140 23 48; --cp-danger-bg: 255 200 208;
+  --c-kpi: rgb(120 200 255 / .34); --c-coda: rgb(160 130 255 / .34); --c-attivita: rgb(255 170 120 / .36); --c-archivio: rgb(110 220 150 / .32); --c-scadenze: rgb(255 215 80 / .38); --c-avvisi: rgb(255 130 180 / .30);
+  --bento-card-bg: rgb(255 255 255 / .5); --bento-card-line: rgb(255 255 255 / .65);
+  --bento-sh: 0 10px 40px rgb(60 50 120 / .12);
+  --bento-bg: radial-gradient(1000px 600px at 10% -10%, rgb(var(--accent) / .32), transparent 60%), radial-gradient(900px 600px at 100% 10%, rgb(255 160 120 / .35), transparent 60%), radial-gradient(900px 700px at 40% 110%, rgb(110 220 190 / .35), transparent 60%), rgb(var(--surface-page));
+}
+
+/* ── Regole comuni ── */
+:root[data-stile^="bento"] body { background: var(--bento-bg); background-attachment: fixed; }
+:root[data-stile^="bento"] .min-h-screen.bg-surface-page { background: transparent; } /* lo sfondo (a tinta o sfumato) lo porta body */
+
+/* Forme: angoli più larghi e niente righe nette attorno ai riquadri. */
+:root[data-stile^="bento"] .rounded-2xl { border-radius: 28px; }
+:root[data-stile^="bento"] .rounded-xl { border-radius: 22px; }
+:root[data-stile^="bento"] .rounded-lg { border-radius: 14px; }
+:root[data-stile^="bento"] .glass-panel { border-radius: 28px; border: 0; box-shadow: var(--bento-sh); backdrop-filter: none; -webkit-backdrop-filter: none; }
+:root[data-stile^="bento"] .glass-pill { border: 0; box-shadow: var(--bento-sh); }
+:root[data-stile^="bento"] .bg-surface-card { box-shadow: var(--bento-sh); }
+:root[data-stile^="bento"] .bg-surface-card.border { border-color: transparent; }
+
+/* Pastello: riquadri pieni (card piena, componenti a tinta), niente chiazze di colore sullo sfondo. */
+:root[data-stile="bento_pastello"] .glass-mesh-bg { display: none; }
+:root[data-stile="bento_pastello"] .glass-panel { background: rgb(var(--surface-card)); }
+:root[data-stile="bento_pastello"] .glass-dock { background: rgb(var(--surface-card) / .92); }
+
+/* Vetro: riquadri trasparenti con sfocatura; il bordo è un filo di luce. */
+:root[data-stile="bento_vetro"] .glass-panel,
+:root[data-stile="bento_vetro"] .bg-surface-card {
+  background: var(--bento-card-bg);
+  border: 1px solid var(--bento-card-line);
+  backdrop-filter: blur(22px) saturate(1.4); -webkit-backdrop-filter: blur(22px) saturate(1.4);
+}
+:root[data-stile="bento_vetro"] .glass-dock { background: var(--bento-card-bg); }
+
+/* Colore FISSO per tipo di componente (attributo data-comp sul riquadro). */
+:root[data-stile^="bento"] [data-comp="kpi"] { background: var(--c-kpi); }
+:root[data-stile^="bento"] [data-comp="coda"] { background: var(--c-coda); }
+:root[data-stile^="bento"] [data-comp="attivita"] { background: var(--c-attivita); }
+:root[data-stile^="bento"] [data-comp="archivio"] { background: var(--c-archivio); }
+:root[data-stile^="bento"] [data-comp="scadenze"] { background: var(--c-scadenze); }
+:root[data-stile^="bento"] [data-comp="avvisi"] { background: var(--c-avvisi); }

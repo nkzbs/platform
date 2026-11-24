@@ -251,3 +251,7 @@ h1, h2, h3, .font-display {
 :root[data-theme="light"] .glass-mesh-logo {
   opacity: 0.22;
 }
+
+/* Stile Bento (Impostazioni → Aspetto): l'accento di Super Admin è il viola di Platform, più chiaro in scuro per leggere bene. Il resto è in shared/frontend/stile-bento.css. */
+:root[data-stile^="bento"] { --cp-primary: 132 118 255; --cp-primary-hover: 110 96 240; --accent: var(--cp-primary); }
+:root[data-theme="light"][data-stile^="bento"] { --cp-primary: 88 74 236; --cp-primary-hover: 70 57 205; }

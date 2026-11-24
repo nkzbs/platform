@@ -2,6 +2,15 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.68 — Stile grafico «Bento» (pastello e vetro), chiaro e scuro
+
+- **Nuova impostazione «Stile»** in Impostazioni → Aspetto e funzioni: **Classico** (com'è sempre stata, resta il predefinito), **Bento pastello** (riquadri pieni, tinte tenui) e **Bento vetro** (riquadri trasparenti su sfondo sfumato). Si salva per ogni tenant (`tenant_settings.stile_app`, validato da `lib/stili.js`, esce in `/api/tenant-info`) e si applica subito, senza ricaricare.
+- **Chiaro e scuro inclusi**: il chiaro/scuro resta quello già esistente; lo stile ridefinisce solo i token (`shared/frontend/stile-bento.css`, attributo `data-stile` sulla radice). Senza stile scelto il CSS non cambia nulla.
+- **Colore fisso per tipo di riquadro** (attributo `data-comp`): KPI azzurro, coda lilla, da fare/scadenze giallo, attività pesca, archivio verde, avvisi rosa. Nella Dashboard i widget lo ricevono dal tipo (`COMPONENTE_DI_WIDGET` in `DashboardPage.jsx`); i riquadri dei moduli, le schede e le impostazioni prendono forma e tinte dai token.
+- **Super Admin**: voce «Aspetto» nelle Impostazioni; la scelta resta in quel browser (localStorage, `lib/stile.js`). Accento viola di Platform.
+- Tolte quattro copie identiche con «2» nel nome (file di sincronizzazione finiti nel repository).
+- Provato dal vivo su una copia locale: selettore, salvataggio, i quattro casi (pastello/vetro × chiaro/scuro) e il colore dei riquadri. **Non provato**: le pagine dei moduli con dati veri e il telefono. La prima passata copre forma, sfondo e riquadri della Dashboard; le schermate con colori scritti a mano restano come sono e si ritoccano dopo averle viste.
+
 ## 0.5.67 — «Auguri al cliente» non più tra le Azioni della scheda (pacchetto 43)
 
 - **Nascosta nella scheda del cliente** l'azione «Auguri al cliente / comunicazioni varie» (nuova proprietà `nascosta_nella_scheda` di un'azione esterna, `RecordDetailModal.jsx`). L'azione resta nel modulo: serve al **«Messaggio ai clienti»** di massa e agli auguri automatici di compleanno (spenti finché non si attivano). Sui tenant esistenti la proprietà arriva con il blocco `auguri_senza_pulsante_nella_scheda`.

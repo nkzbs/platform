@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## 0.5.68 — 24 novembre 2026 (stile grafico Bento)
+
+- **Lo stile è un'impostazione per tenant, non un tema separato**: `stile_app` (vuoto = Classico) in Aspetto, come il carattere. Perché: l'utente voleva un tema «applicabile» che non rompa nulla; con il valore vuoto il CSS non cambia di una riga. Per Super Admin, che non ha impostazioni salvate sul server, la scelta resta nel browser (localStorage).
+- **Solo token, non componenti**: lo stile ridefinisce le variabili già usate da Tailwind (`--surface-*`, `--gray-*`, `--cp-*`) e poche regole sugli angoli e sui riquadri, in `shared/frontend/stile-bento.css`, uguale in core e Super Admin. Chiaro e scuro sono quelli esistenti (`data-theme`), perché l'utente ha chiesto «con dark inclusa». Così nessun componente va riscritto e una schermata con colori scritti a mano resta com'è, invece di rompersi.
+- **Colori fissi per tipo di riquadro** con l'attributo `data-comp` (kpi, coda, attività, archivio, scadenze, avvisi), non per modulo né per scelta dell'utente: lo stesso tipo ha sempre lo stesso colore. L'accento invece segue l'app (viola in Super Admin, quello del tenant altrove).
+- **Aggiungere uno stile**: una voce in `core/backend/src/lib/stili.js` e un blocco in `stile-bento.css`. Il frontend dei tenant non conosce i nomi, li legge da `/api/tenant-info`.
+
 ## 0.5.48 – 0.5.67 — 23 novembre 2026 (zucca, Mediazione immobiliare)
 
 - **Pochi moduli, le cose dentro le schede**: Cliente, Immobile e Trattativa sono i tre moduli di lavoro; le **Attività** vivono dentro le tre schede (`menu_nascosto`, come le Quote societarie). **Provvigioni resta un modulo**: porta la fattura elettronica, una per parte (venditore e acquirente), e non si compila a mano (nasce dalla trattativa).

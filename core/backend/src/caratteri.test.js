@@ -70,6 +70,18 @@ async function main() {
     eq((await put({ app_logo_chiaro_url: null })).status, 200); eq((await (await fetch(BASE + '/api/tenant-info')).json()).app_logo_chiaro_url, null);
   });
 
+  await test('Stile grafico: si sceglie, esce in tenant-info, uno sconosciuto è rifiutato, salvare altro non lo azzera, si torna a Classico', async () => {
+    const leggi = async () => (await (await fetch(BASE + '/api/settings/azienda', { headers: H })).json());
+    const put = (extra, togli) => leggi().then((b) => { const o = { ...b, ...extra }; if (togli) delete o[togli]; return fetch(BASE + '/api/settings/azienda', { method: 'PUT', headers: H, body: JSON.stringify(o) }); });
+    const info = async () => (await (await fetch(BASE + '/api/tenant-info')).json()).stile_app;
+    eq((await leggi()).stile_app, null, 'di partenza Classico'); eq(await info(), null);
+    eq((await put({ stile_app: 'bento_vetro' })).status, 200); eq(await info(), 'bento_vetro');
+    eq((await put({ stile_app: 'bento_pastello' })).status, 200); eq(await info(), 'bento_pastello');
+    eq((await put({ stile_app: 'neon_totale' })).status, 400); eq(await info(), 'bento_pastello', 'invariato dopo il rifiuto');
+    eq((await put({ ragione_sociale: 'Agenzia Stile' }, 'stile_app')).status, 200); eq(await info(), 'bento_pastello', 'salvare altro non lo azzera');
+    eq((await put({ stile_app: null })).status, 200); eq(await info(), null);
+  });
+
   console.log(`\n${'='.repeat(60)}\n${passed} passati, ${failed} falliti su ${passed + failed} test.`);
   try { fs.unlinkSync(process.env.DB_PATH); } catch (e) {}
   process.exit(failed > 0 ? 1 : 0);

@@ -5,6 +5,7 @@ import StatusBadge from '../components/StatusBadge'
 import UsersPage from './UsersPage'
 import { startRegistration, browserSupportsWebAuthn } from '@simplewebauthn/browser'
 import GlassPageBackground from '../components/GlassPageBackground'
+import { leggiStile, salvaStile, STILI } from '../lib/stile'
 
 // PLATFORM-UI-REDESIGN-CATALOG.md #8 — unico pezzo mancante di questa pagina
 // (la navigazione a tile per sotto-sezioni esiste già): un indicatore di
@@ -38,6 +39,7 @@ const SETTINGS_GROUPS = [
     { key: 'sicurezza', icon: 'shield', label: 'Sicurezza' },
   ] },
   { label: 'Piattaforma', items: [
+    { key: 'aspetto', icon: 'palette', label: 'Aspetto' },
     { key: 'ai', icon: 'key', label: 'Chiavi AI' },
     { key: 'server', icon: 'database', label: 'Server (Linode)' },
   ] },
@@ -69,6 +71,7 @@ function SettingsNav({ groups, active, onChange }) {
 
 // ─── IMPOSTAZIONI ───────────────────────────────────────────────────────────────
 function SettingsPage({ token, myId }) {
+  const [stile, setStile] = useState(leggiStile)
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -438,6 +441,28 @@ function SettingsPage({ token, myId }) {
             </div>
           </div>
         )}
+      </section>
+      )}
+
+      {/* ASPETTO — lo stile grafico di Super Admin; resta in questo browser */}
+      {tab === 'aspetto' && (
+      <section className="glass-panel p-5">
+        <SectionHead icon="palette" title="Aspetto" sub="Forma e colori dei riquadri, in tema chiaro e scuro. La scelta resta su questo browser." />
+        <div className="grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label="Stile grafico">
+          {STILI.map((o) => {
+            const attivo = stile === o.chiave
+            return (
+              <button key={o.chiave || 'classico'} type="button" role="radio" aria-checked={attivo} onClick={() => { salvaStile(o.chiave); setStile(o.chiave) }}
+                className={'text-left rounded-lg border p-3 transition ' + (attivo ? 'border-cp-primary bg-cp-primary/10' : 'border-gray-800 hover:border-gray-600')}>
+                <div className="text-ink text-base font-medium leading-tight">{o.nome}</div>
+                <div className="flex gap-1.5 mt-2 h-5">
+                  {o.colori.length ? o.colori.map((c) => <span key={c} className="flex-1 rounded-md" style={{ background: c }} />) : <span className="flex-1 rounded-md bg-surface-page border border-gray-700" />}
+                </div>
+                <div className="text-[11px] text-gray-500 mt-1.5">{o.nota}{attivo ? ' · In uso' : ''}</div>
+              </button>
+            )
+          })}
+        </div>
       </section>
       )}
 
