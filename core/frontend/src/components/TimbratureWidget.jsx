@@ -92,10 +92,10 @@ export default function TimbratureWidget({ token, user, onNavigate }) {
     riparti()
   }
 
-  const inp = 'bg-surface-input border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-ink min-w-0 w-full'
+  const inp = 'bg-ink/[0.07] border border-ink/10 rounded-xl px-3 py-2.5 text-sm text-ink min-w-0 w-full' // tinta trasparente: segue il colore del riquadro (anche con lo stile Bento), niente fondo nero fisso
   const interruttore = (chiave, etichetta, attivoCls) => (
     <button type="button" role="radio" aria-checked={modoEff === chiave} onClick={() => setModo(chiave)}
-      className={'py-2 rounded-lg text-sm transition ' + (modoEff === chiave ? attivoCls + ' text-white font-semibold' : 'text-gray-400 hover:text-ink')}>{etichetta}</button>
+      className={'py-2 rounded-lg text-sm transition ' + (modoEff === chiave ? attivoCls + ' text-white font-semibold shadow-sm' : 'text-gray-400 hover:text-ink')}>{etichetta}</button>
   )
 
   return (
@@ -105,7 +105,7 @@ export default function TimbratureWidget({ token, user, onNavigate }) {
           <Icon name="clock" size={15} className={aperta ? 'text-green-500' : 'text-gray-500'} />
           <h2 className="text-sm font-semibold text-ink">Timbrature</h2>
         </div>
-        <span className={'inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full ' + (aperta ? 'bg-green-900/30 text-green-400' : 'bg-surface-input text-gray-500')}>
+        <span className={'inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full ' + (aperta ? 'bg-green-900/30 text-green-400' : 'bg-ink/[0.07] text-gray-500')}>
           <span className={'w-2 h-2 rounded-full ' + (aperta ? 'bg-green-500' : 'bg-gray-600')} />
           {aperta ? 'Al lavoro dalle ' + hhmm(aperta.data[mod.inizio]) : 'Non al lavoro'}
         </span>
@@ -114,7 +114,7 @@ export default function TimbratureWidget({ token, user, onNavigate }) {
       <div className="text-xs text-gray-500 mt-1 mb-3">ore di oggi</div>
       {error && <div className="text-xs text-red-400 bg-red-900/20 border border-red-900/40 rounded-lg p-2.5 mb-3">{error}</div>}
 
-      <div role="radiogroup" aria-label="Cosa registrare" className="grid grid-cols-2 gap-0.5 p-0.5 rounded-xl bg-surface-input border border-gray-800 mb-3">
+      <div role="radiogroup" aria-label="Cosa registrare" className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-ink/[0.07] mb-3">
         {interruttore('entrata', 'Entrata', 'bg-accent')}
         {interruttore('uscita', 'Uscita', 'bg-red-700')}
       </div>
