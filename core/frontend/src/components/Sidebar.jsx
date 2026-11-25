@@ -217,14 +217,14 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
   const nessunRisultato = filtro && (editPins ? !poolF.length : (!overflowSenzaGruppoF.length && !overflowConGruppoF.length && !systemItemsF.length))
 
   const notificationList = (
-    <div className="max-h-64 overflow-y-auto">
+    <div className="max-h-[50vh] md:max-h-64 overflow-y-auto">
       {notifications.length === 0 ? (
         <div className="text-xs text-gray-600 text-center py-6">Nessuna notifica</div>
       ) : notifications.map((n) => (
         <div key={n.id} className={'px-3 py-2.5 border-b border-white/5 ' + (n.read ? 'opacity-50' : '')}>
           <div className="flex items-start gap-2">
-            {!n.read && <div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 flex-shrink-0" />}
-            {n.read && <div className="w-1.5 h-1.5 flex-shrink-0" />}
+            {/* ternario, non «n.read && …»: da SQLite `read` arriva come 0 e React stamperebbe uno «0» al posto del pallino */}
+            {n.read ? <div className="w-1.5 h-1.5 flex-shrink-0" /> : <div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 flex-shrink-0" />}
             <div className="flex-1 min-w-0">
               <div className="text-xs text-gray-300 leading-snug">{n.message}</div>
               {n.module_slug && <div className="text-[10px] text-gray-600 mt-0.5">{n.module_slug}{n.record_id ? ' #' + n.record_id : ''}</div>}
@@ -414,7 +414,7 @@ function Sidebar({ modules, currentPage, onNavigate, user, onLogout, tenantName,
           <div className="relative" ref={notifRef}>
             <DockIcon name="Notifiche" icon="bell" active={notifOpen} badge={unreadCount} onClick={() => setNotifOpen((s) => !s)} />
             {notifOpen && (
-              <div className="glass-panel absolute bottom-[52px] left-1/2 w-72 z-50 overflow-hidden" style={{ transform: 'translateX(-50%)' }}>
+              <div className="bg-surface-card border border-gray-700 rounded-2xl shadow-2xl fixed left-1/2 z-50 overflow-hidden" style={{ transform: 'translateX(-50%)', bottom: 'calc(100% + 12px)', width: 'min(400px, calc(100vw - 32px))' }}> {/* il dock ha un transform: «fixed» qui si misura sul dock, quindi 100% = sopra il dock, centrato */}
                 <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/10">
                   <span className="text-xs font-semibold text-ink">Notifiche</span>
                   <div className="flex gap-2">
