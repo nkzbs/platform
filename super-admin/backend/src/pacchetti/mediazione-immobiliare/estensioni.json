@@ -1629,6 +1629,40 @@
           }
         }
       ]
+    },
+    {
+      "key": "nuova_vendita",
+      "_nota": "Il pulsante «Nuova vendita» sulle Trattative: un percorso a passi (venditore, immobile, acquirente facoltativo, titolo). Per ogni passo scegli una scheda che c'è già o ne crei una nuova, da modulo PDF o a mano; alla fine nasce la trattativa già collegata. Si cambia dal Builder, nel blocco «Creazione guidata» (passi in `procedura`).",
+      "richiede": {
+        "trattative": [
+          "titolo",
+          "venditore",
+          "acquirente",
+          "immobile"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "creazione_guidata",
+          "scelta_iniziale": false,
+          "procedura_label": "Nuova vendita",
+          "procedura": [
+            {
+              "campo": "venditore",
+              "titolo": "Venditore"
+            },
+            {
+              "campo": "immobile",
+              "titolo": "Immobile"
+            },
+            {
+              "campo": "acquirente",
+              "titolo": "Acquirente",
+              "facoltativo": true
+            }
+          ]
+        }
+      ]
     }
   ],
   "immobili": [

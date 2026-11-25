@@ -18,6 +18,7 @@ import AiSuggestionsPanel from '../../components/AiSuggestionsPanel'
 import ImportPdf from '../../components/ImportPdf'
 import ImportaModuloPdf from '../../components/ImportaModuloPdf'
 import { SceltaNuovo, ProponiCollegato } from '../../components/CreazioneGuidata'
+import NuovaVendita from '../../components/NuovaVendita'
 import ImportPayslip from '../../components/ImportPayslip'
 import BustaPagaReportView from '../../components/BustaPagaReportView'
 import DriveSyncButton from '../../components/DriveSyncButton'
@@ -55,6 +56,7 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
   const [pdfAperto, setPdfAperto] = useState(false)
   const [haPdf, setHaPdf] = useState(false)
   const [collegato, setCollegato] = useState(null) // { id } del record appena creato
+  const [procedura, setProcedura] = useState(false) // percorso a passi «Nuova vendita»
   const [showSourceSearch, setShowSourceSearch] = useState(false)
   const [branchCreateOpen, setBranchCreateOpen] = useState(null)
   const [showReport, setShowReport] = useState(false)
@@ -680,6 +682,9 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
                 <Icon name="plus" size={14} />Nuovo
               </button>
             )}
+            {canCreate && guidata && (guidata.procedura || []).length > 0 && (
+              <button onClick={() => setProcedura(true)} className="bg-gray-800 hover:bg-gray-700 text-ink px-4 py-2 rounded-lg text-sm font-medium transition">{guidata.procedura_label || 'Nuova vendita'}</button>
+            )}
             <button onClick={() => setShowReport(!showReport)} aria-label="Report" title="Report" aria-pressed={showReport} className={'w-9 h-9 rounded-lg transition flex items-center justify-center ' + (showReport ? 'bg-gray-700 text-ink' : 'bg-gray-800 hover:bg-gray-700 text-gray-300')}>
               <Icon name="bar-chart" size={16} />
             </button>
@@ -1205,6 +1210,7 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
         </div>
       )}
 
+      {procedura && schema && <NuovaVendita token={token} mod={mod} schema={schema} procedura={guidata.procedura} onNavigate={onNavigate} onChiudi={() => setProcedura(false)} onCreata={() => loadRecords()} />}
       {sceltaNuovo && <SceltaNuovo nome={mod.name} onAnnulla={() => setSceltaNuovo(false)} onPdf={() => { setSceltaNuovo(false); setPdfAperto(true) }} onManuale={() => { setSceltaNuovo(false); apriNuovo() }} />}
       {pdfAperto && <ImportaModuloPdf token={token} mod={mod} senzaVoce aperto onChiudi={() => setPdfAperto(false)} onCreated={(r) => { loadRecords(); proponiCollegato(r && r.id) }} />}
       {collegato && <ProponiCollegato token={token} mod={mod} recordId={collegato.id} regole={(guidata.dopo || []).filter((r) => r.modulo)} onNavigate={onNavigate} onChiudi={() => setCollegato(null)} />}
