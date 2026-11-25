@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## Consenso alle comunicazioni accanto ai contatti (pacchetto 50, nessun cambio di versione)
+
+- Su Clienti il **consenso alle comunicazioni (mail, SMS)** ora sta nella sezione **Contatti**, accanto a mail e telefono, e tra i **dati chiave** della scheda. Prima era solo in lettura, in «Privacy e consensi», e si scriveva soltanto alla firma dell'informativa: non c'era un posto dove segnalare un consenso dato a voce o per iscritto.
+- Ora si **segna a mano**, con **«Consenso dato il»** e **«Come l'ha dato»** (modulo privacy firmato, a voce, per iscritto, dal sito web): servono per poterlo dimostrare (art. 7 GDPR). Il firmare l'informativa continua a spuntarlo da solo. Il motore dei messaggi legge sempre lo stesso campo (`consenso_marketing`): chi non ha il consenso resta escluso dagli invii di massa e dagli auguri.
+- Estensione `consenso_accanto_ai_contatti` (pacchetto 49 → 50). Cambia solo i campi ancora uguali a quelli del pacchetto; una scelta fatta dal Builder non si tocca. Il consenso a partner e portali resta in «Privacy e consensi», in sola lettura.
+- Provato in isolamento (riscrittura e secondo giro); **non provato dal vivo**.
+
 ## Sicurezza (audit del 25/11) e pannello Privacy e GDPR (nessun cambio di versione)
 
 - **Audit di sicurezza**: [docs/AUDIT-SICUREZZA-2026-11-25.md](AUDIT-SICUREZZA-2026-11-25.md). Corretto nel codice: gli **script delle fonti dati** girano in un processo isolato senza segreti né disco (A2); l'**avvio del collegamento Google** è solo per admin (M1); **HSTS** e intestazioni sulle pagine, **CSP in sola segnalazione** (M3); `internal-setup` col confronto a tempo costante (M7); `body-parser` aggiornato (M6). **Ancora aperti** (toccano la produzione, in attesa di conferma): segreto interno per tenant (A1), porta 4000 solo da Cloudflare (A3), limite di login e 2FA obbligatorio (M4), permessi del NAS (M5), link monouso per i download (M2).

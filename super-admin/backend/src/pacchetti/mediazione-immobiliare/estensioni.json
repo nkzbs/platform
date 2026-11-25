@@ -5473,6 +5473,68 @@
           ]
         }
       ]
+    },
+    {
+      "key": "consenso_accanto_ai_contatti",
+      "_nota": "Il consenso alle comunicazioni commerciali sta accanto a mail e telefono (sezione Contatti e tra i dati chiave) e si può segnare a mano: prima era solo in lettura e si scriveva soltanto alla firma dell'informativa. Si aggiungono la data e il modo in cui il cliente l'ha dato (a voce, per iscritto, dal sito o col modulo privacy firmato): serve per poterlo dimostrare (art. 7 GDPR). Il motore dei messaggi continua a leggere lo stesso campo «Consenso comunicazioni commerciali». Cambia solo dove il campo è ancora quello del pacchetto: una scelta fatta dal Builder non si tocca.",
+      "richiede": {
+        "clienti": [
+          "consenso_marketing",
+          "email",
+          "telefono"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "field",
+          "key": "consenso_marketing_data",
+          "label": "Consenso dato il",
+          "type": "date",
+          "sezione": "Contatti"
+        },
+        {
+          "block_type": "field",
+          "key": "consenso_marketing_modo",
+          "label": "Come l'ha dato",
+          "type": "select",
+          "options": [
+            "Modulo privacy firmato",
+            "A voce",
+            "Per iscritto (mail o messaggio)",
+            "Dal sito web"
+          ],
+          "sezione": "Contatti"
+        }
+      ],
+      "riscrivi": [
+        {
+          "block_type": "field",
+          "key": "consenso_marketing",
+          "proprieta": {
+            "sola_lettura": {
+              "da": true,
+              "a": false
+            },
+            "sezione": {
+              "da": "Privacy e consensi",
+              "a": "Contatti"
+            },
+            "label": {
+              "da": "Consenso comunicazioni commerciali",
+              "a": "Consenso alle comunicazioni (mail, SMS)"
+            }
+          }
+        }
+      ],
+      "imposta": [
+        {
+          "block_type": "field",
+          "key": "consenso_marketing",
+          "proprieta": {
+            "dato_chiave": true
+          }
+        }
+      ]
     }
   ],
   "quote_societarie": [
