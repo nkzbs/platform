@@ -17,6 +17,7 @@ import ExportServerCard from '../components/ExportServerCard'
 import TelegramCard from '../components/TelegramCard'
 import SitoWebPage from './SitoWebPage'
 import SicurezzaTab from '../components/SicurezzaTab'
+import GdprPanel from '../components/GdprPanel'
 import ReviewMatchesTab from '../components/ReviewMatchesTab'
 import MovimentiPage from './MovimentiPage'
 import ListePage from './ListePage'
@@ -546,6 +547,7 @@ const SETTINGS_GROUPS = [
     { key: 'aspetto', icon: 'palette', label: 'Aspetto e funzioni', schede: [['aspetto', 'Aspetto'], ['funzioni', 'Funzioni']] },
     { key: 'assistente', icon: 'wand', label: 'AI', schede: [['assistente', 'Impostazioni AI'], ['suggerimenti', 'Suggerimenti']] },
     { key: 'export_dati', icon: 'download', label: 'Dati e sicurezza', schede: [['export_dati', 'Dati e backup'], ['sicurezza', 'Sicurezza']] },
+    { key: 'gdpr', icon: 'shield', label: 'Privacy e GDPR' },
     { key: 'guida', icon: 'info', label: 'Guida d\'uso' },
   ] },
 ]
@@ -637,6 +639,7 @@ function ImpostazioniPage({ token, user, initialTab, features = {}, modules = []
           {tab === 'assistente' && <AiSettingsPage token={token} onChanged={onFeaturesChanged} />}
 
           {tab === 'sicurezza' && <SicurezzaTab token={token} />}
+          {tab === 'gdpr' && <GdprPanel token={token} />}
           {tab === 'collegamenti' && <ReviewMatchesTab token={token} />}
           {tab === 'movimenti' && <MovimentiPage token={token} />}
 

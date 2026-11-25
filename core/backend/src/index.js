@@ -115,6 +115,7 @@ const routeMounts = [
   ['/dashboard', dashboardRoutes],
   ['/audit-log', auditRoutes],
   ['/security-status', securityStatusRoutes],
+  ['/gdpr', require('./routes/gdpr')],
   ['/roles', rolesRoutes],
   ['/m2m', m2mRoutes],
   ['/notifications', notificationsRoutes],

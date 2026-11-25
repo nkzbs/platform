@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## Sicurezza (audit del 25/11) e pannello Privacy e GDPR (nessun cambio di versione)
+
+- **Audit di sicurezza**: [docs/AUDIT-SICUREZZA-2026-11-25.md](AUDIT-SICUREZZA-2026-11-25.md). Corretto nel codice: gli **script delle fonti dati** girano in un processo isolato senza segreti né disco (A2); l'**avvio del collegamento Google** è solo per admin (M1); **HSTS** e intestazioni sulle pagine, **CSP in sola segnalazione** (M3); `internal-setup` col confronto a tempo costante (M7); `body-parser` aggiornato (M6). **Ancora aperti** (toccano la produzione, in attesa di conferma): segreto interno per tenant (A1), porta 4000 solo da Cloudflare (A3), limite di login e 2FA obbligatorio (M4), permessi del NAS (M5), link monouso per i download (M2).
+- **Impostazioni → Privacy e GDPR** (solo admin): **Stato** (checklist: registro, fornitori, violazioni, 2FA degli admin), **Trattamenti** (registro art. 30, con «Precompila» da bozze generiche), **Fornitori** (accordi di trattamento art. 28, dedotti dalle connessioni attive), **Violazioni** (registro art. 33 con le 72 ore) e **Persona** (ricerca ed esportazione dei dati di una persona, art. 15 e 20). Le bozze di partenza sono dati in `seeds/gdpr-modelli.json`, senza nomi di progetto. Codice: `gdpr.js`, `routes/gdpr.js`, `GdprPanel.jsx`.
+- **Documenti** in `docs/gdpr/`: procedura per le violazioni, conservazione, valutazione d'impatto e bozza dell'accordo con il responsabile. Sono **bozze**, non pareri legali.
+- Test: `gdpr.test.js` (9, provati), `source-engine.test.js` (15, provati). **Non provato**: il pannello nel browser e le rotte con un server vero (il server di prova non parte in questo ambiente).
+
 ## Provvigioni al rogito, automatiche; creazione al volo dalla trattativa (pacchetti 46, 47, 48 e 49, nessun cambio di versione)
 
 - **Quando nascono**: al passaggio della trattativa a «Rogito completato» (prima alla firma del preliminare). Una riga per il venditore e una per l'acquirente, in «da fatturare», tipo «Provvigione rogito», con cliente, prezzo concordato e data del rogito presi dalla trattativa. La fattura la emetti tu. Una volta sola per trattativa.
