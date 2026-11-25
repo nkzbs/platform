@@ -5465,7 +5465,8 @@
                 "campo": "tipo_cliente",
                 "mappa": {
                   "Venditore": "venditore",
-                  "Acquirente": "acquirente"
+                  "Acquirente che sa già cosa vuole": "acquirente",
+                  "Acquirente che cerca casa e non ha tempo": "acquirente"
                 },
                 "predefinito": "cliente"
               }
@@ -5532,6 +5533,56 @@
           "key": "consenso_marketing",
           "proprieta": {
             "dato_chiave": true
+          }
+        }
+      ]
+    },
+    {
+      "key": "creazione_guidata_tipi_cliente",
+      "_nota": "Corregge la creazione guidata dei Clienti: il tipo di cliente decide se la nuova trattativa lo collega come venditore o come acquirente, ma la mappa usava «Acquirente» invece dei nomi veri dell'elenco («Acquirente che sa già cosa vuole», «Acquirente che cerca casa e non ha tempo»): un acquirente finiva collegato come «cliente» generico. Cambia solo se il blocco è ancora quello del pacchetto.",
+      "richiede": {
+        "clienti": [
+          "nome",
+          "tipo_cliente"
+        ]
+      },
+      "riscrivi": [
+        {
+          "block_type": "creazione_guidata",
+          "proprieta": {
+            "dopo": {
+              "da": [
+                {
+                  "modulo": "trattative",
+                  "domanda": "Vuoi creare già una trattativa?",
+                  "titolo": "Trattativa — {nome}",
+                  "per_valore": {
+                    "campo": "tipo_cliente",
+                    "mappa": {
+                      "Venditore": "venditore",
+                      "Acquirente": "acquirente"
+                    },
+                    "predefinito": "cliente"
+                  }
+                }
+              ],
+              "a": [
+                {
+                  "modulo": "trattative",
+                  "domanda": "Vuoi creare già una trattativa?",
+                  "titolo": "Trattativa — {nome}",
+                  "per_valore": {
+                    "campo": "tipo_cliente",
+                    "mappa": {
+                      "Venditore": "venditore",
+                      "Acquirente che sa già cosa vuole": "acquirente",
+                      "Acquirente che cerca casa e non ha tempo": "acquirente"
+                    },
+                    "predefinito": "cliente"
+                  }
+                }
+              ]
+            }
           }
         }
       ]

@@ -2,6 +2,12 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## Manuale di zucca e correzione del tipo di cliente (pacchetto 51, nessun cambio di versione)
+
+- **Manuale di zucca** (`docs/zucca/MANUALE-ZUCCA.pdf`, 17 pagine): un capitolo per ognuno degli 8 moduli con un flusso (Clienti, Immobili, Trattative, Provvigioni, Quote societarie, Richieste Privacy, Attività, Note), ciascuno con il **diagramma a stati numerato** e, per ogni numero, la scheda dell'azione (dove si preme, chi può, cosa serve, cosa succede da solo, attenzione), poi le azioni sulla scheda (verifiche, documenti da firmare, messaggi) e le automazioni con quando scattano. Generato dalla configurazione vera del tenant (script nella cartella di lavoro, non nel repository). **Guida d'uso della vendita** (`GUIDA-VENDITA.pdf`) corretta sui nomi dei tipi di cliente e sulla fattura elettronica.
+- **Difetto corretto (pacchetto 51)**: la «creazione guidata» dei Clienti decideva se collegare la nuova trattativa come venditore o come acquirente con una mappa che usava «Acquirente», ma su zucca il tipo di cliente si chiama «Acquirente che sa già cosa vuole» o «Acquirente che cerca casa e non ha tempo»: l'acquirente finiva collegato come «cliente» generico. Estensione `creazione_guidata_tipi_cliente` (riscrive il blocco solo se è ancora quello del pacchetto); provata in isolamento sulla configurazione vera di zucca.
+- **Scoperte nella lettura della configurazione**: l'immobile **non segue** la trattativa (nessuna automazione: «Avvia trattativa» e «Segna venduto» si premono a mano); i **requisiti per stato** sono solo promemoria; la «Fattura elettronica» è un segnaposto non attivo (le fatture si emettono con Fatture in Cloud).
+
 ## Giro di prova su zucca: stato iniziale dei record e consenso come «Sì/No» (nessun cambio di versione)
 
 - **Difetto trovato provando il flusso vero**: un record creato **senza** il form dell'app (percorso «Nuova vendita», proposta «Vuoi creare già una trattativa?», API, strumenti MCP) nasceva **senza stato**, e non poteva più cambiare stato («Transizione non ammessa: undefined → …»). Ora il server dà lo **stato di partenza** del flusso (quello segnato `initial`, altrimenti il primo) quando non è indicato (`statoIniziale` in `routes/records-helpers.js`). Vale per qualunque modulo con un flusso.
