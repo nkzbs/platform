@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## Giro di prova su zucca: stato iniziale dei record e consenso come «Sì/No» (nessun cambio di versione)
+
+- **Difetto trovato provando il flusso vero**: un record creato **senza** il form dell'app (percorso «Nuova vendita», proposta «Vuoi creare già una trattativa?», API, strumenti MCP) nasceva **senza stato**, e non poteva più cambiare stato («Transizione non ammessa: undefined → …»). Ora il server dà lo **stato di partenza** del flusso (quello segnato `initial`, altrimenti il primo) quando non è indicato (`statoIniziale` in `routes/records-helpers.js`). Vale per qualunque modulo con un flusso.
+- Nei **dati chiave** della scheda, una casella spuntata ora si legge **«Sì»/«No»** (prima «true»).
+- **Provato dal vivo su zucca** (dati «DEMO», poi tutti cancellati): notifiche su telefono, scelta «Da PDF o a mano», avviso «Vuoi creare già una trattativa?», percorso «Nuova vendita» fino in fondo, titolo precompilato, pannello Privacy e GDPR (checklist, ricerca persona, «Precompila», allarme delle 72 ore), consenso accanto ai contatti, esclusione dagli invii di chi non ha il consenso (in anteprima), e **provvigioni automatiche al rogito** (due righe, 3% da scaglione su 200.000 €: netto 6.000, IVA 1.320, totale 7.320, da fatturare). **Non provato**: la scelta «Da PDF» con un PDF vero e l'invio reale dei messaggi.
+- **Da decidere**: su zucca i **requisiti per stato** sono solo promemoria (`bloccante` falso): i passaggi a «Preliminare firmato» e «Rogito completato» avvengono anche senza i documenti richiesti. Il pacchetto li dichiara bloccanti: va scelto cosa si vuole.
+
 ## Consenso alle comunicazioni accanto ai contatti (pacchetto 50, nessun cambio di versione)
 
 - Su Clienti il **consenso alle comunicazioni (mail, SMS)** ora sta nella sezione **Contatti**, accanto a mail e telefono, e tra i **dati chiave** della scheda. Prima era solo in lettura, in «Privacy e consensi», e si scriveva soltanto alla firma dell'informativa: non c'era un posto dove segnalare un consenso dato a voce o per iscritto.

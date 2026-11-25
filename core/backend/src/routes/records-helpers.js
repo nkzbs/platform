@@ -94,4 +94,12 @@ function logHistory(moduleSlug, recordId, actor, action, beforeData, afterData) 
 }
 
 
-module.exports = { getModuleSchema, attachComputedFields, attachComputedToFlatRows, applyDefaults, checkUnique, checkCreationValidation, logHistory };
+// Lo stato di partenza di un record nuovo: quello segnato `initial` nel flusso del modulo, altrimenti il primo. Il form dell'app lo metteva da sé; chi crea un record in altro
+// modo (percorso «Nuova vendita», proposta dopo la creazione, API, strumenti MCP) lo lasciava vuoto e il record non poteva più cambiare stato («undefined → …»).
+function statoIniziale(schema) {
+  const st = schema && schema.workflow && schema.workflow.states;
+  if (!Array.isArray(st) || !st.length) return undefined;
+  return (st.find((x) => x && x.initial) || st[0]).key;
+}
+
+module.exports = { statoIniziale, getModuleSchema, attachComputedFields, attachComputedToFlatRows, applyDefaults, checkUnique, checkCreationValidation, logHistory };

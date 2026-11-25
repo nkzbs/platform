@@ -23,7 +23,7 @@ const { computeWeeklyBreakdown } = require('../weekly-breakdown');
 
 const router = express.Router();
 
-const { getModuleSchema, attachComputedFields, attachComputedToFlatRows, applyDefaults, checkUnique, checkCreationValidation, logHistory } = require('./records-helpers');
+const { statoIniziale, getModuleSchema, attachComputedFields, attachComputedToFlatRows, applyDefaults, checkUnique, checkCreationValidation, logHistory } = require('./records-helpers');
 
 // Valuta SOLO i campi computed marcati `live: true` (attributo generico sulla card
 // Formula/Aggregato, non specifico di nessun caso d'uso) contro un record ANCORA IN
@@ -197,6 +197,7 @@ router.post('/:slug', requireAuth, requireModuleAccess, (req, res) => {
   if (rule && !rule.create) return res.status(403).json({ error: 'Non hai i permessi per creare record in questo modulo' });
   // Campi di sola lettura (`sola_lettura`: es. i consensi privacy, che si confermano solo firmando): non si scrivono a mano, nascono vuoti.
   const corpoCreazione = { ...(req.body || {}) }; for (const f of schema.fields || []) if (f.sola_lettura) delete corpoCreazione[f.key];
+  if (!corpoCreazione._stato) { const iniziale = statoIniziale(schema); if (iniziale) corpoCreazione._stato = iniziale; } // stato di partenza se non è stato indicato
   const withDefaults = valoriSuggeriti.allinea(req.params.slug, schema, pianoRata.applica(req.params.slug, competenza.applica(req.params.slug, applicaEredita(db, schema, applyDefaults(corpoCreazione, schema.fields)), null)), req.user.id);
   const uniqueError = checkUnique(req.params.slug, schema.fields, withDefaults, null);
   if (uniqueError) return res.status(400).json(uniqueError);
