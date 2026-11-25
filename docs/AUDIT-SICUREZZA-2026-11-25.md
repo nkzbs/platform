@@ -45,9 +45,9 @@ Perimetro guardato: codice del repository (core, Super Admin, provisioner, share
 - **Correzione**: eseguire gli script in un processo separato senza segreti (o con `isolated-vm`), con un elenco di domini consentiti e blocco degli indirizzi privati.
 
 ### A3 — L'origine è raggiungibile senza Cloudflare
-- **Prova**: `curl -k -H "Host: admin.platform-core.it" https://hearth.karimpour.it:4000/` risponde 200 dal nginx del NAS. Il nome `hearth.karimpour.it` (rimasto dalla vecchia app) rivela l'indirizzo reale e non passa da Cloudflare. Il router inoltra l'intera fascia 4000-4100.
+- **Prova**: `curl -k -H "Host: admin.platform-core.it" https://hearth.karimpour.it:4000/` risponde 200 dal nginx del NAS. Il nome `hearth.karimpour.it` (rimasto dalla vecchia app, oggi ingresso per SSH e DSM) rivela l'indirizzo reale e non passa da Cloudflare. Il router inoltra l'intera fascia 4000-4100.
 - **Rischio**: si aggira tutto ciò che Cloudflare dà (filtro, protezione dagli attacchi, blocco dei bot) e il limite di richieste.
-- **Correzione**: accettare sulla porta 4000 solo gli indirizzi di Cloudflare (o certificato client «Authenticated Origin Pulls»); togliere o proxare il nome `hearth.karimpour.it`.
+- **Correzione**: accettare sulla porta 4000 solo gli indirizzi di Cloudflare (o certificato client «Authenticated Origin Pulls»); il nome `hearth.karimpour.it` resta, perché serve per entrare da fuori casa.
 
 ## Problemi medi
 
@@ -113,7 +113,7 @@ Dati trattati su zucca: anagrafica, codice fiscale, documenti d'identità e dati
 **Resta aperto, e cosa serve da te**
 - **A1 — segreto interno unico.** Non l'ho toccato: serve una migrazione a un segreto per tenant, da fare per gradi con un tenant di prova, perché un errore interrompe la gestione di tutti i tenant. **Mitigazione subito, da te in Cloudflare** (Sicurezza → WAF → Regole personalizzate): *blocca* se l'indirizzo contiene `/internal` **e** l'IP di origine non è quello pubblico del NAS. Super Admin chiama i tenant dal NAS, quindi continua a funzionare; chiunque altro non raggiunge più le rotte interne dei tenant su Linode.
 - **A3 — tenant su Linode.** Il server dei tenant veri usa Caddy, non questo nginx: la stessa restrizione a Cloudflare va messa lì (`docs` di `server-remoto`). Io non ho accesso a quel server.
-- **A3 — `hearth.karimpour.it`.** Il nome rivela l'indirizzo del NAS: togli il record DNS (o mettilo dietro Cloudflare) quando non ti serve più per l'SSH da fuori casa.
+- **A3 — `hearth.karimpour.it`.** **Resta com'è**: è l'ingresso per SSH e DSM da fuori casa (porte 1988, 443 e 5000, servite da DSM, non da `platform-nginx`). Il nome rivela l'indirizzo del NAS, ma ora la porta 4000 di Platform risponde solo a Cloudflare, quindi non è più un modo per aggirarlo. Per rendere sicuro anche l'ingresso: SSH solo con chiave (già così) e 2FA su DSM, da controllare in DSM.
 - **M4 — 2FA obbligatorio per gli admin.** Non l'ho imposto (richiede una procedura di attivazione per chi non ce l'ha): il pannello Privacy e GDPR segnala chi ne è senza.
 - **M5 — cartelle di `admin` sul NAS** (`hearth`, `hearth_backup_20260521.tar.gz`, `tmp_deploy`, `nicocaffe`, `firefly`, `homebridge`…): da DSM → File Station → Proprietà → Permessi, togliendo «Everyone». Non ho potuto cambiarle da utente `claude`.
 - **M5 — vecchi file in `deploy-secrets`** (tarball di immagini di agosto da ~330 MB, script di una volta, copie `.bak` dei file di ambiente): non li ho cancellati, perché è irreversibile. Dimmi se vuoi che li tolga.
