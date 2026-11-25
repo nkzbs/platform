@@ -70,7 +70,8 @@ function Passo({ api, token, schema, passo, valore, onScelto }) {
   )
 }
 
-export default function NuovaVendita({ token, mod, schema, procedura, onNavigate, onChiudi, onCreata }) {
+// `modello`: titolo di partenza con segnaposto {campo} (es. «Vendita — {immobile}»), sostituiti col nome della scheda scelta in quel passo.
+export default function NuovaVendita({ token, mod, schema, procedura, modello, onNavigate, onChiudi, onCreata }) {
   const api = useApi(token)
   const passi = procedura.filter((p) => p.campo)
   const [i, setI] = useState(0)
@@ -82,6 +83,22 @@ export default function NuovaVendita({ token, mod, schema, procedura, onNavigate
   const passo = passi[i]
   const rel = passo && (schema.relations || []).find((r) => r.key === passo.campo)
   const avanti = () => setI(i + 1)
+  useEffect(() => {
+    if (!ultimo || titolo || !modello) return
+    let vivo = true
+    const campi = [...modello.matchAll(/\{(\w+)\}/g)].map((m) => m[1])
+    Promise.all(campi.map(async (c) => {
+      const rel = (schema.relations || []).find((r) => r.key === c), id = scelte[c]
+      if (!rel || !id) return [c, '']
+      const r = await api.get('/records/' + rel.target_module + '/' + id)
+      return [c, (r && r.data && (r.data.titolo || r.data.nome)) || '']
+    })).then((coppie) => {
+      if (!vivo) return
+      const mappa = Object.fromEntries(coppie)
+      setTitolo((t) => t || modello.replace(/\{(\w+)\}/g, (_, c) => mappa[c] || '').replace(/[\s—-]+$/, '').trim())
+    })
+    return () => { vivo = false }
+  }, [ultimo]) // eslint-disable-line react-hooks/exhaustive-deps
   const salva = async () => {
     setBusy(true); setErr('')
     const corpo = { titolo: titolo.trim(), ...Object.fromEntries(Object.entries(scelte).filter(([, v]) => v)) }

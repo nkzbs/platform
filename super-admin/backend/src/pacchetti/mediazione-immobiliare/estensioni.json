@@ -1646,6 +1646,7 @@
           "block_type": "creazione_guidata",
           "scelta_iniziale": false,
           "procedura_label": "Nuova vendita",
+          "procedura_titolo": "Vendita — {immobile}",
           "procedura": [
             {
               "campo": "venditore",

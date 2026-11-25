@@ -1210,7 +1210,7 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
         </div>
       )}
 
-      {procedura && schema && <NuovaVendita token={token} mod={mod} schema={schema} procedura={guidata.procedura} onNavigate={onNavigate} onChiudi={() => setProcedura(false)} onCreata={() => loadRecords()} />}
+      {procedura && schema && <NuovaVendita token={token} mod={mod} schema={schema} procedura={guidata.procedura} modello={guidata.procedura_titolo} onNavigate={onNavigate} onChiudi={() => setProcedura(false)} onCreata={() => loadRecords()} />}
       {sceltaNuovo && <SceltaNuovo nome={mod.name} onAnnulla={() => setSceltaNuovo(false)} onPdf={() => { setSceltaNuovo(false); setPdfAperto(true) }} onManuale={() => { setSceltaNuovo(false); apriNuovo() }} />}
       {pdfAperto && <ImportaModuloPdf token={token} mod={mod} senzaVoce aperto onChiudi={() => setPdfAperto(false)} onCreated={(r) => { loadRecords(); proponiCollegato(r && r.id) }} />}
       {collegato && <ProponiCollegato token={token} mod={mod} recordId={collegato.id} regole={(guidata.dopo || []).filter((r) => r.modulo)} onNavigate={onNavigate} onChiudi={() => setCollegato(null)} />}
