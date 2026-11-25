@@ -1565,6 +1565,70 @@
           }
         }
       ]
+    },
+    {
+      "key": "crea_dalla_trattativa",
+      "_nota": "Tutto nasce dalla trattativa: dai campi Venditore, Acquirente e Immobile si sceglie una scheda che c'è già oppure si crea «al volo» quella nuova (i dati essenziali; il resto si completa poi sulla scheda, a mano o importando il modulo PDF). Dà il comportamento solo alle relazioni che non lo hanno ancora: una scelta fatta dal Builder non si tocca.",
+      "richiede": {
+        "trattative": [
+          "venditore",
+          "acquirente",
+          "immobile"
+        ]
+      },
+      "imposta": [
+        {
+          "block_type": "relation",
+          "key": "venditore",
+          "proprieta": {
+            "quick_create": {
+              "enabled": true,
+              "fields_subset": [
+                "nome",
+                "tipo_soggetto",
+                "codice_fiscale_piva",
+                "email",
+                "telefono",
+                "tipo_cliente"
+              ]
+            }
+          }
+        },
+        {
+          "block_type": "relation",
+          "key": "acquirente",
+          "proprieta": {
+            "quick_create": {
+              "enabled": true,
+              "fields_subset": [
+                "nome",
+                "tipo_soggetto",
+                "codice_fiscale_piva",
+                "email",
+                "telefono",
+                "tipo_cliente"
+              ]
+            }
+          }
+        },
+        {
+          "block_type": "relation",
+          "key": "immobile",
+          "proprieta": {
+            "quick_create": {
+              "enabled": true,
+              "fields_subset": [
+                "titolo",
+                "tipologia",
+                "indirizzo",
+                "comune",
+                "prezzo_richiesto",
+                "superficie_mq"
+              ]
+            }
+          }
+        }
+      ]
     }
   ],
   "immobili": [
