@@ -122,7 +122,7 @@ Nota sul deploy: lo script della fonte dati usa il flag `--permission` di Node (
 
 ## Piano in ordine di priorità
 
-1. **Subito** (poche ore): bloccare le rotte `/internal` in nginx; limitare la porta 4000 a Cloudflare e togliere `hearth.karimpour.it`; `npm audit fix` nel provisioner; chiudere i permessi di `/volume1/docker` e togliere i vecchi file dai segreti.
+1. **Subito** (poche ore): bloccare le rotte `/internal` in nginx; limitare la porta 4000 a Cloudflare (fatto sul NAS); `npm audit fix` nel provisioner; chiudere i permessi di `/volume1/docker` e togliere i vecchi file dai segreti.
 2. **Questa settimana**: HSTS e CSP; segreto interno diverso per tenant e spegnimento del ramo legacy; `/oauth/start` solo admin; link monouso per i download; 2FA obbligatorio per gli admin.
 3. **Prima di dare un accesso admin a un cliente**: sandbox vero per gli script delle fonti dati (A2).
 4. **GDPR**: registro dei trattamenti, procedura di violazione, DPIA, nomina del responsabile e DPA con i fornitori; procedura di cancellazione e conservazione.
