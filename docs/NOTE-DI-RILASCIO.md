@@ -35,6 +35,14 @@ Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la 
 - `riscrivi` ora distingue i blocchi senza chiave (le automazioni) anche dall'etichetta.
 - Test: `provvigioni-due-parti.test.js` aggiornato. **Non provato dal vivo** su zucca; **non verificato** che il caricamento da PDF riempia anche clienti e immobili come a mano.
 
+## Il dizionario del bot: molte più frasi capite (nessun cambio di versione, serve ridistribuire Super Admin)
+
+- Le istruzioni che Mistral riceve per tradurre una frase in un'azione ora includono un **dizionario** (`lib/bot-dizionario.json` in Super Admin): 8 regole di disambiguazione («ho pagato» con importo = nuova spesa, senza importo = segna pagata; «stipendio» arrivato ≠ stipendio chiesto), **modi di dire** per tutte le 12 azioni (gergo come «ho sganciato», «attacco», «stacco», «spalmala in 6 mesi», «è entrato lo stipendio», «siamo pari»), numeri a parole («sessanta euro», «due e cinquanta»), errori di battitura, e **37 esempi** frase → azione con date calcolate da «oggi».
+- Include i **report nuovi** (Com'è andata, Prossimi giorni, In scadenza, Il tuo anno): «com'è andato il mese?» e «cosa scade questa settimana?» scelgono il report giusto.
+- Non cambia cosa il bot *può fare*: stesse 12 azioni, stesse validazioni, sempre la conferma con un tocco. Elimina e modifica restano «altro».
+- Costo: circa 7.500 caratteri in più per richiesta (circa $0,0003 con Mistral Small).
+- Test: `bot-dizionario.test.js` (10): ogni esempio è un'azione valida, ogni azione ha esempi, nessuna frase vale due azioni, nessun dato personale, istruzioni sotto i 20.000 caratteri. **Non misurato**: quante frasi in più capisce davvero Mistral Small (serve un confronto su casi veri, con la chiave).
+
 ## Report: mensile completo, pagato e nuovi report; data di pagamento automatica (nessun cambio di versione)
 
 - **Mensile «Quanto devo pagare»**: l'elenco delle voci in arrivo è **completo** (prima si fermava a 8 con «+ altre N») e **raggruppato per settimana** con il totale di ogni settimana; in fondo, «✅ Pagato nel 2026» (totale, per modulo, di cui nel mese). Si spegne con «Raggruppa per settimana» e «Aggiungi “Pagato nell'anno”» (Impostazioni → Report). Le righe mostrate arrivano fino a 100.

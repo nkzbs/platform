@@ -2,6 +2,13 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## Il dizionario del bot è un file di dati — 25 novembre 2026
+
+- **Dati, non testo incollato nel codice**: i modi di dire, le regole e gli esempi stanno in `bot-dizionario.json`, così ampliare il vocabolario del bot è aggiungere una riga, con un test che la valida (ogni esempio deve essere un'azione ammessa). Prima gli esempi erano dentro una stringa lunga nel codice.
+- **Esempi con segnaposto per le date**: un esempio fisso («ieri» = 24/11) insegnerebbe una data sbagliata il giorno dopo; i segnaposto si calcolano da «oggi» a ogni richiesta.
+- **Un modello piccolo (Mistral Small) vuole esempi, non spiegazioni**: per questo regole brevi e tanti esempi corti, con un tetto alla lunghezza delle istruzioni.
+- **Non si allarga cosa il bot può fare**: solo cosa capisce. Le 12 azioni, le validazioni e la conferma restano gli stessi.
+
 ## Report e data di pagamento — 24 novembre 2026
 
 - **Elenco completo per settimana, non troncato**: l'utente voleva «l'elenco completo delle spese in arrivo»; il vecchio limite di 8 righe resta come impostazione ma di partenza è 100.

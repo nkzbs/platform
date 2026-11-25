@@ -6,6 +6,7 @@
 const { redact } = require('./ai-redact');
 
 const { AZIONI, ISO, CAMPI_BUSTA_PAGA, validateIntent } = require('../../../../shared/ai-bot-intent.js');
+const dizionario = require('./bot-dizionario');
 
 const BOT_PROMPT = `Sei il traduttore di un bot di un'app gestionale (spese, entrate, scadenze, timbrature, buste paga). Ricevi un JSON con "frase" (cosa ha scritto l'utente), "oggi" (data di oggi), "timbrature" (true se l'utente può timbrare), "busta_paga" (true se l'utente ha dei cedolini archiviati), "debito_casa" (true se è attivo il saldo dei contributi casa), "report" (i report disponibili), "moduli": i moduli di spesa disponibili, ciascuno con "slug", "name", "etichetta" e "categorie" (valori ammessi), "moduli_entrata": i moduli di entrata disponibili, ciascuno con "slug", "name", "categorie" (valori ammessi) e "gruppi" (valori ammessi, es. Casa/Personale, solo se il modulo li ha), ed eventualmente "storico" ({"testo","capito"}: l'ultima frase di questa conversazione e cosa si era capito, se recente). Se "frase" da sola è troppo vaga per capire cosa vuole (es. "e il mese scorso?", "anche quelle di casa") ma "storico" c'è ed è chiaramente lo stesso argomento, usalo per interpretarla come un seguito di quella; se "frase" è già chiara da sola, o parla d'altro, ignora "storico". Scegli UNA azione tra queste e rispondi SOLO con un oggetto JSON, senza testo attorno:
 - {"azione":"domanda"} se chiede un calcolo o un'informazione sui dati ("quanto ho speso di benzina a settembre?", "quante bollette A2A nel 2025?").
@@ -21,6 +22,9 @@ const BOT_PROMPT = `Sei il traduttore di un bot di un'app gestionale (spese, ent
 - {"azione":"debito_casa"} SOLO se "debito_casa" è true e chiede chi deve soldi a chi sui contributi alla casa ("quanto devo a Federica?", "siamo in pari con casa?", "chi è indietro con i contributi?"). Nessun altro campo.
 - {"azione":"altro"} per tutto il resto (saluti, richieste che non rientrano, eliminare o modificare dati, impostazioni).
 Non inventare moduli, categorie, gruppi o importi. Gli importi sono in euro, con il punto per i decimali. Se un valore non è nella frase, usa null.`;
+
+// Le istruzioni complete per UNA richiesta: quelle di base più il dizionario (modi di dire, regole, esempi con le date calcolate da `oggi`, vedi lib/bot-dizionario.js).
+const promptBot = (oggi) => BOT_PROMPT + dizionario.sezione(ISO.test(String(oggi || '')) ? oggi : new Date().toISOString().slice(0, 10));
 
 const clean = (v, n) => String(v == null ? '' : v).replace(/[\r\n]+/g, ' ').trim().slice(0, n);
 
@@ -49,4 +53,4 @@ function sanitizeBot(data) {
   return { payload: { frase, oggi, timbrature, busta_paga: bustaPaga, debito_casa: debitoCasa, report, moduli, moduli_entrata: moduliEntrata, storico } };
 }
 
-module.exports = { BOT_PROMPT, sanitizeBot, validateIntent, AZIONI };
+module.exports = { BOT_PROMPT, promptBot, sanitizeBot, validateIntent, AZIONI };

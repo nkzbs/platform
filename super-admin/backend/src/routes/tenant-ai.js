@@ -377,7 +377,7 @@ router.post('/bot-intent', requireTenant, async (req, res) => {
   if (s.error) return res.status(400).json({ error: s.error });
   if (!isProviderConfigured('mistral', tenant_slug)) return res.status(503).json({ error: 'Nessuna chiave Mistral: inseriscila in Impostazioni → AI.', code: 'ai_not_configured' });
   try {
-    const text = await callAI('mistral', { system: botAi.BOT_PROMPT, user: JSON.stringify(s.payload), maxTokens: 250, tenantSlug: tenant_slug });
+    const text = await callAI('mistral', { system: botAi.promptBot(s.payload.oggi), user: JSON.stringify(s.payload), maxTokens: 250, tenantSlug: tenant_slug });
     const raw = parseJsonObject(text);
     if (!raw) return res.status(502).json({ error: 'Risposta dell\'AI non valida' });
     const v = botAi.validateIntent(raw, s.payload.moduli, s.payload.oggi, s.payload.report.map((r) => r.id), s.payload.moduli_entrata);
