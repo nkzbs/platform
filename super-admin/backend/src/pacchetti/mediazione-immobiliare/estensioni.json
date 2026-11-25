@@ -3280,6 +3280,29 @@
           }
         }
       ]
+    },
+    {
+      "key": "creazione_guidata",
+      "_nota": "Premendo «Nuovo» chiede se partire da un modulo PDF o inserire a mano; dopo la creazione propone «Vuoi creare già una trattativa?». Se dici sì, la trattativa nasce già collegata e ti porta nel suo modulo. Si cambia dal Builder (blocco «Creazione guidata»).",
+      "richiede": {
+        "immobili": [
+          "titolo"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "creazione_guidata",
+          "scelta_iniziale": true,
+          "dopo": [
+            {
+              "modulo": "trattative",
+              "domanda": "Vuoi creare già una trattativa?",
+              "titolo": "Vendita — {nome}",
+              "campo": "immobile"
+            }
+          ]
+        }
+      ]
     }
   ],
   "clienti": [
@@ -5379,6 +5402,37 @@
                 "campo": "ricerca_incarico_stato",
                 "operazione": "set",
                 "valore": "Scaduto"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "creazione_guidata",
+      "_nota": "Premendo «Nuovo» chiede se partire da un modulo PDF o inserire a mano; dopo la creazione propone «Vuoi creare già una trattativa?». Se dici sì, la trattativa nasce già collegata e ti porta nel suo modulo. Si cambia dal Builder (blocco «Creazione guidata»).",
+      "richiede": {
+        "clienti": [
+          "nome",
+          "tipo_cliente"
+        ]
+      },
+      "aggiungi": [
+        {
+          "block_type": "creazione_guidata",
+          "scelta_iniziale": true,
+          "dopo": [
+            {
+              "modulo": "trattative",
+              "domanda": "Vuoi creare già una trattativa?",
+              "titolo": "Trattativa — {nome}",
+              "per_valore": {
+                "campo": "tipo_cliente",
+                "mappa": {
+                  "Venditore": "venditore",
+                  "Acquirente": "acquirente"
+                },
+                "predefinito": "cliente"
               }
             }
           ]

@@ -17,6 +17,7 @@ import ReportPanel from './ReportPanel'
 import AiSuggestionsPanel from '../../components/AiSuggestionsPanel'
 import ImportPdf from '../../components/ImportPdf'
 import ImportaModuloPdf from '../../components/ImportaModuloPdf'
+import { SceltaNuovo, ProponiCollegato } from '../../components/CreazioneGuidata'
 import ImportPayslip from '../../components/ImportPayslip'
 import BustaPagaReportView from '../../components/BustaPagaReportView'
 import DriveSyncButton from '../../components/DriveSyncButton'
@@ -49,6 +50,11 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
   const [codaDaPagare, setCodaDaPagare] = useState(null)
   useEffect(() => { let vivo = true; api.get('/module-roles/queues').then((qs) => { if (vivo && Array.isArray(qs)) setCodaDaPagare(qs.find((x) => x.module_slug === mod.slug && x.da_fare && x.importo) || null) }); return () => { vivo = false } }, [mod.slug]) // eslint-disable-line react-hooks/exhaustive-deps
   const [showNew, setShowNew] = useState(false)
+  // Creazione guidata (blocco `creazione_guidata`): scelta iniziale e proposta del record collegato
+  const [sceltaNuovo, setSceltaNuovo] = useState(false)
+  const [pdfAperto, setPdfAperto] = useState(false)
+  const [haPdf, setHaPdf] = useState(false)
+  const [collegato, setCollegato] = useState(null) // { id } del record appena creato
   const [showSourceSearch, setShowSourceSearch] = useState(false)
   const [branchCreateOpen, setBranchCreateOpen] = useState(null)
   const [showReport, setShowReport] = useState(false)
@@ -341,6 +347,24 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
   const [calMonth, setCalMonth] = useState(() => { const n = new Date(); return { y: n.getFullYear(), m: n.getMonth() } })
   const [creating, setCreating] = useState(false)
 
+  const guidata = schema && schema.creazione_guidata
+  useEffect(() => {
+    if (!guidata) { setHaPdf(false); return }
+    api.get('/records/' + mod.slug + '/importa-modulo').then((d) => setHaPdf(!!(d && Array.isArray(d.modelli) && d.modelli.length)))
+  }, [mod.slug, !!guidata]) // eslint-disable-line react-hooks/exhaustive-deps
+  const apriNuovo = () => {
+    setShowNew(true); setMostraCollegamenti(false)
+    const arch = mod.list_view === 'archive'
+    const ff = arch ? fields.find((f) => f.type === 'select') : null
+    const df = arch ? fields.find((f) => f.type === 'date' && !f.scadenza) : null
+    setForm({
+      ...(workflow && workflow.states && workflow.states.length > 0 ? { _stato: workflow.states[0].key } : {}),
+      ...(ff && cartellaCorrente ? { [ff.key]: cartellaCorrente } : {}),
+      ...(df ? { [df.key]: todayStr } : {}),
+    })
+  }
+  const proponiCollegato = (id) => { if (guidata && (guidata.dopo || []).some((r) => r.modulo) && id) setCollegato({ id }) }
+
   const create = async () => {
     setCreating(true)
     const { ok, data } = await api.post('/records/' + mod.slug, form)
@@ -361,6 +385,7 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
     setEmbeddedRows({})
     loadRecords()
     toast('Record creato')
+    proponiCollegato(parentId)
   }
 
   const remove = async (id) => {
@@ -649,15 +674,8 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
               // auto-compila già dal nome del file, vedi uploadFile sopra — qui lo stesso principio
               // per la data: un valore di partenza sensato invece di un campo vuoto da pensare).
               <button onClick={() => {
-                setShowNew(true); setMostraCollegamenti(false)
-                const arch = mod.list_view === 'archive'
-                const ff = arch ? fields.find((f) => f.type === 'select') : null
-                const df = arch ? fields.find((f) => f.type === 'date' && !f.scadenza) : null
-                setForm({
-                  ...(workflow && workflow.states && workflow.states.length > 0 ? { _stato: workflow.states[0].key } : {}),
-                  ...(ff && cartellaCorrente ? { [ff.key]: cartellaCorrente } : {}),
-                  ...(df ? { [df.key]: todayStr } : {}),
-                })
+                if (guidata && guidata.scelta_iniziale !== false && haPdf) { setSceltaNuovo(true); return }
+                apriNuovo()
               }} className="bg-accent hover:opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
                 <Icon name="plus" size={14} />Nuovo
               </button>
@@ -1187,6 +1205,9 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
         </div>
       )}
 
+      {sceltaNuovo && <SceltaNuovo nome={mod.name} onAnnulla={() => setSceltaNuovo(false)} onPdf={() => { setSceltaNuovo(false); setPdfAperto(true) }} onManuale={() => { setSceltaNuovo(false); apriNuovo() }} />}
+      {pdfAperto && <ImportaModuloPdf token={token} mod={mod} senzaVoce aperto onChiudi={() => setPdfAperto(false)} onCreated={(r) => { loadRecords(); proponiCollegato(r && r.id) }} />}
+      {collegato && <ProponiCollegato token={token} mod={mod} recordId={collegato.id} regole={(guidata.dopo || []).filter((r) => r.modulo)} onNavigate={onNavigate} onChiudi={() => setCollegato(null)} />}
       {showNew && editableFields.length > 0 && (() => {
         const closeAll = () => { setShowNew(false); setForm({}); setEmbeddedRows({}) }
 

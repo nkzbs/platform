@@ -11,10 +11,12 @@ const MAX = 4 * 1024 * 1024
 const toBase64 = (file) => new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(String(r.result).split(',')[1] || ''); r.onerror = reject; r.readAsDataURL(file) })
 const mostra = (v) => (v === true ? 'Sì' : Array.isArray(v) ? v.join(', ') : /^\d{4}-\d{2}-\d{2}$/.test(String(v)) ? String(v).split('-').reverse().join('/') : String(v))
 
-export default function ImportaModuloPdf({ token, mod, onCreated }) {
+// `aperto`/`onChiudi`: la finestra si può aprire da fuori (la scelta «da PDF» della creazione guidata); `senzaVoce` nasconde la voce del menu.
+export default function ImportaModuloPdf({ token, mod, onCreated, aperto, onChiudi, senzaVoce }) {
   const api = useApi(token)
   const [disponibile, setDisponibile] = useState(false)
-  const [open, setOpen] = useState(false)
+  const [apertoDa, setOpen] = useState(false)
+  const open = apertoDa || !!aperto
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [p, setP] = useState(null) // la proposta del server
@@ -24,7 +26,7 @@ export default function ImportaModuloPdf({ token, mod, onCreated }) {
   useEffect(() => { api.get('/records/' + mod.slug + '/importa-modulo').then((d) => setDisponibile(!!(d && Array.isArray(d.modelli) && d.modelli.length))) }, [mod.slug]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!disponibile) return null
 
-  const reset = () => { setOpen(false); setP(null); setErr(''); setBusy(false); setEsclusi({}); if (input.current) input.current.value = '' }
+  const reset = () => { setOpen(false); if (onChiudi) onChiudi(); setP(null); setErr(''); setBusy(false); setEsclusi({}); if (input.current) input.current.value = '' }
 
   const scegli = async (e) => {
     const file = e.target.files && e.target.files[0]
@@ -46,13 +48,13 @@ export default function ImportaModuloPdf({ token, mod, onCreated }) {
     setBusy(false)
     if (!r.ok) { setErr((r.data && r.data.error) || 'Non sono riuscito a creare la scheda.'); return }
     window.dispatchEvent(new CustomEvent('platform:toast', { detail: { message: 'Scheda creata dal modulo PDF', type: 'success' } }))
-    reset(); if (onCreated) onCreated()
+    reset(); if (onCreated) onCreated(r.data)
   }
 
   const importati = p ? p.campi.filter((c) => !esclusi[c.key]).length : 0
   return (
     <>
-      <VoceMenu icon="file" label="Importa da modulo PDF" desc="Carica il modulo dell'agenzia compilato: i dati diventano una scheda nuova" onClick={() => setOpen(true)} />
+      {!senzaVoce && <VoceMenu icon="file" label="Importa da modulo PDF" desc="Carica il modulo dell'agenzia compilato: i dati diventano una scheda nuova" onClick={() => setOpen(true)} />}
       {open && (
         <Portal>
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">

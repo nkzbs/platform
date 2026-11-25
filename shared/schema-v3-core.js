@@ -60,6 +60,7 @@ export function toV3(schemaV2) {
   if (s.scope) steps.push({ id: genId('scp'), block_type: 'scope', ...s.scope })
   if (s.permissions) steps.push({ id: genId('prm'), block_type: 'permissions', ...s.permissions })
   if (s.view_tabs) steps.push({ id: genId('vtb'), block_type: 'view_tabs', ...s.view_tabs })
+  if (s.creazione_guidata) steps.push({ id: genId('cgu'), block_type: 'creazione_guidata', ...s.creazione_guidata })
   if (s.validazione_creazione) steps.push({ id: genId('vcr'), block_type: 'validazione_creazione', ...s.validazione_creazione })
   if (s.allegati) steps.push({ id: genId('alg'), block_type: 'allegati', ...s.allegati })
   ;(s.aggregati || []).forEach((a) => steps.push({ id: genId('agg'), block_type: 'report_aggregate', ...a }))
@@ -124,6 +125,7 @@ export function toV2(schemaV3) {
     else if (block_type === 'category_pivot') throw new Error('Impossibile convertire a v2: contiene un blocco "category_pivot" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
     else if (block_type === 'weekly_breakdown') throw new Error('Impossibile convertire a v2: contiene un blocco "weekly_breakdown" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
     else if (block_type === 'view_tabs') throw new Error('Impossibile convertire a v2: contiene un blocco "view_tabs" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
+    else if (block_type === 'creazione_guidata') throw new Error('Impossibile convertire a v2: contiene un blocco "creazione_guidata" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
     else if (block_type === 'view') throw new Error('Impossibile convertire a v2: contiene un blocco "view" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
     else if (block_type === 'api_source') throw new Error('Impossibile convertire a v2: contiene un blocco "api_source" senza equivalente nello schema v2. Questo modulo può restare solo in v3.')
     else throw new Error('Tipo di blocco v3 sconosciuto: "' + block_type + '"')
@@ -170,6 +172,7 @@ export function toV2Lenient(schemaV3) {
     else if (block_type === 'view') out.views.push(rest)
     else if (block_type === 'api_source') out.api_sources.push(rest)
     else if (block_type === 'view_tabs') out.view_tabs = rest
+    else if (block_type === 'creazione_guidata') out.creazione_guidata = rest
     else if (block_type === 'connection_required') out.requires_connection = rest.integration_id
     else if (block_type === 'condition' || block_type === 'automation') out._v3_unsupported.push(step)
     // Tipo sconosciuto: ignorato silenziosamente qui (a differenza di toV2 strict) —

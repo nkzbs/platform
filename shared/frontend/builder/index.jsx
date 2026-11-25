@@ -29,7 +29,7 @@ const BLOCK_TYPE_CATEGORY = {
   permissions: 'Permessi', validazione_creazione: 'Permessi',
   report_aggregate: 'Calcolo', yearly_breakdown: 'Calcolo', category_pivot: 'Calcolo', weekly_breakdown: 'Calcolo',
   connection_required: 'Automazione', automation: 'Automazione', document_action: 'Automazione', external_action: 'Automazione', calendar_view: 'Layout form', map_view: 'Layout form', state_requirements: 'Workflow', match_view: 'Layout form',
-  branch_create: 'Layout form', period_view: 'Layout form', parent_children_view: 'Layout form', view_tabs: 'Layout form', view: 'Layout form',
+  branch_create: 'Layout form', period_view: 'Layout form', parent_children_view: 'Layout form', view_tabs: 'Layout form', creazione_guidata: 'Layout form', view: 'Layout form',
 }
 
 // Etichetta leggibile per tipo di blocco — usata solo per la riga di riepilogo
@@ -44,7 +44,7 @@ const BLOCK_TYPE_LABEL = {
   connection_required: 'Richiede connessione', automation: 'Automazione', document_action: 'Documento da modello', external_action: 'Azione esterna', calendar_view: 'Vista a calendario', map_view: 'Mappa', state_requirements: 'Requisiti dello stato', match_view: 'Abbinamento',
   branch_create: 'Crea in filiale', period_view: 'Vista periodo',
   parent_children_view: 'Vista padre/figli', yearly_breakdown: 'Riepilogo annuale', category_pivot: 'Pivot categoria',
-  weekly_breakdown: 'Riepilogo settimanale', view_tabs: 'Tab di vista', report_aggregate: 'Report aggregato', view: 'Vista', api_source: 'Fonte esterna',
+  weekly_breakdown: 'Riepilogo settimanale', view_tabs: 'Tab di vista', creazione_guidata: 'Creazione guidata', report_aggregate: 'Report aggregato', view: 'Vista', api_source: 'Fonte esterna',
 }
 function summaryForStep(step) {
   const typeLabel = BLOCK_TYPE_LABEL[step.block_type] || step.block_type
@@ -431,6 +431,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
         category_pivots: draft.category_pivots || [],
         weekly_breakdowns: draft.weekly_breakdowns || [],
         view_tabs: draft.view_tabs || null,
+        creazione_guidata: draft.creazione_guidata || null, // senza questa riga riaprire e pubblicare il Builder cancellerebbe la creazione guidata
         requires_connection: draft.requires_connection || null,
         // Automazioni/condizioni: il backend le mette da parte qui quando appiattisce
         // a v2 (vedi toV2Lenient) — senza riportarle dentro, si perdevano silenziosamente
@@ -834,6 +835,7 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
     { label: 'Abbinamento', desc: "Nel dettaglio di un record mostra i record di un altro modulo che gli corrispondono, ordinati per quanti criteri soddisfano — es. «Immobili adatti» su un cliente che cerca casa (tipologia, budget, zona), o «Richieste compatibili» su un immobile. Un criterio obbligatorio è un vincolo (esclude), gli altri fanno il punteggio. Sola lettura: non scrive nulla.", icon: 'link', color: '#8B5CF6', category: 'Layout form', block_type: 'match_view', defaults: { key: 'abbinamento_' + Date.now(), label: 'Record corrispondenti', target_module: '', display_field: '', subtitle_fields: [], rules: [] } },
     { label: 'Creazione con scelta', desc: "Un bottone che chiede prima una scelta (es. \"Diretto\" o \"A rate\") e poi mostra campi diversi, creando il record in un modulo diverso a seconda della scelta — es. un pagamento diretto crea una Spesa, un pagamento a rate crea un Debito.", icon: 'git-branch', color: '#EC4899', category: 'Layout form', block_type: 'branch_create', defaults: { label: 'Nuovo', branches: [] } },
     { label: 'Vista', desc: "Una vista configurabile sui record: per periodo navigabile (mese/anno, con metriche e confronto col precedente), riepilogo per sotto-periodo, pivot per categoria su più anni, barre settimanali con soglia, oppure genitori con rollup dei figli collegati. Sostituisce o si aggiunge alla vista del modulo secondo la modalità scelta.", icon: 'bar-chart', color: '#10B981', category: 'Layout form', block_type: 'view', defaults: { key: 'vista_' + Date.now(), label: 'Nuova vista', mode: 'period', placement: 'replace', granularity: 'mese', date_field: '', compare_previous: false, breakdown: false, metrics: [], filters: [] } },
+    { label: 'Creazione guidata', desc: "Premendo «Nuovo» chiede prima se partire da un modulo PDF o inserire a mano, e dopo la creazione propone di creare subito un record collegato in un altro modulo (es. una trattativa dal nuovo cliente).", icon: 'plus', color: '#8B5CF6', category: 'Layout form', block_type: 'creazione_guidata', defaults: { scelta_iniziale: true, dopo: [] } },
     { label: 'Tab della vista', desc: "Più viste che sostituiscono la tabella, alternabili a tab sullo stesso modulo — es. un tab \"Spese\" (la vista mensile propria) e un tab \"Debiti\" (il progresso di un altro modulo). Ogni tab riusa un blocco già dichiarato altrove (qui o su un altro modulo), non lo ridefinisce.", icon: 'list', color: '#8B5CF6', category: 'Layout form', block_type: 'view_tabs', defaults: { tabs: [] }, disabled: schema && schema.steps.some((s) => s.block_type === 'view_tabs'), note: 'Un solo blocco per modulo' },
   ]
   const CATEGORY_ORDER = ['Dati', 'Relazioni', 'Workflow', 'Permessi', 'Calcolo', 'Automazione', 'Layout form']
@@ -2710,6 +2712,47 @@ function BuilderPage({ token, baseUrl, moduleActions, allModules, onModulesChang
                   )
                 }
 
+                if (step.block_type === 'creazione_guidata') {
+                  const dopo = step.dopo || []
+                  const updateDopo = (next) => updateStep(idx, 'dopo', next)
+                  const updateRiga = (ri, patch) => updateDopo(dopo.map((r, i) => i === ri ? { ...r, ...patch } : r))
+                  return (
+                    <div key={step.id} {...dragHandlers(idx)}
+                      className="bg-surface-card rounded-md border border-gray-800 p-4 cursor-grab active:cursor-grabbing"
+                      style={{ borderLeft: '3px solid #8B5CF6' }}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-400">
+                          <span className="text-gray-600 select-none">&#8942;&#8942;</span>
+                          <Icon name="plus" size={12} /> Creazione guidata
+                        </div>
+                        <button onClick={() => removeStep(idx)} className="text-red-400/60 hover:text-red-400 transition"><Icon name="trash" size={14} /></button>
+                      </div>
+                      <label className="flex items-center gap-2 text-sm text-ink mb-3">
+                        <input type="checkbox" checked={step.scelta_iniziale !== false} onChange={(e) => updateStep(idx, 'scelta_iniziale', e.target.checked)} />
+                        Premendo «Nuovo» chiedi prima: da modulo PDF o inserimento (solo se il modulo ha moduli PDF)
+                      </label>
+                      <div className="text-xs text-gray-500 mb-2">Dopo la creazione, proponi di creare subito:</div>
+                      <div className="space-y-3">
+                        {dopo.map((r, ri) => (
+                          <div key={ri} className="border border-gray-800 rounded-lg p-3 space-y-2">
+                            <select value={r.modulo || ''} onChange={(e) => updateRiga(ri, { modulo: e.target.value, campo: '' })} className="w-full bg-gray-800 text-ink text-sm rounded-lg px-3 py-2">
+                              <option value="">Modulo da creare…</option>
+                              {fieldCache.filter((m) => m.slug !== selected).map((m) => <option key={m.slug} value={m.slug}>{m.name || m.slug}</option>)}
+                            </select>
+                            <select value={r.campo || ''} onChange={(e) => updateRiga(ri, { campo: e.target.value })} className="w-full bg-gray-800 text-ink text-sm rounded-lg px-3 py-2">
+                              <option value="">Collega la scheda nuova a…</option>
+                              {((fieldCache.find((m) => m.slug === r.modulo) || {}).relations || []).filter((x) => x.target_module === selected).map((x) => <option key={x.key} value={x.key}>{x.label || x.key}</option>)}
+                            </select>
+                            <input value={r.domanda || ''} onChange={(e) => updateRiga(ri, { domanda: e.target.value })} placeholder="Domanda (es. Vuoi creare già una trattativa?)" className="w-full bg-gray-800 text-ink text-sm rounded-lg px-3 py-2" />
+                            <input value={r.titolo || ''} onChange={(e) => updateRiga(ri, { titolo: e.target.value })} placeholder="Titolo della scheda nuova (usa {nome})" className="w-full bg-gray-800 text-ink text-sm rounded-lg px-3 py-2" />
+                            <button type="button" onClick={() => updateDopo(dopo.filter((_, i) => i !== ri))} className="text-xs text-red-400/70 hover:text-red-400">Togli</button>
+                          </div>
+                        ))}
+                        <button type="button" onClick={() => updateDopo([...dopo, { modulo: '', campo: '', domanda: '', titolo: '' }])} className="text-xs text-accent hover:opacity-80">+ Aggiungi</button>
+                      </div>
+                    </div>
+                  )
+                }
                 if (step.block_type === 'view_tabs') {
                   const tabs = step.tabs || []
                   const updateTabs = (next) => updateStep(idx, 'tabs', next)
