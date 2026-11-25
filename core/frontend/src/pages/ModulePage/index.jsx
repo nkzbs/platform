@@ -123,7 +123,7 @@ function ModulePage({ module: mod, token, user, onNavigate, onStartTour }) {
   }
   useEffect(loadConnectorStatus, [mod.slug]) // eslint-disable-line react-hooks/exhaustive-deps
   const missingConnectors = requiredConnectors.filter((id) => connectorStatus[id] === false)
-  const connectGoogle = () => { window.location.href = API + '/integrazioni/google/oauth/start' }
+  const connectGoogle = async () => { const r = await api.post('/integrazioni/google/oauth/start', {}); if (r && r.ok && r.data && r.data.url) window.location.href = r.data.url }
   const disconnectGoogle = async () => { const res = await api.post('/integrazioni/google/disconnect', {}); if (res && res.ok) loadConnectorStatus() }
   const toggleDrive = async () => { const res = await api.put('/integrazioni/google/drive', { enabled: !(googleStatus && googleStatus.drive_enabled) }); if (res && res.ok) loadConnectorStatus() }
 

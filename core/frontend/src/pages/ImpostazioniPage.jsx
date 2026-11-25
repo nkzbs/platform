@@ -109,7 +109,7 @@ function ConnessioniTab({ token, user, features = {} }) {
   useEffect(() => { if (openFor === 'openapi_it' && connections.some((c) => c.id === 'openapi_it' && c.connected)) caricaDemoOa() }, [openFor, connections]) // eslint-disable-line react-hooks/exhaustive-deps
   const toggle = (id) => { const next = openFor === id ? null : id; setOpenFor(next); if (next) setCredForm(initialCredForm(next)) }
 
-  const connectGoogle = () => { window.location.href = API + '/integrazioni/google/oauth/start' }
+  const connectGoogle = async () => { const r = await api.post('/integrazioni/google/oauth/start', {}); if (r && r.ok && r.data && r.data.url) window.location.href = r.data.url }
   const disconnectGoogle = async () => {
     const res = await api.post('/integrazioni/google/disconnect', {})
     if (res && res.ok) { loadConnections(); loadGoogleStatus() }

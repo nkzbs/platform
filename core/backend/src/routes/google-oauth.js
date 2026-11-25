@@ -5,12 +5,12 @@
 // stessa logica OAuth2 reale già in produzione su hearth (backend/src/routes/
 // google.js): consenso utente + refresh token, non server-to-server.
 //
-// Le route di redirect (oauth/start, oauth/callback) sono raggiunte da una
-// navigazione browser a tutta pagina (redirect di Google), non da una fetch
-// del nostro frontend — non possono quindi portare un Bearer token, e restano
-// deliberatamente FUORI da requireAuth, esattamente come in hearth. La
-// sicurezza del flusso è garantita dal parametro state OAuth, non dal nostro
-// JWT.
+// Il ritorno di Google (oauth/callback) è una navigazione a tutta pagina: non
+// porta un Bearer token e resta FUORI da requireAuth; la sua sicurezza è lo
+// state OAuth. L'AVVIO (POST oauth/start), invece, richiede un admin loggato
+// (audit 25/11/2026, M1): prima era una GET senza login, quindi chiunque poteva
+// ottenere uno state valido, completare il consenso col proprio account Google
+// e far collegare al tenant la propria casella (login CSRF).
 //
 // Le credenziali/token vivono nella riga 'connections' con integration_id
 // 'google' (stesso campo JSON 'credentials' già usato da tutte le altre
@@ -90,8 +90,8 @@ router.put('/drive', requireAuth, requireAdmin, (req, res) => {
   res.json({ ok: true, enabled: !!enabled });
 });
 
-// GET /oauth/start — redirect a Google (niente requireAuth: è una navigazione browser)
-router.get('/oauth/start', (req, res) => {
+// POST /oauth/start — solo admin: crea lo state e restituisce l'indirizzo di Google a cui mandare il browser
+router.post('/oauth/start', requireAuth, requireAdmin, (req, res) => {
   const cfg = getCreds();
   if (!cfg.client_id || !cfg.client_secret) {
     return res.status(400).json({ error: 'Configura prima Client ID e Client Secret' });
@@ -119,7 +119,7 @@ router.get('/oauth/start', (req, res) => {
     prompt: 'consent',
     state,
   });
-  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+  res.json({ url: `https://accounts.google.com/o/oauth2/v2/auth?${params}` });
 });
 
 // GET /oauth/callback

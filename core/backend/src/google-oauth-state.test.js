@@ -32,9 +32,15 @@ async function main() {
   const login = await (await fetch(BASE + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: process.env.INITIAL_ADMIN_PASSWORD }) })).json();
   const H = { Authorization: 'Bearer ' + login.token, 'Content-Type': 'application/json' };
   await fetch(BASE + '/api/integrazioni/google/config', { method: 'PUT', headers: H, body: JSON.stringify({ client_id: 'id-prova', client_secret: 'segreto-prova' }) });
-  const avvia = async () => { const r = await fetch(BASE + '/api/integrazioni/google/oauth/start', { redirect: 'manual' }); return new URL(r.headers.get('location')).searchParams.get('state'); };
+  const avvia = async () => { const r = await fetch(BASE + '/api/integrazioni/google/oauth/start', { method: 'POST', headers: H, body: '{}' }); return new URL((await r.json()).url).searchParams.get('state'); };
   const callback = (state) => fetch(BASE + '/api/integrazioni/google/oauth/callback?code=codice-finto' + (state === undefined ? '' : '&state=' + encodeURIComponent(state)), { redirect: 'manual' });
 
+  await test('senza login (o da non admin) l\'avvio è rifiutato: nessuno può procurarsi uno state valido (audit M1)', async () => {
+    const senza = await fetch(BASE + '/api/integrazioni/google/oauth/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    assertEq(senza.status, 401, 'senza login');
+    const vecchia = await fetch(BASE + '/api/integrazioni/google/oauth/start', { redirect: 'manual' });
+    assertTrue(vecchia.status === 404 || vecchia.status === 401, 'la vecchia GET non deve più avviare il flusso: ' + vecchia.status);
+  });
   await test('il state è casuale (48 caratteri esadecimali) e diverso a ogni richiesta', async () => {
     const a = await avvia(), b = await avvia();
     assertTrue(/^[0-9a-f]{48}$/.test(a), a); assertTrue(a !== b, 'due richieste uguali');

@@ -9,13 +9,10 @@ const moduleAi = require('../module-ai');
 const reports = require('../reports');
 const features = require('../features');
 const { logAudit } = require('../audit-log');
+const { requireInternalSecret } = require('../../../../shared/internal-secret.js');
 
 const router = express.Router();
-router.use((req, res, next) => {
-  const secret = req.headers['x-internal-secret'];
-  if (!secret || secret !== (process.env.INTERNAL_API_SECRET || 'changeme_internal')) return res.status(401).json({ error: 'Secret interno non valido' });
-  next();
-});
+router.use(requireInternalSecret); // confronto a tempo costante, nessun valore di riserva (audit 25/11/2026, M7)
 
 router.post('/apply', (req, res) => {
   require('./setup-wizard').chiudi(); // un tenant nato dall'analisi arriva già con i suoi moduli: niente primi passi

@@ -90,6 +90,21 @@ Dati trattati su zucca: anagrafica, codice fiscale, documenti d'identità e dati
 - **G5 — Backup**: il backup settimanale via mail e le copie su Google Drive contengono dati personali. **Da controllare** che gli allegati siano cifrati e protetti.
 - **G6 — AI**: spenta per default (privacy by default). **Da controllare** quali campi dei record partono verso Mistral per ogni funzione e se i clienti ne sono informati nell'informativa.
 
+## Correzioni fatte il 25/11 (nel codice; non ancora su zucca)
+
+| Voce | Cosa è cambiato | Come l'ho provato |
+|------|-----------------|-------------------|
+| A2 | Gli script delle fonti dati girano in un processo figlio senza variabili d'ambiente e, dove Node lo permette, senza disco né processi (`source-engine-child.js`). La rete resta libera, come deciso il 16/10. | 15 test, tra cui uno nuovo: lo script che esce dal vm non trova né segreti né file |
+| M1 | L'avvio del collegamento Google è ora `POST` riservato agli admin e restituisce l'indirizzo; la vecchia `GET` aperta non esiste più | Test aggiornato (`google-oauth-state.test.js`), **non eseguito**: il server non parte in questo ambiente |
+| M3 | HSTS, X-Frame-Options, nosniff e Referrer-Policy sulle pagine dei tenant e di Super Admin; la CSP è **in sola segnalazione** (Google Fonts la renderebbe bloccante troppo presto) | Solo lettura del file; da vedere nella console del browser dopo il deploy |
+| M6 | `npm audit fix` nel provisioner | `npm audit`: 0 vulnerabilità |
+| M7 | `internal-setup` usa il confronto a tempo costante di `shared/internal-secret.js`, senza valore di riserva | Controllo di sintassi |
+| B1 | Tolto il valore di riserva `'changeme'` del JWT in `bot-payslip.js` | Controllo di sintassi |
+
+**Resta aperto** (serve una tua conferma, tocca la produzione): A1 (segreto interno per tenant), A3 (porta 4000 solo da Cloudflare, nome `hearth.karimpour.it`), M4 (limite di login e 2FA obbligatorio), M5 (permessi del NAS), M2 (download con link monouso).
+
+Nota sul deploy: lo script della fonte dati usa il flag `--permission` di Node (22.13 o più recente). Se il flag non fosse accettato dall'immagine, le fonti dati rispondono con un errore invece di girare senza protezione. Dopo il deploy: provare una fonte dati dal Builder.
+
 ## Piano in ordine di priorità
 
 1. **Subito** (poche ore): bloccare le rotte `/internal` in nginx; limitare la porta 4000 a Cloudflare e togliere `hearth.karimpour.it`; `npm audit fix` nel provisioner; chiudere i permessi di `/volume1/docker` e togliere i vecchi file dai segreti.

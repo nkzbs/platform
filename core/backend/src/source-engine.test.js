@@ -63,6 +63,15 @@ async function main() {
   });
 
   console.log('\n--- timeout ---');
+  await test('anche uscendo dal vm, lo script non trova i segreti del processo né i file (audit A2)', async () => {
+    process.env.SEGRETO_PROVA_AUDIT = 'non-deve-uscire';
+    const codice = "const F = app.log.constructor; const p = F('return process')(); let letto = 'no'; try { letto = String(p.mainModule.require('fs').readFileSync('/etc/hosts')).slice(0, 5); } catch (e) { letto = 'negato'; } app.result({ segreto: p.env.SEGRETO_PROVA_AUDIT || null, file: letto });";
+    const r = await runSourceScript(codice, {});
+    delete process.env.SEGRETO_PROVA_AUDIT;
+    assertTrue(r.ok, 'lo script doveva comunque finire: ' + r.error);
+    assertEq(r.result.segreto, null, 'il segreto non deve arrivare allo script');
+    assertTrue(r.result.file === 'negato' || r.result.file === 'no', 'il disco non deve essere leggibile: ' + r.result.file);
+  });
   await test('un ciclo sincrono infinito viene interrotto (non blocca il processo)', async () => {
     const r = await runSourceScript('while(true){}', {});
     assertEq(r.ok, false); assertTrue(/tempo/.test(r.error));

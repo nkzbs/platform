@@ -194,7 +194,7 @@ async function allegato(user, slug, recordId) {
   if (!att.ok || !Array.isArray(att.data) || !att.data.length) return null;
   const up = att.data[0];
   const jwt = require('jsonwebtoken');
-  const token = jwt.sign({ id: user.id, username: user.username, role: user.role, display_name: user.display_name }, process.env.JWT_SECRET || 'changeme', { expiresIn: '2m' });
+  const token = jwt.sign({ id: user.id, username: user.username, role: user.role, display_name: user.display_name }, process.env.JWT_SECRET, { expiresIn: '2m' });
   const res = await fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/api/uploads/' + up.upload_id, { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(20000) });
   if (!res.ok) return null;
   const bytes = Buffer.from(await res.arrayBuffer());

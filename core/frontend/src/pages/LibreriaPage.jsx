@@ -208,7 +208,7 @@ function LibreriaPage({ token, onRefresh, onOpenInBuilder, onCreateNewModule, on
     if (res && res.ok) { setOpenConnFor(null); loadConnections() }
   }
 
-  const connectGoogle = () => { window.location.href = API + '/integrazioni/google/oauth/start' }
+  const connectGoogle = async () => { const r = await api.post('/integrazioni/google/oauth/start', {}); if (r && r.ok && r.data && r.data.url) window.location.href = r.data.url }
   const disconnectGoogle = async () => {
     const res = await api.post('/integrazioni/google/disconnect', {})
     if (res && res.ok) { loadConnections(); loadGoogleStatus() }
