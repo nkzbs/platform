@@ -35,7 +35,7 @@ async function main() {
   const { applicaSeed } = require('./seed-blocchi-verticale');
   const tutte = require('../../../super-admin/backend/src/pacchetti/mediazione-immobiliare/estensioni.json');
   // qui si provano le due estensioni della provvigione a due parti: gli altri blocchi del pacchetto (requisiti per stato…) hanno i loro test
-  const seed = { provvigioni: tutte.provvigioni.filter((e) => e.key === 'due_parti'), trattative: tutte.trattative.filter((e) => e.key === 'provvigioni_due_parti') };
+  const seed = { provvigioni: tutte.provvigioni.filter((e) => e.key === 'due_parti'), trattative: tutte.trattative.filter((e) => ['provvigioni_due_parti', 'provvigioni_al_rogito'].includes(e.key)) };
 
   const mk = (slug, steps) => db.prepare("INSERT INTO modules (name, slug, icon, color, installed, active, sort_order, schema_json) VALUES (?, ?, 'box', '#000', 1, 1, 70, ?)").run(slug, slug, JSON.stringify({ version: 3, steps }));
   const rec = (slug, data) => db.prepare('INSERT INTO records (module_slug, data) VALUES (?, ?)').run(slug, JSON.stringify(data)).lastInsertRowid;
@@ -56,6 +56,9 @@ async function main() {
     { id: 's2', block_type: 'workflow_state', key: 'preliminare_firmato', label: 'Preliminare firmato' },
     { id: 't1', block_type: 'workflow_transition', from: 'trattativa_in_corso', to: 'preliminare_firmato', label: 'Firma', roles: ['admin'] },
     { id: 't2', block_type: 'workflow_transition', from: 'preliminare_firmato', to: 'trattativa_in_corso', label: 'Riapri', roles: ['admin'] },
+    { id: 's3', block_type: 'workflow_state', key: 'rogito_completato', label: 'Rogito completato' },
+    { id: 't3', block_type: 'workflow_transition', from: 'preliminare_firmato', to: 'rogito_completato', label: 'Rogito', roles: ['admin'] },
+    { id: 't4', block_type: 'workflow_transition', from: 'rogito_completato', to: 'preliminare_firmato', label: 'Riapri rogito', roles: ['admin'] },
   ]);
   const idLegacy = rec('provvigioni', { descrizione: 'Vecchia', importo: 5000, _stato: 'da_fatturare' });
 
@@ -88,11 +91,11 @@ async function main() {
     assertEq([d.importo_netto, d.iva, d.totale], [5000, 1100, 6100]);
   });
 
-  console.log('\n--- alla firma del preliminare ---');
+  console.log('\n--- al rogito completato ---');
   const cV = rec('clienti', { nome: 'Venditore Verdi' }), cA = rec('clienti', { nome: 'Acquirente Bianchi' });
   const trattativa = async (dati) => (await api('POST', '/records/trattative', { titolo: 'Vendita', _stato: 'trattativa_in_corso', prezzo_concordato: 200000, data_rogito: '2027-02-15', ...dati })).body.id;
   const delle = (idT) => db.prepare("SELECT data FROM records WHERE module_slug = 'provvigioni'").all().map((r) => JSON.parse(r.data)).filter((d) => d.trattativa === idT);
-  const firma = (id, to = 'preliminare_firmato') => api('POST', '/records/trattative/' + id + '/transition', { to });
+  const firma = (id, to = 'rogito_completato') => api('POST', '/records/trattative/' + id + '/transition', { to });
 
   await test('una riga per parte: cliente, percentuale, prezzo, scadenza al rogito, da fatturare', async () => {
     const t = await trattativa({ venditore: cV, acquirente: cA, prov_venditore_perc: 3, prov_acquirente_perc: 2 });
@@ -105,21 +108,24 @@ async function main() {
   });
   await test('riaprire e rifirmare NON duplica le provvigioni', async () => {
     const t = await trattativa({ venditore: cV, acquirente: cA, prov_venditore_perc: 3, prov_acquirente_perc: 2 });
-    await firma(t); await firma(t, 'trattativa_in_corso'); await firma(t);
+    await firma(t); await firma(t, 'preliminare_firmato'); await firma(t);
     assertEq(delle(t).length, 2);
   });
-  await test('una parte senza percentuale non genera la sua riga', async () => {
-    const t = await trattativa({ venditore: cV, prov_venditore_perc: 3 });
-    await firma(t);
-    assertEq(delle(t).map((r) => r.parte), ['Venditore']);
+  await test('i passaggi di prima (preliminare) non generano più niente', async () => {
+    const t = await trattativa({ venditore: cV, acquirente: cA, prov_venditore_perc: 3, prov_acquirente_perc: 2 });
+    assertEq((await firma(t, 'preliminare_firmato')).status, 200);
+    assertEq(delle(t).length, 0);
   });
-  await test('nessuna percentuale: nessuna riga, e dopo averle indicate si può rigenerare', async () => {
+  await test('senza percentuali le righe nascono lo stesso (la percentuale la propone lo scaglione) e il tipo è «Provvigione rogito»', async () => {
+    const t = await trattativa({ venditore: cV, acquirente: cA });
+    await firma(t);
+    const righe = delle(t).sort((a, b) => a.parte.localeCompare(b.parte));
+    assertEq(righe.map((r) => [r.parte, r.tipo, r.percentuale === undefined || r.percentuale === '' || r.percentuale === null]), [['Acquirente', 'Provvigione rogito', true], ['Venditore', 'Provvigione rogito', true]]);
+    assertTrue(JSON.parse(db.prepare('SELECT data FROM records WHERE id = ?').get(t).data).provvigioni_generate_il, 'segno «generate il» mancante');
+  });
+  await test('una parte non indicata non genera la sua riga', async () => {
     const t = await trattativa({ venditore: cV });
     await firma(t);
-    assertEq(delle(t).length, 0);
-    assertTrue(!JSON.parse(db.prepare('SELECT data FROM records WHERE id = ?').get(t).data).provvigioni_generate_il, 'il segno non va scritto se non è nata nessuna riga');
-    await api('PUT', '/records/trattative/' + t, { ...JSON.parse(db.prepare('SELECT data FROM records WHERE id = ?').get(t).data), prov_venditore_perc: 3 });
-    await firma(t, 'trattativa_in_corso'); await firma(t);
     assertEq(delle(t).map((r) => r.parte), ['Venditore']);
   });
 

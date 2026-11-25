@@ -2,6 +2,14 @@
 
 Una voce per ogni chiusura di fase. Il numero di versione è quello di tutta la piattaforma (sidebar di Finance e Super Admin, `/health`, `package.json`); si cambia a mano a ogni chiusura. Il perché delle scelte sta in [`DECISIONI.md`](DECISIONI.md).
 
+## Provvigioni al rogito, automatiche (pacchetto 46, nessun cambio di versione)
+
+- **Quando nascono**: al passaggio della trattativa a «Rogito completato» (prima alla firma del preliminare). Una riga per il venditore e una per l'acquirente, in «da fatturare», tipo «Provvigione rogito», con cliente, prezzo concordato e data del rogito presi dalla trattativa. La fattura la emetti tu. Una volta sola per trattativa.
+- **Niente da scrivere a mano**: prima la riga nasceva solo se la percentuale della parte era scritta sulla trattativa, altrimenti non succedeva niente e nessun avviso. Ora nasce comunque e, senza percentuale, la propone lo scaglione del modulo Provvigioni. Una parte non indicata sulla trattativa non genera la sua riga.
+- **Come arriva su zucca**: nuova estensione `provvigioni_al_rogito` (pacchetto 45 → 46). Riscrive l'automazione già presente («Provvigioni alla firma del preliminare» → «Provvigioni al rogito») solo se è ancora quella del pacchetto; se l'hai cambiata dal Builder non si tocca. Serve prima il redeploy di Super Admin, poi «Aggiorna» sul tenant.
+- `riscrivi` ora distingue i blocchi senza chiave (le automazioni) anche dall'etichetta.
+- Test: `provvigioni-due-parti.test.js` aggiornato. **Non provato dal vivo** su zucca; **non verificato** che il caricamento da PDF riempia anche clienti e immobili come a mano.
+
 ## Report: mensile completo, pagato e nuovi report; data di pagamento automatica (nessun cambio di versione)
 
 - **Mensile «Quanto devo pagare»**: l'elenco delle voci in arrivo è **completo** (prima si fermava a 8 con «+ altre N») e **raggruppato per settimana** con il totale di ogni settimana; in fondo, «✅ Pagato nel 2026» (totale, per modulo, di cui nel mese). Si spegne con «Raggruppa per settimana» e «Aggiungi “Pagato nell'anno”» (Impostazioni → Report). Le righe mostrate arrivano fino a 100.

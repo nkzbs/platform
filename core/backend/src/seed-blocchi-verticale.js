@@ -214,12 +214,12 @@ function impostaProprietaMancanti(steps, regole, statiModulo) {
   return { steps: out, impostati };
 }
 
-// `riscrivi`: [{ block_type, key, proprieta: { nome: { da, a } } }] cambia il TESTO di una proprietà di un blocco già presente solo se vale ancora `da` (il testo di prima del pacchetto):
+// `riscrivi`: [{ block_type, key, etichetta (facoltativa), proprieta: { nome: { da, a } } }] cambia il TESTO di una proprietà di un blocco già presente solo se vale ancora `da` (il testo di prima del pacchetto):
 // un testo cambiato dall'utente dal Builder non si tocca. Per aggiornare etichette e descrizioni di un blocco già pubblicato (`imposta` dà solo ciò che manca).
 function riscriviTesti(steps, regole) {
   const impostati = [], out = steps.slice(), uguali = (p, q) => JSON.stringify(p) === JSON.stringify(q); // anche gli elenchi (es. i tipi di allegato) si confrontano per contenuto
   for (let i = 0; i < out.length; i++) {
-    const x = out[i], r = (regole || []).find((y) => y.block_type === x.block_type && (y.key || '') === (x.key || '')); // un blocco senza chiave (es. gli allegati) si trova dal tipo
+    const x = out[i], r = (regole || []).find((y) => y.block_type === x.block_type && (y.key || '') === (x.key || '') && (y.etichetta === undefined || y.etichetta === x.label)); // un blocco senza chiave (es. gli allegati) si trova dal tipo; `etichetta` distingue le automazioni, che non hanno chiave
     if (!r) continue;
     const nuove = {};
     for (const [k, v] of Object.entries(r.proprieta || {})) if (v && uguali(x[k], v.da) && !uguali(v.a, v.da)) nuove[k] = v.a;

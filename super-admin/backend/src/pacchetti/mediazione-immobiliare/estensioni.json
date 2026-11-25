@@ -1282,6 +1282,289 @@
           ]
         }
       ]
+    },
+    {
+      "key": "provvigioni_al_rogito",
+      "_nota": "Le provvigioni nascono da sole quando la trattativa passa a «Rogito completato» (prima nascevano alla firma del preliminare e solo con le percentuali scritte a mano). Una riga per il venditore e una per l'acquirente, in «da fatturare», con prezzo concordato, data del rogito e cliente presi dalla trattativa; la fattura la emette l'agenzia. Se la percentuale della parte non è scritta sulla trattativa la riga nasce lo stesso e la percentuale la propone lo scaglione del modulo Provvigioni. Una volta sola per trattativa. Cambia l'automazione già presente solo se è ancora quella del pacchetto: se l'hai modificata dal Builder non si tocca.",
+      "richiede": {
+        "trattative": [
+          "venditore",
+          "acquirente",
+          "prov_venditore_perc",
+          "prov_acquirente_perc",
+          "provvigioni_generate_il",
+          "prezzo_concordato",
+          "data_rogito"
+        ]
+      },
+      "riscrivi": [
+        {
+          "block_type": "automation",
+          "etichetta": "Provvigioni alla firma del preliminare",
+          "proprieta": {
+            "label": {
+              "da": "Provvigioni alla firma del preliminare",
+              "a": "Provvigioni al rogito"
+            },
+            "trigger": {
+              "da": {
+                "evento": "cambio_stato",
+                "stato": "preliminare_firmato"
+              },
+              "a": {
+                "evento": "cambio_stato",
+                "stato": "rogito_completato"
+              }
+            },
+            "azioni": {
+              "da": [
+                {
+                  "kind": "condition",
+                  "a": "provvigioni_generate_il",
+                  "op": "!=",
+                  "b": {
+                    "literal": "provvigioni_generate_il"
+                  },
+                  "then": [],
+                  "otherwise": [
+                    {
+                      "kind": "condition",
+                      "a": "prov_venditore_perc",
+                      "op": ">",
+                      "b": {
+                        "literal": 0
+                      },
+                      "then": [
+                        {
+                          "target": "__interno__",
+                          "azione": "crea_record",
+                          "config": {
+                            "modulo": "provvigioni",
+                            "dati": {
+                              "descrizione": "Provvigione venditore",
+                              "trattativa": "__origine_id__",
+                              "cliente": "campo:venditore",
+                              "parte": "Venditore",
+                              "tipo": "Provvigione preliminare",
+                              "percentuale": "campo:prov_venditore_perc",
+                              "base_imponibile": "campo:prezzo_concordato",
+                              "data_scadenza": "campo:data_rogito",
+                              "_stato": "da_fatturare"
+                            }
+                          }
+                        },
+                        {
+                          "target": "__interno__",
+                          "azione": "aggiorna_record",
+                          "config": {
+                            "modulo": "trattative",
+                            "id_field": "__self__",
+                            "campo": "provvigioni_generate_il",
+                            "operazione": "set",
+                            "valore": "_oggi_"
+                          }
+                        }
+                      ],
+                      "otherwise": []
+                    },
+                    {
+                      "kind": "condition",
+                      "a": "prov_acquirente_perc",
+                      "op": ">",
+                      "b": {
+                        "literal": 0
+                      },
+                      "then": [
+                        {
+                          "target": "__interno__",
+                          "azione": "crea_record",
+                          "config": {
+                            "modulo": "provvigioni",
+                            "dati": {
+                              "descrizione": "Provvigione acquirente",
+                              "trattativa": "__origine_id__",
+                              "cliente": "campo:acquirente",
+                              "parte": "Acquirente",
+                              "tipo": "Provvigione preliminare",
+                              "percentuale": "campo:prov_acquirente_perc",
+                              "base_imponibile": "campo:prezzo_concordato",
+                              "data_scadenza": "campo:data_rogito",
+                              "_stato": "da_fatturare"
+                            }
+                          }
+                        },
+                        {
+                          "target": "__interno__",
+                          "azione": "aggiorna_record",
+                          "config": {
+                            "modulo": "trattative",
+                            "id_field": "__self__",
+                            "campo": "provvigioni_generate_il",
+                            "operazione": "set",
+                            "valore": "_oggi_"
+                          }
+                        }
+                      ],
+                      "otherwise": []
+                    }
+                  ]
+                }
+              ],
+              "a": [
+                {
+                  "kind": "condition",
+                  "a": "provvigioni_generate_il",
+                  "op": "!=",
+                  "b": {
+                    "literal": "provvigioni_generate_il"
+                  },
+                  "then": [],
+                  "otherwise": [
+                    {
+                      "kind": "condition",
+                      "a": "venditore",
+                      "op": "!=",
+                      "b": {
+                        "literal": "venditore"
+                      },
+                      "then": [
+                        {
+                          "kind": "condition",
+                          "a": "prov_venditore_perc",
+                          "op": ">",
+                          "b": {
+                            "literal": 0
+                          },
+                          "then": [
+                            {
+                              "target": "__interno__",
+                              "azione": "crea_record",
+                              "config": {
+                                "modulo": "provvigioni",
+                                "dati": {
+                                  "descrizione": "Provvigione venditore",
+                                  "trattativa": "__origine_id__",
+                                  "cliente": "campo:venditore",
+                                  "parte": "Venditore",
+                                  "tipo": "Provvigione rogito",
+                                  "percentuale": "campo:prov_venditore_perc",
+                                  "base_imponibile": "campo:prezzo_concordato",
+                                  "data_scadenza": "campo:data_rogito",
+                                  "_stato": "da_fatturare"
+                                }
+                              }
+                            }
+                          ],
+                          "otherwise": [
+                            {
+                              "target": "__interno__",
+                              "azione": "crea_record",
+                              "config": {
+                                "modulo": "provvigioni",
+                                "dati": {
+                                  "descrizione": "Provvigione venditore",
+                                  "trattativa": "__origine_id__",
+                                  "cliente": "campo:venditore",
+                                  "parte": "Venditore",
+                                  "tipo": "Provvigione rogito",
+                                  "base_imponibile": "campo:prezzo_concordato",
+                                  "data_scadenza": "campo:data_rogito",
+                                  "_stato": "da_fatturare"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "target": "__interno__",
+                          "azione": "aggiorna_record",
+                          "config": {
+                            "modulo": "trattative",
+                            "id_field": "__self__",
+                            "campo": "provvigioni_generate_il",
+                            "operazione": "set",
+                            "valore": "_oggi_"
+                          }
+                        }
+                      ],
+                      "otherwise": []
+                    },
+                    {
+                      "kind": "condition",
+                      "a": "acquirente",
+                      "op": "!=",
+                      "b": {
+                        "literal": "acquirente"
+                      },
+                      "then": [
+                        {
+                          "kind": "condition",
+                          "a": "prov_acquirente_perc",
+                          "op": ">",
+                          "b": {
+                            "literal": 0
+                          },
+                          "then": [
+                            {
+                              "target": "__interno__",
+                              "azione": "crea_record",
+                              "config": {
+                                "modulo": "provvigioni",
+                                "dati": {
+                                  "descrizione": "Provvigione acquirente",
+                                  "trattativa": "__origine_id__",
+                                  "cliente": "campo:acquirente",
+                                  "parte": "Acquirente",
+                                  "tipo": "Provvigione rogito",
+                                  "percentuale": "campo:prov_acquirente_perc",
+                                  "base_imponibile": "campo:prezzo_concordato",
+                                  "data_scadenza": "campo:data_rogito",
+                                  "_stato": "da_fatturare"
+                                }
+                              }
+                            }
+                          ],
+                          "otherwise": [
+                            {
+                              "target": "__interno__",
+                              "azione": "crea_record",
+                              "config": {
+                                "modulo": "provvigioni",
+                                "dati": {
+                                  "descrizione": "Provvigione acquirente",
+                                  "trattativa": "__origine_id__",
+                                  "cliente": "campo:acquirente",
+                                  "parte": "Acquirente",
+                                  "tipo": "Provvigione rogito",
+                                  "base_imponibile": "campo:prezzo_concordato",
+                                  "data_scadenza": "campo:data_rogito",
+                                  "_stato": "da_fatturare"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "target": "__interno__",
+                          "azione": "aggiorna_record",
+                          "config": {
+                            "modulo": "trattative",
+                            "id_field": "__self__",
+                            "campo": "provvigioni_generate_il",
+                            "operazione": "set",
+                            "valore": "_oggi_"
+                          }
+                        }
+                      ],
+                      "otherwise": []
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
     }
   ],
   "immobili": [
