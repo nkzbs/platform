@@ -18,6 +18,10 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // username 1000 volte (che comunque resterebbe protetto lo stesso). Vedi
 // shared/rate-limit.js per il motivo del contatore fatto in casa.
 const loginLimiter = rateLimit({ windowMs: 5 * 60 * 1000, max: 10, message: 'Troppi tentativi di accesso, riprova tra qualche minuto', name: 'login', failClosed: true });
+// Secondo limite, per ACCOUNT (audit 25/11/2026, M4): il limite per IP non ferma chi prova la stessa utenza da molti indirizzi. 30 tentativi ogni 15 minuti
+// per nome utente: troppi per una persona vera, pochi per indovinare una password. Si conta anche chi ha sbagliato un nome, così non si distingue un
+// utente che esiste da uno che non esiste. Chi ha la passkey accede lo stesso (non passa da qui).
+const loginAccountLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, keyFn: (req) => 'acc:' + String((req.body && req.body.username) || '').toLowerCase().slice(0, 64), message: 'Troppi tentativi su questo account, riprova tra qualche minuto', name: 'login-account', failClosed: true });
 
 // Endpoint chiamati automaticamente a intervalli fissi, senza alcuna azione
 // dell'utente (campanella notifiche ogni 30s in Sidebar.jsx, log attività ogni
@@ -152,7 +156,7 @@ function signPendingToken(user) {
 // P2 (collaudo operativo 2026-09-03) — login e verifica 2FA non finivano mai in
 // audit_log qui, unico evento di sicurezza non tracciato in questo backend, stesso
 // gap chiuso in parallelo su super-admin/backend/src/routes/auth.js.
-router.post('/login', loginLimiter, (req, res) => {
+router.post('/login', loginLimiter, loginAccountLimiter, (req, res) => {
   const { username, password } = req.body;
   const user = db.prepare('SELECT * FROM users WHERE username = ? AND active = 1').get(username);
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {

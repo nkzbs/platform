@@ -18,7 +18,7 @@ Perimetro guardato: codice del repository (core, Super Admin, provisioner, share
 |---|---------|----------|-------|
 | A1 | Alto | Un solo segreto interno per Super Admin e per tutti i tenant | Dal codice + verificato che le rotte sono raggiungibili |
 | A2 | Alto | Gli script delle fonti dati escono dal «sandbox» e eseguono codice nel tenant | **Verificato** (prova locale innocua) |
-| A3 | Alto | L'origine si raggiunge direttamente, senza Cloudflare | **Verificato** |
+| A3 | Alto | L'origine si raggiunge direttamente, senza Cloudflare | **Verificato** — corretto sul NAS, resta Linode |
 | M1 | Medio | Collegamento Google: `state` ottenibile da chiunque | Dal codice |
 | M2 | Medio | Token di sessione nell'indirizzo dei download (backup) | Dal codice |
 | M3 | Medio | Mancano HSTS e CSP | **Verificato** |
@@ -101,7 +101,22 @@ Dati trattati su zucca: anagrafica, codice fiscale, documenti d'identità e dati
 | M7 | `internal-setup` usa il confronto a tempo costante di `shared/internal-secret.js`, senza valore di riserva | Controllo di sintassi |
 | B1 | Tolto il valore di riserva `'changeme'` del JWT in `bot-payslip.js` | Controllo di sintassi |
 
-**Resta aperto** (serve una tua conferma, tocca la produzione): A1 (segreto interno per tenant), A3 (porta 4000 solo da Cloudflare, nome `hearth.karimpour.it`), M4 (limite di login e 2FA obbligatorio), M5 (permessi del NAS), M2 (download con link monouso).
+### Seconda tornata (stesso giorno)
+
+| Voce | Cosa è cambiato | Come l'ho provato |
+|------|-----------------|-------------------|
+| A3 (NAS) | `platform-nginx` accetta solo connessioni da Cloudflare e dalle reti private; le altre ricevono 444. In più legge l'indirizzo vero del visitatore da `CF-Connecting-IP`, quindi il limite di login non è più condiviso tra utenti diversi. **Già attivo sul NAS** (copia di sicurezza: `nginx.conf.bak-audit-2026-11-25` nel container). | Sintassi controllata nel container vivo; dopo il ricaricamento `admin` e `finance` rispondono 200; un nginx di prova separato ha confermato che una sorgente non ammessa viene chiusa. **Non provato da fuori casa**: dalla rete di casa l'origine resta raggiungibile, perché le reti private sono ammesse |
+| M4 (parziale) | Secondo limite di login **per account** (30 ogni 15 minuti), in Platform e in Super Admin | Controllo di sintassi |
+| M2 | I download di backup ed export usano un **link monouso di 60 secondi**, legato al percorso (`POST /auth/download-link`); il token di sessione nell'indirizzo non è più accettato | Test aggiornati (`auth-audit-2fa.test.js`), **non eseguiti**: il server non parte in questo ambiente |
+| M5 (parziale) | `platform-build-01`, `platform-src` e `scripts` passati da 777 a 750 (non c'è più l'ACL aperta) | `ls -ld` |
+
+**Resta aperto, e cosa serve da te**
+- **A1 — segreto interno unico.** Non l'ho toccato: serve una migrazione a un segreto per tenant, da fare per gradi con un tenant di prova, perché un errore interrompe la gestione di tutti i tenant. **Mitigazione subito, da te in Cloudflare** (Sicurezza → WAF → Regole personalizzate): *blocca* se l'indirizzo contiene `/internal` **e** l'IP di origine non è quello pubblico del NAS. Super Admin chiama i tenant dal NAS, quindi continua a funzionare; chiunque altro non raggiunge più le rotte interne dei tenant su Linode.
+- **A3 — tenant su Linode.** Il server dei tenant veri usa Caddy, non questo nginx: la stessa restrizione a Cloudflare va messa lì (`docs` di `server-remoto`). Io non ho accesso a quel server.
+- **A3 — `hearth.karimpour.it`.** Il nome rivela l'indirizzo del NAS: togli il record DNS (o mettilo dietro Cloudflare) quando non ti serve più per l'SSH da fuori casa.
+- **M4 — 2FA obbligatorio per gli admin.** Non l'ho imposto (richiede una procedura di attivazione per chi non ce l'ha): il pannello Privacy e GDPR segnala chi ne è senza.
+- **M5 — cartelle di `admin` sul NAS** (`hearth`, `hearth_backup_20260521.tar.gz`, `tmp_deploy`, `nicocaffe`, `firefly`, `homebridge`…): da DSM → File Station → Proprietà → Permessi, togliendo «Everyone». Non ho potuto cambiarle da utente `claude`.
+- **M5 — vecchi file in `deploy-secrets`** (tarball di immagini di agosto da ~330 MB, script di una volta, copie `.bak` dei file di ambiente): non li ho cancellati, perché è irreversibile. Dimmi se vuoi che li tolga.
 
 Nota sul deploy: lo script della fonte dati usa il flag `--permission` di Node (22.13 o più recente). Se il flag non fosse accettato dall'immagine, le fonti dati rispondono con un errore invece di girare senza protezione. Dopo il deploy: provare una fonte dati dal Builder.
 

@@ -344,3 +344,6 @@ La prima volta per un indirizzo l'elenco richiede anche 30-40 secondi (Overpass 
 
 Spostare un tag già pubblicato richiede un push forzato (`git push --force origin <tag>`): si fa solo con un via libera esplicito. Il 08/11/2026 `v0.4.61` è stato spostato sul commit realmente online (`082d2a8`).
 
+## Indirizzi di Cloudflare in nginx (25/11/2026)
+
+`infra/nginx/nginx.conf` ammette solo Cloudflare e le reti private (blocchi `set_real_ip_from` e `geo $origine_consentita`). L'elenco è quello ufficiale del 25/11/2026 (https://www.cloudflare.com/ips-v4 e ips-v6) e cambia di rado. **Ogni 6 mesi** (o se qualcuno non riesce più ad aprire il sito) confrontalo con quello pubblicato, aggiorna il file, provalo con `nginx -t -c` nel container e ricarica. Copia della configurazione precedente nel container: `/etc/nginx/nginx.conf.bak-audit-2026-11-25`. La configurazione di `platform-nginx` sta nel volume `platform-nginx-config`: dopo una modifica al repository va copiata lì (`docker cp`), non basta il push.

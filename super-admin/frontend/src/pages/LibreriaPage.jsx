@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { API } from '../lib/api'
+import { scarica } from '../lib/scarica'
 import Icon from '../components/Icon'
 import VoceMenu from '../components/VoceMenu'
 import Select from '../components/Select'
@@ -386,7 +387,7 @@ function LibreriaPage({ token }) {
                 </div>
 
                 <div className="flex items-center justify-between pt-1">
-                  <a href={API + '/registry/modules/' + detail.id + '/export?token=' + encodeURIComponent(token)} className="text-xs text-gray-400 hover:text-ink transition flex items-center gap-1.5"><Icon name="download" size={12} />Esporta come file</a>
+                  <button type="button" onClick={() => scarica(token, '/registry/modules/' + detail.id + '/export')} className="text-xs text-gray-400 hover:text-ink transition flex items-center gap-1.5"><Icon name="download" size={12} />Esporta come file</button>
                   <button onClick={() => removeVersion(detail.id, 'la v' + detail.version + ' di "' + detail.name + '"')} className="text-xs text-gray-500 hover:text-red-400 transition">Togli questa versione</button>
                 </div>
               </div>

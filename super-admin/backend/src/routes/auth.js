@@ -27,6 +27,10 @@ function signPendingToken(user) {
 // stesso ragionamento (lì duplicato perché sono due processi separati, mai un
 // solo Super Admin da proteggere qui contro N tenant diversi).
 const loginLimiter = rateLimit({ windowMs: 5 * 60 * 1000, max: 10, message: 'Troppi tentativi di accesso, riprova tra qualche minuto', name: 'login', failClosed: true });
+// Secondo limite, per ACCOUNT (audit 25/11/2026, M4): il limite per IP non ferma chi prova la stessa utenza da molti indirizzi. 30 tentativi ogni 15 minuti
+// per nome utente: troppi per una persona vera, pochi per indovinare una password. Si conta anche chi ha sbagliato un nome, così non si distingue un
+// utente che esiste da uno che non esiste. Chi ha la passkey accede lo stesso (non passa da qui).
+const loginAccountLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, keyFn: (req) => 'acc:' + String((req.body && req.body.username) || '').toLowerCase().slice(0, 64), message: 'Troppi tentativi su questo account, riprova tra qualche minuto', name: 'login-account', failClosed: true });
 
 // Crea l'utente admin al primo avvio. La password viene da INITIAL_ADMIN_PASSWORD
 // se impostata; altrimenti ne viene generata una casuale e stampata UNA sola volta
@@ -71,11 +75,21 @@ function requireAuth(req, res, next) {
   next();
 }
 
-// Per i download aperti con un link (?token=...): stesse regole di requireAuth.
+// Download con un link MONOUSO (audit 25/11/2026, M2). Prima il link portava il token di sessione (24 ore) nell'indirizzo: finiva in cronologia, log e intestazioni.
+// Ora il frontend chiede prima un link (POST /auth/download-link): un token che vale 60 secondi, UNA volta sola e SOLO per quel percorso; il download lo presenta
+// come ?dl=… (un <a href> non può mandare l'header Authorization). Il token di sessione in query non è più accettato.
+const downloadUsati = new Map(); // jti -> scadenza (ms): serve a rifiutare un secondo uso
+function pulisciDownloadUsati() { const ora = Date.now(); for (const [k, scade] of downloadUsati) if (scade < ora) downloadUsati.delete(k); }
 function requireQueryToken(req, res, next) {
-  const { user, error } = verifySessionToken(req.query.token);
-  if (error) return res.status(401).json({ error: 'Non autorizzato' });
-  req.user = user;
+  let p;
+  try { p = jwt.verify(String(req.query.dl || ''), JWT_SECRET); } catch (e) { return res.status(401).json({ error: 'Link di download non valido o scaduto' }); }
+  if (!p.dl || !p.jti || !p.uid || p.dl !== req.originalUrl.split('?')[0]) return res.status(401).json({ error: 'Link di download non valido o scaduto' });
+  pulisciDownloadUsati();
+  if (downloadUsati.has(p.jti)) return res.status(401).json({ error: 'Questo link è già stato usato: ne serve uno nuovo' });
+  downloadUsati.set(p.jti, Date.now() + 5 * 60 * 1000);
+  const current = db.prepare('SELECT * FROM users WHERE id = ? AND active = 1').get(p.uid);
+  if (!current) return res.status(401).json({ error: 'Utente disabilitato' });
+  req.user = userPublicShape(current);
   next();
 }
 
@@ -84,7 +98,7 @@ function requireQueryToken(req, res, next) {
 // azione mutante lo è). loginLimiter (rate-limit) restava l'unica difesa visibile, ma
 // senza una riga in audit_log un tentativo riuscito con credenziali rubate non lascia
 // traccia leggibile da un operatore — solo dal log applicativo grezzo, se ancora vivo.
-router.post('/login', loginLimiter, (req, res) => {
+router.post('/login', loginLimiter, loginAccountLimiter, (req, res) => {
   const { username, password } = req.body;
   const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
@@ -220,6 +234,12 @@ router.post('/change-password', requireAuth, (req, res) => {
 // stepup_until resta nello schema (migrazione già applicata, rimuoverla
 // richiederebbe un DROP COLUMN distruttivo per zero beneficio) ma non è più
 // letta né scritta da nessun percorso.
+
+router.post('/download-link', requireAuth, (req, res) => {
+  const percorso = String((req.body && req.body.path) || '');
+  if (!/^\/api\/[A-Za-z0-9_\-/.]+$/.test(percorso) || percorso.includes('..')) return res.status(400).json({ error: 'Percorso non valido' });
+  res.json({ token: jwt.sign({ dl: percorso, uid: req.user.id, jti: require('crypto').randomBytes(12).toString('hex') }, JWT_SECRET, { expiresIn: 60 }) });
+});
 
 module.exports = router;
 module.exports.requireAuth = requireAuth;

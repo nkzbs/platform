@@ -133,9 +133,28 @@ async function main() {
     }
   });
 
-  await test('download con ?token= di sessione valido -> passa il controllo (404, non 401)', async () => {
+  await test('download: il token di sessione in query NON è più accettato (audit M2)', async () => {
     const res = await fetch(BASE + '/api/registry/modules/999999/export?token=' + encodeURIComponent(auth.Authorization.slice(7)));
-    assertEq(res.status, 404);
+    assertEq(res.status, 401);
+  });
+  const linkMonouso = async (percorso) => { const r = await fetch(BASE + '/api/auth/download-link', { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify({ path: percorso }) }); return { status: r.status, body: await r.json() }; };
+  await test('link monouso: passa il controllo una volta (404 = oltre l\'auth), la seconda volta no', async () => {
+    const percorso = '/api/registry/modules/999999/export';
+    const l = await linkMonouso(percorso);
+    assertEq(l.status, 200);
+    const prima = await fetch(BASE + percorso + '?dl=' + encodeURIComponent(l.body.token));
+    assertEq(prima.status, 404, 'prima volta');
+    const seconda = await fetch(BASE + percorso + '?dl=' + encodeURIComponent(l.body.token));
+    assertEq(seconda.status, 401, 'seconda volta');
+  });
+  await test('link monouso: vale solo per il suo percorso e non si crea senza login né con percorsi strani', async () => {
+    const l = await linkMonouso('/api/registry/modules/1/export');
+    const altro = await fetch(BASE + '/api/registry/modules/2/export?dl=' + encodeURIComponent(l.body.token));
+    assertEq(altro.status, 401, 'altro percorso');
+    const senzaLogin = await fetch(BASE + '/api/auth/download-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: '/api/x' }) });
+    assertEq(senzaLogin.status, 401, 'senza login');
+    assertEq((await linkMonouso('/api/../etc/passwd')).status, 400, 'percorso con ..');
+    assertEq((await linkMonouso('https://altro.sito/x')).status, 400, 'indirizzo esterno');
   });
 
   await test('POST /login/2fa-verify con codice sbagliato -> 401 E riga audit_log auth.2fa_verify_failed', async () => {

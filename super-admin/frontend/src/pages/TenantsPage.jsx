@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { API } from '../lib/api'
+import { scarica } from '../lib/scarica'
 import SchedaBackup from '../components/SchedaBackup'
 import VoceMenu from '../components/VoceMenu'
 import InviteTenantModal from '../components/InviteTenantModal'
@@ -868,15 +869,15 @@ function TenantsPage({ token, onViewActivity, onNavigate }) {
                                 <td className="px-3 py-1.5 text-right whitespace-nowrap">
                                   {b.status === 'ok' && (
                                     <>
-                                      <a href={API + '/tenants/' + t.slug + '/backups/' + b.id + '/download?token=' + encodeURIComponent(token)}
+                                      <button type="button" onClick={() => scarica(token, '/tenants/' + t.slug + '/backups/' + b.id + '/download')}
                                         className="text-gray-400 hover:text-gray-200 transition normal-case">
                                         Scarica
-                                      </a>
+                                      </button>
                                       {b.allegati_file && (
-                                        <a href={API + '/tenants/' + t.slug + '/backups/' + b.id + '/allegati/download?token=' + encodeURIComponent(token)}
+                                        <button type="button" onClick={() => scarica(token, '/tenants/' + t.slug + '/backups/' + b.id + '/allegati/download')}
                                           className="text-gray-400 hover:text-gray-200 transition normal-case ml-3" title={'Allegati: ' + b.allegati_size_mb + ' MB'}>
                                           Allegati
-                                        </a>
+                                        </button>
                                       )}
                                       <button onClick={() => runRestore(t.slug, b)} disabled={restoringId === b.id}
                                         className="text-cp-primary hover:opacity-80 disabled:opacity-40 transition normal-case ml-3">
